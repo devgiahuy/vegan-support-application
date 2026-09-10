@@ -32,9 +32,7 @@ export class ProductMapper extends BaseBidirectionalMapper<
     );
 
     // 3. Quét tìm Giá (hỗ trợ ép chuỗi '250000' -> 250000)
-    const price = safeNumber(
-      pickField(dto, ['price', 'selling_price', 'unit_price', 'cost'], 0)
-    );
+    const price = safeNumber(pickField(dto, ['price', 'selling_price', 'unit_price', 'cost'], 0));
 
     // 4. Quét trạng thái
     const status = safeEnum(
@@ -69,17 +67,18 @@ export class ProductMapper extends BaseBidirectionalMapper<
     );
 
     // 7. Quét tồn kho
-    const stock = safeNumber(
-      pickField(dto, ['stock', 'stock_quantity', 'inventory'], 0)
-    );
+    const stock = safeNumber(pickField(dto, ['stock', 'stock_quantity', 'inventory'], 0));
 
     // 8. Quét tags (xử lý cả mảng lẫn chuỗi 'tag1, tag2')
     let tags: string[] = [];
-    const rawTags = pickField(dto, ['tags'], null);
+    const rawTags = pickField<string[] | string | null>(dto, ['tags'], null);
     if (Array.isArray(rawTags)) {
       tags = safeArray(rawTags, (t) => safeString(t));
     } else if (typeof rawTags === 'string') {
-      tags = rawTags.split(',').map((t) => t.trim()).filter(Boolean);
+      tags = rawTags
+        .split(',')
+        .map((t) => t.trim())
+        .filter(Boolean);
     }
 
     // 9. Quét ngày tạo

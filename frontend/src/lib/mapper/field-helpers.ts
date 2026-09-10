@@ -124,20 +124,28 @@ export function safeEnum<T extends Record<string, string | number>>(
 ): T[keyof T] {
   if (val === null || val === undefined) return fallback;
 
-  // Kiểm tra nếu giá trị tồn tại trong enum values
-  const values = Object.values(enumObj);
-  if (values.includes(val as any)) {
-    return val as T[keyof T];
+  const entries = Object.entries(enumObj);
+
+  // Chuỗi: ưu tiên khớp KEY (case-insensitive) để enum số không bị trả về chuỗi.
+  // VD: 'ACTIVE' -> StatusEnum.ACTIVE (1), không phải chuỗi 'ACTIVE'.
+  // (Object.values của numeric enum chứa cả key đảo ngược nên không dùng includes trực tiếp.)
+  if (typeof val === 'string') {
+    const valUpper = val.trim().toUpperCase();
+    // Bỏ qua key số (cặp đảo ngược của numeric enum như '0' -> 'INACTIVE')
+    const byKey = entries.find(
+      ([key]) => Number.isNaN(Number(key)) && key.toUpperCase() === valUpper
+    );
+    if (byKey) return byKey[1] as T[keyof T];
+    const byValue = entries.find(([, v]) => String(v).toUpperCase() === valUpper);
+    // Bỏ qua cặp đảo ngược của numeric enum (key là số, value là chuỗi tên)
+    if (byValue && Number.isNaN(Number(byValue[0]))) return byValue[1] as T[keyof T];
+    return fallback;
   }
 
-  // Thử so khớp chuỗi case-insensitive
-  if (typeof val === 'string') {
-    const valUpper = val.toUpperCase().trim();
-    for (const [key, enumValue] of Object.entries(enumObj)) {
-      if (key.toUpperCase() === valUpper || String(enumValue).toUpperCase() === valUpper) {
-        return enumValue as T[keyof T];
-      }
-    }
+  // Giá trị không phải chuỗi (thường là number): khớp trực tiếp với enum values thật.
+  const realValues = entries.filter(([key]) => Number.isNaN(Number(key))).map(([, v]) => v);
+  if (realValues.includes(val as string | number)) {
+    return val as T[keyof T];
   }
 
   return fallback;

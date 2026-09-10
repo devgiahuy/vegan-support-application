@@ -1,27 +1,16 @@
 'use client';
 
-import React, { useEffect } from 'react';
-import { useUIStore } from '@/store/useUIStore';
+import React from 'react';
+import { ThemeProvider } from 'next-themes';
 
+/**
+ * Bọc next-themes (attribute="class") để đồng bộ với
+ * `@custom-variant dark` trong globals.css. Dùng useTheme() để đọc/đổi theme.
+ */
 export function ThemeController({ children }: { children: React.ReactNode }) {
-  const theme = useUIStore((s) => s.theme);
-
-  useEffect(() => {
-    const root = document.documentElement;
-    if (theme === 'dark') {
-      root.classList.add('dark');
-    } else if (theme === 'light') {
-      root.classList.remove('dark');
-    } else {
-      // System
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      if (mediaQuery.matches) {
-        root.classList.add('dark');
-      } else {
-        root.classList.remove('dark');
-      }
-    }
-  }, [theme]);
-
-  return <>{children}</>;
+  return (
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+      {children}
+    </ThemeProvider>
+  );
 }

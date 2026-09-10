@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const BACKEND_URL =
-  process.env.BACKEND_API_URL ||
-  process.env.NEXT_PUBLIC_API_URL ||
-  'http://127.0.0.1:8080/api/v1';
+import { BACKEND_URL } from '@/lib/env';
 
 /**
  * POST /api/auth/refresh-token
@@ -63,8 +59,5 @@ export async function POST(req: NextRequest) {
   // BE chưa chạy -> trả 502 để axios interceptor hiểu là refresh thất bại
   // và chuyển về logout, thay vì treo queue.
   console.error('[refresh-token proxy] backend unreachable:', lastError);
-  return NextResponse.json(
-    { message: 'Không thể làm mới phiên đăng nhập.' },
-    { status: 502 }
-  );
+  return NextResponse.json({ message: 'Không thể làm mới phiên đăng nhập.' }, { status: 502 });
 }

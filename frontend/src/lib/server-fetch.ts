@@ -1,12 +1,11 @@
 import { cookies } from 'next/headers';
+import { BACKEND_URL, isDev } from './env';
 
 function getBackendUrl(): string {
-  const raw =
-    process.env.BACKEND_API_URL ||
-    process.env.NEXT_PUBLIC_API_URL ||
-    'http://127.0.0.1:8080/api/v1';
   // Bỏ quote thừa + slash cuối để tránh `http://x//products`
-  return raw.replace(/^['"]|['"]$/g, '').trim().replace(/\/+$/, '');
+  return BACKEND_URL.replace(/^['"]|['"]$/g, '')
+    .trim()
+    .replace(/\/+$/, '');
 }
 
 export interface ServerFetchOptions extends Omit<RequestInit, 'headers'> {
@@ -22,9 +21,7 @@ export interface ServerFetchOptions extends Omit<RequestInit, 'headers'> {
 }
 
 function getCookieToken(cookieStore: Awaited<ReturnType<typeof cookies>>): string | undefined {
-  return (
-    cookieStore.get('accessToken')?.value ?? cookieStore.get('access_token')?.value
-  );
+  return cookieStore.get('accessToken')?.value ?? cookieStore.get('access_token')?.value;
 }
 
 /**
@@ -38,14 +35,7 @@ export async function serverFetch<T>(
   endpoint: string,
   options: ServerFetchOptions = {}
 ): Promise<T | null> {
-  const {
-    withAuth = true,
-    cache,
-    revalidate,
-    tags,
-    headers: initHeaders,
-    ...rest
-  } = options;
+  const { withAuth = true, cache, revalidate, tags, headers: initHeaders, ...rest } = options;
 
   const cookieStore = await cookies();
 
@@ -68,13 +58,18 @@ export async function serverFetch<T>(
       headers: reqHeaders,
       ...(cache ? { cache } : {}),
       ...(revalidate !== undefined || tags
-        ? { next: { ...(revalidate !== undefined ? { revalidate } : {}), ...(tags ? { tags } : {}) } }
+        ? {
+            next: {
+              ...(revalidate !== undefined ? { revalidate } : {}),
+              ...(tags ? { tags } : {}),
+            },
+          }
         : {}),
     });
 
     if (!res.ok) {
-      // Chỉ log ồn khi dev, prod chỉ warn/error nhẹ để khỏi rò rỉ URL/token
-      if (process.env.NODE_ENV === 'development') {
+      // Chỉ log ồn khi dev, prod giữ im để khỏi rò rỉ URL/token
+      if (isDev) {
         if (res.status === 401 || res.status === 403) {
           console.warn(`[serverFetch] ${endpoint}: ${res.status}`);
         } else {
@@ -92,7 +87,7 @@ export async function serverFetch<T>(
     }
     return json as T;
   } catch (error) {
-    if (process.env.NODE_ENV === 'development') {
+    if (isDev) {
       console.error(`[serverFetch] ${endpoint}:`, error);
     }
     return null;

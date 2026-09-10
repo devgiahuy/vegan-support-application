@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { ErrorResponse } from '@/types/api';
 import { getAccessToken, setAccessToken, clearAccessToken } from './auth-token';
 import { useAuthStore } from '@/store/useAuthStore';
+import { API_BASE_URL } from './env';
 
 declare module 'axios' {
   export interface AxiosRequestConfig {
@@ -13,8 +14,8 @@ declare module 'axios' {
 }
 
 const api = axios.create({
-  // Next.js API route proxy hoặc direct backend
-  baseURL: process.env.NEXT_PUBLIC_API_URL || '/api/v1',
+  // Next.js API route proxy hoặc direct backend (lấy từ lib/env.ts đã validate)
+  baseURL: API_BASE_URL,
   timeout: 15000,
   withCredentials: true,
   headers: {
@@ -81,8 +82,16 @@ api.interceptors.response.use(
             errorData?.detail === 'Vui lòng đăng nhập' ||
             errorData?.Detail === 'Vui lòng đăng nhập'));
 
-      if (isAuthError && originalRequest && !originalRequest._retry && !originalRequest.url?.includes('/auth/login')) {
-        if (originalRequest.url?.includes('/auth/logout') || originalRequest.url?.includes('/auth/refresh-token')) {
+      if (
+        isAuthError &&
+        originalRequest &&
+        !originalRequest._retry &&
+        !originalRequest.url?.includes('/auth/login')
+      ) {
+        if (
+          originalRequest.url?.includes('/auth/logout') ||
+          originalRequest.url?.includes('/auth/refresh-token')
+        ) {
           return Promise.reject(error);
         }
 
@@ -137,11 +146,18 @@ api.interceptors.response.use(
         } else if (status >= 500) {
           toast.error('Lỗi hệ thống máy chủ. Vui lòng thử lại sau.');
         } else if (status === 403) {
-          toast.error(errorData?.message || errorData?.detail || 'Bạn không có quyền thực hiện thao tác này.');
+          toast.error(
+            errorData?.message || errorData?.detail || 'Bạn không có quyền thực hiện thao tác này.'
+          );
         } else if (status === 429) {
           toast.error('Bạn đang gửi quá nhiều yêu cầu. Vui lòng thử lại sau.');
         } else if (showErrorToast) {
-          toast.error(errorData?.message || errorData?.detail || errorData?.title || 'Thao tác thất bại. Vui lòng thử lại.');
+          toast.error(
+            errorData?.message ||
+              errorData?.detail ||
+              errorData?.title ||
+              'Thao tác thất bại. Vui lòng thử lại.'
+          );
         }
       }
     } else if (error.request) {

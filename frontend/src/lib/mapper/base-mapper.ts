@@ -20,7 +20,7 @@ export interface IBidirectionalMapper<
   TDto,
   TModel,
   TCreateReq = Partial<TDto>,
-  TUpdateReq = Partial<TDto>
+  TUpdateReq = Partial<TDto>,
 > extends IMapper<TDto, TModel> {
   toCreateDto(domain: Partial<TModel>): TCreateReq;
   toUpdateDto(domain: Partial<TModel>): TUpdateReq;
@@ -39,7 +39,7 @@ export abstract class BaseMapper<TDto, TModel> implements IMapper<TDto, TModel> 
    * Chuyển mảng DTO thành mảng Domain Model, tự động bảo vệ null/undefined
    */
   toModelList(dtos: (TDto | null | undefined)[] | null | undefined): TModel[] {
-    return safeArray(dtos, (item) => this.toModel(item));
+    return safeArray<TDto | null | undefined, TModel>(dtos, (item) => this.toModel(item));
   }
 
   /**
@@ -81,7 +81,7 @@ export abstract class BaseBidirectionalMapper<
   TDto,
   TModel,
   TCreateReq = Partial<TDto>,
-  TUpdateReq = Partial<TDto>
+  TUpdateReq = Partial<TDto>,
 >
   extends BaseMapper<TDto, TModel>
   implements IBidirectionalMapper<TDto, TModel, TCreateReq, TUpdateReq>
