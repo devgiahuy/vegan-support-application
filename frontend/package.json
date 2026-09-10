@@ -11,7 +11,7 @@
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepare": "git -C .. config core.hooksPath .husky || true",
+    "prepare": "git -C .. config core.hooksPath frontend/.husky || true",
     "sync:swagger": "node scripts/sync-swagger.mjs"
   },
   "lint-staged": {

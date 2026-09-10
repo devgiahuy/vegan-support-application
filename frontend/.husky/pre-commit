@@ -1,0 +1,7 @@
+#!/bin/sh
+# Hook riêng của FE: chỉ chạy khi có file frontend/ được stage.
+# Commit chỉ đụng backend/ thì bỏ qua, không tốn thời gian.
+if git diff --cached --name-only | grep -q '^frontend/'; then
+  cd frontend
+  npx lint-staged
+fi
