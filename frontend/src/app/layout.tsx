@@ -7,8 +7,8 @@ import { Toaster } from '@/components/ui/sonner';
 import { Header } from '@/components/layout/header';
 
 export const metadata: Metadata = {
-  title: 'WDP301 - Modern Frontend Architecture',
-  description: 'Enterprise Frontend Architecture with Axios Interceptors, TanStack Query, Zustand, and Type Mapper Layer',
+  title: 'Vegan Support - Modern Frontend Architecture',
+  description: 'Enterprise Frontend with Axios, TanStack Query, Zustand and Mapper Layer',
 };
 
 export default function RootLayout({

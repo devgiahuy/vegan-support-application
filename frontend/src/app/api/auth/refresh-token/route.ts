@@ -1,0 +1,70 @@
+import { NextRequest, NextResponse } from 'next/server';
+
+const BACKEND_URL =
+  process.env.BACKEND_API_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  'http://127.0.0.1:8080/api/v1';
+
+/**
+ * POST /api/auth/refresh-token
+ * Proxy tới Backend để đổi refreshToken (HttpOnly cookie) lấy accessToken mới.
+ * Lý do cần proxy: browser tự gửi HttpOnly cookie cùng-domain,
+ * FE không bao giờ đọc refreshToken bằng JS.
+ */
+export async function POST(req: NextRequest) {
+  const cookieHeader = req.headers.get('cookie') ?? '';
+  const candidates = ['/auth/refresh-token', '/auth/refresh'];
+
+  let lastError: unknown = null;
+
+  for (const path of candidates) {
+    try {
+      const res = await fetch(`${BACKEND_URL}${path}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          // Forward toàn bộ cookie (chứa refreshToken HttpOnly) tới BE
+          cookie: cookieHeader,
+        },
+        body: JSON.stringify({}),
+      });
+
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok) {
+        // 404 = BE dùng tên endpoint còn lại -> thử candidate tiếp theo
+        if (res.status === 404) {
+          lastError = data;
+          continue;
+        }
+        return NextResponse.json(data, { status: res.status });
+      }
+
+      const response = NextResponse.json(data);
+
+      // Forward Set-Cookie từ BE (refresh rotation) về browser
+      const setCookie =
+        typeof (res.headers as any).getSetCookie === 'function'
+          ? (res.headers as any).getSetCookie()
+          : res.headers.get('set-cookie')
+            ? [res.headers.get('set-cookie') as string]
+            : [];
+
+      for (const c of setCookie) {
+        response.headers.append('set-cookie', c);
+      }
+
+      return response;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  // BE chưa chạy -> trả 502 để axios interceptor hiểu là refresh thất bại
+  // và chuyển về logout, thay vì treo queue.
+  console.error('[refresh-token proxy] backend unreachable:', lastError);
+  return NextResponse.json(
+    { message: 'Không thể làm mới phiên đăng nhập.' },
+    { status: 502 }
+  );
+}

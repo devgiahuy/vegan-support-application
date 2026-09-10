@@ -1,4 +1,5 @@
 import api from '@/lib/axios';
+import axios from 'axios';
 import { APIResponse } from '@/types/api';
 import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
 import { LoginResponseDto, UserDto } from '../types/auth.dto';
@@ -26,15 +27,24 @@ export const authApi = {
   },
 
   logout: async (): Promise<void> => {
-    await api.post(API_ENDPOINTS.AUTH.LOGOUT, {}, { silent: true });
+    // Gọi Next handler để vừa proxy BE vừa xóa HttpOnly cookie cùng-domain.
+    // Dùng axios thô (baseURL '') để tránh interceptor tự gắn refresh loop.
+    try {
+      await axios.post('/api/auth/logout', {}, { baseURL: '' });
+    } catch {
+      // BE down vẫn cho logout client, interceptor đã silent
+      try {
+        await api.post(API_ENDPOINTS.AUTH.LOGOUT, {}, { silent: true });
+      } catch {
+        /* noop */
+      }
+    }
   },
 
   refreshToken: async (): Promise<string> => {
-    const res = await api.post<APIResponse<{ access_token: string }>>(
-      API_ENDPOINTS.AUTH.REFRESH_TOKEN,
-      {},
-      { silent: true }
-    );
-    return res.data.data?.access_token || '';
+    // Luôn đi qua Next proxy để forward HttpOnly cookie refreshToken.
+    const res = await axios.post('/api/auth/refresh-token', {}, { baseURL: '' });
+    const payload = (res.data as any)?.data ?? res.data;
+    return payload?.access_token ?? payload?.accessToken ?? payload?.token ?? '';
   },
 };

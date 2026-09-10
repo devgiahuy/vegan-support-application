@@ -1,6 +1,8 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { toast } from 'sonner';
 import { ErrorResponse } from '@/types/api';
+import { getAccessToken, setAccessToken, clearAccessToken } from './auth-token';
+import { useAuthStore } from '@/store/useAuthStore';
 
 declare module 'axios' {
   export interface AxiosRequestConfig {
@@ -20,23 +22,18 @@ const api = axios.create({
   },
 });
 
-// Request Interceptor: inject token & request timestamp
+// Request Interceptor: inject token từ Single Source of Truth (memory + zustand)
+// KHÔNG đọc trực tiếp localStorage ở đây nữa để tránh lệch với HttpOnly cookie.
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Nếu có token lưu trong localStorage hoặc cookie, tự động gắn vào Header
-    if (typeof window !== 'undefined') {
-      try {
-        const authData = localStorage.getItem('auth-storage');
-        if (authData) {
-          const parsed = JSON.parse(authData);
-          const token = parsed?.state?.token;
-          if (token && config.headers && !config.headers.Authorization) {
-            config.headers.Authorization = `Bearer ${token}`;
-          }
-        }
-      } catch (err) {
-        console.warn('Lỗi đọc auth token từ localStorage:', err);
-      }
+    const storeToken = useAuthStore.getState().token;
+    const token = getAccessToken() ?? storeToken;
+    // Tự sync lại memory nếu store còn token (trường hợp hydrate sau F5)
+    if (token && !getAccessToken()) {
+      setAccessToken(token);
+    }
+    if (token && config.headers && !config.headers.Authorization) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
@@ -101,13 +98,28 @@ api.interceptors.response.use(
         isRefreshing = true;
 
         try {
-          // Gọi API refresh token
-          await axios.post('/api/auth/refresh-token', {}, { baseURL: '' });
-          processQueue(null);
+          // Gọi Next Route Handler /api/auth/refresh-token (proxy tới BE, gửi HttpOnly cookie).
+          // Handler này đã được tạo ở src/app/api/auth/refresh-token/route.ts
+          const refreshRes = await axios.post('/api/auth/refresh-token', {}, { baseURL: '' });
+          // BE có thể trả {access_token | accessToken | token} hoặc {data: {...}}
+          const payload = (refreshRes.data as any)?.data ?? refreshRes.data;
+          const newToken: string =
+            payload?.access_token ?? payload?.accessToken ?? payload?.token ?? '';
+
+          if (newToken) {
+            setAccessToken(newToken);
+            useAuthStore.getState().setToken(newToken);
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            }
+          }
+          processQueue(null, newToken || null);
           hasShownSessionExpiredToast = false;
           return api(originalRequest);
         } catch (err) {
           processQueue(err, null);
+          clearAccessToken();
+          useAuthStore.getState().logout();
           if (!hasShownSessionExpiredToast && !silent) {
             toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
             hasShownSessionExpiredToast = true;

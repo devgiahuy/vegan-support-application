@@ -27,6 +27,13 @@ yarn-error.log*
 .env*.local
 .env
 
+# local swagger source (giữ local, chỉ commit catalog đã chẻ nhỏ)
+docs/swagger.json
+API-WORKFLOW.md
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# agent
+.agent/

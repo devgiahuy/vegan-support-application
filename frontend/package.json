@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "sync:swagger": "node scripts/sync-swagger.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

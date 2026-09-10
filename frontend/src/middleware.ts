@@ -30,7 +30,12 @@ function isTokenExpired(token: string) {
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const accessToken = request.cookies.get('accessToken')?.value;
+
+  // BE set HttpOnly cookie sau login (proxy /api/v1 giữ cùng-domain).
+  // Chấp nhận cả 2 tên để tương thích BE cũ/mới: accessToken | access_token
+  const accessToken =
+    request.cookies.get('accessToken')?.value ??
+    request.cookies.get('access_token')?.value;
 
   // Ví dụ bảo vệ route dashboard:
   const isProtectedPath = pathname.startsWith('/dashboard') || pathname.startsWith('/profile');
@@ -43,9 +48,14 @@ export function middleware(request: NextRequest) {
     }
   }
 
+  // Đã login rồi thì không cho quay lại /login nữa
+  if (pathname === '/login' && accessToken && !isTokenExpired(accessToken)) {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/profile/:path*'],
+  matcher: ['/dashboard/:path*', '/profile/:path*', '/login'],
 };
