@@ -20,7 +20,8 @@ src/
 │   ├── constants/api-endpoints.ts  # MỌI endpoint tập trung ở đây. Cấm hardcode string URL trong feature.
 │   └── enums/            # Enum dùng chung (StatusEnum, UserRole...).
 ├── components/
-│   ├── ui/               # shadcn nguyên bản (button, card, input...). Không sửa logic, chỉ style via cn().
+│   ├── ui/               # shadcn nguyên bản (new-york/radix, cài qua `npx shadcn@latest add`).
+│   │                     # Không sửa logic, chỉ style via cn().
 │   ├── layout/           # Header, sidebar... dùng chung.
 │   └── providers/        # query-provider, auth-provider, theme-controller. Client Component.
 ├── features/<domain>/    # Đơn vị chính. Mỗi domain 1 folder độc lập:
@@ -38,7 +39,7 @@ src/
 │   ├── server-fetch.ts   # Server fetch: đọc HttpOnly cookie, BACKEND_API_URL, revalidate/tags.
 │   ├── query-client.ts   # staleTime 1m, gcTime 5m, không retry 4xx.
 │   ├── api-error.ts      # getApiErrorMessage/handleApiError/isAxiosError... Dùng khi cần toast thủ công.
-│   ├── utils.ts          # cn(), formatCurrency(), formatDate().
+│   ├── utils.ts          # cn() (re-export từ package `cn`), formatCurrency(), formatDate().
 │   └── mapper/           # Core: base-mapper.ts (BaseMapper/BaseBidirectionalMapper), field-helpers.ts
 │                         # (pickField, safeString/Number/Boolean/Date/Array/Enum).
 ├── store/                # Zustand client-state ONLY: useAuthStore (token memory + persist user),
@@ -64,13 +65,18 @@ Server: Server Component -> lib/server-fetch.ts (+ mapper) -> Model -> render
 3. `components/ui` không import `features/*`, `store/*`. Chỉ nhận props.
 4. `app/` không gọi trực tiếp `axios`/`fetch`. Gọi qua `features/*/queries` (client) hoặc `lib/server-fetch` (server).
 5. Endpoint mới -> thêm vào `common/constants/api-endpoints.ts` trước, rồi mới dùng.
+6. UI **ưu tiên shadcn/ui** (`components/ui/*`). Thiếu component -> tải bằng CLI (mục 4.5);
+   shadcn không có sẵn -> mới được tự code ở `components/shared/*`. Cấm tự viết lại component shadcn đã có.
+7. ⭐ **Mọi `api/*.api.ts` mới/sửa BẮT BUỘC phải có/cập nhật `mappers/*.mapper.ts` tương ứng.**
+   Cấm tạo API trả DTO trực tiếp mà không qua Mapper. Không có Mapper -> không được merge PR.
 
 ---
 
-## 3. ⭐ RULE BẮT BUỘC: gọi API phải có Interface + Mapper, cấm `any`
+## 3. ⭐ RULE BẮT BUỘC: khi code API phải code Mapper — gọi API phải có Interface + Mapper, cấm `any`
 
-> **Mọi API call đều phải đi qua bộ 3: `DTO interface` + `Model interface` + `Mapper class`. Cấm `any`, cấm `as any`,
-> cấm `(res.data as any)`, cấm component xài trực tiếp DTO.**
+> **RULE CỨNG: Cứ code/thay đổi `api/*.api.ts` là BẮT BUỘC phải code/cập nhật `mappers/*.mapper.ts` đi kèm.
+> Mọi API call đều phải đi qua bộ 3: `DTO interface` + `Model interface` + `Mapper class`. Cấm `any`, cấm `as any`,
+> cấm `(res.data as any)`, cấm component xài trực tiếp DTO, cấm `api/*.api.ts` trả về DTO mà chưa `toModel`.**
 
 ### 3.1. Tại sao
 
@@ -156,6 +162,7 @@ return productMapper.toPaginationModel(res.data.data); // trả PaginationResult
 
 Checklist review PR/API mới:
 
+- [ ] Mỗi `api/*.api.ts` mới/sửa đều có `mappers/*.mapper.ts` tương ứng đi kèm (không API nào thiếu Mapper).
 - [ ] Có `types/*.dto.ts` + `types/*.model.ts` riêng, không dùng chung, không `any`.
 - [ ] Có `mappers/*.mapper.ts` extends `BaseMapper`/`BaseBidirectionalMapper`, dùng
       `pickField` + `safe*` cho **mọi field** (kể cả khi tin BE).
@@ -208,6 +215,33 @@ Checklist review PR/API mới:
 - Dùng component `components/ui/*`, gộp class bằng `cn()`. Tiền/ngày dùng `formatCurrency/formatDate` trong `lib/utils.ts`.
 - UI chỉ nhận `Model` (camelCase, đã format). Mọi `formattedX`, label enum xử lý trong mapper/model, không format trong JSX.
 
+### shadcn/ui — RULE BẮT BUỘC (ưu tiên dùng Base UI của shadcn)
+
+> Nguyên tắc: **Có sẵn -> dùng. Chưa có -> tải về. Không có để tải -> tự code.**
+
+1. **Ưu tiên tuyệt đối component shadcn** trong `components/ui/*` (button, dialog, input, table...).
+   Cấm tự viết lại (hand-roll) một component mà shadcn đã cung cấp.
+2. **Chưa có trong project -> tải về bằng CLI**, không copy tay từ web:
+   ```bash
+   npx shadcn@latest add <component>        # vd: npx shadcn@latest add table select skeleton
+   npx shadcn@latest add <component> --dry-run   # xem trước khi ghi file
+   ```
+   Sau khi add, kiểm tra `components.json` + `src/components/ui/*` rồi chỉnh style qua `className`/`cn()`.
+3. **File trong `components/ui/*` là của shadcn: KHÔNG sửa logic.** Chỉ được đổi style/thêm variant
+   bằng `cn()` ở nơi dùng, hoặc (khi thật cần) bọc lại ở `components/shared/*`.
+4. **shadcn KHÔNG có component đó -> được phép tự code**, đặt ở `components/shared/*` hoặc
+   `features/<domain>/components/`, và phải tuân thủ:
+   - Tailwind v4 + `cn()` (export từ `cn` qua `@/lib/utils`), icon dùng `lucide-react`.
+   - Primitive/a11y dùng package `radix-ui` (unified) khi cần (dialog, popover, select...).
+   - API component theo phong cách shadcn: function component, nhận `className`, spread props,
+     gắn `data-slot`, hỗ trợ `aria-*`, disabled/loading state.
+   - Nếu component tự code đủ phổ biến, cân nhắc dùng để không lặp lại nhiều nơi.
+5. **Cấu hình chuẩn (không tự đổi):** `components.json` -> style `new-york`, base `radix`,
+   Tailwind v4 (không có `tailwind.config`), `iconLibrary: lucide`,
+   alias `@/components` + `@/lib/utils`. CSS token ở `src/app/globals.css`.
+6. **Class merging:** dùng `cn()` (import từ `@/lib/utils`, thực thi bởi package `cn`).
+   Không thêm `clsx`/`tailwind-merge` mới.
+
 ### TypeScript
 
 - `strict: true`. Cấm `any`/`as any` (kể cả `catch (e: any)`, dùng `unknown` + type guard).
@@ -241,3 +275,17 @@ Chi tiết: `docs/API-WORKFLOW.md`. Tóm tắt:
 2. Khi cần 1 API: đọc `API-CATALOG.md` tìm tag/path → chỉ mở `docs/api/<tag>.md`.
    **Cấm đọc swagger gốc trong lúc code.**
 3. Viết DTO theo schema trong file tag, rồi làm tiếp các bước mục 5 (Mapper → API → Queries).
+
+---
+
+## 7. ⭐ RULE BẮT BUỘC: cập nhật PROGRESS + WORK-LOG sau mỗi task
+
+> **Xong 1 task mà không cập nhật 2 file dưới = task chưa xong. Không được báo "done" khi chưa ghi log.**
+
+1. **`docs/PROGRESS.md`** — cập nhật cột `%` + `Trạng thái` của đúng task/feature theo cách tính % trong file đó
+   (7 bước scaffold), và append 1 dòng vào bảng `Lịch sử cập nhật` (`% cũ → % mới` + lý do).
+   Chỉ tick % cho bước đã merge vào cây làm việc, không tính code nháp.
+2. **`docs/WORK-LOG.md`** — append 1 entry mới theo mẫu trong file (mục tiêu, đã làm,
+   file tạo/sửa, kết quả `npx tsc --noEmit` + `npm test` + test tay, PROGRESS đổi ra sao, còn lại/rủi ro).
+   Viết sau khi đã verify, trước khi báo xong cho user.
+3. Thứ tự: code + verify → cập nhật PROGRESS → append WORK-LOG → đọc lại 2 file kiểm tra → mới báo done.
