@@ -4,9 +4,9 @@
 ## GET `/api/v1/posts`
 List nội dung published
 - operationId: `listPublishedPosts`
-- Params: `query:page (integer)`, `query:limit (integer)`, `query:type (string)`
+- Params: `query:page (integer)`, `query:limit (integer)`, `query:type (string)`, `query:q (string)`, `query:category (string)`, `query:maxCookTimeMinutes (integer,null)`, `query:difficulty (string)`, `query:dietPattern (string)`, `query:ingredientIds (array<string>)`, `query:forDate (string)`
 - Request: —
-- Responses: `200` → PostListResponse, `400` → ErrorResponse
+- Responses: `200` → PostListResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse
 
 ## POST `/api/v1/posts`
 Tạo Recipe, Blog hoặc Video
@@ -14,6 +14,13 @@ Tạo Recipe, Blog hoặc Video
 - Params: —
 - Request: `CreatePostRequest` (required)
 - Responses: `201` → PostResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `409` → ErrorResponse
+
+## GET `/api/v1/posts/{id}/related`
+Lấy related Recipe, Blog và Video
+- operationId: `getRelatedPosts`
+- Params: `path:id* (string)`, `query:limitPerType (integer)`, `query:forDate (string)`
+- Request: —
+- Responses: `200` → RelatedPostsResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse
 
 ## GET `/api/v1/posts/{idOrSlug}`
 Lấy content detail theo UUID hoặc slug
@@ -68,6 +75,13 @@ Soft-delete content thuộc quyền sở hữu
           "type": "string"
         },
         "categoryIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "_truncated": true
+          }
+        },
+        "tags": {
           "type": "array",
           "items": {
             "type": "string",
@@ -154,6 +168,13 @@ Soft-delete content thuộc quyền sở hữu
             "_truncated": true
           }
         },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "_truncated": true
+          }
+        },
         "media": {
           "type": "array",
           "items": {
@@ -169,23 +190,7 @@ Soft-delete content thuộc quyền sở hữu
     },
     {
       "type": "object",
-      "required": [
-        "type",
-        "title",
-        "body"
-      ],
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": [
-            "VIDEO"
-          ]
-        },
-        "title": {
-          "type": "string"
-        },
-        "slug": {
-          "type": "string"
+      "required":
   …(truncated — xem api-catalog.json)
 ```
 
@@ -317,7 +322,9 @@ Soft-delete content thuộc quyền sở hữu
         "page",
         "limit",
         "total",
-        "totalPages"
+        "totalPages",
+        "rankingVersion",
+        "appliedConstraints"
       ],
       "properties": {
         "page": {
@@ -331,6 +338,53 @@ Soft-delete content thuộc quyền sở hữu
         },
         "totalPages": {
           "type": "integer"
+        },
+        "rankingVersion": {
+          "type": "string",
+          "enum": [
+            "v1"
+          ]
+        },
+        "appliedConstraints": {
+          "type": "object",
+          "required": [
+            "authenticated",
+            "dietPattern",
+            "allergyCount",
+            "ingredientExclusionCount",
+            "traditions",
+            "forDate"
+          ],
+          "properties": {
+            "authenticated": {
+              "type": "boolean",
+              "_truncated": true
+            },
+            "dietPattern": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "_truncated": true
+            },
+            "allergyCount": {
+              "type": "integer",
+              "_truncated": true
+            },
+            "ingredientExclusionCount": {
+              "type": "integer",
+              "_truncated": true
+            },
+            "traditions": {
+              "type": "array",
+              "_truncated": true
+            },
+            "forDate": {
+              "type": "string",
+              "_truncated": true
+            }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
@@ -474,6 +528,120 @@ Soft-delete content thuộc quyền sở hữu
   …(truncated — xem api-catalog.json)
 ```
 
+#### RelatedPostsResponse
+```json
+{
+  "type": "object",
+  "required": [
+    "success",
+    "data",
+    "meta"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "enum": [
+        true
+      ]
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "recipes",
+        "blogs",
+        "videos"
+      ],
+      "properties": {
+        "recipes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "_truncated": true
+          }
+        },
+        "blogs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "_truncated": true
+          }
+        },
+        "videos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "_truncated": true
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "meta": {
+      "type": "object",
+      "required": [
+        "rankingVersion",
+        "limitPerType",
+        "appliedConstraints"
+      ],
+      "properties": {
+        "rankingVersion": {
+          "type": "string",
+          "enum": [
+            "v1"
+          ]
+        },
+        "limitPerType": {
+          "type": "integer"
+        },
+        "appliedConstraints": {
+          "type": "object",
+          "required": [
+            "authenticated",
+            "dietPattern",
+            "allergyCount",
+            "ingredientExclusionCount",
+            "traditions",
+            "forDate"
+          ],
+          "properties": {
+            "authenticated": {
+              "type": "boolean",
+              "_truncated": true
+            },
+            "dietPattern": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "_truncated": true
+            },
+            "allergyCount": {
+              "type": "integer",
+              "_truncated": true
+            },
+            "ingredientExclusionCount": {
+              "type": "integer",
+              "_truncated": true
+            },
+            "traditions": {
+              "type": "array",
+              "_truncated": true
+            },
+            "forDate": {
+              "type": "string",
+              "_truncated": true
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
+```
+
 #### UpdatePostRequest
 ```json
 {
@@ -504,6 +672,13 @@ Soft-delete content thuộc quyền sở hữu
           "type": "string"
         },
         "categoryIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "_truncated": true
+          }
+        },
+        "tags": {
           "type": "array",
           "items": {
             "type": "string",
@@ -594,6 +769,13 @@ Soft-delete content thuộc quyền sở hữu
             "_truncated": true
           }
         },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "_truncated": true
+          }
+        },
         "media": {
           "type": "array",
           "items": {
@@ -602,22 +784,6 @@ Soft-delete content thuộc quyền sở hữu
           }
         },
         "body": {
-          "type": "string"
-        },
-        "expectedVersion": {
-          "type": "integer"
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required": [
-        "type",
-        "title",
-        "body",
-        "expectedVersion"
-      ],
-      "properties": {
+          "typ
   …(truncated — xem api-catalog.json)
 ```

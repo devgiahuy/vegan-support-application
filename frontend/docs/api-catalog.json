@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
   "source": "../backend/openapi.json",
-  "generatedAt": "2026-09-15T15:43:45.688Z",
+  "generatedAt": "2026-09-15T16:04:35.685Z",
   "stats": {
-    "operations": 30,
+    "operations": 31,
     "groups": 9,
-    "schemas": 33
+    "schemas": 34
   },
   "operations": [
     {
@@ -840,12 +840,59 @@
           "name": "type",
           "required": false,
           "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "category",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "maxCookTimeMinutes",
+          "required": false,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        {
+          "in": "query",
+          "name": "difficulty",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "dietPattern",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "ingredientIds",
+          "required": false,
+          "type": "array<string>"
+        },
+        {
+          "in": "query",
+          "name": "forDate",
+          "required": false,
+          "type": "string"
         }
       ],
       "request": null,
       "responses": {
         "200": "PostListResponse",
-        "400": "ErrorResponse"
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
       }
     },
     {
@@ -867,6 +914,41 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/{id}/related",
+      "group": "Content",
+      "summary": "Lấy related Recipe, Blog và Video",
+      "operationId": "getRelatedPosts",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "limitPerType",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "forDate",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "RelatedPostsResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse"
       }
     },
     {

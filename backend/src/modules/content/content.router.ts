@@ -12,6 +12,7 @@ import {
   postIdentifierParamsSchema,
   postIdParamsSchema,
   postListQuerySchema,
+  relatedPostsQuerySchema,
   updatePostRequestSchema,
   uploadSignatureRequestSchema,
 } from './content.schemas.js';
@@ -21,12 +22,24 @@ export function createPostsRouter(
   authentication: AuthenticationMiddleware,
 ): Router {
   const router = Router();
-  router.get('/', validateQuery(postListQuerySchema), controller.listPosts);
+  router.get(
+    '/',
+    authentication.optionalAuthenticate,
+    validateQuery(postListQuerySchema),
+    controller.listPosts,
+  );
   router.post(
     '/',
     authentication.authenticate,
     validateBody(createPostRequestSchema),
     controller.createPost,
+  );
+  router.get(
+    '/:id/related',
+    authentication.optionalAuthenticate,
+    validateParams(postIdParamsSchema),
+    validateQuery(relatedPostsQuerySchema),
+    controller.getRelatedPosts,
   );
   router.get(
     '/:idOrSlug',

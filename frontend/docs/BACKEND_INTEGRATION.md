@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 1.5
+**Version:** 1.6
 
 **Cập nhật:** 15/09/2026
 
@@ -8,7 +8,7 @@
 
 **Contract target:** `/api/v1`
 
-> Tài liệu này là registry sống cho những capability backend đã sẵn sàng để frontend tích hợp. Foundation, Authentication & Sessions, Profile/Health, Diet Rules, Catalog và Content Core đã hoàn tất; các feature còn lại giữ `PLANNED` cho tới khi phase tương ứng vượt qua đầy đủ completion gate.
+> Tài liệu này là registry sống cho những capability backend đã sẵn sàng để frontend tích hợp. Foundation, Authentication & Sessions, Profile/Health, Diet Rules, Catalog, Content Core và Content Discovery đã hoàn tất; các feature còn lại giữ `PLANNED` cho tới khi phase tương ứng vượt qua đầy đủ completion gate.
 
 ---
 
@@ -213,24 +213,24 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 
 ### 6.3 Content và Community
 
-| Method | Path                  | Status    | Backend updated | FE integrated | Ghi chú                                                                  |
-| ------ | --------------------- | --------- | --------------- | ------------- | ------------------------------------------------------------------------ |
-| GET    | `/posts`              | `READY`   | 2026-09-15      | No            | Public published revision; type filter + pagination, chưa search ranking |
-| POST   | `/posts`              | `READY`   | 2026-09-15      | No            | Auth; Recipe/Blog/Video polymorphic; Phase 04 luôn `PENDING_REVIEW`      |
-| GET    | `/posts/:idOrSlug`    | `READY`   | 2026-09-15      | No            | Public thấy published revision; owner/Admin thấy latest revision         |
-| PATCH  | `/posts/:id`          | `READY`   | 2026-09-15      | No            | Owner/Admin; full revision snapshot + `expectedVersion`                  |
-| DELETE | `/posts/:id`          | `READY`   | 2026-09-15      | No            | Owner/Admin soft-delete; query `expectedVersion`; idempotent             |
-| GET    | `/posts/:id/related`  | `PLANNED` | —               | No            | Trả recipes/blogs/videos riêng                                           |
-| POST   | `/uploads/signature`  | `READY`   | 2026-09-15      | No            | Auth; Cloudinary SHA-1 signature/config, không lộ API secret             |
-| GET    | `/posts/:id/comments` | `PLANNED` | —               | No            | Reply tối đa một tầng                                                    |
-| POST   | `/posts/:id/comments` | `PLANNED` | —               | No            | Member+                                                                  |
-| PATCH  | `/comments/:id`       | `PLANNED` | —               | No            | Owner only, editedAt                                                     |
-| DELETE | `/comments/:id`       | `PLANNED` | —               | No            | Soft-delete                                                              |
-| PUT    | `/posts/:id/vote`     | `PLANNED` | —               | No            | Upvote toggle/create                                                     |
-| DELETE | `/posts/:id/vote`     | `PLANNED` | —               | No            | Remove upvote                                                            |
-| PUT    | `/posts/:id/rating`   | `PLANNED` | —               | No            | Recipe only, upsert                                                      |
-| PUT    | `/posts/:id/bookmark` | `PLANNED` | —               | No            | Recipe/Video only                                                        |
-| DELETE | `/posts/:id/bookmark` | `PLANNED` | —               | No            | Remove bookmark                                                          |
+| Method | Path                  | Status    | Backend updated | FE integrated | Ghi chú                                                                                                     |
+| ------ | --------------------- | --------- | --------------- | ------------- | ----------------------------------------------------------------------------------------------------------- |
+| GET    | `/posts`              | `READY`   | 2026-09-15      | No            | Search v1 không dấu; q/type/category/cook-time/difficulty/diet/ingredient filters; auth profile constraints |
+| POST   | `/posts`              | `READY`   | 2026-09-15      | No            | Auth; Recipe/Blog/Video polymorphic; Phase 04 luôn `PENDING_REVIEW`                                         |
+| GET    | `/posts/:idOrSlug`    | `READY`   | 2026-09-15      | No            | Public thấy published revision; owner/Admin thấy latest revision                                            |
+| PATCH  | `/posts/:id`          | `READY`   | 2026-09-15      | No            | Owner/Admin; full revision snapshot + `expectedVersion`                                                     |
+| DELETE | `/posts/:id`          | `READY`   | 2026-09-15      | No            | Owner/Admin soft-delete; query `expectedVersion`; idempotent                                                |
+| GET    | `/posts/:id/related`  | `READY`   | 2026-09-15      | No            | Published-only; recipes/blogs/videos riêng, dedupe, profile-safe, limit 1–10/type                           |
+| POST   | `/uploads/signature`  | `READY`   | 2026-09-15      | No            | Auth; Cloudinary SHA-1 signature/config, không lộ API secret                                                |
+| GET    | `/posts/:id/comments` | `PLANNED` | —               | No            | Reply tối đa một tầng                                                                                       |
+| POST   | `/posts/:id/comments` | `PLANNED` | —               | No            | Member+                                                                                                     |
+| PATCH  | `/comments/:id`       | `PLANNED` | —               | No            | Owner only, editedAt                                                                                        |
+| DELETE | `/comments/:id`       | `PLANNED` | —               | No            | Soft-delete                                                                                                 |
+| PUT    | `/posts/:id/vote`     | `PLANNED` | —               | No            | Upvote toggle/create                                                                                        |
+| DELETE | `/posts/:id/vote`     | `PLANNED` | —               | No            | Remove upvote                                                                                               |
+| PUT    | `/posts/:id/rating`   | `PLANNED` | —               | No            | Recipe only, upsert                                                                                         |
+| PUT    | `/posts/:id/bookmark` | `PLANNED` | —               | No            | Recipe/Video only                                                                                           |
+| DELETE | `/posts/:id/bookmark` | `PLANNED` | —               | No            | Remove bookmark                                                                                             |
 
 ### 6.4 Contributor, Moderation và Catalog
 
@@ -390,6 +390,8 @@ FE xin signature từ backend
 
 - Request create/update là discriminated union theo `type = RECIPE | BLOG | VIDEO`; frontend phải giữ
   DTO riêng cho từng nhánh, không gửi field publication/author do client tự đặt.
+- `tags` là snapshot theo revision, tối đa 15 giá trị; backend chuẩn hóa để search/related nhưng trả
+  lại nhãn gốc cho UI.
 - `PATCH /posts/:id` gửi full revision snapshot kèm `expectedVersion`. Khi nhận
   `CONTENT_VERSION_CONFLICT`, fetch lại detail trước khi cho user merge hoặc submit lại.
 - Trước Phase 07/08, mọi submission của user là `PENDING_REVIEW`; không dùng `requestedType` để giả
@@ -399,7 +401,21 @@ FE xin signature từ backend
   `mealPlannerEligible=false`; frontend phải hiển thị trạng thái resolution và không tự chọn canonical
   ingredient thay backend.
 
-### 7.5 Chat SSE
+### 7.5 Search và related content
+
+- `GET /posts` nhận `q`, `type`, `category` (UUID hoặc slug), `maxCookTimeMinutes`, `difficulty`,
+  `dietPattern`, `ingredientIds`, `forDate`, `page`, `limit`. `ingredientIds` yêu cầu Recipe chứa đủ
+  toàn bộ canonical IDs đã gửi.
+- Query rỗng hợp lệ và trả discovery mới nhất. `q` chỉ có dấu câu trả `INVALID_SEARCH_QUERY`.
+- Với authenticated request, backend dùng diet profile đã lưu thay cho query có khả năng nới rule,
+  đồng thời lọc allergy/exclusion và enabled tradition rules trước ranking. `forDate` mặc định là ngày
+  hiện tại tại `Asia/Ho_Chi_Minh` và quyết định tradition rule cho lịch `PERIODIC`.
+- Response meta trả `rankingVersion=v1` và `appliedConstraints`; UI dùng metadata này để giải thích
+  filter đang áp dụng, không tự suy luận lại hard constraints.
+- `GET /posts/:id/related?limitPerType=4` trả `{ recipes, blogs, videos }`. Current item luôn bị loại;
+  mỗi nhóm được xếp theo category/ingredient/tag overlap rồi `publishedAt` và UUID.
+
+### 7.6 Chat SSE
 
 Frontend cần xử lý event types do OpenAPI chốt, tối thiểu:
 
@@ -416,14 +432,14 @@ error
 - `error` có thể xuất hiện sau HTTP 200; không chỉ dựa vào Axios error interceptor.
 - Disclaimer render cố định kể cả khi stream lỗi một phần.
 
-### 7.6 Behavioral events
+### 7.7 Behavioral events
 
 - Không block primary action nếu ghi event thất bại.
 - Chỉ gửi event khi backend xác nhận personalization consent đang active.
 - Dedupe rapid repeated views ở client để giảm noise; backend vẫn là nơi quyết định dedupe chính thức.
 - Recommendation UI render `reasonCodes`, không tự đọc raw behavior history.
 
-### 7.7 Maps
+### 7.8 Maps
 
 - Browser lấy geolocation sau thao tác/consent rõ ràng.
 - Từ chối permission phải chuyển sang form địa chỉ.
@@ -485,6 +501,7 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `CONTENT_VERSION_CONFLICT`          | Fetch revision mới nhất trước khi merge/submit lại                    |
 | `CONTENT_STATE_CONFLICT`            | Khóa edit khi content đang bị giữ để review                           |
 | `CONTENT_DELETED`                   | Đóng editor và hiển thị trạng thái đã xóa cho owner/Admin             |
+| `INVALID_SEARCH_QUERY`              | Giữ filters hiện tại và yêu cầu từ khóa có chữ hoặc số                |
 | `HEALTH_PROFILE_INCOMPLETE`         | Link tới health profile                                               |
 | `NO_ELIGIBLE_RECIPE`                | Hiển thị slot trống/warnings, không crash                             |
 | `VERIFICATION_ALREADY_EXISTS`       | Refresh target và hiển thị reviewer hiện tại                          |
@@ -555,6 +572,7 @@ Thêm entry mới nhất ở trên cùng.
 
 | Date       | Version | Module       | Change                                                                                                                               | Breaking | FE action                                                                                      |
 | ---------- | ------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------ | :------: | ---------------------------------------------------------------------------------------------- |
+| 2026-09-15 | 1.6     | Search       | Mở rộng GET posts với normalized ranking/filter an toàn và thêm related content theo ba type                                         |    No    | Sync OpenAPI; map search meta/filters và ba list related, không tự nới appliedConstraints      |
 | 2026-09-15 | 1.5     | Content      | Thêm Recipe/Blog/Video revision CRUD, structured recipe constraints, soft-delete/version conflict và signed Cloudinary upload        |    No    | Sync OpenAPI; tạo DTO/Model/Mapper theo post type, upload trực tiếp và xử lý revision conflict |
 | 2026-09-15 | 1.4     | Catalog      | Thêm category tree, canonical ingredient, alias resolution và metadata allergen/diet/tradition; exclusion nhận optional ingredientId |    No    | Sync OpenAPI; tạo DTO/Model/Mapper cho category và ingredient, xử lý AMBIGUOUS                 |
 | 2026-09-15 | 1.3     | Profile/Diet | Thêm profile, BMI/BMR/TDEE, rule preview v1, preference/effective constraints và PERIODIC dates                                      |    No    | Sync OpenAPI; tạo DTO/Model/Mapper riêng cho profile và diet flow                              |

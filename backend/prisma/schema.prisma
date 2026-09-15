@@ -325,8 +325,11 @@ model PostRevision {
   version           Int
   status            PostRevisionStatus        @default(PENDING_REVIEW)
   title             String                    @db.VarChar(200)
+  normalizedTitle   String                    @map("normalized_title") @db.VarChar(200)
   excerpt           String?                   @db.VarChar(500)
+  normalizedExcerpt String?                   @map("normalized_excerpt") @db.VarChar(500)
   body              String
+  normalizedBody    String                    @map("normalized_body")
   createdById       String                    @map("created_by_id") @db.Uuid
   reviewNote        String?                   @map("review_note") @db.VarChar(2000)
   createdAt         DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -337,10 +340,13 @@ model PostRevision {
   ingredients       RecipeIngredient[]
   dietCompatibility RecipeDietCompatibility[]
   categories        PostCategory[]
+  tags              PostTag[]
   media             PostMedia[]
 
   @@unique([postId, version])
   @@index([postId, status, createdAt])
+  @@index([normalizedTitle(ops: raw("gin_trgm_ops"))], type: Gin, map: "post_revisions_normalized_title_trgm_idx")
+  @@index([normalizedBody(ops: raw("gin_trgm_ops"))], type: Gin, map: "post_revisions_normalized_body_trgm_idx")
   @@map("post_revisions")
 }
 
@@ -361,6 +367,7 @@ model RecipeDetail {
   traditionWarnings   Json             @default("[]") @map("tradition_warnings")
   revision            PostRevision     @relation(fields: [revisionId], references: [id], onDelete: Cascade)
 
+  @@index([difficulty, cookTimeMinutes, revisionId], map: "recipe_details_search_filters_idx")
   @@map("recipe_details")
 }
 
@@ -381,6 +388,8 @@ model RecipeIngredient {
   @@unique([revisionId, position])
   @@index([ingredientId])
   @@index([revisionId, resolutionStatus])
+  @@index([normalizedName(ops: raw("gin_trgm_ops"))], type: Gin, map: "recipe_ingredients_normalized_name_trgm_idx")
+  @@index([ingredientId, revisionId], map: "recipe_ingredients_search_ingredient_revision_idx")
   @@map("recipe_ingredients")
 }
 
@@ -404,7 +413,19 @@ model PostCategory {
 
   @@id([revisionId, categoryId])
   @@index([categoryId])
+  @@index([categoryId, revisionId], map: "post_categories_search_category_revision_idx")
   @@map("post_categories")
+}
+
+model PostTag {
+  revisionId    String       @map("revision_id") @db.Uuid
+  normalizedTag String       @map("normalized_tag") @db.VarChar(80)
+  tag           String       @db.VarChar(80)
+  revision      PostRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+
+  @@id([revisionId, normalizedTag])
+  @@index([normalizedTag(ops: raw("gin_trgm_ops"))], type: Gin, map: "post_tags_normalized_tag_trgm_idx")
+  @@map("post_tags")
 }
 
 model PostMedia {

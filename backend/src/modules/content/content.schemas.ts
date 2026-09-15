@@ -17,6 +17,26 @@ const uniqueUuidList = (maximum: number) =>
     .max(maximum)
     .refine((values) => new Set(values).size === values.length, 'ID không được trùng lặp');
 
+const optionalTrimmedString = (maximum: number) =>
+  z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().trim().min(1).max(maximum).optional(),
+  );
+
+const optionalUuidCsv = z.preprocess((value) => {
+  if (value === undefined || value === '') return undefined;
+  const values: unknown[] = Array.isArray(value) ? (value as unknown[]) : [value];
+  return values.flatMap((item): unknown[] => (typeof item === 'string' ? item.split(',') : [item]));
+}, uniqueUuidList(20).optional());
+
+const dateOnlySchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, 'Ngày phải ở định dạng YYYY-MM-DD')
+  .refine((value) => {
+    const parsed = new Date(`${value}T00:00:00.000Z`);
+    return !Number.isNaN(parsed.getTime()) && parsed.toISOString().startsWith(value);
+  }, 'Ngày không hợp lệ');
+
 const cloudinaryMediaInputSchema = z
   .object({
     provider: z.literal(MediaProvider.CLOUDINARY),
@@ -63,6 +83,14 @@ const commonContentFields = {
     .optional(),
   excerpt: z.string().trim().min(1).max(500).optional(),
   categoryIds: uniqueUuidList(10).default([]),
+  tags: z
+    .array(z.string().trim().min(1).max(80))
+    .max(15)
+    .default([])
+    .refine(
+      (values) => new Set(values.map((value) => value.toLowerCase())).size === values.length,
+      'Tag không được trùng lặp',
+    ),
   media: mediaListInputSchema,
 };
 
@@ -154,10 +182,50 @@ export const postListQuerySchema = z
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
     type: z.enum(PostType).optional(),
+    q: optionalTrimmedString(120).describe('Từ khóa tiếng Việt có hoặc không dấu'),
+    category: optionalTrimmedString(140)
+      .refine(
+        (value) =>
+          value === undefined ||
+          z.string().uuid().safeParse(value).success ||
+          /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value),
+        'Category phải là UUID hoặc slug kebab-case',
+      )
+      .describe('Category UUID hoặc slug'),
+    maxCookTimeMinutes: z.coerce
+      .number()
+      .int()
+      .min(0)
+      .max(10_080)
+      .optional()
+      .describe('Chỉ trả Recipe có cook time không vượt quá giá trị này'),
+    difficulty: z.enum(RecipeDifficulty).optional().describe('Filter Recipe difficulty'),
+    dietPattern: z
+      .enum(DietPattern)
+      .optional()
+      .describe('Guest filter; authenticated profile đã lưu có quyền ưu tiên'),
+    ingredientIds: optionalUuidCsv.describe(
+      'CSV hoặc repeated UUID; Recipe phải chứa đủ mọi canonical ingredient',
+    ),
+    forDate: dateOnlySchema
+      .optional()
+      .describe('Ngày YYYY-MM-DD để áp lịch tradition PERIODIC; mặc định ngày hiện tại VN'),
   })
   .strict();
 export const postIdentifierParamsSchema = z.object({ idOrSlug: z.string().trim().min(1).max(220) });
 export const postIdParamsSchema = z.object({ id: z.string().uuid() }).strict();
+export const relatedPostsQuerySchema = z
+  .object({
+    limitPerType: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(10)
+      .default(4)
+      .describe('Số kết quả tối đa cho mỗi nhóm Recipe/Blog/Video'),
+    forDate: dateOnlySchema.optional(),
+  })
+  .strict();
 export const deletePostQuerySchema = z
   .object({ expectedVersion: z.coerce.number().int().positive() })
   .strict();
@@ -194,6 +262,7 @@ const revisionSchema = z
     title: z.string(),
     excerpt: z.string().nullable(),
     body: z.string(),
+    tags: z.array(z.string()),
     createdAt: z.string().datetime(),
   })
   .strict();
@@ -285,6 +354,17 @@ const paginationMetaSchema = z
     limit: z.number().int().positive(),
     total: z.number().int().nonnegative(),
     totalPages: z.number().int().nonnegative(),
+    rankingVersion: z.literal('v1'),
+    appliedConstraints: z
+      .object({
+        authenticated: z.boolean(),
+        dietPattern: z.enum(DietPattern).nullable(),
+        allergyCount: z.number().int().nonnegative(),
+        ingredientExclusionCount: z.number().int().nonnegative(),
+        traditions: z.array(z.enum(Tradition)),
+        forDate: dateOnlySchema,
+      })
+      .strict(),
   })
   .strict();
 export const postResponseSchema = z
@@ -292,6 +372,25 @@ export const postResponseSchema = z
   .strict();
 export const postListResponseSchema = z
   .object({ success: z.literal(true), data: z.array(postSchema), meta: paginationMetaSchema })
+  .strict();
+export const relatedPostsResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z
+      .object({
+        recipes: z.array(recipePostSchema),
+        blogs: z.array(blogPostSchema),
+        videos: z.array(videoPostSchema),
+      })
+      .strict(),
+    meta: z
+      .object({
+        rankingVersion: z.literal('v1'),
+        limitPerType: z.number().int().min(1).max(10),
+        appliedConstraints: paginationMetaSchema.shape.appliedConstraints,
+      })
+      .strict(),
+  })
   .strict();
 export const deletePostResponseSchema = z
   .object({
@@ -326,7 +425,11 @@ export type UpdatePostInput = z.infer<typeof updatePostRequestSchema>;
 export type PostListQuery = z.infer<typeof postListQuerySchema>;
 export type PostIdentifierParams = z.infer<typeof postIdentifierParamsSchema>;
 export type PostIdParams = z.infer<typeof postIdParamsSchema>;
+export type RelatedPostsQuery = z.infer<typeof relatedPostsQuerySchema>;
 export type DeletePostQuery = z.infer<typeof deletePostQuerySchema>;
 export type UploadSignatureInput = z.infer<typeof uploadSignatureRequestSchema>;
 export type MediaInput = z.infer<typeof mediaInputSchema>;
 export type PostOutput = z.infer<typeof postSchema>;
+export type AppliedSearchConstraintsOutput = z.infer<
+  typeof paginationMetaSchema.shape.appliedConstraints
+>;

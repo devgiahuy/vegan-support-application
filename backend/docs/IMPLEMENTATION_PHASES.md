@@ -1,6 +1,6 @@
 # Backend Implementation Phases
 
-**Version:** 1.5
+**Version:** 1.6
 
 **Cập nhật:** 15/09/2026
 
@@ -112,7 +112,7 @@ Cập nhật bảng này trong commit của phase. `Commit` phải là hash th�
 | 02    | `COMPLETED`   | 2026-09-15     | This phase commit | Profile/health/diet gates passed; rule set v1 seeded     |
 | 03    | `COMPLETED`   | 2026-09-15     | This phase commit | Catalog gates passed; category/ingredient seed ready     |
 | 04    | `COMPLETED`   | 2026-09-15     | This phase commit | Content/media gates passed; published demo seed ready    |
-| 05    | `NOT_STARTED` | —              | —                 | —                                                        |
+| 05    | `COMPLETED`   | 2026-09-15     | This phase commit | Search/related gates passed; pg_trgm plan evidence saved |
 | 06    | `NOT_STARTED` | —              | —                 | —                                                        |
 | 07    | `NOT_STARTED` | —              | —                 | —                                                        |
 | 08    | `NOT_STARTED` | —              | —                 | —                                                        |

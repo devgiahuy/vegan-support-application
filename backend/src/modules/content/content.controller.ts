@@ -9,12 +9,14 @@ import {
   deletePostResponseSchema,
   postListResponseSchema,
   postResponseSchema,
+  relatedPostsResponseSchema,
   uploadSignatureResponseSchema,
   type CreatePostInput,
   type DeletePostQuery,
   type PostIdentifierParams,
   type PostIdParams,
   type PostListQuery,
+  type RelatedPostsQuery,
   type UpdatePostInput,
   type UploadSignatureInput,
 } from './content.schemas.js';
@@ -35,9 +37,26 @@ export class ContentController {
   listPosts = async (request: Request, response: Response): Promise<void> => {
     const result = await this.contentService.listPublished(
       getValidatedQuery<PostListQuery>(request),
+      request.auth ? { userId: request.auth.userId, role: request.auth.role } : undefined,
     );
     response.status(200).json(
       postListResponseSchema.parse({
+        success: true,
+        data: result.data,
+        meta: result.meta,
+      }),
+    );
+  };
+
+  getRelatedPosts = async (request: Request, response: Response): Promise<void> => {
+    const { id } = getValidatedParams<PostIdParams>(request);
+    const result = await this.contentService.getRelated(
+      id,
+      getValidatedQuery<RelatedPostsQuery>(request),
+      request.auth ? { userId: request.auth.userId, role: request.auth.role } : undefined,
+    );
+    response.status(200).json(
+      relatedPostsResponseSchema.parse({
         success: true,
         data: result.data,
         meta: result.meta,

@@ -9,12 +9,15 @@ import {
   postListQuerySchema,
   postListResponseSchema,
   postResponseSchema,
+  relatedPostsQuerySchema,
+  relatedPostsResponseSchema,
   updatePostRequestSchema,
   uploadSignatureRequestSchema,
   uploadSignatureResponseSchema,
 } from './content.schemas.js';
 
 const authenticated = [{ BearerAuth: [] }, { AccessTokenCookie: [] }];
+const optionalAuthenticated = [{}, ...authenticated];
 
 function errorResponse(errorSchema: ZodType, description: string, codes: string[]) {
   return {
@@ -48,6 +51,7 @@ const recipeExample = {
   excerpt: 'Bữa tối nhanh với đạm thực vật.',
   body: 'Áp chảo đậu hũ rồi xào cùng bông cải và sốt gia vị.',
   categoryIds: ['11111111-1111-4111-8111-111111111111'],
+  tags: ['đậu hũ', 'bữa tối'],
   media: [],
   recipe: {
     servings: 2,
@@ -71,6 +75,10 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
   const updateRequest = registry.register('UpdatePostRequest', updatePostRequestSchema);
   const postResponse = registry.register('PostResponse', postResponseSchema);
   const postListResponse = registry.register('PostListResponse', postListResponseSchema);
+  const relatedPostsResponse = registry.register(
+    'RelatedPostsResponse',
+    relatedPostsResponseSchema,
+  );
   const deleteResponse = registry.register('DeletePostResponse', deletePostResponseSchema);
   const signatureRequest = registry.register(
     'UploadSignatureRequest',
@@ -87,15 +95,49 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     tags: ['Content'],
     summary: 'List nội dung published',
     description:
-      'Chỉ trả active published revision. Phase 04 hỗ trợ pagination và type filter; search/related ranking thuộc Phase 05.',
+      'Tìm kiếm không dấu và filter published content. Ranking v1: title > canonical ingredient > category/tag > body, sau đó publishedAt và UUID. Với access token hợp lệ, backend tự áp dụng allergy, ingredient exclusion, diet pattern và enabled tradition rules trước ranking; dietPattern từ query không thể nới profile đã lưu. ingredientIds yêu cầu Recipe chứa đủ toàn bộ ID.',
     operationId: 'listPublishedPosts',
+    security: optionalAuthenticated,
     request: { query: postListQuerySchema },
     responses: {
       200: {
         description: 'Published Recipe/Blog/Video list',
         content: { 'application/json': { schema: postListResponse } },
       },
-      400: errorResponse(errorSchema, 'Query không hợp lệ', ['VALIDATION_ERROR']),
+      400: errorResponse(errorSchema, 'Query hoặc filter không hợp lệ', [
+        'VALIDATION_ERROR',
+        'INVALID_SEARCH_QUERY',
+      ]),
+      401: errorResponse(errorSchema, 'Access token được gửi nhưng không hợp lệ', [
+        'INVALID_ACCESS_TOKEN',
+        'TOKEN_EXPIRED',
+      ]),
+      403: errorResponse(errorSchema, 'Tài khoản bị cấm', ['ACCOUNT_BANNED']),
+    },
+  });
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/posts/{id}/related',
+    tags: ['Content'],
+    summary: 'Lấy related Recipe, Blog và Video',
+    description:
+      'Chỉ dùng active published revisions, loại current post và dedupe theo post ID. Mỗi type trả tối đa limitPerType; category/canonical ingredient/normalized tag overlap có trọng số 5/4/3, sau đó publishedAt và UUID. Hard constraints từ profile authenticated luôn chạy trước related score.',
+    operationId: 'getRelatedPosts',
+    security: optionalAuthenticated,
+    request: { params: postIdParamsSchema, query: relatedPostsQuerySchema },
+    responses: {
+      200: {
+        description: 'Ba list riêng recipes, blogs và videos cùng ranking metadata',
+        content: { 'application/json': { schema: relatedPostsResponse } },
+      },
+      400: errorResponse(errorSchema, 'ID, limit hoặc forDate không hợp lệ', ['VALIDATION_ERROR']),
+      401: errorResponse(errorSchema, 'Access token được gửi nhưng không hợp lệ', [
+        'INVALID_ACCESS_TOKEN',
+        'TOKEN_EXPIRED',
+      ]),
+      403: errorResponse(errorSchema, 'Tài khoản bị cấm', ['ACCOUNT_BANNED']),
+      404: errorResponse(errorSchema, 'Không tìm thấy published content nguồn', ['NOT_FOUND']),
     },
   });
 

@@ -1,6 +1,7 @@
 import {
   DietPattern,
   IngredientResolutionStatus,
+  PracticeSchedule,
   PostStatus,
   PostType,
   Prisma,
@@ -10,6 +11,7 @@ import { AppError } from '../../common/errors/app-error.js';
 import { catalogSlug, normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 import {
   ContentVersionConflictError,
+  type SearchConstraints,
   type ContentRepository,
   type IngredientMetadataRecord,
   type PostIdentityRecord,
@@ -19,10 +21,12 @@ import {
   type RevisionSnapshot,
 } from './content.repository.js';
 import type {
+  AppliedSearchConstraintsOutput,
   CreatePostInput,
   DeletePostQuery,
   PostListQuery,
   PostOutput,
+  RelatedPostsQuery,
   UpdatePostInput,
 } from './content.schemas.js';
 import type { MediaService } from './media.service.js';
@@ -33,8 +37,35 @@ export interface ContentActor {
   role: Role;
 }
 
-function pagination(page: number, limit: number, total: number) {
-  return { page, limit, total, totalPages: total === 0 ? 0 : Math.ceil(total / limit) };
+const SEARCH_RANKING_VERSION = 'v1' as const;
+const SEARCH_TIMEZONE = 'Asia/Ho_Chi_Minh' as const;
+
+function pagination(
+  page: number,
+  limit: number,
+  total: number,
+  appliedConstraints: AppliedSearchConstraintsOutput,
+) {
+  return {
+    page,
+    limit,
+    total,
+    totalPages: total === 0 ? 0 : Math.ceil(total / limit),
+    rankingVersion: SEARCH_RANKING_VERSION,
+    appliedConstraints,
+  };
+}
+
+function dateOnlyInTimezone(date: Date): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: SEARCH_TIMEZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? '';
+  return `${value('year')}-${value('month')}-${value('day')}`;
 }
 
 function stringList(value: Prisma.JsonValue): string[] {
@@ -74,13 +105,54 @@ export class ContentService {
     private readonly publicationPolicy: ContentPublicationPolicy,
   ) {}
 
-  async listPublished(query: PostListQuery) {
-    const result = await this.repository.listPublished(query);
+  async listPublished(query: PostListQuery, actor?: ContentActor) {
+    const { q, ...filters } = query;
+    const normalizedQuery = q ? normalizeVietnameseText(q) : undefined;
+    if (q && !normalizedQuery) {
+      throw new AppError({
+        statusCode: 400,
+        code: 'INVALID_SEARCH_QUERY',
+        message: 'Từ khóa tìm kiếm phải chứa chữ cái hoặc chữ số',
+      });
+    }
+    const searchContext = await this.searchContext(actor?.userId, query.dietPattern, query.forDate);
+    const result = await this.repository.searchPublished(
+      { ...filters, ...(normalizedQuery ? { normalizedQuery } : {}) },
+      searchContext.constraints,
+    );
     return {
       data: result.records.flatMap((post) =>
         post.publishedRevision ? [this.postOutput(post, post.publishedRevision)] : [],
       ),
-      meta: pagination(query.page, query.limit, result.total),
+      meta: pagination(query.page, query.limit, result.total, searchContext.summary),
+    };
+  }
+
+  async getRelated(id: string, query: RelatedPostsQuery, actor?: ContentActor) {
+    const source = await this.repository.findPublishedPost(id);
+    if (!source?.publishedRevision) throw this.notFoundError();
+    const searchContext = await this.searchContext(actor?.userId, undefined, query.forDate);
+    const groups = await this.repository.findRelatedPublished(
+      source,
+      query.limitPerType,
+      searchContext.constraints,
+    );
+    const recipes = groups.RECIPE.map((post) => this.publishedPostOutput(post)).filter(
+      (post): post is Extract<PostOutput, { type: 'RECIPE' }> => post.type === 'RECIPE',
+    );
+    const blogs = groups.BLOG.map((post) => this.publishedPostOutput(post)).filter(
+      (post): post is Extract<PostOutput, { type: 'BLOG' }> => post.type === 'BLOG',
+    );
+    const videos = groups.VIDEO.map((post) => this.publishedPostOutput(post)).filter(
+      (post): post is Extract<PostOutput, { type: 'VIDEO' }> => post.type === 'VIDEO',
+    );
+    return {
+      data: { recipes, blogs, videos },
+      meta: {
+        rankingVersion: SEARCH_RANKING_VERSION,
+        limitPerType: query.limitPerType,
+        appliedConstraints: searchContext.summary,
+      },
     };
   }
 
@@ -180,10 +252,87 @@ export class ContentService {
       ...(input.excerpt ? { excerpt: input.excerpt } : {}),
       body: input.body,
       categoryIds: input.categoryIds,
+      tags: this.normalizeTags(input.tags),
       media,
     };
     if (input.type !== PostType.RECIPE) return common;
     return { ...common, recipe: await this.buildRecipeSnapshot(input.recipe) };
+  }
+
+  private async searchContext(
+    userId: string | undefined,
+    requestedDietPattern: PostListQuery['dietPattern'],
+    requestedDate: string | undefined,
+  ): Promise<{ constraints: SearchConstraints; summary: AppliedSearchConstraintsOutput }> {
+    const forDate = requestedDate ?? dateOnlyInTimezone(new Date());
+    if (!userId) {
+      return {
+        constraints: {
+          ...(requestedDietPattern ? { dietPattern: requestedDietPattern } : {}),
+          allergenCodes: [],
+          excludedIngredientIds: [],
+          excludedNormalizedNames: [],
+          traditions: [],
+          requireResolvedIngredients: false,
+        },
+        summary: {
+          authenticated: false,
+          dietPattern: requestedDietPattern ?? null,
+          allergyCount: 0,
+          ingredientExclusionCount: 0,
+          traditions: [],
+          forDate,
+        },
+      };
+    }
+
+    const profile = await this.repository.findSearchProfile(userId);
+    const preference = profile?.dietPreference;
+    const scheduleApplies =
+      preference?.practiceSchedule === PracticeSchedule.PERMANENT ||
+      (preference?.practiceSchedule === PracticeSchedule.PERIODIC &&
+        profile?.dietScheduleDates.some(
+          (scheduleDate) => scheduleDate.date.toISOString().slice(0, 10) === forDate,
+        ));
+    const traditions = scheduleApplies
+      ? [
+          ...new Set(
+            profile?.dietPreferenceRules.flatMap(({ ruleDefinition }) =>
+              ruleDefinition.active && ruleDefinition.hardConstraint && ruleDefinition.tradition
+                ? [ruleDefinition.tradition]
+                : [],
+            ) ?? [],
+          ),
+        ]
+      : [];
+    const allergenCodes = profile?.allergies.map((allergy) => allergy.allergenCode) ?? [];
+    const exclusions = profile?.ingredientExclusions ?? [];
+    const excludedIngredientIds = exclusions.flatMap((exclusion) =>
+      exclusion.ingredientId ? [exclusion.ingredientId] : [],
+    );
+    const excludedNormalizedNames = exclusions.map((exclusion) => exclusion.normalizedName);
+    const dietPattern = preference?.dietPattern ?? requestedDietPattern;
+    const requireResolvedIngredients = Boolean(
+      dietPattern || allergenCodes.length || exclusions.length || traditions.length,
+    );
+    return {
+      constraints: {
+        ...(dietPattern ? { dietPattern } : {}),
+        allergenCodes,
+        excludedIngredientIds,
+        excludedNormalizedNames,
+        traditions,
+        requireResolvedIngredients,
+      },
+      summary: {
+        authenticated: true,
+        dietPattern: dietPattern ?? null,
+        allergyCount: allergenCodes.length,
+        ingredientExclusionCount: exclusions.length,
+        traditions,
+        forDate,
+      },
+    };
   }
 
   private async buildRecipeSnapshot(
@@ -302,6 +451,17 @@ export class ContentService {
     };
   }
 
+  private normalizeTags(tags: string[]): Array<{ tag: string; normalizedTag: string }> {
+    const normalized = tags.map((tag) => ({ tag, normalizedTag: normalizeVietnameseText(tag) }));
+    if (
+      normalized.some((item) => !item.normalizedTag) ||
+      new Set(normalized.map((item) => item.normalizedTag)).size !== normalized.length
+    ) {
+      throw this.invalidContentError('Tag phải khác nhau sau khi chuẩn hóa và chứa chữ hoặc số');
+    }
+    return normalized;
+  }
+
   private postOutput(
     post: PostIdentityRecord | PublishedPostRecord,
     revision: RevisionRecord,
@@ -327,6 +487,7 @@ export class ContentService {
         title: revision.title,
         excerpt: revision.excerpt,
         body: revision.body,
+        tags: revision.tags.map((item) => item.tag),
         createdAt: revision.createdAt.toISOString(),
       },
       categories: revision.categories.map(({ category }) => ({
@@ -395,6 +556,18 @@ export class ContentService {
     }
     if (post.type === PostType.BLOG) return { ...common, type: PostType.BLOG, recipe: null };
     return { ...common, type: PostType.VIDEO, recipe: null };
+  }
+
+  private publishedPostOutput(post: PublishedPostRecord): PostOutput {
+    if (!post.publishedRevision) {
+      throw new AppError({
+        statusCode: 500,
+        code: 'CONTENT_DATA_INTEGRITY_ERROR',
+        message: 'Published content thiếu published revision',
+        expose: false,
+      });
+    }
+    return this.postOutput(post, post.publishedRevision);
   }
 
   private async requireOwnedPost(actor: ContentActor, id: string): Promise<PostIdentityRecord> {

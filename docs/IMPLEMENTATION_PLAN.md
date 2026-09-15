@@ -1,6 +1,6 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 1.2
+**Version:** 1.3
 
 **Ngày chốt:** 15/09/2026
 
@@ -255,7 +255,7 @@ Health calculation MVP dùng dữ liệu `MANUAL`: `BMI = weightKg / heightMeter
 | `categories`                      | id, parentId, name, slug, type, status, sortOrder                                                        |
 | `category_proposals`              | proposedById, parentId, name, slug, type, status, reviewedById, resolvedCategoryId                       |
 | `posts`                           | id, authorId, type, slug, status, version, publishedRevisionId, publishedAt, deletedAt, deletedById      |
-| `post_revisions`                  | postId, version, title, excerpt, body, status, createdById, reviewNote                                   |
+| `post_revisions`                  | postId, version, title/body + normalized search fields, status, createdById, reviewNote                  |
 | `recipe_details`                  | revisionId, servings, prep/cook time, difficulty, nutrition, mealPlannerEligible, derived constraints    |
 | `ingredients`                     | id, canonicalName, normalizedName, foodGroup, status                                                     |
 | `ingredient_aliases`              | ingredientId, alias, normalizedAlias; alias có thể map nhiều candidate                                   |
@@ -266,6 +266,7 @@ Health calculation MVP dùng dữ liệu `MANUAL`: `BMI = weightKg / heightMeter
 | `recipe_ingredients`              | revisionId, ingredientId nullable, displayName, normalizedName, amount, unit, optional, resolutionStatus |
 | `recipe_diet_compatibilities`     | revisionId, dietPattern, compatible, reasonCodes                                                         |
 | `post_categories`                 | revisionId, categoryId                                                                                   |
+| `post_tags`                       | revisionId, tag, normalizedTag                                                                           |
 | `post_media`                      | revisionId, kind, provider, publicId, secureUrl, MIME/size/dimension metadata                            |
 | `comments`                        | id, postId, authorId, parentId, content, status, editedAt, deletedAt                                     |
 | `votes`                           | userId, postId, createdAt; unique(userId, postId)                                                        |
@@ -273,6 +274,10 @@ Health calculation MVP dùng dữ liệu `MANUAL`: `BMI = weightKg / heightMeter
 | `bookmarks`                       | userId, postId, createdAt; unique(userId, postId)                                                        |
 
 `post_revisions` cho phép bản published cũ tiếp tục hiển thị trong lúc bản sửa mới chờ duyệt.
+Search v1 dùng normalized ASCII fields với GIN trigram indexes; ranking theo title > canonical
+ingredient > category/tag > body. Allergy, ingredient exclusion, diet pattern và enabled tradition rule
+của user đăng nhập luôn được lọc trước ranking. Related content dùng category/tag/ingredient overlap và
+trả ba nhóm Recipe/Blog/Video riêng.
 
 ### 4.3 Moderation, AI và behavior
 
