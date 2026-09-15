@@ -1,0 +1,11 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Domain models intentionally start in Phase 01. Phase 00 only verifies the
+// database connection and establishes Prisma migration/seed tooling.

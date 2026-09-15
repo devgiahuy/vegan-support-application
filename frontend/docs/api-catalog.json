@@ -1,0 +1,25 @@
+{
+  "$generated": "scripts/sync-swagger.mjs — không sửa tay",
+  "source": "../backend/openapi.json",
+  "generatedAt": "2026-09-15T08:15:35.508Z",
+  "stats": {
+    "operations": 1,
+    "groups": 1,
+    "schemas": 3
+  },
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/api/v1/health",
+      "group": "Foundation",
+      "summary": "Kiểm tra trạng thái API và PostgreSQL",
+      "operationId": "getHealth",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "HealthResponse",
+        "503": "HealthUnavailableResponse"
+      }
+    }
+  ]
+}
