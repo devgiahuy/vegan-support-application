@@ -52,6 +52,7 @@ export function toPublicUser(
     id: user.id,
     email: user.email,
     displayName: user.displayName,
+    avatarUrl: user.avatarUrl,
     role: user.role,
     status: user.status,
     createdAt: user.createdAt.toISOString(),

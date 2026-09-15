@@ -42,6 +42,7 @@ export const userResponseSchema = z
     id: z.string().uuid(),
     email: z.string().email(),
     displayName: z.string(),
+    avatarUrl: z.string().url().nullable(),
     role: z.enum(Role),
     status: z.enum(UserStatus),
     createdAt: z.string().datetime(),
@@ -80,10 +81,6 @@ export const logoutResponseSchema = z
       .strict(),
     meta: z.null(),
   })
-  .strict();
-
-export const meResponseSchema = z
-  .object({ success: z.literal(true), data: userResponseSchema, meta: z.null() })
   .strict();
 
 export type RegisterInput = z.infer<typeof registerRequestSchema>;

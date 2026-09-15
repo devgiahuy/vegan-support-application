@@ -1,6 +1,6 @@
 # Backend Implementation Phases
 
-**Version:** 1.2
+**Version:** 1.3
 
 **Cập nhật:** 15/09/2026
 
@@ -109,7 +109,7 @@ Cập nhật bảng này trong commit của phase. `Commit` phải là hash th�
 | ----- | ------------- | -------------- | ----------------- | ------------------------------------------------------ |
 | 00    | `COMPLETED`   | 2026-09-15     | This phase commit | Foundation gate passed; hash reported in phase handoff |
 | 01    | `COMPLETED`   | 2026-09-15     | This phase commit | Auth/session gate passed; hash reported in phase handoff |
-| 02    | `NOT_STARTED` | —              | —                 | —                                                      |
+| 02    | `COMPLETED`   | 2026-09-15     | This phase commit | Profile/health/diet gates passed; rule set v1 seeded    |
 | 03    | `NOT_STARTED` | —              | —                 | —                                                      |
 | 04    | `NOT_STARTED` | —              | —                 | —                                                      |
 | 05    | `NOT_STARTED` | —              | —                 | —                                                      |

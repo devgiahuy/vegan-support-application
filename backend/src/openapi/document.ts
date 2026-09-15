@@ -5,6 +5,7 @@ import {
   healthUnavailableResponseSchema,
 } from '../modules/health/health.schemas.js';
 import { registerAuthOpenApi } from '../modules/auth/auth.openapi.js';
+import { registerProfileOpenApi } from '../modules/profile/profile.openapi.js';
 
 const registry = new OpenAPIRegistry();
 
@@ -34,6 +35,7 @@ registry.registerPath({
 });
 
 registerAuthOpenApi(registry, registeredErrorResponse);
+registerProfileOpenApi(registry, registeredErrorResponse);
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
@@ -49,5 +51,6 @@ export const openApiDocument = generator.generateDocument({
     { name: 'Foundation', description: 'Service health and foundation contract' },
     { name: 'Auth', description: 'Authentication and refresh-session lifecycle' },
     { name: 'Users', description: 'Authenticated user contract' },
+    { name: 'Diet Rules', description: 'Versioned diet and tradition rule confirmation' },
   ],
 });

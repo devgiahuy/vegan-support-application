@@ -228,7 +228,7 @@ Pagination:
 | `diet_schedule_dates` | userId, date, enabled; dùng khi `practiceSchedule=PERIODIC` |
 | `diet_rule_definitions` | code, type, tradition nullable, ingredientId nullable, defaultEnabled, version, active |
 | `user_allergies` | userId, ingredient/allergen code, severity optional, active |
-| `user_ingredient_exclusions` | userId, ingredientId, reason, active |
+| `user_ingredient_exclusions` | Phase 02: userId, ingredientName, normalizedName, reason, active; Phase 03 bổ sung canonical ingredientId khi catalog tồn tại |
 | `contributor_profiles` | userId, contributorType, approvalBasis, approvedAt, approvedBy |
 | `contributor_applications` | userId, requestedType, experience, referenceLinks, source, status, reviewNote |
 
@@ -245,6 +245,8 @@ HealthDataSource     MANUAL
 ```
 
 MVP không suy luận tradition từ diet pattern. User có thể chọn `VEGAN + PERIODIC + CHRISTIAN` hoặc tổ hợp khác nếu không vi phạm rule dữ liệu. `requestedType` trong Contributor application không được đưa vào JWT và không cấp quyền cho tới khi application ở trạng thái `APPROVED`.
+
+Health calculation MVP dùng dữ liệu `MANUAL`: `BMI = weightKg / heightMeters²`; BMR theo Mifflin–St Jeor (`+5` cho `MALE`, `-161` cho `FEMALE`); TDEE bằng BMR nhân activity factor `1.2 / 1.375 / 1.55 / 1.725 / 1.9` tương ứng `SEDENTARY / LIGHTLY_ACTIVE / MODERATELY_ACTIVE / VERY_ACTIVE / EXTRA_ACTIVE`. Kết quả được làm tròn hai chữ số thập phân.
 
 ### 4.2 Content và community
 

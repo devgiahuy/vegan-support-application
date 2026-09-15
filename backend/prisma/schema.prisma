@@ -46,21 +46,88 @@ enum ContributorApplicationSource {
   @@map("contributor_application_source")
 }
 
+enum HealthSex {
+  MALE
+  FEMALE
+
+  @@map("health_sex")
+}
+
+enum ActivityLevel {
+  SEDENTARY
+  LIGHTLY_ACTIVE
+  MODERATELY_ACTIVE
+  VERY_ACTIVE
+  EXTRA_ACTIVE
+
+  @@map("activity_level")
+}
+
+enum HealthDataSource {
+  MANUAL
+
+  @@map("health_data_source")
+}
+
+enum DietPattern {
+  VEGAN
+  LACTO_OVO
+
+  @@map("diet_pattern")
+}
+
+enum PracticeSchedule {
+  PERMANENT
+  PERIODIC
+
+  @@map("practice_schedule")
+}
+
+enum Tradition {
+  NONE
+  BUDDHIST
+  CHRISTIAN
+
+  @@map("tradition")
+}
+
+enum DietRuleSource {
+  DIET_PATTERN
+  TRADITION
+
+  @@map("diet_rule_source")
+}
+
+enum AllergySeverity {
+  MILD
+  MODERATE
+  SEVERE
+
+  @@map("allergy_severity")
+}
+
 model User {
-  id                  String                   @id @default(uuid()) @db.Uuid
-  email               String                   @unique @db.VarChar(320)
-  passwordHash        String                   @map("password_hash")
-  displayName         String                   @map("display_name") @db.VarChar(100)
-  role                Role                     @default(MEMBER)
-  status              UserStatus               @default(ACTIVE)
-  failedLoginAttempts Int                      @default(0) @map("failed_login_attempts")
-  lockedUntil         DateTime?                @map("locked_until") @db.Timestamptz(3)
-  lastLoginAt         DateTime?                @map("last_login_at") @db.Timestamptz(3)
-  createdAt           DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt           DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt           DateTime?                @map("deleted_at") @db.Timestamptz(3)
-  refreshSessions     RefreshSession[]
-  applications        ContributorApplication[]
+  id                   String                    @id @default(uuid()) @db.Uuid
+  email                String                    @unique @db.VarChar(320)
+  passwordHash         String                    @map("password_hash")
+  displayName          String                    @map("display_name") @db.VarChar(100)
+  avatarUrl            String?                   @map("avatar_url") @db.VarChar(2048)
+  role                 Role                      @default(MEMBER)
+  status               UserStatus                @default(ACTIVE)
+  failedLoginAttempts  Int                       @default(0) @map("failed_login_attempts")
+  lockedUntil          DateTime?                 @map("locked_until") @db.Timestamptz(3)
+  lastLoginAt          DateTime?                 @map("last_login_at") @db.Timestamptz(3)
+  createdAt            DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt            DateTime?                 @map("deleted_at") @db.Timestamptz(3)
+  refreshSessions      RefreshSession[]
+  applications         ContributorApplication[]
+  healthProfile        HealthProfile?
+  dietPreference       DietPreference?
+  dietPreferenceRules  DietPreferenceRule[]
+  dietScheduleDates    DietScheduleDate[]
+  allergies            UserAllergy[]
+  ingredientExclusions UserIngredientExclusion[]
 
   @@map("users")
 }
@@ -100,4 +167,117 @@ model ContributorApplication {
 
   @@index([userId, createdAt])
   @@map("contributor_applications")
+}
+
+model HealthProfile {
+  userId        String           @id @map("user_id") @db.Uuid
+  heightCm      Decimal          @map("height_cm") @db.Decimal(5, 2)
+  weightKg      Decimal          @map("weight_kg") @db.Decimal(6, 2)
+  age           Int
+  sex           HealthSex
+  activityLevel ActivityLevel    @map("activity_level")
+  bmi           Decimal          @db.Decimal(6, 2)
+  bmr           Decimal          @db.Decimal(8, 2)
+  tdee          Decimal          @db.Decimal(8, 2)
+  dataSource    HealthDataSource @default(MANUAL) @map("data_source")
+  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("health_profiles")
+}
+
+model DietPreference {
+  userId           String           @id @map("user_id") @db.Uuid
+  dietPattern      DietPattern      @map("diet_pattern")
+  practiceSchedule PracticeSchedule @map("practice_schedule")
+  tradition        Tradition
+  ruleSetVersion   Int              @map("rule_set_version")
+  confirmedAt      DateTime         @map("confirmed_at") @db.Timestamptz(3)
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("diet_preferences")
+}
+
+model DietRuleDefinition {
+  id              String               @id @default(uuid()) @db.Uuid
+  code            String               @db.VarChar(120)
+  label           String               @db.VarChar(180)
+  description     String
+  source          DietRuleSource
+  dietPattern     DietPattern?         @map("diet_pattern")
+  tradition       Tradition?
+  defaultEnabled  Boolean              @default(true) @map("default_enabled")
+  hardConstraint  Boolean              @default(true) @map("hard_constraint")
+  ruleSetVersion  Int                  @map("rule_set_version")
+  active          Boolean              @default(true)
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  preferenceRules DietPreferenceRule[]
+
+  @@unique([code, ruleSetVersion])
+  @@index([ruleSetVersion, active])
+  @@map("diet_rule_definitions")
+}
+
+model DietPreferenceRule {
+  userId           String             @map("user_id") @db.Uuid
+  ruleDefinitionId String             @map("rule_definition_id") @db.Uuid
+  enabled          Boolean
+  source           DietRuleSource
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ruleDefinition   DietRuleDefinition @relation(fields: [ruleDefinitionId], references: [id], onDelete: Restrict)
+
+  @@id([userId, ruleDefinitionId])
+  @@index([userId, enabled])
+  @@map("diet_preference_rules")
+}
+
+model DietScheduleDate {
+  userId    String   @map("user_id") @db.Uuid
+  date      DateTime @db.Date
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, date])
+  @@index([userId, enabled, date])
+  @@map("diet_schedule_dates")
+}
+
+model UserAllergy {
+  id           String           @id @default(uuid()) @db.Uuid
+  userId       String           @map("user_id") @db.Uuid
+  allergenCode String           @map("allergen_code") @db.VarChar(100)
+  label        String?          @db.VarChar(160)
+  severity     AllergySeverity?
+  active       Boolean          @default(true)
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, allergenCode])
+  @@index([userId, active])
+  @@map("user_allergies")
+}
+
+model UserIngredientExclusion {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  ingredientName String   @map("ingredient_name") @db.VarChar(160)
+  normalizedName String   @map("normalized_name") @db.VarChar(160)
+  reason         String?  @db.VarChar(500)
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, normalizedName])
+  @@index([userId, active])
+  @@map("user_ingredient_exclusions")
 }

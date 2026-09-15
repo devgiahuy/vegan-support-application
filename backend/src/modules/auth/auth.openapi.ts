@@ -6,7 +6,6 @@ import {
   loginRequestSchema,
   logoutRequestSchema,
   logoutResponseSchema,
-  meResponseSchema,
   refreshResponseSchema,
   registerRequestSchema,
 } from './auth.schemas.js';
@@ -75,7 +74,6 @@ export function registerAuthOpenApi(registry: OpenAPIRegistry, errorSchema: ZodT
   const authSessionResponse = registry.register('AuthSessionResponse', authSessionResponseSchema);
   const refreshResponse = registry.register('RefreshResponse', refreshResponseSchema);
   const logoutResponse = registry.register('LogoutResponse', logoutResponseSchema);
-  const meResponse = registry.register('MeResponse', meResponseSchema);
 
   registry.registerPath({
     method: 'post',
@@ -188,23 +186,6 @@ export function registerAuthOpenApi(registry: OpenAPIRegistry, errorSchema: ZodT
         headers: clearedSessionCookieHeaders,
         content: { 'application/json': { schema: logoutResponse } },
       },
-    },
-  });
-
-  registry.registerPath({
-    method: 'get',
-    path: '/api/v1/users/me',
-    tags: ['Users'],
-    summary: 'Lấy user và role đã được backend phê duyệt',
-    operationId: 'getMe',
-    security: [{ BearerAuth: [] }, { AccessTokenCookie: [] }],
-    responses: {
-      200: {
-        description: 'User hiện tại',
-        content: { 'application/json': { schema: meResponse } },
-      },
-      401: errorResponse(errorSchema, 'Yêu cầu đăng nhập', 'AUTH_REQUIRED'),
-      403: errorResponse(errorSchema, 'Tài khoản đã bị cấm', 'ACCOUNT_BANNED'),
     },
   });
 }

@@ -17,10 +17,13 @@ import { AuthService } from './modules/auth/auth.service.js';
 import { AuthenticationMiddleware } from './modules/auth/authentication.middleware.js';
 import { PasswordService } from './modules/auth/password.service.js';
 import { TokenService } from './modules/auth/token.service.js';
+import { DietController } from './modules/diet/diet.controller.js';
+import { createDietRouter } from './modules/diet/diet.router.js';
 import { createHealthRouter } from './modules/health/health.router.js';
+import { ProfileRepository } from './modules/profile/profile.repository.js';
+import { ProfileService } from './modules/profile/profile.service.js';
 import { UsersController } from './modules/users/users.controller.js';
 import { createUsersRouter } from './modules/users/users.router.js';
-import { UsersService } from './modules/users/users.service.js';
 import { openApiDocument } from './openapi/document.js';
 
 export interface AppDependencies {
@@ -36,7 +39,9 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   const authService = new AuthService(authRepository, new PasswordService(), tokenService, config);
   const authController = new AuthController(authService, config);
   const authentication = new AuthenticationMiddleware(tokenService, authRepository);
-  const usersController = new UsersController(new UsersService(authRepository));
+  const profileService = new ProfileService(new ProfileRepository(database.client));
+  const usersController = new UsersController(profileService);
+  const dietController = new DietController(profileService);
 
   app.disable('x-powered-by');
   app.use(helmet());
@@ -72,6 +77,7 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/health', createHealthRouter(config, database));
   app.use('/api/v1/auth', createAuthRouter(authController));
   app.use('/api/v1/users', createUsersRouter(usersController, authentication));
+  app.use('/api/v1/diet-rules', createDietRouter(dietController, authentication));
 
   app.use(notFoundHandler);
   app.use(createErrorHandler(logger));

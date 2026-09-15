@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 1.2
+**Version:** 1.3
 
 **Cập nhật:** 15/09/2026
 
@@ -8,7 +8,7 @@
 
 **Contract target:** `/api/v1`
 
-> Tài liệu này là registry sống cho những capability backend đã sẵn sàng để frontend tích hợp. Foundation, OpenAPI và Authentication & Sessions đã hoàn tất; các feature còn lại giữ `PLANNED` cho tới khi phase tương ứng vượt qua đầy đủ completion gate.
+> Tài liệu này là registry sống cho những capability backend đã sẵn sàng để frontend tích hợp. Foundation, Authentication & Sessions, Profile/Health và Diet Rules đã hoàn tất; các feature còn lại giữ `PLANNED` cho tới khi phase tương ứng vượt qua đầy đủ completion gate.
 
 ---
 
@@ -202,12 +202,12 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 | POST   | `/auth/login`                | `READY`   | 2026-09-15      | No            | Trả access token và đặt access/refresh HttpOnly cookies; generic invalid-credential response   |
 | POST   | `/auth/refresh`              | `READY`   | 2026-09-15      | No            | Đọc refresh cookie, rotation mỗi lần dùng; reuse revoke toàn token family                      |
 | POST   | `/auth/logout`               | `READY`   | 2026-09-15      | No            | Idempotent; body `{ allDevices?: boolean }`; revoke phiên hiện tại hoặc toàn bộ phiên của user |
-| GET    | `/users/me`                  | `READY`   | 2026-09-15      | No            | Bearer/access cookie; trả role backend-authoritative và trạng thái application riêng           |
-| PATCH  | `/users/me`                  | `PLANNED` | —               | No            | Profile cơ bản                                             |
-| PUT    | `/users/me/health-profile`   | `PLANNED` | —               | No            | Manual BMI/BMR/TDEE inputs                                 |
-| POST   | `/diet-rules/preview`        | `PLANNED` | —               | No            | Trả rule set để user toggle/xác nhận                       |
-| PUT    | `/users/me/diet-preferences` | `PLANNED` | —               | No            | Lưu pattern/schedule/tradition/rules                       |
-| PUT    | `/users/me/diet-schedule`    | `PLANNED` | —               | No            | Date-only values cho PERIODIC                              |
+| GET    | `/users/me`                  | `READY`   | 2026-09-15      | No            | Trả profile, health `MANUAL`, diet snapshot/effective constraints; không lộ hash/session        |
+| PATCH  | `/users/me`                  | `READY`   | 2026-09-15      | No            | Cập nhật `displayName`/HTTP(S) `avatarUrl`; cần ít nhất một field                               |
+| PUT    | `/users/me/health-profile`   | `READY`   | 2026-09-15      | No            | Upsert manual inputs; backend tính BMI, Mifflin–St Jeor BMR và activity-factor TDEE             |
+| POST   | `/diet-rules/preview`        | `READY`   | 2026-09-15      | No            | Auth required; trả rule set v1, source/default/hard flag; tradition rule là configurable        |
+| PUT    | `/users/me/diet-preferences` | `READY`   | 2026-09-15      | No            | Full snapshot; exact preview IDs/version; PERIODIC cần dates; allergy/exclusion luôn hard       |
+| PUT    | `/users/me/diet-schedule`    | `READY`   | 2026-09-15      | No            | Replace lịch PERIODIC bằng `YYYY-MM-DD`, semantic `Asia/Ho_Chi_Minh`, PostgreSQL `DATE`          |
 | DELETE | `/users/me/behavior-history` | `PLANNED` | —               | No            | Reset personalization                                      |
 
 ### 6.3 Content và Community
@@ -427,6 +427,12 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `SELF_APPROVAL_FORBIDDEN`           | Giữ queue và báo lỗi rõ                                               |
 | `DIET_RULE_RECONFIRMATION_REQUIRED` | Mở review rule flow                                                   |
 | `DIET_SCHEDULE_REQUIRED`            | Yêu cầu chọn ngày periodic                                            |
+| `DIET_RULES_UNAVAILABLE`            | Không cho lưu preference; hiển thị trạng thái cấu hình chưa sẵn sàng  |
+| `INVALID_DIET_RULE_SELECTION`       | Sync lại preview và yêu cầu user xác nhận toàn bộ rule                |
+| `DIET_RULE_REQUIRED`                | Giữ bật hard constraint của diet pattern                              |
+| `DIET_PREFERENCES_REQUIRED`         | Điều hướng user lưu diet preference trước khi chỉnh lịch              |
+| `DIET_SCHEDULE_NOT_APPLICABLE`      | Không gửi ngày khi practice schedule là `PERMANENT`                    |
+| `INVALID_INGREDIENT_EXCLUSIONS`     | Yêu cầu loại mục rỗng/trùng khỏi danh sách exclusion                   |
 | `HEALTH_PROFILE_INCOMPLETE`         | Link tới health profile                                               |
 | `NO_ELIGIBLE_RECIPE`                | Hiển thị slot trống/warnings, không crash                             |
 | `VERIFICATION_ALREADY_EXISTS`       | Refresh target và hiển thị reviewer hiện tại                          |
@@ -497,6 +503,7 @@ Thêm entry mới nhất ở trên cùng.
 
 | Date       | Version | Module     | Change                                                                                  | Breaking | FE action                                                         |
 | ---------- | ------- | ---------- | --------------------------------------------------------------------------------------- | :------: | ----------------------------------------------------------------- |
+| 2026-09-15 | 1.3     | Profile/Diet | Thêm profile, BMI/BMR/TDEE, rule preview v1, preference/effective constraints và PERIODIC dates | No | Sync OpenAPI; tạo DTO/Model/Mapper riêng cho profile và diet flow |
 | 2026-09-15 | 1.2     | Auth       | Hoàn tất register/login/refresh rotation/logout, RBAC primitives và `/users/me`          |    No    | Sync OpenAPI; tích hợp proxy/cookie với `withCredentials=true`    |
 | 2026-09-15 | 1.1     | Foundation | Hoàn tất health, Swagger UI và OpenAPI JSON; thêm request ID và error envelope nền tảng |    No    | Dùng catalog OpenAPI đã sync; chưa cần tạo consumer UI cho health |
 | 2026-09-15 | 1.0     | All        | Tạo integration registry; backend chưa triển khai                                       |    No    | Không tích hợp API thật cho tới khi status READY                  |

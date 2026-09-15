@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
   "source": "../backend/openapi.json",
-  "generatedAt": "2026-09-15T10:46:27.484Z",
+  "generatedAt": "2026-09-15T11:06:06.381Z",
   "stats": {
-    "operations": 6,
-    "groups": 3,
-    "schemas": 10
+    "operations": 11,
+    "groups": 4,
+    "schemas": 19
   },
   "operations": [
     {
@@ -95,14 +95,118 @@
       "method": "GET",
       "path": "/api/v1/users/me",
       "group": "Users",
-      "summary": "Lấy user và role đã được backend phê duyệt",
+      "summary": "Lấy hồ sơ người dùng hiện tại",
       "operationId": "getMe",
       "params": [],
       "request": null,
       "responses": {
-        "200": "MeResponse",
+        "200": "ProfileResponse",
         "401": "ErrorResponse",
         "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/users/me",
+      "group": "Users",
+      "summary": "Cập nhật hồ sơ cơ bản",
+      "operationId": "updateMe",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "UpdateBasicProfileRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "ProfileResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/users/me/health-profile",
+      "group": "Users",
+      "summary": "Lưu dữ liệu sức khỏe thủ công và tính BMI/BMR/TDEE",
+      "operationId": "updateHealthProfile",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "HealthProfileRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "HealthProfileResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/diet-rules/preview",
+      "group": "Diet Rules",
+      "summary": "Xem trước bộ quy tắc diet/tradition hiện hành",
+      "operationId": "previewDietRules",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "DietRulePreviewRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "DietRulePreviewResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/users/me/diet-preferences",
+      "group": "Users",
+      "summary": "Xác nhận diet preferences, rules và hard constraints cá nhân",
+      "operationId": "saveDietPreferences",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "SaveDietPreferencesRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "DietPreferenceResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "409": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/users/me/diet-schedule",
+      "group": "Users",
+      "summary": "Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC",
+      "operationId": "updateDietSchedule",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "UpdateDietScheduleRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "DietScheduleResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "409": "ErrorResponse"
       }
     }
   ]

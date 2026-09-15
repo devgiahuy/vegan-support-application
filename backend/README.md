@@ -1,7 +1,7 @@
 # Vegan Support Backend
 
-Production-shaped Express/TypeScript foundation for the Vegan Support Application. Phase 00 exposes
-only service documentation and `GET /api/v1/health`; business modules begin in later phases.
+Express/TypeScript API for the Vegan Support Application. The implemented scope includes the service
+foundation, authentication/sessions, user profiles, manual health metrics, and versioned diet rules.
 
 ## Prerequisites
 
@@ -26,6 +26,11 @@ Local endpoints:
 - API health: `http://localhost:4000/api/v1/health`
 - Swagger UI: `http://localhost:4000/api-docs`
 - OpenAPI JSON: `http://localhost:4000/api-docs.json`
+
+Profile calculations use manual height, weight, age, sex, and activity inputs. BMR follows the
+Mifflin–St Jeor formula; TDEE factors are 1.2, 1.375, 1.55, 1.725, and 1.9 from sedentary through
+extra-active. Diet rule set v1 is seeded by `npm run seed`, and `PERIODIC` dates are stored as
+date-only values for `Asia/Ho_Chi_Minh`.
 
 ## Quality gates
 

@@ -62,6 +62,7 @@ Rotate refresh token và cấp access token mới
             "id",
             "email",
             "displayName",
+            "avatarUrl",
             "role",
             "status",
             "createdAt",
@@ -78,6 +79,13 @@ Rotate refresh token và cấp access token mới
             },
             "displayName": {
               "type": "string",
+              "_truncated": true
+            },
+            "avatarUrl": {
+              "type": [
+                "string",
+                "null"
+              ],
               "_truncated": true
             },
             "role": {

@@ -2,14 +2,229 @@
 # Users
 
 ## GET `/api/v1/users/me`
-Lấy user và role đã được backend phê duyệt
+Lấy hồ sơ người dùng hiện tại
 - operationId: `getMe`
 - Params: —
 - Request: —
-- Responses: `200` → MeResponse, `401` → ErrorResponse, `403` → ErrorResponse
+- Responses: `200` → ProfileResponse, `401` → ErrorResponse, `403` → ErrorResponse
+
+## PATCH `/api/v1/users/me`
+Cập nhật hồ sơ cơ bản
+- operationId: `updateMe`
+- Params: —
+- Request: `UpdateBasicProfileRequest` (required)
+- Responses: `200` → ProfileResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse
+
+## PUT `/api/v1/users/me/health-profile`
+Lưu dữ liệu sức khỏe thủ công và tính BMI/BMR/TDEE
+- operationId: `updateHealthProfile`
+- Params: —
+- Request: `HealthProfileRequest` (required)
+- Responses: `200` → HealthProfileResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse
+
+## PUT `/api/v1/users/me/diet-preferences`
+Xác nhận diet preferences, rules và hard constraints cá nhân
+- operationId: `saveDietPreferences`
+- Params: —
+- Request: `SaveDietPreferencesRequest` (required)
+- Responses: `200` → DietPreferenceResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `409` → ErrorResponse, `503` → ErrorResponse
+
+## PUT `/api/v1/users/me/diet-schedule`
+Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
+- operationId: `updateDietSchedule`
+- Params: —
+- Request: `UpdateDietScheduleRequest` (required)
+- Responses: `200` → DietScheduleResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `409` → ErrorResponse
 
 ---
 ### Schemas dùng trong nhóm
+
+#### DietPreferenceResponse
+```json
+{
+  "type": "object",
+  "required": [
+    "success",
+    "data",
+    "meta"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "enum": [
+        true
+      ]
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "dietPattern",
+        "practiceSchedule",
+        "tradition",
+        "ruleSetVersion",
+        "confirmedAt",
+        "requiresRuleReview",
+        "rules",
+        "schedule",
+        "allergies",
+        "ingredientExclusions",
+        "effectiveConstraints"
+      ],
+      "properties": {
+        "dietPattern": {
+          "type": "string",
+          "enum": [
+            "VEGAN",
+            "LACTO_OVO"
+          ]
+        },
+        "practiceSchedule": {
+          "type": "string",
+          "enum": [
+            "PERMANENT",
+            "PERIODIC"
+          ]
+        },
+        "tradition": {
+          "type": "string",
+          "enum": [
+            "NONE",
+            "BUDDHIST",
+            "CHRISTIAN"
+          ]
+        },
+        "ruleSetVersion": {
+          "type": "integer"
+        },
+        "confirmedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "requiresRuleReview": {
+          "type": "boolean"
+        },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "_truncated": true
+          }
+        },
+        "schedule": {
+          "type": "object",
+          "required": [
+            "timezone",
+            "dates"
+          ],
+          "properties": {
+            "timezone": {
+              "type": "string",
+              "_truncated": true
+            },
+            "dates": {
+              "type": "array",
+              "_truncated": true
+            }
+          },
+          "additionalProperties": false
+        },
+        "allergies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "_truncated": true
+          }
+        },
+        "ingredientExclusions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "_truncated": true
+          }
+        },
+        "effectiveConstraints": {
+          "type": "object",
+          "required": [
+            "always",
+            "scheduledTradition"
+          ],
+          "properties": {
+            "always": {
+              "type": "array",
+              "_truncated": true
+            },
+            "scheduledTradition": {
+              "type": "object",
+              "_truncated": true
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "meta": {
+      "type": "null"
+    }
+  },
+  "additionalProperties": false
+}
+```
+
+#### DietScheduleResponse
+```json
+{
+  "type": "object",
+  "required": [
+    "success",
+    "data",
+    "meta"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "enum": [
+        true
+      ]
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "practiceSchedule",
+        "timezone",
+        "dates"
+      ],
+      "properties": {
+        "practiceSchedule": {
+          "type": "string",
+          "enum": [
+            "PERMANENT",
+            "PERIODIC"
+          ]
+        },
+        "timezone": {
+          "type": "string",
+          "enum": [
+            "Asia/Ho_Chi_Minh"
+          ]
+        },
+        "dates": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "_truncated": true
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "meta": {
+      "type": "null"
+    }
+  },
+  "additionalProperties": false
+}
+```
 
 #### ErrorResponse
 ```json
@@ -54,7 +269,137 @@ Lấy user và role đã được backend phê duyệt
 }
 ```
 
-#### MeResponse
+#### HealthProfileRequest
+```json
+{
+  "type": "object",
+  "required": [
+    "heightCm",
+    "weightKg",
+    "age",
+    "sex",
+    "activityLevel"
+  ],
+  "properties": {
+    "heightCm": {
+      "type": "number"
+    },
+    "weightKg": {
+      "type": "number"
+    },
+    "age": {
+      "type": "integer"
+    },
+    "sex": {
+      "type": "string",
+      "enum": [
+        "MALE",
+        "FEMALE"
+      ]
+    },
+    "activityLevel": {
+      "type": "string",
+      "enum": [
+        "SEDENTARY",
+        "LIGHTLY_ACTIVE",
+        "MODERATELY_ACTIVE",
+        "VERY_ACTIVE",
+        "EXTRA_ACTIVE"
+      ]
+    }
+  },
+  "additionalProperties": false
+}
+```
+
+#### HealthProfileResponse
+```json
+{
+  "type": "object",
+  "required": [
+    "success",
+    "data",
+    "meta"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "enum": [
+        true
+      ]
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "heightCm",
+        "weightKg",
+        "age",
+        "sex",
+        "activityLevel",
+        "bmi",
+        "bmr",
+        "tdee",
+        "dataSource",
+        "updatedAt"
+      ],
+      "properties": {
+        "heightCm": {
+          "type": "number"
+        },
+        "weightKg": {
+          "type": "number"
+        },
+        "age": {
+          "type": "integer"
+        },
+        "sex": {
+          "type": "string",
+          "enum": [
+            "MALE",
+            "FEMALE"
+          ]
+        },
+        "activityLevel": {
+          "type": "string",
+          "enum": [
+            "SEDENTARY",
+            "LIGHTLY_ACTIVE",
+            "MODERATELY_ACTIVE",
+            "VERY_ACTIVE",
+            "EXTRA_ACTIVE"
+          ]
+        },
+        "bmi": {
+          "type": "number"
+        },
+        "bmr": {
+          "type": "number"
+        },
+        "tdee": {
+          "type": "number"
+        },
+        "dataSource": {
+          "type": "string",
+          "enum": [
+            "MANUAL"
+          ]
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "meta": {
+      "type": "null"
+    }
+  },
+  "additionalProperties": false
+}
+```
+
+#### ProfileResponse
 ```json
 {
   "type": "object",
@@ -76,10 +421,13 @@ Lấy user và role đã được backend phê duyệt
         "id",
         "email",
         "displayName",
+        "avatarUrl",
         "role",
         "status",
         "createdAt",
-        "contributorApplication"
+        "contributorApplication",
+        "healthProfile",
+        "dietPreference"
       ],
       "properties": {
         "id": {
@@ -92,6 +440,13 @@ Lấy user và role đã được backend phê duyệt
         },
         "displayName": {
           "type": "string"
+        },
+        "avatarUrl": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uri"
         },
         "role": {
           "type": "string",
@@ -134,12 +489,206 @@ Lấy user và role đã được backend phê duyệt
             }
           },
           "additionalProperties": false
-        }
-      },
-      "additionalProperties": false
+        },
+        "healthProfile": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "required": [
+            "heightCm",
+            "weightKg",
+            "age",
+            "sex",
+            "activityLevel",
+            "bmi",
+            "bmr",
+            "tdee",
+            "dataSource",
+            "updatedAt"
+          ],
+          "properties": {
+            "heightCm": {
+              "type": "number",
+              "_truncated": true
+            },
+            "weightKg": {
+              "type": "number",
+              "_truncated": true
+            },
+            "age": {
+              "type": "integer",
+              "_truncated": true
+            },
+            "sex": {
+              "type": "string",
+              "_truncated": true
+            },
+            "activityLevel": {
+              "type": "string",
+              "_truncated": true
+            },
+            "bmi": {
+              "type": "number",
+              "_truncated": true
+            },
+            "bmr": {
+              "type": "number",
+              "_truncated": true
+            },
+            "tdee": {
+              "type": "number",
+              "_truncated": true
+            }
+  …(truncated — xem api-catalog.json)
+```
+
+#### SaveDietPreferencesRequest
+```json
+{
+  "type": "object",
+  "required": [
+    "dietPattern",
+    "practiceSchedule",
+    "tradition",
+    "ruleSetVersion",
+    "rules"
+  ],
+  "properties": {
+    "dietPattern": {
+      "type": "string",
+      "enum": [
+        "VEGAN",
+        "LACTO_OVO"
+      ]
     },
-    "meta": {
-      "type": "null"
+    "practiceSchedule": {
+      "type": "string",
+      "enum": [
+        "PERMANENT",
+        "PERIODIC"
+      ]
+    },
+    "tradition": {
+      "type": "string",
+      "enum": [
+        "NONE",
+        "BUDDHIST",
+        "CHRISTIAN"
+      ]
+    },
+    "ruleSetVersion": {
+      "type": "integer"
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "ruleDefinitionId",
+          "enabled"
+        ],
+        "properties": {
+          "ruleDefinitionId": {
+            "type": "string",
+            "_truncated": true
+          },
+          "enabled": {
+            "type": "boolean",
+            "_truncated": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "scheduleDates": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "allergies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "allergenCode"
+        ],
+        "properties": {
+          "allergenCode": {
+            "type": "string",
+            "_truncated": true
+          },
+          "label": {
+            "type": "string",
+            "_truncated": true
+          },
+          "severity": {
+            "type": "string",
+            "_truncated": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "ingredientExclusions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "ingredientName"
+        ],
+        "properties": {
+          "ingredientName": {
+            "type": "string",
+            "_truncated": true
+          },
+          "reason": {
+            "type": "string",
+            "_truncated": true
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}
+```
+
+#### UpdateBasicProfileRequest
+```json
+{
+  "type": "object",
+  "properties": {
+    "displayName": {
+      "type": "string"
+    },
+    "avatarUrl": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "uri"
+    }
+  },
+  "additionalProperties": false
+}
+```
+
+#### UpdateDietScheduleRequest
+```json
+{
+  "type": "object",
+  "required": [
+    "dates"
+  ],
+  "properties": {
+    "dates": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
     }
   },
   "additionalProperties": false
