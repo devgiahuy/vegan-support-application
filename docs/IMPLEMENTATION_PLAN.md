@@ -1,6 +1,6 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 1.0
+**Version:** 1.1
 
 **Ngày chốt:** 15/09/2026
 
@@ -11,23 +11,23 @@
 
 ## 1. Các quyết định đã chốt
 
-| ID | Quyết định | Phương án được chọn |
-| --- | --- | --- |
-| D1 | Phạm vi | MVP theo lát cắt dọc; các chức năng nâng cao vẫn được giữ trong roadmap |
-| D2 | Cá nhân hóa hành vi | MVP dùng behavioral scoring có thể giải thích; Phase 2 dùng GenAI/embedding nâng cao |
-| D3 | Contributor | User có thể chọn loại Contributor khi đăng ký hoặc apply sau; tài khoản vẫn là `MEMBER` cho tới khi Admin duyệt |
-| D4 | Phân loại ăn chay | Tách `dietPattern`, `practiceSchedule`, `tradition`; hệ thống đề xuất rule để user xác nhận/toggle từng rule |
-| D5 | Moderation | Member chờ duyệt; Contributor được auto-publish nếu không bị flag; Admin quyết định removal cuối cùng |
-| D6 | Sức khỏe | MVP web nhập tay; HealthKit/Health Connect và cảm biến thuộc Phase 2 |
-| D7 | Database | PostgreSQL + Prisma |
-| D8 | Backend | Node.js + Express + TypeScript |
-| D9 | Bản đồ | Hybrid: dữ liệu quán nội bộ + Google Maps/Places/Geocoding |
-| D10 | Media | Cloudinary cho upload; hỗ trợ thêm YouTube URL |
-| D11 | AI provider | Provider adapter và model cấu hình qua environment; không hard-code model vào domain |
-| D12 | Tài liệu | Product SRS đặt tập trung ở `/docs`; tài liệu frontend/backend chỉ mô tả kỹ thuật |
-| D13 | FE/BE contract | OpenAPI-first; frontend sinh catalog từ Swagger trước khi tích hợp |
-| D14 | CV/STT | Đặc tả trong roadmap; không coi UI mock là hoàn thành requirement |
-| D15 | AI governance | MVP có request log, feedback metrics, moderation metrics và feature toggle |
+| ID  | Quyết định          | Phương án được chọn                                                                                             |
+| --- | ------------------- | --------------------------------------------------------------------------------------------------------------- |
+| D1  | Phạm vi             | MVP theo lát cắt dọc; các chức năng nâng cao vẫn được giữ trong roadmap                                         |
+| D2  | Cá nhân hóa hành vi | MVP dùng behavioral scoring có thể giải thích; Phase 2 dùng GenAI/embedding nâng cao                            |
+| D3  | Contributor         | User có thể chọn loại Contributor khi đăng ký hoặc apply sau; tài khoản vẫn là `MEMBER` cho tới khi Admin duyệt |
+| D4  | Phân loại ăn chay   | Tách `dietPattern`, `practiceSchedule`, `tradition`; hệ thống đề xuất rule để user xác nhận/toggle từng rule    |
+| D5  | Moderation          | Member chờ duyệt; Contributor được auto-publish nếu không bị flag; Admin quyết định removal cuối cùng           |
+| D6  | Sức khỏe            | MVP web nhập tay; HealthKit/Health Connect và cảm biến thuộc Phase 2                                            |
+| D7  | Database            | PostgreSQL + Prisma                                                                                             |
+| D8  | Backend             | Node.js + Express + TypeScript                                                                                  |
+| D9  | Bản đồ              | Hybrid: dữ liệu quán nội bộ + Google Maps/Places/Geocoding                                                      |
+| D10 | Media               | Cloudinary cho upload; hỗ trợ thêm YouTube URL                                                                  |
+| D11 | AI provider         | Provider adapter và model cấu hình qua environment; không hard-code model vào domain                            |
+| D12 | Tài liệu            | Product SRS đặt tập trung ở `/docs`; tài liệu frontend/backend chỉ mô tả kỹ thuật                               |
+| D13 | FE/BE contract      | OpenAPI-first; frontend sinh catalog từ Swagger trước khi tích hợp                                              |
+| D14 | CV/STT              | Đặc tả trong roadmap; không coi UI mock là hoàn thành requirement                                               |
+| D15 | AI governance       | MVP có request log, feedback metrics, moderation metrics và feature toggle                                      |
 
 ### 1.1 Quy ước về tradition trong MVP
 
@@ -218,19 +218,19 @@ Pagination:
 
 ### 4.1 Identity và profile
 
-| Table | Trường chính |
-| --- | --- |
-| `users` | id, email, passwordHash, displayName, role, status, avatarUrl, deletedAt |
-| `refresh_sessions` | userId, tokenHash, expiresAt, revokedAt, replacedById, deviceInfo |
-| `health_profiles` | userId, heightCm, weightKg, age, sex, activityLevel, bmi, bmr, tdee, dataSource |
-| `diet_preferences` | userId, dietPattern, practiceSchedule, tradition, ruleSetVersion, confirmedAt |
-| `diet_preference_rules` | userId, ruleDefinitionId, enabled, source, updatedAt |
-| `diet_schedule_dates` | userId, date, enabled; dùng khi `practiceSchedule=PERIODIC` |
-| `diet_rule_definitions` | code, type, tradition nullable, ingredientId nullable, defaultEnabled, version, active |
-| `user_allergies` | userId, ingredient/allergen code, severity optional, active |
-| `user_ingredient_exclusions` | Phase 02: userId, ingredientName, normalizedName, reason, active; Phase 03 bổ sung canonical ingredientId khi catalog tồn tại |
-| `contributor_profiles` | userId, contributorType, approvalBasis, approvedAt, approvedBy |
-| `contributor_applications` | userId, requestedType, experience, referenceLinks, source, status, reviewNote |
+| Table                        | Trường chính                                                                                                                 |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `users`                      | id, email, passwordHash, displayName, role, status, avatarUrl, deletedAt                                                     |
+| `refresh_sessions`           | userId, tokenHash, expiresAt, revokedAt, replacedById, deviceInfo                                                            |
+| `health_profiles`            | userId, heightCm, weightKg, age, sex, activityLevel, bmi, bmr, tdee, dataSource                                              |
+| `diet_preferences`           | userId, dietPattern, practiceSchedule, tradition, ruleSetVersion, confirmedAt                                                |
+| `diet_preference_rules`      | userId, ruleDefinitionId, enabled, source, updatedAt                                                                         |
+| `diet_schedule_dates`        | userId, date, enabled; dùng khi `practiceSchedule=PERIODIC`                                                                  |
+| `diet_rule_definitions`      | code, type, tradition nullable, ingredientId nullable, defaultEnabled, version, active                                       |
+| `user_allergies`             | userId, ingredient/allergen code, severity optional, active                                                                  |
+| `user_ingredient_exclusions` | userId, ingredientId nullable, ingredientName, normalizedName, reason, active; free-text vẫn được giữ khi chưa map canonical |
+| `contributor_profiles`       | userId, contributorType, approvalBasis, approvedAt, approvedBy                                                               |
+| `contributor_applications`   | userId, requestedType, experience, referenceLinks, source, status, reviewNote                                                |
 
 Enums MVP:
 
@@ -250,53 +250,59 @@ Health calculation MVP dùng dữ liệu `MANUAL`: `BMI = weightKg / heightMeter
 
 ### 4.2 Content và community
 
-| Table | Trường chính |
-| --- | --- |
-| `categories` | id, parentId, name, slug, type, status, sortOrder |
-| `posts` | id, authorId, type, title, slug, body, status, coverUrl, videoUrl, youtubeUrl, publishedAt |
-| `post_revisions` | postId, version, payload, status, reviewedBy, reviewNote |
-| `recipe_details` | postId, servings, cookTimeMinutes, difficulty, calories, protein, carbs, fat, fiber, vitaminB12 |
-| `ingredients` | id, canonicalName, normalizedName, foodGroup, allergens |
-| `recipe_ingredients` | postId, ingredientId, displayName, amount, unit, optional |
-| `recipe_diet_rules` | postId, compatibleDietPattern, compatibleTradition |
-| `comments` | id, postId, authorId, parentId, content, status, editedAt, deletedAt |
-| `votes` | userId, postId, createdAt; unique(userId, postId) |
-| `ratings` | userId, postId, taste, difficulty, createdAt; unique(userId, postId) |
-| `bookmarks` | userId, postId, createdAt; unique(userId, postId) |
+| Table                             | Trường chính                                                                                    |
+| --------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `categories`                      | id, parentId, name, slug, type, status, sortOrder                                               |
+| `category_proposals`              | proposedById, parentId, name, slug, type, status, reviewedById, resolvedCategoryId              |
+| `posts`                           | id, authorId, type, title, slug, body, status, coverUrl, videoUrl, youtubeUrl, publishedAt      |
+| `post_revisions`                  | postId, version, payload, status, reviewedBy, reviewNote                                        |
+| `recipe_details`                  | postId, servings, cookTimeMinutes, difficulty, calories, protein, carbs, fat, fiber, vitaminB12 |
+| `ingredients`                     | id, canonicalName, normalizedName, foodGroup, status                                            |
+| `ingredient_aliases`              | ingredientId, alias, normalizedAlias; alias có thể map nhiều candidate                          |
+| `allergen_definitions`            | code, label, description, active                                                                |
+| `ingredient_allergens`            | ingredientId, allergenCode                                                                      |
+| `ingredient_diet_compatibilities` | ingredientId, dietPattern, compatible                                                           |
+| `ingredient_tradition_warnings`   | ingredientId, tradition, warningCode, label                                                     |
+| `recipe_ingredients`              | postId, ingredientId, displayName, amount, unit, optional                                       |
+| `recipe_diet_rules`               | postId, compatibleDietPattern, compatibleTradition                                              |
+| `comments`                        | id, postId, authorId, parentId, content, status, editedAt, deletedAt                            |
+| `votes`                           | userId, postId, createdAt; unique(userId, postId)                                               |
+| `ratings`                         | userId, postId, taste, difficulty, createdAt; unique(userId, postId)                            |
+| `bookmarks`                       | userId, postId, createdAt; unique(userId, postId)                                               |
 
 `post_revisions` cho phép bản published cũ tiếp tục hiển thị trong lúc bản sửa mới chờ duyệt.
 
 ### 4.3 Moderation, AI và behavior
 
-| Table | Trường chính |
-| --- | --- |
-| `reports` | reporterId, targetType, targetId, reason, description, status |
-| `moderation_actions` | actorId, action, targetType, targetId, reason, aiFlagId, reportId |
-| `ai_flags` | feature, targetType, targetId, reasonCodes, riskScore, modelId, status |
-| `chat_sessions` | userId nullable, guestId nullable, title, deletedAt |
-| `chat_messages` | sessionId, role, content, isPublic, modelId, createdAt |
-| `ai_verifications` | targetType, targetId, reviewerId, decision, note, createdAt |
-| `behavior_events` | userId, eventType, entityType, entityId, metadata, createdAt |
-| `ai_request_logs` | feature, userId nullable, guestId nullable, provider, modelId, latencyMs, status, tokenUsage, costEstimate |
-| `ai_feedback` | requestLogId, userId nullable, rating, reason, comment |
-| `ai_feature_configs` | feature, enabled, provider, modelId, timeoutMs, updatedBy |
-| `notifications` | userId, type, title, message, targetType, targetId, readAt, expiresAt |
+| Table                | Trường chính                                                                                               |
+| -------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `reports`            | reporterId, targetType, targetId, reason, description, status                                              |
+| `moderation_actions` | actorId, action, targetType, targetId, reason, aiFlagId, reportId                                          |
+| `ai_flags`           | feature, targetType, targetId, reasonCodes, riskScore, modelId, status                                     |
+| `chat_sessions`      | userId nullable, guestId nullable, title, deletedAt                                                        |
+| `chat_messages`      | sessionId, role, content, isPublic, modelId, createdAt                                                     |
+| `ai_verifications`   | targetType, targetId, reviewerId, decision, note, createdAt                                                |
+| `behavior_events`    | userId, eventType, entityType, entityId, metadata, createdAt                                               |
+| `ai_request_logs`    | feature, userId nullable, guestId nullable, provider, modelId, latencyMs, status, tokenUsage, costEstimate |
+| `ai_feedback`        | requestLogId, userId nullable, rating, reason, comment                                                     |
+| `ai_feature_configs` | feature, enabled, provider, modelId, timeoutMs, updatedBy                                                  |
+| `notifications`      | userId, type, title, message, targetType, targetId, readAt, expiresAt                                      |
 
 Không lưu raw prompt chứa PII trong `ai_request_logs`. Nếu cần debug, chỉ lưu payload đã redact và có thời hạn lưu rõ ràng.
 
 ### 4.4 Meal plan và location
 
-| Table | Trường chính |
-| --- | --- |
-| `meal_plans` | userId, weekStart, goal, targetCalories, generatedBy, explanation |
-| `meal_plan_items` | mealPlanId, date, mealType, recipeId, calories, position |
-| `restaurants` | name, address, latitude, longitude, googlePlaceId, status, menuTags, supportedDietPatterns |
-| `restaurant_submissions` | restaurantId, submitterId, status, reviewNote, reviewedBy |
+| Table                    | Trường chính                                                                               |
+| ------------------------ | ------------------------------------------------------------------------------------------ |
+| `meal_plans`             | userId, weekStart, goal, targetCalories, generatedBy, explanation                          |
+| `meal_plan_items`        | mealPlanId, date, mealType, recipeId, calories, position                                   |
+| `restaurants`            | name, address, latitude, longitude, googlePlaceId, status, menuTags, supportedDietPatterns |
+| `restaurant_submissions` | restaurantId, submitterId, status, reviewNote, reviewedBy                                  |
 
 Tạo index cho:
 
 - `posts(status, type, publishedAt)`.
-- `categories(slug)` unique.
+- `categories(type, slug)` unique cho root và `categories(type, parentId, slug)` unique cho child.
 - `ingredients(normalizedName)`.
 - `behavior_events(userId, createdAt)`.
 - `restaurants(latitude, longitude)`; cân nhắc PostGIS sau MVP nếu query khoảng cách tăng.
@@ -575,18 +581,18 @@ Các hệ số phải để trong config và được người có chuyên môn 
 
 ## 6. RBAC và trách nhiệm
 
-| Hành động | Guest | Member | Experienced Contributor | Admin-approved Nutrition Expert | Admin |
-| --- | :---: | :---: | :---: | :---: | :---: |
-| Xem/search content | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Chatbot | Giới hạn | ✓ | ✓ | ✓ | ✓ |
-| Comment/vote/rating/bookmark |  | ✓ | ✓ | ✓ | ✓ |
-| Tạo content |  | Pending | Auto nếu không flag | Auto nếu không flag | Auto |
-| Sửa/xóa content của mình |  | ✓ | ✓ | ✓ | ✓ |
-| Duyệt chất lượng recipe/member post |  |  | ✓ | ✓ | ✓ |
-| Kiểm chứng nội dung AI dinh dưỡng |  |  |  | ✓ | ✓ |
-| Quản lý user/category/report |  |  |  |  | ✓ |
-| Hide/remove/ban cuối cùng |  |  |  |  | ✓ |
-| Bật/tắt AI feature |  |  |  |  | ✓ |
+| Hành động                           |  Guest   | Member  | Experienced Contributor | Admin-approved Nutrition Expert | Admin |
+| ----------------------------------- | :------: | :-----: | :---------------------: | :-----------------------------: | :---: |
+| Xem/search content                  |    ✓     |    ✓    |            ✓            |                ✓                |   ✓   |
+| Chatbot                             | Giới hạn |    ✓    |            ✓            |                ✓                |   ✓   |
+| Comment/vote/rating/bookmark        |          |    ✓    |            ✓            |                ✓                |   ✓   |
+| Tạo content                         |          | Pending |   Auto nếu không flag   |       Auto nếu không flag       | Auto  |
+| Sửa/xóa content của mình            |          |    ✓    |            ✓            |                ✓                |   ✓   |
+| Duyệt chất lượng recipe/member post |          |         |            ✓            |                ✓                |   ✓   |
+| Kiểm chứng nội dung AI dinh dưỡng   |          |         |                         |                ✓                |   ✓   |
+| Quản lý user/category/report        |          |         |                         |                                 |   ✓   |
+| Hide/remove/ban cuối cùng           |          |         |                         |                                 |   ✓   |
+| Bật/tắt AI feature                  |          |         |                         |                                 |   ✓   |
 
 Mọi authorization được kiểm tra ở backend. Frontend guard chỉ phục vụ UX, không phải security boundary.
 
@@ -952,16 +958,16 @@ Backend được chia nhỏ và theo dõi chi tiết trong [`backend/docs/IMPLEM
 
 Kế hoạch giả định team có thể chia ít nhất hai luồng FE/BE. Nếu chỉ có một developer, phải giảm phạm vi theo thứ tự P2 rồi P1 ở mục 10.
 
-| Ngày | Backend phases mục tiêu | Ghi chú |
-| --- | --- | --- |
-| 0 | 00 | Foundation và contract trước mọi feature |
-| 1 | 01–03 | Auth trước; Profile/Diet, Catalog có thể tách branch sau Auth |
-| 2 | 04–06 | Content trước; Search và Community sau Content |
-| 3 | 07–08 | Contributor trước Moderation |
-| 4 | 09–10 | Behavior trước Meal Planner |
-| 5 | 11–12, 15 | Chat trước Sharing/Verification; Governance sau Moderation/Chat/Review |
-| 6 | 13–14 | Restaurant trước notification event cuối cùng |
-| 7 | 16 | Chỉ hardening, không thêm feature |
+| Ngày | Backend phases mục tiêu | Ghi chú                                                                |
+| ---- | ----------------------- | ---------------------------------------------------------------------- |
+| 0    | 00                      | Foundation và contract trước mọi feature                               |
+| 1    | 01–03                   | Auth trước; Profile/Diet, Catalog có thể tách branch sau Auth          |
+| 2    | 04–06                   | Content trước; Search và Community sau Content                         |
+| 3    | 07–08                   | Contributor trước Moderation                                           |
+| 4    | 09–10                   | Behavior trước Meal Planner                                            |
+| 5    | 11–12, 15               | Chat trước Sharing/Verification; Governance sau Moderation/Chat/Review |
+| 6    | 13–14                   | Restaurant trước notification event cuối cùng                          |
+| 7    | 16                      | Chỉ hardening, không thêm feature                                      |
 
 ### Ngày 0 — Freeze contract
 
@@ -1229,17 +1235,17 @@ Mỗi rule mới cần nguồn, reviewer chuyên môn, ngày hiệu lực và ve
 
 ## 14. Rủi ro chính
 
-| Rủi ro | Giảm thiểu |
-| --- | --- |
-| Scope vượt một tuần | Giữ P0, giảm chiều sâu P1, không kéo Phase 2 vào sprint |
-| FE/BE lệch contract | OpenAPI-first, sync Swagger mỗi ngày |
-| AI provider/model thay đổi | Adapter + model config, không hard-code |
-| Meal Planner thiếu dữ liệu | Seed recipe có nutrition/food-group/allergen đầy đủ |
-| Rule tradition sai | Rule có version; explicit exclusions ưu tiên; cần reviewer chuyên môn |
-| AI moderation false positive | Chỉ flag/quarantine, không tự hard-delete |
-| Google quota/lỗi | Cache + restaurant DB nội bộ + list fallback |
-| Permission bug | Permission matrix + backend authorization review từng role |
-| Health/privacy risk | MVP manual, consent rõ ràng, không log dữ liệu nhạy cảm |
+| Rủi ro                       | Giảm thiểu                                                            |
+| ---------------------------- | --------------------------------------------------------------------- |
+| Scope vượt một tuần          | Giữ P0, giảm chiều sâu P1, không kéo Phase 2 vào sprint               |
+| FE/BE lệch contract          | OpenAPI-first, sync Swagger mỗi ngày                                  |
+| AI provider/model thay đổi   | Adapter + model config, không hard-code                               |
+| Meal Planner thiếu dữ liệu   | Seed recipe có nutrition/food-group/allergen đầy đủ                   |
+| Rule tradition sai           | Rule có version; explicit exclusions ưu tiên; cần reviewer chuyên môn |
+| AI moderation false positive | Chỉ flag/quarantine, không tự hard-delete                             |
+| Google quota/lỗi             | Cache + restaurant DB nội bộ + list fallback                          |
+| Permission bug               | Permission matrix + backend authorization review từng role            |
+| Health/privacy risk          | MVP manual, consent rõ ràng, không log dữ liệu nhạy cảm               |
 
 ---
 

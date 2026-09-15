@@ -226,7 +226,7 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     tags: ['Users', 'Diet Rules'],
     summary: 'Xác nhận diet preferences, rules và hard constraints cá nhân',
     description:
-      'Rule IDs phải khớp toàn bộ preview/version. Diet-pattern rule không thể tắt. PERIODIC bắt buộc có scheduleDates theo Asia/Ho_Chi_Minh. Allergies và ingredient exclusions luôn là hard constraints.',
+      'Rule IDs phải khớp toàn bộ preview/version. Diet-pattern rule không thể tắt. PERIODIC bắt buộc có scheduleDates theo Asia/Ho_Chi_Minh. Ingredient exclusion nhận optional canonical ingredientId; free-text vẫn được giữ khi chưa map. Allergies và exclusions luôn là hard constraints.',
     operationId: 'saveDietPreferences',
     security: authenticated,
     request: {
@@ -246,7 +246,13 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
               ],
               scheduleDates: ['2026-09-18', '2026-09-25'],
               allergies: [{ allergenCode: 'PEANUT', severity: 'SEVERE' }],
-              ingredientExclusions: [{ ingredientName: 'Rau mùi', reason: 'Không thích' }],
+              ingredientExclusions: [
+                {
+                  ingredientId: '33333333-3333-4333-8333-333333333333',
+                  ingredientName: 'Đậu hũ',
+                  reason: 'Không thích',
+                },
+              ],
             },
           },
         },
@@ -257,17 +263,13 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
         description: 'Snapshot preference và effective constraints đã lưu',
         content: { 'application/json': { schema: dietPreferenceResponse } },
       },
-      400: multipleErrorResponse(
-        errorSchema,
-        'Rule hoặc preference không hợp lệ',
-        [
-          'VALIDATION_ERROR',
-          'INVALID_DIET_RULE_SELECTION',
-          'DIET_RULE_REQUIRED',
-          'INVALID_INGREDIENT_EXCLUSIONS',
-          'DIET_SCHEDULE_NOT_APPLICABLE',
-        ],
-      ),
+      400: multipleErrorResponse(errorSchema, 'Rule hoặc preference không hợp lệ', [
+        'VALIDATION_ERROR',
+        'INVALID_DIET_RULE_SELECTION',
+        'DIET_RULE_REQUIRED',
+        'INVALID_INGREDIENT_EXCLUSIONS',
+        'DIET_SCHEDULE_NOT_APPLICABLE',
+      ]),
       401: errorResponse(errorSchema, 'Yêu cầu đăng nhập', 'AUTH_REQUIRED'),
       403: errorResponse(errorSchema, 'Tài khoản đã bị cấm', 'ACCOUNT_BANNED'),
       409: multipleErrorResponse(
@@ -310,11 +312,7 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
       409: multipleErrorResponse(
         errorSchema,
         'Cần diet preference PERIODIC và ít nhất một ngày hợp lệ',
-        [
-          'DIET_PREFERENCES_REQUIRED',
-          'DIET_SCHEDULE_NOT_APPLICABLE',
-          'DIET_SCHEDULE_REQUIRED',
-        ],
+        ['DIET_PREFERENCES_REQUIRED', 'DIET_SCHEDULE_NOT_APPLICABLE', 'DIET_SCHEDULE_REQUIRED'],
       ),
     },
   });

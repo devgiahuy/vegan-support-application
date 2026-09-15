@@ -136,6 +136,7 @@ const allergyInputSchema = z
 
 const ingredientExclusionInputSchema = z
   .object({
+    ingredientId: z.string().uuid().optional(),
     ingredientName: z.string().trim().min(1).max(160),
     reason: z.string().trim().min(1).max(500).optional(),
   })
@@ -180,6 +181,7 @@ export const allergySchema = z
 export const ingredientExclusionSchema = z
   .object({
     id: z.string().uuid(),
+    ingredientId: z.string().uuid().nullable(),
     ingredientName: z.string(),
     normalizedName: z.string(),
     reason: z.string().nullable(),

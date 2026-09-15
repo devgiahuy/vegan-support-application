@@ -27,6 +27,18 @@
     {
       "name": "Diet Rules",
       "description": "Versioned diet and tradition rule confirmation"
+    },
+    {
+      "name": "Categories",
+      "description": "Public active category tree"
+    },
+    {
+      "name": "Ingredients",
+      "description": "Canonical ingredient discovery and alias resolution"
+    },
+    {
+      "name": "Catalog Admin",
+      "description": "Admin-only category and ingredient management"
     }
   ],
   "components": {
@@ -860,6 +872,13 @@
                           "type": "string",
                           "format": "uuid"
                         },
+                        "ingredientId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "uuid"
+                        },
                         "ingredientName": {
                           "type": "string"
                         },
@@ -878,6 +897,7 @@
                       },
                       "required": [
                         "id",
+                        "ingredientId",
                         "ingredientName",
                         "normalizedName",
                         "reason",
@@ -1446,6 +1466,10 @@
             "items": {
               "type": "object",
               "properties": {
+                "ingredientId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
                 "ingredientName": {
                   "type": "string",
                   "minLength": 1,
@@ -1649,6 +1673,13 @@
                       "type": "string",
                       "format": "uuid"
                     },
+                    "ingredientId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uuid"
+                    },
                     "ingredientName": {
                       "type": "string"
                     },
@@ -1667,6 +1698,7 @@
                   },
                   "required": [
                     "id",
+                    "ingredientId",
                     "ingredientName",
                     "normalizedName",
                     "reason",
@@ -1892,6 +1924,915 @@
               "practiceSchedule",
               "timezone",
               "dates"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "CategoryTreeResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "parentId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "slug": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "FOOD_TYPE",
+                    "RECIPE_GROUP",
+                    "CONTENT_TOPIC"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ACTIVE",
+                    "ARCHIVED"
+                  ]
+                },
+                "sortOrder": {
+                  "type": "integer"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "children": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "parentId": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "uuid"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "slug": {
+                        "type": "string"
+                      },
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "FOOD_TYPE",
+                          "RECIPE_GROUP",
+                          "CONTENT_TOPIC"
+                        ]
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "ACTIVE",
+                          "ARCHIVED"
+                        ]
+                      },
+                      "sortOrder": {
+                        "type": "integer"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "parentId",
+                      "name",
+                      "slug",
+                      "type",
+                      "status",
+                      "sortOrder",
+                      "createdAt",
+                      "updatedAt"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "parentId",
+                "name",
+                "slug",
+                "type",
+                "status",
+                "sortOrder",
+                "createdAt",
+                "updatedAt",
+                "children"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "CategoryResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "parentId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "name": {
+                "type": "string"
+              },
+              "slug": {
+                "type": "string"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "FOOD_TYPE",
+                  "RECIPE_GROUP",
+                  "CONTENT_TOPIC"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED"
+                ]
+              },
+              "sortOrder": {
+                "type": "integer"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "parentId",
+              "name",
+              "slug",
+              "type",
+              "status",
+              "sortOrder",
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "AdminCategoryListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "parentId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "slug": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "FOOD_TYPE",
+                    "RECIPE_GROUP",
+                    "CONTENT_TOPIC"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ACTIVE",
+                    "ARCHIVED"
+                  ]
+                },
+                "sortOrder": {
+                  "type": "integer"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "parentId",
+                "name",
+                "slug",
+                "type",
+                "status",
+                "sortOrder",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "IngredientResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "canonicalName": {
+                "type": "string"
+              },
+              "normalizedName": {
+                "type": "string"
+              },
+              "foodGroup": {
+                "type": "string",
+                "enum": [
+                  "GRAINS",
+                  "LEGUMES",
+                  "VEGETABLES",
+                  "FRUITS",
+                  "NUTS_SEEDS",
+                  "MUSHROOMS",
+                  "DAIRY_EGGS",
+                  "HERBS_SPICES",
+                  "OTHER"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ACTIVE",
+                  "ARCHIVED"
+                ]
+              },
+              "aliases": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "alias": {
+                      "type": "string"
+                    },
+                    "normalizedAlias": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "alias",
+                    "normalizedAlias"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "allergenCodes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "dietCompatibilities": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "dietPattern": {
+                      "type": "string",
+                      "enum": [
+                        "VEGAN",
+                        "LACTO_OVO"
+                      ]
+                    },
+                    "compatible": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "dietPattern",
+                    "compatible"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "traditionWarnings": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "tradition": {
+                      "type": "string",
+                      "enum": [
+                        "NONE",
+                        "BUDDHIST",
+                        "CHRISTIAN"
+                      ]
+                    },
+                    "warningCode": {
+                      "type": "string"
+                    },
+                    "label": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "tradition",
+                    "warningCode",
+                    "label"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "canonicalName",
+              "normalizedName",
+              "foodGroup",
+              "status",
+              "aliases",
+              "allergenCodes",
+              "dietCompatibilities",
+              "traditionWarnings",
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "IngredientListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "canonicalName": {
+                  "type": "string"
+                },
+                "normalizedName": {
+                  "type": "string"
+                },
+                "foodGroup": {
+                  "type": "string",
+                  "enum": [
+                    "GRAINS",
+                    "LEGUMES",
+                    "VEGETABLES",
+                    "FRUITS",
+                    "NUTS_SEEDS",
+                    "MUSHROOMS",
+                    "DAIRY_EGGS",
+                    "HERBS_SPICES",
+                    "OTHER"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ACTIVE",
+                    "ARCHIVED"
+                  ]
+                },
+                "aliases": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "alias": {
+                        "type": "string"
+                      },
+                      "normalizedAlias": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "alias",
+                      "normalizedAlias"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "allergenCodes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "dietCompatibilities": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "dietPattern": {
+                        "type": "string",
+                        "enum": [
+                          "VEGAN",
+                          "LACTO_OVO"
+                        ]
+                      },
+                      "compatible": {
+                        "type": "boolean"
+                      }
+                    },
+                    "required": [
+                      "dietPattern",
+                      "compatible"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "traditionWarnings": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "tradition": {
+                        "type": "string",
+                        "enum": [
+                          "NONE",
+                          "BUDDHIST",
+                          "CHRISTIAN"
+                        ]
+                      },
+                      "warningCode": {
+                        "type": "string"
+                      },
+                      "label": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "tradition",
+                      "warningCode",
+                      "label"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "canonicalName",
+                "normalizedName",
+                "foodGroup",
+                "status",
+                "aliases",
+                "allergenCodes",
+                "dietCompatibilities",
+                "traditionWarnings",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "IngredientResolutionResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "query": {
+                "type": "string"
+              },
+              "normalizedQuery": {
+                "type": "string"
+              },
+              "match": {
+                "type": "string",
+                "enum": [
+                  "NONE",
+                  "EXACT",
+                  "AMBIGUOUS"
+                ]
+              },
+              "candidates": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "canonicalName": {
+                      "type": "string"
+                    },
+                    "normalizedName": {
+                      "type": "string"
+                    },
+                    "foodGroup": {
+                      "type": "string",
+                      "enum": [
+                        "GRAINS",
+                        "LEGUMES",
+                        "VEGETABLES",
+                        "FRUITS",
+                        "NUTS_SEEDS",
+                        "MUSHROOMS",
+                        "DAIRY_EGGS",
+                        "HERBS_SPICES",
+                        "OTHER"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "ACTIVE",
+                        "ARCHIVED"
+                      ]
+                    },
+                    "aliases": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "alias": {
+                            "type": "string"
+                          },
+                          "normalizedAlias": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "alias",
+                          "normalizedAlias"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "allergenCodes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "dietCompatibilities": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "dietPattern": {
+                            "type": "string",
+                            "enum": [
+                              "VEGAN",
+                              "LACTO_OVO"
+                            ]
+                          },
+                          "compatible": {
+                            "type": "boolean"
+                          }
+                        },
+                        "required": [
+                          "dietPattern",
+                          "compatible"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "traditionWarnings": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "tradition": {
+                            "type": "string",
+                            "enum": [
+                              "NONE",
+                              "BUDDHIST",
+                              "CHRISTIAN"
+                            ]
+                          },
+                          "warningCode": {
+                            "type": "string"
+                          },
+                          "label": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "tradition",
+                          "warningCode",
+                          "label"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "canonicalName",
+                    "normalizedName",
+                    "foodGroup",
+                    "status",
+                    "aliases",
+                    "allergenCodes",
+                    "dietCompatibilities",
+                    "traditionWarnings",
+                    "createdAt",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "query",
+              "normalizedQuery",
+              "match",
+              "candidates"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "CatalogArchiveResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ARCHIVED"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "status"
             ],
             "additionalProperties": false
           },
@@ -2646,7 +3587,7 @@
           "Diet Rules"
         ],
         "summary": "Xác nhận diet preferences, rules và hard constraints cá nhân",
-        "description": "Rule IDs phải khớp toàn bộ preview/version. Diet-pattern rule không thể tắt. PERIODIC bắt buộc có scheduleDates theo Asia/Ho_Chi_Minh. Allergies và ingredient exclusions luôn là hard constraints.",
+        "description": "Rule IDs phải khớp toàn bộ preview/version. Diet-pattern rule không thể tắt. PERIODIC bắt buộc có scheduleDates theo Asia/Ho_Chi_Minh. Ingredient exclusion nhận optional canonical ingredientId; free-text vẫn được giữ khi chưa map. Allergies và exclusions luôn là hard constraints.",
         "operationId": "saveDietPreferences",
         "security": [
           {
@@ -2687,7 +3628,8 @@
                 ],
                 "ingredientExclusions": [
                   {
-                    "ingredientName": "Rau mùi",
+                    "ingredientId": "33333333-3333-4333-8333-333333333333",
+                    "ingredientName": "Đậu hũ",
                     "reason": "Không thích"
                   }
                 ]
@@ -2989,6 +3931,3107 @@
                       "error": {
                         "code": "DIET_SCHEDULE_REQUIRED",
                         "message": "Cần diet preference PERIODIC và ít nhất một ngày hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/categories": {
+      "get": {
+        "tags": [
+          "Categories"
+        ],
+        "summary": "Lấy cây category active tối đa hai tầng",
+        "operationId": "listPublicCategories",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "FOOD_TYPE",
+                "RECIPE_GROUP",
+                "CONTENT_TOPIC"
+              ]
+            },
+            "required": false,
+            "name": "type",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Public category tree",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryTreeResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Query không hợp lệ",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Query không hợp lệ",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/categories": {
+      "get": {
+        "tags": [
+          "Catalog Admin"
+        ],
+        "summary": "List category gồm cả archived",
+        "operationId": "listAdminCategories",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "FOOD_TYPE",
+                "RECIPE_GROUP",
+                "CONTENT_TOPIC"
+              ]
+            },
+            "required": false,
+            "name": "type",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "ARCHIVED"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách category có pagination",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminCategoryListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu catalog không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATALOG_NAME": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATALOG_NAME",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATEGORY_PARENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATEGORY_PARENT",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_TYPE_MISMATCH": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_TYPE_MISMATCH",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_DEPTH_EXCEEDED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_DEPTH_EXCEEDED",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATEGORY_REPLACEMENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATEGORY_REPLACEMENT",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_INGREDIENT_METADATA": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_INGREDIENT_METADATA",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "AUTH_REQUIRED",
+                    "message": "Yêu cầu đăng nhập",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Chỉ Admin được quản lý catalog",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "FORBIDDEN",
+                    "message": "Chỉ Admin được quản lý catalog",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy catalog item",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy catalog item",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Catalog item bị trùng hoặc đang được tham chiếu",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CATEGORY_SLUG_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_SLUG_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_REPLACEMENT_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_REPLACEMENT_REQUIRED",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_REPLACEMENT_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_REPLACEMENT_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INGREDIENT_NAME_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_NAME_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INGREDIENT_ALIAS_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_ALIAS_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATALOG_REFERENCE_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATALOG_REFERENCE_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Catalog Admin"
+        ],
+        "summary": "Tạo category",
+        "description": "Parent và child phải cùng type; tree tối đa hai tầng; slug unique trong parent/type.",
+        "operationId": "createCategory",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "name": "Món chính",
+                "type": "FOOD_TYPE",
+                "sortOrder": 10
+              },
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "slug": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 140,
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "FOOD_TYPE",
+                      "RECIPE_GROUP",
+                      "CONTENT_TOPIC"
+                    ]
+                  },
+                  "parentId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "sortOrder": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100000,
+                    "default": 0
+                  }
+                },
+                "required": [
+                  "name",
+                  "type"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Category đã tạo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu catalog không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATALOG_NAME": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATALOG_NAME",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATEGORY_PARENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATEGORY_PARENT",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_TYPE_MISMATCH": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_TYPE_MISMATCH",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_DEPTH_EXCEEDED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_DEPTH_EXCEEDED",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATEGORY_REPLACEMENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATEGORY_REPLACEMENT",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_INGREDIENT_METADATA": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_INGREDIENT_METADATA",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "AUTH_REQUIRED",
+                    "message": "Yêu cầu đăng nhập",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Chỉ Admin được quản lý catalog",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "FORBIDDEN",
+                    "message": "Chỉ Admin được quản lý catalog",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy catalog item",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy catalog item",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Catalog item bị trùng hoặc đang được tham chiếu",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CATEGORY_SLUG_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_SLUG_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_REPLACEMENT_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_REPLACEMENT_REQUIRED",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_REPLACEMENT_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_REPLACEMENT_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INGREDIENT_NAME_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_NAME_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INGREDIENT_ALIAS_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_ALIAS_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATALOG_REFERENCE_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATALOG_REFERENCE_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/categories/{id}": {
+      "patch": {
+        "tags": [
+          "Catalog Admin"
+        ],
+        "summary": "Cập nhật category",
+        "operationId": "updateCategory",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 120
+                  },
+                  "slug": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 140,
+                    "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "FOOD_TYPE",
+                      "RECIPE_GROUP",
+                      "CONTENT_TOPIC"
+                    ]
+                  },
+                  "parentId": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "uuid"
+                  },
+                  "sortOrder": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 100000
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Category đã cập nhật",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu catalog không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATALOG_NAME": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATALOG_NAME",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATEGORY_PARENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATEGORY_PARENT",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_TYPE_MISMATCH": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_TYPE_MISMATCH",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_DEPTH_EXCEEDED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_DEPTH_EXCEEDED",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATEGORY_REPLACEMENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATEGORY_REPLACEMENT",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_INGREDIENT_METADATA": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_INGREDIENT_METADATA",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "AUTH_REQUIRED",
+                    "message": "Yêu cầu đăng nhập",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Chỉ Admin được quản lý catalog",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "FORBIDDEN",
+                    "message": "Chỉ Admin được quản lý catalog",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy catalog item",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy catalog item",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Catalog item bị trùng hoặc đang được tham chiếu",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CATEGORY_SLUG_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_SLUG_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_REPLACEMENT_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_REPLACEMENT_REQUIRED",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_REPLACEMENT_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_REPLACEMENT_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INGREDIENT_NAME_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_NAME_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INGREDIENT_ALIAS_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_ALIAS_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATALOG_REFERENCE_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATALOG_REFERENCE_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Catalog Admin"
+        ],
+        "summary": "Archive category",
+        "description": "Category có child active hoặc pending proposal bắt buộc replacementId active, cùng type và cùng tầng. Reparent và archive chạy trong một transaction. Phase 04 sẽ dùng cùng policy cho content references.",
+        "operationId": "archiveCategory",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "replacementId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Category đã archive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogArchiveResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu catalog không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATALOG_NAME": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATALOG_NAME",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATEGORY_PARENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATEGORY_PARENT",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_TYPE_MISMATCH": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_TYPE_MISMATCH",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_DEPTH_EXCEEDED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_DEPTH_EXCEEDED",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATEGORY_REPLACEMENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATEGORY_REPLACEMENT",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_INGREDIENT_METADATA": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_INGREDIENT_METADATA",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "AUTH_REQUIRED",
+                    "message": "Yêu cầu đăng nhập",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Chỉ Admin được quản lý catalog",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "FORBIDDEN",
+                    "message": "Chỉ Admin được quản lý catalog",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy catalog item",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy catalog item",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Catalog item bị trùng hoặc đang được tham chiếu",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CATEGORY_SLUG_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_SLUG_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_REPLACEMENT_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_REPLACEMENT_REQUIRED",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_REPLACEMENT_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_REPLACEMENT_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INGREDIENT_NAME_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_NAME_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INGREDIENT_ALIAS_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_ALIAS_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATALOG_REFERENCE_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATALOG_REFERENCE_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ingredients": {
+      "get": {
+        "tags": [
+          "Ingredients"
+        ],
+        "summary": "List canonical ingredient active",
+        "operationId": "listPublicIngredients",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "GRAINS",
+                "LEGUMES",
+                "VEGETABLES",
+                "FRUITS",
+                "NUTS_SEEDS",
+                "MUSHROOMS",
+                "DAIRY_EGGS",
+                "HERBS_SPICES",
+                "OTHER"
+              ]
+            },
+            "required": false,
+            "name": "foodGroup",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ingredient list có metadata và pagination",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngredientListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Query không hợp lệ",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Query không hợp lệ",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ingredients/resolve": {
+      "get": {
+        "tags": [
+          "Ingredients"
+        ],
+        "summary": "Resolve tên/alias ingredient không phân biệt dấu",
+        "description": "Trả NONE, EXACT hoặc AMBIGUOUS. Khi ambiguous, client phải cho người dùng chọn candidate; backend không tự chọn.",
+        "operationId": "resolveIngredient",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            },
+            "required": true,
+            "name": "query",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Kết quả resolution",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngredientResolutionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Query không hợp lệ",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Query không hợp lệ",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/ingredients": {
+      "get": {
+        "tags": [
+          "Catalog Admin"
+        ],
+        "summary": "List ingredient gồm cả archived",
+        "operationId": "listAdminIngredients",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "GRAINS",
+                "LEGUMES",
+                "VEGETABLES",
+                "FRUITS",
+                "NUTS_SEEDS",
+                "MUSHROOMS",
+                "DAIRY_EGGS",
+                "HERBS_SPICES",
+                "OTHER"
+              ]
+            },
+            "required": false,
+            "name": "foodGroup",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "ARCHIVED"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ingredient list có pagination",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngredientListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu catalog không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATALOG_NAME": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATALOG_NAME",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATEGORY_PARENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATEGORY_PARENT",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_TYPE_MISMATCH": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_TYPE_MISMATCH",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_DEPTH_EXCEEDED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_DEPTH_EXCEEDED",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATEGORY_REPLACEMENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATEGORY_REPLACEMENT",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_INGREDIENT_METADATA": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_INGREDIENT_METADATA",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "AUTH_REQUIRED",
+                    "message": "Yêu cầu đăng nhập",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Chỉ Admin được quản lý catalog",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "FORBIDDEN",
+                    "message": "Chỉ Admin được quản lý catalog",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy catalog item",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy catalog item",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Catalog item bị trùng hoặc đang được tham chiếu",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CATEGORY_SLUG_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_SLUG_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_REPLACEMENT_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_REPLACEMENT_REQUIRED",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_REPLACEMENT_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_REPLACEMENT_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INGREDIENT_NAME_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_NAME_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INGREDIENT_ALIAS_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_ALIAS_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATALOG_REFERENCE_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATALOG_REFERENCE_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Catalog Admin"
+        ],
+        "summary": "Tạo canonical ingredient và metadata",
+        "operationId": "createIngredient",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "canonicalName": "Đậu hũ",
+                "foodGroup": "LEGUMES",
+                "allergenCodes": [
+                  "SOY"
+                ],
+                "dietCompatibilities": [
+                  {
+                    "dietPattern": "VEGAN",
+                    "compatible": true
+                  }
+                ]
+              },
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "canonicalName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                  },
+                  "foodGroup": {
+                    "type": "string",
+                    "enum": [
+                      "GRAINS",
+                      "LEGUMES",
+                      "VEGETABLES",
+                      "FRUITS",
+                      "NUTS_SEEDS",
+                      "MUSHROOMS",
+                      "DAIRY_EGGS",
+                      "HERBS_SPICES",
+                      "OTHER"
+                    ]
+                  },
+                  "allergenCodes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "maxItems": 30,
+                    "default": []
+                  },
+                  "dietCompatibilities": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "dietPattern": {
+                          "type": "string",
+                          "enum": [
+                            "VEGAN",
+                            "LACTO_OVO"
+                          ]
+                        },
+                        "compatible": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "dietPattern",
+                        "compatible"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "maxItems": 10,
+                    "default": []
+                  },
+                  "traditionWarnings": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "tradition": {
+                          "type": "string",
+                          "enum": [
+                            "NONE",
+                            "BUDDHIST",
+                            "CHRISTIAN"
+                          ]
+                        },
+                        "warningCode": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120,
+                          "pattern": "^[A-Z0-9]+(?:_[A-Z0-9]+)*$"
+                        },
+                        "label": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 180
+                        }
+                      },
+                      "required": [
+                        "tradition",
+                        "warningCode",
+                        "label"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "maxItems": 30,
+                    "default": []
+                  }
+                },
+                "required": [
+                  "canonicalName",
+                  "foodGroup"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Ingredient đã tạo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngredientResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu catalog không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATALOG_NAME": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATALOG_NAME",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATEGORY_PARENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATEGORY_PARENT",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_TYPE_MISMATCH": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_TYPE_MISMATCH",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_DEPTH_EXCEEDED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_DEPTH_EXCEEDED",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATEGORY_REPLACEMENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATEGORY_REPLACEMENT",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_INGREDIENT_METADATA": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_INGREDIENT_METADATA",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "AUTH_REQUIRED",
+                    "message": "Yêu cầu đăng nhập",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Chỉ Admin được quản lý catalog",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "FORBIDDEN",
+                    "message": "Chỉ Admin được quản lý catalog",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy catalog item",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy catalog item",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Catalog item bị trùng hoặc đang được tham chiếu",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CATEGORY_SLUG_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_SLUG_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_REPLACEMENT_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_REPLACEMENT_REQUIRED",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_REPLACEMENT_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_REPLACEMENT_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INGREDIENT_NAME_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_NAME_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INGREDIENT_ALIAS_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_ALIAS_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATALOG_REFERENCE_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATALOG_REFERENCE_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/ingredients/{id}": {
+      "patch": {
+        "tags": [
+          "Catalog Admin"
+        ],
+        "summary": "Cập nhật ingredient hoặc full snapshot metadata",
+        "operationId": "updateIngredient",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "canonicalName": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                  },
+                  "foodGroup": {
+                    "type": "string",
+                    "enum": [
+                      "GRAINS",
+                      "LEGUMES",
+                      "VEGETABLES",
+                      "FRUITS",
+                      "NUTS_SEEDS",
+                      "MUSHROOMS",
+                      "DAIRY_EGGS",
+                      "HERBS_SPICES",
+                      "OTHER"
+                    ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "ACTIVE",
+                      "ARCHIVED"
+                    ]
+                  },
+                  "allergenCodes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100
+                    },
+                    "maxItems": 30,
+                    "default": []
+                  },
+                  "dietCompatibilities": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "dietPattern": {
+                          "type": "string",
+                          "enum": [
+                            "VEGAN",
+                            "LACTO_OVO"
+                          ]
+                        },
+                        "compatible": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "dietPattern",
+                        "compatible"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "maxItems": 10,
+                    "default": []
+                  },
+                  "traditionWarnings": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "tradition": {
+                          "type": "string",
+                          "enum": [
+                            "NONE",
+                            "BUDDHIST",
+                            "CHRISTIAN"
+                          ]
+                        },
+                        "warningCode": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 120,
+                          "pattern": "^[A-Z0-9]+(?:_[A-Z0-9]+)*$"
+                        },
+                        "label": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 180
+                        }
+                      },
+                      "required": [
+                        "tradition",
+                        "warningCode",
+                        "label"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "maxItems": 30,
+                    "default": []
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Ingredient đã cập nhật",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngredientResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu catalog không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATALOG_NAME": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATALOG_NAME",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATEGORY_PARENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATEGORY_PARENT",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_TYPE_MISMATCH": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_TYPE_MISMATCH",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_DEPTH_EXCEEDED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_DEPTH_EXCEEDED",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATEGORY_REPLACEMENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATEGORY_REPLACEMENT",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_INGREDIENT_METADATA": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_INGREDIENT_METADATA",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "AUTH_REQUIRED",
+                    "message": "Yêu cầu đăng nhập",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Chỉ Admin được quản lý catalog",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "FORBIDDEN",
+                    "message": "Chỉ Admin được quản lý catalog",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy catalog item",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy catalog item",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Catalog item bị trùng hoặc đang được tham chiếu",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CATEGORY_SLUG_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_SLUG_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_REPLACEMENT_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_REPLACEMENT_REQUIRED",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_REPLACEMENT_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_REPLACEMENT_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INGREDIENT_NAME_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_NAME_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INGREDIENT_ALIAS_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_ALIAS_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATALOG_REFERENCE_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATALOG_REFERENCE_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Catalog Admin"
+        ],
+        "summary": "Archive ingredient",
+        "operationId": "archiveIngredient",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Ingredient đã archive",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogArchiveResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu catalog không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATALOG_NAME": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATALOG_NAME",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATEGORY_PARENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATEGORY_PARENT",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_TYPE_MISMATCH": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_TYPE_MISMATCH",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_DEPTH_EXCEEDED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_DEPTH_EXCEEDED",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATEGORY_REPLACEMENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATEGORY_REPLACEMENT",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_INGREDIENT_METADATA": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_INGREDIENT_METADATA",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "AUTH_REQUIRED",
+                    "message": "Yêu cầu đăng nhập",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Chỉ Admin được quản lý catalog",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "FORBIDDEN",
+                    "message": "Chỉ Admin được quản lý catalog",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy catalog item",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy catalog item",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Catalog item bị trùng hoặc đang được tham chiếu",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CATEGORY_SLUG_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_SLUG_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_REPLACEMENT_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_REPLACEMENT_REQUIRED",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_REPLACEMENT_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_REPLACEMENT_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INGREDIENT_NAME_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_NAME_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INGREDIENT_ALIAS_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_ALIAS_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATALOG_REFERENCE_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATALOG_REFERENCE_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/ingredients/{id}/aliases": {
+      "post": {
+        "tags": [
+          "Catalog Admin"
+        ],
+        "summary": "Thêm alias ingredient",
+        "description": "Alias được normalize không dấu. Cùng alias có thể trỏ tới nhiều canonical ingredient để biểu diễn kết quả ambiguous.",
+        "operationId": "addIngredientAlias",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "alias": "tofu"
+              },
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "alias": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 160
+                  }
+                },
+                "required": [
+                  "alias"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Alias đã thêm",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngredientResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu catalog không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATALOG_NAME": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATALOG_NAME",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATEGORY_PARENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATEGORY_PARENT",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_TYPE_MISMATCH": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_TYPE_MISMATCH",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_DEPTH_EXCEEDED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_DEPTH_EXCEEDED",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATEGORY_REPLACEMENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATEGORY_REPLACEMENT",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_INGREDIENT_METADATA": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_INGREDIENT_METADATA",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "AUTH_REQUIRED",
+                    "message": "Yêu cầu đăng nhập",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Chỉ Admin được quản lý catalog",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "FORBIDDEN",
+                    "message": "Chỉ Admin được quản lý catalog",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy catalog item",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy catalog item",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Catalog item bị trùng hoặc đang được tham chiếu",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CATEGORY_SLUG_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_SLUG_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_REPLACEMENT_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_REPLACEMENT_REQUIRED",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_REPLACEMENT_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_REPLACEMENT_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INGREDIENT_NAME_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_NAME_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INGREDIENT_ALIAS_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_ALIAS_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATALOG_REFERENCE_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATALOG_REFERENCE_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/ingredients/{id}/aliases/{aliasId}": {
+      "delete": {
+        "tags": [
+          "Catalog Admin"
+        ],
+        "summary": "Xóa alias của ingredient",
+        "operationId": "deleteIngredientAlias",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "aliasId",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Alias đã xóa"
+          },
+          "400": {
+            "description": "Dữ liệu catalog không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATALOG_NAME": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATALOG_NAME",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATEGORY_PARENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATEGORY_PARENT",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_TYPE_MISMATCH": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_TYPE_MISMATCH",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_DEPTH_EXCEEDED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_DEPTH_EXCEEDED",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CATEGORY_REPLACEMENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CATEGORY_REPLACEMENT",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_INGREDIENT_METADATA": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_INGREDIENT_METADATA",
+                        "message": "Dữ liệu catalog không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "AUTH_REQUIRED",
+                    "message": "Yêu cầu đăng nhập",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Chỉ Admin được quản lý catalog",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "FORBIDDEN",
+                    "message": "Chỉ Admin được quản lý catalog",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy catalog item",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "NOT_FOUND",
+                    "message": "Không tìm thấy catalog item",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Catalog item bị trùng hoặc đang được tham chiếu",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CATEGORY_SLUG_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_SLUG_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_REPLACEMENT_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_REPLACEMENT_REQUIRED",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATEGORY_REPLACEMENT_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATEGORY_REPLACEMENT_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INGREDIENT_NAME_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_NAME_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INGREDIENT_ALIAS_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_ALIAS_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CATALOG_REFERENCE_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CATALOG_REFERENCE_CONFLICT",
+                        "message": "Catalog item bị trùng hoặc đang được tham chiếu",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }

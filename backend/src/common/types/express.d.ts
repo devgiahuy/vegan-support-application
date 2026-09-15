@@ -7,6 +7,8 @@ declare global {
     interface Request {
       requestId: string;
       validatedBody?: unknown;
+      validatedParams?: unknown;
+      validatedQuery?: unknown;
       auth?: {
         userId: string;
         email: string;

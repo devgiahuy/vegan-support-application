@@ -1,7 +1,8 @@
 # Vegan Support Backend
 
 Express/TypeScript API for the Vegan Support Application. The implemented scope includes the service
-foundation, authentication/sessions, user profiles, manual health metrics, and versioned diet rules.
+foundation, authentication/sessions, user profiles, manual health metrics, versioned diet rules, and
+the category/ingredient catalog.
 
 ## Prerequisites
 
@@ -31,6 +32,10 @@ Profile calculations use manual height, weight, age, sex, and activity inputs. B
 Mifflin–St Jeor formula; TDEE factors are 1.2, 1.375, 1.55, 1.725, and 1.9 from sedentary through
 extra-active. Diet rule set v1 is seeded by `npm run seed`, and `PERIODIC` dates are stored as
 date-only values for `Asia/Ho_Chi_Minh`.
+
+Phase 03 seeds a two-level category tree, allergen definitions, all food-group enum values through
+demo ingredients, canonical ingredient metadata, and accent-insensitive aliases. Public catalog
+routes hide archived items; catalog mutations require the backend-authoritative `ADMIN` role.
 
 ## Quality gates
 

@@ -639,6 +639,10 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
           "ingredientName"
         ],
         "properties": {
+          "ingredientId": {
+            "type": "string",
+            "_truncated": true
+          },
           "ingredientName": {
             "type": "string",
             "_truncated": true

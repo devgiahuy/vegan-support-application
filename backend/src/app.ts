@@ -17,6 +17,14 @@ import { AuthService } from './modules/auth/auth.service.js';
 import { AuthenticationMiddleware } from './modules/auth/authentication.middleware.js';
 import { PasswordService } from './modules/auth/password.service.js';
 import { TokenService } from './modules/auth/token.service.js';
+import { CatalogController } from './modules/catalog/catalog.controller.js';
+import { CatalogRepository } from './modules/catalog/catalog.repository.js';
+import {
+  createCatalogAdminRouter,
+  createCategoryRouter,
+  createIngredientRouter,
+} from './modules/catalog/catalog.router.js';
+import { CatalogService } from './modules/catalog/catalog.service.js';
 import { DietController } from './modules/diet/diet.controller.js';
 import { createDietRouter } from './modules/diet/diet.router.js';
 import { createHealthRouter } from './modules/health/health.router.js';
@@ -42,6 +50,9 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   const profileService = new ProfileService(new ProfileRepository(database.client));
   const usersController = new UsersController(profileService);
   const dietController = new DietController(profileService);
+  const catalogController = new CatalogController(
+    new CatalogService(new CatalogRepository(database.client)),
+  );
 
   app.disable('x-powered-by');
   app.use(helmet());
@@ -78,6 +89,9 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/auth', createAuthRouter(authController));
   app.use('/api/v1/users', createUsersRouter(usersController, authentication));
   app.use('/api/v1/diet-rules', createDietRouter(dietController, authentication));
+  app.use('/api/v1/categories', createCategoryRouter(catalogController));
+  app.use('/api/v1/ingredients', createIngredientRouter(catalogController));
+  app.use('/api/v1/admin', createCatalogAdminRouter(catalogController, authentication));
 
   app.use(notFoundHandler);
   app.use(createErrorHandler(logger));

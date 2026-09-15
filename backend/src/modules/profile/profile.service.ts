@@ -7,6 +7,7 @@ import {
   type HealthProfile,
 } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
+import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 import { toPublicUser } from '../auth/auth.service.js';
 import type {
   DietPreferenceOutput,
@@ -38,16 +39,6 @@ const activityFactors: Record<ActivityLevel, number> = {
 
 function roundToTwo(value: number): number {
   return Math.round((value + Number.EPSILON) * 100) / 100;
-}
-
-function normalizeIngredientName(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/gi, 'd')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
 }
 
 function dateOnly(date: Date): string {
@@ -121,6 +112,7 @@ function dietPreferenceOutput(
     })),
     ingredientExclusions: profile.ingredientExclusions.map((exclusion) => ({
       id: exclusion.id,
+      ingredientId: exclusion.ingredientId,
       ingredientName: exclusion.ingredientName,
       normalizedName: exclusion.normalizedName,
       reason: exclusion.reason,
@@ -243,7 +235,7 @@ export class ProfileService {
 
     const definitions = await this.repository.findRuleDefinitions(input, input.ruleSetVersion);
     this.validateSelectedRules(input, definitions);
-    const exclusions = this.normalizeExclusions(input);
+    const exclusions = await this.normalizeExclusions(input);
     await this.repository.saveDietPreferences(userId, input, definitions, exclusions, new Date());
     const profile = await this.repository.findProfile(userId);
     if (!profile) throw this.profileNotFoundError();
@@ -326,12 +318,33 @@ export class ProfileService {
     }
   }
 
-  private normalizeExclusions(input: SaveDietPreferencesInput): NormalizedIngredientExclusion[] {
-    const exclusions = input.ingredientExclusions.map((exclusion) => ({
-      ingredientName: exclusion.ingredientName,
-      normalizedName: normalizeIngredientName(exclusion.ingredientName),
-      ...(exclusion.reason ? { reason: exclusion.reason } : {}),
-    }));
+  private async normalizeExclusions(
+    input: SaveDietPreferencesInput,
+  ): Promise<NormalizedIngredientExclusion[]> {
+    const canonicalIds = input.ingredientExclusions.flatMap((exclusion) =>
+      exclusion.ingredientId ? [exclusion.ingredientId] : [],
+    );
+    const ingredients = await this.repository.findActiveIngredients(canonicalIds);
+    if (new Set(canonicalIds).size !== ingredients.length) {
+      throw new AppError({
+        statusCode: 400,
+        code: 'INVALID_INGREDIENT_EXCLUSIONS',
+        message: 'Canonical ingredient không tồn tại hoặc đã archive',
+      });
+    }
+    const ingredientById = new Map(ingredients.map((ingredient) => [ingredient.id, ingredient]));
+    const exclusions = input.ingredientExclusions.map((exclusion) => {
+      const canonical = exclusion.ingredientId
+        ? ingredientById.get(exclusion.ingredientId)
+        : undefined;
+      return {
+        ...(canonical ? { ingredientId: canonical.id } : {}),
+        ingredientName: canonical?.canonicalName ?? exclusion.ingredientName,
+        normalizedName:
+          canonical?.normalizedName ?? normalizeVietnameseText(exclusion.ingredientName),
+        ...(exclusion.reason ? { reason: exclusion.reason } : {}),
+      };
+    });
     if (
       exclusions.some((exclusion) => !exclusion.normalizedName) ||
       new Set(exclusions.map((exclusion) => exclusion.normalizedName)).size !== exclusions.length

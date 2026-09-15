@@ -51,6 +51,7 @@ interface CalculatedHealthMetrics {
 }
 
 export interface NormalizedIngredientExclusion {
+  ingredientId?: string;
   ingredientName: string;
   normalizedName: string;
   reason?: string;
@@ -114,6 +115,13 @@ export class ProfileRepository {
         ],
       },
       orderBy: [{ source: 'asc' }, { code: 'asc' }],
+    });
+  }
+
+  findActiveIngredients(ids: string[]) {
+    return this.prisma.ingredient.findMany({
+      where: { id: { in: ids }, status: 'ACTIVE' },
+      select: { id: true, canonicalName: true, normalizedName: true },
     });
   }
 
