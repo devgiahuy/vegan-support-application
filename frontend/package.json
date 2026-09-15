@@ -7,8 +7,6 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run",
-    "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "git -C .. config core.hooksPath frontend/.husky || true",
@@ -61,9 +59,6 @@
     "postcss": "^8",
     "prettier": "^3.9.6",
     "tailwindcss": "^4",
-    "typescript": "^5",
-    "vite": "^8.3.0",
-    "vite-tsconfig-paths": "^6.1.1",
-    "vitest": "^5.0.0"
+    "typescript": "^5"
   }
 }

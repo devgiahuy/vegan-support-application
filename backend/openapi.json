@@ -39,6 +39,14 @@
     {
       "name": "Catalog Admin",
       "description": "Admin-only category and ingredient management"
+    },
+    {
+      "name": "Content",
+      "description": "Revisioned Recipe, Blog, and Video content"
+    },
+    {
+      "name": "Uploads",
+      "description": "Safe Cloudinary signed-upload configuration"
     }
   ],
   "components": {
@@ -2846,6 +2854,3320 @@
           "meta"
         ],
         "additionalProperties": false
+      },
+      "CreatePostRequest": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "RECIPE"
+                ]
+              },
+              "title": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 200
+              },
+              "slug": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 220,
+                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+              },
+              "excerpt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "categoryIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "maxItems": 10,
+                "default": []
+              },
+              "media": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "CLOUDINARY"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "COVER_IMAGE",
+                            "VIDEO"
+                          ]
+                        },
+                        "publicId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 255
+                        },
+                        "secureUrl": {
+                          "type": "string",
+                          "maxLength": 2048,
+                          "format": "uri"
+                        },
+                        "mimeType": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "bytes": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "width": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "height": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "durationSeconds": {
+                          "type": "number",
+                          "exclusiveMinimum": 0,
+                          "maximum": 86400
+                        }
+                      },
+                      "required": [
+                        "provider",
+                        "kind",
+                        "publicId",
+                        "secureUrl",
+                        "mimeType",
+                        "bytes"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "YOUTUBE"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "VIDEO"
+                          ]
+                        },
+                        "secureUrl": {
+                          "type": "string",
+                          "maxLength": 2048,
+                          "format": "uri"
+                        }
+                      },
+                      "required": [
+                        "provider",
+                        "kind",
+                        "secureUrl"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "maxItems": 2,
+                "default": []
+              },
+              "body": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 100000
+              },
+              "recipe": {
+                "type": "object",
+                "properties": {
+                  "servings": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  },
+                  "prepTimeMinutes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10080
+                  },
+                  "cookTimeMinutes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10080
+                  },
+                  "difficulty": {
+                    "type": "string",
+                    "enum": [
+                      "EASY",
+                      "MEDIUM",
+                      "HARD"
+                    ]
+                  },
+                  "nutrition": {
+                    "type": "object",
+                    "properties": {
+                      "calories": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "proteinGrams": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "carbsGrams": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "fatGrams": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "fiberGrams": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "vitaminB12Mcg": {
+                        "type": "number",
+                        "minimum": 0
+                      }
+                    },
+                    "default": {},
+                    "additionalProperties": false
+                  },
+                  "ingredients": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "ingredientId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "displayName": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 160
+                        },
+                        "amount": {
+                          "type": "number",
+                          "exclusiveMinimum": 0,
+                          "maximum": 1000000
+                        },
+                        "unit": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 40
+                        },
+                        "optional": {
+                          "type": "boolean",
+                          "default": false
+                        }
+                      },
+                      "required": [
+                        "displayName",
+                        "amount",
+                        "unit"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1,
+                    "maxItems": 100
+                  }
+                },
+                "required": [
+                  "servings",
+                  "prepTimeMinutes",
+                  "cookTimeMinutes",
+                  "difficulty",
+                  "ingredients"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "body",
+              "recipe"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "BLOG"
+                ]
+              },
+              "title": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 200
+              },
+              "slug": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 220,
+                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+              },
+              "excerpt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "categoryIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "maxItems": 10,
+                "default": []
+              },
+              "media": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "CLOUDINARY"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "COVER_IMAGE",
+                            "VIDEO"
+                          ]
+                        },
+                        "publicId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 255
+                        },
+                        "secureUrl": {
+                          "type": "string",
+                          "maxLength": 2048,
+                          "format": "uri"
+                        },
+                        "mimeType": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "bytes": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "width": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "height": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "durationSeconds": {
+                          "type": "number",
+                          "exclusiveMinimum": 0,
+                          "maximum": 86400
+                        }
+                      },
+                      "required": [
+                        "provider",
+                        "kind",
+                        "publicId",
+                        "secureUrl",
+                        "mimeType",
+                        "bytes"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "YOUTUBE"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "VIDEO"
+                          ]
+                        },
+                        "secureUrl": {
+                          "type": "string",
+                          "maxLength": 2048,
+                          "format": "uri"
+                        }
+                      },
+                      "required": [
+                        "provider",
+                        "kind",
+                        "secureUrl"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "maxItems": 2,
+                "default": []
+              },
+              "body": {
+                "type": "string",
+                "minLength": 100,
+                "maxLength": 200000
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "body"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "VIDEO"
+                ]
+              },
+              "title": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 200
+              },
+              "slug": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 220,
+                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+              },
+              "excerpt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "categoryIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "maxItems": 10,
+                "default": []
+              },
+              "media": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "CLOUDINARY"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "COVER_IMAGE",
+                            "VIDEO"
+                          ]
+                        },
+                        "publicId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 255
+                        },
+                        "secureUrl": {
+                          "type": "string",
+                          "maxLength": 2048,
+                          "format": "uri"
+                        },
+                        "mimeType": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "bytes": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "width": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "height": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "durationSeconds": {
+                          "type": "number",
+                          "exclusiveMinimum": 0,
+                          "maximum": 86400
+                        }
+                      },
+                      "required": [
+                        "provider",
+                        "kind",
+                        "publicId",
+                        "secureUrl",
+                        "mimeType",
+                        "bytes"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "YOUTUBE"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "VIDEO"
+                          ]
+                        },
+                        "secureUrl": {
+                          "type": "string",
+                          "maxLength": 2048,
+                          "format": "uri"
+                        }
+                      },
+                      "required": [
+                        "provider",
+                        "kind",
+                        "secureUrl"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "maxItems": 2,
+                "default": []
+              },
+              "body": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 100000
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "body"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "UpdatePostRequest": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "RECIPE"
+                ]
+              },
+              "title": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 200
+              },
+              "slug": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 220,
+                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+              },
+              "excerpt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "categoryIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "maxItems": 10,
+                "default": []
+              },
+              "media": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "CLOUDINARY"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "COVER_IMAGE",
+                            "VIDEO"
+                          ]
+                        },
+                        "publicId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 255
+                        },
+                        "secureUrl": {
+                          "type": "string",
+                          "maxLength": 2048,
+                          "format": "uri"
+                        },
+                        "mimeType": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "bytes": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "width": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "height": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "durationSeconds": {
+                          "type": "number",
+                          "exclusiveMinimum": 0,
+                          "maximum": 86400
+                        }
+                      },
+                      "required": [
+                        "provider",
+                        "kind",
+                        "publicId",
+                        "secureUrl",
+                        "mimeType",
+                        "bytes"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "YOUTUBE"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "VIDEO"
+                          ]
+                        },
+                        "secureUrl": {
+                          "type": "string",
+                          "maxLength": 2048,
+                          "format": "uri"
+                        }
+                      },
+                      "required": [
+                        "provider",
+                        "kind",
+                        "secureUrl"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "maxItems": 2,
+                "default": []
+              },
+              "body": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 100000
+              },
+              "recipe": {
+                "type": "object",
+                "properties": {
+                  "servings": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  },
+                  "prepTimeMinutes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10080
+                  },
+                  "cookTimeMinutes": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 10080
+                  },
+                  "difficulty": {
+                    "type": "string",
+                    "enum": [
+                      "EASY",
+                      "MEDIUM",
+                      "HARD"
+                    ]
+                  },
+                  "nutrition": {
+                    "type": "object",
+                    "properties": {
+                      "calories": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "proteinGrams": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "carbsGrams": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "fatGrams": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "fiberGrams": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "vitaminB12Mcg": {
+                        "type": "number",
+                        "minimum": 0
+                      }
+                    },
+                    "default": {},
+                    "additionalProperties": false
+                  },
+                  "ingredients": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "ingredientId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "displayName": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 160
+                        },
+                        "amount": {
+                          "type": "number",
+                          "exclusiveMinimum": 0,
+                          "maximum": 1000000
+                        },
+                        "unit": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 40
+                        },
+                        "optional": {
+                          "type": "boolean",
+                          "default": false
+                        }
+                      },
+                      "required": [
+                        "displayName",
+                        "amount",
+                        "unit"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "minItems": 1,
+                    "maxItems": 100
+                  }
+                },
+                "required": [
+                  "servings",
+                  "prepTimeMinutes",
+                  "cookTimeMinutes",
+                  "difficulty",
+                  "ingredients"
+                ],
+                "additionalProperties": false
+              },
+              "expectedVersion": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "body",
+              "recipe",
+              "expectedVersion"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "BLOG"
+                ]
+              },
+              "title": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 200
+              },
+              "slug": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 220,
+                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+              },
+              "excerpt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "categoryIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "maxItems": 10,
+                "default": []
+              },
+              "media": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "CLOUDINARY"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "COVER_IMAGE",
+                            "VIDEO"
+                          ]
+                        },
+                        "publicId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 255
+                        },
+                        "secureUrl": {
+                          "type": "string",
+                          "maxLength": 2048,
+                          "format": "uri"
+                        },
+                        "mimeType": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "bytes": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "width": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "height": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "durationSeconds": {
+                          "type": "number",
+                          "exclusiveMinimum": 0,
+                          "maximum": 86400
+                        }
+                      },
+                      "required": [
+                        "provider",
+                        "kind",
+                        "publicId",
+                        "secureUrl",
+                        "mimeType",
+                        "bytes"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "YOUTUBE"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "VIDEO"
+                          ]
+                        },
+                        "secureUrl": {
+                          "type": "string",
+                          "maxLength": 2048,
+                          "format": "uri"
+                        }
+                      },
+                      "required": [
+                        "provider",
+                        "kind",
+                        "secureUrl"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "maxItems": 2,
+                "default": []
+              },
+              "body": {
+                "type": "string",
+                "minLength": 100,
+                "maxLength": 200000
+              },
+              "expectedVersion": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "body",
+              "expectedVersion"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "VIDEO"
+                ]
+              },
+              "title": {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 200
+              },
+              "slug": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 220,
+                "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+              },
+              "excerpt": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 500
+              },
+              "categoryIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "maxItems": 10,
+                "default": []
+              },
+              "media": {
+                "type": "array",
+                "items": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "CLOUDINARY"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "COVER_IMAGE",
+                            "VIDEO"
+                          ]
+                        },
+                        "publicId": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 255
+                        },
+                        "secureUrl": {
+                          "type": "string",
+                          "maxLength": 2048,
+                          "format": "uri"
+                        },
+                        "mimeType": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 100
+                        },
+                        "bytes": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "width": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "height": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "durationSeconds": {
+                          "type": "number",
+                          "exclusiveMinimum": 0,
+                          "maximum": 86400
+                        }
+                      },
+                      "required": [
+                        "provider",
+                        "kind",
+                        "publicId",
+                        "secureUrl",
+                        "mimeType",
+                        "bytes"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "YOUTUBE"
+                          ]
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "VIDEO"
+                          ]
+                        },
+                        "secureUrl": {
+                          "type": "string",
+                          "maxLength": 2048,
+                          "format": "uri"
+                        }
+                      },
+                      "required": [
+                        "provider",
+                        "kind",
+                        "secureUrl"
+                      ],
+                      "additionalProperties": false
+                    }
+                  ]
+                },
+                "maxItems": 2,
+                "default": []
+              },
+              "body": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 100000
+              },
+              "expectedVersion": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              }
+            },
+            "required": [
+              "type",
+              "title",
+              "body",
+              "expectedVersion"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "PostResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "oneOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "author": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "displayName": {
+                        "type": "string"
+                      },
+                      "avatarUrl": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "displayName",
+                      "avatarUrl"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "slug": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "DRAFT",
+                      "PENDING_REVIEW",
+                      "PUBLISHED",
+                      "FLAGGED",
+                      "REJECTED",
+                      "HIDDEN",
+                      "DELETED"
+                    ]
+                  },
+                  "version": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "publishedRevisionVersion": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "exclusiveMinimum": 0
+                  },
+                  "publishedAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "revision": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "version": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "DRAFT",
+                          "PENDING_REVIEW",
+                          "PUBLISHED",
+                          "FLAGGED",
+                          "REJECTED"
+                        ]
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "excerpt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "body": {
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "version",
+                      "status",
+                      "title",
+                      "excerpt",
+                      "body",
+                      "createdAt"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "categories": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "slug",
+                        "type"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "media": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "COVER_IMAGE",
+                            "VIDEO"
+                          ]
+                        },
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "CLOUDINARY",
+                            "YOUTUBE"
+                          ]
+                        },
+                        "publicId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "secureUrl": {
+                          "type": "string",
+                          "format": "uri"
+                        },
+                        "mimeType": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "bytes": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "exclusiveMinimum": 0
+                        },
+                        "width": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "exclusiveMinimum": 0
+                        },
+                        "height": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "exclusiveMinimum": 0
+                        },
+                        "durationSeconds": {
+                          "type": [
+                            "number",
+                            "null"
+                          ],
+                          "exclusiveMinimum": 0
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "provider",
+                        "publicId",
+                        "secureUrl",
+                        "mimeType",
+                        "bytes",
+                        "width",
+                        "height",
+                        "durationSeconds"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "RECIPE"
+                    ]
+                  },
+                  "recipe": {
+                    "type": "object",
+                    "properties": {
+                      "servings": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "prepTimeMinutes": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "cookTimeMinutes": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "difficulty": {
+                        "type": "string",
+                        "enum": [
+                          "EASY",
+                          "MEDIUM",
+                          "HARD"
+                        ]
+                      },
+                      "nutrition": {
+                        "type": "object",
+                        "properties": {
+                          "calories": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "proteinGrams": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "carbsGrams": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "fatGrams": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "fiberGrams": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "vitaminB12Mcg": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "calories",
+                          "proteinGrams",
+                          "carbsGrams",
+                          "fatGrams",
+                          "fiberGrams",
+                          "vitaminB12Mcg"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "mealPlannerEligible": {
+                        "type": "boolean"
+                      },
+                      "allergenCodes": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "traditionWarnings": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "tradition": {
+                              "type": "string",
+                              "enum": [
+                                "NONE",
+                                "BUDDHIST",
+                                "CHRISTIAN"
+                              ]
+                            },
+                            "warningCode": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "tradition",
+                            "warningCode",
+                            "label"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "dietCompatibilities": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "dietPattern": {
+                              "type": "string",
+                              "enum": [
+                                "VEGAN",
+                                "LACTO_OVO"
+                              ]
+                            },
+                            "compatible": {
+                              "type": "boolean"
+                            },
+                            "reasonCodes": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "required": [
+                            "dietPattern",
+                            "compatible",
+                            "reasonCodes"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "ingredients": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "ingredientId": {
+                              "type": [
+                                "string",
+                                "null"
+                              ],
+                              "format": "uuid"
+                            },
+                            "canonicalName": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            },
+                            "position": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "normalizedName": {
+                              "type": "string"
+                            },
+                            "amount": {
+                              "type": "number",
+                              "exclusiveMinimum": 0
+                            },
+                            "unit": {
+                              "type": "string"
+                            },
+                            "optional": {
+                              "type": "boolean"
+                            },
+                            "resolutionStatus": {
+                              "type": "string",
+                              "enum": [
+                                "EXACT",
+                                "AMBIGUOUS",
+                                "UNKNOWN"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "ingredientId",
+                            "canonicalName",
+                            "position",
+                            "displayName",
+                            "normalizedName",
+                            "amount",
+                            "unit",
+                            "optional",
+                            "resolutionStatus"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "servings",
+                      "prepTimeMinutes",
+                      "cookTimeMinutes",
+                      "difficulty",
+                      "nutrition",
+                      "mealPlannerEligible",
+                      "allergenCodes",
+                      "traditionWarnings",
+                      "dietCompatibilities",
+                      "ingredients"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "id",
+                  "author",
+                  "slug",
+                  "status",
+                  "version",
+                  "publishedRevisionVersion",
+                  "publishedAt",
+                  "createdAt",
+                  "updatedAt",
+                  "revision",
+                  "categories",
+                  "media",
+                  "type",
+                  "recipe"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "author": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "displayName": {
+                        "type": "string"
+                      },
+                      "avatarUrl": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "displayName",
+                      "avatarUrl"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "slug": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "DRAFT",
+                      "PENDING_REVIEW",
+                      "PUBLISHED",
+                      "FLAGGED",
+                      "REJECTED",
+                      "HIDDEN",
+                      "DELETED"
+                    ]
+                  },
+                  "version": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "publishedRevisionVersion": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "exclusiveMinimum": 0
+                  },
+                  "publishedAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "revision": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "version": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "DRAFT",
+                          "PENDING_REVIEW",
+                          "PUBLISHED",
+                          "FLAGGED",
+                          "REJECTED"
+                        ]
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "excerpt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "body": {
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "version",
+                      "status",
+                      "title",
+                      "excerpt",
+                      "body",
+                      "createdAt"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "categories": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "slug",
+                        "type"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "media": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "COVER_IMAGE",
+                            "VIDEO"
+                          ]
+                        },
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "CLOUDINARY",
+                            "YOUTUBE"
+                          ]
+                        },
+                        "publicId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "secureUrl": {
+                          "type": "string",
+                          "format": "uri"
+                        },
+                        "mimeType": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "bytes": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "exclusiveMinimum": 0
+                        },
+                        "width": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "exclusiveMinimum": 0
+                        },
+                        "height": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "exclusiveMinimum": 0
+                        },
+                        "durationSeconds": {
+                          "type": [
+                            "number",
+                            "null"
+                          ],
+                          "exclusiveMinimum": 0
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "provider",
+                        "publicId",
+                        "secureUrl",
+                        "mimeType",
+                        "bytes",
+                        "width",
+                        "height",
+                        "durationSeconds"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "BLOG"
+                    ]
+                  },
+                  "recipe": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "id",
+                  "author",
+                  "slug",
+                  "status",
+                  "version",
+                  "publishedRevisionVersion",
+                  "publishedAt",
+                  "createdAt",
+                  "updatedAt",
+                  "revision",
+                  "categories",
+                  "media",
+                  "type",
+                  "recipe"
+                ],
+                "additionalProperties": false
+              },
+              {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "author": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "displayName": {
+                        "type": "string"
+                      },
+                      "avatarUrl": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "displayName",
+                      "avatarUrl"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "slug": {
+                    "type": "string"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "DRAFT",
+                      "PENDING_REVIEW",
+                      "PUBLISHED",
+                      "FLAGGED",
+                      "REJECTED",
+                      "HIDDEN",
+                      "DELETED"
+                    ]
+                  },
+                  "version": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "publishedRevisionVersion": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "exclusiveMinimum": 0
+                  },
+                  "publishedAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "revision": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "version": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "DRAFT",
+                          "PENDING_REVIEW",
+                          "PUBLISHED",
+                          "FLAGGED",
+                          "REJECTED"
+                        ]
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "excerpt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "body": {
+                        "type": "string"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "version",
+                      "status",
+                      "title",
+                      "excerpt",
+                      "body",
+                      "createdAt"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "categories": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "slug",
+                        "type"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "media": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "COVER_IMAGE",
+                            "VIDEO"
+                          ]
+                        },
+                        "provider": {
+                          "type": "string",
+                          "enum": [
+                            "CLOUDINARY",
+                            "YOUTUBE"
+                          ]
+                        },
+                        "publicId": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "secureUrl": {
+                          "type": "string",
+                          "format": "uri"
+                        },
+                        "mimeType": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "bytes": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "exclusiveMinimum": 0
+                        },
+                        "width": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "exclusiveMinimum": 0
+                        },
+                        "height": {
+                          "type": [
+                            "integer",
+                            "null"
+                          ],
+                          "exclusiveMinimum": 0
+                        },
+                        "durationSeconds": {
+                          "type": [
+                            "number",
+                            "null"
+                          ],
+                          "exclusiveMinimum": 0
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "kind",
+                        "provider",
+                        "publicId",
+                        "secureUrl",
+                        "mimeType",
+                        "bytes",
+                        "width",
+                        "height",
+                        "durationSeconds"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "VIDEO"
+                    ]
+                  },
+                  "recipe": {
+                    "type": "null"
+                  }
+                },
+                "required": [
+                  "id",
+                  "author",
+                  "slug",
+                  "status",
+                  "version",
+                  "publishedRevisionVersion",
+                  "publishedAt",
+                  "createdAt",
+                  "updatedAt",
+                  "revision",
+                  "categories",
+                  "media",
+                  "type",
+                  "recipe"
+                ],
+                "additionalProperties": false
+              }
+            ]
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "PostListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "author": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "displayName": {
+                          "type": "string"
+                        },
+                        "avatarUrl": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "displayName",
+                        "avatarUrl"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "slug": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "PENDING_REVIEW",
+                        "PUBLISHED",
+                        "FLAGGED",
+                        "REJECTED",
+                        "HIDDEN",
+                        "DELETED"
+                      ]
+                    },
+                    "version": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "publishedRevisionVersion": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "exclusiveMinimum": 0
+                    },
+                    "publishedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "revision": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "DRAFT",
+                            "PENDING_REVIEW",
+                            "PUBLISHED",
+                            "FLAGGED",
+                            "REJECTED"
+                          ]
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "excerpt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "body": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "version",
+                        "status",
+                        "title",
+                        "excerpt",
+                        "body",
+                        "createdAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "categories": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "slug": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "slug",
+                          "type"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "media": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "COVER_IMAGE",
+                              "VIDEO"
+                            ]
+                          },
+                          "provider": {
+                            "type": "string",
+                            "enum": [
+                              "CLOUDINARY",
+                              "YOUTUBE"
+                            ]
+                          },
+                          "publicId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "secureUrl": {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          "mimeType": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "bytes": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "exclusiveMinimum": 0
+                          },
+                          "width": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "exclusiveMinimum": 0
+                          },
+                          "height": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "exclusiveMinimum": 0
+                          },
+                          "durationSeconds": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "exclusiveMinimum": 0
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "provider",
+                          "publicId",
+                          "secureUrl",
+                          "mimeType",
+                          "bytes",
+                          "width",
+                          "height",
+                          "durationSeconds"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "RECIPE"
+                      ]
+                    },
+                    "recipe": {
+                      "type": "object",
+                      "properties": {
+                        "servings": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "prepTimeMinutes": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "cookTimeMinutes": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "difficulty": {
+                          "type": "string",
+                          "enum": [
+                            "EASY",
+                            "MEDIUM",
+                            "HARD"
+                          ]
+                        },
+                        "nutrition": {
+                          "type": "object",
+                          "properties": {
+                            "calories": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "proteinGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "carbsGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fatGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fiberGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "vitaminB12Mcg": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "calories",
+                            "proteinGrams",
+                            "carbsGrams",
+                            "fatGrams",
+                            "fiberGrams",
+                            "vitaminB12Mcg"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "mealPlannerEligible": {
+                          "type": "boolean"
+                        },
+                        "allergenCodes": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "traditionWarnings": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "tradition": {
+                                "type": "string",
+                                "enum": [
+                                  "NONE",
+                                  "BUDDHIST",
+                                  "CHRISTIAN"
+                                ]
+                              },
+                              "warningCode": {
+                                "type": "string"
+                              },
+                              "label": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "tradition",
+                              "warningCode",
+                              "label"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "dietCompatibilities": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "dietPattern": {
+                                "type": "string",
+                                "enum": [
+                                  "VEGAN",
+                                  "LACTO_OVO"
+                                ]
+                              },
+                              "compatible": {
+                                "type": "boolean"
+                              },
+                              "reasonCodes": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "required": [
+                              "dietPattern",
+                              "compatible",
+                              "reasonCodes"
+                            ],
+                            "additionalProperties": false
+                          }
+                        },
+                        "ingredients": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "ingredientId": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "format": "uuid"
+                              },
+                              "canonicalName": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "position": {
+                                "type": "integer",
+                                "minimum": 0
+                              },
+                              "displayName": {
+                                "type": "string"
+                              },
+                              "normalizedName": {
+                                "type": "string"
+                              },
+                              "amount": {
+                                "type": "number",
+                                "exclusiveMinimum": 0
+                              },
+                              "unit": {
+                                "type": "string"
+                              },
+                              "optional": {
+                                "type": "boolean"
+                              },
+                              "resolutionStatus": {
+                                "type": "string",
+                                "enum": [
+                                  "EXACT",
+                                  "AMBIGUOUS",
+                                  "UNKNOWN"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "id",
+                              "ingredientId",
+                              "canonicalName",
+                              "position",
+                              "displayName",
+                              "normalizedName",
+                              "amount",
+                              "unit",
+                              "optional",
+                              "resolutionStatus"
+                            ],
+                            "additionalProperties": false
+                          }
+                        }
+                      },
+                      "required": [
+                        "servings",
+                        "prepTimeMinutes",
+                        "cookTimeMinutes",
+                        "difficulty",
+                        "nutrition",
+                        "mealPlannerEligible",
+                        "allergenCodes",
+                        "traditionWarnings",
+                        "dietCompatibilities",
+                        "ingredients"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "author",
+                    "slug",
+                    "status",
+                    "version",
+                    "publishedRevisionVersion",
+                    "publishedAt",
+                    "createdAt",
+                    "updatedAt",
+                    "revision",
+                    "categories",
+                    "media",
+                    "type",
+                    "recipe"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "author": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "displayName": {
+                          "type": "string"
+                        },
+                        "avatarUrl": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "displayName",
+                        "avatarUrl"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "slug": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "PENDING_REVIEW",
+                        "PUBLISHED",
+                        "FLAGGED",
+                        "REJECTED",
+                        "HIDDEN",
+                        "DELETED"
+                      ]
+                    },
+                    "version": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "publishedRevisionVersion": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "exclusiveMinimum": 0
+                    },
+                    "publishedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "revision": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "DRAFT",
+                            "PENDING_REVIEW",
+                            "PUBLISHED",
+                            "FLAGGED",
+                            "REJECTED"
+                          ]
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "excerpt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "body": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "version",
+                        "status",
+                        "title",
+                        "excerpt",
+                        "body",
+                        "createdAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "categories": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "slug": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "slug",
+                          "type"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "media": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "COVER_IMAGE",
+                              "VIDEO"
+                            ]
+                          },
+                          "provider": {
+                            "type": "string",
+                            "enum": [
+                              "CLOUDINARY",
+                              "YOUTUBE"
+                            ]
+                          },
+                          "publicId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "secureUrl": {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          "mimeType": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "bytes": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "exclusiveMinimum": 0
+                          },
+                          "width": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "exclusiveMinimum": 0
+                          },
+                          "height": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "exclusiveMinimum": 0
+                          },
+                          "durationSeconds": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "exclusiveMinimum": 0
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "provider",
+                          "publicId",
+                          "secureUrl",
+                          "mimeType",
+                          "bytes",
+                          "width",
+                          "height",
+                          "durationSeconds"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "BLOG"
+                      ]
+                    },
+                    "recipe": {
+                      "type": "null"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "author",
+                    "slug",
+                    "status",
+                    "version",
+                    "publishedRevisionVersion",
+                    "publishedAt",
+                    "createdAt",
+                    "updatedAt",
+                    "revision",
+                    "categories",
+                    "media",
+                    "type",
+                    "recipe"
+                  ],
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "author": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "displayName": {
+                          "type": "string"
+                        },
+                        "avatarUrl": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "displayName",
+                        "avatarUrl"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "slug": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "DRAFT",
+                        "PENDING_REVIEW",
+                        "PUBLISHED",
+                        "FLAGGED",
+                        "REJECTED",
+                        "HIDDEN",
+                        "DELETED"
+                      ]
+                    },
+                    "version": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "publishedRevisionVersion": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "exclusiveMinimum": 0
+                    },
+                    "publishedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "revision": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "DRAFT",
+                            "PENDING_REVIEW",
+                            "PUBLISHED",
+                            "FLAGGED",
+                            "REJECTED"
+                          ]
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "excerpt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "body": {
+                          "type": "string"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "version",
+                        "status",
+                        "title",
+                        "excerpt",
+                        "body",
+                        "createdAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "categories": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "slug": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "name",
+                          "slug",
+                          "type"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "media": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "COVER_IMAGE",
+                              "VIDEO"
+                            ]
+                          },
+                          "provider": {
+                            "type": "string",
+                            "enum": [
+                              "CLOUDINARY",
+                              "YOUTUBE"
+                            ]
+                          },
+                          "publicId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "secureUrl": {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          "mimeType": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "bytes": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "exclusiveMinimum": 0
+                          },
+                          "width": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "exclusiveMinimum": 0
+                          },
+                          "height": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "exclusiveMinimum": 0
+                          },
+                          "durationSeconds": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "exclusiveMinimum": 0
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "provider",
+                          "publicId",
+                          "secureUrl",
+                          "mimeType",
+                          "bytes",
+                          "width",
+                          "height",
+                          "durationSeconds"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "VIDEO"
+                      ]
+                    },
+                    "recipe": {
+                      "type": "null"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "author",
+                    "slug",
+                    "status",
+                    "version",
+                    "publishedRevisionVersion",
+                    "publishedAt",
+                    "createdAt",
+                    "updatedAt",
+                    "revision",
+                    "categories",
+                    "media",
+                    "type",
+                    "recipe"
+                  ],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "DeletePostResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "DELETED"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "status"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "UploadSignatureRequest": {
+        "type": "object",
+        "properties": {
+          "resourceType": {
+            "type": "string",
+            "enum": [
+              "image",
+              "video"
+            ]
+          }
+        },
+        "required": [
+          "resourceType"
+        ],
+        "additionalProperties": false
+      },
+      "UploadSignatureResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "cloudName": {
+                "type": "string"
+              },
+              "apiKey": {
+                "type": "string"
+              },
+              "resourceType": {
+                "type": "string",
+                "enum": [
+                  "image",
+                  "video"
+                ]
+              },
+              "uploadUrl": {
+                "type": "string",
+                "format": "uri"
+              },
+              "timestamp": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "signature": {
+                "type": "string"
+              },
+              "folder": {
+                "type": "string"
+              },
+              "maxBytes": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "allowedMimeTypes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "cloudName",
+              "apiKey",
+              "resourceType",
+              "uploadUrl",
+              "timestamp",
+              "signature",
+              "folder",
+              "maxBytes",
+              "allowedMimeTypes",
+              "expiresAt"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
       }
     },
     "parameters": {}
@@ -4870,7 +8192,7 @@
           "Catalog Admin"
         ],
         "summary": "Archive category",
-        "description": "Category có child active hoặc pending proposal bắt buộc replacementId active, cùng type và cùng tầng. Reparent và archive chạy trong một transaction. Phase 04 sẽ dùng cùng policy cho content references.",
+        "description": "Category có child active, pending proposal hoặc content reference bắt buộc replacementId active, cùng type và cùng tầng. Reparent, thay content reference và archive chạy trong một transaction.",
         "operationId": "archiveCategory",
         "security": [
           {
@@ -7032,6 +10354,950 @@
                       "error": {
                         "code": "CATALOG_REFERENCE_CONFLICT",
                         "message": "Catalog item bị trùng hoặc đang được tham chiếu",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/posts": {
+      "get": {
+        "tags": [
+          "Content"
+        ],
+        "summary": "List nội dung published",
+        "description": "Chỉ trả active published revision. Phase 04 hỗ trợ pagination và type filter; search/related ranking thuộc Phase 05.",
+        "operationId": "listPublishedPosts",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "RECIPE",
+                "BLOG",
+                "VIDEO"
+              ]
+            },
+            "required": false,
+            "name": "type",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Published Recipe/Blog/Video list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Query không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Query không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Content"
+        ],
+        "summary": "Tạo Recipe, Blog hoặc Video",
+        "description": "Không nhận author/status/publishedAt từ client. Trước Phase 07, mọi user-created content đi Member path PENDING_REVIEW; requested Contributor type không cấp quyền.",
+        "operationId": "createPost",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "examples": {
+                "recipe": {
+                  "value": {
+                    "type": "RECIPE",
+                    "title": "Đậu hũ xào bông cải",
+                    "excerpt": "Bữa tối nhanh với đạm thực vật.",
+                    "body": "Áp chảo đậu hũ rồi xào cùng bông cải và sốt gia vị.",
+                    "categoryIds": [
+                      "11111111-1111-4111-8111-111111111111"
+                    ],
+                    "media": [],
+                    "recipe": {
+                      "servings": 2,
+                      "prepTimeMinutes": 15,
+                      "cookTimeMinutes": 20,
+                      "difficulty": "EASY",
+                      "nutrition": {
+                        "calories": 360,
+                        "proteinGrams": 24,
+                        "carbsGrams": 28,
+                        "fatGrams": 18
+                      },
+                      "ingredients": [
+                        {
+                          "ingredientId": "22222222-2222-4222-8222-222222222222",
+                          "displayName": "Đậu hũ",
+                          "amount": 300,
+                          "unit": "g"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "blog": {
+                  "value": {
+                    "type": "BLOG",
+                    "title": "Đạm thực vật trong bữa ăn",
+                    "body": "Nội dung blog tối thiểu một trăm ký tự để bảo đảm bài viết có nội dung đủ rõ ràng trước khi gửi vào hàng chờ review.",
+                    "categoryIds": [],
+                    "media": []
+                  }
+                },
+                "video": {
+                  "value": {
+                    "type": "VIDEO",
+                    "title": "Chuẩn bị bữa ăn xanh",
+                    "body": "Mô tả nội dung video và các lưu ý chính cho người xem.",
+                    "categoryIds": [],
+                    "media": [
+                      {
+                        "provider": "YOUTUBE",
+                        "kind": "VIDEO",
+                        "secureUrl": "https://youtu.be/veganDemo01"
+                      }
+                    ]
+                  }
+                }
+              },
+              "schema": {
+                "$ref": "#/components/schemas/CreatePostRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Post và revision PENDING_REVIEW đã tạo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Content hoặc reference không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Content hoặc reference không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CONTENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CONTENT",
+                        "message": "Content hoặc reference không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_MEDIA_REFERENCE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_MEDIA_REFERENCE",
+                        "message": "Content hoặc reference không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_INGREDIENT_REFERENCE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_INGREDIENT_REFERENCE",
+                        "message": "Content hoặc reference không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu đăng nhập",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Slug đã được sử dụng",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CONTENT_SLUG_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTENT_SLUG_CONFLICT",
+                        "message": "Slug đã được sử dụng",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/posts/{idOrSlug}": {
+      "get": {
+        "tags": [
+          "Content"
+        ],
+        "summary": "Lấy content detail theo UUID hoặc slug",
+        "description": "Guest/non-owner chỉ thấy active published revision. Owner/Admin thấy revision mới nhất để tiếp tục edit; soft-deleted content trả 410 cho owner/Admin và 404 cho public.",
+        "operationId": "getPost",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 220
+            },
+            "required": true,
+            "name": "idOrSlug",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Polymorphic Recipe/Blog/Video detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Identifier không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Identifier không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy published content",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy published content",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Owner/Admin truy cập content đã soft-delete",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CONTENT_DELETED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTENT_DELETED",
+                        "message": "Owner/Admin truy cập content đã soft-delete",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/posts/{id}": {
+      "patch": {
+        "tags": [
+          "Content"
+        ],
+        "summary": "Tạo revision mới cho content thuộc quyền sở hữu",
+        "description": "Request là full revision snapshot và bắt buộc expectedVersion. Edit published post tạo PENDING_REVIEW revision mới; published revision cũ vẫn phục vụ public.",
+        "operationId": "updatePost",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "type": "RECIPE",
+                "title": "Đậu hũ xào bông cải",
+                "excerpt": "Bữa tối nhanh với đạm thực vật.",
+                "body": "Áp chảo đậu hũ rồi xào cùng bông cải và sốt gia vị.",
+                "categoryIds": [
+                  "11111111-1111-4111-8111-111111111111"
+                ],
+                "media": [],
+                "recipe": {
+                  "servings": 2,
+                  "prepTimeMinutes": 15,
+                  "cookTimeMinutes": 20,
+                  "difficulty": "EASY",
+                  "nutrition": {
+                    "calories": 360,
+                    "proteinGrams": 24,
+                    "carbsGrams": 28,
+                    "fatGrams": 18
+                  },
+                  "ingredients": [
+                    {
+                      "ingredientId": "22222222-2222-4222-8222-222222222222",
+                      "displayName": "Đậu hũ",
+                      "amount": 300,
+                      "unit": "g"
+                    }
+                  ]
+                },
+                "expectedVersion": 1
+              },
+              "schema": {
+                "$ref": "#/components/schemas/UpdatePostRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Revision mới đã tạo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Content hoặc reference không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Content hoặc reference không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CONTENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CONTENT",
+                        "message": "Content hoặc reference không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_MEDIA_REFERENCE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_MEDIA_REFERENCE",
+                        "message": "Content hoặc reference không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_INGREDIENT_REFERENCE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_INGREDIENT_REFERENCE",
+                        "message": "Content hoặc reference không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu đăng nhập",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Không phải owner/Admin",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Không phải owner/Admin",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Không phải owner/Admin",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy content",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy content",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Version/state/slug conflict",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CONTENT_VERSION_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTENT_VERSION_CONFLICT",
+                        "message": "Version/state/slug conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CONTENT_STATE_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTENT_STATE_CONFLICT",
+                        "message": "Version/state/slug conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CONTENT_SLUG_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTENT_SLUG_CONFLICT",
+                        "message": "Version/state/slug conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Content đã soft-delete",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CONTENT_DELETED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTENT_DELETED",
+                        "message": "Content đã soft-delete",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Content"
+        ],
+        "summary": "Soft-delete content thuộc quyền sở hữu",
+        "operationId": "deletePost",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            },
+            "required": true,
+            "name": "expectedVersion",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Content đã soft-delete; thao tác lặp lại là idempotent",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeletePostResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "expectedVersion không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "expectedVersion không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu đăng nhập",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Không phải owner/Admin",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Không phải owner/Admin",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Không phải owner/Admin",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy content",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy content",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Optimistic version conflict",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CONTENT_VERSION_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTENT_VERSION_CONFLICT",
+                        "message": "Optimistic version conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/uploads/signature": {
+      "post": {
+        "tags": [
+          "Uploads"
+        ],
+        "summary": "Tạo Cloudinary signed-upload parameters",
+        "description": "Trả cloud name, API key, folder, timestamp và SHA-1 signature có thời hạn; không bao giờ trả API secret. Client phải gửi đúng folder/timestamp đã được ký.",
+        "operationId": "createUploadSignature",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "resourceType": "image"
+              },
+              "schema": {
+                "$ref": "#/components/schemas/UploadSignatureRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Signed upload configuration và MIME/size limits",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadSignatureResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Resource type không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Resource type không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu đăng nhập",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }

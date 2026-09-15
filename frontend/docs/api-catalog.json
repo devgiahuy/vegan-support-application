@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
   "source": "../backend/openapi.json",
-  "generatedAt": "2026-09-15T11:23:20.172Z",
+  "generatedAt": "2026-09-15T15:43:45.688Z",
   "stats": {
-    "operations": 24,
-    "groups": 7,
-    "schemas": 26
+    "operations": 30,
+    "groups": 9,
+    "schemas": 33
   },
   "operations": [
     {
@@ -814,6 +814,161 @@
         "403": "ErrorResponse",
         "404": "ErrorResponse",
         "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts",
+      "group": "Content",
+      "summary": "List nội dung published",
+      "operationId": "listPublishedPosts",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "type",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "PostListResponse",
+        "400": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts",
+      "group": "Content",
+      "summary": "Tạo Recipe, Blog hoặc Video",
+      "operationId": "createPost",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "CreatePostRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "PostResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/{idOrSlug}",
+      "group": "Content",
+      "summary": "Lấy content detail theo UUID hoặc slug",
+      "operationId": "getPost",
+      "params": [
+        {
+          "in": "path",
+          "name": "idOrSlug",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "PostResponse",
+        "400": "ErrorResponse",
+        "404": "ErrorResponse",
+        "410": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/posts/{id}",
+      "group": "Content",
+      "summary": "Tạo revision mới cho content thuộc quyền sở hữu",
+      "operationId": "updatePost",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "UpdatePostRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "PostResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "410": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/posts/{id}",
+      "group": "Content",
+      "summary": "Soft-delete content thuộc quyền sở hữu",
+      "operationId": "deletePost",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "expectedVersion",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "DeletePostResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/uploads/signature",
+      "group": "Uploads",
+      "summary": "Tạo Cloudinary signed-upload parameters",
+      "operationId": "createUploadSignature",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "UploadSignatureRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "UploadSignatureResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
       }
     }
   ]

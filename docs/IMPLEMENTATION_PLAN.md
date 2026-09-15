@@ -1,6 +1,6 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 1.1
+**Version:** 1.2
 
 **Ngày chốt:** 15/09/2026
 
@@ -250,25 +250,27 @@ Health calculation MVP dùng dữ liệu `MANUAL`: `BMI = weightKg / heightMeter
 
 ### 4.2 Content và community
 
-| Table                             | Trường chính                                                                                    |
-| --------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `categories`                      | id, parentId, name, slug, type, status, sortOrder                                               |
-| `category_proposals`              | proposedById, parentId, name, slug, type, status, reviewedById, resolvedCategoryId              |
-| `posts`                           | id, authorId, type, title, slug, body, status, coverUrl, videoUrl, youtubeUrl, publishedAt      |
-| `post_revisions`                  | postId, version, payload, status, reviewedBy, reviewNote                                        |
-| `recipe_details`                  | postId, servings, cookTimeMinutes, difficulty, calories, protein, carbs, fat, fiber, vitaminB12 |
-| `ingredients`                     | id, canonicalName, normalizedName, foodGroup, status                                            |
-| `ingredient_aliases`              | ingredientId, alias, normalizedAlias; alias có thể map nhiều candidate                          |
-| `allergen_definitions`            | code, label, description, active                                                                |
-| `ingredient_allergens`            | ingredientId, allergenCode                                                                      |
-| `ingredient_diet_compatibilities` | ingredientId, dietPattern, compatible                                                           |
-| `ingredient_tradition_warnings`   | ingredientId, tradition, warningCode, label                                                     |
-| `recipe_ingredients`              | postId, ingredientId, displayName, amount, unit, optional                                       |
-| `recipe_diet_rules`               | postId, compatibleDietPattern, compatibleTradition                                              |
-| `comments`                        | id, postId, authorId, parentId, content, status, editedAt, deletedAt                            |
-| `votes`                           | userId, postId, createdAt; unique(userId, postId)                                               |
-| `ratings`                         | userId, postId, taste, difficulty, createdAt; unique(userId, postId)                            |
-| `bookmarks`                       | userId, postId, createdAt; unique(userId, postId)                                               |
+| Table                             | Trường chính                                                                                             |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `categories`                      | id, parentId, name, slug, type, status, sortOrder                                                        |
+| `category_proposals`              | proposedById, parentId, name, slug, type, status, reviewedById, resolvedCategoryId                       |
+| `posts`                           | id, authorId, type, slug, status, version, publishedRevisionId, publishedAt, deletedAt, deletedById      |
+| `post_revisions`                  | postId, version, title, excerpt, body, status, createdById, reviewNote                                   |
+| `recipe_details`                  | revisionId, servings, prep/cook time, difficulty, nutrition, mealPlannerEligible, derived constraints    |
+| `ingredients`                     | id, canonicalName, normalizedName, foodGroup, status                                                     |
+| `ingredient_aliases`              | ingredientId, alias, normalizedAlias; alias có thể map nhiều candidate                                   |
+| `allergen_definitions`            | code, label, description, active                                                                         |
+| `ingredient_allergens`            | ingredientId, allergenCode                                                                               |
+| `ingredient_diet_compatibilities` | ingredientId, dietPattern, compatible                                                                    |
+| `ingredient_tradition_warnings`   | ingredientId, tradition, warningCode, label                                                              |
+| `recipe_ingredients`              | revisionId, ingredientId nullable, displayName, normalizedName, amount, unit, optional, resolutionStatus |
+| `recipe_diet_compatibilities`     | revisionId, dietPattern, compatible, reasonCodes                                                         |
+| `post_categories`                 | revisionId, categoryId                                                                                   |
+| `post_media`                      | revisionId, kind, provider, publicId, secureUrl, MIME/size/dimension metadata                            |
+| `comments`                        | id, postId, authorId, parentId, content, status, editedAt, deletedAt                                     |
+| `votes`                           | userId, postId, createdAt; unique(userId, postId)                                                        |
+| `ratings`                         | userId, postId, taste, difficulty, createdAt; unique(userId, postId)                                     |
+| `bookmarks`                       | userId, postId, createdAt; unique(userId, postId)                                                        |
 
 `post_revisions` cho phép bản published cũ tiếp tục hiển thị trong lúc bản sửa mới chờ duyệt.
 

@@ -2,7 +2,7 @@
 
 Express/TypeScript API for the Vegan Support Application. The implemented scope includes the service
 foundation, authentication/sessions, user profiles, manual health metrics, versioned diet rules, and
-the category/ingredient catalog.
+the category/ingredient catalog, and revisioned Recipe/Blog/Video content.
 
 ## Prerequisites
 
@@ -36,6 +36,11 @@ date-only values for `Asia/Ho_Chi_Minh`.
 Phase 03 seeds a two-level category tree, allergen definitions, all food-group enum values through
 demo ingredients, canonical ingredient metadata, and accent-insensitive aliases. Public catalog
 routes hide archived items; catalog mutations require the backend-authoritative `ADMIN` role.
+
+Phase 04 stores content as immutable revision snapshots. User submissions remain `PENDING_REVIEW`
+until contributor approval and moderation phases are available; seeded demo content supplies published
+Recipe, Blog, and Video examples. Cloudinary uploads use a server-generated signature, and persisted
+media references are checked against the configured cloud, folder, MIME allowlist, and size limits.
 
 ## Quality gates
 

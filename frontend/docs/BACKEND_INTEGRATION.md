@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 1.4
+**Version:** 1.5
 
 **Cập nhật:** 15/09/2026
 
@@ -8,7 +8,7 @@
 
 **Contract target:** `/api/v1`
 
-> Tài liệu này là registry sống cho những capability backend đã sẵn sàng để frontend tích hợp. Foundation, Authentication & Sessions, Profile/Health, Diet Rules và Catalog đã hoàn tất; các feature còn lại giữ `PLANNED` cho tới khi phase tương ứng vượt qua đầy đủ completion gate.
+> Tài liệu này là registry sống cho những capability backend đã sẵn sàng để frontend tích hợp. Foundation, Authentication & Sessions, Profile/Health, Diet Rules, Catalog và Content Core đã hoàn tất; các feature còn lại giữ `PLANNED` cho tới khi phase tương ứng vượt qua đầy đủ completion gate.
 
 ---
 
@@ -213,55 +213,55 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 
 ### 6.3 Content và Community
 
-| Method | Path                  | Status    | Backend updated | FE integrated | Ghi chú                        |
-| ------ | --------------------- | --------- | --------------- | ------------- | ------------------------------ |
-| GET    | `/posts`              | `PLANNED` | —               | No            | Search/filter/pagination       |
-| POST   | `/posts`              | `PLANNED` | —               | No            | Role-based publish state       |
-| GET    | `/posts/:idOrSlug`    | `PLANNED` | —               | No            | Published revision cho public  |
-| PATCH  | `/posts/:id`          | `PLANNED` | —               | No            | Tạo revision theo role         |
-| DELETE | `/posts/:id`          | `PLANNED` | —               | No            | Soft-delete owner/admin rules  |
-| GET    | `/posts/:id/related`  | `PLANNED` | —               | No            | Trả recipes/blogs/videos riêng |
-| POST   | `/uploads/signature`  | `PLANNED` | —               | No            | Cloudinary signed upload       |
-| GET    | `/posts/:id/comments` | `PLANNED` | —               | No            | Reply tối đa một tầng          |
-| POST   | `/posts/:id/comments` | `PLANNED` | —               | No            | Member+                        |
-| PATCH  | `/comments/:id`       | `PLANNED` | —               | No            | Owner only, editedAt           |
-| DELETE | `/comments/:id`       | `PLANNED` | —               | No            | Soft-delete                    |
-| PUT    | `/posts/:id/vote`     | `PLANNED` | —               | No            | Upvote toggle/create           |
-| DELETE | `/posts/:id/vote`     | `PLANNED` | —               | No            | Remove upvote                  |
-| PUT    | `/posts/:id/rating`   | `PLANNED` | —               | No            | Recipe only, upsert            |
-| PUT    | `/posts/:id/bookmark` | `PLANNED` | —               | No            | Recipe/Video only              |
-| DELETE | `/posts/:id/bookmark` | `PLANNED` | —               | No            | Remove bookmark                |
+| Method | Path                  | Status    | Backend updated | FE integrated | Ghi chú                                                                  |
+| ------ | --------------------- | --------- | --------------- | ------------- | ------------------------------------------------------------------------ |
+| GET    | `/posts`              | `READY`   | 2026-09-15      | No            | Public published revision; type filter + pagination, chưa search ranking |
+| POST   | `/posts`              | `READY`   | 2026-09-15      | No            | Auth; Recipe/Blog/Video polymorphic; Phase 04 luôn `PENDING_REVIEW`      |
+| GET    | `/posts/:idOrSlug`    | `READY`   | 2026-09-15      | No            | Public thấy published revision; owner/Admin thấy latest revision         |
+| PATCH  | `/posts/:id`          | `READY`   | 2026-09-15      | No            | Owner/Admin; full revision snapshot + `expectedVersion`                  |
+| DELETE | `/posts/:id`          | `READY`   | 2026-09-15      | No            | Owner/Admin soft-delete; query `expectedVersion`; idempotent             |
+| GET    | `/posts/:id/related`  | `PLANNED` | —               | No            | Trả recipes/blogs/videos riêng                                           |
+| POST   | `/uploads/signature`  | `READY`   | 2026-09-15      | No            | Auth; Cloudinary SHA-1 signature/config, không lộ API secret             |
+| GET    | `/posts/:id/comments` | `PLANNED` | —               | No            | Reply tối đa một tầng                                                    |
+| POST   | `/posts/:id/comments` | `PLANNED` | —               | No            | Member+                                                                  |
+| PATCH  | `/comments/:id`       | `PLANNED` | —               | No            | Owner only, editedAt                                                     |
+| DELETE | `/comments/:id`       | `PLANNED` | —               | No            | Soft-delete                                                              |
+| PUT    | `/posts/:id/vote`     | `PLANNED` | —               | No            | Upvote toggle/create                                                     |
+| DELETE | `/posts/:id/vote`     | `PLANNED` | —               | No            | Remove upvote                                                            |
+| PUT    | `/posts/:id/rating`   | `PLANNED` | —               | No            | Recipe only, upsert                                                      |
+| PUT    | `/posts/:id/bookmark` | `PLANNED` | —               | No            | Recipe/Video only                                                        |
+| DELETE | `/posts/:id/bookmark` | `PLANNED` | —               | No            | Remove bookmark                                                          |
 
 ### 6.4 Contributor, Moderation và Catalog
 
-| Method | Path                                         | Status    | Backend updated | FE integrated | Ghi chú                                                                            |
-| ------ | -------------------------------------------- | --------- | --------------- | ------------- | ---------------------------------------------------------------------------------- |
-| POST   | `/contributor-applications`                  | `PLANNED` | —               | No            | Member upgrade; không có certificate MVP                                           |
-| GET    | `/admin/contributor-applications`            | `PLANNED` | —               | No            | Admin only                                                                         |
-| PATCH  | `/admin/contributor-applications/:id/review` | `PLANNED` | —               | No            | Approve/reject + type + basis                                                      |
-| GET    | `/review-queue/posts`                        | `PLANNED` | —               | No            | Contributor/Admin filtering                                                        |
-| PATCH  | `/review-queue/posts/:id/approve`            | `PLANNED` | —               | No            | Cấm self-approve                                                                   |
-| PATCH  | `/review-queue/posts/:id/reject`             | `PLANNED` | —               | No            | Reason required                                                                    |
-| POST   | `/reports`                                   | `PLANNED` | —               | No            | One active report/user/target                                                      |
-| GET    | `/admin/reports`                             | `PLANNED` | —               | No            | Admin only                                                                         |
-| PATCH  | `/admin/reports/:id/resolve`                 | `PLANNED` | —               | No            | Audit required                                                                     |
-| GET    | `/admin/users`                               | `PLANNED` | —               | No            | Search/filter/pagination                                                           |
-| PATCH  | `/admin/users/:id/status`                    | `PLANNED` | —               | No            | Lock/ban/unban/delete rules                                                        |
-| GET    | `/admin/comments`                            | `PLANNED` | —               | No            | Moderation list                                                                    |
-| PATCH  | `/admin/comments/:id/status`                 | `PLANNED` | —               | No            | Hide/restore                                                                       |
-| GET    | `/categories`                                | `READY`   | 2026-09-15      | No            | Public active tree tối đa hai tầng; filter `type`                                  |
-| GET    | `/admin/categories`                          | `READY`   | 2026-09-15      | No            | Admin only; pagination; xem cả archived                                            |
-| POST   | `/admin/categories`                          | `READY`   | 2026-09-15      | No            | Admin only; parent/child cùng type                                                 |
-| PATCH  | `/admin/categories/:id`                      | `READY`   | 2026-09-15      | No            | Admin only; enforce depth và scoped slug                                           |
-| DELETE | `/admin/categories/:id`                      | `READY`   | 2026-09-15      | No            | Archive; child/proposal đang dùng cần replacement cùng type/tầng trong transaction |
-| GET    | `/ingredients`                               | `READY`   | 2026-09-15      | No            | Public active list; q không dấu, foodGroup, pagination                             |
-| GET    | `/ingredients/resolve`                       | `READY`   | 2026-09-15      | No            | `NONE/EXACT/AMBIGUOUS`; ambiguous luôn trả candidates                              |
-| GET    | `/admin/ingredients`                         | `READY`   | 2026-09-15      | No            | Admin only; xem active/archived và metadata                                        |
-| POST   | `/admin/ingredients`                         | `READY`   | 2026-09-15      | No            | Admin only; canonical + allergen/diet/tradition metadata                           |
-| PATCH  | `/admin/ingredients/:id`                     | `READY`   | 2026-09-15      | No            | Admin only; metadata array là full snapshot khi gửi                                |
-| DELETE | `/admin/ingredients/:id`                     | `READY`   | 2026-09-15      | No            | Archive; public endpoint ngừng trả item                                            |
-| POST   | `/admin/ingredients/:id/aliases`             | `READY`   | 2026-09-15      | No            | Admin only; normalize tiếng Việt có/không dấu                                      |
-| DELETE | `/admin/ingredients/:id/aliases/:aliasId`    | `READY`   | 2026-09-15      | No            | Admin only; 204 khi xóa thành công                                                 |
+| Method | Path                                         | Status    | Backend updated | FE integrated | Ghi chú                                                               |
+| ------ | -------------------------------------------- | --------- | --------------- | ------------- | --------------------------------------------------------------------- |
+| POST   | `/contributor-applications`                  | `PLANNED` | —               | No            | Member upgrade; không có certificate MVP                              |
+| GET    | `/admin/contributor-applications`            | `PLANNED` | —               | No            | Admin only                                                            |
+| PATCH  | `/admin/contributor-applications/:id/review` | `PLANNED` | —               | No            | Approve/reject + type + basis                                         |
+| GET    | `/review-queue/posts`                        | `PLANNED` | —               | No            | Contributor/Admin filtering                                           |
+| PATCH  | `/review-queue/posts/:id/approve`            | `PLANNED` | —               | No            | Cấm self-approve                                                      |
+| PATCH  | `/review-queue/posts/:id/reject`             | `PLANNED` | —               | No            | Reason required                                                       |
+| POST   | `/reports`                                   | `PLANNED` | —               | No            | One active report/user/target                                         |
+| GET    | `/admin/reports`                             | `PLANNED` | —               | No            | Admin only                                                            |
+| PATCH  | `/admin/reports/:id/resolve`                 | `PLANNED` | —               | No            | Audit required                                                        |
+| GET    | `/admin/users`                               | `PLANNED` | —               | No            | Search/filter/pagination                                              |
+| PATCH  | `/admin/users/:id/status`                    | `PLANNED` | —               | No            | Lock/ban/unban/delete rules                                           |
+| GET    | `/admin/comments`                            | `PLANNED` | —               | No            | Moderation list                                                       |
+| PATCH  | `/admin/comments/:id/status`                 | `PLANNED` | —               | No            | Hide/restore                                                          |
+| GET    | `/categories`                                | `READY`   | 2026-09-15      | No            | Public active tree tối đa hai tầng; filter `type`                     |
+| GET    | `/admin/categories`                          | `READY`   | 2026-09-15      | No            | Admin only; pagination; xem cả archived                               |
+| POST   | `/admin/categories`                          | `READY`   | 2026-09-15      | No            | Admin only; parent/child cùng type                                    |
+| PATCH  | `/admin/categories/:id`                      | `READY`   | 2026-09-15      | No            | Admin only; enforce depth và scoped slug                              |
+| DELETE | `/admin/categories/:id`                      | `READY`   | 2026-09-15      | No            | Archive; child/proposal/content reference cần replacement transaction |
+| GET    | `/ingredients`                               | `READY`   | 2026-09-15      | No            | Public active list; q không dấu, foodGroup, pagination                |
+| GET    | `/ingredients/resolve`                       | `READY`   | 2026-09-15      | No            | `NONE/EXACT/AMBIGUOUS`; ambiguous luôn trả candidates                 |
+| GET    | `/admin/ingredients`                         | `READY`   | 2026-09-15      | No            | Admin only; xem active/archived và metadata                           |
+| POST   | `/admin/ingredients`                         | `READY`   | 2026-09-15      | No            | Admin only; canonical + allergen/diet/tradition metadata              |
+| PATCH  | `/admin/ingredients/:id`                     | `READY`   | 2026-09-15      | No            | Admin only; metadata array là full snapshot khi gửi                   |
+| DELETE | `/admin/ingredients/:id`                     | `READY`   | 2026-09-15      | No            | Archive; public endpoint ngừng trả item                               |
+| POST   | `/admin/ingredients/:id/aliases`             | `READY`   | 2026-09-15      | No            | Admin only; normalize tiếng Việt có/không dấu                         |
+| DELETE | `/admin/ingredients/:id/aliases/:aliasId`    | `READY`   | 2026-09-15      | No            | Admin only; 204 khi xóa thành công                                    |
 
 Persistence cho `category_proposals` đã có để giữ BL-12, nhưng endpoint Contributor submit/Admin
 review proposal vẫn là `PLANNED` cho tới Phase 07; frontend chưa được tạo API consumer cho luồng này.
@@ -376,10 +376,30 @@ FE xin signature từ backend
 ```
 
 - Không gửi API secret xuống frontend.
+- Gọi `POST /uploads/signature` với `resourceType: image | video`, sau đó dùng nguyên
+  `uploadUrl`, `cloudName`, `apiKey`, `folder`, `timestamp` và `signature` trả về cho request upload.
+- Signature chỉ có hiệu lực tới `expiresAt`; nếu upload bắt đầu sau thời điểm này, xin signature mới.
+- Khi tạo/cập nhật Post, media Cloudinary phải gửi lại `provider`, `kind`, `publicId`, `secureUrl`,
+  `mimeType`, `bytes` và metadata dimension/duration nếu có. Backend kiểm tra cloud, folder, MIME và
+  size trước khi lưu.
+- Video ngoài Cloudinary chỉ nhận URL YouTube thuộc allowlist và backend chuẩn hóa thành watch URL.
 - Validate MIME/size ở UI để UX tốt, nhưng backend vẫn phải validate metadata khi lưu Post.
 - Hiển thị progress và retry; không tạo Post record trước khi upload hoàn tất trừ khi backend contract hỗ trợ draft rõ ràng.
 
-### 7.4 Chat SSE
+### 7.4 Content revisions
+
+- Request create/update là discriminated union theo `type = RECIPE | BLOG | VIDEO`; frontend phải giữ
+  DTO riêng cho từng nhánh, không gửi field publication/author do client tự đặt.
+- `PATCH /posts/:id` gửi full revision snapshot kèm `expectedVersion`. Khi nhận
+  `CONTENT_VERSION_CONFLICT`, fetch lại detail trước khi cho user merge hoặc submit lại.
+- Trước Phase 07/08, mọi submission của user là `PENDING_REVIEW`; không dùng `requestedType` để giả
+  lập quyền publish. Khi sửa content đã published, public tiếp tục thấy `publishedRevisionVersion`
+  trong lúc owner/Admin nhận revision mới nhất.
+- Recipe có ingredient `AMBIGUOUS` hoặc `UNKNOWN` vẫn lưu được để review nhưng
+  `mealPlannerEligible=false`; frontend phải hiển thị trạng thái resolution và không tự chọn canonical
+  ingredient thay backend.
+
+### 7.5 Chat SSE
 
 Frontend cần xử lý event types do OpenAPI chốt, tối thiểu:
 
@@ -396,14 +416,14 @@ error
 - `error` có thể xuất hiện sau HTTP 200; không chỉ dựa vào Axios error interceptor.
 - Disclaimer render cố định kể cả khi stream lỗi một phần.
 
-### 7.5 Behavioral events
+### 7.6 Behavioral events
 
 - Không block primary action nếu ghi event thất bại.
 - Chỉ gửi event khi backend xác nhận personalization consent đang active.
 - Dedupe rapid repeated views ở client để giảm noise; backend vẫn là nơi quyết định dedupe chính thức.
 - Recommendation UI render `reasonCodes`, không tự đọc raw behavior history.
 
-### 7.6 Maps
+### 7.7 Maps
 
 - Browser lấy geolocation sau thao tác/consent rõ ràng.
 - Từ chối permission phải chuyển sang form địa chỉ.
@@ -458,6 +478,13 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `INGREDIENT_NAME_CONFLICT`          | Báo canonical ingredient đã tồn tại sau normalize không dấu           |
 | `INGREDIENT_ALIAS_CONFLICT`         | Báo alias đã tồn tại trên canonical ingredient này                    |
 | `CATALOG_REFERENCE_CONFLICT`        | Refresh catalog; item/metadata đang có reference không hợp lệ         |
+| `INVALID_CONTENT`                   | Giữ form và hiển thị business validation của Recipe/Blog/Video        |
+| `INVALID_MEDIA_REFERENCE`           | Yêu cầu upload/chọn lại media hợp lệ trước khi submit                 |
+| `INVALID_INGREDIENT_REFERENCE`      | Sync catalog và yêu cầu chọn lại canonical ingredient                 |
+| `CONTENT_SLUG_CONFLICT`             | Báo slug đã tồn tại và cho user chỉnh slug                            |
+| `CONTENT_VERSION_CONFLICT`          | Fetch revision mới nhất trước khi merge/submit lại                    |
+| `CONTENT_STATE_CONFLICT`            | Khóa edit khi content đang bị giữ để review                           |
+| `CONTENT_DELETED`                   | Đóng editor và hiển thị trạng thái đã xóa cho owner/Admin             |
 | `HEALTH_PROFILE_INCOMPLETE`         | Link tới health profile                                               |
 | `NO_ELIGIBLE_RECIPE`                | Hiển thị slot trống/warnings, không crash                             |
 | `VERIFICATION_ALREADY_EXISTS`       | Refresh target và hiển thị reviewer hiện tại                          |
@@ -526,13 +553,14 @@ Không được mô tả endpoint là READY chỉ vì route đã tồn tại n�
 
 Thêm entry mới nhất ở trên cùng.
 
-| Date       | Version | Module       | Change                                                                                                                               | Breaking | FE action                                                                      |
-| ---------- | ------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------ | :------: | ------------------------------------------------------------------------------ |
-| 2026-09-15 | 1.4     | Catalog      | Thêm category tree, canonical ingredient, alias resolution và metadata allergen/diet/tradition; exclusion nhận optional ingredientId |    No    | Sync OpenAPI; tạo DTO/Model/Mapper cho category và ingredient, xử lý AMBIGUOUS |
-| 2026-09-15 | 1.3     | Profile/Diet | Thêm profile, BMI/BMR/TDEE, rule preview v1, preference/effective constraints và PERIODIC dates                                      |    No    | Sync OpenAPI; tạo DTO/Model/Mapper riêng cho profile và diet flow              |
-| 2026-09-15 | 1.2     | Auth         | Hoàn tất register/login/refresh rotation/logout, RBAC primitives và `/users/me`                                                      |    No    | Sync OpenAPI; tích hợp proxy/cookie với `withCredentials=true`                 |
-| 2026-09-15 | 1.1     | Foundation   | Hoàn tất health, Swagger UI và OpenAPI JSON; thêm request ID và error envelope nền tảng                                              |    No    | Dùng catalog OpenAPI đã sync; chưa cần tạo consumer UI cho health              |
-| 2026-09-15 | 1.0     | All          | Tạo integration registry; backend chưa triển khai                                                                                    |    No    | Không tích hợp API thật cho tới khi status READY                               |
+| Date       | Version | Module       | Change                                                                                                                               | Breaking | FE action                                                                                      |
+| ---------- | ------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------ | :------: | ---------------------------------------------------------------------------------------------- |
+| 2026-09-15 | 1.5     | Content      | Thêm Recipe/Blog/Video revision CRUD, structured recipe constraints, soft-delete/version conflict và signed Cloudinary upload        |    No    | Sync OpenAPI; tạo DTO/Model/Mapper theo post type, upload trực tiếp và xử lý revision conflict |
+| 2026-09-15 | 1.4     | Catalog      | Thêm category tree, canonical ingredient, alias resolution và metadata allergen/diet/tradition; exclusion nhận optional ingredientId |    No    | Sync OpenAPI; tạo DTO/Model/Mapper cho category và ingredient, xử lý AMBIGUOUS                 |
+| 2026-09-15 | 1.3     | Profile/Diet | Thêm profile, BMI/BMR/TDEE, rule preview v1, preference/effective constraints và PERIODIC dates                                      |    No    | Sync OpenAPI; tạo DTO/Model/Mapper riêng cho profile và diet flow                              |
+| 2026-09-15 | 1.2     | Auth         | Hoàn tất register/login/refresh rotation/logout, RBAC primitives và `/users/me`                                                      |    No    | Sync OpenAPI; tích hợp proxy/cookie với `withCredentials=true`                                 |
+| 2026-09-15 | 1.1     | Foundation   | Hoàn tất health, Swagger UI và OpenAPI JSON; thêm request ID và error envelope nền tảng                                              |    No    | Dùng catalog OpenAPI đã sync; chưa cần tạo consumer UI cho health                              |
+| 2026-09-15 | 1.0     | All          | Tạo integration registry; backend chưa triển khai                                                                                    |    No    | Không tích hợp API thật cho tới khi status READY                                               |
 
 Template:
 

@@ -43,6 +43,16 @@ const environmentSchema = z
     REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(30),
     LOGIN_MAX_ATTEMPTS: z.coerce.number().int().min(3).max(20).default(5),
     LOGIN_LOCK_MINUTES: z.coerce.number().int().min(1).max(1_440).default(15),
+    CLOUDINARY_CLOUD_NAME: z.string().trim().min(1),
+    CLOUDINARY_API_KEY: z.string().trim().min(1),
+    CLOUDINARY_API_SECRET: z.string().min(1),
+    CLOUDINARY_UPLOAD_FOLDER: z
+      .string()
+      .trim()
+      .regex(/^[a-zA-Z0-9/_-]+$/)
+      .default('vegan-support/posts'),
+    MAX_UPLOAD_IMAGE_BYTES: z.coerce.number().int().min(1).max(25_000_000).default(10_000_000),
+    MAX_UPLOAD_VIDEO_BYTES: z.coerce.number().int().min(1).max(250_000_000).default(100_000_000),
   })
   .transform((environment) => ({
     nodeEnv: environment.NODE_ENV,
@@ -62,6 +72,12 @@ const environmentSchema = z
     refreshTokenTtlDays: environment.REFRESH_TOKEN_TTL_DAYS,
     loginMaxAttempts: environment.LOGIN_MAX_ATTEMPTS,
     loginLockMinutes: environment.LOGIN_LOCK_MINUTES,
+    cloudinaryCloudName: environment.CLOUDINARY_CLOUD_NAME,
+    cloudinaryApiKey: environment.CLOUDINARY_API_KEY,
+    cloudinaryApiSecret: environment.CLOUDINARY_API_SECRET,
+    cloudinaryUploadFolder: environment.CLOUDINARY_UPLOAD_FOLDER,
+    maxUploadImageBytes: environment.MAX_UPLOAD_IMAGE_BYTES,
+    maxUploadVideoBytes: environment.MAX_UPLOAD_VIDEO_BYTES,
     cookieSecure: environment.NODE_ENV === 'production',
   }));
 

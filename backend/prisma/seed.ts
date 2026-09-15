@@ -5,7 +5,14 @@ import {
   DietPattern,
   DietRuleSource,
   FoodGroup,
+  IngredientResolutionStatus,
+  MediaKind,
+  MediaProvider,
+  PostRevisionStatus,
+  PostStatus,
+  PostType,
   PrismaClient,
+  RecipeDifficulty,
   Role,
   Tradition,
   UserStatus,
@@ -383,8 +390,167 @@ async function main(): Promise<void> {
       }
     });
   }
+
+  const admin = await prisma.user.findUniqueOrThrow({
+    where: { email: seedEnvironment.SEED_ADMIN_EMAIL.toLowerCase() },
+  });
+  const [recipeCategory, topicCategory, tofu, broccoli] = await Promise.all([
+    prisma.category.findFirstOrThrow({
+      where: { type: CategoryType.FOOD_TYPE, slug: 'com-va-ngu-coc', status: CatalogStatus.ACTIVE },
+    }),
+    prisma.category.findFirstOrThrow({
+      where: { type: CategoryType.CONTENT_TOPIC, slug: 'dinh-duong', status: CatalogStatus.ACTIVE },
+    }),
+    prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'dau hu' } }),
+    prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'bong cai xanh' } }),
+  ]);
+
+  if (!(await prisma.post.findUnique({ where: { slug: 'dau-hu-xao-bong-cai-demo' } }))) {
+    await prisma.$transaction(async (transaction) => {
+      const post = await transaction.post.create({
+        data: {
+          authorId: admin.id,
+          type: PostType.RECIPE,
+          slug: 'dau-hu-xao-bong-cai-demo',
+          status: PostStatus.PUBLISHED,
+          version: 1,
+          publishedAt: new Date(),
+        },
+      });
+      const revision = await transaction.postRevision.create({
+        data: {
+          postId: post.id,
+          createdById: admin.id,
+          version: 1,
+          status: PostRevisionStatus.PUBLISHED,
+          title: 'Đậu hũ xào bông cải',
+          excerpt: 'Món xào giàu đạm thực vật cho bữa ăn nhanh.',
+          body: 'Ép ráo đậu hũ, áp chảo vàng rồi xào nhanh cùng bông cải và sốt gia vị.',
+          categories: { create: [{ categoryId: recipeCategory.id }] },
+          recipeDetail: {
+            create: {
+              servings: 2,
+              prepTimeMinutes: 15,
+              cookTimeMinutes: 20,
+              difficulty: RecipeDifficulty.EASY,
+              calories: 360,
+              proteinGrams: 24,
+              carbsGrams: 28,
+              fatGrams: 18,
+              fiberGrams: 8,
+              vitaminB12Mcg: 0,
+              mealPlannerEligible: true,
+              allergenCodes: ['SOY'],
+              traditionWarnings: [],
+            },
+          },
+          ingredients: {
+            create: [
+              {
+                ingredientId: tofu.id,
+                position: 0,
+                displayName: 'Đậu hũ',
+                normalizedName: 'dau hu',
+                amount: 300,
+                unit: 'g',
+                resolutionStatus: IngredientResolutionStatus.EXACT,
+              },
+              {
+                ingredientId: broccoli.id,
+                position: 1,
+                displayName: 'Bông cải xanh',
+                normalizedName: 'bong cai xanh',
+                amount: 200,
+                unit: 'g',
+                resolutionStatus: IngredientResolutionStatus.EXACT,
+              },
+            ],
+          },
+          dietCompatibility: {
+            create: [
+              { dietPattern: DietPattern.VEGAN, compatible: true, reasonCodes: [] },
+              { dietPattern: DietPattern.LACTO_OVO, compatible: true, reasonCodes: [] },
+            ],
+          },
+        },
+      });
+      await transaction.post.update({
+        where: { id: post.id },
+        data: { publishedRevisionId: revision.id },
+      });
+    });
+  }
+
+  if (!(await prisma.post.findUnique({ where: { slug: 'dam-thuc-vat-trong-bua-an-demo' } }))) {
+    await prisma.$transaction(async (transaction) => {
+      const post = await transaction.post.create({
+        data: {
+          authorId: admin.id,
+          type: PostType.BLOG,
+          slug: 'dam-thuc-vat-trong-bua-an-demo',
+          status: PostStatus.PUBLISHED,
+          version: 1,
+          publishedAt: new Date(),
+        },
+      });
+      const revision = await transaction.postRevision.create({
+        data: {
+          postId: post.id,
+          createdById: admin.id,
+          version: 1,
+          status: PostRevisionStatus.PUBLISHED,
+          title: 'Đạm thực vật trong bữa ăn hằng ngày',
+          excerpt: 'Kết hợp nhiều nhóm thực phẩm để xây dựng bữa ăn cân bằng.',
+          body: 'Các loại đậu, hạt và ngũ cốc cung cấp nguồn đạm thực vật đa dạng. Khi xây dựng thực đơn, hãy kết hợp nhiều nhóm thực phẩm, theo dõi khẩu phần và ưu tiên nhu cầu sức khỏe cá nhân thay vì dựa vào một nguyên liệu duy nhất.',
+          categories: { create: [{ categoryId: topicCategory.id }] },
+        },
+      });
+      await transaction.post.update({
+        where: { id: post.id },
+        data: { publishedRevisionId: revision.id },
+      });
+    });
+  }
+
+  if (!(await prisma.post.findUnique({ where: { slug: 'video-bua-an-xanh-demo' } }))) {
+    await prisma.$transaction(async (transaction) => {
+      const post = await transaction.post.create({
+        data: {
+          authorId: admin.id,
+          type: PostType.VIDEO,
+          slug: 'video-bua-an-xanh-demo',
+          status: PostStatus.PUBLISHED,
+          version: 1,
+          publishedAt: new Date(),
+        },
+      });
+      const revision = await transaction.postRevision.create({
+        data: {
+          postId: post.id,
+          createdById: admin.id,
+          version: 1,
+          status: PostRevisionStatus.PUBLISHED,
+          title: 'Video chuẩn bị bữa ăn xanh',
+          excerpt: 'Demo contract video YouTube cho local development.',
+          body: 'Video minh họa quy trình chuẩn bị nguyên liệu và sắp xếp một bữa ăn thực vật.',
+          categories: { create: [{ categoryId: topicCategory.id }] },
+          media: {
+            create: {
+              kind: MediaKind.VIDEO,
+              provider: MediaProvider.YOUTUBE,
+              secureUrl: 'https://www.youtube.com/watch?v=veganDemo01',
+            },
+          },
+        },
+      });
+      await transaction.post.update({
+        where: { id: post.id },
+        data: { publishedRevisionId: revision.id },
+      });
+    });
+  }
   console.info(
-    `Seeded local accounts, diet rules v${String(dietRuleSetVersion)}, categories, allergens, and ingredients.`,
+    `Seeded local accounts, diet rules v${String(dietRuleSetVersion)}, catalog, and demo content.`,
   );
 }
 

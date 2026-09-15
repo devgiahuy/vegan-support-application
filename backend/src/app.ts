@@ -25,6 +25,12 @@ import {
   createIngredientRouter,
 } from './modules/catalog/catalog.router.js';
 import { CatalogService } from './modules/catalog/catalog.service.js';
+import { ContentController } from './modules/content/content.controller.js';
+import { Phase04PendingReviewPolicy } from './modules/content/content-publication.policy.js';
+import { ContentRepository } from './modules/content/content.repository.js';
+import { createPostsRouter, createUploadsRouter } from './modules/content/content.router.js';
+import { ContentService } from './modules/content/content.service.js';
+import { MediaService } from './modules/content/media.service.js';
 import { DietController } from './modules/diet/diet.controller.js';
 import { createDietRouter } from './modules/diet/diet.router.js';
 import { createHealthRouter } from './modules/health/health.router.js';
@@ -52,6 +58,15 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   const dietController = new DietController(profileService);
   const catalogController = new CatalogController(
     new CatalogService(new CatalogRepository(database.client)),
+  );
+  const mediaService = new MediaService(config);
+  const contentController = new ContentController(
+    new ContentService(
+      new ContentRepository(database.client),
+      mediaService,
+      new Phase04PendingReviewPolicy(),
+    ),
+    mediaService,
   );
 
   app.disable('x-powered-by');
@@ -92,6 +107,8 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/categories', createCategoryRouter(catalogController));
   app.use('/api/v1/ingredients', createIngredientRouter(catalogController));
   app.use('/api/v1/admin', createCatalogAdminRouter(catalogController, authentication));
+  app.use('/api/v1/posts', createPostsRouter(contentController, authentication));
+  app.use('/api/v1/uploads', createUploadsRouter(contentController, authentication));
 
   app.use(notFoundHandler);
   app.use(createErrorHandler(logger));
