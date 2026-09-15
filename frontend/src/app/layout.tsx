@@ -1,14 +1,21 @@
 import type { Metadata } from 'next';
+import { Be_Vietnam_Pro } from 'next/font/google';
 import './globals.css';
 import QueryProvider from '@/components/providers/query-provider';
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { ThemeController } from '@/components/providers/theme-controller';
 import { Toaster } from '@/components/ui/sonner';
-import { Header } from '@/components/layout/header';
+
+const beVietnam = Be_Vietnam_Pro({
+  subsets: ['latin', 'vietnamese'],
+  weight: ['400', '500', '600', '700'],
+  variable: '--font-be-vietnam',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
-  title: 'Vegan Support - Modern Frontend Architecture',
-  description: 'Enterprise Frontend with Axios, TanStack Query, Zustand and Mapper Layer',
+  title: 'ChayXanh — Ăn chay đủ chất, dễ dàng mỗi ngày',
+  description: 'Nền tảng cộng đồng, dinh dưỡng và bản đồ quán chay cho người ăn chay tại Việt Nam.',
 };
 
 export default function RootLayout({
@@ -17,15 +24,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi" suppressHydrationWarning>
-      <body className="min-h-screen flex flex-col antialiased">
+    <html lang="vi" className={beVietnam.variable} suppressHydrationWarning>
+      <body className="min-h-screen font-sans antialiased">
         <QueryProvider>
           <ThemeController>
             <AuthProvider>
-              <Header />
-              <main className="flex-1 container mx-auto p-4 md:p-6 max-w-7xl">
-                {children}
-              </main>
+              {children}
               <Toaster position="bottom-right" duration={3000} />
             </AuthProvider>
           </ThemeController>
