@@ -1,0 +1,61 @@
+import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
+import { errorResponseSchema } from '../common/schemas/api-envelope.schemas.js';
+import {
+  healthResponseSchema,
+  healthUnavailableResponseSchema,
+} from '../modules/health/health.schemas.js';
+import { registerAuthOpenApi } from '../modules/auth/auth.openapi.js';
+import { registerProfileOpenApi } from '../modules/profile/profile.openapi.js';
+import { registerCatalogOpenApi } from '../modules/catalog/catalog.openapi.js';
+
+const registry = new OpenAPIRegistry();
+
+const registeredErrorResponse = registry.register('ErrorResponse', errorResponseSchema);
+const registeredHealthResponse = registry.register('HealthResponse', healthResponseSchema);
+const registeredHealthUnavailableResponse = registry.register(
+  'HealthUnavailableResponse',
+  healthUnavailableResponseSchema,
+);
+
+registry.registerPath({
+  method: 'get',
+  path: '/api/v1/health',
+  tags: ['Foundation'],
+  summary: 'Kiểm tra trạng thái API và PostgreSQL',
+  operationId: 'getHealth',
+  responses: {
+    200: {
+      description: 'API và PostgreSQL hoạt động bình thường',
+      content: { 'application/json': { schema: registeredHealthResponse } },
+    },
+    503: {
+      description: 'PostgreSQL không khả dụng',
+      content: { 'application/json': { schema: registeredHealthUnavailableResponse } },
+    },
+  },
+});
+
+registerAuthOpenApi(registry, registeredErrorResponse);
+registerProfileOpenApi(registry, registeredErrorResponse);
+registerCatalogOpenApi(registry, registeredErrorResponse);
+
+const generator = new OpenApiGeneratorV31(registry.definitions);
+
+export const openApiDocument = generator.generateDocument({
+  openapi: '3.1.0',
+  info: {
+    title: 'Vegan Support Application API',
+    version: '0.1.0',
+    description: 'REST API contract for the Vegan Support Application.',
+  },
+  servers: [{ url: 'http://localhost:4000', description: 'Local development' }],
+  tags: [
+    { name: 'Foundation', description: 'Service health and foundation contract' },
+    { name: 'Auth', description: 'Authentication and refresh-session lifecycle' },
+    { name: 'Users', description: 'Authenticated user contract' },
+    { name: 'Diet Rules', description: 'Versioned diet and tradition rule confirmation' },
+    { name: 'Categories', description: 'Public active category tree' },
+    { name: 'Ingredients', description: 'Canonical ingredient discovery and alias resolution' },
+    { name: 'Catalog Admin', description: 'Admin-only category and ingredient management' },
+  ],
+});
