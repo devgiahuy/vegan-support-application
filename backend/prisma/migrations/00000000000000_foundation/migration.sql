@@ -1,0 +1,2 @@
+-- Phase 00 foundation migration.
+-- Domain tables are introduced only by their owning implementation phases.

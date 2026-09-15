@@ -1,0 +1,820 @@
+{
+  "$generated": "scripts/sync-swagger.mjs — không sửa tay",
+  "source": "../backend/openapi.json",
+  "generatedAt": "2026-09-15T11:23:20.172Z",
+  "stats": {
+    "operations": 24,
+    "groups": 7,
+    "schemas": 26
+  },
+  "operations": [
+    {
+      "method": "GET",
+      "path": "/api/v1/health",
+      "group": "Foundation",
+      "summary": "Kiểm tra trạng thái API và PostgreSQL",
+      "operationId": "getHealth",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "HealthResponse",
+        "503": "HealthUnavailableResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/register",
+      "group": "Auth",
+      "summary": "Đăng ký tài khoản Member",
+      "operationId": "register",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "RegisterRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "AuthSessionResponse",
+        "400": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/login",
+      "group": "Auth",
+      "summary": "Đăng nhập",
+      "operationId": "login",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "LoginRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "AuthSessionResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/refresh",
+      "group": "Auth",
+      "summary": "Rotate refresh token và cấp access token mới",
+      "operationId": "refreshSession",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "RefreshResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/auth/logout",
+      "group": "Auth",
+      "summary": "Đăng xuất phiên hiện tại hoặc tất cả thiết bị",
+      "operationId": "logout",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "LogoutRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "LogoutResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/users/me",
+      "group": "Users",
+      "summary": "Lấy hồ sơ người dùng hiện tại",
+      "operationId": "getMe",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "ProfileResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/users/me",
+      "group": "Users",
+      "summary": "Cập nhật hồ sơ cơ bản",
+      "operationId": "updateMe",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "UpdateBasicProfileRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "ProfileResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/users/me/health-profile",
+      "group": "Users",
+      "summary": "Lưu dữ liệu sức khỏe thủ công và tính BMI/BMR/TDEE",
+      "operationId": "updateHealthProfile",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "HealthProfileRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "HealthProfileResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/diet-rules/preview",
+      "group": "Diet Rules",
+      "summary": "Xem trước bộ quy tắc diet/tradition hiện hành",
+      "operationId": "previewDietRules",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "DietRulePreviewRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "DietRulePreviewResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/users/me/diet-preferences",
+      "group": "Users",
+      "summary": "Xác nhận diet preferences, rules và hard constraints cá nhân",
+      "operationId": "saveDietPreferences",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "SaveDietPreferencesRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "DietPreferenceResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "409": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/users/me/diet-schedule",
+      "group": "Users",
+      "summary": "Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC",
+      "operationId": "updateDietSchedule",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "UpdateDietScheduleRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "DietScheduleResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/categories",
+      "group": "Categories",
+      "summary": "Lấy cây category active tối đa hai tầng",
+      "operationId": "listPublicCategories",
+      "params": [
+        {
+          "in": "query",
+          "name": "type",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "CategoryTreeResponse",
+        "400": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/categories",
+      "group": "Catalog Admin",
+      "summary": "List category gồm cả archived",
+      "operationId": "listAdminCategories",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "type",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "AdminCategoryListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/categories",
+      "group": "Catalog Admin",
+      "summary": "Tạo category",
+      "operationId": "createCategory",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "name",
+            "type"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "slug": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "FOOD_TYPE",
+                "RECIPE_GROUP",
+                "CONTENT_TOPIC"
+              ]
+            },
+            "parentId": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "sortOrder": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "CategoryResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/categories/{id}",
+      "group": "Catalog Admin",
+      "summary": "Cập nhật category",
+      "operationId": "updateCategory",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "slug": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "FOOD_TYPE",
+                "RECIPE_GROUP",
+                "CONTENT_TOPIC"
+              ]
+            },
+            "parentId": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "uuid"
+            },
+            "sortOrder": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "CategoryResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/categories/{id}",
+      "group": "Catalog Admin",
+      "summary": "Archive category",
+      "operationId": "archiveCategory",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "replacementId",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "CatalogArchiveResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ingredients",
+      "group": "Ingredients",
+      "summary": "List canonical ingredient active",
+      "operationId": "listPublicIngredients",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "foodGroup",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "IngredientListResponse",
+        "400": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ingredients/resolve",
+      "group": "Ingredients",
+      "summary": "Resolve tên/alias ingredient không phân biệt dấu",
+      "operationId": "resolveIngredient",
+      "params": [
+        {
+          "in": "query",
+          "name": "query",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "IngredientResolutionResponse",
+        "400": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ingredients",
+      "group": "Catalog Admin",
+      "summary": "List ingredient gồm cả archived",
+      "operationId": "listAdminIngredients",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "foodGroup",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "IngredientListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/ingredients",
+      "group": "Catalog Admin",
+      "summary": "Tạo canonical ingredient và metadata",
+      "operationId": "createIngredient",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "canonicalName",
+            "foodGroup"
+          ],
+          "properties": {
+            "canonicalName": {
+              "type": "string"
+            },
+            "foodGroup": {
+              "type": "string",
+              "enum": [
+                "GRAINS",
+                "LEGUMES",
+                "VEGETABLES",
+                "FRUITS",
+                "NUTS_SEEDS",
+                "MUSHROOMS",
+                "DAIRY_EGGS",
+                "HERBS_SPICES",
+                "OTHER"
+              ]
+            },
+            "allergenCodes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "dietCompatibilities": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "dietPattern",
+                  "compatible"
+                ],
+                "properties": {
+                  "dietPattern": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "compatible": {
+                    "type": "boolean",
+                    "_truncated": true
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "traditionWarnings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "tradition",
+                  "warningCode",
+                  "label"
+                ],
+                "properties": {
+                  "tradition": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "warningCode": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "label": {
+                    "type": "string",
+                    "_truncated": true
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "IngredientResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/ingredients/{id}",
+      "group": "Catalog Admin",
+      "summary": "Cập nhật ingredient hoặc full snapshot metadata",
+      "operationId": "updateIngredient",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "canonicalName": {
+              "type": "string"
+            },
+            "foodGroup": {
+              "type": "string",
+              "enum": [
+                "GRAINS",
+                "LEGUMES",
+                "VEGETABLES",
+                "FRUITS",
+                "NUTS_SEEDS",
+                "MUSHROOMS",
+                "DAIRY_EGGS",
+                "HERBS_SPICES",
+                "OTHER"
+              ]
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "ARCHIVED"
+              ]
+            },
+            "allergenCodes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "dietCompatibilities": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "dietPattern",
+                  "compatible"
+                ],
+                "properties": {
+                  "dietPattern": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "compatible": {
+                    "type": "boolean",
+                    "_truncated": true
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "traditionWarnings": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "tradition",
+                  "warningCode",
+                  "label"
+                ],
+                "properties": {
+                  "tradition": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "warningCode": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "label": {
+                    "type": "string",
+                    "_truncated": true
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "IngredientResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/ingredients/{id}",
+      "group": "Catalog Admin",
+      "summary": "Archive ingredient",
+      "operationId": "archiveIngredient",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "CatalogArchiveResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/ingredients/{id}/aliases",
+      "group": "Catalog Admin",
+      "summary": "Thêm alias ingredient",
+      "operationId": "addIngredientAlias",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "alias"
+          ],
+          "properties": {
+            "alias": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "IngredientResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/ingredients/{id}/aliases/{aliasId}",
+      "group": "Catalog Admin",
+      "summary": "Xóa alias của ingredient",
+      "operationId": "deleteIngredientAlias",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "path",
+          "name": "aliasId",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "204": "Alias đã xóa",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    }
+  ]
+}

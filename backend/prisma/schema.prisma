@@ -1,0 +1,444 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  MEMBER
+  CONTRIBUTOR
+  ADMIN
+
+  @@map("user_role")
+}
+
+enum UserStatus {
+  ACTIVE
+  LOCKED
+  BANNED
+  DELETED
+
+  @@map("user_status")
+}
+
+enum ContributorType {
+  EXPERIENCED_PRACTITIONER
+  NUTRITION_EXPERT
+
+  @@map("contributor_type")
+}
+
+enum ContributorApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@map("contributor_application_status")
+}
+
+enum ContributorApplicationSource {
+  REGISTRATION
+  PROFILE
+
+  @@map("contributor_application_source")
+}
+
+enum HealthSex {
+  MALE
+  FEMALE
+
+  @@map("health_sex")
+}
+
+enum ActivityLevel {
+  SEDENTARY
+  LIGHTLY_ACTIVE
+  MODERATELY_ACTIVE
+  VERY_ACTIVE
+  EXTRA_ACTIVE
+
+  @@map("activity_level")
+}
+
+enum HealthDataSource {
+  MANUAL
+
+  @@map("health_data_source")
+}
+
+enum DietPattern {
+  VEGAN
+  LACTO_OVO
+
+  @@map("diet_pattern")
+}
+
+enum PracticeSchedule {
+  PERMANENT
+  PERIODIC
+
+  @@map("practice_schedule")
+}
+
+enum Tradition {
+  NONE
+  BUDDHIST
+  CHRISTIAN
+
+  @@map("tradition")
+}
+
+enum DietRuleSource {
+  DIET_PATTERN
+  TRADITION
+
+  @@map("diet_rule_source")
+}
+
+enum AllergySeverity {
+  MILD
+  MODERATE
+  SEVERE
+
+  @@map("allergy_severity")
+}
+
+enum CatalogStatus {
+  ACTIVE
+  ARCHIVED
+
+  @@map("catalog_status")
+}
+
+enum CategoryType {
+  FOOD_TYPE
+  RECIPE_GROUP
+  CONTENT_TOPIC
+
+  @@map("category_type")
+}
+
+enum CategoryProposalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@map("category_proposal_status")
+}
+
+enum FoodGroup {
+  GRAINS
+  LEGUMES
+  VEGETABLES
+  FRUITS
+  NUTS_SEEDS
+  MUSHROOMS
+  DAIRY_EGGS
+  HERBS_SPICES
+  OTHER
+
+  @@map("food_group")
+}
+
+model User {
+  id                        String                    @id @default(uuid()) @db.Uuid
+  email                     String                    @unique @db.VarChar(320)
+  passwordHash              String                    @map("password_hash")
+  displayName               String                    @map("display_name") @db.VarChar(100)
+  avatarUrl                 String?                   @map("avatar_url") @db.VarChar(2048)
+  role                      Role                      @default(MEMBER)
+  status                    UserStatus                @default(ACTIVE)
+  failedLoginAttempts       Int                       @default(0) @map("failed_login_attempts")
+  lockedUntil               DateTime?                 @map("locked_until") @db.Timestamptz(3)
+  lastLoginAt               DateTime?                 @map("last_login_at") @db.Timestamptz(3)
+  createdAt                 DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                 DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt                 DateTime?                 @map("deleted_at") @db.Timestamptz(3)
+  refreshSessions           RefreshSession[]
+  applications              ContributorApplication[]
+  healthProfile             HealthProfile?
+  dietPreference            DietPreference?
+  dietPreferenceRules       DietPreferenceRule[]
+  dietScheduleDates         DietScheduleDate[]
+  allergies                 UserAllergy[]
+  ingredientExclusions      UserIngredientExclusion[]
+  categoryProposals         CategoryProposal[]        @relation("CategoryProposalAuthor")
+  reviewedCategoryProposals CategoryProposal[]        @relation("CategoryProposalReviewer")
+
+  @@map("users")
+}
+
+model Category {
+  id                String             @id @default(uuid()) @db.Uuid
+  parentId          String?            @map("parent_id") @db.Uuid
+  name              String             @db.VarChar(120)
+  slug              String             @db.VarChar(140)
+  type              CategoryType
+  status            CatalogStatus      @default(ACTIVE)
+  sortOrder         Int                @default(0) @map("sort_order")
+  createdAt         DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  parent            Category?          @relation("CategoryTree", fields: [parentId], references: [id], onDelete: Restrict)
+  children          Category[]         @relation("CategoryTree")
+  childProposals    CategoryProposal[] @relation("CategoryProposalParent")
+  resolvedProposals CategoryProposal[] @relation("CategoryProposalResolution")
+
+  @@index([type, parentId, status, sortOrder])
+  @@map("categories")
+}
+
+model CategoryProposal {
+  id                 String                 @id @default(uuid()) @db.Uuid
+  proposedById       String                 @map("proposed_by_id") @db.Uuid
+  parentId           String?                @map("parent_id") @db.Uuid
+  name               String                 @db.VarChar(120)
+  slug               String                 @db.VarChar(140)
+  type               CategoryType
+  status             CategoryProposalStatus @default(PENDING)
+  reviewNote         String?                @map("review_note") @db.VarChar(1000)
+  reviewedById       String?                @map("reviewed_by_id") @db.Uuid
+  resolvedCategoryId String?                @map("resolved_category_id") @db.Uuid
+  createdAt          DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  proposedBy         User                   @relation("CategoryProposalAuthor", fields: [proposedById], references: [id], onDelete: Cascade)
+  parent             Category?              @relation("CategoryProposalParent", fields: [parentId], references: [id], onDelete: Restrict)
+  reviewedBy         User?                  @relation("CategoryProposalReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  resolvedCategory   Category?              @relation("CategoryProposalResolution", fields: [resolvedCategoryId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([proposedById, status])
+  @@map("category_proposals")
+}
+
+model Ingredient {
+  id                  String                        @id @default(uuid()) @db.Uuid
+  canonicalName       String                        @map("canonical_name") @db.VarChar(160)
+  normalizedName      String                        @unique @map("normalized_name") @db.VarChar(160)
+  foodGroup           FoodGroup                     @map("food_group")
+  status              CatalogStatus                 @default(ACTIVE)
+  createdAt           DateTime                      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime                      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  aliases             IngredientAlias[]
+  allergens           IngredientAllergen[]
+  dietCompatibilities IngredientDietCompatibility[]
+  traditionWarnings   IngredientTraditionWarning[]
+  userExclusions      UserIngredientExclusion[]
+
+  @@index([status, foodGroup, canonicalName])
+  @@map("ingredients")
+}
+
+model IngredientAlias {
+  id              String     @id @default(uuid()) @db.Uuid
+  ingredientId    String     @map("ingredient_id") @db.Uuid
+  alias           String     @db.VarChar(160)
+  normalizedAlias String     @map("normalized_alias") @db.VarChar(160)
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  ingredient      Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@unique([ingredientId, normalizedAlias])
+  @@index([normalizedAlias])
+  @@map("ingredient_aliases")
+}
+
+model AllergenDefinition {
+  code        String               @id @db.VarChar(100)
+  label       String               @db.VarChar(160)
+  description String?
+  active      Boolean              @default(true)
+  createdAt   DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  ingredients IngredientAllergen[]
+
+  @@map("allergen_definitions")
+}
+
+model IngredientAllergen {
+  ingredientId String             @map("ingredient_id") @db.Uuid
+  allergenCode String             @map("allergen_code") @db.VarChar(100)
+  ingredient   Ingredient         @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  allergen     AllergenDefinition @relation(fields: [allergenCode], references: [code], onDelete: Restrict)
+
+  @@id([ingredientId, allergenCode])
+  @@index([allergenCode])
+  @@map("ingredient_allergens")
+}
+
+model IngredientDietCompatibility {
+  ingredientId String      @map("ingredient_id") @db.Uuid
+  dietPattern  DietPattern @map("diet_pattern")
+  compatible   Boolean
+  ingredient   Ingredient  @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@id([ingredientId, dietPattern])
+  @@index([dietPattern, compatible])
+  @@map("ingredient_diet_compatibilities")
+}
+
+model IngredientTraditionWarning {
+  ingredientId String     @map("ingredient_id") @db.Uuid
+  tradition    Tradition
+  warningCode  String     @map("warning_code") @db.VarChar(120)
+  label        String     @db.VarChar(180)
+  ingredient   Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+
+  @@id([ingredientId, tradition, warningCode])
+  @@index([tradition])
+  @@map("ingredient_tradition_warnings")
+}
+
+model RefreshSession {
+  id           String          @id @default(uuid()) @db.Uuid
+  userId       String          @map("user_id") @db.Uuid
+  tokenHash    String          @unique @map("token_hash") @db.Char(64)
+  familyId     String          @map("family_id") @db.Uuid
+  expiresAt    DateTime        @map("expires_at") @db.Timestamptz(3)
+  revokedAt    DateTime?       @map("revoked_at") @db.Timestamptz(3)
+  revokeReason String?         @map("revoke_reason") @db.VarChar(50)
+  replacedById String?         @unique @map("replaced_by_id") @db.Uuid
+  deviceInfo   String?         @map("device_info") @db.VarChar(500)
+  createdAt    DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  lastUsedAt   DateTime?       @map("last_used_at") @db.Timestamptz(3)
+  user         User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replacedBy   RefreshSession? @relation("SessionReplacement", fields: [replacedById], references: [id], onDelete: SetNull)
+  replaces     RefreshSession? @relation("SessionReplacement")
+
+  @@index([userId, revokedAt])
+  @@index([familyId])
+  @@map("refresh_sessions")
+}
+
+model ContributorApplication {
+  id             String                       @id @default(uuid()) @db.Uuid
+  userId         String                       @map("user_id") @db.Uuid
+  requestedType  ContributorType              @map("requested_type")
+  experience     String
+  referenceLinks Json                         @default("[]") @map("reference_links")
+  source         ContributorApplicationSource @default(REGISTRATION)
+  status         ContributorApplicationStatus @default(PENDING)
+  createdAt      DateTime                     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user           User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("contributor_applications")
+}
+
+model HealthProfile {
+  userId        String           @id @map("user_id") @db.Uuid
+  heightCm      Decimal          @map("height_cm") @db.Decimal(5, 2)
+  weightKg      Decimal          @map("weight_kg") @db.Decimal(6, 2)
+  age           Int
+  sex           HealthSex
+  activityLevel ActivityLevel    @map("activity_level")
+  bmi           Decimal          @db.Decimal(6, 2)
+  bmr           Decimal          @db.Decimal(8, 2)
+  tdee          Decimal          @db.Decimal(8, 2)
+  dataSource    HealthDataSource @default(MANUAL) @map("data_source")
+  createdAt     DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("health_profiles")
+}
+
+model DietPreference {
+  userId           String           @id @map("user_id") @db.Uuid
+  dietPattern      DietPattern      @map("diet_pattern")
+  practiceSchedule PracticeSchedule @map("practice_schedule")
+  tradition        Tradition
+  ruleSetVersion   Int              @map("rule_set_version")
+  confirmedAt      DateTime         @map("confirmed_at") @db.Timestamptz(3)
+  createdAt        DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("diet_preferences")
+}
+
+model DietRuleDefinition {
+  id              String               @id @default(uuid()) @db.Uuid
+  code            String               @db.VarChar(120)
+  label           String               @db.VarChar(180)
+  description     String
+  source          DietRuleSource
+  dietPattern     DietPattern?         @map("diet_pattern")
+  tradition       Tradition?
+  defaultEnabled  Boolean              @default(true) @map("default_enabled")
+  hardConstraint  Boolean              @default(true) @map("hard_constraint")
+  ruleSetVersion  Int                  @map("rule_set_version")
+  active          Boolean              @default(true)
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  preferenceRules DietPreferenceRule[]
+
+  @@unique([code, ruleSetVersion])
+  @@index([ruleSetVersion, active])
+  @@map("diet_rule_definitions")
+}
+
+model DietPreferenceRule {
+  userId           String             @map("user_id") @db.Uuid
+  ruleDefinitionId String             @map("rule_definition_id") @db.Uuid
+  enabled          Boolean
+  source           DietRuleSource
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ruleDefinition   DietRuleDefinition @relation(fields: [ruleDefinitionId], references: [id], onDelete: Restrict)
+
+  @@id([userId, ruleDefinitionId])
+  @@index([userId, enabled])
+  @@map("diet_preference_rules")
+}
+
+model DietScheduleDate {
+  userId    String   @map("user_id") @db.Uuid
+  date      DateTime @db.Date
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, date])
+  @@index([userId, enabled, date])
+  @@map("diet_schedule_dates")
+}
+
+model UserAllergy {
+  id           String           @id @default(uuid()) @db.Uuid
+  userId       String           @map("user_id") @db.Uuid
+  allergenCode String           @map("allergen_code") @db.VarChar(100)
+  label        String?          @db.VarChar(160)
+  severity     AllergySeverity?
+  active       Boolean          @default(true)
+  createdAt    DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user         User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, allergenCode])
+  @@index([userId, active])
+  @@map("user_allergies")
+}
+
+model UserIngredientExclusion {
+  id             String      @id @default(uuid()) @db.Uuid
+  userId         String      @map("user_id") @db.Uuid
+  ingredientId   String?     @map("ingredient_id") @db.Uuid
+  ingredientName String      @map("ingredient_name") @db.VarChar(160)
+  normalizedName String      @map("normalized_name") @db.VarChar(160)
+  reason         String?     @db.VarChar(500)
+  active         Boolean     @default(true)
+  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime    @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user           User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ingredient     Ingredient? @relation(fields: [ingredientId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, normalizedName])
+  @@index([userId, active])
+  @@index([ingredientId])
+  @@map("user_ingredient_exclusions")
+}

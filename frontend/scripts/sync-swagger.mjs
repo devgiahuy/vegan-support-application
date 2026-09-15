@@ -230,7 +230,7 @@ async function main() {
     stats: { operations: ops.length, groups: groups.size, schemas: Object.keys(schemas).length },
     operations: ops,
   };
-  writeFileSync(join(DOCS, 'api-catalog.json'), JSON.stringify(catalog, null, 2));
+  writeFileSync(join(DOCS, 'api-catalog.json'), `${JSON.stringify(catalog, null, 2)}\n`);
 
   // 2) API-CATALOG.md — index 1 trang
   let md = `${GEN_HEAD}\n# API Catalog\n\n`;
@@ -250,7 +250,7 @@ async function main() {
     }
     md += `\n`;
   }
-  writeFileSync(join(DOCS, 'API-CATALOG.md'), md);
+  writeFileSync(join(DOCS, 'API-CATALOG.md'), `${md.trimEnd()}\n`);
 
   // 3) docs/api/<tag>.md — chi tiết từng nhóm (xóa file tag cũ không còn)
   const fresh = new Set();
@@ -290,7 +290,7 @@ async function main() {
         g += `#### ${r}\n\`\`\`json\n${dump}\n\`\`\`\n\n`;
       }
     }
-    writeFileSync(join(API_DIR, file), g);
+    writeFileSync(join(API_DIR, file), `${g.trimEnd()}\n`);
   }
   for (const f of readdirSync(API_DIR).filter((f) => f.endsWith('.md'))) {
     if (!fresh.has(f)) rmSync(join(API_DIR, f));
