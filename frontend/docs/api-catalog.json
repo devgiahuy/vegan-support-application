@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
   "source": "../backend/openapi.json",
-  "generatedAt": "2026-09-15T16:04:35.685Z",
+  "generatedAt": "2026-09-15T16:17:55.072Z",
   "stats": {
-    "operations": 31,
-    "groups": 9,
-    "schemas": 34
+    "operations": 42,
+    "groups": 10,
+    "schemas": 41
   },
   "operations": [
     {
@@ -1048,6 +1048,346 @@
       },
       "responses": {
         "200": "UploadSignatureResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/{id}/comments",
+      "group": "Community",
+      "summary": "List thread comment của published content",
+      "operationId": "listPostComments",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "order",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "CommunityCommentListResponse",
+        "400": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/{id}/comments",
+      "group": "Community",
+      "summary": "Tạo comment hoặc reply một tầng",
+      "operationId": "createPostComment",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "content"
+          ],
+          "properties": {
+            "content": {
+              "type": "string"
+            },
+            "parentId": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "CommunityCommentResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "429": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/comments/{id}",
+      "group": "Community",
+      "summary": "Sửa comment của chính mình",
+      "operationId": "updateOwnComment",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "content"
+          ],
+          "properties": {
+            "content": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "CommunityCommentResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "429": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/comments/{id}",
+      "group": "Community",
+      "summary": "Soft-delete comment của chính mình",
+      "operationId": "deleteOwnComment",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "CommunityCommentResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "429": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/{id}/community-summary",
+      "group": "Community",
+      "summary": "Lấy aggregate community và viewer state",
+      "operationId": "getPostCommunitySummary",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "CommunitySummaryResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/posts/{id}/vote",
+      "group": "Community",
+      "summary": "Upvote content idempotent",
+      "operationId": "putPostVote",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "CommunityVoteResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "429": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/posts/{id}/vote",
+      "group": "Community",
+      "summary": "Gỡ upvote idempotent",
+      "operationId": "deletePostVote",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "CommunityVoteResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "429": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/posts/{id}/rating",
+      "group": "Community",
+      "summary": "Upsert taste/difficulty rating cho Recipe",
+      "operationId": "putRecipeRating",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "taste",
+            "difficulty"
+          ],
+          "properties": {
+            "taste": {
+              "type": "integer"
+            },
+            "difficulty": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "CommunityRatingResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "429": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/posts/{id}/bookmark",
+      "group": "Community",
+      "summary": "Bookmark Recipe/Video idempotent",
+      "operationId": "putPostBookmark",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "CommunityBookmarkResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "429": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/posts/{id}/bookmark",
+      "group": "Community",
+      "summary": "Gỡ bookmark idempotent",
+      "operationId": "deletePostBookmark",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "CommunityBookmarkResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "429": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/users/me/bookmarks",
+      "group": "Community",
+      "summary": "List bookmark Recipe/Video của current user",
+      "operationId": "listOwnBookmarks",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "type",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "CommunityBookmarkListResponse",
         "400": "ErrorResponse",
         "401": "ErrorResponse",
         "403": "ErrorResponse"

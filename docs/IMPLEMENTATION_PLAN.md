@@ -268,10 +268,11 @@ Health calculation MVP dùng dữ liệu `MANUAL`: `BMI = weightKg / heightMeter
 | `post_categories`                 | revisionId, categoryId                                                                                   |
 | `post_tags`                       | revisionId, tag, normalizedTag                                                                           |
 | `post_media`                      | revisionId, kind, provider, publicId, secureUrl, MIME/size/dimension metadata                            |
-| `comments`                        | id, postId, authorId, parentId, content, status, editedAt, deletedAt                                     |
-| `votes`                           | userId, postId, createdAt; unique(userId, postId)                                                        |
-| `ratings`                         | userId, postId, taste, difficulty, createdAt; unique(userId, postId)                                     |
-| `bookmarks`                       | userId, postId, createdAt; unique(userId, postId)                                                        |
+| `comments`                        | id, postId, authorId, parentId, content, status, edit/delete/hide audit fields                           |
+| `post_votes`                      | userId, postId, createdAt; unique(userId, postId)                                                        |
+| `post_ratings`                    | userId, postId, taste, difficulty, active, timestamps; unique(userId, postId)                            |
+| `post_bookmarks`                  | userId, postId, createdAt; unique(userId, postId)                                                        |
+| `community_rate_limit_buckets`    | userId, action, windowStart, count; unique(userId, action, windowStart)                                  |
 
 `post_revisions` cho phép bản published cũ tiếp tục hiển thị trong lúc bản sửa mới chờ duyệt.
 Search v1 dùng normalized ASCII fields với GIN trigram indexes; ranking theo title > canonical
@@ -541,6 +542,7 @@ Các hệ số phải để trong config và được người có chuyên môn 
 - Average rating tính từ active ratings, không dựa vào cached number do client gửi.
 - Bookmark chỉ áp dụng Recipe/Video; unique theo `(userId, postId)`.
 - Comment bị Admin hide không được author tự restore.
+- Community mutation dùng fixed-window rate limit do backend lưu; client không tự suy luận hoặc gửi counter.
 
 ### BL-12 — Category
 
@@ -722,11 +724,13 @@ GET    /api/v1/posts/:id/comments
 POST   /api/v1/posts/:id/comments
 PATCH  /api/v1/comments/:id
 DELETE /api/v1/comments/:id
+GET    /api/v1/posts/:id/community-summary
 PUT    /api/v1/posts/:id/vote
 DELETE /api/v1/posts/:id/vote
 PUT    /api/v1/posts/:id/rating
 PUT    /api/v1/posts/:id/bookmark
 DELETE /api/v1/posts/:id/bookmark
+GET    /api/v1/users/me/bookmarks
 ```
 
 UI:

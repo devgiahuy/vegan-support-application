@@ -203,20 +203,38 @@ enum MediaProvider {
   @@map("media_provider")
 }
 
+enum CommentStatus {
+  VISIBLE
+  HIDDEN
+  DELETED
+
+  @@map("comment_status")
+}
+
+enum CommunityAction {
+  COMMENT_CREATE
+  COMMENT_EDIT
+  VOTE
+  RATING
+  BOOKMARK
+
+  @@map("community_action")
+}
+
 model User {
-  id                        String                    @id @default(uuid()) @db.Uuid
-  email                     String                    @unique @db.VarChar(320)
-  passwordHash              String                    @map("password_hash")
-  displayName               String                    @map("display_name") @db.VarChar(100)
-  avatarUrl                 String?                   @map("avatar_url") @db.VarChar(2048)
-  role                      Role                      @default(MEMBER)
-  status                    UserStatus                @default(ACTIVE)
-  failedLoginAttempts       Int                       @default(0) @map("failed_login_attempts")
-  lockedUntil               DateTime?                 @map("locked_until") @db.Timestamptz(3)
-  lastLoginAt               DateTime?                 @map("last_login_at") @db.Timestamptz(3)
-  createdAt                 DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt                 DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt                 DateTime?                 @map("deleted_at") @db.Timestamptz(3)
+  id                        String                     @id @default(uuid()) @db.Uuid
+  email                     String                     @unique @db.VarChar(320)
+  passwordHash              String                     @map("password_hash")
+  displayName               String                     @map("display_name") @db.VarChar(100)
+  avatarUrl                 String?                    @map("avatar_url") @db.VarChar(2048)
+  role                      Role                       @default(MEMBER)
+  status                    UserStatus                 @default(ACTIVE)
+  failedLoginAttempts       Int                        @default(0) @map("failed_login_attempts")
+  lockedUntil               DateTime?                  @map("locked_until") @db.Timestamptz(3)
+  lastLoginAt               DateTime?                  @map("last_login_at") @db.Timestamptz(3)
+  createdAt                 DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                 DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt                 DateTime?                  @map("deleted_at") @db.Timestamptz(3)
   refreshSessions           RefreshSession[]
   applications              ContributorApplication[]
   healthProfile             HealthProfile?
@@ -225,11 +243,17 @@ model User {
   dietScheduleDates         DietScheduleDate[]
   allergies                 UserAllergy[]
   ingredientExclusions      UserIngredientExclusion[]
-  categoryProposals         CategoryProposal[]        @relation("CategoryProposalAuthor")
-  reviewedCategoryProposals CategoryProposal[]        @relation("CategoryProposalReviewer")
-  posts                     Post[]                    @relation("PostAuthor")
-  deletedPosts              Post[]                    @relation("PostDeletedBy")
-  postRevisions             PostRevision[]            @relation("PostRevisionAuthor")
+  categoryProposals         CategoryProposal[]         @relation("CategoryProposalAuthor")
+  reviewedCategoryProposals CategoryProposal[]         @relation("CategoryProposalReviewer")
+  posts                     Post[]                     @relation("PostAuthor")
+  deletedPosts              Post[]                     @relation("PostDeletedBy")
+  postRevisions             PostRevision[]             @relation("PostRevisionAuthor")
+  comments                  Comment[]                  @relation("CommentAuthor")
+  hiddenComments            Comment[]                  @relation("CommentHiddenBy")
+  postVotes                 PostVote[]
+  postRatings               PostRating[]
+  postBookmarks             PostBookmark[]
+  communityRateLimits       CommunityRateLimitBucket[]
 
   @@map("users")
 }
@@ -313,10 +337,93 @@ model Post {
   deletedBy           User?          @relation("PostDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
   revisions           PostRevision[] @relation("PostRevisions")
   publishedRevision   PostRevision?  @relation("PublishedRevision", fields: [publishedRevisionId], references: [id], onDelete: SetNull)
+  comments            Comment[]
+  votes               PostVote[]
+  ratings             PostRating[]
+  bookmarks           PostBookmark[]
 
   @@index([status, type, publishedAt])
   @@index([authorId, status, updatedAt])
   @@map("posts")
+}
+
+model Comment {
+  id           String        @id @default(uuid()) @db.Uuid
+  postId       String        @map("post_id") @db.Uuid
+  authorId     String        @map("author_id") @db.Uuid
+  parentId     String?       @map("parent_id") @db.Uuid
+  content      String        @db.VarChar(2000)
+  status       CommentStatus @default(VISIBLE)
+  editedAt     DateTime?     @map("edited_at") @db.Timestamptz(3)
+  deletedAt    DateTime?     @map("deleted_at") @db.Timestamptz(3)
+  hiddenAt     DateTime?     @map("hidden_at") @db.Timestamptz(3)
+  hiddenById   String?       @map("hidden_by_id") @db.Uuid
+  hiddenReason String?       @map("hidden_reason") @db.VarChar(1000)
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  post         Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author       User          @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  parent       Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Restrict)
+  replies      Comment[]     @relation("CommentReplies")
+  hiddenBy     User?         @relation("CommentHiddenBy", fields: [hiddenById], references: [id], onDelete: SetNull)
+
+  @@index([postId, status, createdAt, id])
+  @@index([parentId, status, createdAt, id])
+  @@index([authorId, status, createdAt])
+  @@map("comments")
+}
+
+model PostVote {
+  userId    String   @map("user_id") @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@index([postId, createdAt])
+  @@map("post_votes")
+}
+
+model PostRating {
+  userId     String   @map("user_id") @db.Uuid
+  postId     String   @map("post_id") @db.Uuid
+  taste      Int
+  difficulty Int
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@index([postId, active])
+  @@map("post_ratings")
+}
+
+model PostBookmark {
+  userId    String   @map("user_id") @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@index([postId, createdAt])
+  @@index([userId, createdAt, postId])
+  @@map("post_bookmarks")
+}
+
+model CommunityRateLimitBucket {
+  userId      String          @map("user_id") @db.Uuid
+  action      CommunityAction
+  windowStart DateTime        @map("window_start") @db.Timestamptz(0)
+  count       Int             @default(1)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, action, windowStart])
+  @@index([windowStart])
+  @@map("community_rate_limit_buckets")
 }
 
 model PostRevision {

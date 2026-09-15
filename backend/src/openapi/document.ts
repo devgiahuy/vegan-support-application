@@ -8,6 +8,7 @@ import { registerAuthOpenApi } from '../modules/auth/auth.openapi.js';
 import { registerProfileOpenApi } from '../modules/profile/profile.openapi.js';
 import { registerCatalogOpenApi } from '../modules/catalog/catalog.openapi.js';
 import { registerContentOpenApi } from '../modules/content/content.openapi.js';
+import { registerCommunityOpenApi } from '../modules/community/community.openapi.js';
 
 const registry = new OpenAPIRegistry();
 
@@ -40,6 +41,7 @@ registerAuthOpenApi(registry, registeredErrorResponse);
 registerProfileOpenApi(registry, registeredErrorResponse);
 registerCatalogOpenApi(registry, registeredErrorResponse);
 registerContentOpenApi(registry, registeredErrorResponse);
+registerCommunityOpenApi(registry, registeredErrorResponse);
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
@@ -60,6 +62,7 @@ export const openApiDocument = generator.generateDocument({
     { name: 'Ingredients', description: 'Canonical ingredient discovery and alias resolution' },
     { name: 'Catalog Admin', description: 'Admin-only category and ingredient management' },
     { name: 'Content', description: 'Revisioned Recipe, Blog, and Video content' },
+    { name: 'Community', description: 'Comments, votes, ratings, and bookmarks' },
     { name: 'Uploads', description: 'Safe Cloudinary signed-upload configuration' },
   ],
 });

@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 1.6
+**Version:** 1.7
 
 **Cập nhật:** 15/09/2026
 
@@ -8,7 +8,7 @@
 
 **Contract target:** `/api/v1`
 
-> Tài liệu này là registry sống cho những capability backend đã sẵn sàng để frontend tích hợp. Foundation, Authentication & Sessions, Profile/Health, Diet Rules, Catalog, Content Core và Content Discovery đã hoàn tất; các feature còn lại giữ `PLANNED` cho tới khi phase tương ứng vượt qua đầy đủ completion gate.
+> Tài liệu này là registry sống cho những capability backend đã sẵn sàng để frontend tích hợp. Foundation, Authentication & Sessions, Profile/Health, Diet Rules, Catalog, Content Core, Content Discovery và Community Interactions đã hoàn tất; các feature còn lại giữ `PLANNED` cho tới khi phase tương ứng vượt qua đầy đủ completion gate.
 
 ---
 
@@ -213,24 +213,26 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 
 ### 6.3 Content và Community
 
-| Method | Path                  | Status    | Backend updated | FE integrated | Ghi chú                                                                                                     |
-| ------ | --------------------- | --------- | --------------- | ------------- | ----------------------------------------------------------------------------------------------------------- |
-| GET    | `/posts`              | `READY`   | 2026-09-15      | No            | Search v1 không dấu; q/type/category/cook-time/difficulty/diet/ingredient filters; auth profile constraints |
-| POST   | `/posts`              | `READY`   | 2026-09-15      | No            | Auth; Recipe/Blog/Video polymorphic; Phase 04 luôn `PENDING_REVIEW`                                         |
-| GET    | `/posts/:idOrSlug`    | `READY`   | 2026-09-15      | No            | Public thấy published revision; owner/Admin thấy latest revision                                            |
-| PATCH  | `/posts/:id`          | `READY`   | 2026-09-15      | No            | Owner/Admin; full revision snapshot + `expectedVersion`                                                     |
-| DELETE | `/posts/:id`          | `READY`   | 2026-09-15      | No            | Owner/Admin soft-delete; query `expectedVersion`; idempotent                                                |
-| GET    | `/posts/:id/related`  | `READY`   | 2026-09-15      | No            | Published-only; recipes/blogs/videos riêng, dedupe, profile-safe, limit 1–10/type                           |
-| POST   | `/uploads/signature`  | `READY`   | 2026-09-15      | No            | Auth; Cloudinary SHA-1 signature/config, không lộ API secret                                                |
-| GET    | `/posts/:id/comments` | `PLANNED` | —               | No            | Reply tối đa một tầng                                                                                       |
-| POST   | `/posts/:id/comments` | `PLANNED` | —               | No            | Member+                                                                                                     |
-| PATCH  | `/comments/:id`       | `PLANNED` | —               | No            | Owner only, editedAt                                                                                        |
-| DELETE | `/comments/:id`       | `PLANNED` | —               | No            | Soft-delete                                                                                                 |
-| PUT    | `/posts/:id/vote`     | `PLANNED` | —               | No            | Upvote toggle/create                                                                                        |
-| DELETE | `/posts/:id/vote`     | `PLANNED` | —               | No            | Remove upvote                                                                                               |
-| PUT    | `/posts/:id/rating`   | `PLANNED` | —               | No            | Recipe only, upsert                                                                                         |
-| PUT    | `/posts/:id/bookmark` | `PLANNED` | —               | No            | Recipe/Video only                                                                                           |
-| DELETE | `/posts/:id/bookmark` | `PLANNED` | —               | No            | Remove bookmark                                                                                             |
+| Method | Path                           | Status  | Backend updated | FE integrated | Ghi chú                                                                                                     |
+| ------ | ------------------------------ | ------- | --------------- | ------------- | ----------------------------------------------------------------------------------------------------------- |
+| GET    | `/posts`                       | `READY` | 2026-09-15      | No            | Search v1 không dấu; q/type/category/cook-time/difficulty/diet/ingredient filters; auth profile constraints |
+| POST   | `/posts`                       | `READY` | 2026-09-15      | No            | Auth; Recipe/Blog/Video polymorphic; Phase 04 luôn `PENDING_REVIEW`                                         |
+| GET    | `/posts/:idOrSlug`             | `READY` | 2026-09-15      | No            | Public thấy published revision; owner/Admin thấy latest revision                                            |
+| PATCH  | `/posts/:id`                   | `READY` | 2026-09-15      | No            | Owner/Admin; full revision snapshot + `expectedVersion`                                                     |
+| DELETE | `/posts/:id`                   | `READY` | 2026-09-15      | No            | Owner/Admin soft-delete; query `expectedVersion`; idempotent                                                |
+| GET    | `/posts/:id/related`           | `READY` | 2026-09-15      | No            | Published-only; recipes/blogs/videos riêng, dedupe, profile-safe, limit 1–10/type                           |
+| POST   | `/uploads/signature`           | `READY` | 2026-09-15      | No            | Auth; Cloudinary SHA-1 signature/config, không lộ API secret                                                |
+| GET    | `/posts/:id/comments`          | `READY` | 2026-09-15      | No            | Public; phân trang root thread; reply một tầng; deleted/hidden placeholder khi còn reply                    |
+| POST   | `/posts/:id/comments`          | `READY` | 2026-09-15      | No            | Auth; chỉ published content; parent phải là root visible cùng post                                          |
+| PATCH  | `/comments/:id`                | `READY` | 2026-09-15      | No            | Owner only; visible only; backend ghi `editedAt`                                                            |
+| DELETE | `/comments/:id`                | `READY` | 2026-09-15      | No            | Owner only; soft-delete idempotent; không đổi comment bị Admin hide                                         |
+| GET    | `/posts/:id/community-summary` | `READY` | 2026-09-15      | No            | Public aggregate; optional auth trả viewer vote/bookmark/rating state                                       |
+| PUT    | `/posts/:id/vote`              | `READY` | 2026-09-15      | No            | Auth; idempotent upvote; trả counter server-side                                                            |
+| DELETE | `/posts/:id/vote`              | `READY` | 2026-09-15      | No            | Auth; idempotent remove; trả counter server-side                                                            |
+| PUT    | `/posts/:id/rating`            | `READY` | 2026-09-15      | No            | Auth; Recipe only; taste/difficulty 1–5; upsert và trả active aggregate                                     |
+| PUT    | `/posts/:id/bookmark`          | `READY` | 2026-09-15      | No            | Auth; Recipe/Video only; idempotent                                                                         |
+| DELETE | `/posts/:id/bookmark`          | `READY` | 2026-09-15      | No            | Auth; Recipe/Video only; idempotent                                                                         |
+| GET    | `/users/me/bookmarks`          | `READY` | 2026-09-15      | No            | Auth; published Recipe/Video; filter type và pagination                                                     |
 
 ### 6.4 Contributor, Moderation và Catalog
 
@@ -415,7 +417,22 @@ FE xin signature từ backend
 - `GET /posts/:id/related?limitPerType=4` trả `{ recipes, blogs, videos }`. Current item luôn bị loại;
   mỗi nhóm được xếp theo category/ingredient/tag overlap rồi `publishedAt` và UUID.
 
-### 7.6 Chat SSE
+### 7.6 Community interactions
+
+- Chỉ published content nhận comment/vote/rating/bookmark. Không dùng counter từ client; đọc
+  aggregate và viewer state qua `GET /posts/:id/community-summary`.
+- Comment list phân trang theo root thread; `replies` chỉ có một tầng. `isPlaceholder=true` đi cùng
+  `content=null` và `author=null` khi root đã deleted/hidden nhưng còn reply visible.
+- `PATCH/DELETE /comments/:id` chỉ dành cho owner. Comment `HIDDEN` không thể được tác giả sửa, xóa
+  hoặc restore; moderation status sẽ do Phase 08 quản lý.
+- Vote và bookmark dùng PUT/DELETE idempotent. Rating là PUT upsert, chỉ Recipe, gồm hai điểm nguyên
+  `taste` và `difficulty` từ 1–5; aggregate chỉ tính rating `active`.
+- Mutation có fixed-window rate limit lưu ở backend. Khi nhận `COMMUNITY_RATE_LIMITED`, đọc
+  `error.fields.retryAfterSeconds[0]`, disable action tạm thời và không optimistic-retry liên tục.
+- Bookmark list chỉ trả published Recipe/Video; frontend vẫn cần DTO/Model/Mapper riêng trước khi
+  đổi `FE integrated` sang Yes.
+
+### 7.7 Chat SSE
 
 Frontend cần xử lý event types do OpenAPI chốt, tối thiểu:
 
@@ -432,14 +449,14 @@ error
 - `error` có thể xuất hiện sau HTTP 200; không chỉ dựa vào Axios error interceptor.
 - Disclaimer render cố định kể cả khi stream lỗi một phần.
 
-### 7.7 Behavioral events
+### 7.8 Behavioral events
 
 - Không block primary action nếu ghi event thất bại.
 - Chỉ gửi event khi backend xác nhận personalization consent đang active.
 - Dedupe rapid repeated views ở client để giảm noise; backend vẫn là nơi quyết định dedupe chính thức.
 - Recommendation UI render `reasonCodes`, không tự đọc raw behavior history.
 
-### 7.8 Maps
+### 7.9 Maps
 
 - Browser lấy geolocation sau thao tác/consent rõ ràng.
 - Từ chối permission phải chuyển sang form địa chỉ.
@@ -502,6 +519,12 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `CONTENT_STATE_CONFLICT`            | Khóa edit khi content đang bị giữ để review                           |
 | `CONTENT_DELETED`                   | Đóng editor và hiển thị trạng thái đã xóa cho owner/Admin             |
 | `INVALID_SEARCH_QUERY`              | Giữ filters hiện tại và yêu cầu từ khóa có chữ hoặc số                |
+| `INVALID_COMMENT_PARENT`            | Giữ nội dung và yêu cầu reply lại một root comment còn visible        |
+| `COMMENT_OWNER_REQUIRED`            | Không mở edit/delete cho comment của user khác                        |
+| `COMMENT_NOT_EDITABLE`              | Refresh thread; comment đã deleted/hidden không thể sửa hoặc restore  |
+| `RATING_RECIPE_ONLY`                | Ẩn rating control khỏi Blog/Video                                     |
+| `BOOKMARK_TYPE_NOT_SUPPORTED`       | Ẩn bookmark control khỏi Blog                                         |
+| `COMMUNITY_RATE_LIMITED`            | Disable action theo `retryAfterSeconds`, không retry tự động          |
 | `HEALTH_PROFILE_INCOMPLETE`         | Link tới health profile                                               |
 | `NO_ELIGIBLE_RECIPE`                | Hiển thị slot trống/warnings, không crash                             |
 | `VERIFICATION_ALREADY_EXISTS`       | Refresh target và hiển thị reviewer hiện tại                          |
@@ -572,6 +595,7 @@ Thêm entry mới nhất ở trên cùng.
 
 | Date       | Version | Module       | Change                                                                                                                               | Breaking | FE action                                                                                      |
 | ---------- | ------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------ | :------: | ---------------------------------------------------------------------------------------------- |
+| 2026-09-15 | 1.7     | Community    | Thêm comment thread một tầng, idempotent vote/bookmark, Recipe rating aggregate, community summary và current-user bookmark list     |    No    | Sync OpenAPI; tạo DTO/Model/Mapper/query hooks và xử lý placeholder/rate limit                 |
 | 2026-09-15 | 1.6     | Search       | Mở rộng GET posts với normalized ranking/filter an toàn và thêm related content theo ba type                                         |    No    | Sync OpenAPI; map search meta/filters và ba list related, không tự nới appliedConstraints      |
 | 2026-09-15 | 1.5     | Content      | Thêm Recipe/Blog/Video revision CRUD, structured recipe constraints, soft-delete/version conflict và signed Cloudinary upload        |    No    | Sync OpenAPI; tạo DTO/Model/Mapper theo post type, upload trực tiếp và xử lý revision conflict |
 | 2026-09-15 | 1.4     | Catalog      | Thêm category tree, canonical ingredient, alias resolution và metadata allergen/diet/tradition; exclusion nhận optional ingredientId |    No    | Sync OpenAPI; tạo DTO/Model/Mapper cho category và ingredient, xử lý AMBIGUOUS                 |

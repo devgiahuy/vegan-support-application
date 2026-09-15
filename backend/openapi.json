@@ -45,6 +45,10 @@
       "description": "Revisioned Recipe, Blog, and Video content"
     },
     {
+      "name": "Community",
+      "description": "Comments, votes, ratings, and bookmarks"
+    },
+    {
       "name": "Uploads",
       "description": "Safe Cloudinary signed-upload configuration"
     }
@@ -7464,6 +7468,797 @@
           "meta"
         ],
         "additionalProperties": false
+      },
+      "CommunityCommentListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "postId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "parentId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "content": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "VISIBLE",
+                    "HIDDEN",
+                    "DELETED"
+                  ]
+                },
+                "isPlaceholder": {
+                  "type": "boolean"
+                },
+                "author": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "avatarUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "displayName",
+                    "avatarUrl"
+                  ],
+                  "additionalProperties": false
+                },
+                "editedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "replies": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "postId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "parentId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "content": {
+                        "type": "string"
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "VISIBLE"
+                        ]
+                      },
+                      "isPlaceholder": {
+                        "type": "boolean",
+                        "enum": [
+                          false
+                        ]
+                      },
+                      "author": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "displayName": {
+                            "type": "string"
+                          },
+                          "avatarUrl": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "displayName",
+                          "avatarUrl"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "editedAt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "date-time"
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "postId",
+                      "parentId",
+                      "content",
+                      "status",
+                      "isPlaceholder",
+                      "author",
+                      "editedAt",
+                      "createdAt"
+                    ],
+                    "additionalProperties": false
+                  }
+                }
+              },
+              "required": [
+                "id",
+                "postId",
+                "parentId",
+                "content",
+                "status",
+                "isPlaceholder",
+                "author",
+                "editedAt",
+                "createdAt",
+                "replies"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "CommunityCommentResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "postId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "parentId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "content": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "VISIBLE",
+                  "HIDDEN",
+                  "DELETED"
+                ]
+              },
+              "isPlaceholder": {
+                "type": "boolean"
+              },
+              "author": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "displayName": {
+                    "type": "string"
+                  },
+                  "avatarUrl": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "displayName",
+                  "avatarUrl"
+                ],
+                "additionalProperties": false
+              },
+              "editedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "replies": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "postId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "parentId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "content": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "VISIBLE"
+                      ]
+                    },
+                    "isPlaceholder": {
+                      "type": "boolean",
+                      "enum": [
+                        false
+                      ]
+                    },
+                    "author": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "displayName": {
+                          "type": "string"
+                        },
+                        "avatarUrl": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "displayName",
+                        "avatarUrl"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "editedAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "postId",
+                    "parentId",
+                    "content",
+                    "status",
+                    "isPlaceholder",
+                    "author",
+                    "editedAt",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "id",
+              "postId",
+              "parentId",
+              "content",
+              "status",
+              "isPlaceholder",
+              "author",
+              "editedAt",
+              "createdAt",
+              "replies"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "CommunityVoteResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "postId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "voted": {
+                "type": "boolean"
+              },
+              "voteCount": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "postId",
+              "voted",
+              "voteCount"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "CommunityRatingResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "postId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "rating": {
+                "type": "object",
+                "properties": {
+                  "taste": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "difficulty": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  }
+                },
+                "required": [
+                  "taste",
+                  "difficulty"
+                ],
+                "additionalProperties": false
+              },
+              "aggregate": {
+                "type": "object",
+                "properties": {
+                  "count": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "tasteAverage": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "difficultyAverage": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 1,
+                    "maximum": 5
+                  }
+                },
+                "required": [
+                  "count",
+                  "tasteAverage",
+                  "difficultyAverage"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "postId",
+              "rating",
+              "aggregate"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "CommunityBookmarkResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "postId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "bookmarked": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "postId",
+              "bookmarked"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "CommunitySummaryResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "postId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "voteCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "rating": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "count": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "tasteAverage": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "difficultyAverage": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 1,
+                    "maximum": 5
+                  }
+                },
+                "required": [
+                  "count",
+                  "tasteAverage",
+                  "difficultyAverage"
+                ],
+                "additionalProperties": false
+              },
+              "viewer": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "voted": {
+                    "type": "boolean"
+                  },
+                  "bookmarked": {
+                    "type": "boolean"
+                  },
+                  "rating": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "taste": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 5
+                      },
+                      "difficulty": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 5
+                      }
+                    },
+                    "required": [
+                      "taste",
+                      "difficulty"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "voted",
+                  "bookmarked",
+                  "rating"
+                ]
+              }
+            },
+            "required": [
+              "postId",
+              "voteCount",
+              "rating",
+              "viewer"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "CommunityBookmarkListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "postId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "RECIPE",
+                    "VIDEO"
+                  ]
+                },
+                "slug": {
+                  "type": "string"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "excerpt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "coverImageUrl": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uri"
+                },
+                "publishedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "bookmarkedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "postId",
+                "type",
+                "slug",
+                "title",
+                "excerpt",
+                "coverImageUrl",
+                "publishedAt",
+                "bookmarkedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
       }
     },
     "parameters": {}
@@ -12909,6 +13704,1939 @@
                       "error": {
                         "code": "AUTH_REQUIRED",
                         "message": "Yêu cầu đăng nhập",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/posts/{id}/comments": {
+      "get": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "List thread comment của published content",
+        "description": "Phân trang comment gốc; reply hiển thị tối đa một tầng. Comment đã xóa/ẩn chỉ còn placeholder khi vẫn có reply visible.",
+        "operationId": "listPostComments",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "oldest",
+                "newest"
+              ],
+              "default": "oldest"
+            },
+            "required": false,
+            "name": "order",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Danh sách thread comment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityCommentListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID hoặc pagination không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "ID hoặc pagination không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy published content",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy published content",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Tạo comment hoặc reply một tầng",
+        "operationId": "createPostComment",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  },
+                  "parentId": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                },
+                "required": [
+                  "content"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Comment đã tạo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityCommentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Body hoặc parent comment không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Body hoặc parent comment không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_COMMENT_PARENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_COMMENT_PARENT",
+                        "message": "Body hoặc parent comment không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy published content",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy published content",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn thao tác community",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "COMMUNITY_RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "COMMUNITY_RATE_LIMITED",
+                        "message": "Vượt giới hạn thao tác community",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/comments/{id}": {
+      "patch": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Sửa comment của chính mình",
+        "description": "Ghi editedAt; chỉ comment VISIBLE mới sửa được.",
+        "operationId": "updateOwnComment",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "content": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "content"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Comment đã sửa",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityCommentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID hoặc body không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "ID hoặc body không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm hoặc không phải chủ sở hữu comment",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm hoặc không phải chủ sở hữu comment",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "COMMENT_OWNER_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "COMMENT_OWNER_REQUIRED",
+                        "message": "Tài khoản bị cấm hoặc không phải chủ sở hữu comment",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy comment",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy comment",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Comment không còn editable",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "COMMENT_NOT_EDITABLE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "COMMENT_NOT_EDITABLE",
+                        "message": "Comment không còn editable",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn thao tác community",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "COMMUNITY_RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "COMMUNITY_RATE_LIMITED",
+                        "message": "Vượt giới hạn thao tác community",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Soft-delete comment của chính mình",
+        "description": "Idempotent khi comment đã soft-delete. Comment bị Admin ẩn không thể đổi trạng thái qua API tác giả.",
+        "operationId": "deleteOwnComment",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comment đã soft-delete",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityCommentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID hoặc body không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "ID hoặc body không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm hoặc không phải chủ sở hữu comment",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm hoặc không phải chủ sở hữu comment",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "COMMENT_OWNER_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "COMMENT_OWNER_REQUIRED",
+                        "message": "Tài khoản bị cấm hoặc không phải chủ sở hữu comment",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy comment",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy comment",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Comment không còn editable",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "COMMENT_NOT_EDITABLE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "COMMENT_NOT_EDITABLE",
+                        "message": "Comment không còn editable",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn thao tác community",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "COMMUNITY_RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "COMMUNITY_RATE_LIMITED",
+                        "message": "Vượt giới hạn thao tác community",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/posts/{id}/community-summary": {
+      "get": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Lấy aggregate community và viewer state",
+        "description": "Counter/average luôn tính server-side từ record hiện tại. Rating aggregate chỉ có cho Recipe; viewer null với guest.",
+        "operationId": "getPostCommunitySummary",
+        "security": [
+          {},
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Vote count, rating aggregate và trạng thái viewer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunitySummaryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "ID không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Access token được gửi nhưng không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Access token được gửi nhưng không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Access token được gửi nhưng không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy published content",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy published content",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/posts/{id}/vote": {
+      "put": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Upvote content idempotent",
+        "operationId": "putPostVote",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trạng thái vote và counter server-side",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityVoteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "ID không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy published content",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy published content",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn thao tác community",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "COMMUNITY_RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "COMMUNITY_RATE_LIMITED",
+                        "message": "Vượt giới hạn thao tác community",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Gỡ upvote idempotent",
+        "operationId": "deletePostVote",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trạng thái vote và counter server-side",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityVoteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "ID không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy published content",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy published content",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn thao tác community",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "COMMUNITY_RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "COMMUNITY_RATE_LIMITED",
+                        "message": "Vượt giới hạn thao tác community",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/posts/{id}/rating": {
+      "put": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Upsert taste/difficulty rating cho Recipe",
+        "description": "Mỗi điểm từ 1 đến 5; average chỉ dùng active rating và do backend tính.",
+        "operationId": "putRecipeRating",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "taste": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  },
+                  "difficulty": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 5
+                  }
+                },
+                "required": [
+                  "taste",
+                  "difficulty"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Rating hiện tại và aggregate server-side",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityRatingResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Rating hoặc post type không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Rating hoặc post type không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "RATING_RECIPE_ONLY": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RATING_RECIPE_ONLY",
+                        "message": "Rating hoặc post type không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy published content",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy published content",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn thao tác community",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "COMMUNITY_RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "COMMUNITY_RATE_LIMITED",
+                        "message": "Vượt giới hạn thao tác community",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/posts/{id}/bookmark": {
+      "put": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Bookmark Recipe/Video idempotent",
+        "operationId": "putPostBookmark",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trạng thái bookmark",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityBookmarkResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID hoặc post type không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "ID hoặc post type không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "BOOKMARK_TYPE_NOT_SUPPORTED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "BOOKMARK_TYPE_NOT_SUPPORTED",
+                        "message": "ID hoặc post type không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy published content",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy published content",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn thao tác community",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "COMMUNITY_RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "COMMUNITY_RATE_LIMITED",
+                        "message": "Vượt giới hạn thao tác community",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "Gỡ bookmark idempotent",
+        "operationId": "deletePostBookmark",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trạng thái bookmark",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityBookmarkResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID hoặc post type không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "ID hoặc post type không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "BOOKMARK_TYPE_NOT_SUPPORTED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "BOOKMARK_TYPE_NOT_SUPPORTED",
+                        "message": "ID hoặc post type không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy published content",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy published content",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Vượt giới hạn thao tác community",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "COMMUNITY_RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "COMMUNITY_RATE_LIMITED",
+                        "message": "Vượt giới hạn thao tác community",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me/bookmarks": {
+      "get": {
+        "tags": [
+          "Community"
+        ],
+        "summary": "List bookmark Recipe/Video của current user",
+        "operationId": "listOwnBookmarks",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "RECIPE",
+                "VIDEO"
+              ]
+            },
+            "required": false,
+            "name": "type",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Published bookmark list mới nhất trước",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CommunityBookmarkListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Pagination hoặc type không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Pagination hoặc type không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }

@@ -25,6 +25,14 @@ import {
   createIngredientRouter,
 } from './modules/catalog/catalog.router.js';
 import { CatalogService } from './modules/catalog/catalog.service.js';
+import { CommunityController } from './modules/community/community.controller.js';
+import { CommunityRepository } from './modules/community/community.repository.js';
+import {
+  createCommentsRouter,
+  createCommunityPostsRouter,
+  createCommunityUsersRouter,
+} from './modules/community/community.router.js';
+import { CommunityService } from './modules/community/community.service.js';
 import { ContentController } from './modules/content/content.controller.js';
 import { Phase04PendingReviewPolicy } from './modules/content/content-publication.policy.js';
 import { ContentRepository } from './modules/content/content.repository.js';
@@ -68,6 +76,9 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
     ),
     mediaService,
   );
+  const communityController = new CommunityController(
+    new CommunityService(new CommunityRepository(database.client)),
+  );
 
   app.disable('x-powered-by');
   app.use(helmet());
@@ -103,11 +114,14 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/health', createHealthRouter(config, database));
   app.use('/api/v1/auth', createAuthRouter(authController));
   app.use('/api/v1/users', createUsersRouter(usersController, authentication));
+  app.use('/api/v1/users', createCommunityUsersRouter(communityController, authentication));
   app.use('/api/v1/diet-rules', createDietRouter(dietController, authentication));
   app.use('/api/v1/categories', createCategoryRouter(catalogController));
   app.use('/api/v1/ingredients', createIngredientRouter(catalogController));
   app.use('/api/v1/admin', createCatalogAdminRouter(catalogController, authentication));
   app.use('/api/v1/posts', createPostsRouter(contentController, authentication));
+  app.use('/api/v1/posts', createCommunityPostsRouter(communityController, authentication));
+  app.use('/api/v1/comments', createCommentsRouter(communityController, authentication));
   app.use('/api/v1/uploads', createUploadsRouter(contentController, authentication));
 
   app.use(notFoundHandler);

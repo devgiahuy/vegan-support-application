@@ -2,6 +2,7 @@ import 'dotenv/config';
 import {
   CatalogStatus,
   CategoryType,
+  CommentStatus,
   DietPattern,
   DietRuleSource,
   FoodGroup,
@@ -774,8 +775,90 @@ async function main(): Promise<void> {
       });
     });
   }
+
+  const [member, communityRecipe, communityVideo] = await Promise.all([
+    prisma.user.findUniqueOrThrow({
+      where: { email: seedEnvironment.SEED_MEMBER_EMAIL.toLowerCase() },
+    }),
+    prisma.post.findUniqueOrThrow({ where: { slug: 'dau-hu-xao-bong-cai-demo' } }),
+    prisma.post.findUniqueOrThrow({ where: { slug: 'video-bua-an-xanh-demo' } }),
+  ]);
+  const rootCommentId = '60000000-0000-4000-8000-000000000001';
+  const replyCommentId = '60000000-0000-4000-8000-000000000002';
+  await prisma.$transaction(async (transaction) => {
+    await transaction.comment.upsert({
+      where: { id: rootCommentId },
+      update: {
+        postId: communityRecipe.id,
+        authorId: member.id,
+        parentId: null,
+        content: 'Công thức dễ theo dõi và phù hợp cho bữa tối nhanh.',
+        status: CommentStatus.VISIBLE,
+        editedAt: null,
+        deletedAt: null,
+        hiddenAt: null,
+        hiddenById: null,
+        hiddenReason: null,
+      },
+      create: {
+        id: rootCommentId,
+        postId: communityRecipe.id,
+        authorId: member.id,
+        content: 'Công thức dễ theo dõi và phù hợp cho bữa tối nhanh.',
+      },
+    });
+    await transaction.comment.upsert({
+      where: { id: replyCommentId },
+      update: {
+        postId: communityRecipe.id,
+        authorId: admin.id,
+        parentId: rootCommentId,
+        content: 'Cảm ơn bạn, có thể giảm thêm thời gian bằng cách sơ chế bông cải trước.',
+        status: CommentStatus.VISIBLE,
+        editedAt: null,
+        deletedAt: null,
+        hiddenAt: null,
+        hiddenById: null,
+        hiddenReason: null,
+      },
+      create: {
+        id: replyCommentId,
+        postId: communityRecipe.id,
+        authorId: admin.id,
+        parentId: rootCommentId,
+        content: 'Cảm ơn bạn, có thể giảm thêm thời gian bằng cách sơ chế bông cải trước.',
+      },
+    });
+    await transaction.postVote.upsert({
+      where: { userId_postId: { userId: member.id, postId: communityRecipe.id } },
+      update: {},
+      create: { userId: member.id, postId: communityRecipe.id },
+    });
+    await transaction.postVote.upsert({
+      where: { userId_postId: { userId: admin.id, postId: communityRecipe.id } },
+      update: {},
+      create: { userId: admin.id, postId: communityRecipe.id },
+    });
+    await transaction.postRating.upsert({
+      where: { userId_postId: { userId: member.id, postId: communityRecipe.id } },
+      update: { taste: 5, difficulty: 2, active: true },
+      create: { userId: member.id, postId: communityRecipe.id, taste: 5, difficulty: 2 },
+    });
+    await transaction.postRating.upsert({
+      where: { userId_postId: { userId: admin.id, postId: communityRecipe.id } },
+      update: { taste: 4, difficulty: 2, active: true },
+      create: { userId: admin.id, postId: communityRecipe.id, taste: 4, difficulty: 2 },
+    });
+    for (const postId of [communityRecipe.id, communityVideo.id]) {
+      await transaction.postBookmark.upsert({
+        where: { userId_postId: { userId: member.id, postId } },
+        update: {},
+        create: { userId: member.id, postId },
+      });
+    }
+  });
   console.info(
-    `Seeded local accounts, diet rules v${String(dietRuleSetVersion)}, catalog, and 10 discovery content records.`,
+    `Seeded local accounts, diet rules v${String(dietRuleSetVersion)}, catalog, 10 discovery content records, and community interactions.`,
   );
 }
 
