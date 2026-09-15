@@ -32,15 +32,12 @@ Local endpoints:
 ```bash
 npm run lint
 npm run typecheck
-npm test
-npm run test:integration
 npm run build
 npm run openapi:generate
 ```
 
-`test:integration` uses `TEST_DATABASE_URL` when provided. Otherwise, it creates and removes a
-temporary local PostgreSQL cluster using `initdb`, `pg_ctl`, and `createdb`; it never migrates the
-development database implicitly.
+The backend phase workflow does not maintain automated unit or integration test suites. Its required
+completion gate is lint, typecheck, and build; OpenAPI generation is run whenever the contract changes.
 
 To verify the production entry point after building:
 

@@ -1,4 +1,5 @@
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import express, { type Express, type Request, type Response } from 'express';
 import helmet from 'helmet';
 import type { Logger } from 'pino';
@@ -9,7 +10,17 @@ import { notFoundHandler } from './common/middleware/not-found.js';
 import { requestIdMiddleware } from './common/middleware/request-id.js';
 import type { AppConfig } from './config/env.js';
 import type { Database } from './database/database.js';
+import { AuthController } from './modules/auth/auth.controller.js';
+import { AuthRepository } from './modules/auth/auth.repository.js';
+import { createAuthRouter } from './modules/auth/auth.router.js';
+import { AuthService } from './modules/auth/auth.service.js';
+import { AuthenticationMiddleware } from './modules/auth/authentication.middleware.js';
+import { PasswordService } from './modules/auth/password.service.js';
+import { TokenService } from './modules/auth/token.service.js';
 import { createHealthRouter } from './modules/health/health.router.js';
+import { UsersController } from './modules/users/users.controller.js';
+import { createUsersRouter } from './modules/users/users.router.js';
+import { UsersService } from './modules/users/users.service.js';
 import { openApiDocument } from './openapi/document.js';
 
 export interface AppDependencies {
@@ -20,6 +31,12 @@ export interface AppDependencies {
 
 export function createApp({ config, database, logger }: AppDependencies): Express {
   const app = express();
+  const authRepository = new AuthRepository(database.client);
+  const tokenService = new TokenService(config);
+  const authService = new AuthService(authRepository, new PasswordService(), tokenService, config);
+  const authController = new AuthController(authService, config);
+  const authentication = new AuthenticationMiddleware(tokenService, authRepository);
+  const usersController = new UsersController(new UsersService(authRepository));
 
   app.disable('x-powered-by');
   app.use(helmet());
@@ -42,6 +59,7 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
       genReqId: (request) => request.requestId,
     }),
   );
+  app.use(cookieParser());
   app.use(express.json({ limit: config.jsonBodyLimit }));
   app.use(express.urlencoded({ extended: false, limit: config.jsonBodyLimit }));
 
@@ -52,6 +70,8 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
     swaggerUi.setup(openApiDocument, { customSiteTitle: 'Vegan Support API Docs' }),
   );
   app.use('/api/v1/health', createHealthRouter(config, database));
+  app.use('/api/v1/auth', createAuthRouter(authController));
+  app.use('/api/v1/users', createUsersRouter(usersController, authentication));
 
   app.use(notFoundHandler);
   app.use(createErrorHandler(logger));

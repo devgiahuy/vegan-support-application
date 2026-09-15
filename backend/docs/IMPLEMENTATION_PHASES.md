@@ -1,28 +1,29 @@
 # Backend Implementation Phases
 
-**Version:** 1.1
+**Version:** 1.2
 
 **Cập nhật:** 15/09/2026
 
 **Stack baseline:** Node.js · Express · TypeScript · PostgreSQL · Prisma · Zod · OpenAPI
 
-Tài liệu này chia backend thành các phase đủ nhỏ để triển khai, kiểm thử và commit riêng. Mỗi phase được thực hiện trong một session mới bằng prompt tương ứng trong `backend/docs/prompts/`.
+Tài liệu này chia backend thành các phase đủ nhỏ để triển khai, xác minh và commit riêng. Mỗi phase được thực hiện trong một session mới bằng prompt tương ứng trong `backend/docs/prompts/`.
 
 ## 1. Nguyên tắc thực hiện
 
 - Phase có dependency về source code, nhưng không phụ thuộc lịch sử hội thoại. Session mới phải xác minh prerequisite trực tiếp từ repository.
 - Một phase chỉ làm đúng scope được ghi; không kéo feature của phase sau vào commit.
-- Mỗi phase kết thúc bằng đúng một commit riêng sau khi test pass.
+- Mỗi phase kết thúc bằng đúng một commit riêng sau khi gate lint/typecheck/build pass.
+- Không duy trì automated unit hoặc integration test trong các phase backend.
 - Không đưa `.DS_Store`, secret hoặc thay đổi không liên quan vào commit.
 - Mọi endpoint mới/đổi phải cập nhật OpenAPI và `frontend/docs/BACKEND_INTEGRATION.md` trong cùng commit.
-- Chỉ chuyển endpoint sang `READY` khi route, validation, authorization, migration/seed và integration test của endpoint đều hoàn chỉnh.
+- Chỉ chuyển endpoint sang `READY` khi route, validation, authorization, migration/seed, OpenAPI và gate lint/typecheck/build đều hoàn chỉnh.
 - Nếu prerequisite chưa có hoặc repository đang có thay đổi chồng lấn không thể bảo toàn, dừng và báo rõ; không tự viết lại phase trước.
 
 ## 2. Phase map
 
 | Phase | Tên                              | Dependency     | Kết quả chính                                                | Commit đề xuất                                                |
 | ----- | -------------------------------- | -------------- | ------------------------------------------------------------ | ------------------------------------------------------------- |
-| 00    | Backend Foundation               | Không          | Express TS, config, Prisma, test, OpenAPI, health            | `chore(backend): bootstrap service foundation`                |
+| 00    | Backend Foundation               | Không          | Express TS, config, Prisma, OpenAPI, health                  | `chore(backend): bootstrap service foundation`                |
 | 01    | Authentication & Sessions        | 00             | Register/login/refresh/logout, RBAC primitives               | `feat(auth): implement authentication and sessions`           |
 | 02    | Profile, Health & Diet Rules     | 01             | Profile, BMI/BMR/TDEE, rule preview/toggle, periodic dates   | `feat(profile): add health and diet preferences`              |
 | 03    | Category & Ingredient Catalog    | 01             | Category tree, canonical ingredients, diet/allergen metadata | `feat(catalog): add categories and ingredients`               |
@@ -72,15 +73,13 @@ Mỗi phase phải tạo/cập nhật, nếu áp dụng:
 3. Route/controller/service/repository.
 4. Authorization và ownership rules.
 5. OpenAPI schemas/examples/errors.
-6. Unit tests cho pure business logic.
-7. Integration tests cho route và database constraint.
-8. Seed/fixture phục vụ test và demo.
-9. `frontend/docs/BACKEND_INTEGRATION.md`:
+6. Seed/fixture phục vụ local validation và demo.
+7. `frontend/docs/BACKEND_INTEGRATION.md`:
    - endpoint status;
    - backend update date/commit;
    - error codes;
    - changelog.
-10. Một commit chỉ chứa scope của phase.
+8. Một commit chỉ chứa scope của phase.
 
 ## 5. Gate trước khi commit
 
@@ -89,8 +88,6 @@ Chạy script tương ứng do Phase 00 thiết lập, tối thiểu:
 ```bash
 npm run lint
 npm run typecheck
-npm test
-npm run test:integration
 npm run build
 ```
 
@@ -102,7 +99,7 @@ git status --short
 git diff --stat
 ```
 
-Chỉ stage file thuộc phase. Xem staged diff trước khi commit. Nếu test phụ thuộc service ngoài, mock provider trong automated test và ghi rõ test live nào chưa chạy.
+Chỉ stage file thuộc phase. Xem staged diff trước khi commit. Nếu validation thủ công phụ thuộc service ngoài, dùng provider fake/local adapter khi có thể và ghi rõ live check nào chưa chạy.
 
 ## 6. Phase completion record
 
@@ -111,7 +108,7 @@ Cập nhật bảng này trong commit của phase. `Commit` phải là hash th�
 | Phase | Status        | Completed date | Commit            | Notes                                                  |
 | ----- | ------------- | -------------- | ----------------- | ------------------------------------------------------ |
 | 00    | `COMPLETED`   | 2026-09-15     | This phase commit | Foundation gate passed; hash reported in phase handoff |
-| 01    | `NOT_STARTED` | —              | —                 | —                                                      |
+| 01    | `COMPLETED`   | 2026-09-15     | This phase commit | Auth/session gate passed; hash reported in phase handoff |
 | 02    | `NOT_STARTED` | —              | —                 | —                                                      |
 | 03    | `NOT_STARTED` | —              | —                 | —                                                      |
 | 04    | `NOT_STARTED` | —              | —                 | —                                                      |

@@ -1,12 +1,13 @@
 import { PrismaClient } from '@prisma/client';
 
 export interface Database {
+  readonly client: PrismaClient;
   check(): Promise<void>;
   disconnect(): Promise<void>;
 }
 
 export class PrismaDatabase implements Database {
-  constructor(private readonly client: PrismaClient = new PrismaClient()) {}
+  constructor(readonly client: PrismaClient = new PrismaClient()) {}
 
   async check(): Promise<void> {
     await this.client.$queryRaw`SELECT 1`;

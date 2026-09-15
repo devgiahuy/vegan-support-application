@@ -15,9 +15,29 @@
     {
       "name": "Foundation",
       "description": "Service health and foundation contract"
+    },
+    {
+      "name": "Auth",
+      "description": "Authentication and refresh-session lifecycle"
+    },
+    {
+      "name": "Users",
+      "description": "Authenticated user contract"
     }
   ],
   "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "AccessTokenCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "accessToken"
+      }
+    },
     "schemas": {
       "ErrorResponse": {
         "type": "object",
@@ -201,6 +221,386 @@
           "error"
         ],
         "additionalProperties": false
+      },
+      "RegisterRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 320,
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 128
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 100
+          },
+          "contributorRequest": {
+            "type": "object",
+            "properties": {
+              "requestedType": {
+                "type": "string",
+                "enum": [
+                  "EXPERIENCED_PRACTITIONER",
+                  "NUTRITION_EXPERT"
+                ]
+              },
+              "experience": {
+                "type": "string",
+                "minLength": 20,
+                "maxLength": 2000
+              },
+              "referenceLinks": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uri"
+                },
+                "maxItems": 5,
+                "default": []
+              }
+            },
+            "required": [
+              "requestedType",
+              "experience"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "email",
+          "password",
+          "displayName"
+        ],
+        "additionalProperties": false
+      },
+      "LoginRequest": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string",
+            "maxLength": 320,
+            "format": "email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ],
+        "additionalProperties": false
+      },
+      "LogoutRequest": {
+        "type": "object",
+        "properties": {
+          "allDevices": {
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "default": {
+          "allDevices": false
+        },
+        "additionalProperties": false
+      },
+      "AuthSessionResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "user": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  },
+                  "displayName": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "MEMBER",
+                      "CONTRIBUTOR",
+                      "ADMIN"
+                    ]
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "ACTIVE",
+                      "LOCKED",
+                      "BANNED",
+                      "DELETED"
+                    ]
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "contributorApplication": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "PENDING",
+                          "APPROVED",
+                          "REJECTED"
+                        ]
+                      },
+                      "requestedType": {
+                        "type": "string",
+                        "enum": [
+                          "EXPERIENCED_PRACTITIONER",
+                          "NUTRITION_EXPERT"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "status",
+                      "requestedType"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "id",
+                  "email",
+                  "displayName",
+                  "role",
+                  "status",
+                  "createdAt",
+                  "contributorApplication"
+                ],
+                "additionalProperties": false
+              },
+              "accessToken": {
+                "type": "string",
+                "minLength": 1
+              },
+              "accessTokenExpiresAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "user",
+              "accessToken",
+              "accessTokenExpiresAt"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "RefreshResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "accessToken": {
+                "type": "string",
+                "minLength": 1
+              },
+              "accessTokenExpiresAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "accessToken",
+              "accessTokenExpiresAt"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "LogoutResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "loggedOut": {
+                "type": "boolean",
+                "enum": [
+                  true
+                ]
+              },
+              "scope": {
+                "type": "string",
+                "enum": [
+                  "CURRENT",
+                  "ALL_DEVICES"
+                ]
+              }
+            },
+            "required": [
+              "loggedOut",
+              "scope"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "MeResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "displayName": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "MEMBER",
+                  "CONTRIBUTOR",
+                  "ADMIN"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ACTIVE",
+                  "LOCKED",
+                  "BANNED",
+                  "DELETED"
+                ]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "contributorApplication": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "PENDING",
+                      "APPROVED",
+                      "REJECTED"
+                    ]
+                  },
+                  "requestedType": {
+                    "type": "string",
+                    "enum": [
+                      "EXPERIENCED_PRACTITIONER",
+                      "NUTRITION_EXPERT"
+                    ]
+                  }
+                },
+                "required": [
+                  "status",
+                  "requestedType"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "id",
+              "email",
+              "displayName",
+              "role",
+              "status",
+              "createdAt",
+              "contributorApplication"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
       }
     },
     "parameters": {}
@@ -230,6 +630,390 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/HealthUnavailableResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/register": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Đăng ký tài khoản Member",
+        "description": "Contributor request chỉ tạo application PENDING; user và JWT luôn có role MEMBER cho tới khi Admin duyệt.",
+        "operationId": "register",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "email": "member@example.com",
+                "password": "StrongPassword123!",
+                "displayName": "Nguyễn An",
+                "contributorRequest": {
+                  "requestedType": "NUTRITION_EXPERT",
+                  "experience": "Tôi có kinh nghiệm tư vấn dinh dưỡng thực vật.",
+                  "referenceLinks": [
+                    "https://example.com/profile"
+                  ]
+                }
+              },
+              "schema": {
+                "$ref": "#/components/schemas/RegisterRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Đăng ký thành công",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Sets HttpOnly accessToken and refreshToken cookies. Secure is enabled in production; SameSite=Lax; Path=/.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu không hợp lệ",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "VALIDATION_ERROR",
+                    "message": "Dữ liệu không hợp lệ",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Email đã được sử dụng",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "EMAIL_ALREADY_EXISTS",
+                    "message": "Email đã được sử dụng",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/login": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Đăng nhập",
+        "operationId": "login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "email": "member@example.com",
+                "password": "StrongPassword123!"
+              },
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Đăng nhập thành công",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Sets HttpOnly accessToken and refreshToken cookies. Secure is enabled in production; SameSite=Lax; Path=/.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthSessionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Email hoặc mật khẩu không đúng",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "INVALID_CREDENTIALS",
+                    "message": "Email hoặc mật khẩu không đúng",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản đã bị cấm",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_BANNED",
+                    "message": "Tài khoản đã bị cấm",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản đang tạm khóa",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang tạm khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/refresh": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Rotate refresh token và cấp access token mới",
+        "description": "Refresh token cũ bị revoke ngay sau rotation. Reuse sẽ revoke toàn bộ token family.",
+        "operationId": "refreshSession",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Opaque refresh token; HttpOnly cookie"
+            },
+            "required": true,
+            "description": "Opaque refresh token; HttpOnly cookie",
+            "name": "refreshToken",
+            "in": "cookie"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Làm mới phiên thành công",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Sets HttpOnly accessToken and refreshToken cookies. Secure is enabled in production; SameSite=Lax; Path=/.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RefreshResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Refresh token không hợp lệ hoặc đã hết hạn",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "INVALID_REFRESH_TOKEN",
+                    "message": "Refresh token không hợp lệ hoặc đã hết hạn",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản đã bị cấm",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_BANNED",
+                    "message": "Tài khoản đã bị cấm",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/logout": {
+      "post": {
+        "tags": [
+          "Auth"
+        ],
+        "summary": "Đăng xuất phiên hiện tại hoặc tất cả thiết bị",
+        "operationId": "logout",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Opaque refresh token; HttpOnly cookie"
+            },
+            "required": false,
+            "description": "Opaque refresh token; HttpOnly cookie",
+            "name": "refreshToken",
+            "in": "cookie"
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "example": {
+                "allDevices": false
+              },
+              "schema": {
+                "$ref": "#/components/schemas/LogoutRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Đăng xuất idempotent; xóa accessToken và refreshToken cookies",
+            "headers": {
+              "Set-Cookie": {
+                "description": "Expires the HttpOnly accessToken and refreshToken cookies at Path=/.",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogoutResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/users/me": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Lấy user và role đã được backend phê duyệt",
+        "operationId": "getMe",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User hiện tại",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "AUTH_REQUIRED",
+                    "message": "Yêu cầu đăng nhập",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản đã bị cấm",
+            "content": {
+              "application/json": {
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_BANNED",
+                    "message": "Tài khoản đã bị cấm",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }

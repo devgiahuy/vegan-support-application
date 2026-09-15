@@ -4,10 +4,11 @@ import {
   healthResponseSchema,
   healthUnavailableResponseSchema,
 } from '../modules/health/health.schemas.js';
+import { registerAuthOpenApi } from '../modules/auth/auth.openapi.js';
 
 const registry = new OpenAPIRegistry();
 
-registry.register('ErrorResponse', errorResponseSchema);
+const registeredErrorResponse = registry.register('ErrorResponse', errorResponseSchema);
 const registeredHealthResponse = registry.register('HealthResponse', healthResponseSchema);
 const registeredHealthUnavailableResponse = registry.register(
   'HealthUnavailableResponse',
@@ -32,6 +33,8 @@ registry.registerPath({
   },
 });
 
+registerAuthOpenApi(registry, registeredErrorResponse);
+
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
 export const openApiDocument = generator.generateDocument({
@@ -42,5 +45,9 @@ export const openApiDocument = generator.generateDocument({
     description: 'REST API contract for the Vegan Support Application.',
   },
   servers: [{ url: 'http://localhost:4000', description: 'Local development' }],
-  tags: [{ name: 'Foundation', description: 'Service health and foundation contract' }],
+  tags: [
+    { name: 'Foundation', description: 'Service health and foundation contract' },
+    { name: 'Auth', description: 'Authentication and refresh-session lifecycle' },
+    { name: 'Users', description: 'Authenticated user contract' },
+  ],
 });

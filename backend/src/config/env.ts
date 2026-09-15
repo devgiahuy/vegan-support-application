@@ -36,6 +36,13 @@ const environmentSchema = z
     LOG_LEVEL: z
       .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
       .default('info'),
+    JWT_ACCESS_SECRET: z.string().min(32),
+    JWT_ISSUER: z.string().min(1).default('vegan-support-api'),
+    JWT_AUDIENCE: z.string().min(1).default('vegan-support-web'),
+    ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().min(60).max(3_600).default(900),
+    REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(30),
+    LOGIN_MAX_ATTEMPTS: z.coerce.number().int().min(3).max(20).default(5),
+    LOGIN_LOCK_MINUTES: z.coerce.number().int().min(1).max(1_440).default(15),
   })
   .transform((environment) => ({
     nodeEnv: environment.NODE_ENV,
@@ -48,6 +55,14 @@ const environmentSchema = z
     jsonBodyLimit: environment.JSON_BODY_LIMIT,
     shutdownTimeoutMs: environment.SHUTDOWN_TIMEOUT_MS,
     logLevel: environment.LOG_LEVEL,
+    jwtAccessSecret: environment.JWT_ACCESS_SECRET,
+    jwtIssuer: environment.JWT_ISSUER,
+    jwtAudience: environment.JWT_AUDIENCE,
+    accessTokenTtlSeconds: environment.ACCESS_TOKEN_TTL_SECONDS,
+    refreshTokenTtlDays: environment.REFRESH_TOKEN_TTL_DAYS,
+    loginMaxAttempts: environment.LOGIN_MAX_ATTEMPTS,
+    loginLockMinutes: environment.LOGIN_LOCK_MINUTES,
+    cookieSecure: environment.NODE_ENV === 'production',
   }));
 
 export type AppConfig = z.infer<typeof environmentSchema>;

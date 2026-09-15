@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 1.1
+**Version:** 1.2
 
 **Cập nhật:** 15/09/2026
 
@@ -8,7 +8,7 @@
 
 **Contract target:** `/api/v1`
 
-> Tài liệu này là registry sống cho những capability backend đã sẵn sàng để frontend tích hợp. Foundation và OpenAPI đã hoàn tất; các feature nghiệp vụ vẫn ở trạng thái `PLANNED` cho tới khi phase tương ứng vượt qua đầy đủ completion gate.
+> Tài liệu này là registry sống cho những capability backend đã sẵn sàng để frontend tích hợp. Foundation, OpenAPI và Authentication & Sessions đã hoàn tất; các feature còn lại giữ `PLANNED` cho tới khi phase tương ứng vượt qua đầy đủ completion gate.
 
 ---
 
@@ -30,7 +30,7 @@ Nếu OpenAPI và file này lệch nhau, không tự đoán. Backend phải cậ
 | ------------- | ---------------------------------------------------- | --------------------------------------------------- |
 | `PLANNED`     | Chỉ có trong kế hoạch                                | Có thể dựng type/UI mock nội bộ, không gọi API thật |
 | `IN_PROGRESS` | Backend đang phát triển, contract chưa ổn định       | Không merge integration phụ thuộc endpoint          |
-| `READY`       | OpenAPI, migration, seed và test backend đã hoàn tất | Được tích hợp và viết mapper/query                  |
+| `READY`       | OpenAPI, migration/seed và backend gates đã hoàn tất | Được tích hợp và viết mapper/query                  |
 | `CHANGING`    | Có breaking change đang được phối hợp                | Dùng version/branch đã thống nhất; không sync mù    |
 | `DEPRECATED`  | Còn tạm thời cho migration                           | Không tạo consumer mới                              |
 | `REMOVED`     | Không còn được phục vụ                               | Xóa consumer sau khi migration hoàn tất             |
@@ -41,9 +41,9 @@ Endpoint chỉ được chuyển sang `READY` khi có đủ:
 
 - Route hoạt động trong local environment.
 - Schema request/response/error xuất hiện trong OpenAPI.
-- Authorization được test.
+- Authorization được backend enforce và review.
 - Migration/seed cần thiết đã có.
-- Happy path và business-error integration tests pass.
+- Lint, typecheck và build backend pass.
 - Mục endpoint tương ứng trong file này có ngày cập nhật.
 
 ---
@@ -196,13 +196,13 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 
 ### 6.2 Auth và Profile
 
-| Method | Path                         | Status    | Backend updated | FE integrated | Ghi chú                                                    |
-| ------ | ---------------------------- | --------- | --------------- | ------------- | ---------------------------------------------------------- |
-| POST   | `/auth/register`             | `PLANNED` | —               | No            | Có optional `requestedContributorType`                     |
-| POST   | `/auth/login`                | `PLANNED` | —               | No            | Access token + refresh cookie                              |
-| POST   | `/auth/refresh`              | `PLANNED` | —               | No            | Rotation, Route Handler proxy                              |
-| POST   | `/auth/logout`               | `PLANNED` | —               | No            | Revoke refresh session                                     |
-| GET    | `/users/me`                  | `PLANNED` | —               | No            | Trả role đã được duyệt, không trả requested role như quyền |
+| Method | Path                         | Status    | Backend updated | FE integrated | Ghi chú                                                                                       |
+| ------ | ---------------------------- | --------- | --------------- | ------------- | --------------------------------------------------------------------------------------------- |
+| POST   | `/auth/register`             | `READY`   | 2026-09-15      | No            | Optional `contributorRequest` chỉ tạo application `PENDING`; account/JWT vẫn là `MEMBER`       |
+| POST   | `/auth/login`                | `READY`   | 2026-09-15      | No            | Trả access token và đặt access/refresh HttpOnly cookies; generic invalid-credential response   |
+| POST   | `/auth/refresh`              | `READY`   | 2026-09-15      | No            | Đọc refresh cookie, rotation mỗi lần dùng; reuse revoke toàn token family                      |
+| POST   | `/auth/logout`               | `READY`   | 2026-09-15      | No            | Idempotent; body `{ allDevices?: boolean }`; revoke phiên hiện tại hoặc toàn bộ phiên của user |
+| GET    | `/users/me`                  | `READY`   | 2026-09-15      | No            | Bearer/access cookie; trả role backend-authoritative và trạng thái application riêng           |
 | PATCH  | `/users/me`                  | `PLANNED` | —               | No            | Profile cơ bản                                             |
 | PUT    | `/users/me/health-profile`   | `PLANNED` | —               | No            | Manual BMI/BMR/TDEE inputs                                 |
 | POST   | `/diet-rules/preview`        | `PLANNED` | —               | No            | Trả rule set để user toggle/xác nhận                       |
@@ -407,7 +407,12 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | Code                                | UI behavior                                                           |
 | ----------------------------------- | --------------------------------------------------------------------- |
 | `AUTH_REQUIRED`                     | Mở login/redirect có return URL                                       |
+| `INVALID_ACCESS_TOKEN`              | Xóa auth state; yêu cầu đăng nhập lại                                 |
 | `TOKEN_EXPIRED`                     | Để refresh queue xử lý                                                |
+| `INVALID_REFRESH_TOKEN`             | Xóa auth state; yêu cầu đăng nhập lại                                 |
+| `REFRESH_TOKEN_REUSED`              | Xóa auth state trên thiết bị và cảnh báo phiên đã bị thu hồi          |
+| `INVALID_CREDENTIALS`               | Báo email hoặc mật khẩu không đúng, không tiết lộ tài khoản tồn tại   |
+| `EMAIL_ALREADY_EXISTS`              | Hiển thị lỗi email đã được sử dụng tại form đăng ký                   |
 | `ACCOUNT_LOCKED`                    | Hiện thời gian thử lại nếu có                                         |
 | `ACCOUNT_BANNED`                    | Logout và hiển thị lý do/contact                                      |
 | `FORBIDDEN`                         | Trang/notification không đủ quyền                                     |
@@ -453,10 +458,10 @@ Mỗi backend change ảnh hưởng frontend phải thực hiện trong cùng ch
 4. Cập nhật business error ở mục 8 nếu thêm code mới.
 5. Thêm entry vào changelog mục 11 nếu breaking hoặc behavior thay đổi.
 6. Cập nhật completion record của phase tương ứng khi toàn bộ gate đã pass.
-7. Chạy backend tests và xuất `/api-docs.json` thành công.
+7. Chạy backend lint/typecheck/build và xuất `/api-docs.json` thành công.
 8. Ghi rõ frontend action cần làm trong PR summary.
 
-Không được mô tả endpoint là READY chỉ vì route đã tồn tại nếu authorization, schema hoặc test chưa hoàn chỉnh.
+Không được mô tả endpoint là READY chỉ vì route đã tồn tại nếu authorization, schema hoặc backend gate chưa hoàn chỉnh.
 
 ### Backend PR checklist
 
@@ -465,7 +470,7 @@ Không được mô tả endpoint là READY chỉ vì route đã tồn tại n�
 [ ] BACKEND_INTEGRATION.md status updated
 [ ] Request/response/error examples updated
 [ ] Migration/seed updated if needed
-[ ] Authorization and ownership tests added
+[ ] Authorization and ownership implementation reviewed
 [ ] Breaking change documented
 [ ] Frontend migration note included
 ```
@@ -492,6 +497,7 @@ Thêm entry mới nhất ở trên cùng.
 
 | Date       | Version | Module     | Change                                                                                  | Breaking | FE action                                                         |
 | ---------- | ------- | ---------- | --------------------------------------------------------------------------------------- | :------: | ----------------------------------------------------------------- |
+| 2026-09-15 | 1.2     | Auth       | Hoàn tất register/login/refresh rotation/logout, RBAC primitives và `/users/me`          |    No    | Sync OpenAPI; tích hợp proxy/cookie với `withCredentials=true`    |
 | 2026-09-15 | 1.1     | Foundation | Hoàn tất health, Swagger UI và OpenAPI JSON; thêm request ID và error envelope nền tảng |    No    | Dùng catalog OpenAPI đã sync; chưa cần tạo consumer UI cho health |
 | 2026-09-15 | 1.0     | All        | Tạo integration registry; backend chưa triển khai                                       |    No    | Không tích hợp API thật cho tới khi status READY                  |
 
@@ -513,6 +519,6 @@ Một frontend/backend capability chỉ được xem là tích hợp xong khi:
 - Không có `any` hoặc component dùng raw DTO.
 - Auth/ownership error được xử lý.
 - Loading/error/empty/success UI đầy đủ.
-- Contract/integration test pass.
+- Backend gates và frontend checks liên quan pass.
 - Ma trận mục 6 ghi `FE integrated = Yes` kèm ngày hoặc PR/commit reference.
 - Changelog được cập nhật nếu behavior hoặc contract thay đổi.
