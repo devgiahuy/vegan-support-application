@@ -1,6 +1,6 @@
 # Backend Implementation Phases
 
-**Version:** 1.7
+**Version:** 1.8
 
 **Cập nhật:** 15/09/2026
 
@@ -114,7 +114,7 @@ Cập nhật bảng này trong commit của phase. `Commit` phải là hash th�
 | 04    | `COMPLETED`   | 2026-09-15     | This phase commit | Content/media gates passed; published demo seed ready    |
 | 05    | `COMPLETED`   | 2026-09-15     | This phase commit | Search/related gates passed; pg_trgm plan evidence saved |
 | 06    | `COMPLETED`   | 2026-09-15     | This phase commit | Community gates passed; interaction demo seed ready      |
-| 07    | `NOT_STARTED` | —              | —                 | —                                                        |
+| 07    | `COMPLETED`   | 2026-09-15     | This phase commit | Contributor application/profile and subtype RBAC ready   |
 | 08    | `NOT_STARTED` | —              | —                 | —                                                        |
 | 09    | `NOT_STARTED` | —              | —                 | —                                                        |
 | 10    | `NOT_STARTED` | —              | —                 | —                                                        |

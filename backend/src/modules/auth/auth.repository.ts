@@ -1,18 +1,30 @@
-import type { PrismaClient } from '@prisma/client';
 import {
   ContributorApplicationSource,
   ContributorApplicationStatus,
   Prisma,
   Role,
-  type ContributorApplication,
+  type PrismaClient,
   type RefreshSession,
   type User,
   UserStatus,
 } from '@prisma/client';
+import type { ContributorApplicationStateMachine } from '../contributors/contributor-application.state-machine.js';
 import type { RegisterInput } from './auth.schemas.js';
 
-export type UserWithApplications = User & { applications: ContributorApplication[] };
-export type SessionWithUser = RefreshSession & { user: User };
+const userWithContributorContextInclude = {
+  applications: {
+    where: { status: ContributorApplicationStatus.PENDING },
+    orderBy: { createdAt: 'desc' as const },
+    take: 1,
+  },
+  contributorProfile: true,
+} satisfies Prisma.UserInclude;
+
+export type UserWithApplications = Prisma.UserGetPayload<{
+  include: typeof userWithContributorContextInclude;
+}>;
+export type AuthenticatedUser = Prisma.UserGetPayload<{ include: { contributorProfile: true } }>;
+export type SessionWithUser = RefreshSession & { user: AuthenticatedUser };
 
 export class DuplicateEmailError extends Error {}
 
@@ -24,7 +36,10 @@ export interface NewSession {
 }
 
 export class AuthRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly contributorStateMachine: ContributorApplicationStateMachine,
+  ) {}
 
   async createUserWithSession(
     input: RegisterInput,
@@ -44,18 +59,19 @@ export class AuthRepository {
         });
         const application = input.contributorRequest
           ? await transaction.contributorApplication.create({
-              data: {
-                userId: user.id,
-                requestedType: input.contributorRequest.requestedType,
-                experience: input.contributorRequest.experience,
-                referenceLinks: input.contributorRequest.referenceLinks,
-                source: ContributorApplicationSource.REGISTRATION,
-                status: ContributorApplicationStatus.PENDING,
-              },
+              data: this.contributorStateMachine.pendingApplicationData(
+                user.id,
+                ContributorApplicationSource.REGISTRATION,
+                input.contributorRequest,
+              ),
             })
           : null;
         await transaction.refreshSession.create({ data: { userId: user.id, ...session } });
-        return { ...user, applications: application ? [application] : [] };
+        return {
+          ...user,
+          applications: application ? [application] : [],
+          contributorProfile: null,
+        };
       });
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
@@ -65,24 +81,21 @@ export class AuthRepository {
     }
   }
 
-  findUserByEmail(email: string): Promise<User | null> {
+  findUserByEmail(email: string) {
     return this.prisma.user.findUnique({ where: { email } });
   }
 
-  findUserById(userId: string): Promise<User | null> {
-    return this.prisma.user.findUnique({ where: { id: userId } });
+  findUserById(userId: string): Promise<AuthenticatedUser | null> {
+    return this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { contributorProfile: true },
+    });
   }
 
   findUserWithPendingApplication(userId: string): Promise<UserWithApplications | null> {
     return this.prisma.user.findUnique({
       where: { id: userId },
-      include: {
-        applications: {
-          where: { status: ContributorApplicationStatus.PENDING },
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-        },
-      },
+      include: userWithContributorContextInclude,
     });
   }
 
@@ -126,7 +139,7 @@ export class AuthRepository {
   findSessionByTokenHash(tokenHash: string): Promise<SessionWithUser | null> {
     return this.prisma.refreshSession.findUnique({
       where: { tokenHash },
-      include: { user: true },
+      include: { user: { include: { contributorProfile: true } } },
     });
   }
 

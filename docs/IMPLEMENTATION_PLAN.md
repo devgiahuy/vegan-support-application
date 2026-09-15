@@ -229,8 +229,8 @@ Pagination:
 | `diet_rule_definitions`      | code, type, tradition nullable, ingredientId nullable, defaultEnabled, version, active                                       |
 | `user_allergies`             | userId, ingredient/allergen code, severity optional, active                                                                  |
 | `user_ingredient_exclusions` | userId, ingredientId nullable, ingredientName, normalizedName, reason, active; free-text vẫn được giữ khi chưa map canonical |
-| `contributor_profiles`       | userId, contributorType, approvalBasis, approvedAt, approvedBy                                                               |
-| `contributor_applications`   | userId, requestedType, experience, referenceLinks, source, status, reviewNote                                                |
+| `contributor_profiles`       | userId, contributorType, approvalBasis, approvedAt, approvedBy, sourceApplicationId                                          |
+| `contributor_applications`   | userId, requestedType, experience, referenceLinks, source, status, final type, review/cooldown audit fields                  |
 
 Enums MVP:
 
@@ -765,6 +765,7 @@ API:
 
 ```text
 POST   /api/v1/contributor-applications
+GET    /api/v1/contributor-applications/me
 GET    /api/v1/admin/contributor-applications
 PATCH  /api/v1/admin/contributor-applications/:id/review
 

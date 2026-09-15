@@ -72,10 +72,18 @@ export class AuthenticationMiddleware {
         message: 'Tài khoản đã bị cấm',
       });
     }
+    if (claims.role !== user.role) {
+      throw new AppError({
+        statusCode: 401,
+        code: 'STALE_ACCESS_TOKEN',
+        message: 'Quyền tài khoản đã thay đổi, vui lòng đăng nhập lại',
+      });
+    }
     request.auth = {
       userId: user.id,
       email: user.email,
       role: user.role,
+      contributorType: user.contributorProfile?.contributorType ?? null,
       status: user.status,
     };
   }

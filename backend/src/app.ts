@@ -33,6 +33,14 @@ import {
   createCommunityUsersRouter,
 } from './modules/community/community.router.js';
 import { CommunityService } from './modules/community/community.service.js';
+import { ContributorApplicationStateMachine } from './modules/contributors/contributor-application.state-machine.js';
+import { ContributorController } from './modules/contributors/contributor.controller.js';
+import { ContributorRepository } from './modules/contributors/contributor.repository.js';
+import {
+  createContributorAdminRouter,
+  createContributorApplicationsRouter,
+} from './modules/contributors/contributor.router.js';
+import { ContributorService } from './modules/contributors/contributor.service.js';
 import { ContentController } from './modules/content/content.controller.js';
 import { Phase04PendingReviewPolicy } from './modules/content/content-publication.policy.js';
 import { ContentRepository } from './modules/content/content.repository.js';
@@ -56,7 +64,8 @@ export interface AppDependencies {
 
 export function createApp({ config, database, logger }: AppDependencies): Express {
   const app = express();
-  const authRepository = new AuthRepository(database.client);
+  const contributorStateMachine = new ContributorApplicationStateMachine();
+  const authRepository = new AuthRepository(database.client, contributorStateMachine);
   const tokenService = new TokenService(config);
   const authService = new AuthService(authRepository, new PasswordService(), tokenService, config);
   const authController = new AuthController(authService, config);
@@ -78,6 +87,9 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   );
   const communityController = new CommunityController(
     new CommunityService(new CommunityRepository(database.client)),
+  );
+  const contributorController = new ContributorController(
+    new ContributorService(new ContributorRepository(database.client), contributorStateMachine),
   );
 
   app.disable('x-powered-by');
@@ -113,12 +125,17 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   );
   app.use('/api/v1/health', createHealthRouter(config, database));
   app.use('/api/v1/auth', createAuthRouter(authController));
+  app.use(
+    '/api/v1/contributor-applications',
+    createContributorApplicationsRouter(contributorController, authentication),
+  );
   app.use('/api/v1/users', createUsersRouter(usersController, authentication));
   app.use('/api/v1/users', createCommunityUsersRouter(communityController, authentication));
   app.use('/api/v1/diet-rules', createDietRouter(dietController, authentication));
   app.use('/api/v1/categories', createCategoryRouter(catalogController));
   app.use('/api/v1/ingredients', createIngredientRouter(catalogController));
   app.use('/api/v1/admin', createCatalogAdminRouter(catalogController, authentication));
+  app.use('/api/v1/admin', createContributorAdminRouter(contributorController, authentication));
   app.use('/api/v1/posts', createPostsRouter(contentController, authentication));
   app.use('/api/v1/posts', createCommunityPostsRouter(communityController, authentication));
   app.use('/api/v1/comments', createCommentsRouter(communityController, authentication));

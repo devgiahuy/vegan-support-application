@@ -1,5 +1,10 @@
 import { randomUUID } from 'node:crypto';
-import { UserStatus, type ContributorApplication, type User } from '@prisma/client';
+import {
+  UserStatus,
+  type ContributorApplication,
+  type ContributorProfile,
+  type User,
+} from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
 import type { AppConfig } from '../../config/env.js';
 import type { LoginInput, PublicUser, RegisterInput } from './auth.schemas.js';
@@ -11,6 +16,7 @@ import {
 } from './auth.repository.js';
 import type { PasswordService } from './password.service.js';
 import type { TokenService } from './token.service.js';
+import { approvedContributorTypeLabel } from '../contributors/contributor-application.state-machine.js';
 
 interface SessionResult {
   user: PublicUser;
@@ -47,6 +53,7 @@ function invalidCredentialsError(): AppError {
 export function toPublicUser(
   user: User,
   application: ContributorApplication | null = null,
+  contributorProfile: ContributorProfile | null = null,
 ): PublicUser {
   return {
     id: user.id,
@@ -58,6 +65,14 @@ export function toPublicUser(
     createdAt: user.createdAt.toISOString(),
     contributorApplication: application
       ? { status: application.status, requestedType: application.requestedType }
+      : null,
+    contributorProfile: contributorProfile
+      ? {
+          contributorType: contributorProfile.contributorType,
+          label: approvedContributorTypeLabel(contributorProfile.contributorType),
+          approvalBasis: contributorProfile.approvalBasis,
+          approvedAt: contributorProfile.approvedAt.toISOString(),
+        }
       : null,
   };
 }
@@ -151,6 +166,13 @@ export class AuthService {
     }
 
     if (currentSession.revokedAt) {
+      if (currentSession.revokeReason === 'ROLE_CHANGED') {
+        throw new AppError({
+          statusCode: 401,
+          code: 'INVALID_REFRESH_TOKEN',
+          message: 'Phiên đăng nhập đã hết hiệu lực sau khi quyền tài khoản thay đổi',
+        });
+      }
       await this.repository.revokeFamily(currentSession.familyId, 'REUSE_DETECTED', now);
       throw new AppError({
         statusCode: 401,
@@ -253,7 +275,7 @@ export class AuthService {
   ): Promise<SessionResult> {
     const access = await this.tokenService.issueAccessToken(user);
     return {
-      user: toPublicUser(user, user.applications[0] ?? null),
+      user: toPublicUser(user, user.applications[0] ?? null, user.contributorProfile),
       accessToken: access.token,
       accessTokenExpiresAt: access.expiresAt.toISOString(),
       refreshToken,

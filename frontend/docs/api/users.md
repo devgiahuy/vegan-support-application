@@ -426,6 +426,7 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
         "status",
         "createdAt",
         "contributorApplication",
+        "contributorProfile",
         "healthProfile",
         "dietPreference"
       ],
@@ -490,6 +491,37 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
           },
           "additionalProperties": false
         },
+        "contributorProfile": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "required": [
+            "contributorType",
+            "label",
+            "approvalBasis",
+            "approvedAt"
+          ],
+          "properties": {
+            "contributorType": {
+              "type": "string",
+              "_truncated": true
+            },
+            "label": {
+              "type": "string",
+              "_truncated": true
+            },
+            "approvalBasis": {
+              "type": "string",
+              "_truncated": true
+            },
+            "approvedAt": {
+              "type": "string",
+              "_truncated": true
+            }
+          },
+          "additionalProperties": false
+        },
         "healthProfile": {
           "type": [
             "object",
@@ -509,37 +541,6 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
           ],
           "properties": {
             "heightCm": {
-              "type": "number",
-              "_truncated": true
-            },
-            "weightKg": {
-              "type": "number",
-              "_truncated": true
-            },
-            "age": {
-              "type": "integer",
-              "_truncated": true
-            },
-            "sex": {
-              "type": "string",
-              "_truncated": true
-            },
-            "activityLevel": {
-              "type": "string",
-              "_truncated": true
-            },
-            "bmi": {
-              "type": "number",
-              "_truncated": true
-            },
-            "bmr": {
-              "type": "number",
-              "_truncated": true
-            },
-            "tdee": {
-              "type": "number",
-              "_truncated": true
-            }
   …(truncated — xem api-catalog.json)
 ```
 

@@ -169,7 +169,7 @@ export class ProfileService {
     }
 
     return {
-      ...toPublicUser(profile, profile.applications[0] ?? null),
+      ...toPublicUser(profile, profile.applications[0] ?? null, profile.contributorProfile),
       healthProfile: profile.healthProfile ? healthOutput(profile.healthProfile) : null,
       dietPreference: dietPreferenceOutput(profile, latestRuleSetVersion),
     };

@@ -61,11 +61,15 @@ export function registerAuthOpenApi(registry: OpenAPIRegistry, errorSchema: ZodT
     type: 'http',
     scheme: 'bearer',
     bearerFormat: 'JWT',
+    description:
+      'Role claim được đối chiếu với role hiện tại trong database; token cũ sau role change trả STALE_ACCESS_TOKEN.',
   });
   registry.registerComponent('securitySchemes', 'AccessTokenCookie', {
     type: 'apiKey',
     in: 'cookie',
     name: 'accessToken',
+    description:
+      'Access JWT cookie; role claim được đối chiếu với database và có thể trả STALE_ACCESS_TOKEN sau role change.',
   });
 
   const registerRequest = registry.register('RegisterRequest', registerRequestSchema);

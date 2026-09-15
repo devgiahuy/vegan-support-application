@@ -222,38 +222,41 @@ enum CommunityAction {
 }
 
 model User {
-  id                        String                     @id @default(uuid()) @db.Uuid
-  email                     String                     @unique @db.VarChar(320)
-  passwordHash              String                     @map("password_hash")
-  displayName               String                     @map("display_name") @db.VarChar(100)
-  avatarUrl                 String?                    @map("avatar_url") @db.VarChar(2048)
-  role                      Role                       @default(MEMBER)
-  status                    UserStatus                 @default(ACTIVE)
-  failedLoginAttempts       Int                        @default(0) @map("failed_login_attempts")
-  lockedUntil               DateTime?                  @map("locked_until") @db.Timestamptz(3)
-  lastLoginAt               DateTime?                  @map("last_login_at") @db.Timestamptz(3)
-  createdAt                 DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt                 DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt                 DateTime?                  @map("deleted_at") @db.Timestamptz(3)
-  refreshSessions           RefreshSession[]
-  applications              ContributorApplication[]
-  healthProfile             HealthProfile?
-  dietPreference            DietPreference?
-  dietPreferenceRules       DietPreferenceRule[]
-  dietScheduleDates         DietScheduleDate[]
-  allergies                 UserAllergy[]
-  ingredientExclusions      UserIngredientExclusion[]
-  categoryProposals         CategoryProposal[]         @relation("CategoryProposalAuthor")
-  reviewedCategoryProposals CategoryProposal[]         @relation("CategoryProposalReviewer")
-  posts                     Post[]                     @relation("PostAuthor")
-  deletedPosts              Post[]                     @relation("PostDeletedBy")
-  postRevisions             PostRevision[]             @relation("PostRevisionAuthor")
-  comments                  Comment[]                  @relation("CommentAuthor")
-  hiddenComments            Comment[]                  @relation("CommentHiddenBy")
-  postVotes                 PostVote[]
-  postRatings               PostRating[]
-  postBookmarks             PostBookmark[]
-  communityRateLimits       CommunityRateLimitBucket[]
+  id                          String                     @id @default(uuid()) @db.Uuid
+  email                       String                     @unique @db.VarChar(320)
+  passwordHash                String                     @map("password_hash")
+  displayName                 String                     @map("display_name") @db.VarChar(100)
+  avatarUrl                   String?                    @map("avatar_url") @db.VarChar(2048)
+  role                        Role                       @default(MEMBER)
+  status                      UserStatus                 @default(ACTIVE)
+  failedLoginAttempts         Int                        @default(0) @map("failed_login_attempts")
+  lockedUntil                 DateTime?                  @map("locked_until") @db.Timestamptz(3)
+  lastLoginAt                 DateTime?                  @map("last_login_at") @db.Timestamptz(3)
+  createdAt                   DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                   DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt                   DateTime?                  @map("deleted_at") @db.Timestamptz(3)
+  refreshSessions             RefreshSession[]
+  applications                ContributorApplication[]
+  reviewedApplications        ContributorApplication[]   @relation("ContributorApplicationReviewer")
+  contributorProfile          ContributorProfile?        @relation("ContributorProfileUser")
+  approvedContributorProfiles ContributorProfile[]       @relation("ContributorProfileApprover")
+  healthProfile               HealthProfile?
+  dietPreference              DietPreference?
+  dietPreferenceRules         DietPreferenceRule[]
+  dietScheduleDates           DietScheduleDate[]
+  allergies                   UserAllergy[]
+  ingredientExclusions        UserIngredientExclusion[]
+  categoryProposals           CategoryProposal[]         @relation("CategoryProposalAuthor")
+  reviewedCategoryProposals   CategoryProposal[]         @relation("CategoryProposalReviewer")
+  posts                       Post[]                     @relation("PostAuthor")
+  deletedPosts                Post[]                     @relation("PostDeletedBy")
+  postRevisions               PostRevision[]             @relation("PostRevisionAuthor")
+  comments                    Comment[]                  @relation("CommentAuthor")
+  hiddenComments              Comment[]                  @relation("CommentHiddenBy")
+  postVotes                   PostVote[]
+  postRatings                 PostRating[]
+  postBookmarks               PostBookmark[]
+  communityRateLimits         CommunityRateLimitBucket[]
 
   @@map("users")
 }
@@ -636,19 +639,48 @@ model RefreshSession {
 }
 
 model ContributorApplication {
-  id             String                       @id @default(uuid()) @db.Uuid
-  userId         String                       @map("user_id") @db.Uuid
-  requestedType  ContributorType              @map("requested_type")
-  experience     String
-  referenceLinks Json                         @default("[]") @map("reference_links")
-  source         ContributorApplicationSource @default(REGISTRATION)
-  status         ContributorApplicationStatus @default(PENDING)
-  createdAt      DateTime                     @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(3)
-  user           User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String                       @id @default(uuid()) @db.Uuid
+  userId             String                       @map("user_id") @db.Uuid
+  requestedType      ContributorType              @map("requested_type")
+  experience         String
+  referenceLinks     Json                         @default("[]") @map("reference_links")
+  source             ContributorApplicationSource @default(REGISTRATION)
+  status             ContributorApplicationStatus @default(PENDING)
+  approvedType       ContributorType?             @map("approved_type")
+  approvalBasis      String?                      @map("approval_basis") @db.VarChar(2000)
+  reviewNote         String?                      @map("review_note") @db.VarChar(2000)
+  reviewedById       String?                      @map("reviewed_by_id") @db.Uuid
+  reviewedAt         DateTime?                    @map("reviewed_at") @db.Timestamptz(3)
+  reapplyEligibleAt  DateTime?                    @map("reapply_eligible_at") @db.Timestamptz(3)
+  createdAt          DateTime                     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user               User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy         User?                        @relation("ContributorApplicationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  contributorProfile ContributorProfile?
 
+  @@index([status, createdAt, id])
+  @@index([requestedType, status, createdAt])
   @@index([userId, createdAt])
+  @@index([reviewedById, reviewedAt])
   @@map("contributor_applications")
+}
+
+model ContributorProfile {
+  userId              String                 @id @map("user_id") @db.Uuid
+  contributorType     ContributorType        @map("contributor_type")
+  approvalBasis       String                 @map("approval_basis") @db.VarChar(2000)
+  approvedAt          DateTime               @map("approved_at") @db.Timestamptz(3)
+  approvedById        String                 @map("approved_by_id") @db.Uuid
+  sourceApplicationId String                 @unique @map("source_application_id") @db.Uuid
+  createdAt           DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user                User                   @relation("ContributorProfileUser", fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy          User                   @relation("ContributorProfileApprover", fields: [approvedById], references: [id], onDelete: Restrict)
+  sourceApplication   ContributorApplication @relation(fields: [sourceApplicationId], references: [id], onDelete: Restrict)
+
+  @@index([contributorType, approvedAt])
+  @@index([approvedById, approvedAt])
+  @@map("contributor_profiles")
 }
 
 model HealthProfile {

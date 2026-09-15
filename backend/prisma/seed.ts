@@ -3,6 +3,9 @@ import {
   CatalogStatus,
   CategoryType,
   CommentStatus,
+  ContributorApplicationSource,
+  ContributorApplicationStatus,
+  ContributorType,
   DietPattern,
   DietRuleSource,
   FoodGroup,
@@ -235,6 +238,8 @@ const seedEnvironment = z
   .object({
     SEED_MEMBER_EMAIL: z.string().email().default('member@example.com'),
     SEED_MEMBER_PASSWORD: z.string().min(8),
+    SEED_EXPERIENCED_CONTRIBUTOR_EMAIL: z.string().email().default('contributor@example.com'),
+    SEED_NUTRITION_EXPERT_EMAIL: z.string().email().default('expert@example.com'),
     SEED_ADMIN_EMAIL: z.string().email().default('admin@example.com'),
     SEED_ADMIN_PASSWORD: z.string().min(8),
   })
@@ -399,6 +404,98 @@ async function main(): Promise<void> {
   const admin = await prisma.user.findUniqueOrThrow({
     where: { email: seedEnvironment.SEED_ADMIN_EMAIL.toLowerCase() },
   });
+  const contributorSeedDefinitions = [
+    {
+      applicationId: '70000000-0000-4000-8000-000000000001',
+      email: seedEnvironment.SEED_EXPERIENCED_CONTRIBUTOR_EMAIL.toLowerCase(),
+      displayName: 'Demo Experienced Contributor',
+      contributorType: ContributorType.EXPERIENCED_PRACTITIONER,
+      experience:
+        'Có kinh nghiệm thực hành chế độ ăn thực vật và chia sẻ công thức trong cộng đồng.',
+      approvalBasis:
+        'Admin duyệt thủ công dựa trên mô tả kinh nghiệm và lịch sử đóng góp demo trong hệ thống.',
+    },
+    {
+      applicationId: '70000000-0000-4000-8000-000000000002',
+      email: seedEnvironment.SEED_NUTRITION_EXPERT_EMAIL.toLowerCase(),
+      displayName: 'Demo Nutrition Expert',
+      contributorType: ContributorType.NUTRITION_EXPERT,
+      experience:
+        'Có kinh nghiệm chuyên môn dinh dưỡng thực vật và đánh giá nội dung giáo dục dinh dưỡng.',
+      approvalBasis:
+        'Admin duyệt thủ công dựa trên thông tin chuyên môn demo; không phải xác minh chứng chỉ.',
+    },
+  ] as const;
+  const seededApprovalAt = new Date('2026-09-15T00:00:00.000Z');
+  for (const definition of contributorSeedDefinitions) {
+    await prisma.$transaction(async (transaction) => {
+      const user = await transaction.user.upsert({
+        where: { email: definition.email },
+        update: {
+          passwordHash: memberPasswordHash,
+          displayName: definition.displayName,
+          role: Role.CONTRIBUTOR,
+          status: UserStatus.ACTIVE,
+        },
+        create: {
+          email: definition.email,
+          passwordHash: memberPasswordHash,
+          displayName: definition.displayName,
+          role: Role.CONTRIBUTOR,
+          status: UserStatus.ACTIVE,
+        },
+      });
+      const application = await transaction.contributorApplication.upsert({
+        where: { id: definition.applicationId },
+        update: {
+          userId: user.id,
+          requestedType: definition.contributorType,
+          experience: definition.experience,
+          referenceLinks: [],
+          source: ContributorApplicationSource.REGISTRATION,
+          status: ContributorApplicationStatus.APPROVED,
+          approvedType: definition.contributorType,
+          approvalBasis: definition.approvalBasis,
+          reviewNote: 'Approved seed profile for local role and permission validation.',
+          reviewedById: admin.id,
+          reviewedAt: seededApprovalAt,
+          reapplyEligibleAt: null,
+        },
+        create: {
+          id: definition.applicationId,
+          userId: user.id,
+          requestedType: definition.contributorType,
+          experience: definition.experience,
+          referenceLinks: [],
+          source: ContributorApplicationSource.REGISTRATION,
+          status: ContributorApplicationStatus.APPROVED,
+          approvedType: definition.contributorType,
+          approvalBasis: definition.approvalBasis,
+          reviewNote: 'Approved seed profile for local role and permission validation.',
+          reviewedById: admin.id,
+          reviewedAt: seededApprovalAt,
+        },
+      });
+      await transaction.contributorProfile.upsert({
+        where: { userId: user.id },
+        update: {
+          contributorType: definition.contributorType,
+          approvalBasis: definition.approvalBasis,
+          approvedAt: seededApprovalAt,
+          approvedById: admin.id,
+          sourceApplicationId: application.id,
+        },
+        create: {
+          userId: user.id,
+          contributorType: definition.contributorType,
+          approvalBasis: definition.approvalBasis,
+          approvedAt: seededApprovalAt,
+          approvedById: admin.id,
+          sourceApplicationId: application.id,
+        },
+      });
+    });
+  }
   const [recipeCategory, topicCategory, tofu, broccoli, brownRice, mushroom] = await Promise.all([
     prisma.category.findFirstOrThrow({
       where: { type: CategoryType.FOOD_TYPE, slug: 'com-va-ngu-coc', status: CatalogStatus.ACTIVE },
@@ -858,7 +955,7 @@ async function main(): Promise<void> {
     }
   });
   console.info(
-    `Seeded local accounts, diet rules v${String(dietRuleSetVersion)}, catalog, 10 discovery content records, and community interactions.`,
+    `Seeded local Member, two approved Contributor subtypes, Admin, diet rules v${String(dietRuleSetVersion)}, catalog, 10 discovery content records, and community interactions.`,
   );
 }
 
