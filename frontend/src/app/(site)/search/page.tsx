@@ -78,12 +78,12 @@ function SearchContent() {
 
   const handleSearchSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    router.push(`/tim-kiem?q=${encodeURIComponent(query.trim())}`);
+    router.push(`/search?q=${encodeURIComponent(query.trim())}`);
   };
 
   const handleKeywordClick = (kw: string) => {
     setQuery(kw);
-    router.push(`/tim-kiem?q=${encodeURIComponent(kw)}`);
+    router.push(`/search?q=${encodeURIComponent(kw)}`);
   };
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -201,7 +201,7 @@ function SearchContent() {
                 type="button"
                 onClick={() => {
                   setQuery('');
-                  router.push('/tim-kiem');
+                  router.push('/search');
                 }}
                 className="absolute right-24 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
                 aria-label="Xoá từ khoá"
@@ -356,10 +356,10 @@ function SearchContent() {
 
           <div className="pt-4 border-t border-border/60 max-w-lg mx-auto flex justify-center gap-3">
             <Button asChild variant="default" size="sm" className="rounded-full text-xs">
-              <Link href="/bai-viet">Xem Cẩm Nang Ăn Chay</Link>
+              <Link href="/articles">Xem Cẩm Nang Ăn Chay</Link>
             </Button>
             <Button asChild variant="secondary" size="sm" className="rounded-full text-xs">
-              <Link href="/cong-thuc">Khám Phá Công Thức</Link>
+              <Link href="/recipes">Khám Phá Công Thức</Link>
             </Button>
           </div>
         </div>

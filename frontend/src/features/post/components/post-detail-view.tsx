@@ -200,7 +200,7 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
           <Home className="h-4 w-4" /> Trang chủ
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <Link href="/bai-viet" className="hover:text-primary transition-colors">
+        <Link href="/articles" className="hover:text-primary transition-colors">
           Cẩm nang & Chia sẻ
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
@@ -330,7 +330,7 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
             </Button>
 
             <Button asChild variant="secondary" size="sm" className="rounded-full gap-1.5">
-              <Link href={`/bai-viet/${post.id}/chinh-sua`}>
+              <Link href={`/articles/${post.id}/edit`}>
                 <Pencil className="h-3.5 w-3.5" /> Sửa bài
               </Link>
             </Button>
@@ -403,7 +403,7 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
                 <Tag className="h-3.5 w-3.5" /> Chủ đề liên quan:
               </span>
               {post.tags.map((tag) => (
-                <Link key={tag} href={`/tim-kiem?q=${encodeURIComponent(tag)}`}>
+                <Link key={tag} href={`/search?q=${encodeURIComponent(tag)}`}>
                   <Badge
                     variant="secondary"
                     className="hover:bg-primary/20 hover:text-primary transition-colors cursor-pointer rounded-lg"
@@ -460,7 +460,7 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
               </p>
             </div>
             <Button asChild variant="ghost" className="gap-1 text-primary">
-              <Link href="/bai-viet">
+              <Link href="/articles">
                 Xem tất cả <ChevronRight className="h-4 w-4" />
               </Link>
             </Button>

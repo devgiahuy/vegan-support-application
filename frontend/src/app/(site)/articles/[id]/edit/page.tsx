@@ -29,7 +29,7 @@ export default function EditPostPage() {
         </p>
         <div className="pt-2">
           <Button asChild className="rounded-full gap-2">
-            <Link href="/ho-so?tab=posts">
+            <Link href="/profile?tab=posts">
               <ArrowLeft className="h-4 w-4" /> Quay lại Hồ sơ của tôi
             </Link>
           </Button>
@@ -49,12 +49,12 @@ export default function EditPostPage() {
           <Home className="h-4 w-4" /> Trang chủ
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <Link href="/bai-viet" className="hover:text-primary transition-colors">
+        <Link href="/articles" className="hover:text-primary transition-colors">
           Cẩm nang
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
         <Link
-          href={`/bai-viet/${post.id}`}
+          href={`/articles/${post.id}`}
           className="hover:text-primary transition-colors truncate max-w-xs"
         >
           {post.title}
@@ -74,7 +74,7 @@ export default function EditPostPage() {
           </p>
         </div>
         <Button asChild variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
-          <Link href={`/bai-viet/${post.id}`}>
+          <Link href={`/articles/${post.id}`}>
             <ArrowLeft className="h-4 w-4" /> Huỷ &amp; Xem bài viết
           </Link>
         </Button>

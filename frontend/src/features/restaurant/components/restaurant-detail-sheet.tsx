@@ -181,7 +181,7 @@ export function RestaurantDetailSheet({ restaurant, isOpen, onClose }: Restauran
             </div>
 
             <Button asChild className="w-full gap-1.5 font-semibold text-sm">
-              <Link href={`/ban-do/${restaurant.id}`}>
+              <Link href={`/restaurants/${restaurant.id}`}>
                 Xem chi tiết toàn trang <ExternalLink className="h-4 w-4" />
               </Link>
             </Button>

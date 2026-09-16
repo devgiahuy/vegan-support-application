@@ -124,7 +124,7 @@ export default function UploadVideoPage() {
         toast.success(
           'Đăng tải video thành công! Hệ thống đang kích hoạt AI STT tóm tắt công thức.'
         );
-        router.push('/video');
+        router.push('/videos');
       }
     }, 1000);
   };
@@ -140,7 +140,7 @@ export default function UploadVideoPage() {
           <Home className="h-4 w-4" /> Trang chủ
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <Link href="/video" className="hover:text-primary transition-colors">
+        <Link href="/videos" className="hover:text-primary transition-colors">
           Video nấu ăn
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />

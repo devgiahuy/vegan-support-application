@@ -97,7 +97,7 @@ export default function CreateRecipePage() {
             <Home className="h-3.5 w-3.5" /> Trang chủ
           </Link>
           <ChevronRight className="h-3.5 w-3.5" />
-          <Link href="/cong-thuc" className="hover:text-primary">
+          <Link href="/recipes" className="hover:text-primary">
             Công thức
           </Link>
           <ChevronRight className="h-3.5 w-3.5" />
@@ -513,7 +513,7 @@ export default function CreateRecipePage() {
               <ArrowLeft className="h-4 w-4" /> Quay lại Bước 1
             </Button>
             <Button asChild className="gap-2 rounded-full">
-              <Link href="/ho-so">
+              <Link href="/profile">
                 <CheckCircle2 className="h-4 w-4" /> Gửi duyệt công thức
               </Link>
             </Button>

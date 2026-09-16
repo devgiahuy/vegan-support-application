@@ -90,7 +90,7 @@ export default function VideoDiscoveryPage() {
           </p>
           <div className="pt-2">
             <Button asChild className="gap-2 font-semibold shadow-md">
-              <Link href="/dang-video">
+              <Link href="/videos/new">
                 <UploadCloud className="h-4 w-4" /> Đăng tải video của bạn (UC-05)
               </Link>
             </Button>
@@ -111,7 +111,7 @@ export default function VideoDiscoveryPage() {
             />
           </div>
           <Button asChild className="gap-2 font-semibold shrink-0 h-11 px-5">
-            <Link href="/dang-video">
+            <Link href="/videos/new">
               <UploadCloud className="h-4 w-4" /> Đăng video
             </Link>
           </Button>

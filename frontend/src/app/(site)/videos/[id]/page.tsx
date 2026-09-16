@@ -102,7 +102,7 @@ export default function VideoDetailPage() {
           <Home className="h-4 w-4" /> Trang chủ
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <Link href="/video" className="hover:text-primary transition-colors">
+        <Link href="/videos" className="hover:text-primary transition-colors">
           Video nấu ăn
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />

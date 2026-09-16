@@ -144,7 +144,7 @@ export function WhyRecommendedDialog({
 
         <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
           <Button variant="outline" asChild size="sm" className="gap-1.5 text-xs">
-            <Link href="/ho-so" onClick={onClose}>
+            <Link href="/profile" onClick={onClose}>
               Quản lý cài đặt cá nhân hoá <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </Button>

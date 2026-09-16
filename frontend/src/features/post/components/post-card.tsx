@@ -45,7 +45,7 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
     e.preventDefault();
     e.stopPropagation();
     if (typeof window !== 'undefined' && navigator.clipboard) {
-      navigator.clipboard.writeText(`${window.location.origin}/bai-viet/${post.id}`);
+      navigator.clipboard.writeText(`${window.location.origin}/articles/${post.id}`);
       toast.success('Đã sao chép liên kết bài viết!');
     }
   };
@@ -89,7 +89,7 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
           className
         )}
       >
-        <Link href={`/bai-viet/${post.id}`} className="flex flex-col sm:flex-row h-full">
+        <Link href={`/articles/${post.id}`} className="flex flex-col sm:flex-row h-full">
           {/* Cover Image */}
           <div className="relative aspect-video sm:aspect-[4/3] sm:w-56 shrink-0 overflow-hidden bg-muted">
             <img
@@ -178,7 +178,7 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
       )}
     >
       <Link
-        href={`/bai-viet/${post.id}`}
+        href={`/articles/${post.id}`}
         className="block relative aspect-video w-full overflow-hidden bg-muted"
       >
         <img
@@ -233,7 +233,7 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
             <span>{post.publishedAt}</span>
           </div>
 
-          <Link href={`/bai-viet/${post.id}`}>
+          <Link href={`/articles/${post.id}`}>
             <h3 className="text-base sm:text-lg font-bold text-foreground line-clamp-2 group-hover:text-primary transition-colors leading-snug">
               {post.title}
             </h3>

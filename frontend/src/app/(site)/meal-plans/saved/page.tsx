@@ -129,7 +129,7 @@ export default function SavedMealPlansPage() {
           <Home className="h-4 w-4" /> Trang chủ
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <Link href="/ke-hoach-bua-an" className="hover:text-primary transition-colors">
+        <Link href="/meal-plans" className="hover:text-primary transition-colors">
           Kế hoạch bữa ăn
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
@@ -148,7 +148,7 @@ export default function SavedMealPlansPage() {
         </div>
 
         <Button asChild className="gap-2 font-semibold shadow-md shrink-0">
-          <Link href="/ke-hoach-bua-an">
+          <Link href="/meal-plans">
             <Plus className="h-4 w-4" /> Tạo thực đơn mới
           </Link>
         </Button>
@@ -266,7 +266,7 @@ export default function SavedMealPlansPage() {
                       size="sm"
                       className="gap-1 text-xs text-primary font-medium"
                     >
-                      <Link href="/ke-hoach-bua-an">
+                      <Link href="/meal-plans">
                         Xem chi tiết lịch 7 ngày <ArrowRight className="h-3.5 w-3.5" />
                       </Link>
                     </Button>
@@ -297,7 +297,7 @@ export default function SavedMealPlansPage() {
             </p>
           </div>
           <Button asChild className="gap-2">
-            <Link href="/ke-hoach-bua-an">
+            <Link href="/meal-plans">
               <Plus className="h-4 w-4" /> Tạo thực đơn tuần đầu tiên
             </Link>
           </Button>

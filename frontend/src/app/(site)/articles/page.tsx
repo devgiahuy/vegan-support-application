@@ -2,18 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import {
-  BookOpen,
-  Plus,
-  Search,
-  Filter,
-  Sparkles,
-  BadgeCheck,
-  TrendingUp,
-  Clock,
-  ArrowUpDown,
-  CheckCircle2,
-} from 'lucide-react';
+import { BookOpen, Plus, Search, BadgeCheck, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -26,16 +15,14 @@ import {
 } from '@/components/ui/select';
 import { PostCard } from '@/features/post/components/post-card';
 import { usePostStore } from '@/store/usePostStore';
-import type { DietSchool, Post } from '@/features/post/types/post.model';
-
-const CATEGORIES = [
-  'Tất cả',
-  'Sức khỏe & Dinh dưỡng',
-  'Kinh nghiệm ăn chay',
-  'Mẹo nhà bếp',
-  'Lối sống xanh',
-  'Văn hóa & Tinh thần',
-];
+import type { DietSchool } from '@/features/post/types/post.model';
+import { CategoryType } from '@/common/enums';
+import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
+import { CategoryFilterPills } from '@/features/category/components/category-filter-pills';
+import {
+  findCategoryById,
+  matchesCategoryName,
+} from '@/features/category/utils/flatten-categories';
 
 const DIET_SCHOOL_FILTERS: { value: 'ALL' | DietSchool; label: string }[] = [
   { value: 'ALL', label: 'Tất cả trường phái' },
@@ -47,9 +34,20 @@ const DIET_SCHOOL_FILTERS: { value: 'ALL' | DietSchool; label: string }[] = [
 export default function BlogListingPage() {
   const { posts } = usePostStore();
   const [searchQuery, setSearchQuery] = React.useState('');
-  const [selectedCategory, setSelectedCategory] = React.useState('Tất cả');
+  const [selectedCategoryId, setSelectedCategoryId] = React.useState<string | null>(null);
   const [selectedSchool, setSelectedSchool] = React.useState<'ALL' | DietSchool>('ALL');
   const [sortBy, setSortBy] = React.useState<'newest' | 'score' | 'views'>('newest');
+
+  const {
+    data: categoryTree = [],
+    isLoading: isCategoryLoading,
+    isError: isCategoryError,
+    refetch: refetchCategories,
+  } = useCategoryTreeQuery(CategoryType.CONTENT_TOPIC);
+
+  const selectedCategory = selectedCategoryId
+    ? findCategoryById(categoryTree, selectedCategoryId)
+    : undefined;
 
   // Lọc chỉ lấy bài đã xuất bản (PUBLISHED) để hiển thị trên cẩm nang công khai
   const publicPosts = React.useMemo(() => {
@@ -70,8 +68,10 @@ export default function BlogListingPage() {
       );
     }
 
-    if (selectedCategory !== 'Tất cả') {
-      list = list.filter((p) => p.category === selectedCategory);
+    if (selectedCategory) {
+      // Tạm thời: bài viết mẫu lưu `category` dạng nhãn tự do nên so khớp theo tên.
+      // Khi API bài viết hỗ trợ lọc theo `categoryId`, thay bằng filter server-side.
+      list = list.filter((p) => matchesCategoryName(selectedCategory.name, p.category));
     }
 
     if (selectedSchool !== 'ALL') {
@@ -113,7 +113,7 @@ export default function BlogListingPage() {
               size="lg"
               className="rounded-2xl gap-2 font-bold shadow-md shadow-primary/20"
             >
-              <Link href="/bai-viet/tao-moi">
+              <Link href="/articles/new">
                 <Plus className="h-5 w-5" /> Viết bài chia sẻ mới
               </Link>
             </Button>
@@ -123,7 +123,7 @@ export default function BlogListingPage() {
               size="lg"
               className="rounded-2xl gap-2 bg-background/80"
             >
-              <Link href="/ho-so?tab=posts">Bài viết của tôi</Link>
+              <Link href="/profile?tab=posts">Bài viết của tôi</Link>
             </Button>
           </div>
         </div>
@@ -148,7 +148,10 @@ export default function BlogListingPage() {
             <span className="text-xs font-medium text-muted-foreground shrink-0 hidden sm:inline">
               Sắp xếp theo:
             </span>
-            <Select value={sortBy} onValueChange={(v) => setSortBy(v as any)}>
+            <Select
+              value={sortBy}
+              onValueChange={(v) => setSortBy(v as 'newest' | 'score' | 'views')}
+            >
               <SelectTrigger className="h-11 rounded-2xl text-xs w-[160px] bg-card">
                 <ArrowUpDown className="h-3.5 w-3.5 mr-1.5 text-primary" />
                 <SelectValue placeholder="Sắp xếp" />
@@ -183,19 +186,40 @@ export default function BlogListingPage() {
           ))}
         </div>
 
-        {/* Category Pills */}
+        {/* Category Pills (danh mục thật từ catalog) */}
         <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-border/60">
           <span className="text-xs text-muted-foreground mr-1">Chủ đề:</span>
-          {CATEGORIES.map((c) => (
-            <Badge
-              key={c}
-              variant={selectedCategory === c ? 'default' : 'secondary'}
-              onClick={() => setSelectedCategory(c)}
-              className="cursor-pointer rounded-lg text-xs py-1 px-2.5 transition-all"
-            >
-              {c}
-            </Badge>
-          ))}
+          {isCategoryLoading ? (
+            <span className="flex flex-wrap gap-1.5" aria-label="Đang tải danh mục">
+              {[0, 1, 2, 3].map((i) => (
+                <span key={i} className="h-6 w-20 animate-pulse rounded-lg bg-muted" />
+              ))}
+            </span>
+          ) : isCategoryError ? (
+            <span className="flex items-center gap-2 text-xs text-muted-foreground">
+              Không tải được danh mục.
+              <button
+                onClick={() => void refetchCategories()}
+                className="font-medium text-primary hover:underline"
+              >
+                Thử lại
+              </button>
+            </span>
+          ) : categoryTree.length === 0 ? (
+            <span className="text-xs text-muted-foreground">Chưa có chủ đề nội dung.</span>
+          ) : (
+            <CategoryFilterPills
+              items={categoryTree}
+              selectedId={selectedCategoryId}
+              onSelect={setSelectedCategoryId}
+            />
+          )}
+          <Link
+            href="/categories?type=CONTENT_TOPIC"
+            className="ml-auto text-xs font-medium text-primary hover:underline"
+          >
+            Tất cả chủ đề
+          </Link>
         </div>
       </div>
 
@@ -220,7 +244,7 @@ export default function BlogListingPage() {
             variant="outline"
             onClick={() => {
               setSearchQuery('');
-              setSelectedCategory('Tất cả');
+              setSelectedCategoryId(null);
               setSelectedSchool('ALL');
             }}
             className="rounded-full text-xs mt-2"
@@ -253,7 +277,7 @@ export default function BlogListingPage() {
           size="sm"
           className="rounded-full border-emerald-500/40 text-emerald-700 dark:text-emerald-300 shrink-0"
         >
-          <Link href="/bai-viet/tao-moi">Tham gia đóng góp bài viết</Link>
+          <Link href="/articles/new">Tham gia đóng góp bài viết</Link>
         </Button>
       </div>
     </div>

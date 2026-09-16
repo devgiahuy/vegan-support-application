@@ -67,7 +67,7 @@ export function RestaurantDetailView({ restaurant, nearbyRestaurants }: Restaura
           <Home className="h-4 w-4" /> Trang chủ
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <Link href="/ban-do" className="hover:text-primary transition-colors">
+        <Link href="/restaurants" className="hover:text-primary transition-colors">
           Bản đồ quán chay
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
@@ -372,7 +372,7 @@ export function RestaurantDetailView({ restaurant, nearbyRestaurants }: Restaura
               {nearbyRestaurants.slice(0, 3).map((item) => (
                 <Link
                   key={item.id}
-                  href={`/ban-do/${item.id}`}
+                  href={`/restaurants/${item.id}`}
                   className="flex gap-3 p-3 rounded-xl border bg-card hover:border-primary/50 transition-all shadow-sm group"
                 >
                   <div className="relative h-16 w-16 shrink-0 rounded-lg overflow-hidden bg-muted">

@@ -95,7 +95,7 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
           <Home className="h-4 w-4" /> Trang chủ
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <Link href="/cong-thuc" className="hover:text-primary transition-colors">
+        <Link href="/recipes" className="hover:text-primary transition-colors">
           Khám phá công thức
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />

@@ -35,7 +35,7 @@ export default function PostDetailPage() {
         </p>
         <div className="pt-2">
           <Button asChild className="rounded-full gap-2">
-            <Link href="/bai-viet">
+            <Link href="/articles">
               <ArrowLeft className="h-4 w-4" /> Quay lại Cẩm nang
             </Link>
           </Button>

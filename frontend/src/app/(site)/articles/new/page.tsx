@@ -18,7 +18,7 @@ export default function CreatePostPage() {
           <Home className="h-4 w-4" /> Trang chủ
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
-        <Link href="/bai-viet" className="hover:text-primary transition-colors">
+        <Link href="/articles" className="hover:text-primary transition-colors">
           Cẩm nang &amp; Chia sẻ
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
@@ -37,7 +37,7 @@ export default function CreatePostPage() {
           </p>
         </div>
         <Button asChild variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
-          <Link href="/bai-viet">
+          <Link href="/articles">
             <ArrowLeft className="h-4 w-4" /> Huỷ bỏ &amp; Quay lại
           </Link>
         </Button>

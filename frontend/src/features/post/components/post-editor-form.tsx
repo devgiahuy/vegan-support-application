@@ -241,7 +241,7 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
             ? 'Đã cập nhật và xuất bản bài viết thành công!'
             : 'Đã gửi cập nhật tới Chuyên gia Dinh dưỡng để kiểm duyệt!'
       );
-      router.push(`/bai-viet/${initialPost.id}`);
+      router.push(`/articles/${initialPost.id}`);
     } else {
       const created = addPost({
         title,
@@ -265,9 +265,9 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
       );
 
       if (postStatus === 'PUBLISHED') {
-        router.push(`/bai-viet/${created.id}`);
+        router.push(`/articles/${created.id}`);
       } else {
-        router.push('/ho-so?tab=posts');
+        router.push('/profile?tab=posts');
       }
     }
   };

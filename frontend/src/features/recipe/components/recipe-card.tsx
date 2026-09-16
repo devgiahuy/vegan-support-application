@@ -14,10 +14,7 @@ export function RecipeCard({ recipe, className }: { recipe: Recipe; className?: 
         className
       )}
     >
-      <Link
-        href={`/cong-thuc/${recipe.id}`}
-        className="relative block aspect-[4/3] overflow-hidden"
-      >
+      <Link href={`/recipes/${recipe.id}`} className="relative block aspect-[4/3] overflow-hidden">
         <Image
           src={recipe.image}
           alt={recipe.title}
@@ -56,7 +53,7 @@ export function RecipeCard({ recipe, className }: { recipe: Recipe; className?: 
         </div>
 
         <h3 className="mt-2 line-clamp-2 text-base font-semibold leading-snug group-hover:text-primary">
-          <Link href={`/cong-thuc/${recipe.id}`}>{recipe.title}</Link>
+          <Link href={`/recipes/${recipe.id}`}>{recipe.title}</Link>
         </h3>
 
         <div className="mt-3 flex items-center justify-between pt-3 border-t border-border/60">

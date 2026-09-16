@@ -258,7 +258,7 @@ export default function MealPlanPage() {
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-2.5">
         <Button asChild variant="outline" className="gap-1.5 rounded-full">
-          <Link href="/ke-hoach-bua-an/da-luu">
+          <Link href="/meal-plans/saved">
             <CalendarDays className="h-4 w-4 text-primary" /> Thực đơn đã lưu
           </Link>
         </Button>
@@ -596,7 +596,7 @@ export default function MealPlanPage() {
                 nay.
               </p>
               <Button asChild className="mt-3 w-full gap-1.5 rounded-xl">
-                <Link href="/ban-do">
+                <Link href="/restaurants">
                   <Navigation className="h-4 w-4" /> Tìm quán chay lân cận (3km)
                 </Link>
               </Button>
