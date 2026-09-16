@@ -4,7 +4,7 @@ import { ErrorResponse } from '@/types/api';
 import { getAccessToken, setAccessToken, clearAccessToken } from './auth-token';
 import { useAuthStore } from '@/store/useAuthStore';
 import { API_BASE_URL } from './env';
-import { sharedRefresh, clearRefreshState } from './auth-refresh';
+import { sharedRefresh, forceLogout } from './auth-refresh';
 
 declare module 'axios' {
   export interface AxiosRequestConfig {
@@ -145,9 +145,8 @@ api.interceptors.response.use(
           return api(originalRequest);
         } catch (err) {
           processQueue(err, null);
-          clearAccessToken();
-          clearRefreshState();
-          useAuthStore.getState().logout();
+          // Đăng xuất triệt để (xóa cả HttpOnly cookies) để không kẹt loop /login → /.
+          await forceLogout();
           // Sự kiện mất phiên là toàn cục: luôn toast 1 lần kể cả khi request
           // kích hoạt có `silent` (silent chỉ áp dụng cho lỗi nghiệp vụ của request đó).
           if (!hasShownSessionExpiredToast) {

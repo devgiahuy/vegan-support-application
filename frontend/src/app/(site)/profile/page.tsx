@@ -12,7 +12,6 @@ import {
   HeartPulse,
   BookOpen,
   CheckCircle2,
-  AlertTriangle,
   UtensilsCrossed,
   Eye,
   Pencil,
@@ -31,22 +30,17 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { WhyRecommendedDialog } from '@/components/shared/why-recommended-dialog';
 import { calGoalTargets } from '@/features/health/lib/bmi';
 
-import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { LoadingState } from '@/components/shared/loading-state';
 import { ErrorState } from '@/components/shared/error-state';
-import { usePostStore } from '@/store/usePostStore';
-import type { Post } from '@/features/post/types/post.model';
+import { SafeImage } from '@/components/shared/safe-image';
+import { DeletePostDialog } from '@/features/post/components/delete-post-dialog';
+import { useArticlesQuery } from '@/features/post/queries/post.queries';
+import { useAuthStore } from '@/store/useAuthStore';
+import type { Article } from '@/features/post/types/post.model';
 import { useDetailedProfileQuery } from '@/features/profile/queries/profile.queries';
 import { BasicProfileForm } from '@/features/profile/components/basic-profile-form';
 import { HealthProfileForm } from '@/features/profile/components/health-profile-form';
@@ -59,41 +53,15 @@ type Tab = 'info' | 'health' | 'diet' | 'posts' | 'privacy';
 
 const DIET_MODES = ['Thuần chay (Vegan)', 'Chay bán phần', 'Ăn chay rằm/mùng 1'];
 
-const POSTS = [
-  {
-    status: 'Đã duyệt',
-    tone: 'primary',
-    title: 'Phở Nấm Thuần Chay Dưỡng Sinh Nước Dùng Thanh Ngọt',
-    meta: 'Món nước • Đăng ngày 12/10/2024',
-    desc: 'Bí quyết ninh củ cải trắng, mía lau và các loại nấm tươi để có nồi nước dùng ngọt tự nhiên.',
-    views: '1,420 lượt xem • 248 yêu thích',
-  },
-  {
-    status: 'Chờ duyệt',
-    tone: 'cta',
-    title: 'Nem Rán Chay Nhân Nấm Mộc Nhĩ & Đậu Xanh Bùi Béo',
-    meta: 'Món chiên giòn • Gửi lúc 15:30 hôm nay',
-    desc: 'Vỏ bánh ram giòn rụm nhiều giờ, công thức nhân đậu bùi thơm dinh dưỡng cho ngày lễ rằm.',
-    views: 'Ban kiểm duyệt sẽ phản hồi trong 24 giờ',
-  },
-  {
-    status: 'Cần chỉnh sửa',
-    tone: 'destructive',
-    title: 'Cà Tím Kho Tiêu Nồi Đất Cay Nồng Đậm Đà Đưa Cơm',
-    meta: 'Món kho • Cập nhật 2 ngày trước',
-    desc: 'Lý do: Vui lòng bổ sung định lượng chi tiết cho nguyên liệu gia vị tiêu và nước tương.',
-    views: 'Phiên bản nháp v1.2',
-  },
-];
-
-const toneClass: Record<string, string> = {
-  primary: 'bg-primary/10 text-primary',
-  cta: 'bg-cta/15 text-cta',
-  destructive: 'bg-destructive/10 text-destructive',
-};
-
 export default function ProfilePage() {
-  const [tab, setTab] = React.useState<Tab>('health');
+  // Đọc tab khởi đầu từ URL một lần duy nhất lúc mount (không setState trong effect).
+  const [tab, setTab] = React.useState<Tab>(() => {
+    if (typeof window === 'undefined') return 'health';
+    const urlTab = new URLSearchParams(window.location.search).get('tab');
+    return urlTab && ['info', 'health', 'diet', 'posts', 'privacy'].includes(urlTab)
+      ? (urlTab as Tab)
+      : 'health';
+  });
   const shouldReduceMotion = useReducedMotion();
   const [personalizationEnabled, setPersonalizationEnabled] = React.useState(true);
   const [healthSyncEnabled, setHealthSyncEnabled] = React.useState(true);
@@ -106,33 +74,24 @@ export default function ProfilePage() {
     refetch: refetchProfile,
   } = useDetailedProfileQuery();
 
-  const { posts, deletePost } = usePostStore();
+  const { user } = useAuthStore();
+  const { data: articlesPagination, isLoading: isMyPostsLoading } = useArticlesQuery({ limit: 50 });
   const [postSearch, setPostSearch] = React.useState('');
   const [postStatusFilter, setPostStatusFilter] = React.useState<
-    'ALL' | 'PUBLISHED' | 'PENDING' | 'FLAGGED' | 'DRAFT'
+    'ALL' | 'PUBLISHED' | 'PENDING_REVIEW' | 'FLAGGED' | 'DRAFT'
   >('ALL');
-  const [postToDelete, setPostToDelete] = React.useState<Post | null>(null);
+  const [postToDelete, setPostToDelete] = React.useState<Article | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
 
-  React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const urlTab = params.get('tab');
-      if (urlTab && ['info', 'health', 'diet', 'posts', 'privacy'].includes(urlTab)) {
-        setTab(urlTab as Tab);
-      }
-    }
-  }, []);
-
+  // Bài viết của tôi: lọc client-side theo tác giả đang đăng nhập.
+  // Tạm thời cho tới khi backend hỗ trợ filter `authorId` ở GET /posts.
   const myPosts = React.useMemo(() => {
-    return posts.filter(
-      (p) =>
-        p.author.id === 'my-user' ||
-        p.author.id === 'expert-lan-anh' ||
-        p.tags?.includes('BàiCủaTôi') ||
-        p.author.name.includes('Lan Hương')
+    const items = articlesPagination?.items || [];
+    if (!user) return [];
+    return items.filter(
+      (a) => a.author.id === user.id || (user.displayName && a.author.name === user.displayName)
     );
-  }, [posts]);
+  }, [articlesPagination?.items, user]);
 
   const filteredMyPosts = React.useMemo(() => {
     let list = [...myPosts];
@@ -144,7 +103,7 @@ export default function ProfilePage() {
       list = list.filter(
         (p) =>
           p.title.toLowerCase().includes(q) ||
-          p.summary.toLowerCase().includes(q) ||
+          p.excerpt.toLowerCase().includes(q) ||
           p.tags?.some((t) => t.toLowerCase().includes(q))
       );
     }
@@ -152,7 +111,7 @@ export default function ProfilePage() {
   }, [myPosts, postStatusFilter, postSearch]);
 
   const publishedCount = myPosts.filter((p) => p.status === 'PUBLISHED').length;
-  const pendingCount = myPosts.filter((p) => p.status === 'PENDING').length;
+  const pendingCount = myPosts.filter((p) => p.status === 'PENDING_REVIEW').length;
   const flaggedCount = myPosts.filter((p) => p.status === 'FLAGGED').length;
   const draftCount = myPosts.filter((p) => p.status === 'DRAFT').length;
 
@@ -181,6 +140,13 @@ export default function ProfilePage() {
           <CardContent className="flex flex-col gap-5 p-6 md:flex-row md:items-center">
             <div className="relative">
               <Avatar className="h-20 w-20 rounded-2xl">
+                {detailedProfile.user.avatarUrl && (
+                  <AvatarImage
+                    src={detailedProfile.user.avatarUrl}
+                    alt={detailedProfile.user.displayName}
+                    className="rounded-2xl"
+                  />
+                )}
                 <AvatarFallback className="rounded-2xl bg-primary/10 text-2xl text-primary">
                   {detailedProfile.user.initials || 'U'}
                 </AvatarFallback>
@@ -289,7 +255,8 @@ export default function ProfilePage() {
           className="mt-6"
         >
           {/* TAB: INFO — form thật (PATCH /users/me: displayName + avatarUrl).
-          Số điện thoại / bio / đổi mật khẩu / tải file ảnh không có endpoint READY nên không render. */}
+          Ảnh upload qua POST /uploads/signature → Cloudinary rồi PATCH URL.
+          Số điện thoại / bio / đổi mật khẩu không có endpoint READY nên không render. */}
           {tab === 'info' && (
             <div>
               {isProfileLoading && <LoadingState message="Đang tải thông tin..." />}
@@ -466,17 +433,19 @@ export default function ProfilePage() {
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { id: 'ALL', label: `Tất cả (${myPosts.length})` },
-                    { id: 'PUBLISHED', label: `Đã duyệt (${publishedCount})` },
-                    { id: 'PENDING', label: `Chờ duyệt (${pendingCount})` },
-                    { id: 'FLAGGED', label: `Cần sửa (${flaggedCount})` },
-                    { id: 'DRAFT', label: `Bản nháp (${draftCount})` },
-                  ].map((f) => (
+                  {(
+                    [
+                      { id: 'ALL', label: `Tất cả (${myPosts.length})` },
+                      { id: 'PUBLISHED', label: `Đã duyệt (${publishedCount})` },
+                      { id: 'PENDING_REVIEW', label: `Chờ duyệt (${pendingCount})` },
+                      { id: 'FLAGGED', label: `Cần sửa (${flaggedCount})` },
+                      { id: 'DRAFT', label: `Bản nháp (${draftCount})` },
+                    ] as const
+                  ).map((f) => (
                     <Badge
                       key={f.id}
                       variant={postStatusFilter === f.id ? 'default' : 'secondary'}
-                      onClick={() => setPostStatusFilter(f.id as any)}
+                      onClick={() => setPostStatusFilter(f.id)}
                       className="rounded-full px-3 py-1 cursor-pointer text-xs transition-all"
                     >
                       {f.label}
@@ -495,10 +464,17 @@ export default function ProfilePage() {
               </div>
 
               <div className="mt-4 space-y-3">
-                {filteredMyPosts.length > 0 ? (
+                {isMyPostsLoading ? (
+                  [1, 2].map((i) => (
+                    <div
+                      key={i}
+                      className="h-28 animate-pulse rounded-2xl border border-border/60 bg-muted/40"
+                    />
+                  ))
+                ) : filteredMyPosts.length > 0 ? (
                   filteredMyPosts.map((p) => {
                     const isPublished = p.status === 'PUBLISHED';
-                    const isPending = p.status === 'PENDING';
+                    const isPending = p.status === 'PENDING_REVIEW';
                     const isFlagged = p.status === 'FLAGGED';
 
                     return (
@@ -508,9 +484,12 @@ export default function ProfilePage() {
                       >
                         <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-center">
                           <div className="relative h-24 w-full shrink-0 overflow-hidden rounded-xl bg-muted md:w-36">
-                            <img
-                              src={p.coverImage}
+                            <SafeImage
+                              src={p.coverImageUrl}
+                              fallbackSrc="https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&auto=format&fit=crop&q=80"
                               alt={p.title}
+                              fill
+                              sizes="(max-width: 768px) 100vw, 144px"
                               className="h-full w-full object-cover"
                             />
                           </div>
@@ -531,10 +510,12 @@ export default function ProfilePage() {
                                 {p.statusLabel || p.status}
                               </Badge>
                               <span className="text-[11px] text-muted-foreground">•</span>
-                              <span className="text-xs text-muted-foreground">{p.category}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {p.category.name}
+                              </span>
                               <span className="text-[11px] text-muted-foreground">•</span>
                               <span className="text-xs text-muted-foreground">
-                                Đăng ngày {p.publishedAt}
+                                Đăng ngày {p.formattedPublishedAt || 'chưa xuất bản'}
                               </span>
                             </div>
 
@@ -543,25 +524,8 @@ export default function ProfilePage() {
                             </h3>
 
                             <p className="line-clamp-1 text-xs text-muted-foreground">
-                              {p.summary}
+                              {p.excerpt}
                             </p>
-
-                            {p.moderationReason && (
-                              <div className="mt-1 flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md">
-                                <AlertTriangle className="h-3 w-3 shrink-0" />
-                                <span className="truncate">{p.moderationReason}</span>
-                              </div>
-                            )}
-
-                            <div className="flex items-center gap-3 text-[11px] text-muted-foreground pt-0.5">
-                              <span>{p.views.toLocaleString()} lượt xem</span>
-                              <span>•</span>
-                              <span className="text-primary font-semibold">
-                                Net vote: {p.score}
-                              </span>
-                              <span>•</span>
-                              <span>{p.commentCount} bình luận</span>
-                            </div>
                           </div>
 
                           <div className="flex gap-1 shrink-0 self-end md:self-center">
@@ -782,21 +746,17 @@ export default function ProfilePage() {
       />
 
       {/* Delete Post Confirmation Dialog */}
-      <ConfirmDialog
+      <DeletePostDialog
         open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        title="Xoá bài viết này?"
-        description={`Bạn có chắc chắn muốn xoá bài viết "${postToDelete?.title}"? Hành động này không thể hoàn tác.`}
-        confirmLabel="Xoá bài viết"
-        cancelLabel="Huỷ bỏ"
-        danger={true}
-        onConfirm={() => {
-          if (postToDelete) {
-            deletePost(postToDelete.id);
-            toast.success(`Đã xoá bài viết "${postToDelete.title}" thành công!`);
-            setIsDeleteDialogOpen(false);
-            setPostToDelete(null);
-          }
+        onOpenChange={(open) => {
+          setIsDeleteDialogOpen(open);
+          if (!open) setPostToDelete(null);
+        }}
+        postId={postToDelete?.id || ''}
+        postTitle={postToDelete?.title || ''}
+        expectedVersion={postToDelete?.version}
+        onSuccess={() => {
+          setPostToDelete(null);
         }}
       />
     </div>

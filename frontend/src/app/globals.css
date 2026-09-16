@@ -111,3 +111,50 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ==========================================================================
+   View Transition: Hiệu ứng gợn sóng lan tỏa (Circular Wave) cho Dark / Light mode
+   ========================================================================== */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+::view-transition-old(root) {
+  z-index: 1;
+}
+
+::view-transition-new(root) {
+  z-index: 9999;
+}
+
+/* ==========================================================================
+   Sonner Toast Customization: Phong cách VeggieConnect
+   ========================================================================== */
+[data-sonner-toaster] {
+  --normal-bg: var(--card);
+  --normal-border: var(--border);
+  --normal-text: var(--foreground);
+}
+
+[data-sonner-toast] {
+  border-radius: 1rem !important;
+  font-family: var(--font-sans) !important;
+}
+
+[data-sonner-toast][data-styled='true'] {
+  border-radius: 1rem !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.06) !important;
+}
+
+.dark [data-sonner-toast][data-styled='true'] {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-sonner-toast] [data-close-button] {
+  border-radius: 9999px !important;
+  transition: all 0.2s ease !important;
+}
+
+

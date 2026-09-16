@@ -14,7 +14,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { PostCard } from '@/features/post/components/post-card';
-import { usePostStore } from '@/store/usePostStore';
 import type { DietSchool } from '@/features/post/types/post.model';
 import { CategoryType } from '@/common/enums';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
@@ -23,6 +22,7 @@ import {
   findCategoryById,
   matchesCategoryName,
 } from '@/features/category/utils/flatten-categories';
+import { useArticlesQuery } from '@/features/post/queries/post.queries';
 
 const DIET_SCHOOL_FILTERS: { value: 'ALL' | DietSchool; label: string }[] = [
   { value: 'ALL', label: 'Tất cả trường phái' },
@@ -32,7 +32,6 @@ const DIET_SCHOOL_FILTERS: { value: 'ALL' | DietSchool; label: string }[] = [
 ];
 
 export default function BlogListingPage() {
-  const { posts } = usePostStore();
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedCategoryId, setSelectedCategoryId] = React.useState<string | null>(null);
   const [selectedSchool, setSelectedSchool] = React.useState<'ALL' | DietSchool>('ALL');
@@ -45,49 +44,45 @@ export default function BlogListingPage() {
     refetch: refetchCategories,
   } = useCategoryTreeQuery(CategoryType.CONTENT_TOPIC);
 
+  const {
+    data: articlesPagination,
+    isLoading: isArticlesLoading,
+    isError: isArticlesError,
+    refetch: refetchArticles,
+  } = useArticlesQuery({
+    q: searchQuery.trim() || undefined,
+    category: selectedCategoryId || undefined,
+  });
+
   const selectedCategory = selectedCategoryId
     ? findCategoryById(categoryTree, selectedCategoryId)
     : undefined;
 
-  // Lọc chỉ lấy bài đã xuất bản (PUBLISHED) để hiển thị trên cẩm nang công khai
-  const publicPosts = React.useMemo(() => {
-    return posts.filter((p) => p.status === 'PUBLISHED');
-  }, [posts]);
+  const articles = articlesPagination?.items || [];
 
   // Áp dụng bộ lọc & tìm kiếm
   const filteredPosts = React.useMemo(() => {
-    let list = [...publicPosts];
-
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      list = list.filter(
-        (p) =>
-          p.title.toLowerCase().includes(q) ||
-          p.summary.toLowerCase().includes(q) ||
-          p.tags?.some((t) => t.toLowerCase().includes(q))
-      );
-    }
-
-    if (selectedCategory) {
-      // Tạm thời: bài viết mẫu lưu `category` dạng nhãn tự do nên so khớp theo tên.
-      // Khi API bài viết hỗ trợ lọc theo `categoryId`, thay bằng filter server-side.
-      list = list.filter((p) => matchesCategoryName(selectedCategory.name, p.category));
-    }
+    let list = [...articles];
 
     if (selectedSchool !== 'ALL') {
-      list = list.filter((p) => p.dietSchool === selectedSchool || p.dietSchool === 'ALL');
+      list = list.filter((p) => {
+        if ('dietSchool' in p) {
+          return p.dietSchool === selectedSchool || p.dietSchool === 'ALL';
+        }
+        return true;
+      });
     }
 
     if (sortBy === 'newest') {
       list.sort((a, b) => b.id.localeCompare(a.id));
     } else if (sortBy === 'score') {
-      list.sort((a, b) => b.score - a.score);
+      list.sort((a, b) => b.stats.likes - a.stats.likes);
     } else if (sortBy === 'views') {
-      list.sort((a, b) => b.views - a.views);
+      list.sort((a, b) => b.stats.views - a.stats.views);
     }
 
     return list;
-  }, [publicPosts, searchQuery, selectedCategory, selectedSchool, sortBy]);
+  }, [articles, selectedSchool, sortBy]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 lg:px-6 space-y-8">
@@ -223,8 +218,31 @@ export default function BlogListingPage() {
         </div>
       </div>
 
-      {/* Posts Grid */}
-      {filteredPosts.length > 0 ? (
+      {/* Posts Grid - 4 States */}
+      {isArticlesLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div
+              key={i}
+              className="h-80 animate-pulse rounded-2xl border border-border/60 bg-muted/40"
+            />
+          ))}
+        </div>
+      ) : isArticlesError ? (
+        <div className="rounded-3xl border border-destructive/30 bg-destructive/5 p-8 text-center space-y-3">
+          <p className="font-semibold text-destructive">Không thể tải danh sách bài viết.</p>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            Đã có lỗi xảy ra trong quá trình nạp bài viết từ máy chủ. Vui lòng thử lại.
+          </p>
+          <Button
+            variant="outline"
+            className="rounded-xl mt-2"
+            onClick={() => void refetchArticles()}
+          >
+            Thử lại
+          </Button>
+        </div>
+      ) : filteredPosts.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredPosts.map((post) => (
             <PostCard key={post.id} post={post} />

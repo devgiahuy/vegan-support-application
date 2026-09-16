@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Search, Home, ChevronRight, SlidersHorizontal, Sparkles } from 'lucide-react';
+import { Search, Home, ChevronRight, SlidersHorizontal, Sparkles, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -12,12 +12,21 @@ import { CategoryType } from '@/common/enums';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
 import { CategoryFilterList } from '@/features/category/components/category-filter-list';
 import { findCategoryById } from '@/features/category/utils/flatten-categories';
+import { useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
+import { RecipeCard } from '@/features/recipe/components/recipe-card';
 
 const TIMES = ['Tất cả thời gian', 'Dưới 15 phút', '15 – 30 phút', '30 – 60 phút', 'Trên 1 giờ'];
+const DIFFICULTIES = [
+  { label: 'Tất cả độ khó', value: '' },
+  { label: 'Dễ', value: 'EASY' },
+  { label: 'Trung bình', value: 'MEDIUM' },
+  { label: 'Nâng cao', value: 'HARD' },
+];
 
 export default function RecipeDiscoveryPage() {
   const [query, setQuery] = React.useState('');
   const [time, setTime] = React.useState('Tất cả thời gian');
+  const [difficulty, setDifficulty] = React.useState('');
   const [checkedIds, setCheckedIds] = React.useState<string[]>([]);
 
   const {
@@ -27,6 +36,19 @@ export default function RecipeDiscoveryPage() {
     refetch: refetchCategories,
   } = useCategoryTreeQuery(CategoryType.RECIPE_GROUP);
 
+  const {
+    data: recipesPagination,
+    isLoading: isRecipesLoading,
+    isError: isRecipesError,
+    refetch: refetchRecipes,
+  } = useRecipesQuery({
+    q: query.trim() || undefined,
+    category: checkedIds[0] || undefined,
+    difficulty: difficulty || undefined,
+  });
+
+  const recipes = recipesPagination?.items || [];
+
   const toggleCat = (id: string) =>
     setCheckedIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
 
@@ -34,21 +56,25 @@ export default function RecipeDiscoveryPage() {
     .map((id) => findCategoryById(categoryTree, id)?.name)
     .filter((name): name is string => typeof name === 'string');
 
-  // Backend chưa có endpoint công thức (`/posts` hay `/recipes` đều chưa có
-  // trong swagger) nên danh sách để trống trung thực thay vì dùng dữ liệu mẫu.
-  // Khi API READY, thay bằng query thật + filter server-side theo danh mục.
-  const recipes: never[] = [];
-
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 lg:px-6">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-1.5 text-sm text-muted-foreground">
-        <Link href="/" className="inline-flex items-center gap-1 hover:text-primary">
-          <Home className="h-3.5 w-3.5" /> Trang chủ
-        </Link>
-        <ChevronRight className="h-3.5 w-3.5" />
-        <span className="font-semibold text-primary">Khám phá công thức</span>
-        {/* Số lượng thật sẽ hiện khi API công thức READY. */}
+      <nav className="flex items-center justify-between text-sm text-muted-foreground">
+        <div className="flex items-center gap-1.5">
+          <Link href="/" className="inline-flex items-center gap-1 hover:text-primary">
+            <Home className="h-3.5 w-3.5" /> Trang chủ
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5" />
+          <span className="font-semibold text-primary">Khám phá công thức</span>
+          <span className="text-xs font-normal text-muted-foreground">
+            ({recipesPagination?.metadata?.totalItems ?? recipes.length} món)
+          </span>
+        </div>
+        <Button asChild size="sm" className="gap-1.5 rounded-xl">
+          <Link href="/recipes/new">
+            <PlusCircle className="h-4 w-4" /> Đăng công thức mới
+          </Link>
+        </Button>
       </nav>
 
       {/* Search */}
@@ -62,24 +88,37 @@ export default function RecipeDiscoveryPage() {
             className="h-12 rounded-2xl pl-10"
           />
         </div>
-        <Button className="h-12 gap-2 rounded-2xl px-6">Tìm kiếm</Button>
+        <Button className="h-12 gap-2 rounded-2xl px-6" onClick={() => void refetchRecipes()}>
+          Tìm kiếm
+        </Button>
       </div>
 
       {/* Filter chips */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <span className="text-sm text-muted-foreground">Đang lọc:</span>
-        {selectedCategoryNames.length === 0 ? (
-          <span className="text-sm text-muted-foreground">Tất cả danh mục</span>
+        {selectedCategoryNames.length === 0 && !difficulty ? (
+          <span className="text-sm text-muted-foreground">Tất cả danh mục & độ khó</span>
         ) : (
-          selectedCategoryNames.map((name) => (
-            <Badge key={name} className="gap-1 rounded-full bg-primary/10 text-primary">
-              {name}
-            </Badge>
-          ))
+          <>
+            {selectedCategoryNames.map((name) => (
+              <Badge key={name} className="gap-1 rounded-full bg-primary/10 text-primary">
+                {name}
+              </Badge>
+            ))}
+            {difficulty && (
+              <Badge className="gap-1 rounded-full bg-cta/10 text-cta">
+                Độ khó: {DIFFICULTIES.find((d) => d.value === difficulty)?.label}
+              </Badge>
+            )}
+          </>
         )}
-        {selectedCategoryNames.length > 0 && (
+        {(selectedCategoryNames.length > 0 || difficulty || query) && (
           <button
-            onClick={() => setCheckedIds([])}
+            onClick={() => {
+              setCheckedIds([]);
+              setDifficulty('');
+              setQuery('');
+            }}
             className="text-sm text-muted-foreground underline decoration-dotted hover:text-destructive"
           >
             Xoá tất cả bộ lọc
@@ -135,7 +174,24 @@ export default function RecipeDiscoveryPage() {
                 )}
               </div>
 
-              {/* Lọc theo nguyên liệu sẽ thêm khi API công thức READY. */}
+              {/* Lọc theo độ khó */}
+              <div>
+                <h3 className="text-sm font-semibold">Độ khó</h3>
+                <div className="mt-3 space-y-2">
+                  {DIFFICULTIES.map((d) => (
+                    <label key={d.value} className="flex cursor-pointer items-center gap-2 text-sm">
+                      <input
+                        type="radio"
+                        name="difficulty"
+                        checked={difficulty === d.value}
+                        onChange={() => setDifficulty(d.value)}
+                        className="h-4 w-4 accent-primary"
+                      />
+                      {d.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
 
               <div>
                 <h3 className="text-sm font-semibold">Thời gian chế biến</h3>
@@ -160,6 +216,7 @@ export default function RecipeDiscoveryPage() {
                 className="w-full rounded-xl"
                 onClick={() => {
                   setCheckedIds([]);
+                  setDifficulty('');
                   setQuery('');
                   setTime('Tất cả thời gian');
                 }}
@@ -176,28 +233,66 @@ export default function RecipeDiscoveryPage() {
             <h1 className="text-xl font-bold sm:text-2xl">
               Khám phá công thức{' '}
               <span className="text-sm font-normal text-muted-foreground">
-                ({recipes.length} công thức)
+                ({recipesPagination?.metadata?.totalItems ?? recipes.length} công thức)
               </span>
             </h1>
           </div>
 
+          {/* 4 Trạng thái: Loading, Error, Empty, Success */}
           <div className="mt-5">
-            <EmptyState
-              title="Chưa có công thức nào"
-              description={
-                query.trim()
-                  ? `Không tìm thấy công thức cho "${query.trim()}". API công thức chưa sẵn sàng nên danh sách đang trống.`
-                  : 'API công thức chưa sẵn sàng nên danh sách đang trống. Danh sách thật sẽ hiện ở đây khi backend có endpoint.'
-              }
-              action={
-                <Button asChild variant="outline" className="mt-2 rounded-xl">
-                  <Link href="/categories?type=RECIPE_GROUP">Xem danh mục món chay</Link>
+            {isRecipesLoading ? (
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {[1, 2, 3, 4, 5, 6].map((i) => (
+                  <div
+                    key={i}
+                    className="h-80 animate-pulse rounded-2xl border border-border/60 bg-muted/40"
+                  />
+                ))}
+              </div>
+            ) : isRecipesError ? (
+              <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-6 text-center">
+                <p className="font-semibold text-destructive">Không thể tải danh sách công thức.</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Đã có lỗi xảy ra khi kết nối tới máy chủ. Vui lòng thử lại.
+                </p>
+                <Button
+                  variant="outline"
+                  className="mt-4 rounded-xl"
+                  onClick={() => void refetchRecipes()}
+                >
+                  Thử lại
                 </Button>
-              }
-            />
+              </div>
+            ) : recipes.length === 0 ? (
+              <EmptyState
+                title="Chưa có công thức nào"
+                description={
+                  query.trim()
+                    ? `Không tìm thấy công thức phù hợp với từ khóa "${query.trim()}". Hãy thử từ khóa khác.`
+                    : 'Không tìm thấy công thức nào phù hợp với bộ lọc hiện tại.'
+                }
+                action={
+                  <Button
+                    variant="outline"
+                    className="mt-2 rounded-xl"
+                    onClick={() => {
+                      setCheckedIds([]);
+                      setDifficulty('');
+                      setQuery('');
+                    }}
+                  >
+                    Xóa tất cả bộ lọc
+                  </Button>
+                }
+              />
+            ) : (
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {recipes.map((recipe, index) => (
+                  <RecipeCard key={recipe.id} recipe={recipe} priority={index === 0} />
+                ))}
+              </div>
+            )}
           </div>
-
-          {/* Phân trang sẽ thêm khi API công thức READY. */}
 
           {/* AI card */}
           <Card className="mt-8 border-primary/20 bg-gradient-to-br from-primary/5 to-cta/5">

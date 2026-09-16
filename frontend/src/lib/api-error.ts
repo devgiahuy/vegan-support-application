@@ -101,6 +101,38 @@ export const getApiErrorMessage = (
 };
 
 /**
+ * Tóm tắt lỗi từng field (`error.fields`) thành text hiển thị trong toast.
+ * Ví dụ: { "title": ["Quá ngắn"] } -> "title: Quá ngắn". Giới hạn số dòng
+ * để toast không quá dài; phần còn lại user xem trong Network/log.
+ */
+export const formatApiErrorFields = (error: unknown, maxFields: number = 3): string | undefined => {
+  const fields = getApiErrorFields(error);
+  if (!fields) return undefined;
+  const parts: string[] = [];
+  for (const [key, value] of Object.entries(fields)) {
+    const messages = Array.isArray(value) ? value.map((v) => String(v)).join(', ') : String(value);
+    parts.push(`${key}: ${messages}`);
+    if (parts.length >= maxFields) break;
+  }
+  if (parts.length === 0) return undefined;
+  const extra = Object.keys(fields).length - parts.length;
+  return extra > 0 ? [...parts, `... và ${extra} lỗi khác`].join('\n') : parts.join('\n');
+};
+
+/**
+ * Toast lỗi API bám message backend: dòng chính là `error.message` từ server
+ * (tiếng Việt), dòng phụ là tối đa vài lỗi field. Không bao giờ hiện message
+ * generic của axios ("Request failed with status code 400").
+ */
+export const toastApiError = (error: unknown, title: string, fallbackMessage?: string) => {
+  const message = getApiErrorMessage(error, fallbackMessage);
+  const fields = formatApiErrorFields(error);
+  toast.error(title, {
+    description: fields ? `${message}\n${fields}` : message,
+  });
+};
+
+/**
  * Handles API errors by showing a toast, avoiding duplicates with Axios global handler.
  */
 export const handleApiError = (error: unknown, fallbackMessage?: string) => {

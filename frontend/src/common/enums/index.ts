@@ -113,3 +113,57 @@ export enum ResolutionMatch {
   EXACT = 'EXACT',
   AMBIGUOUS = 'AMBIGUOUS',
 }
+
+/** Loại bài viết / nội dung (Content & Media). */
+export enum PostType {
+  RECIPE = 'RECIPE',
+  BLOG = 'BLOG',
+  VIDEO = 'VIDEO',
+}
+
+/** Trạng thái vòng đời bài viết (Content & Media, bám backend `PostStatus`). */
+export enum PostStatus {
+  DRAFT = 'DRAFT',
+  PENDING_REVIEW = 'PENDING_REVIEW',
+  PUBLISHED = 'PUBLISHED',
+  FLAGGED = 'FLAGGED',
+  QUARANTINED = 'QUARANTINED',
+  REJECTED = 'REJECTED',
+  HIDDEN = 'HIDDEN',
+  ARCHIVED = 'ARCHIVED',
+  DELETED = 'DELETED',
+}
+
+/** Độ khó của công thức nấu ăn. */
+export enum RecipeDifficulty {
+  EASY = 'EASY',
+  MEDIUM = 'MEDIUM',
+  HARD = 'HARD',
+}
+
+/** Nguồn phát video. */
+export enum VideoSource {
+  CLOUDINARY = 'CLOUDINARY',
+  YOUTUBE = 'YOUTUBE',
+}
+
+/** Quyết định kiểm duyệt nội dung (Content Review). */
+export enum ReviewDecision {
+  APPROVE = 'APPROVE',
+  REJECT = 'REJECT',
+}
+
+/** Trạng thái mục trong hàng chờ kiểm duyệt (backend PostRevisionStatus subset). */
+export enum ReviewItemStatus {
+  PENDING_REVIEW = 'PENDING_REVIEW',
+  FLAGGED = 'FLAGGED',
+  QUARANTINED = 'QUARANTINED',
+}
+
+/** Độ ưu tiên xử lý kiểm duyệt. */
+export enum ModerationPriority {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  URGENT = 'URGENT',
+}

@@ -18,24 +18,41 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import type { Post } from '../types/post.model';
-import { usePostStore } from '@/store/usePostStore';
+import { SafeImage } from '@/components/shared/safe-image';
+import type { Post, Article } from '../types/post.model';
 
 interface PostCardProps {
-  post: Post;
+  post: Post | Article;
   className?: string;
   horizontal?: boolean;
 }
 
 export function PostCard({ post, className, horizontal = false }: PostCardProps) {
-  const { toggleSavePost } = usePostStore();
-  const [isSaved, setIsSaved] = React.useState<boolean>(post.saved || false);
+  // Trạng thái lưu giữ ở state local (API bookmark chưa có), không dùng store toàn cục.
+  const [isSaved, setIsSaved] = React.useState<boolean>(
+    ('saved' in post ? post.saved : false) ?? false
+  );
+
+  const ARTICLE_FALLBACK_COVER =
+    'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=800&auto=format&fit=crop&q=80';
+  const coverImage =
+    ('coverImageUrl' in post ? post.coverImageUrl : post.coverImage) || ARTICLE_FALLBACK_COVER;
+  const categoryName =
+    typeof post.category === 'string' ? post.category : post.category?.name || 'Dinh dưỡng';
+  const readingMinutes =
+    ('readingTimeMinutes' in post ? post.readingTimeMinutes : post.readingMinutes) || 5;
+  const publishedDate =
+    ('formattedPublishedAt' in post ? post.formattedPublishedAt : post.publishedAt) || '';
+  const summary = ('excerpt' in post ? post.excerpt : post.summary) || '';
+  const authorAvatar = ('avatar' in post.author ? post.author.avatar : post.author.avatarUrl) || '';
+  const score = 'stats' in post ? post.stats.likes : post.score;
+  const views = 'stats' in post ? post.stats.views : post.views;
+  const commentCount = 'stats' in post ? post.stats.comments : post.commentCount;
 
   const handleToggleSave = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setIsSaved(!isSaved);
-    toggleSavePost(post.id);
     toast.success(
       !isSaved ? 'Đã lưu bài viết vào danh sách của bạn!' : 'Đã bỏ lưu bài viết khỏi danh sách.'
     );
@@ -50,30 +67,40 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
     }
   };
 
+  const dietSchool = 'dietSchool' in post ? post.dietSchool : undefined;
   const dietSchoolLabel =
-    post.dietSchool === 'PHAT_GIAO'
+    dietSchool === 'PHAT_GIAO'
       ? 'Chay Phật giáo'
-      : post.dietSchool === 'DAO_GIAO'
+      : dietSchool === 'DAO_GIAO'
         ? 'Chay Đạo giáo'
         : 'Thuần chay';
 
   const roleBadgeInfo = React.useMemo(() => {
-    if (post.author.role === 'NUTRITION_EXPERT') {
+    const author = post.author;
+    if ('role' in author) {
+      if (author.role === 'NUTRITION_EXPERT') {
+        return {
+          label: 'Chuyên gia Dinh dưỡng',
+          className:
+            'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+          icon: BadgeCheck,
+        };
+      }
+      if (author.role === 'EXPERIENCED_COOK') {
+        return {
+          label: 'Đầu bếp kinh nghiệm',
+          className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+          icon: Sparkles,
+        };
+      }
       return {
-        label: 'Chuyên gia Dinh dưỡng',
-        className: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-        icon: BadgeCheck,
-      };
-    }
-    if (post.author.role === 'EXPERIENCED_COOK') {
-      return {
-        label: 'Đầu bếp kinh nghiệm',
-        className: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
-        icon: Sparkles,
+        label: author.roleTitle || 'Thành viên',
+        className: 'bg-muted text-muted-foreground border-transparent',
+        icon: null,
       };
     }
     return {
-      label: post.author.roleTitle || 'Thành viên',
+      label: 'Tác giả',
       className: 'bg-muted text-muted-foreground border-transparent',
       icon: null,
     };
@@ -92,14 +119,17 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
         <Link href={`/articles/${post.id}`} className="flex flex-col sm:flex-row h-full">
           {/* Cover Image */}
           <div className="relative aspect-video sm:aspect-[4/3] sm:w-56 shrink-0 overflow-hidden bg-muted">
-            <img
-              src={post.coverImage}
+            <SafeImage
+              src={coverImage}
+              fallbackSrc={ARTICLE_FALLBACK_COVER}
               alt={post.title}
+              fill
+              sizes="(max-width: 640px) 100vw, 224px"
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
             <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1.5">
               <Badge className="bg-background/90 text-foreground backdrop-blur text-[11px] font-medium shadow-sm">
-                {post.category}
+                {categoryName}
               </Badge>
             </div>
           </div>
@@ -116,10 +146,14 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
                 </Badge>
                 <span>•</span>
                 <span className="flex items-center gap-1">
-                  <Clock className="h-3 w-3" /> {post.readingMinutes} phút đọc
+                  <Clock className="h-3 w-3" /> {readingMinutes} phút đọc
                 </span>
-                <span>•</span>
-                <span>{post.publishedAt}</span>
+                {publishedDate && (
+                  <>
+                    <span>•</span>
+                    <span>{publishedDate}</span>
+                  </>
+                )}
               </div>
 
               <h3 className="text-base font-bold text-foreground line-clamp-2 transition-colors group-hover:text-primary">
@@ -127,14 +161,14 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
               </h3>
 
               <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-                {post.summary}
+                {summary}
               </p>
             </div>
 
             <div className="mt-4 flex items-center justify-between pt-3 border-t border-border/50">
               <div className="flex items-center gap-2 min-w-0">
                 <Avatar className="h-7 w-7 ring-1 ring-primary/20">
-                  <AvatarImage src={post.author.avatar} alt={post.author.name} />
+                  <AvatarImage src={authorAvatar} alt={post.author.name} />
                   <AvatarFallback className="text-xs bg-primary/10 text-primary">
                     {post.author.name.charAt(0)}
                   </AvatarFallback>
@@ -157,10 +191,10 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
 
               <div className="flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="inline-flex items-center gap-1 font-semibold text-primary">
-                  <ArrowBigUp className="h-4 w-4 fill-primary/20" /> {post.score}
+                  <ArrowBigUp className="h-4 w-4 fill-primary/20" /> {score}
                 </span>
                 <span className="inline-flex items-center gap-1">
-                  <MessageSquare className="h-3.5 w-3.5" /> {post.commentCount}
+                  <MessageSquare className="h-3.5 w-3.5" /> {commentCount}
                 </span>
               </div>
             </div>
@@ -181,14 +215,17 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
         href={`/articles/${post.id}`}
         className="block relative aspect-video w-full overflow-hidden bg-muted"
       >
-        <img
-          src={post.coverImage}
+        <SafeImage
+          src={coverImage}
+          fallbackSrc={ARTICLE_FALLBACK_COVER}
           alt={post.title}
+          fill
+          sizes="(max-width: 768px) 100vw, 400px"
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
         <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">
           <Badge className="bg-background/90 text-foreground backdrop-blur text-xs font-medium shadow-sm">
-            {post.category}
+            {categoryName}
           </Badge>
           <Badge
             variant="outline"
@@ -227,10 +264,14 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
         <div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
             <span className="flex items-center gap-1">
-              <Clock className="h-3 w-3" /> {post.readingMinutes} phút đọc
+              <Clock className="h-3 w-3" /> {readingMinutes} phút đọc
             </span>
-            <span>•</span>
-            <span>{post.publishedAt}</span>
+            {publishedDate && (
+              <>
+                <span>•</span>
+                <span>{publishedDate}</span>
+              </>
+            )}
           </div>
 
           <Link href={`/articles/${post.id}`}>
@@ -240,7 +281,7 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
           </Link>
 
           <p className="mt-2 text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-            {post.summary}
+            {summary}
           </p>
 
           {post.tags && post.tags.length > 0 && (
@@ -260,7 +301,7 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
         <div className="mt-5 flex items-center justify-between pt-4 border-t border-border/60">
           <div className="flex items-center gap-2.5 min-w-0">
             <Avatar className="h-8 w-8 ring-1 ring-primary/20">
-              <AvatarImage src={post.author.avatar} alt={post.author.name} />
+              <AvatarImage src={authorAvatar} alt={post.author.name} />
               <AvatarFallback className="text-xs bg-primary/10 text-primary">
                 {post.author.name.charAt(0)}
               </AvatarFallback>
@@ -282,13 +323,13 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
 
           <div className="flex items-center gap-2.5 text-xs text-muted-foreground shrink-0">
             <span className="flex items-center gap-1 font-semibold text-primary">
-              <ArrowBigUp className="h-4 w-4 fill-primary/20" /> {post.score}
+              <ArrowBigUp className="h-4 w-4 fill-primary/20" /> {score}
             </span>
             <span className="flex items-center gap-1">
-              <Eye className="h-3.5 w-3.5" /> {post.views}
+              <Eye className="h-3.5 w-3.5" /> {views}
             </span>
             <span className="flex items-center gap-1">
-              <MessageSquare className="h-3.5 w-3.5" /> {post.commentCount}
+              <MessageSquare className="h-3.5 w-3.5" /> {commentCount}
             </span>
           </div>
         </div>

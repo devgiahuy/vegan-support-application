@@ -11,7 +11,8 @@ Before changing product behavior, backend APIs, database schemas, or frontend AP
 3. The prompt for the active phase under `backend/docs/prompts/`, when phase-based implementation is requested.
 4. `frontend/docs/BACKEND_INTEGRATION.md` — live backend capability status and frontend integration contract.
 5. `frontend/docs/ARCHITECTURE.md` — mandatory frontend DTO/Model/Mapper and query-layer conventions.
-6. `docs/SRS.md` once it exists. Until the SRS files are consolidated, do not silently resolve conflicting requirements; follow the decisions in the implementation plan and flag remaining conflicts.
+6. `frontend/AGENTS.md` — mandatory frontend agent instructions, architecture rules, and contextual skill enforcement.
+7. `docs/SRS.md` once it exists. Until the SRS files are consolidated, do not silently resolve conflicting requirements; follow the decisions in the implementation plan and flag remaining conflicts.
 
 ## Backend contract synchronization — mandatory
 
@@ -40,6 +41,7 @@ If a backend change is breaking, set the affected endpoint status to `CHANGING`,
 - Every API consumer requires separate request/response DTOs, UI Models, Mappers, API functions, TanStack Query keys/hooks, and mapper tests.
 - Components must not consume raw backend DTOs and must not use `any`.
 - Handle documented business error codes and loading/error/empty/success states.
+- Follow all guidelines in `frontend/AGENTS.md` and enforce contextual skills in `frontend/.agents/skills/` (e.g. `shadcn`, `ui-ux-pro-max`, `baseline-ui`, `remotion-best-practices`, `fixing-motion-performance`, `next-best-practices`, `full-output-enforcement`).
 - After successful integration, update the `FE integrated` column and changelog in `frontend/docs/BACKEND_INTEGRATION.md`.
 
 ## Business-rule safety

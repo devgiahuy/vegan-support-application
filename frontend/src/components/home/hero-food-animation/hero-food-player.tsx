@@ -59,6 +59,7 @@ export function HeroFoodPlayer({ className = '' }: HeroFoodPlayerProps) {
         loop
         controls={false}
         clickToPlay={false}
+        acknowledgeRemotionLicense
         style={{
           width: '100%',
           height: '100%',

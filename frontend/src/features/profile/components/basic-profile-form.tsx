@@ -3,17 +3,17 @@
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, ImageIcon } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useUpdateBasicProfileMutation } from '../queries/profile.queries';
 import { basicProfileSchema, type BasicProfileFormValues } from '../schemas/profile.schema';
 import { getApiErrorCode, getApiErrorFields } from '@/lib/api-error';
+import { AvatarUploader } from './avatar-uploader';
 
 /**
- * Form cập nhật tên hiển thị + ảnh đại diện (URL HTTP(S)).
+ * Form cập nhật tên hiển thị + ảnh đại diện (upload file → URL Cloudinary).
  * Nút lưu vô hiệu hóa khi không có thay đổi — PATCH yêu cầu ít nhất 1 field.
  */
 export function BasicProfileForm({
@@ -27,6 +27,9 @@ export function BasicProfileForm({
 }) {
   const updateMutation = useUpdateBasicProfileMutation();
   const [formError, setFormError] = React.useState<string | null>(null);
+  // `true` khi ảnh hiện tại chỉ là preview mock (`blob:`) vì backend
+  // upload chưa phục vụ — phải chặn submit để BE không 400.
+  const [isMockAvatar, setIsMockAvatar] = React.useState(false);
 
   const form = useForm<BasicProfileFormValues>({
     resolver: zodResolver(basicProfileSchema),
@@ -36,10 +39,11 @@ export function BasicProfileForm({
   // Đồng bộ lại khi profile tải xong sau lần render đầu.
   React.useEffect(() => {
     form.reset({ displayName: initialDisplayName, avatarUrl: initialAvatarUrl });
+    setIsMockAvatar(false);
   }, [form, initialDisplayName, initialAvatarUrl]);
 
   const { isDirty } = form.formState;
-  const avatarPreview = (form.watch('avatarUrl') ?? '').trim();
+  const avatarValue = form.watch('avatarUrl') ?? '';
 
   const onSubmit = async (values: BasicProfileFormValues) => {
     setFormError(null);
@@ -47,7 +51,14 @@ export function BasicProfileForm({
     const name = (values.displayName ?? '').trim();
     const avatar = (values.avatarUrl ?? '').trim();
     if (name.length > 0 && name !== initialDisplayName) payload.displayName = name;
-    if (avatar !== initialAvatarUrl) payload.avatarUrl = avatar.length > 0 ? avatar : null;
+    if (avatar !== initialAvatarUrl) {
+      // Chặn preview mock (`blob:`) — chỉ gửi URL http(s) thật hoặc xóa ảnh.
+      if (avatar.startsWith('blob:') || isMockAvatar) {
+        setFormError('Ảnh chưa tải lên máy chủ. Vui lòng thử lại khi backend sẵn sàng.');
+        return;
+      }
+      payload.avatarUrl = avatar.length > 0 ? avatar : null;
+    }
     if (Object.keys(payload).length === 0) return;
 
     try {
@@ -92,33 +103,18 @@ export function BasicProfileForm({
         </div>
       )}
 
-      <div className="flex items-center gap-4">
-        <Avatar className="h-16 w-16 rounded-2xl">
-          {avatarPreview.startsWith('http') && (
-            <AvatarImage src={avatarPreview} alt="Xem trước ảnh đại diện" />
-          )}
-          <AvatarFallback className="rounded-2xl bg-primary/10 text-xl text-primary">
-            {fallbackInitials || 'U'}
-          </AvatarFallback>
-        </Avatar>
-        <div className="space-y-1.5 flex-1">
-          <Label htmlFor="profile-avatarUrl">URL ảnh đại diện (để trống để xóa ảnh)</Label>
-          <div className="relative">
-            <ImageIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              id="profile-avatarUrl"
-              type="url"
-              inputMode="url"
-              placeholder="https://..."
-              className="pl-9"
-              {...form.register('avatarUrl')}
-            />
-          </div>
-          {form.formState.errors.avatarUrl && (
-            <p className="text-xs text-destructive">{form.formState.errors.avatarUrl.message}</p>
-          )}
-        </div>
-      </div>
+      <AvatarUploader
+        value={avatarValue}
+        fallbackInitials={fallbackInitials}
+        disabled={updateMutation.isPending}
+        onChange={(url, isMock) => {
+          setIsMockAvatar(isMock);
+          form.setValue('avatarUrl', url, { shouldDirty: true, shouldValidate: false });
+        }}
+      />
+      {form.formState.errors.avatarUrl && (
+        <p className="text-xs text-destructive">{form.formState.errors.avatarUrl.message}</p>
+      )}
 
       <div className="space-y-1.5">
         <Label htmlFor="profile-displayName">Tên hiển thị</Label>
