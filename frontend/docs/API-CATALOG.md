@@ -2,9 +2,19 @@
 
 # API Catalog
 
-> Source: `http://localhost:4000/api-docs.json` | Generated: 2026-09-15T16:27:39.407Z
-> 24 endpoints · 7 nhóm · 26 schemas
+> Source: `../backend/openapi.json` | Generated: 2026-09-16T08:07:05.561Z
+> 71 endpoints · 17 nhóm · 70 schemas
 > Quy tắc agent: đọc bảng dưới tìm tag/path → chỉ mở `docs/api/<tag>.md` tương ứng. Cấm đọc swagger gốc.
+
+## AI Chat (5) → `docs/api/ai-chat.md`
+
+| Method | Path | Summary | Request | Responses |
+|---|---|---|---|---|
+| GET | `/api/v1/chat/sessions` | List private chat sessions của authenticated user | — | 200:ChatSessionListResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse |
+| POST | `/api/v1/chat/sessions` | Tạo private chat session cho authenticated user hoặc guest | CreateChatSessionRequest | 201:ChatSessionResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse, 423:ErrorResponse |
+| GET | `/api/v1/chat/sessions/{id}/messages` | Đọc message history theo ownership | — | 200:ChatMessageListResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse, 404:ErrorResponse |
+| POST | `/api/v1/chat/sessions/{id}/messages` | Stream nutrition answer qua SSE | SendChatMessageRequest | 200:ChatSseStream, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse, 404:ErrorResponse, 409:ErrorResponse, 423:Er |
+| POST | `/api/v1/chat/messages/{id}/feedback` | Upsert feedback cho owned assistant message | ChatFeedbackRequest | 200:ChatFeedbackResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse, 404:ErrorResponse, 423:ErrorResponse |
 
 ## Auth (4) → `docs/api/auth.md`
 
@@ -50,6 +60,56 @@
 
 ## Ingredients (2) → `docs/api/ingredients.md`
 
+| Method | Path | Summary | Request | Responses |
+|---|---|---|---|---|
+| GET | `/api/v1/ingredients` | List canonical ingredient active | — | 200:IngredientListResponse, 400:ErrorResponse |
+| GET | `/api/v1/ingredients/resolve` | Resolve tên/alias ingredient không phân biệt dấu | — | 200:IngredientResolutionResponse, 400:ErrorResponse |
+
+## Meal Plans (5) → `docs/api/meal-plans.md`
+
+| Method | Path | Summary | Request | Responses |
+|---|---|---|---|---|
+| POST | `/api/v1/meal-plans/generate` | Tạo hoặc regenerate weekly meal plan | GenerateMealPlanRequest | 201:MealPlanResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse, 409:ErrorResponse, 423:ErrorResponse |
+| GET | `/api/v1/meal-plans` | List meal plan versions của current user | — | 200:MealPlanListResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse |
+| GET | `/api/v1/meal-plans/{id}` | Đọc meal plan version thuộc current user | — | 200:MealPlanResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse, 404:ErrorResponse |
+| DELETE | `/api/v1/meal-plans/{id}` | Soft-delete owned meal plan | — | 200:DeleteMealPlanResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse, 404:ErrorResponse, 409:ErrorRespons |
+| PATCH | `/api/v1/meal-plans/{id}/items/{itemId}/swap` | Swap một meal slot an toàn | SwapMealPlanItemRequest | 200:MealPlanResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse, 404:ErrorResponse, 409:ErrorResponse, 423 |
+
+## Moderation (4) → `docs/api/moderation.md`
+
+| Method | Path | Summary | Request | Responses |
+|---|---|---|---|---|
+| GET | `/api/v1/review-queue/posts` | List post revisions awaiting editorial or Admin moderation review | — | 200:ReviewQueueListResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse |
+| PATCH | `/api/v1/review-queue/posts/{id}/approve` | Approve latest post revision | object | 200:ReviewQueueItemResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse, 404:ErrorResponse, 409:ErrorRespon |
+| PATCH | `/api/v1/review-queue/posts/{id}/reject` | Reject latest post revision | object | 200:ReviewQueueItemResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse, 404:ErrorResponse, 409:ErrorRespon |
+| POST | `/api/v1/reports` | Report a visible post or comment | object | 201:ModerationReportResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse, 404:ErrorResponse, 409:ErrorRespo |
+
+## Moderation Admin (6) → `docs/api/moderation-admin.md`
+
+| Method | Path | Summary | Request | Responses |
+|---|---|---|---|---|
+| GET | `/api/v1/admin/reports` | Admin list reports | — | 200:ModerationReportListResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse |
+| PATCH | `/api/v1/admin/reports/{id}/resolve` | Resolve all active reports for the same target with an Admin decision | object | 200:ModerationReportResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse, 404:ErrorResponse, 409:ErrorRespo |
+| GET | `/api/v1/admin/users` | Admin search and filter users | — | 200:AdminModerationUserListResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse |
+| PATCH | `/api/v1/admin/users/{id}/status` | Lock, unlock, ban, unban or delete a user account | object | 200:AdminModerationUserResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse, 404:ErrorResponse, 409:ErrorRe |
+| GET | `/api/v1/admin/comments` | Admin list comments for moderation | — | 200:AdminModerationCommentListResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse |
+| PATCH | `/api/v1/admin/comments/{id}/status` | Admin hide or restore a comment | object | 200:AdminModerationCommentResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse, 404:ErrorResponse, 409:Erro |
+
+## Recommendations (5) → `docs/api/recommendations.md`
+
+| Method | Path | Summary | Request | Responses |
+|---|---|---|---|---|
+| POST | `/api/v1/behavior-events` | Ghi nhận behavior event đã consent | CreateBehaviorEventRequest | 200:BehaviorEventResponse, 201:BehaviorEventResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse, 404:Error |
+| GET | `/api/v1/users/me/personalization` | Đọc personalization consent | — | 200:PersonalizationResponse, 401:ErrorResponse, 403:ErrorResponse |
+| PUT | `/api/v1/users/me/personalization` | Bật hoặc tắt personalization | UpdatePersonalizationRequest | 200:PersonalizationResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse, 409:ErrorResponse, 423:ErrorRespon |
+| DELETE | `/api/v1/users/me/behavior-history` | Xóa toàn bộ behavior history của chính mình | — | 200:DeleteBehaviorHistoryResponse, 401:ErrorResponse, 403:ErrorResponse, 423:ErrorResponse |
+| GET | `/api/v1/recommendations/home` | Recommendation home đã áp hard constraints | — | 200:RecommendationResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse |
+
+## Uploads (1) → `docs/api/uploads.md`
+
+| Method | Path | Summary | Request | Responses |
+|---|---|---|---|---|
+| POST | `/api/v1/uploads/signature` | Tạo Cloudinary signed-upload parameters | UploadSignatureRequest | 200:UploadSignatureResponse, 400:ErrorResponse, 401:ErrorResponse, 403:ErrorResponse, 423:ErrorResponse |
 | Method | Path                          | Summary                                          | Request | Responses                                           |
 | ------ | ----------------------------- | ------------------------------------------------ | ------- | --------------------------------------------------- |
 | GET    | `/api/v1/ingredients`         | List canonical ingredient active                 | —       | 200:IngredientListResponse, 400:ErrorResponse       |

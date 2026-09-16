@@ -1,8 +1,8 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 1.3
+**Version:** 1.4
 
-**Ngày chốt:** 15/09/2026
+**Ngày chốt:** 16/09/2026
 
 **Trạng thái:** Approved baseline for planning
 **Mục tiêu gần:** Có một MVP chạy xuyên suốt UI → API → Database trong một tuần phát triển đầu tiên.
@@ -23,7 +23,7 @@
 | D8  | Backend             | Node.js + Express + TypeScript                                                                                  |
 | D9  | Bản đồ              | Hybrid: dữ liệu quán nội bộ + Google Maps/Places/Geocoding                                                      |
 | D10 | Media               | Cloudinary cho upload; hỗ trợ thêm YouTube URL                                                                  |
-| D11 | AI provider         | Provider adapter và model cấu hình qua environment; không hard-code model vào domain                            |
+| D11 | AI provider         | OpenAI API qua `AiProvider`; Responses API; chat mặc định `gpt-5.6-terra`, moderation `omni-moderation-latest`; model cấu hình qua environment, không hard-code trong domain |
 | D12 | Tài liệu            | Product SRS đặt tập trung ở `/docs`; tài liệu frontend/backend chỉ mô tả kỹ thuật                               |
 | D13 | FE/BE contract      | OpenAPI-first; frontend sinh catalog từ Swagger trước khi tích hợp                                              |
 | D14 | CV/STT              | Đặc tả trong roadmap; không coi UI mock là hoàn thành requirement                                               |
@@ -895,12 +895,20 @@ interface AiProvider {
 Environment/config:
 
 ```text
-AI_PROVIDER
-AI_MODEL_CHAT
-AI_MODEL_MODERATION
+AI_PROVIDER=openai
+OPENAI_API_KEY
+AI_MODEL_CHAT=gpt-5.6-terra
+AI_MODEL_MODERATION=omni-moderation-latest
 AI_TIMEOUT_MS
 AI_MAX_OUTPUT_TOKENS
 ```
+
+- Live chatbot dùng OpenAI Responses API và official OpenAI SDK; streaming từ provider được chuyển
+  thành SSE contract nội bộ để frontend không phụ thuộc trực tiếp vào event format của OpenAI.
+- `AiProvider` vẫn là boundary bắt buộc để dùng fake/local provider khi development và để core API
+  graceful fallback khi OpenAI unavailable. Không triển khai thêm live LLM provider khác trong MVP.
+- Model ID phải đọc từ config. Các giá trị trên là default đã chốt, có thể đổi bằng environment sau
+  khi review chất lượng/chi phí mà không sửa domain logic.
 
 Acceptance:
 

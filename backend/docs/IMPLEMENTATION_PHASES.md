@@ -1,10 +1,13 @@
 # Backend Implementation Phases
 
-**Version:** 2.0
+**Version:** 2.3
 
 **Cập nhật:** 16/09/2026
 
 **Stack baseline:** Node.js · Express · TypeScript · PostgreSQL · Prisma · Zod · OpenAPI
+
+**AI baseline:** OpenAI Responses API · `gpt-5.6-terra` chat · `omni-moderation-latest`
+moderation · fake/local adapter cho development
 
 Tài liệu này chia backend thành các phase đủ nhỏ để triển khai, xác minh và commit riêng. Mỗi phase được thực hiện trong một session mới bằng prompt tương ứng trong `backend/docs/prompts/`.
 
@@ -34,7 +37,7 @@ Tài liệu này chia backend thành các phase đủ nhỏ để triển khai, 
 | 08    | Moderation & Reports             | 04, 06, 07     | Review queue, AI flags, reports, hide/restore/ban, audit     | `feat(moderation): add review reports and audit workflow`     |
 | 09    | Behavior Events & Recommendation | 02, 04, 06     | Consent-aware events, scoring v1, explanations               | `feat(recommendations): add behavioral ranking v1`            |
 | 10    | Meal Planner                     | 02, 03, 04, 09 | Generate/version/swap/shopping list, hard constraints        | `feat(meal-plans): implement weekly planner`                  |
-| 11    | AI Chat Gateway                  | 01, 02         | Provider adapter, quota, SSE, private history, feedback      | `feat(chat): implement nutrition ai gateway`                  |
+| 11    | AI Chat Gateway                  | 01, 02         | OpenAI adapter, quota, SSE, private history, feedback        | `feat(chat): implement nutrition ai gateway`                  |
 | 12    | AI Sharing & Expert Verification | 07, 11         | Public answers, correction records, expert/Admin permissions | `feat(ai-review): add sharing and expert verification`        |
 | 13    | Restaurants & Google Maps        | 01, 02         | Internal/Google hybrid, nearby/search/submission/review      | `feat(restaurants): add location and maps integration`        |
 | 14    | Notifications                    | 01, 07, 08, 13 | In-app notifications, dedupe, read/read-all, retention       | `feat(notifications): add in-app event notifications`         |
@@ -105,25 +108,25 @@ Chỉ stage file thuộc phase. Xem staged diff trước khi commit. Nếu valid
 
 Cập nhật bảng này trong commit của phase. `Commit` phải là hash thật sau khi commit; nếu việc tự cập nhật hash vào cùng commit không khả thi, ghi hash vào changelog/integration guide ở phase kế tiếp hoặc dùng commit reference trong PR.
 
-| Phase | Status        | Completed date | Commit            | Notes                                                            |
-| ----- | ------------- | -------------- | ----------------- | ---------------------------------------------------------------- |
-| 00    | `COMPLETED`   | 2026-09-15     | This phase commit | Foundation gate passed; hash reported in phase handoff           |
-| 01    | `COMPLETED`   | 2026-09-15     | This phase commit | Auth/session gate passed; hash reported in phase handoff         |
-| 02    | `COMPLETED`   | 2026-09-15     | This phase commit | Profile/health/diet gates passed; rule set v1 seeded             |
-| 03    | `COMPLETED`   | 2026-09-15     | This phase commit | Catalog gates passed; category/ingredient seed ready             |
-| 04    | `COMPLETED`   | 2026-09-15     | This phase commit | Content/media gates passed; published demo seed ready            |
-| 05    | `COMPLETED`   | 2026-09-15     | This phase commit | Search/related gates passed; pg_trgm plan evidence saved         |
-| 06    | `COMPLETED`   | 2026-09-15     | This phase commit | Community gates passed; interaction demo seed ready              |
-| 07    | `COMPLETED`   | 2026-09-15     | This phase commit | Contributor application/profile and subtype RBAC ready           |
-| 08    | `COMPLETED`   | 2026-09-16     | This phase commit | Review/report/rule flags, selective ban restore and audit ready  |
-| 09    | `COMPLETED`   | 2026-09-16     | This phase commit | Consent, dedupe, hard-filtered scoring v1 and explanations ready |
-| 10    | `NOT_STARTED` | —              | —                 | —                                                                |
-| 11    | `NOT_STARTED` | —              | —                 | —                                                                |
-| 12    | `NOT_STARTED` | —              | —                 | —                                                                |
-| 13    | `NOT_STARTED` | —              | —                 | —                                                                |
-| 14    | `NOT_STARTED` | —              | —                 | —                                                                |
-| 15    | `NOT_STARTED` | —              | —                 | —                                                                |
-| 16    | `NOT_STARTED` | —              | —                 | —                                                                |
+| Phase | Status        | Completed date | Commit            | Notes                                                                |
+| ----- | ------------- | -------------- | ----------------- | -------------------------------------------------------------------- |
+| 00    | `COMPLETED`   | 2026-09-15     | This phase commit | Foundation gate passed; hash reported in phase handoff               |
+| 01    | `COMPLETED`   | 2026-09-15     | This phase commit | Auth/session gate passed; hash reported in phase handoff             |
+| 02    | `COMPLETED`   | 2026-09-15     | This phase commit | Profile/health/diet gates passed; rule set v1 seeded                 |
+| 03    | `COMPLETED`   | 2026-09-15     | This phase commit | Catalog gates passed; category/ingredient seed ready                 |
+| 04    | `COMPLETED`   | 2026-09-15     | This phase commit | Content/media gates passed; published demo seed ready                |
+| 05    | `COMPLETED`   | 2026-09-15     | This phase commit | Search/related gates passed; pg_trgm plan evidence saved             |
+| 06    | `COMPLETED`   | 2026-09-15     | This phase commit | Community gates passed; interaction demo seed ready                  |
+| 07    | `COMPLETED`   | 2026-09-15     | This phase commit | Contributor application/profile and subtype RBAC ready               |
+| 08    | `COMPLETED`   | 2026-09-16     | This phase commit | Review/report/rule flags, selective ban restore and audit ready      |
+| 09    | `COMPLETED`   | 2026-09-16     | This phase commit | Consent, dedupe, hard-filtered scoring v1 and explanations ready     |
+| 10    | `COMPLETED`   | 2026-09-16     | This phase commit | Versioned weekly planner, safe swap and shopping list ready          |
+| 11    | `COMPLETED`   | 2026-09-16     | This phase commit | OpenAI/fake adapter, private SSE chat, safe quota and feedback ready |
+| 12    | `NOT_STARTED` | —              | —                 | —                                                                    |
+| 13    | `NOT_STARTED` | —              | —                 | —                                                                    |
+| 14    | `NOT_STARTED` | —              | —                 | —                                                                    |
+| 15    | `NOT_STARTED` | —              | —                 | —                                                                    |
+| 16    | `NOT_STARTED` | —              | —                 | —                                                                    |
 
 ## 7. Prompt index
 

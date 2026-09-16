@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import {
+  ActivityLevel,
   AiFlagRiskLevel,
   AiFlagStatus,
   BehaviorEventType,
@@ -12,6 +13,8 @@ import {
   DietPattern,
   DietRuleSource,
   FoodGroup,
+  HealthDataSource,
+  HealthSex,
   IngredientResolutionStatus,
   MediaKind,
   MediaProvider,
@@ -702,6 +705,92 @@ async function main(): Promise<void> {
     });
   }
 
+  const plannerRecipeDefinitions = [
+    { slug: 'to-dau-hu-rau-xanh-420-demo', title: 'Tô đậu hũ rau xanh 420 kcal', calories: 420 },
+    { slug: 'com-nam-gao-lut-500-demo', title: 'Cơm nấm gạo lứt 500 kcal', calories: 500 },
+    { slug: 'com-dau-hu-nam-520-demo', title: 'Cơm đậu hũ nấm 520 kcal', calories: 520 },
+    { slug: 'gao-lut-bong-cai-540-demo', title: 'Gạo lứt bông cải 540 kcal', calories: 540 },
+    { slug: 'to-nam-rau-xanh-560-demo', title: 'Tô nấm rau xanh 560 kcal', calories: 560 },
+    { slug: 'com-dau-hu-bong-cai-580-demo', title: 'Cơm đậu hũ bông cải 580 kcal', calories: 580 },
+    { slug: 'gao-lut-dau-hu-600-demo', title: 'Gạo lứt đậu hũ 600 kcal', calories: 600 },
+    { slug: 'com-nam-bong-cai-610-demo', title: 'Cơm nấm bông cải 610 kcal', calories: 610 },
+  ] as const;
+  for (const [index, definition] of plannerRecipeDefinitions.entries()) {
+    if (await prisma.post.findUnique({ where: { slug: definition.slug } })) continue;
+    const firstIngredient = index % 2 === 0 ? tofu : mushroom;
+    const secondIngredient = index % 3 === 0 ? broccoli : brownRice;
+    await prisma.$transaction(async (transaction) => {
+      const post = await transaction.post.create({
+        data: {
+          authorId: admin.id,
+          type: PostType.RECIPE,
+          slug: definition.slug,
+          status: PostStatus.PUBLISHED,
+          version: 1,
+          publishedAt: new Date(),
+        },
+      });
+      const revision = await transaction.postRevision.create({
+        data: {
+          postId: post.id,
+          createdById: admin.id,
+          version: 1,
+          status: PostRevisionStatus.PUBLISHED,
+          title: definition.title,
+          normalizedTitle: normalizeVietnameseText(definition.title),
+          excerpt: 'Fixture Recipe có nutrition và canonical ingredients cho Meal Planner.',
+          normalizedExcerpt: normalizeVietnameseText(
+            'Fixture Recipe có nutrition và canonical ingredients cho Meal Planner.',
+          ),
+          body: 'Sơ chế nguyên liệu, nấu chín và chia khẩu phần theo hướng dẫn Meal Planner demo.',
+          normalizedBody: normalizeVietnameseText(
+            'Sơ chế nguyên liệu, nấu chín và chia khẩu phần theo hướng dẫn Meal Planner demo.',
+          ),
+          categories: { create: [{ categoryId: recipeCategory.id }] },
+          tags: { create: postTagRows(['meal planner', 'bữa chính']) },
+          recipeDetail: {
+            create: {
+              servings: 2,
+              prepTimeMinutes: 15,
+              cookTimeMinutes: 25,
+              difficulty: RecipeDifficulty.EASY,
+              calories: definition.calories,
+              proteinGrams: 22,
+              carbsGrams: 58,
+              fatGrams: 14,
+              fiberGrams: 10,
+              ...(index % 2 === 0 ? { vitaminB12Mcg: 0 } : {}),
+              mealPlannerEligible: true,
+              allergenCodes: firstIngredient.id === tofu.id ? ['SOY'] : [],
+              traditionWarnings: [],
+            },
+          },
+          ingredients: {
+            create: [firstIngredient, secondIngredient].map((ingredient, position) => ({
+              ingredientId: ingredient.id,
+              position,
+              displayName: ingredient.canonicalName,
+              normalizedName: ingredient.normalizedName,
+              amount: position === 0 ? 180 : 140,
+              unit: 'g',
+              resolutionStatus: IngredientResolutionStatus.EXACT,
+            })),
+          },
+          dietCompatibility: {
+            create: [
+              { dietPattern: DietPattern.VEGAN, compatible: true, reasonCodes: [] },
+              { dietPattern: DietPattern.LACTO_OVO, compatible: true, reasonCodes: [] },
+            ],
+          },
+        },
+      });
+      await transaction.post.update({
+        where: { id: post.id },
+        data: { publishedRevisionId: revision.id },
+      });
+    });
+  }
+
   if (!(await prisma.post.findUnique({ where: { slug: 'dam-thuc-vat-trong-bua-an-demo' } }))) {
     await prisma.$transaction(async (transaction) => {
       const post = await transaction.post.create({
@@ -886,6 +975,32 @@ async function main(): Promise<void> {
     prisma.post.findUniqueOrThrow({ where: { slug: 'dau-hu-xao-bong-cai-demo' } }),
     prisma.post.findUniqueOrThrow({ where: { slug: 'video-bua-an-xanh-demo' } }),
   ]);
+  await prisma.healthProfile.upsert({
+    where: { userId: member.id },
+    update: {
+      heightCm: 160,
+      weightKg: 50,
+      age: 28,
+      sex: HealthSex.FEMALE,
+      activityLevel: ActivityLevel.SEDENTARY,
+      bmi: 19.53,
+      bmr: 1199,
+      tdee: 1438.8,
+      dataSource: HealthDataSource.MANUAL,
+    },
+    create: {
+      userId: member.id,
+      heightCm: 160,
+      weightKg: 50,
+      age: 28,
+      sex: HealthSex.FEMALE,
+      activityLevel: ActivityLevel.SEDENTARY,
+      bmi: 19.53,
+      bmr: 1199,
+      tdee: 1438.8,
+      dataSource: HealthDataSource.MANUAL,
+    },
+  });
   const rootCommentId = '60000000-0000-4000-8000-000000000001';
   const replyCommentId = '60000000-0000-4000-8000-000000000002';
   await prisma.$transaction(async (transaction) => {
@@ -1172,7 +1287,7 @@ async function main(): Promise<void> {
     },
   });
   console.info(
-    `Seeded local Member, two approved Contributor subtypes, Admin, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, behavior recommendation fixtures, and moderation queue fixtures.`,
+    `Seeded local Member, two approved Contributor subtypes, Admin, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, behavior/recommendation and Meal Planner fixtures, and moderation queue fixtures.`,
   );
 }
 
