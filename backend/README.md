@@ -17,10 +17,12 @@ cache or distributed rate limiter.
 ## Local setup
 
 1. Copy `.env.example` to `.env` and adjust local values.
-2. Start the backend and PostgreSQL with Docker: `docker compose -f docker-compose.yml up --build`. With Homebrew:
-   `brew services start postgresql@14`, then create the user/database referenced by `DATABASE_URL`.
+2. Start the backend and PostgreSQL with Docker: `docker compose -f docker-compose.yml up --build`.
+   The backend container applies migrations and runs the idempotent seed before starting the API. With
+   Homebrew: `brew services start postgresql@14`, then create the user/database referenced by
+   `DATABASE_URL`.
 3. Install dependencies with `npm install`.
-4. Run `npm run prisma:migrate:deploy` and `npm run seed`.
+4. For a non-Docker backend, run `npm run prisma:migrate:deploy` and `npm run seed`.
 5. Start the API with `npm run dev`.
 
 Local endpoints:
@@ -52,6 +54,26 @@ Phase 11 uses the official OpenAI SDK and Responses API behind an `AiProvider` b
 default is `gpt-5.6-terra` with `omni-moderation-latest`; set `AI_PROVIDER=fake` for deterministic
 local development or provide `OPENAI_API_KEY` for the live path. Missing/unavailable OpenAI access
 degrades to a static safe response without consuming daily quota.
+
+## Seed data for local API and frontend development
+
+`npm run seed` is idempotent and uses only the existing `SEED_*` credentials. In addition to the
+configured Member, two approved Contributor subtypes, and Admin, it derives scenario accounts from
+`SEED_MEMBER_EMAIL` by adding the following suffixes before `@`; every scenario account uses
+`SEED_MEMBER_PASSWORD`:
+
+- `+seed-pending-contributor` and `+seed-rejected-contributor`
+- `+seed-cold-start`, `+seed-reporter-two`, and `+seed-reporter-three`
+- `+seed-locked`, `+seed-banned`, and `+seed-deleted`
+
+The seed includes active and archived catalog records; published Recipe, Blog, and Video cards with
+media; pending, rejected, flagged, quarantined, and published-with-pending-edit workflows; visible,
+hidden, and deleted comment threads; votes, ratings, bookmarks; LOW/MEDIUM/HIGH AI moderation states;
+five-report HIGH priority and resolved-report fixtures; personalization cold-start/disabled/history
+states; and an active 21-slot Meal Plan with a shopping list for the configured Member.
+
+Authentication refresh sessions, AI chat sessions/messages, quota buckets, and rate-limit buckets are
+intentionally not seeded because they are runtime/session data.
 
 ## Quality gates
 

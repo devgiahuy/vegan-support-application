@@ -22,6 +22,7 @@ import {
   PostRevisionStatus,
   PostStatus,
   PostType,
+  PracticeSchedule,
   PrismaClient,
   RecipeDifficulty,
   ReportStatus,
@@ -33,6 +34,7 @@ import {
 import { z } from 'zod';
 import { PasswordService } from '../src/modules/auth/password.service.js';
 import { normalizeVietnameseText } from '../src/modules/catalog/catalog.normalization.js';
+import { seedScenarioData } from './seed-scenarios.js';
 
 const prisma = new PrismaClient();
 const passwordService = new PasswordService();
@@ -1001,6 +1003,129 @@ async function main(): Promise<void> {
       dataSource: HealthDataSource.MANUAL,
     },
   });
+
+  const [constraintsMember, periodicMember] = await Promise.all([
+    prisma.user.findUniqueOrThrow({
+      where: { email: seedEnvironment.SEED_EXPERIENCED_CONTRIBUTOR_EMAIL.toLowerCase() },
+    }),
+    prisma.user.findUniqueOrThrow({
+      where: { email: seedEnvironment.SEED_NUTRITION_EXPERT_EMAIL.toLowerCase() },
+    }),
+  ]);
+  const scenarioHealthProfile = {
+    heightCm: 160,
+    weightKg: 50,
+    age: 28,
+    sex: HealthSex.FEMALE,
+    activityLevel: ActivityLevel.SEDENTARY,
+    bmi: 19.53,
+    bmr: 1199,
+    tdee: 1438.8,
+    dataSource: HealthDataSource.MANUAL,
+  } as const;
+  const nextMonday = new Date();
+  nextMonday.setUTCHours(0, 0, 0, 0);
+  nextMonday.setUTCDate(nextMonday.getUTCDate() + ((8 - nextMonday.getUTCDay()) % 7 || 7));
+  const buddhistRule = await prisma.dietRuleDefinition.findUniqueOrThrow({
+    where: {
+      code_ruleSetVersion: {
+        code: 'TRADITION_BUDDHIST_EXCLUDE_FIVE_PUNGENT_ROOTS',
+        ruleSetVersion: dietRuleSetVersion,
+      },
+    },
+  });
+
+  await prisma.$transaction(async (transaction) => {
+    for (const userId of [member.id, constraintsMember.id, periodicMember.id]) {
+      await transaction.healthProfile.upsert({
+        where: { userId },
+        update: scenarioHealthProfile,
+        create: { userId, ...scenarioHealthProfile },
+      });
+    }
+    await transaction.healthProfile.deleteMany({ where: { userId: admin.id } });
+
+    for (const userId of [member.id, constraintsMember.id]) {
+      await transaction.dietPreference.upsert({
+        where: { userId },
+        update: {
+          dietPattern: DietPattern.VEGAN,
+          practiceSchedule: PracticeSchedule.PERMANENT,
+          tradition: Tradition.NONE,
+          ruleSetVersion: dietRuleSetVersion,
+          confirmedAt: new Date(),
+        },
+        create: {
+          userId,
+          dietPattern: DietPattern.VEGAN,
+          practiceSchedule: PracticeSchedule.PERMANENT,
+          tradition: Tradition.NONE,
+          ruleSetVersion: dietRuleSetVersion,
+          confirmedAt: new Date(),
+        },
+      });
+    }
+    await transaction.dietPreference.upsert({
+      where: { userId: periodicMember.id },
+      update: {
+        dietPattern: DietPattern.VEGAN,
+        practiceSchedule: PracticeSchedule.PERIODIC,
+        tradition: Tradition.BUDDHIST,
+        ruleSetVersion: dietRuleSetVersion,
+        confirmedAt: new Date(),
+      },
+      create: {
+        userId: periodicMember.id,
+        dietPattern: DietPattern.VEGAN,
+        practiceSchedule: PracticeSchedule.PERIODIC,
+        tradition: Tradition.BUDDHIST,
+        ruleSetVersion: dietRuleSetVersion,
+        confirmedAt: new Date(),
+      },
+    });
+    await transaction.dietPreferenceRule.upsert({
+      where: {
+        userId_ruleDefinitionId: {
+          userId: periodicMember.id,
+          ruleDefinitionId: buddhistRule.id,
+        },
+      },
+      update: { enabled: true, source: DietRuleSource.TRADITION },
+      create: {
+        userId: periodicMember.id,
+        ruleDefinitionId: buddhistRule.id,
+        enabled: true,
+        source: DietRuleSource.TRADITION,
+      },
+    });
+    await transaction.dietScheduleDate.deleteMany({ where: { userId: periodicMember.id } });
+    await transaction.dietScheduleDate.create({
+      data: { userId: periodicMember.id, date: nextMonday, enabled: true },
+    });
+
+    await transaction.userAllergy.deleteMany({ where: { userId: constraintsMember.id } });
+    await transaction.userAllergy.create({
+      data: {
+        userId: constraintsMember.id,
+        allergenCode: 'SOY',
+        label: 'Đậu nành',
+        active: true,
+      },
+    });
+    await transaction.userIngredientExclusion.deleteMany({
+      where: { userId: constraintsMember.id },
+    });
+    await transaction.userIngredientExclusion.create({
+      data: {
+        userId: constraintsMember.id,
+        ingredientId: mushroom.id,
+        ingredientName: mushroom.canonicalName,
+        normalizedName: mushroom.normalizedName,
+        reason: 'Scenario fixture: hard constraint must never be relaxed',
+        active: true,
+      },
+    });
+  });
   const rootCommentId = '60000000-0000-4000-8000-000000000001';
   const replyCommentId = '60000000-0000-4000-8000-000000000002';
   await prisma.$transaction(async (transaction) => {
@@ -1286,8 +1411,16 @@ async function main(): Promise<void> {
       activeKey: `${member.id}:${ReportTargetType.POST}:${communityRecipe.id}`,
     },
   });
+  await seedScenarioData(prisma, {
+    memberEmail: seedEnvironment.SEED_MEMBER_EMAIL.toLowerCase(),
+    memberPasswordHash,
+    adminEmail: seedEnvironment.SEED_ADMIN_EMAIL.toLowerCase(),
+    experiencedContributorEmail: seedEnvironment.SEED_EXPERIENCED_CONTRIBUTOR_EMAIL.toLowerCase(),
+    nutritionExpertEmail: seedEnvironment.SEED_NUTRITION_EXPERT_EMAIL.toLowerCase(),
+    nextMonday,
+  });
   console.info(
-    `Seeded local Member, two approved Contributor subtypes, Admin, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, behavior/recommendation and Meal Planner fixtures, and moderation queue fixtures.`,
+    `Seeded local Member, two approved Contributor subtypes, Admin, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
   );
 }
 

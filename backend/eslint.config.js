@@ -6,6 +6,7 @@ export default tseslint.config(
   {
     ignores: [
       'dist/**',
+      'dist-seed/**',
       'node_modules/**',
       'coverage/**',
       'openapi.json',
