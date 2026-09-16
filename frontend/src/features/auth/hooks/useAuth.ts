@@ -1,8 +1,14 @@
 import { useAuthStore } from '@/store/useAuthStore';
-import { useCurrentUserQuery, useLoginMutation, useLogoutMutation } from '../queries/auth.queries';
+import {
+  useCurrentUserQuery,
+  useLoginMutation,
+  useLogoutMutation,
+  useRegisterMutation,
+} from '../queries/auth.queries';
 
 export function useAuth() {
   const { user, token, isAuthenticated } = useAuthStore();
+  const registerMutation = useRegisterMutation();
   const loginMutation = useLoginMutation();
   const logoutMutation = useLogoutMutation();
   const userQuery = useCurrentUserQuery();
@@ -11,6 +17,8 @@ export function useAuth() {
     user,
     token,
     isAuthenticated,
+    register: registerMutation.mutateAsync,
+    isRegistering: registerMutation.isPending,
     login: loginMutation.mutateAsync,
     isLoggingIn: loginMutation.isPending,
     logout: logoutMutation.mutateAsync,

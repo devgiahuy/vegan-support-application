@@ -1,0 +1,804 @@
+'use client';
+
+import * as React from 'react';
+import Link from 'next/link';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import {
+  Camera,
+  Sparkles,
+  Award,
+  Plus,
+  User,
+  HeartPulse,
+  BookOpen,
+  CheckCircle2,
+  AlertTriangle,
+  UtensilsCrossed,
+  Eye,
+  Pencil,
+  Trash2,
+  Search,
+  ShieldCheck,
+  CalendarDays,
+  FileDown,
+  ChevronRight,
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { WhyRecommendedDialog } from '@/components/shared/why-recommended-dialog';
+import { calGoalTargets } from '@/features/health/lib/bmi';
+
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { LoadingState } from '@/components/shared/loading-state';
+import { ErrorState } from '@/components/shared/error-state';
+import { usePostStore } from '@/store/usePostStore';
+import type { Post } from '@/features/post/types/post.model';
+import { useDetailedProfileQuery } from '@/features/profile/queries/profile.queries';
+import { BasicProfileForm } from '@/features/profile/components/basic-profile-form';
+import { HealthProfileForm } from '@/features/profile/components/health-profile-form';
+import { HealthSummary } from '@/features/profile/components/health-summary';
+import { DietWizard } from '@/features/diet-preferences/components/diet-wizard';
+import { CurrentDietCard } from '@/features/diet-preferences/components/current-diet-card';
+import { ScheduleEditor } from '@/features/diet-preferences/components/schedule-editor';
+
+type Tab = 'info' | 'health' | 'diet' | 'posts' | 'privacy';
+
+const DIET_MODES = ['Thuần chay (Vegan)', 'Chay bán phần', 'Ăn chay rằm/mùng 1'];
+
+const POSTS = [
+  {
+    status: 'Đã duyệt',
+    tone: 'primary',
+    title: 'Phở Nấm Thuần Chay Dưỡng Sinh Nước Dùng Thanh Ngọt',
+    meta: 'Món nước • Đăng ngày 12/10/2024',
+    desc: 'Bí quyết ninh củ cải trắng, mía lau và các loại nấm tươi để có nồi nước dùng ngọt tự nhiên.',
+    views: '1,420 lượt xem • 248 yêu thích',
+  },
+  {
+    status: 'Chờ duyệt',
+    tone: 'cta',
+    title: 'Nem Rán Chay Nhân Nấm Mộc Nhĩ & Đậu Xanh Bùi Béo',
+    meta: 'Món chiên giòn • Gửi lúc 15:30 hôm nay',
+    desc: 'Vỏ bánh ram giòn rụm nhiều giờ, công thức nhân đậu bùi thơm dinh dưỡng cho ngày lễ rằm.',
+    views: 'Ban kiểm duyệt sẽ phản hồi trong 24 giờ',
+  },
+  {
+    status: 'Cần chỉnh sửa',
+    tone: 'destructive',
+    title: 'Cà Tím Kho Tiêu Nồi Đất Cay Nồng Đậm Đà Đưa Cơm',
+    meta: 'Món kho • Cập nhật 2 ngày trước',
+    desc: 'Lý do: Vui lòng bổ sung định lượng chi tiết cho nguyên liệu gia vị tiêu và nước tương.',
+    views: 'Phiên bản nháp v1.2',
+  },
+];
+
+const toneClass: Record<string, string> = {
+  primary: 'bg-primary/10 text-primary',
+  cta: 'bg-cta/15 text-cta',
+  destructive: 'bg-destructive/10 text-destructive',
+};
+
+export default function ProfilePage() {
+  const [tab, setTab] = React.useState<Tab>('health');
+  const shouldReduceMotion = useReducedMotion();
+  const [personalizationEnabled, setPersonalizationEnabled] = React.useState(true);
+  const [healthSyncEnabled, setHealthSyncEnabled] = React.useState(true);
+  const [isWhyDialogOpen, setIsWhyDialogOpen] = React.useState(false);
+
+  const {
+    data: detailedProfile,
+    isLoading: isProfileLoading,
+    isError: isProfileError,
+    refetch: refetchProfile,
+  } = useDetailedProfileQuery();
+
+  const { posts, deletePost } = usePostStore();
+  const [postSearch, setPostSearch] = React.useState('');
+  const [postStatusFilter, setPostStatusFilter] = React.useState<
+    'ALL' | 'PUBLISHED' | 'PENDING' | 'FLAGGED' | 'DRAFT'
+  >('ALL');
+  const [postToDelete, setPostToDelete] = React.useState<Post | null>(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlTab = params.get('tab');
+      if (urlTab && ['info', 'health', 'diet', 'posts', 'privacy'].includes(urlTab)) {
+        setTab(urlTab as Tab);
+      }
+    }
+  }, []);
+
+  const myPosts = React.useMemo(() => {
+    return posts.filter(
+      (p) =>
+        p.author.id === 'my-user' ||
+        p.author.id === 'expert-lan-anh' ||
+        p.tags?.includes('BàiCủaTôi') ||
+        p.author.name.includes('Lan Hương')
+    );
+  }, [posts]);
+
+  const filteredMyPosts = React.useMemo(() => {
+    let list = [...myPosts];
+    if (postStatusFilter !== 'ALL') {
+      list = list.filter((p) => p.status === postStatusFilter);
+    }
+    if (postSearch.trim()) {
+      const q = postSearch.toLowerCase();
+      list = list.filter(
+        (p) =>
+          p.title.toLowerCase().includes(q) ||
+          p.summary.toLowerCase().includes(q) ||
+          p.tags?.some((t) => t.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }, [myPosts, postStatusFilter, postSearch]);
+
+  const publishedCount = myPosts.filter((p) => p.status === 'PUBLISHED').length;
+  const pendingCount = myPosts.filter((p) => p.status === 'PENDING').length;
+  const flaggedCount = myPosts.filter((p) => p.status === 'FLAGGED').length;
+  const draftCount = myPosts.filter((p) => p.status === 'DRAFT').length;
+
+  const tabs: { id: Tab; label: string; icon: React.ElementType; badge?: string }[] = [
+    { id: 'info', label: 'Thông tin cá nhân', icon: User },
+    { id: 'health', label: 'Sức khỏe & BMI', icon: HeartPulse, badge: 'AI Phân tích' },
+    { id: 'diet', label: 'Chế độ ăn', icon: UtensilsCrossed },
+    { id: 'posts', label: 'Bài viết của tôi', icon: BookOpen, badge: `${myPosts.length}` },
+    { id: 'privacy', label: 'Cá nhân hoá & Dữ liệu', icon: ShieldCheck, badge: 'NĐ 13/2023' },
+  ];
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-8 lg:px-6">
+      {/* Profile banner — dữ liệu thật từ GET /users/me */}
+      {isProfileLoading && <LoadingState message="Đang tải hồ sơ của bạn..." />}
+
+      {isProfileError && (
+        <ErrorState
+          title="Không tải được hồ sơ. Vui lòng kiểm tra kết nối và thử lại."
+          onRetry={() => void refetchProfile()}
+        />
+      )}
+
+      {!isProfileLoading && !isProfileError && detailedProfile && (
+        <Card className="overflow-hidden">
+          <CardContent className="flex flex-col gap-5 p-6 md:flex-row md:items-center">
+            <div className="relative">
+              <Avatar className="h-20 w-20 rounded-2xl">
+                <AvatarFallback className="rounded-2xl bg-primary/10 text-2xl text-primary">
+                  {detailedProfile.user.initials || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <span className="absolute -bottom-2 -right-2 rounded-full bg-background p-1.5 shadow">
+                <Camera className="h-4 w-4 text-primary" />
+              </span>
+            </div>
+            <div className="flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-bold">{detailedProfile.user.displayName}</h1>
+                <Badge className="gap-1 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">
+                  <Award className="h-3.5 w-3.5" /> {detailedProfile.user.role}
+                </Badge>
+                {detailedProfile.diet && (
+                  <Badge variant="secondary" className="rounded-full">
+                    {detailedProfile.diet.dietPatternLabel} ·{' '}
+                    {detailedProfile.diet.practiceScheduleLabel}
+                  </Badge>
+                )}
+              </div>
+              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                {detailedProfile.user.email}
+              </p>
+              <div className="mt-3 grid max-w-md grid-cols-3 gap-4">
+                <div>
+                  <p className="text-lg font-bold text-primary">12</p>
+                  <p className="text-xs text-muted-foreground">Công thức đăng</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-primary">1,850</p>
+                  <p className="text-xs text-muted-foreground">Điểm sống lành</p>
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-primary">{detailedProfile.memberSince}</p>
+                  <p className="text-xs text-muted-foreground">Ngày tham gia</p>
+                </div>
+              </div>
+            </div>
+            <Button asChild className="gap-1.5 rounded-full">
+              <Link href="/recipes/new">
+                <Plus className="h-4 w-4" /> Tạo công thức mới
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Tabs Bar với Motion Animation */}
+      <div className="relative mt-6 grid grid-cols-2 gap-1 rounded-full border border-border/80 bg-muted/80 p-1.5 shadow-sm backdrop-blur-sm sm:grid-cols-5">
+        {tabs.map((t) => {
+          const Icon = t.icon;
+          const isActive = tab === t.id;
+          return (
+            <motion.button
+              key={t.id}
+              type="button"
+              whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
+              onClick={() => setTab(t.id)}
+              className={cn(
+                'relative z-10 flex items-center justify-center gap-2 rounded-full px-3 py-2.5 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                isActive
+                  ? 'font-semibold text-primary'
+                  : 'text-muted-foreground hover:text-foreground'
+              )}
+            >
+              {isActive && (
+                <motion.div
+                  layoutId="active-profile-tab"
+                  className="absolute inset-0 -z-10 rounded-full bg-background shadow-sm border border-border/40"
+                  transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                />
+              )}
+              <Icon
+                className={cn(
+                  'h-4 w-4 transition-transform duration-200',
+                  isActive && 'scale-110 text-primary'
+                )}
+              />
+              <span className="hidden sm:inline">{t.label}</span>
+              {t.badge && (
+                <Badge
+                  className={cn(
+                    'hidden rounded-full px-1.5 py-0.5 text-[10px] font-semibold transition-colors lg:inline-flex',
+                    isActive
+                      ? 'bg-primary/15 text-primary'
+                      : 'bg-primary/10 text-primary/80 hover:bg-primary/20'
+                  )}
+                >
+                  {t.badge}
+                </Badge>
+              )}
+            </motion.button>
+          );
+        })}
+      </div>
+
+      {/* Tab Contents với AnimatePresence */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={tab}
+          initial={shouldReduceMotion ? undefined : { opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={shouldReduceMotion ? undefined : { opacity: 0, y: -10 }}
+          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+          className="mt-6"
+        >
+          {/* TAB: INFO — form thật (PATCH /users/me: displayName + avatarUrl).
+          Số điện thoại / bio / đổi mật khẩu / tải file ảnh không có endpoint READY nên không render. */}
+          {tab === 'info' && (
+            <div>
+              {isProfileLoading && <LoadingState message="Đang tải thông tin..." />}
+              {isProfileError && (
+                <ErrorState
+                  title="Không tải được thông tin hồ sơ."
+                  onRetry={() => void refetchProfile()}
+                />
+              )}
+              {!isProfileLoading && !isProfileError && detailedProfile && (
+                <Card>
+                  <CardContent className="space-y-4 p-6">
+                    <div>
+                      <h2 className="font-semibold">Thông tin chi tiết</h2>
+                      <p className="text-xs text-muted-foreground">
+                        Email {detailedProfile.user.email} không thể thay đổi tại đây.
+                      </p>
+                    </div>
+                    <BasicProfileForm
+                      initialDisplayName={detailedProfile.user.displayName}
+                      initialAvatarUrl={detailedProfile.user.avatarUrl}
+                      fallbackInitials={detailedProfile.user.initials}
+                    />
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )}
+
+          {/* TAB: HEALTH — dữ liệu thật (PUT /users/me/health-profile).
+          Số BMI/BMR/TDEE hiển thị đúng backend trả; mục tiêu calo dùng TDEE thật. */}
+          {tab === 'health' && (
+            <div className="grid gap-6 lg:grid-cols-12">
+              <Card className="lg:col-span-5">
+                <CardContent className="space-y-4 p-6">
+                  <div>
+                    <h2 className="font-semibold">Nhập chỉ số thể trạng</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Lưu để xem BMI, BMR và TDEE do hệ thống tính cho bạn.
+                    </p>
+                  </div>
+                  {isProfileLoading && <LoadingState message="Đang tải..." />}
+                  {isProfileError && (
+                    <ErrorState
+                      title="Không tải được dữ liệu sức khỏe."
+                      onRetry={() => void refetchProfile()}
+                    />
+                  )}
+                  {!isProfileLoading && !isProfileError && (
+                    <HealthProfileForm initial={detailedProfile?.health ?? null} />
+                  )}
+                </CardContent>
+              </Card>
+
+              <div className="space-y-6 lg:col-span-7">
+                {isProfileLoading && <LoadingState message="Đang tải kết quả..." />}
+                {!isProfileLoading && !isProfileError && (
+                  <HealthSummary health={detailedProfile?.health ?? null} />
+                )}
+
+                {!isProfileLoading && !isProfileError && detailedProfile?.health && (
+                  <Card>
+                    <CardContent className="p-6">
+                      <h2 className="flex items-center gap-2 font-semibold">
+                        <UtensilsCrossed className="h-4 w-4 text-primary" /> Mục tiêu Calo khuyến
+                        nghị cho người ăn chay
+                      </h2>
+                      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                        {calGoalTargets(detailedProfile.health.tdee).map((g) => (
+                          <div
+                            key={g.key}
+                            className={cn(
+                              'rounded-2xl border p-4',
+                              g.key === 'maintain' && 'border-primary bg-primary/5'
+                            )}
+                          >
+                            <p className="text-sm font-medium">{g.label}</p>
+                            <p className="mt-2 text-xl font-bold text-primary">
+                              {g.kcal.toLocaleString('vi-VN')} kcal
+                            </p>
+                            <p className="mt-1 text-xs text-muted-foreground">{g.note}</p>
+                            {g.key === 'maintain' && (
+                              <Badge className="mt-2 rounded-full bg-primary text-primary-foreground">
+                                Khuyên dùng
+                              </Badge>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                <Card className="border-primary/20 bg-primary/5">
+                  <CardContent className="p-6">
+                    <h2 className="flex items-center gap-2 font-semibold">
+                      <Sparkles className="h-4 w-4 text-primary" /> Lời khuyên dinh dưỡng từ AI
+                      ChayXanh
+                    </h2>
+                    <ul className="mt-3 space-y-3 text-sm">
+                      {[
+                        'Bổ sung đạm thực vật toàn phần: cần ~65-75g protein/ngày từ tempeh, đậu hũ nướng, đậu gà và hạt gai dầu.',
+                        'Tối ưu hấp thu Sắt & Vitamin C: kết hợp rau bina, cải xoăn với chanh hoặc ớt chuông đỏ trong bữa chính.',
+                        'Vitamin B12 & Omega-3: người thuần chay lâu năm nên bổ sung men dinh dưỡng, hạt lanh hoặc vi tảo định kỳ.',
+                      ].map((tip) => (
+                        <li key={tip} className="flex gap-2">
+                          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                          <span className="text-muted-foreground">{tip}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
+
+          {/* TAB: DIET — wizard xem trước + xác nhận chế độ ăn */}
+          {tab === 'diet' && (
+            <div className="space-y-4">
+              {isProfileLoading && <LoadingState message="Đang tải chế độ ăn..." />}
+              {isProfileError && (
+                <ErrorState
+                  title="Không tải được chế độ ăn."
+                  onRetry={() => void refetchProfile()}
+                />
+              )}
+              {!isProfileLoading && !isProfileError && detailedProfile?.diet && (
+                <CurrentDietCard summary={detailedProfile.diet} />
+              )}
+              {!isProfileLoading && !isProfileError && (
+                <DietWizard
+                  initialSelection={
+                    detailedProfile?.diet
+                      ? {
+                          dietPattern: detailedProfile.diet.dietPattern,
+                          practiceSchedule: detailedProfile.diet.practiceSchedule,
+                          tradition: detailedProfile.diet.tradition,
+                        }
+                      : null
+                  }
+                  scheduleSlot={(preference) => (
+                    <ScheduleEditor initialDates={preference.schedule?.dates ?? []} />
+                  )}
+                />
+              )}
+            </div>
+          )}
+
+          {/* TAB: POSTS */}
+          {tab === 'posts' && (
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card p-4 rounded-2xl border">
+                <div>
+                  <h2 className="text-lg font-bold text-foreground">Quản lý bài viết cá nhân</h2>
+                  <p className="text-xs text-muted-foreground">
+                    Quản lý các bài chia sẻ dinh dưỡng, cẩm nang nấu chay và theo dõi trạng thái
+                    kiểm duyệt từ Chuyên gia (SRS UC-02 &amp; UC-11).
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button asChild size="sm" className="rounded-xl gap-1.5 shadow-sm">
+                    <Link href="/articles/new">
+                      <Plus className="h-4 w-4" /> Viết bài mới
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm" className="rounded-xl gap-1.5">
+                    <Link href="/recipes/new">
+                      <UtensilsCrossed className="h-4 w-4 text-primary" /> Đăng công thức
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    { id: 'ALL', label: `Tất cả (${myPosts.length})` },
+                    { id: 'PUBLISHED', label: `Đã duyệt (${publishedCount})` },
+                    { id: 'PENDING', label: `Chờ duyệt (${pendingCount})` },
+                    { id: 'FLAGGED', label: `Cần sửa (${flaggedCount})` },
+                    { id: 'DRAFT', label: `Bản nháp (${draftCount})` },
+                  ].map((f) => (
+                    <Badge
+                      key={f.id}
+                      variant={postStatusFilter === f.id ? 'default' : 'secondary'}
+                      onClick={() => setPostStatusFilter(f.id as any)}
+                      className="rounded-full px-3 py-1 cursor-pointer text-xs transition-all"
+                    >
+                      {f.label}
+                    </Badge>
+                  ))}
+                </div>
+                <div className="relative sm:w-64">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Tìm bài viết của bạn..."
+                    value={postSearch}
+                    onChange={(e) => setPostSearch(e.target.value)}
+                    className="pl-9 h-9 text-xs rounded-xl"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                {filteredMyPosts.length > 0 ? (
+                  filteredMyPosts.map((p) => {
+                    const isPublished = p.status === 'PUBLISHED';
+                    const isPending = p.status === 'PENDING';
+                    const isFlagged = p.status === 'FLAGGED';
+
+                    return (
+                      <Card
+                        key={p.id}
+                        className="overflow-hidden border-border/70 hover:border-primary/40 transition-colors"
+                      >
+                        <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-center">
+                          <div className="relative h-24 w-full shrink-0 overflow-hidden rounded-xl bg-muted md:w-36">
+                            <img
+                              src={p.coverImage}
+                              alt={p.title}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge
+                                className={cn(
+                                  'rounded-full text-[11px] font-medium',
+                                  isPublished &&
+                                    'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+                                  isPending &&
+                                    'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
+                                  isFlagged &&
+                                    'bg-destructive/15 text-destructive border-destructive/30',
+                                  p.status === 'DRAFT' && 'bg-muted text-muted-foreground'
+                                )}
+                              >
+                                {p.statusLabel || p.status}
+                              </Badge>
+                              <span className="text-[11px] text-muted-foreground">•</span>
+                              <span className="text-xs text-muted-foreground">{p.category}</span>
+                              <span className="text-[11px] text-muted-foreground">•</span>
+                              <span className="text-xs text-muted-foreground">
+                                Đăng ngày {p.publishedAt}
+                              </span>
+                            </div>
+
+                            <h3 className="font-semibold text-foreground text-sm sm:text-base leading-snug line-clamp-1">
+                              {p.title}
+                            </h3>
+
+                            <p className="line-clamp-1 text-xs text-muted-foreground">
+                              {p.summary}
+                            </p>
+
+                            {p.moderationReason && (
+                              <div className="mt-1 flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md">
+                                <AlertTriangle className="h-3 w-3 shrink-0" />
+                                <span className="truncate">{p.moderationReason}</span>
+                              </div>
+                            )}
+
+                            <div className="flex items-center gap-3 text-[11px] text-muted-foreground pt-0.5">
+                              <span>{p.views.toLocaleString()} lượt xem</span>
+                              <span>•</span>
+                              <span className="text-primary font-semibold">
+                                Net vote: {p.score}
+                              </span>
+                              <span>•</span>
+                              <span>{p.commentCount} bình luận</span>
+                            </div>
+                          </div>
+
+                          <div className="flex gap-1 shrink-0 self-end md:self-center">
+                            <Button
+                              asChild
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Xem bài viết"
+                              className="rounded-xl"
+                            >
+                              <Link href={`/articles/${p.id}`}>
+                                <Eye className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                            <Button
+                              asChild
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Sửa bài viết"
+                              className="rounded-xl"
+                            >
+                              <Link href={`/articles/${p.id}/edit`}>
+                                <Pencil className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label="Xoá bài viết"
+                              className="text-destructive hover:bg-destructive/10 rounded-xl"
+                              onClick={() => {
+                                setPostToDelete(p);
+                                setIsDeleteDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                ) : (
+                  <div className="rounded-2xl border border-dashed p-8 text-center space-y-2">
+                    <p className="text-sm text-muted-foreground">
+                      Chưa có bài viết nào trong danh mục này.
+                    </p>
+                    <Button asChild size="sm" variant="outline" className="rounded-full text-xs">
+                      <Link href="/articles/new">
+                        <Plus className="h-3.5 w-3.5 mr-1" /> Viết bài chia sẻ đầu tiên
+                      </Link>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* TAB: PRIVACY & PERSONALIZATION (NĐ 13/2023) */}
+          {tab === 'privacy' && (
+            <div className="space-y-6">
+              <Card className="border-border/70">
+                <CardHeader className="pb-4">
+                  <div className="flex items-center gap-2">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <ShieldCheck className="h-5 w-5" />
+                    </span>
+                    <div>
+                      <CardTitle className="text-xl font-bold">
+                        Quyền riêng tư &amp; Quản trị dữ liệu cá nhân
+                      </CardTitle>
+                      <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                        Tuân thủ Nghị định 13/2023/NĐ-CP về bảo vệ dữ liệu cá nhân tại Việt Nam
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="space-y-6">
+                  {/* Quick links to Saved Menus */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-2xl border bg-primary/5 border-primary/20 gap-3">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                        <CalendarDays className="h-5 w-5" />
+                      </span>
+                      <div>
+                        <h4 className="text-sm font-bold text-foreground">
+                          Thực đơn đã lưu của bạn (3 kế hoạch)
+                        </h4>
+                        <p className="text-xs text-muted-foreground">
+                          Xem lại, chỉnh sửa hoặc áp dụng các thực đơn 7 ngày đã lưu
+                        </p>
+                      </div>
+                    </div>
+
+                    <Button asChild size="sm" className="gap-1.5 font-semibold shrink-0">
+                      <Link href="/meal-plans/saved">
+                        Mở Thực đơn đã lưu <ChevronRight className="h-4 w-4" />
+                      </Link>
+                    </Button>
+                  </div>
+
+                  {/* Consent Switches */}
+                  <div className="space-y-4 divide-y">
+                    <div className="flex items-start justify-between gap-4 pt-4 first:pt-0">
+                      <div className="space-y-1">
+                        <Label className="text-sm font-semibold text-foreground">
+                          Cá nhân hoá thực đơn theo dữ liệu hành vi (UC-08)
+                        </Label>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Cho phép AI sử dụng câu hỏi của bạn với Trợ lý AI (UC-07), món ăn bạn đã
+                          lưu và lịch sử tìm kiếm để tự động tinh chỉnh gợi ý thực đơn phù hợp nhất.
+                          Khi tắt, hệ thống chỉ dùng công thức quy chuẩn cứng (UC-06).
+                        </p>
+                      </div>
+                      <Switch
+                        checked={personalizationEnabled}
+                        onCheckedChange={(val) => {
+                          setPersonalizationEnabled(val);
+                          toast.success(
+                            val
+                              ? 'Đã bật cá nhân hoá thực đơn theo hành vi.'
+                              : 'Đã tắt cá nhân hoá. Hệ thống sẽ chỉ sử dụng bộ lọc quy chuẩn.'
+                          );
+                        }}
+                      />
+                    </div>
+
+                    <div className="flex items-start justify-between gap-4 pt-4">
+                      <div className="space-y-1">
+                        <Label className="text-sm font-semibold text-foreground">
+                          Đồng bộ dữ liệu thể trạng &amp; vận động (UC-13)
+                        </Label>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Đồng bộ dữ liệu chiều cao, cân nặng, đếm bước từ Health Connect / cảm biến
+                          điện thoại để tự động tính toán BMR, TDEE và đề xuất mức calo tương ứng.
+                        </p>
+                      </div>
+                      <Switch
+                        checked={healthSyncEnabled}
+                        onCheckedChange={(val) => {
+                          setHealthSyncEnabled(val);
+                          toast.success(
+                            val
+                              ? 'Đã bật đồng bộ dữ liệu sức khoẻ.'
+                              : 'Đã tắt đồng bộ dữ liệu sức khoẻ.'
+                          );
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Transparency explanation button */}
+                  <div className="rounded-2xl border p-4 bg-muted/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                      <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                        <Sparkles className="h-4 w-4 text-primary" /> Minh bạch thuật toán gợi ý AI
+                      </h4>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Xem chi tiết các nguồn tín hiệu nào đang được dùng để đề xuất món ăn và thực
+                        đơn cho bạn
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setIsWhyDialogOpen(true)}
+                      className="gap-1.5 text-xs font-semibold shrink-0"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-primary" /> Xem căn cứ giải trình
+                    </Button>
+                  </div>
+
+                  {/* Data Rights: Download & Delete */}
+                  <div className="space-y-3 pt-2 border-t">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                      Quyền đối với dữ liệu cá nhân (Nghị định 13/2023)
+                    </h4>
+
+                    <div className="flex flex-wrap gap-3">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          toast.info(
+                            'Yêu cầu trích xuất dữ liệu của bạn đã được tiếp nhận. Bản sao lưu sẽ được gửi vào email trong 24 giờ.'
+                          )
+                        }
+                        className="gap-1.5 text-xs"
+                      >
+                        <FileDown className="h-4 w-4 text-primary" /> Tải về bản sao dữ liệu của tôi
+                      </Button>
+
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          toast.success('Đã xóa toàn bộ lịch sử hành vi cá nhân hóa thành công.')
+                        }
+                        className="gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" /> Xóa toàn bộ lịch sử hành vi &amp; chat AI
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Why recommended transparency dialog */}
+      <WhyRecommendedDialog
+        isOpen={isWhyDialogOpen}
+        onClose={() => setIsWhyDialogOpen(false)}
+        targetTitle="Tài khoản cá nhân & Dữ liệu hành vi"
+      />
+
+      {/* Delete Post Confirmation Dialog */}
+      <ConfirmDialog
+        open={isDeleteDialogOpen}
+        onOpenChange={setIsDeleteDialogOpen}
+        title="Xoá bài viết này?"
+        description={`Bạn có chắc chắn muốn xoá bài viết "${postToDelete?.title}"? Hành động này không thể hoàn tác.`}
+        confirmLabel="Xoá bài viết"
+        cancelLabel="Huỷ bỏ"
+        danger={true}
+        onConfirm={() => {
+          if (postToDelete) {
+            deletePost(postToDelete.id);
+            toast.success(`Đã xoá bài viết "${postToDelete.title}" thành công!`);
+            setIsDeleteDialogOpen(false);
+            setPostToDelete(null);
+          }
+        }}
+      />
+    </div>
+  );
+}
