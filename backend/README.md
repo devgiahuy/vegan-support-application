@@ -17,7 +17,7 @@ cache or distributed rate limiter.
 ## Local setup
 
 1. Copy `.env.example` to `.env` and adjust local values.
-2. Start PostgreSQL. With Docker: `docker compose up -d postgres`. With Homebrew:
+2. Start the backend and PostgreSQL with Docker: `docker compose -f docker-compose.yml up --build`. With Homebrew:
    `brew services start postgresql@14`, then create the user/database referenced by `DATABASE_URL`.
 3. Install dependencies with `npm install`.
 4. Run `npm run prisma:migrate:deploy` and `npm run seed`.

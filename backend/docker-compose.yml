@@ -1,0 +1,51 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-vegan_support}
+      POSTGRES_USER: ${POSTGRES_USER:-vegan}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vegan_local}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - vegan_support_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-vegan} -d ${POSTGRES_DB:-vegan_support}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-vegan}:${POSTGRES_PASSWORD:-vegan_local}@postgres:5432/${POSTGRES_DB:-vegan_support}?schema=public
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:3000}
+      JSON_BODY_LIMIT: ${JSON_BODY_LIMIT:-1mb}
+      SHUTDOWN_TIMEOUT_MS: ${SHUTDOWN_TIMEOUT_MS:-10000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-local-development-secret-change-me-32-chars}
+      JWT_ISSUER: ${JWT_ISSUER:-vegan-support-api}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-vegan-support-web}
+      ACCESS_TOKEN_TTL_SECONDS: ${ACCESS_TOKEN_TTL_SECONDS:-900}
+      REFRESH_TOKEN_TTL_DAYS: ${REFRESH_TOKEN_TTL_DAYS:-30}
+      LOGIN_MAX_ATTEMPTS: ${LOGIN_MAX_ATTEMPTS:-5}
+      LOGIN_LOCK_MINUTES: ${LOGIN_LOCK_MINUTES:-15}
+      CLOUDINARY_CLOUD_NAME: ${CLOUDINARY_CLOUD_NAME:-local-development}
+      CLOUDINARY_API_KEY: ${CLOUDINARY_API_KEY:-local-development}
+      CLOUDINARY_API_SECRET: ${CLOUDINARY_API_SECRET:-local-development}
+      CLOUDINARY_UPLOAD_FOLDER: ${CLOUDINARY_UPLOAD_FOLDER:-vegan-support/posts}
+      MAX_UPLOAD_IMAGE_BYTES: ${MAX_UPLOAD_IMAGE_BYTES:-10000000}
+      MAX_UPLOAD_VIDEO_BYTES: ${MAX_UPLOAD_VIDEO_BYTES:-100000000}
+    ports:
+      - '${BACKEND_PORT:-4000}:4000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  vegan_support_postgres:
