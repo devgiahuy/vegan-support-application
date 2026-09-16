@@ -574,3 +574,252 @@
   - `npm test`: 76/76 unit tests pass.
 - PROGRESS: task #0 Nền tảng giữ 70% (nâng cấp UX animation).
 - Còn lại / rủi ro: Không có. Vòng lặp chuyển động mượt mà, không còn cảm giác bị ngắt quãng hay giật về trạng thái ban đầu.
+
+---
+
+## [2026-09-16] — Fix `INVALID_MEDIA_REFERENCE` + toast theo message BE
+
+- Mục tiêu: (1) POST `/posts` 400 `MIME type của media không được hỗ trợ`; (2) toast hiện message generic thay vì message/fields BE.
+- Nguyên nhân:
+  1. `toUploadedMeta` suy MIME từ `format` Cloudinary (`jpg` thiếu `e`, `mov` thay `quicktime`) trong khi allowlist BE strict chỉ nhận `image/jpeg|png|webp|avif`, `video/mp4|webm|quicktime`. Đồng thời `ingredientId: null` tường minh cũng từng 400 (đã lược key ở đợt trước + BE đã nới null).
+  2. Mọi mutation `onError` toast `err.message` của axios ("Request failed with status code 400").
+- Đã làm:
+  - `upload.api.ts`: ưu tiên MIME thật từ File API, chuẩn hóa `image/jpg` → `image/jpeg`, map `mov` → `video/quicktime`, chỉ suy từ `format` khi File API trống.
+  - `lib/api-error.ts`: thêm `formatApiErrorFields` + `toastApiError` (message BE + tối đa 3 dòng fields); 9 mutations post/recipe/video dùng helper mới.
+  - Tests: `upload.api.test.ts` 5 case, `api-error.test.ts` 4 case, thêm case lược `ingredientId` null.
+- Verify: `npx tsc --noEmit` sạch; `npm test` **86/86 pass** (12 files); `npm run build` 26/26 routes.
+- Test tay lại: upload ảnh/video rồi đăng bài — BE phải qua validate media, toast lỗi (nếu còn) hiện đúng message BE.
+
+---
+
+## [2026-09-16] — Đảm bảo upload qua chữ ký + chặn URL mock lọt payload
+
+- Mục tiêu (user nhắc): upload ảnh/video bắt buộc qua `POST /api/v1/uploads/signature`; chống submit URL giả khi chữ ký fail.
+- Đã kiểm tra live: `POST /api/v1/uploads/signature` chưa login → 401 `AUTH_REQUIRED` (route sống, đúng yêu cầu auth). Flow FE: xin chữ ký `{resourceType}` → upload trực tiếp `uploadUrl` (FormData `file/api_key/timestamp/signature/folder`, khớp cách BE ký SHA1 `folder&timestamp`) → ráp `secure_url`/`public_id` vào `media[]`.
+- Đã làm:
+  - `ImageUploader`/`VideoUploader`: khi rơi về mock signature thì toast warning rõ ("chỉ xem trước tạm thời") thay vì toast success gây hiểu nhầm.
+  - `coverMediaInput` + `video.toCreateDto`: loại `blob:` URL và `publicId mock_` khỏi payload tạo bài.
+- Verify: `npx tsc --noEmit` sạch; `npm test` **87/87 pass** (12 files).
+
+---
+
+## [2026-09-16] — Dọn số liệu giả ở recipe detail (rating 5.0, vote 128, badge chuyên gia)
+
+- Mục tiêu (user báo `/recipes/f3edf895...` "hình như còn mock"): trang đã render data BE thật, nhưng mapper tự điền số giả khiến nhìn như mock.
+- Đã kiểm tra live: `GET /posts/f3edf895...` 200 đầy đủ (Demo Admin seed BE, nutrition, ingredients, categories, media thật).
+- Đã làm:
+  - Mapper: `rating`/`ratingCount` → `undefined`, `verified`/`expertVerified` → `false`, `dietTag` → `undefined`; map thêm `allergenCodes`/`traditionWarnings`/`dietCompatibilities` thật từ BE (model bổ sung 3 fields + types).
+  - Card: ẩn cụm sao khi chưa có rating, chỉ hiện kcal/protein/phút khi có số thật, tick xanh chỉ khi `verified === true`.
+  - Detail: bỏ badge trường phái giả + badge "Kiểm chứng bởi Chuyên gia" giả, vote lấy `stats.likes` (bỏ 128 giả), ẩn khối rating/reviews khi chưa có data, thêm card "Tương thích & dị ứng" từ BE (allergen, meal-plan, tradition, diet).
+- Verify: `npx tsc --noEmit` sạch; `npm test` **88/88 pass**; `npm run build` pass; eslint scope 0 errors.
+- Lưu ý: avatar chim cánh cụt + tên "Demo Admin" là seed data của BE (data thật, chỉ nhìn lạ) — sẽ hết khi có user/content thật.
+
+---
+
+## [2026-09-16] — Fix tác giả demo cứng ở form sửa bài viết
+
+- Mục tiêu (user báo trang `/articles/:id/edit` dư nội dung lạ "Tác giả: Nguyễn Lan Hương (Bạn)"): preview + logic duyệt bài dùng tác giả demo cứng thay vì dữ liệu thật.
+- Nguyên nhân: `PostEditorForm` có thanh "Mô phỏng vai trò tác giả" (mock) quyết định PUBLISHED/PENDING_REVIEW, và preview render `getAuthorInfo().name` cứng.
+- Đã làm:
+  - Xóa thanh mô phỏng + `getAuthorInfo` (`expert-lan-anh`/`my-user` giả); quyền xuất bản lấy từ `useAuthStore().user.role` thật (CONTRIBUTOR/ADMIN → xuất bản ngay, MEMBER → chờ duyệt), hiển thị badge vai trò thật ở chế độ chỉ đọc.
+  - Preview "Tác giả:" dùng tên tác giả gốc của bài đang sửa, bài mới dùng tên user đang login.
+- Verify: `npx tsc --noEmit` sạch; `npm test` **88/88 pass**; eslint file 0 errors.
+
+---
+
+## [2026-09-16] — Motion Animation cho Header Nav & Hiệu ứng gợn sóng Dark/Light Mode
+
+- Mục tiêu:
+  1. Header Navigation: Motion animation cho pill indicator khi chuyển trang (active pill) và khi di chuột qua lại giữa các menu (hover pill).
+  2. Dark/Light Mode: Hiệu ứng gợn sóng (circular wave ripple) lan tỏa từ nút toggle ra toàn màn hình khi chuyển đổi giao diện sáng/tối.
+- Đã làm:
+  - `src/components/layout/site-header.tsx`:
+    - Tích hợp `motion/react` (`layoutId="header-active-pill"`, `layoutId="header-hover-pill"`).
+    - Khi chuyển trang: Active pill (`bg-primary`) trượt mượt mà bằng spring animation từ trang cũ sang trang mới.
+    - Khi di chuột: Hover pill (`bg-accent/80`) lướt nhẹ nhàng theo con trỏ chuột cho các mục chưa active.
+    - Tích hợp `useReducedMotion()` và hỗ trợ mở/đóng mobile menu bằng `AnimatePresence`.
+  - `src/components/layout/theme-toggle.tsx` & `src/app/globals.css`:
+    - Ứng dụng native View Transition API (`document.startViewTransition`) kết hợp `clip-path: circle(0px at x y) -> circle(endRadius at x y)` mở rộng tâm sóng từ tọa độ chính xác của nút toggle ra tới góc xa nhất của màn hình trong 450ms.
+    - Đồng bộ class `.dark` tức thì trước khi snapshot để loại bỏ độ trễ màu sắc.
+    - Cấu hình CSS `::view-transition-old(root)` và `::view-transition-new(root)` để theme mới luôn là lớp sóng tràn lên trên.
+  - `src/components/ui/inner-moon.tsx`:
+    - Bổ sung hiệu ứng vòng sóng ripple rung nhẹ (`animate-ping`) cục bộ quanh nút toggle khi click, tăng cường phản hồi thị giác xúc giác (tactile feedback).
+- File tạo/sửa:
+  - Sửa: `src/components/layout/site-header.tsx`, `src/components/layout/theme-toggle.tsx`, `src/components/ui/inner-moon.tsx`, `src/app/globals.css`, `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 12/12 test files pass, 87/87 unit tests pass.
+
+---
+
+## [2026-09-16] — Thiết kế lại phần bên trái Hero Section với Text Animation VerticalCutReveal
+
+- Mục tiêu: Nâng cấp toàn diện thiết kế phần bên trái Hero Section theo chuẩn UI/UX cao cấp, ứng dụng text animation `VerticalCutReveal` (từ hệ sinh thái `@fancy/vertical-cut-reveal` shadcn registry) cho tiêu đề chính, nâng tầm nhận diện thương hiệu VeggieConnect.
+- Đã làm:
+  - Tạo component chuẩn `src/components/ui/vertical-cut-reveal.tsx`:
+    - Dựa trên registry chính thức của Fancy Components, tối ưu hóa cho stack `motion/react` (Motion v13) và Tailwind CSS.
+    - Hỗ trợ phân đoạn `words`, `characters`, `lines`, tích hợp `Intl.Segmenter` hỗ trợ tiếng Việt có dấu và emoji trọn vẹn.
+    - Animate 100% qua thuộc tính GPU compositor `translateY` trong container `overflow-hidden` tạo hiệu ứng lát cắt spring mượt mà.
+    - Đảm bảo trọn vẹn accessibility (`sr-only` text cho screen readers, `prefers-reduced-motion` fallback).
+  - Thiết kế lại layout bên trái `src/app/(site)/page.tsx`:
+    - **Pill Badge**: Viền kính mờ, icon lá mầm cùng chấm ping xanh animated sống động (`Ứng dụng hỗ trợ ăn chay #1 tại Việt Nam`).
+    - **Headline Hero**: Tiêu đề "Ăn chay đủ chất, dễ dàng mỗi ngày" chia nhịp hiển thị với hiệu ứng VerticalCutReveal; cụm từ "đủ chất," được cách điệu bằng dải màu gradient ngọc lục bảo (emerald-to-sprout).
+    - **Copy Subtitle**: Typography `text-pretty`, nhịp chuyển động fade-in `motion.p` xuất hiện êm ái sau headline.
+    - **Nút hành động CTAs**: Thiết kế lại với hiệu ứng hover nâng nhẹ (lift-up), bóng mờ tỏa màu thương hiệu, icon xoay nhẹ và mũi tên lướt ngang khi rê chuột.
+    - **Micro Social Proof**: Cam kết "Miễn phí 100% • Không yêu cầu thẻ tín dụng • Cá nhân hóa theo thể trạng" kèm icon xác nhận tin cậy.
+    - **Thẻ đo lường giá trị (Value Metric Cards)**: Chuyển đổi dãy số khô khan thành 3 card bento tinh tế có icon nền mờ và phụ đề định hướng (500+ Món thuần Việt, 50+ Quán verified, 100% Đo Calo & Đạm).
+- File tạo/sửa:
+  - Tạo: `src/components/ui/vertical-cut-reveal.tsx`
+  - Sửa: `src/app/(site)/page.tsx`, `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 12/12 test files pass, 87/87 unit tests pass.
+  - Chụp ảnh màn hình trực tiếp bằng browser: giao diện hiển thị sắc nét, cân đối hoàn hảo với khối đĩa thức ăn 3D ở bên phải.
+
+---
+
+## [2026-09-16] — Xóa mock pages chống nhầm data thật/giả
+
+- Mục tiêu (user yêu cầu): dọn toàn bộ mock trực tiếp ở pages/components để không nhầm lẫn với data thật.
+- Đã làm:
+  - **P1a Home**: `MOCK_RECIPES` → `useRecipesQuery({limit: 4})` + skeleton/empty; xóa khối quán giả + const `RESTAURANTS`/`CATEGORIES` chết + imports thừa.
+  - **P1b Search**: viết lại bằng 3 queries thật (`q`, `enabled` khi có từ khóa) + `PostCard`/`VideoCard`/`RecipeCard` chuẩn (xóa render inline legacy, link `/video/` sai → đúng); bỏ filter trường phái/sort điểm giả.
+  - **P1c Restaurants**: list + `[id]` thành empty trung thực ("chờ API UC-12"), giữ khung map/filter/dialog đóng góp.
+  - **P2a**: articles bỏ import store thừa; profile tab posts đọc `useArticlesQuery` + lọc theo user login (ghi chú tạm chờ filter `authorId`), xóa bài bằng `DeletePostDialog` (có `expectedVersion`).
+  - **P2b**: vote/lưu → state local; editor bỏ `addPost`/`updatePost`; delete dialog bỏ `deletePost` store.
+  - **P2c**: `git rm` `usePostStore`, 4 `data/mock-*.ts`, cả folder `restaurant` + `product` (orphan, không route nào dùng).
+  - Giữ `__fixtures__` trong API clients (chỉ fallback khi lỗi mạng/404/5xx; BE 200 rỗng → empty thật) + cho tests.
+- Verify: grep `usePostStore|/data/mock-|MOCK_(RECIPES|VIDEOS|RESTAURANTS|POSTS)|features/product` = 0 match; `npx tsc --noEmit` sạch; `npm test` **87/87 pass** (12 files); `npm run build` 26/26 routes; eslint scope 0 errors (chỉ warnings tiền tồn); fix thêm 2 errors `set-state-in-effect` + `any` + quotes phát hiện lúc lint.
+- PROGRESS: % giữ nguyên (dọn mock, không endpoint mới).
+- Lưu ý: có session khác sửa song song `page.tsx`/`WORK-LOG.md` (motion header, hero headline) — đã kiểm tra các sửa mock vẫn nguyên vẹn sau merge tay; user đối chiếu `git diff` trước khi commit.
+
+---
+
+## [2026-09-16] — Triển khai Content Review Queue (spec 006: T001–T020)
+
+- Mục tiêu: trang kiểm duyệt cho Admin/Contributor (mở khóa luồng Member chờ duyệt), thay tab mock ở `/admin`.
+- Đã làm:
+  - **T001–T002**: `REVIEW_QUEUE` endpoints + enums `ReviewDecision`/`ReviewItemStatus`/`ModerationPriority`.
+  - **T003–T006**: `features/review` DTO/Model/Mapper/test (5 tests: full field, null-safe, nhãn Việt, decision DTO, pagination).
+  - **T007–T012 (US1)**: api strict 5 param (không fixture) + queries/mutations (toast Việt, `SELF_APPROVAL_FORBIDDEN` riêng, invalidate) + zod reason + `ReviewDecisionDialog` (đếm ký tự, disable + chú thích khi tự duyệt) + route `/review` (AuthGuard + gate ADMIN/CONTRIBUTOR, 403 thân thiện) + link header dropdown theo quyền.
+  - **T013–T015 (US2)**: `ReviewQueueTable` (lọc status/type/priority + reset trang, skeleton/error/empty/phan trang, badge ưu tiên, cờ AI, số report, vô hiệu hóa nút bài của mình) + viết lại tab queue `/admin` (xóa mock QUEUE/dialog giả/đếm giả).
+  - **T016–T017 (US3)**: profile đã hiện `statusLabel` đúng; ghi nhận gap BE — bài REJECTED không có trong list public và lý do từ chối chưa expose qua post detail (cần BE bổ sung mới hiện được).
+  - **T018–T020**: orphan check pass; `tsc` sạch; `npm test` **93/93 pass** (13 files); `next build` pass; eslint scope 0 errors; `PROGRESS` task #10 20% → 70%; `BACKEND_INTEGRATION` review-queue `FE integrated` + changelog 2.5 (giữ `PLANNED`).
+- Còn lại: test tay theo `specs/006-content-review-queue/quickstart.md` (cần 2 tài khoản Member + duyệt) — user thực hiện.
+
+---
+
+## [2026-09-16] — Fix triệt để loop cookie-mồ-côi khi submit video (đá về `/`)
+
+- Mục tiêu (user báo): nhập đủ thông tin nhấn tạo video thì tự chuyển về trang `/`.
+- Chẩn đoán: không có code nào trong flow video điều hướng `/`; chỉ có middleware (`/login` + cookie access còn hạn → `/`). Chuỗi đúng là: access hết hạn giữa lúc điền form/upload lâu → 401 → refresh gãy (family cũ từng bị revoke) → logout nhưng cookie còn → AuthGuard đá `/login` → middleware đá tiếp `/`.
+- Verify bằng tài khoản test mới: register → refresh → `POST /posts` video → **201 `PENDING_REVIEW`** — code đúng với session sạch.
+- Đã làm: thêm `forceLogout()` dùng chung (`lib/auth-refresh.ts`) — luôn gọi logout proxy xóa HttpOnly cookies trước khi clear store; interceptor và `AuthProvider` đều dùng (trước đó AuthProvider logout không xóa cookies).
+- Verify: `npx tsc --noEmit` sạch; `npm test` **98/98 pass**.
+- User cần làm 1 lần: xóa site data (`localhost:3000` cookies + localStorage `auth-storage`) rồi đăng nhập lại để lấy token family mới — phiên cũ đã bị revoke nên refresh mãi mãi gãy.
+
+---
+
+## [2026-09-16] — Avatar upload + fix hiển thị header/banner `/profile`
+
+- Mục tiêu (user báo + ảnh chụp): form `/profile` tab info vẫn nhập URL tay; banner đầu trang và navbar dropdown không hiện ảnh dù đã lưu URL (chỉ hiện initials `DA`).
+- Chẩn đoán: (1) `basic-profile-form.tsx` dùng `<Input type="url">`; (2) banner `app/(site)/profile/page.tsx:142-146` và `site-header.tsx:162-166` chỉ render `AvatarFallback`, thiếu `AvatarImage`; (3) URL canva ngoài allowlist `next.config.ts`/`safe-image.ts` nên không bền.
+- Đã làm:
+  - Tạo `features/profile/api/avatar-upload.api.ts` (DTO signature riêng trong profile để giữ biên feature độc lập, không import từ `features/post`; `getSignature` + `uploadToCloudinary` + fallback mock `isMock` khi `POST /uploads/signature` PLANNED).
+  - Tạo `features/profile/components/avatar-uploader.tsx` (`'use client'`, shadcn Avatar/Button/Progress, validate JPG/PNG/WebP ≤5MB, progress %, toast Việt, nút Chọn/Thay/Xóa ảnh).
+  - Sửa `basic-profile-form.tsx`: thay cụm URL bằng `AvatarUploader`, `setValue(..., {shouldDirty, shouldValidate:false})`, chặn submit `blob:`/mock bằng `formError` thân thiện.
+  - Nới `profile.schema.ts` cho phép `blob:`/`data:image` ở tầng form để xem trước mock (BE vẫn chỉ nhận `http(s)` khi submit).
+  - Thêm `AvatarImage` vào `site-header.tsx` (đọc `user.avatarUrl` từ `useAuthStore`) và banner `page.tsx`; cập nhật comment tab INFO.
+  - Bổ sung mapper test URL Cloudinary `res.cloudinary.com` (không đổi logic mapper/API/queries/endpoints).
+- File tạo/sửa:
+  - Tạo: `src/features/profile/api/avatar-upload.api.ts`, `src/features/profile/components/avatar-uploader.tsx`
+  - Sửa: `src/features/profile/components/basic-profile-form.tsx`, `src/features/profile/schemas/profile.schema.ts`, `src/components/layout/site-header.tsx`, `src/app/(site)/profile/page.tsx`, `src/features/profile/mappers/profile.mapper.test.ts`, `docs/PROGRESS.md`, `docs/WORK-LOG.md`
+- Verify: `npx tsc --noEmit` sạch (0 lỗi); `npm test` **99/99 pass** (14 files, gồm profile mapper 6/6); `npm run build` pass (27 routes). Test tay còn lại: upload JPG → progress → preview tròn → Cập nhật → F5 vẫn hiện ở banner + header; Xóa ảnh → về initials; file >5MB/sai định dạng → lỗi tiếng Việt; mock signature → toast cảnh báo + chặn submit.
+- PROGRESS: task #9 giữ 90% (không endpoint mới, chỉ hoàn thiện UI + verify).
+- Còn lại / rủi ro: (1) `POST /uploads/signature` vẫn `PLANNED` nên môi trường chưa có BE sẽ rơi vào mock `blob:` và bị chặn submit — hết khi BE READY; (2) avatar URL host lạ (canva...) vẫn hiển thị qua `AvatarImage` nhưng nên upload lại về Cloudinary để bền + tối ưu.
+
+---
+
+## [2026-09-16] — Sửa lỗi click Đăng tải video bị reload trang không gọi API
+
+- Mục tiêu (user báo): vào luồng tạo video (`/videos/new`), nhấn nút "Đăng tải video" thì bị reload (tải lại) toàn trang thay vì gọi API.
+- Chẩn đoán:
+  - Tại `src/app/(site)/videos/new/page.tsx:119`, thẻ form được viết: `<form onSubmit={void handleSubmit(onSubmit)} className="space-y-6">`.
+  - Biểu thức `void handleSubmit(onSubmit)` bị thực thi ngay thời điểm component render và trả về `undefined`.
+  - Kết quả là `onSubmit` của `<form>` nhận giá trị `undefined`, khiến việc nhấn button `type="submit"` kích hoạt hành vi mặc định của trình duyệt (native HTML form submit) dẫn tới reload toàn bộ trang web.
+  - Tương tự phát hiện thêm file `src/features/review/components/review-decision-dialog.tsx:117` cũng gặp lỗi y hệt.
+- Đã làm:
+  - Sửa `src/app/(site)/videos/new/page.tsx`: chuyển thành `<form onSubmit={(e) => void handleSubmit(onSubmit)(e)} className="space-y-6" noValidate>` để handler là callback và `handleSubmit` ngăn chặn sự kiện mặc định (`e.preventDefault()`).
+  - Sửa `src/features/review/components/review-decision-dialog.tsx`: chuyển thành `<form onSubmit={(e) => void handleSubmit(onSubmit)(e)} className="space-y-2" noValidate>`.
+- File tạo/sửa:
+  - Sửa: `src/app/(site)/videos/new/page.tsx`
+  - Sửa: `src/features/review/components/review-decision-dialog.tsx`
+  - Sửa: `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit` đạt 0 lỗi type.
+  - `npm test` toàn bộ 14 test files, 99/99 unit tests pass.
+  - `npm run build` Next.js 16 build thành công toàn bộ 27 routes (exit code 0).
+
+---
+
+## [2026-09-16] — Fix lỗi upstream image response failed 404 (YouTube CDN) và cảnh báo LCP
+
+- Mục tiêu (user báo):
+  - Server log báo lỗi: `⨯ upstream image response failed for https://i.ytimg.com/vi/.../hqdefault.jpg 404` (các ID mẫu `veganDemo01`, `greenPrep01`, `mushroom001`).
+  - Browser log báo: `Image with src "..." was detected as the Largest Contentful Paint (LCP). Please add the loading="eager" property if this image is above the fold.`
+  - Rà soát toàn bộ các nguồn upload/nhúng ảnh & video trên web (Cloudinary, YouTube, Unsplash, Google, local).
+- Chẩn đoán:
+  1. Next.js image optimizer proxy `/_next/image` tải ảnh về server Next trước khi nén gửi về client. Với video YouTube có ID giả/demo từ seed data (`veganDemo01`, `greenPrep01`, `mushroom001`) hoặc link bị xóa, Google CDN trả về 404 khiến Next.js server văng lỗi "upstream image response failed 404".
+  2. Thumbnail YouTube vốn đã được nén WebP/JPEG trên CDN toàn cầu của Google, việc ép đi qua proxy nén của Next.js là dư thừa và làm hỏng log server khi có link 404.
+  3. Cảnh báo LCP xảy ra khi thẻ `<Image>` nằm ngay đầu trang (above-the-fold) bị lazy loading mặc định.
+- Đã làm:
+  - Sửa `src/components/shared/safe-image.tsx`:
+    - Thêm prop `unoptimized?: boolean`.
+    - Tự động bật `unoptimized` đối với thumbnail từ YouTube (`i.ytimg.com`, `img.youtube.com`). Trình duyệt sẽ tải trực tiếp từ Google CDN. Khi video ID không tồn tại, trình duyệt nhận 404 và tự động kích hoạt `onError` chuyển sang `fallbackSrc` (Unsplash) mà hoàn toàn KHÔNG gọi qua Next.js server, triệt tiêu 100% lỗi upstream 404 ở server console.
+    - Bổ sung `loading={priority ? 'eager' : 'lazy'}` và `fetchPriority={priority ? 'high' : 'auto'}` cho nhánh `<img>` native fallback.
+  - Sửa `src/features/video/components/video-card.tsx` và `src/app/(site)/videos/page.tsx`:
+    - Nhận `priority?: boolean`, truyền `priority={index === 0}` cho video card đầu tiên nằm above the fold để tối ưu LCP.
+  - Sửa `src/features/recipe/components/recipe-card.tsx` và `src/app/(site)/recipes/page.tsx`:
+    - Nhận `priority?: boolean`, truyền `priority={index === 0}` cho công thức đầu tiên.
+- File tạo/sửa:
+  - Sửa: `src/components/shared/safe-image.tsx`
+  - Sửa: `src/features/video/components/video-card.tsx`
+  - Sửa: `src/app/(site)/videos/page.tsx`
+  - Sửa: `src/features/recipe/components/recipe-card.tsx`
+  - Sửa: `src/app/(site)/recipes/page.tsx`
+  - Sửa: `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit` đạt 0 lỗi type.
+  - `npm test` toàn bộ 14 test files, 99/99 unit tests pass.
+
+---
+
+## [2026-09-16] — Tạo route `/admin/dashboard`, `/contributor/dashboard` và đồng bộ điều hướng theo role
+
+- Mục tiêu:
+  - Tạo route `/admin/dashboard` và đưa hàng chờ kiểm duyệt (`/review`) vào bảng điều khiển admin cho role `ADMIN`.
+  - Tạo route `/contributor/dashboard` cho role `CONTRIBUTOR` để người đóng góp có dashboard làm việc riêng.
+  - Đồng bộ luồng điều hướng (Header dropdown, middleware, auto-redirect từ `/review`).
+- Đã làm:
+  - Tạo trang `/admin/dashboard` (`src/app/(admin)/admin/dashboard/page.tsx`) với đầy đủ các tab: Kiểm duyệt (`queue`), Người dùng (`users`), Cây danh mục (`categories`), Nguyên liệu (`ingredients`), Audit logs (`logs`), hỗ trợ query parameter `?tab=`.
+  - Sửa `/admin` (`src/app/(admin)/admin/page.tsx`) tự động chuyển hướng sang `/admin/dashboard` giữ nguyên query parameters.
+  - Sửa `AdminLayout` (`src/app/(admin)/admin/layout.tsx`) cập nhật toàn bộ links trỏ sang `/admin/dashboard`, đồng bộ active state theo URL tab và logo link.
+  - Tạo trang `/contributor/dashboard` (`src/app/(site)/contributor/dashboard/page.tsx`) với `AuthGuard` cho `CONTRIBUTOR` và `ADMIN`, giao diện chuẩn thương hiệu VeggieConnect gồm: Banner chào mừng + Badge vai trò, Quick Metric Cards (Hàng chờ duyệt, Tiêu chuẩn thuần chay, Trách nhiệm phản hồi), Tab hàng chờ kiểm duyệt (`ReviewQueueTable`), Tab lối tắt đóng góp (`/recipes/new`, `/articles/new`, `/videos/new`), Tab tiêu chuẩn kiểm duyệt nội dung cộng đồng.
+  - Sửa `/review` (`src/app/(site)/review/page.tsx`) thành trang điều hướng thông minh: `ADMIN` -> `/admin/dashboard?tab=queue`, `CONTRIBUTOR` -> `/contributor/dashboard`, `MEMBER` -> màn hình từ chối quyền truy cập.
+  - Sửa `SiteHeader` (`src/components/layout/site-header.tsx`) cập nhật menu dropdown theo vai trò: Admin hiển thị Bảng điều khiển Quản trị (`/admin/dashboard`) và Kiểm duyệt bài viết (`/admin/dashboard?tab=queue`); Contributor hiển thị Bảng điều khiển Contributor (`/contributor/dashboard`).
+  - Sửa `src/middleware.ts` bổ sung `matcher` và kiểm tra quyền truy cập cho `/contributor/:path*` (chỉ cho phép `CONTRIBUTOR` và `ADMIN`).
+- File tạo/sửa:
+  - Tạo: `src/app/(admin)/admin/dashboard/page.tsx`
+  - Sửa: `src/app/(admin)/admin/page.tsx`
+  - Sửa: `src/app/(admin)/admin/layout.tsx`
+  - Tạo: `src/app/(site)/contributor/dashboard/page.tsx`
+  - Sửa: `src/app/(site)/review/page.tsx`
+  - Sửa: `src/components/layout/site-header.tsx`
+  - Sửa: `src/middleware.ts`
+  - Sửa: `docs/PROGRESS.md`
+  - Sửa: `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit` đạt 0 lỗi type.
+  - `npm test` toàn bộ 14 test files, 99/99 unit tests pass.
+  - `npm run build` Next.js 16 build thành công toàn bộ 29 routes (exit code 0).
+- PROGRESS: Task 10 (Moderation UC-11 + Contributor UC-16/17) 70% → 80%.
