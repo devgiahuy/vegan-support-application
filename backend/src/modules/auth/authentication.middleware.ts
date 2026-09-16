@@ -65,6 +65,16 @@ export class AuthenticationMiddleware {
     const claims = await this.tokenService.verifyAccessToken(token);
     const user = await this.repository.findUserById(claims.userId);
     if (!user || user.status === UserStatus.DELETED) throw new InvalidAccessTokenError();
+    if (
+      user.status === UserStatus.LOCKED &&
+      ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)
+    ) {
+      throw new AppError({
+        statusCode: 423,
+        code: 'ACCOUNT_LOCKED',
+        message: 'Tài khoản đang bị khóa',
+      });
+    }
     if (user.status === UserStatus.BANNED) {
       throw new AppError({
         statusCode: 403,

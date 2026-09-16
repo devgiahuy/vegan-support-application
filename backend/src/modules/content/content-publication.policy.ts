@@ -1,22 +1,51 @@
-import { PostRevisionStatus, PostStatus } from '@prisma/client';
+import { AiFlagRiskLevel, PostRevisionStatus, PostStatus, Role } from '@prisma/client';
 import type { ContentActor } from './content.service.js';
+import type {
+  RuleModerationFlag,
+  RuleModerationInput,
+  RuleModerationService,
+} from '../moderation/rule-moderation.service.js';
 
 export interface SubmissionDecision {
   postStatus: PostStatus;
   revisionStatus: PostRevisionStatus;
+  moderationFlag: RuleModerationFlag | null;
 }
 
 export interface ContentPublicationPolicy {
-  decideInitialSubmission(actor: ContentActor): SubmissionDecision;
+  decideSubmission(actor: ContentActor, input: RuleModerationInput): SubmissionDecision;
 }
 
-export class Phase04PendingReviewPolicy implements ContentPublicationPolicy {
-  decideInitialSubmission(_actor: ContentActor): SubmissionDecision {
-    // Phase 07 may replace this only after approved contributor profiles exist.
-    // Phase 08 must add moderation before API submissions can auto-publish.
+export class ModeratedPublicationPolicy implements ContentPublicationPolicy {
+  constructor(private readonly moderation: RuleModerationService) {}
+
+  decideSubmission(actor: ContentActor, input: RuleModerationInput): SubmissionDecision {
+    const moderationFlag = this.moderation.moderate(input);
+    if (moderationFlag?.riskLevel === AiFlagRiskLevel.HIGH) {
+      return {
+        postStatus: PostStatus.QUARANTINED,
+        revisionStatus: PostRevisionStatus.QUARANTINED,
+        moderationFlag,
+      };
+    }
+    if (actor.role === Role.MEMBER || (actor.role === Role.CONTRIBUTOR && !actor.contributorType)) {
+      return {
+        postStatus: PostStatus.PENDING_REVIEW,
+        revisionStatus: PostRevisionStatus.PENDING_REVIEW,
+        moderationFlag,
+      };
+    }
+    if (moderationFlag) {
+      return {
+        postStatus: PostStatus.FLAGGED,
+        revisionStatus: PostRevisionStatus.FLAGGED,
+        moderationFlag,
+      };
+    }
     return {
-      postStatus: PostStatus.PENDING_REVIEW,
-      revisionStatus: PostRevisionStatus.PENDING_REVIEW,
+      postStatus: PostStatus.PUBLISHED,
+      revisionStatus: PostRevisionStatus.PUBLISHED,
+      moderationFlag: null,
     };
   }
 }

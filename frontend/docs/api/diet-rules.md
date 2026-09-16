@@ -6,7 +6,7 @@ Xem trước bộ quy tắc diet/tradition hiện hành
 - operationId: `previewDietRules`
 - Params: —
 - Request: `DietRulePreviewRequest` (required)
-- Responses: `200` → DietRulePreviewResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `503` → ErrorResponse
+- Responses: `200` → DietRulePreviewResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `423` → ErrorResponse, `503` → ErrorResponse
 
 ---
 ### Schemas dùng trong nhóm

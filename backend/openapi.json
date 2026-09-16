@@ -57,6 +57,14 @@
       "description": "Admin-only Contributor application review"
     },
     {
+      "name": "Moderation",
+      "description": "Content review queue and user reports"
+    },
+    {
+      "name": "Moderation Admin",
+      "description": "Admin decisions, user and comment moderation"
+    },
+    {
       "name": "Uploads",
       "description": "Safe Cloudinary signed-upload configuration"
     }
@@ -4142,6 +4150,7 @@
                       "PENDING_REVIEW",
                       "PUBLISHED",
                       "FLAGGED",
+                      "QUARANTINED",
                       "REJECTED",
                       "HIDDEN",
                       "DELETED"
@@ -4191,6 +4200,7 @@
                           "PENDING_REVIEW",
                           "PUBLISHED",
                           "FLAGGED",
+                          "QUARANTINED",
                           "REJECTED"
                         ]
                       },
@@ -4633,6 +4643,7 @@
                       "PENDING_REVIEW",
                       "PUBLISHED",
                       "FLAGGED",
+                      "QUARANTINED",
                       "REJECTED",
                       "HIDDEN",
                       "DELETED"
@@ -4682,6 +4693,7 @@
                           "PENDING_REVIEW",
                           "PUBLISHED",
                           "FLAGGED",
+                          "QUARANTINED",
                           "REJECTED"
                         ]
                       },
@@ -4900,6 +4912,7 @@
                       "PENDING_REVIEW",
                       "PUBLISHED",
                       "FLAGGED",
+                      "QUARANTINED",
                       "REJECTED",
                       "HIDDEN",
                       "DELETED"
@@ -4949,6 +4962,7 @@
                           "PENDING_REVIEW",
                           "PUBLISHED",
                           "FLAGGED",
+                          "QUARANTINED",
                           "REJECTED"
                         ]
                       },
@@ -5193,6 +5207,7 @@
                         "PENDING_REVIEW",
                         "PUBLISHED",
                         "FLAGGED",
+                        "QUARANTINED",
                         "REJECTED",
                         "HIDDEN",
                         "DELETED"
@@ -5242,6 +5257,7 @@
                             "PENDING_REVIEW",
                             "PUBLISHED",
                             "FLAGGED",
+                            "QUARANTINED",
                             "REJECTED"
                           ]
                         },
@@ -5684,6 +5700,7 @@
                         "PENDING_REVIEW",
                         "PUBLISHED",
                         "FLAGGED",
+                        "QUARANTINED",
                         "REJECTED",
                         "HIDDEN",
                         "DELETED"
@@ -5733,6 +5750,7 @@
                             "PENDING_REVIEW",
                             "PUBLISHED",
                             "FLAGGED",
+                            "QUARANTINED",
                             "REJECTED"
                           ]
                         },
@@ -5951,6 +5969,7 @@
                         "PENDING_REVIEW",
                         "PUBLISHED",
                         "FLAGGED",
+                        "QUARANTINED",
                         "REJECTED",
                         "HIDDEN",
                         "DELETED"
@@ -6000,6 +6019,7 @@
                             "PENDING_REVIEW",
                             "PUBLISHED",
                             "FLAGGED",
+                            "QUARANTINED",
                             "REJECTED"
                           ]
                         },
@@ -6330,6 +6350,7 @@
                         "PENDING_REVIEW",
                         "PUBLISHED",
                         "FLAGGED",
+                        "QUARANTINED",
                         "REJECTED",
                         "HIDDEN",
                         "DELETED"
@@ -6379,6 +6400,7 @@
                             "PENDING_REVIEW",
                             "PUBLISHED",
                             "FLAGGED",
+                            "QUARANTINED",
                             "REJECTED"
                           ]
                         },
@@ -6824,6 +6846,7 @@
                         "PENDING_REVIEW",
                         "PUBLISHED",
                         "FLAGGED",
+                        "QUARANTINED",
                         "REJECTED",
                         "HIDDEN",
                         "DELETED"
@@ -6873,6 +6896,7 @@
                             "PENDING_REVIEW",
                             "PUBLISHED",
                             "FLAGGED",
+                            "QUARANTINED",
                             "REJECTED"
                           ]
                         },
@@ -7094,6 +7118,7 @@
                         "PENDING_REVIEW",
                         "PUBLISHED",
                         "FLAGGED",
+                        "QUARANTINED",
                         "REJECTED",
                         "HIDDEN",
                         "DELETED"
@@ -7143,6 +7168,7 @@
                             "PENDING_REVIEW",
                             "PUBLISHED",
                             "FLAGGED",
+                            "QUARANTINED",
                             "REJECTED"
                           ]
                         },
@@ -8759,6 +8785,1306 @@
           "meta"
         ],
         "additionalProperties": false
+      },
+      "ReviewQueueListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "postId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "RECIPE",
+                    "BLOG",
+                    "VIDEO"
+                  ]
+                },
+                "slug": {
+                  "type": "string"
+                },
+                "postStatus": {
+                  "type": "string",
+                  "enum": [
+                    "DRAFT",
+                    "PENDING_REVIEW",
+                    "PUBLISHED",
+                    "FLAGGED",
+                    "QUARANTINED",
+                    "REJECTED",
+                    "HIDDEN",
+                    "DELETED"
+                  ]
+                },
+                "revisionId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "revisionVersion": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "revisionStatus": {
+                  "type": "string",
+                  "enum": [
+                    "DRAFT",
+                    "PENDING_REVIEW",
+                    "PUBLISHED",
+                    "FLAGGED",
+                    "QUARANTINED",
+                    "REJECTED"
+                  ]
+                },
+                "title": {
+                  "type": "string"
+                },
+                "excerpt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "author": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "MEMBER",
+                        "CONTRIBUTOR",
+                        "ADMIN"
+                      ]
+                    },
+                    "contributorType": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "EXPERIENCED_PRACTITIONER",
+                        "NUTRITION_EXPERT",
+                        null
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "displayName",
+                    "role",
+                    "contributorType"
+                  ],
+                  "additionalProperties": false
+                },
+                "aiFlags": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "provider": {
+                        "type": "string"
+                      },
+                      "model": {
+                        "type": "string"
+                      },
+                      "ruleVersion": {
+                        "type": "string"
+                      },
+                      "reasonCodes": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "riskScore": {
+                        "type": "number",
+                        "minimum": 0,
+                        "maximum": 1
+                      },
+                      "riskLevel": {
+                        "type": "string",
+                        "enum": [
+                          "LOW",
+                          "MEDIUM",
+                          "HIGH"
+                        ]
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "OPEN",
+                          "REVIEWED"
+                        ]
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "provider",
+                      "model",
+                      "ruleVersion",
+                      "reasonCodes",
+                      "riskScore",
+                      "riskLevel",
+                      "status",
+                      "createdAt"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "priority": {
+                  "type": "string",
+                  "enum": [
+                    "NORMAL",
+                    "HIGH"
+                  ]
+                },
+                "activeReporterCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "canDecide": {
+                  "type": "boolean"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "postId",
+                "type",
+                "slug",
+                "postStatus",
+                "revisionId",
+                "revisionVersion",
+                "revisionStatus",
+                "title",
+                "excerpt",
+                "author",
+                "aiFlags",
+                "priority",
+                "activeReporterCount",
+                "canDecide",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "ReviewQueueItemResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "postId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "RECIPE",
+                  "BLOG",
+                  "VIDEO"
+                ]
+              },
+              "slug": {
+                "type": "string"
+              },
+              "postStatus": {
+                "type": "string",
+                "enum": [
+                  "DRAFT",
+                  "PENDING_REVIEW",
+                  "PUBLISHED",
+                  "FLAGGED",
+                  "QUARANTINED",
+                  "REJECTED",
+                  "HIDDEN",
+                  "DELETED"
+                ]
+              },
+              "revisionId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "revisionVersion": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "revisionStatus": {
+                "type": "string",
+                "enum": [
+                  "DRAFT",
+                  "PENDING_REVIEW",
+                  "PUBLISHED",
+                  "FLAGGED",
+                  "QUARANTINED",
+                  "REJECTED"
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "excerpt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "author": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "displayName": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "MEMBER",
+                      "CONTRIBUTOR",
+                      "ADMIN"
+                    ]
+                  },
+                  "contributorType": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "EXPERIENCED_PRACTITIONER",
+                      "NUTRITION_EXPERT",
+                      null
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "displayName",
+                  "role",
+                  "contributorType"
+                ],
+                "additionalProperties": false
+              },
+              "aiFlags": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "provider": {
+                      "type": "string"
+                    },
+                    "model": {
+                      "type": "string"
+                    },
+                    "ruleVersion": {
+                      "type": "string"
+                    },
+                    "reasonCodes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "riskScore": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "riskLevel": {
+                      "type": "string",
+                      "enum": [
+                        "LOW",
+                        "MEDIUM",
+                        "HIGH"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "OPEN",
+                        "REVIEWED"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "provider",
+                    "model",
+                    "ruleVersion",
+                    "reasonCodes",
+                    "riskScore",
+                    "riskLevel",
+                    "status",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "priority": {
+                "type": "string",
+                "enum": [
+                  "NORMAL",
+                  "HIGH"
+                ]
+              },
+              "activeReporterCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "canDecide": {
+                "type": "boolean"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "postId",
+              "type",
+              "slug",
+              "postStatus",
+              "revisionId",
+              "revisionVersion",
+              "revisionStatus",
+              "title",
+              "excerpt",
+              "author",
+              "aiFlags",
+              "priority",
+              "activeReporterCount",
+              "canDecide",
+              "createdAt"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "ModerationReportResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "reporterId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "targetType": {
+                "type": "string",
+                "enum": [
+                  "POST",
+                  "COMMENT"
+                ]
+              },
+              "targetId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "reasonCode": {
+                "type": "string"
+              },
+              "details": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "OPEN",
+                  "RESOLVED"
+                ]
+              },
+              "priority": {
+                "type": "string",
+                "enum": [
+                  "NORMAL",
+                  "HIGH"
+                ]
+              },
+              "activeReporterCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "resolvedDecision": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "APPROVE",
+                  "REJECT",
+                  "NO_VIOLATION",
+                  "WARN",
+                  "HIDE",
+                  "RESTORE",
+                  "DEMOTE",
+                  "BAN",
+                  "UNBAN",
+                  "LOCK",
+                  "UNLOCK",
+                  "DELETE_ACCOUNT",
+                  null
+                ]
+              },
+              "resolvedReason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "resolvedById": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "resolvedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "reporterId",
+              "targetType",
+              "targetId",
+              "reasonCode",
+              "details",
+              "status",
+              "priority",
+              "activeReporterCount",
+              "resolvedDecision",
+              "resolvedReason",
+              "resolvedById",
+              "resolvedAt",
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "ModerationReportListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "reporterId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "targetType": {
+                  "type": "string",
+                  "enum": [
+                    "POST",
+                    "COMMENT"
+                  ]
+                },
+                "targetId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "reasonCode": {
+                  "type": "string"
+                },
+                "details": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "OPEN",
+                    "RESOLVED"
+                  ]
+                },
+                "priority": {
+                  "type": "string",
+                  "enum": [
+                    "NORMAL",
+                    "HIGH"
+                  ]
+                },
+                "activeReporterCount": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "resolvedDecision": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "APPROVE",
+                    "REJECT",
+                    "NO_VIOLATION",
+                    "WARN",
+                    "HIDE",
+                    "RESTORE",
+                    "DEMOTE",
+                    "BAN",
+                    "UNBAN",
+                    "LOCK",
+                    "UNLOCK",
+                    "DELETE_ACCOUNT",
+                    null
+                  ]
+                },
+                "resolvedReason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "resolvedById": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "resolvedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "reporterId",
+                "targetType",
+                "targetId",
+                "reasonCode",
+                "details",
+                "status",
+                "priority",
+                "activeReporterCount",
+                "resolvedDecision",
+                "resolvedReason",
+                "resolvedById",
+                "resolvedAt",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "AdminModerationUserResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "email": {
+                "type": "string",
+                "format": "email"
+              },
+              "displayName": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "MEMBER",
+                  "CONTRIBUTOR",
+                  "ADMIN"
+                ]
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ACTIVE",
+                  "LOCKED",
+                  "BANNED",
+                  "DELETED"
+                ]
+              },
+              "contributorType": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "EXPERIENCED_PRACTITIONER",
+                  "NUTRITION_EXPERT",
+                  null
+                ]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "deletedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "privateDataPurgeAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "email",
+              "displayName",
+              "role",
+              "status",
+              "contributorType",
+              "createdAt",
+              "updatedAt",
+              "deletedAt",
+              "privateDataPurgeAt"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "AdminModerationUserListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "email": {
+                  "type": "string",
+                  "format": "email"
+                },
+                "displayName": {
+                  "type": "string"
+                },
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "MEMBER",
+                    "CONTRIBUTOR",
+                    "ADMIN"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "ACTIVE",
+                    "LOCKED",
+                    "BANNED",
+                    "DELETED"
+                  ]
+                },
+                "contributorType": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "EXPERIENCED_PRACTITIONER",
+                    "NUTRITION_EXPERT",
+                    null
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "deletedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "privateDataPurgeAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "email",
+                "displayName",
+                "role",
+                "status",
+                "contributorType",
+                "createdAt",
+                "updatedAt",
+                "deletedAt",
+                "privateDataPurgeAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "AdminModerationCommentResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "postId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "parentId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "content": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "VISIBLE",
+                  "HIDDEN",
+                  "DELETED"
+                ]
+              },
+              "author": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "displayName": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "MEMBER",
+                      "CONTRIBUTOR",
+                      "ADMIN"
+                    ]
+                  },
+                  "contributorType": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "EXPERIENCED_PRACTITIONER",
+                      "NUTRITION_EXPERT",
+                      null
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "displayName",
+                  "role",
+                  "contributorType"
+                ],
+                "additionalProperties": false
+              },
+              "hiddenReason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "hiddenById": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "hiddenAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "deletedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "postId",
+              "parentId",
+              "content",
+              "status",
+              "author",
+              "hiddenReason",
+              "hiddenById",
+              "hiddenAt",
+              "deletedAt",
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "AdminModerationCommentListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "postId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "parentId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "content": {
+                  "type": "string"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "VISIBLE",
+                    "HIDDEN",
+                    "DELETED"
+                  ]
+                },
+                "author": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "role": {
+                      "type": "string",
+                      "enum": [
+                        "MEMBER",
+                        "CONTRIBUTOR",
+                        "ADMIN"
+                      ]
+                    },
+                    "contributorType": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "EXPERIENCED_PRACTITIONER",
+                        "NUTRITION_EXPERT",
+                        null
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "displayName",
+                    "role",
+                    "contributorType"
+                  ],
+                  "additionalProperties": false
+                },
+                "hiddenReason": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "hiddenById": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "hiddenAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "deletedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "postId",
+                "parentId",
+                "content",
+                "status",
+                "author",
+                "hiddenReason",
+                "hiddenById",
+                "hiddenAt",
+                "deletedAt",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
       }
     },
     "parameters": {}
@@ -9271,6 +10597,24 @@
                 }
               }
             }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -9372,6 +10716,24 @@
                 }
               }
             }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -9468,6 +10830,24 @@
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
                 }
               }
             }
@@ -9694,6 +11074,24 @@
               }
             }
           },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          },
           "503": {
             "description": "Bộ quy tắc chưa sẵn sàng",
             "content": {
@@ -9851,6 +11249,24 @@
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
                 }
               }
             }
@@ -10483,6 +11899,24 @@
                 }
               }
             }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -10775,6 +12209,24 @@
                 }
               }
             }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
           }
         }
       },
@@ -11028,6 +12480,24 @@
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
                 }
               }
             }
@@ -11829,6 +13299,24 @@
                 }
               }
             }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -12186,6 +13674,24 @@
                 }
               }
             }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
           }
         }
       },
@@ -12429,6 +13935,24 @@
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
                 }
               }
             }
@@ -12705,6 +14229,24 @@
                 }
               }
             }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -12952,6 +14494,24 @@
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
                 }
               }
             }
@@ -13210,7 +14770,7 @@
           "Content"
         ],
         "summary": "Tạo Recipe, Blog hoặc Video",
-        "description": "Không nhận author/status/publishedAt từ client. Trước Phase 07, mọi user-created content đi Member path PENDING_REVIEW; requested Contributor type không cấp quyền.",
+        "description": "Không nhận author/status/publishedAt từ client. Member đi PENDING_REVIEW. Approved Contributor/Admin được auto-publish khi rule moderation v1 không flag; low/medium flag vào FLAGGED và high spam/harmful-health vào QUARANTINED. Requested Contributor type không cấp quyền.",
         "operationId": "createPost",
         "security": [
           {
@@ -13294,7 +14854,7 @@
         },
         "responses": {
           "201": {
-            "description": "Post và revision PENDING_REVIEW đã tạo",
+            "description": "Post/revision đã tạo với moderation-derived state",
             "content": {
               "application/json": {
                 "schema": {
@@ -13378,7 +14938,7 @@
             }
           },
           "403": {
-            "description": "Tài khoản bị cấm",
+            "description": "Tài khoản không được mutation",
             "content": {
               "application/json": {
                 "examples": {
@@ -13387,7 +14947,17 @@
                       "success": false,
                       "error": {
                         "code": "ACCOUNT_BANNED",
-                        "message": "Tài khoản bị cấm",
+                        "message": "Tài khoản không được mutation",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_LOCKED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_LOCKED",
+                        "message": "Tài khoản không được mutation",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -13417,6 +14987,24 @@
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
                 }
               }
             }
@@ -13692,7 +15280,7 @@
           "Content"
         ],
         "summary": "Tạo revision mới cho content thuộc quyền sở hữu",
-        "description": "Request là full revision snapshot và bắt buộc expectedVersion. Edit published post tạo PENDING_REVIEW revision mới; published revision cũ vẫn phục vụ public.",
+        "description": "Request là full revision snapshot và bắt buộc expectedVersion. Member edit published post tạo PENDING_REVIEW revision; approved Contributor/Admin được moderation lại và auto-publish nếu sạch. Revision cũ vẫn phục vụ public khi revision mới pending/flagged/quarantined.",
         "operationId": "updatePost",
         "security": [
           {
@@ -13960,6 +15548,24 @@
                 }
               }
             }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
           }
         }
       },
@@ -14127,6 +15733,24 @@
                 }
               }
             }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
           }
         }
       }
@@ -14233,6 +15857,24 @@
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
                 }
               }
             }
@@ -14529,6 +16171,24 @@
               }
             }
           },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          },
           "429": {
             "description": "Vượt giới hạn thao tác community",
             "content": {
@@ -14753,6 +16413,24 @@
               }
             }
           },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          },
           "429": {
             "description": "Vượt giới hạn thao tác community",
             "content": {
@@ -14950,6 +16628,24 @@
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
                 }
               }
             }
@@ -15264,6 +16960,24 @@
               }
             }
           },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          },
           "429": {
             "description": "Vượt giới hạn thao tác community",
             "content": {
@@ -15428,6 +17142,24 @@
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
                 }
               }
             }
@@ -15640,6 +17372,24 @@
               }
             }
           },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          },
           "429": {
             "description": "Vượt giới hạn thao tác community",
             "content": {
@@ -15820,6 +17570,24 @@
               }
             }
           },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          },
           "429": {
             "description": "Vượt giới hạn thao tác community",
             "content": {
@@ -15994,6 +17762,24 @@
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
                 }
               }
             }
@@ -16382,6 +18168,24 @@
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
                 }
               }
             }
@@ -17013,6 +18817,2363 @@
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/review-queue/posts": {
+      "get": {
+        "tags": [
+          "Moderation"
+        ],
+        "summary": "List post revisions awaiting editorial or Admin moderation review",
+        "description": "Approved Contributors see clean Member PENDING_REVIEW revisions. Admin also sees FLAGGED and QUARANTINED revisions with rule reason codes, score, version, report count and priority.",
+        "operationId": "listPostReviewQueue",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING_REVIEW",
+                "FLAGGED",
+                "QUARANTINED"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "RECIPE",
+                "BLOG",
+                "VIDEO"
+              ]
+            },
+            "required": false,
+            "name": "type",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NORMAL",
+                "HIGH"
+              ]
+            },
+            "required": false,
+            "name": "priority",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Review queue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewQueueListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filter không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Filter không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Contributor subtype/Admin permission required",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Contributor subtype/Admin permission required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Contributor subtype/Admin permission required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/review-queue/posts/{id}/approve": {
+      "patch": {
+        "tags": [
+          "Moderation"
+        ],
+        "summary": "Approve latest post revision",
+        "description": "Reason is mandatory. Self-review is forbidden. The latest revision and post are locked transactionally; flagged/quarantined decisions require Admin. A prior published revision remains public while a newer revision is pending or rejected.",
+        "operationId": "approvePostReview",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Review decision and audit recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewQueueItemResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID hoặc reason không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "ID hoặc reason không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Review boundary violated",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Review boundary violated",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "SELF_APPROVAL_FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "SELF_APPROVAL_FORBIDDEN",
+                        "message": "Review boundary violated",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ADMIN_REVIEW_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ADMIN_REVIEW_REQUIRED",
+                        "message": "Review boundary violated",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy target",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy target",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Concurrent/already decided review",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "REVIEW_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "REVIEW_CONFLICT",
+                        "message": "Concurrent/already decided review",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "REVIEW_ALREADY_DECIDED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "REVIEW_ALREADY_DECIDED",
+                        "message": "Concurrent/already decided review",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CONTENT_AUTHOR_INACTIVE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTENT_AUTHOR_INACTIVE",
+                        "message": "Concurrent/already decided review",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/review-queue/posts/{id}/reject": {
+      "patch": {
+        "tags": [
+          "Moderation"
+        ],
+        "summary": "Reject latest post revision",
+        "description": "Reason is mandatory. Self-review is forbidden. The latest revision and post are locked transactionally; flagged/quarantined decisions require Admin. A prior published revision remains public while a newer revision is pending or rejected.",
+        "operationId": "rejectPostReview",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Review decision and audit recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewQueueItemResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID hoặc reason không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "ID hoặc reason không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Review boundary violated",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Review boundary violated",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "SELF_APPROVAL_FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "SELF_APPROVAL_FORBIDDEN",
+                        "message": "Review boundary violated",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ADMIN_REVIEW_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ADMIN_REVIEW_REQUIRED",
+                        "message": "Review boundary violated",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy target",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy target",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Concurrent/already decided review",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "REVIEW_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "REVIEW_CONFLICT",
+                        "message": "Concurrent/already decided review",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "REVIEW_ALREADY_DECIDED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "REVIEW_ALREADY_DECIDED",
+                        "message": "Concurrent/already decided review",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CONTENT_AUTHOR_INACTIVE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTENT_AUTHOR_INACTIVE",
+                        "message": "Concurrent/already decided review",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/reports": {
+      "post": {
+        "tags": [
+          "Moderation"
+        ],
+        "summary": "Report a visible post or comment",
+        "description": "One OPEN report per reporter and target. Priority becomes HIGH at five distinct active reporters; this never confirms a violation automatically.",
+        "operationId": "createModerationReport",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "targetType": {
+                    "type": "string",
+                    "enum": [
+                      "POST",
+                      "COMMENT"
+                    ]
+                  },
+                  "targetId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "reasonCode": {
+                    "type": "string",
+                    "enum": [
+                      "SPAM",
+                      "HARMFUL_HEALTH",
+                      "HARASSMENT",
+                      "MISINFORMATION",
+                      "COPYRIGHT",
+                      "OTHER"
+                    ],
+                    "description": "Stable reporter-selected reason code"
+                  },
+                  "details": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "targetType",
+                  "targetId",
+                  "reasonCode"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Report created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModerationReportResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Report input không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Report input không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Self-report hoặc account boundary",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "SELF_REPORT_FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "SELF_REPORT_FORBIDDEN",
+                        "message": "Self-report hoặc account boundary",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Self-report hoặc account boundary",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Target không visible",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Target không visible",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Active report đã tồn tại",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "DUPLICATE_ACTIVE_REPORT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DUPLICATE_ACTIVE_REPORT",
+                        "message": "Active report đã tồn tại",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/reports": {
+      "get": {
+        "tags": [
+          "Moderation Admin"
+        ],
+        "summary": "Admin list reports",
+        "operationId": "listModerationReportsAdmin",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "OPEN",
+                "RESOLVED"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NORMAL",
+                "HIGH"
+              ]
+            },
+            "required": false,
+            "name": "priority",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "POST",
+                "COMMENT"
+              ]
+            },
+            "required": false,
+            "name": "targetType",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Report queue/history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModerationReportListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filter không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Filter không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin only",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Admin only",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Admin only",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/reports/{id}/resolve": {
+      "patch": {
+        "tags": [
+          "Moderation Admin"
+        ],
+        "summary": "Resolve all active reports for the same target with an Admin decision",
+        "description": "Supports NO_VIOLATION, WARN, HIDE, RESTORE, DEMOTE and BAN. Every decision requires a reason and stores related report IDs in the audit trail.",
+        "operationId": "resolveModerationReportAdmin",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "decision": {
+                    "type": "string",
+                    "enum": [
+                      "NO_VIOLATION",
+                      "WARN",
+                      "HIDE",
+                      "RESTORE",
+                      "DEMOTE",
+                      "BAN"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "decision",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Reports resolved and decision audited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModerationReportResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Decision không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Decision không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin only/protected account",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Admin only/protected account",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "PROTECTED_ADMIN_ACCOUNT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "PROTECTED_ADMIN_ACCOUNT",
+                        "message": "Admin only/protected account",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Report/target không tồn tại",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Report/target không tồn tại",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Report decision conflict",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "REPORT_ALREADY_RESOLVED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "REPORT_ALREADY_RESOLVED",
+                        "message": "Report decision conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "REPORT_REVIEW_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "REPORT_REVIEW_CONFLICT",
+                        "message": "Report decision conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "DEMOTION_NOT_APPLICABLE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DEMOTION_NOT_APPLICABLE",
+                        "message": "Report decision conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CONTENT_STATE_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTENT_STATE_CONFLICT",
+                        "message": "Report decision conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CONTENT_AUTHOR_INACTIVE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTENT_AUTHOR_INACTIVE",
+                        "message": "Report decision conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users": {
+      "get": {
+        "tags": [
+          "Moderation Admin"
+        ],
+        "summary": "Admin search and filter users",
+        "operationId": "listUsersAdmin",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "LOCKED",
+                "BANNED",
+                "DELETED"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MEMBER",
+                "CONTRIBUTOR",
+                "ADMIN"
+              ]
+            },
+            "required": false,
+            "name": "role",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "User administration list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminModerationUserListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filter không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Filter không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin only",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Admin only",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Admin only",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/users/{id}/status": {
+      "patch": {
+        "tags": [
+          "Moderation Admin"
+        ],
+        "summary": "Lock, unlock, ban, unban or delete a user account",
+        "description": "Ban hides only currently visible posts/comments with USER_BANNED. Unban restores only items still hidden for exactly that reason. Delete revokes sessions, anonymizes the account and schedules private-data purge in 30 days.",
+        "operationId": "updateUserStatusAdmin",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "ACTIVE",
+                      "LOCKED",
+                      "BANNED",
+                      "DELETED"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "status",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User state changed and audited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminModerationUserResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Status/reason không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Status/reason không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Self/protected Admin boundary",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "SELF_MODERATION_FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "SELF_MODERATION_FORBIDDEN",
+                        "message": "Self/protected Admin boundary",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "PROTECTED_ADMIN_ACCOUNT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "PROTECTED_ADMIN_ACCOUNT",
+                        "message": "Self/protected Admin boundary",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Self/protected Admin boundary",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy user",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy user",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Invalid user state transition",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "USER_STATUS_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "USER_STATUS_CONFLICT",
+                        "message": "Invalid user state transition",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/comments": {
+      "get": {
+        "tags": [
+          "Moderation Admin"
+        ],
+        "summary": "Admin list comments for moderation",
+        "operationId": "listCommentsAdmin",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "VISIBLE",
+                "HIDDEN",
+                "DELETED"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "postId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "authorId",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Comment moderation list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminModerationCommentListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filter không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Filter không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin only",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Admin only",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Admin only",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/comments/{id}/status": {
+      "patch": {
+        "tags": [
+          "Moderation Admin"
+        ],
+        "summary": "Admin hide or restore a comment",
+        "description": "Author-deleted comments cannot be restored. A reason and audit action are always recorded.",
+        "operationId": "updateCommentStatusAdmin",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "VISIBLE",
+                      "HIDDEN"
+                    ]
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "status",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Comment status changed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminModerationCommentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Status/reason không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Status/reason không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin only",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Admin only",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Admin only",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy comment",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy comment",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Comment state conflict",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "COMMENT_NOT_MODERATABLE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "COMMENT_NOT_MODERATABLE",
+                        "message": "Comment state conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "COMMENT_STATUS_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "COMMENT_STATUS_CONFLICT",
+                        "message": "Comment state conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CONTENT_AUTHOR_INACTIVE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTENT_AUTHOR_INACTIVE",
+                        "message": "Comment state conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
                 }
               }
             }

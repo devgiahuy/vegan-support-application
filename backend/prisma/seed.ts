@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import {
+  AiFlagRiskLevel,
+  AiFlagStatus,
   CatalogStatus,
   CategoryType,
   CommentStatus,
@@ -12,11 +14,14 @@ import {
   IngredientResolutionStatus,
   MediaKind,
   MediaProvider,
+  ModerationPriority,
   PostRevisionStatus,
   PostStatus,
   PostType,
   PrismaClient,
   RecipeDifficulty,
+  ReportStatus,
+  ReportTargetType,
   Role,
   Tradition,
   UserStatus,
@@ -954,8 +959,123 @@ async function main(): Promise<void> {
       });
     }
   });
+
+  const experiencedContributor = await prisma.user.findUniqueOrThrow({
+    where: { email: seedEnvironment.SEED_EXPERIENCED_CONTRIBUTOR_EMAIL.toLowerCase() },
+  });
+  const quarantinePostId = '80000000-0000-4000-8000-000000000001';
+  const quarantineRevisionId = '80000000-0000-4000-8000-000000000002';
+  const aiFlagId = '80000000-0000-4000-8000-000000000003';
+  await prisma.$transaction(async (transaction) => {
+    await transaction.post.upsert({
+      where: { id: quarantinePostId },
+      update: {
+        authorId: experiencedContributor.id,
+        type: PostType.BLOG,
+        slug: 'moderation-quarantine-demo',
+        status: PostStatus.QUARANTINED,
+        version: 1,
+        publishedRevisionId: null,
+        publishedAt: null,
+      },
+      create: {
+        id: quarantinePostId,
+        authorId: experiencedContributor.id,
+        type: PostType.BLOG,
+        slug: 'moderation-quarantine-demo',
+        status: PostStatus.QUARANTINED,
+        version: 1,
+      },
+    });
+    await transaction.postRevision.upsert({
+      where: { id: quarantineRevisionId },
+      update: {
+        postId: quarantinePostId,
+        createdById: experiencedContributor.id,
+        version: 1,
+        status: PostRevisionStatus.QUARANTINED,
+        title: 'Demo nội dung health claim rủi ro cao',
+        normalizedTitle: normalizeVietnameseText('Demo nội dung health claim rủi ro cao'),
+        body: 'Bản ghi demo chỉ dùng để kiểm tra queue moderation cục bộ.',
+        normalizedBody: normalizeVietnameseText(
+          'Bản ghi demo chỉ dùng để kiểm tra queue moderation cục bộ.',
+        ),
+      },
+      create: {
+        id: quarantineRevisionId,
+        postId: quarantinePostId,
+        createdById: experiencedContributor.id,
+        version: 1,
+        status: PostRevisionStatus.QUARANTINED,
+        title: 'Demo nội dung health claim rủi ro cao',
+        normalizedTitle: normalizeVietnameseText('Demo nội dung health claim rủi ro cao'),
+        body: 'Bản ghi demo chỉ dùng để kiểm tra queue moderation cục bộ.',
+        normalizedBody: normalizeVietnameseText(
+          'Bản ghi demo chỉ dùng để kiểm tra queue moderation cục bộ.',
+        ),
+        categories: { create: [{ categoryId: topicCategory.id }] },
+        tags: { create: postTagRows(['moderation', 'health claim']) },
+      },
+    });
+    await transaction.aiFlag.upsert({
+      where: { id: aiFlagId },
+      update: {
+        postRevisionId: quarantineRevisionId,
+        provider: 'RULE_ENGINE',
+        model: 'deterministic-moderation',
+        ruleVersion: 'moderation-rules-v1',
+        reasonCodes: ['HARMFUL_HEALTH_CLAIM'],
+        riskScore: 0.98,
+        riskLevel: AiFlagRiskLevel.HIGH,
+        status: AiFlagStatus.OPEN,
+        reviewedById: null,
+        reviewedAt: null,
+      },
+      create: {
+        id: aiFlagId,
+        postRevisionId: quarantineRevisionId,
+        provider: 'RULE_ENGINE',
+        model: 'deterministic-moderation',
+        ruleVersion: 'moderation-rules-v1',
+        reasonCodes: ['HARMFUL_HEALTH_CLAIM'],
+        riskScore: 0.98,
+        riskLevel: AiFlagRiskLevel.HIGH,
+        status: AiFlagStatus.OPEN,
+      },
+    });
+  });
+
+  const reportId = '80000000-0000-4000-8000-000000000004';
+  await prisma.report.upsert({
+    where: { id: reportId },
+    update: {
+      reporterId: member.id,
+      targetType: ReportTargetType.POST,
+      targetId: communityRecipe.id,
+      reasonCode: 'OTHER',
+      details: 'Report demo để kiểm tra Admin moderation queue.',
+      status: ReportStatus.OPEN,
+      priority: ModerationPriority.NORMAL,
+      activeKey: `${member.id}:${ReportTargetType.POST}:${communityRecipe.id}`,
+      resolvedDecision: null,
+      resolvedReason: null,
+      resolvedById: null,
+      resolvedAt: null,
+    },
+    create: {
+      id: reportId,
+      reporterId: member.id,
+      targetType: ReportTargetType.POST,
+      targetId: communityRecipe.id,
+      reasonCode: 'OTHER',
+      details: 'Report demo để kiểm tra Admin moderation queue.',
+      status: ReportStatus.OPEN,
+      priority: ModerationPriority.NORMAL,
+      activeKey: `${member.id}:${ReportTargetType.POST}:${communityRecipe.id}`,
+    },
+  });
   console.info(
-    `Seeded local Member, two approved Contributor subtypes, Admin, diet rules v${String(dietRuleSetVersion)}, catalog, 10 discovery content records, and community interactions.`,
+    `Seeded local Member, two approved Contributor subtypes, Admin, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, and moderation queue fixtures.`,
   );
 }
 

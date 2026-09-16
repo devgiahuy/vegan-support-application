@@ -24,7 +24,13 @@ import type { ContentActor, ContentService } from './content.service.js';
 import type { MediaService } from './media.service.js';
 
 function actorFromRequest(request: Request): ContentActor {
-  if (request.auth) return { userId: request.auth.userId, role: request.auth.role };
+  if (request.auth) {
+    return {
+      userId: request.auth.userId,
+      role: request.auth.role,
+      contributorType: request.auth.contributorType,
+    };
+  }
   throw new AppError({ statusCode: 401, code: 'AUTH_REQUIRED', message: 'Vui lòng đăng nhập' });
 }
 
@@ -37,7 +43,13 @@ export class ContentController {
   listPosts = async (request: Request, response: Response): Promise<void> => {
     const result = await this.contentService.listPublished(
       getValidatedQuery<PostListQuery>(request),
-      request.auth ? { userId: request.auth.userId, role: request.auth.role } : undefined,
+      request.auth
+        ? {
+            userId: request.auth.userId,
+            role: request.auth.role,
+            contributorType: request.auth.contributorType,
+          }
+        : undefined,
     );
     response.status(200).json(
       postListResponseSchema.parse({
@@ -53,7 +65,13 @@ export class ContentController {
     const result = await this.contentService.getRelated(
       id,
       getValidatedQuery<RelatedPostsQuery>(request),
-      request.auth ? { userId: request.auth.userId, role: request.auth.role } : undefined,
+      request.auth
+        ? {
+            userId: request.auth.userId,
+            role: request.auth.role,
+            contributorType: request.auth.contributorType,
+          }
+        : undefined,
     );
     response.status(200).json(
       relatedPostsResponseSchema.parse({
@@ -68,7 +86,13 @@ export class ContentController {
     const { idOrSlug } = getValidatedParams<PostIdentifierParams>(request);
     const data = await this.contentService.getPost(
       idOrSlug,
-      request.auth ? { userId: request.auth.userId, role: request.auth.role } : undefined,
+      request.auth
+        ? {
+            userId: request.auth.userId,
+            role: request.auth.role,
+            contributorType: request.auth.contributorType,
+          }
+        : undefined,
     );
     response.status(200).json(postResponseSchema.parse({ success: true, data, meta: null }));
   };

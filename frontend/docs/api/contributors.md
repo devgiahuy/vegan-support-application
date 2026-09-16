@@ -6,7 +6,7 @@ Gửi Contributor application hoặc yêu cầu đổi subtype
 - operationId: `submitContributorApplication`
 - Params: —
 - Request: `object` (required)
-- Responses: `201` → ContributorApplicationResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `409` → ErrorResponse
+- Responses: `201` → ContributorApplicationResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
 ```json
 {"type":"object","required":["requestedType","experience"],"properties":{"requestedType":{"type":"string","enum":["EXPERIENCED_PRACTITIONER","NUTRITION_EXPERT"]},"experience":{"type":"string"},"referenceLinks":{"type":"array","items":{"type":"string","format":"uri"}}},"additionalProperties":false}

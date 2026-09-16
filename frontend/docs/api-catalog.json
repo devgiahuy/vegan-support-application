@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
   "source": "../backend/openapi.json",
-  "generatedAt": "2026-09-15T16:35:24.631Z",
+  "generatedAt": "2026-09-16T02:34:56.889Z",
   "stats": {
-    "operations": 46,
-    "groups": 12,
-    "schemas": 43
+    "operations": 56,
+    "groups": 14,
+    "schemas": 51
   },
   "operations": [
     {
@@ -122,7 +122,8 @@
         "200": "ProfileResponse",
         "400": "ErrorResponse",
         "401": "ErrorResponse",
-        "403": "ErrorResponse"
+        "403": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -142,7 +143,8 @@
         "200": "HealthProfileResponse",
         "400": "ErrorResponse",
         "401": "ErrorResponse",
-        "403": "ErrorResponse"
+        "403": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -163,6 +165,7 @@
         "400": "ErrorResponse",
         "401": "ErrorResponse",
         "403": "ErrorResponse",
+        "423": "ErrorResponse",
         "503": "ErrorResponse"
       }
     },
@@ -185,6 +188,7 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "409": "ErrorResponse",
+        "423": "ErrorResponse",
         "503": "ErrorResponse"
       }
     },
@@ -206,7 +210,8 @@
         "400": "ErrorResponse",
         "401": "ErrorResponse",
         "403": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -321,7 +326,8 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -377,7 +383,8 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -407,7 +414,8 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -612,7 +620,8 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -721,7 +730,8 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -745,7 +755,8 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -783,7 +794,8 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -813,7 +825,8 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -913,7 +926,8 @@
         "400": "ErrorResponse",
         "401": "ErrorResponse",
         "403": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -1000,7 +1014,8 @@
         "403": "ErrorResponse",
         "404": "ErrorResponse",
         "409": "ErrorResponse",
-        "410": "ErrorResponse"
+        "410": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -1030,7 +1045,8 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -1050,7 +1066,8 @@
         "200": "UploadSignatureResponse",
         "400": "ErrorResponse",
         "401": "ErrorResponse",
-        "403": "ErrorResponse"
+        "403": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -1131,6 +1148,7 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
+        "423": "ErrorResponse",
         "429": "ErrorResponse"
       }
     },
@@ -1170,6 +1188,7 @@
         "403": "ErrorResponse",
         "404": "ErrorResponse",
         "409": "ErrorResponse",
+        "423": "ErrorResponse",
         "429": "ErrorResponse"
       }
     },
@@ -1195,6 +1214,7 @@
         "403": "ErrorResponse",
         "404": "ErrorResponse",
         "409": "ErrorResponse",
+        "423": "ErrorResponse",
         "429": "ErrorResponse"
       }
     },
@@ -1242,6 +1262,7 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
+        "423": "ErrorResponse",
         "429": "ErrorResponse"
       }
     },
@@ -1266,6 +1287,7 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
+        "423": "ErrorResponse",
         "429": "ErrorResponse"
       }
     },
@@ -1308,6 +1330,7 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
+        "423": "ErrorResponse",
         "429": "ErrorResponse"
       }
     },
@@ -1332,6 +1355,7 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
+        "423": "ErrorResponse",
         "429": "ErrorResponse"
       }
     },
@@ -1356,6 +1380,7 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
+        "423": "ErrorResponse",
         "429": "ErrorResponse"
       }
     },
@@ -1435,7 +1460,8 @@
         "400": "ErrorResponse",
         "401": "ErrorResponse",
         "403": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -1595,7 +1621,479 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/review-queue/posts",
+      "group": "Moderation",
+      "summary": "List post revisions awaiting editorial or Admin moderation review",
+      "operationId": "listPostReviewQueue",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "type",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "priority",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "ReviewQueueListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/review-queue/posts/{id}/approve",
+      "group": "Moderation",
+      "summary": "Approve latest post revision",
+      "operationId": "approvePostReview",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "reason"
+          ],
+          "properties": {
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "ReviewQueueItemResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/review-queue/posts/{id}/reject",
+      "group": "Moderation",
+      "summary": "Reject latest post revision",
+      "operationId": "rejectPostReview",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "reason"
+          ],
+          "properties": {
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "ReviewQueueItemResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/reports",
+      "group": "Moderation",
+      "summary": "Report a visible post or comment",
+      "operationId": "createModerationReport",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "targetType",
+            "targetId",
+            "reasonCode"
+          ],
+          "properties": {
+            "targetType": {
+              "type": "string",
+              "enum": [
+                "POST",
+                "COMMENT"
+              ]
+            },
+            "targetId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "reasonCode": {
+              "type": "string",
+              "enum": [
+                "SPAM",
+                "HARMFUL_HEALTH",
+                "HARASSMENT",
+                "MISINFORMATION",
+                "COPYRIGHT",
+                "OTHER"
+              ]
+            },
+            "details": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "ModerationReportResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/reports",
+      "group": "Moderation Admin",
+      "summary": "Admin list reports",
+      "operationId": "listModerationReportsAdmin",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "priority",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "targetType",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "ModerationReportListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/reports/{id}/resolve",
+      "group": "Moderation Admin",
+      "summary": "Resolve all active reports for the same target with an Admin decision",
+      "operationId": "resolveModerationReportAdmin",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "decision",
+            "reason"
+          ],
+          "properties": {
+            "decision": {
+              "type": "string",
+              "enum": [
+                "NO_VIOLATION",
+                "WARN",
+                "HIDE",
+                "RESTORE",
+                "DEMOTE",
+                "BAN"
+              ]
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "ModerationReportResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users",
+      "group": "Moderation Admin",
+      "summary": "Admin search and filter users",
+      "operationId": "listUsersAdmin",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "role",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "AdminModerationUserListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/users/{id}/status",
+      "group": "Moderation Admin",
+      "summary": "Lock, unlock, ban, unban or delete a user account",
+      "operationId": "updateUserStatusAdmin",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "status",
+            "reason"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "LOCKED",
+                "BANNED",
+                "DELETED"
+              ]
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "AdminModerationUserResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/comments",
+      "group": "Moderation Admin",
+      "summary": "Admin list comments for moderation",
+      "operationId": "listCommentsAdmin",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "postId",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "authorId",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "AdminModerationCommentListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/comments/{id}/status",
+      "group": "Moderation Admin",
+      "summary": "Admin hide or restore a comment",
+      "operationId": "updateCommentStatusAdmin",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "status",
+            "reason"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "VISIBLE",
+                "HIDDEN"
+              ]
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "AdminModerationCommentResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     }
   ]

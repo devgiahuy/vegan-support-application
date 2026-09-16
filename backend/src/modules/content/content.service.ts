@@ -1,5 +1,6 @@
 import {
   DietPattern,
+  type ContributorType,
   IngredientResolutionStatus,
   PracticeSchedule,
   PostStatus,
@@ -11,6 +12,7 @@ import { AppError } from '../../common/errors/app-error.js';
 import { catalogSlug, normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 import {
   ContentVersionConflictError,
+  ContentActorInactiveError,
   type SearchConstraints,
   type ContentRepository,
   type IngredientMetadataRecord,
@@ -35,6 +37,7 @@ import type { ContentPublicationPolicy } from './content-publication.policy.js';
 export interface ContentActor {
   userId: string;
   role: Role;
+  contributorType: ContributorType | null;
 }
 
 const SEARCH_RANKING_VERSION = 'v1' as const;
@@ -185,7 +188,7 @@ export class ContentService {
     if (!slug) throw this.invalidContentError('Tiêu đề không tạo được slug hợp lệ');
     const snapshot = await this.buildSnapshot(input);
     try {
-      const decision = this.publicationPolicy.decideInitialSubmission(actor);
+      const decision = this.publicationPolicy.decideSubmission(actor, input);
       const created = await this.repository.createPost(
         actor.userId,
         input.type,
@@ -223,6 +226,7 @@ export class ContentService {
         input.expectedVersion,
         slug,
         snapshot,
+        this.publicationPolicy.decideSubmission(actor, input),
       );
       return this.postOutput(updated.post, updated.revision);
     } catch (error) {
@@ -585,6 +589,14 @@ export class ContentService {
 
   private mapPersistenceError(error: unknown): AppError {
     if (error instanceof AppError) return error;
+    if (error instanceof ContentActorInactiveError) {
+      return new AppError({
+        statusCode: 403,
+        code: error.status === 'BANNED' ? 'ACCOUNT_BANNED' : 'ACCOUNT_LOCKED',
+        message:
+          error.status === 'BANNED' ? 'Tài khoản đã bị cấm' : 'Tài khoản không thể tạo nội dung',
+      });
+    }
     if (error instanceof ContentVersionConflictError) return this.versionConflictError();
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2002') {

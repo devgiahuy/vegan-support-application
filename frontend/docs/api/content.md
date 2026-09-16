@@ -13,7 +13,7 @@ Tạo Recipe, Blog hoặc Video
 - operationId: `createPost`
 - Params: —
 - Request: `CreatePostRequest` (required)
-- Responses: `201` → PostResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `409` → ErrorResponse
+- Responses: `201` → PostResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
 ## GET `/api/v1/posts/{id}/related`
 Lấy related Recipe, Blog và Video
@@ -34,14 +34,14 @@ Tạo revision mới cho content thuộc quyền sở hữu
 - operationId: `updatePost`
 - Params: `path:id* (string)`
 - Request: `UpdatePostRequest` (required)
-- Responses: `200` → PostResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `410` → ErrorResponse
+- Responses: `200` → PostResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `410` → ErrorResponse, `423` → ErrorResponse
 
 ## DELETE `/api/v1/posts/{id}`
 Soft-delete content thuộc quyền sở hữu
 - operationId: `deletePost`
 - Params: `path:id* (string)`, `query:expectedVersion* (integer)`
 - Request: —
-- Responses: `200` → DeletePostResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse
+- Responses: `200` → DeletePostResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
 ---
 ### Schemas dùng trong nhóm

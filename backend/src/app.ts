@@ -42,11 +42,20 @@ import {
 } from './modules/contributors/contributor.router.js';
 import { ContributorService } from './modules/contributors/contributor.service.js';
 import { ContentController } from './modules/content/content.controller.js';
-import { Phase04PendingReviewPolicy } from './modules/content/content-publication.policy.js';
+import { ModeratedPublicationPolicy } from './modules/content/content-publication.policy.js';
 import { ContentRepository } from './modules/content/content.repository.js';
 import { createPostsRouter, createUploadsRouter } from './modules/content/content.router.js';
 import { ContentService } from './modules/content/content.service.js';
 import { MediaService } from './modules/content/media.service.js';
+import { ModerationController } from './modules/moderation/moderation.controller.js';
+import { ModerationRepository } from './modules/moderation/moderation.repository.js';
+import {
+  createModerationAdminRouter,
+  createReportsRouter,
+  createReviewQueueRouter,
+} from './modules/moderation/moderation.router.js';
+import { ModerationService } from './modules/moderation/moderation.service.js';
+import { RuleModerationService } from './modules/moderation/rule-moderation.service.js';
 import { DietController } from './modules/diet/diet.controller.js';
 import { createDietRouter } from './modules/diet/diet.router.js';
 import { createHealthRouter } from './modules/health/health.router.js';
@@ -77,11 +86,12 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
     new CatalogService(new CatalogRepository(database.client)),
   );
   const mediaService = new MediaService(config);
+  const ruleModerationService = new RuleModerationService();
   const contentController = new ContentController(
     new ContentService(
       new ContentRepository(database.client),
       mediaService,
-      new Phase04PendingReviewPolicy(),
+      new ModeratedPublicationPolicy(ruleModerationService),
     ),
     mediaService,
   );
@@ -90,6 +100,9 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   );
   const contributorController = new ContributorController(
     new ContributorService(new ContributorRepository(database.client), contributorStateMachine),
+  );
+  const moderationController = new ModerationController(
+    new ModerationService(new ModerationRepository(database.client)),
   );
 
   app.disable('x-powered-by');
@@ -136,6 +149,9 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/ingredients', createIngredientRouter(catalogController));
   app.use('/api/v1/admin', createCatalogAdminRouter(catalogController, authentication));
   app.use('/api/v1/admin', createContributorAdminRouter(contributorController, authentication));
+  app.use('/api/v1/admin', createModerationAdminRouter(moderationController, authentication));
+  app.use('/api/v1/review-queue', createReviewQueueRouter(moderationController, authentication));
+  app.use('/api/v1/reports', createReportsRouter(moderationController, authentication));
   app.use('/api/v1/posts', createPostsRouter(contentController, authentication));
   app.use('/api/v1/posts', createCommunityPostsRouter(communityController, authentication));
   app.use('/api/v1/comments', createCommentsRouter(communityController, authentication));

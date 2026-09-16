@@ -13,7 +13,7 @@ Tạo category
 - operationId: `createCategory`
 - Params: —
 - Request: `object` (required)
-- Responses: `201` → CategoryResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse
+- Responses: `201` → CategoryResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
 ```json
 {"type":"object","required":["name","type"],"properties":{"name":{"type":"string"},"slug":{"type":"string"},"type":{"type":"string","enum":["FOOD_TYPE","RECIPE_GROUP","CONTENT_TOPIC"]},"parentId":{"type":["string","null"],"format":"uuid"},"sortOrder":{"type":"integer"}},"additionalProperties":false}
@@ -24,7 +24,7 @@ Cập nhật category
 - operationId: `updateCategory`
 - Params: `path:id* (string)`
 - Request: `object` (required)
-- Responses: `200` → CategoryResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse
+- Responses: `200` → CategoryResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
 ```json
 {"type":"object","properties":{"name":{"type":"string"},"slug":{"type":"string"},"type":{"type":"string","enum":["FOOD_TYPE","RECIPE_GROUP","CONTENT_TOPIC"]},"parentId":{"type":["string","null"],"format":"uuid"},"sortOrder":{"type":"integer"}},"additionalProperties":false}
@@ -35,7 +35,7 @@ Archive category
 - operationId: `archiveCategory`
 - Params: `path:id* (string)`, `query:replacementId (string)`
 - Request: —
-- Responses: `200` → CatalogArchiveResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse
+- Responses: `200` → CatalogArchiveResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
 ## GET `/api/v1/admin/ingredients`
 List ingredient gồm cả archived
@@ -49,7 +49,7 @@ Tạo canonical ingredient và metadata
 - operationId: `createIngredient`
 - Params: —
 - Request: `object` (required)
-- Responses: `201` → IngredientResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse
+- Responses: `201` → IngredientResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
 ```json
 {"type":"object","required":["canonicalName","foodGroup"],"properties":{"canonicalName":{"type":"string"},"foodGroup":{"type":"string","enum":["GRAINS","LEGUMES","VEGETABLES","FRUITS","NUTS_SEEDS","MUSHROOMS","DAIRY_EGGS","HERBS_SPICES","OTHER"]},"allergenCodes":{"type":"array","items":{"type":"string"}},"dietCompatibilities":{"type":"array","items":{"type":"object","required":["dietPattern","compatible"],"properties":{"dietPattern":{"type":"string","_truncated":true},"compatible":{"type":"boolean","_truncated":true}},"additionalProperties":false}},"traditionWarnings":{"type":"array","items":{"type":"object","required":["tradition","warningCode","label"],"properties":{"tradition":{"type":"string","_truncated":true},"warningCode":{"type":"string","_truncated":true},"label":{"type":"string","_truncated":true}},"additionalProperties":false}}},"additionalProperties":false}
@@ -60,7 +60,7 @@ Cập nhật ingredient hoặc full snapshot metadata
 - operationId: `updateIngredient`
 - Params: `path:id* (string)`
 - Request: `object` (required)
-- Responses: `200` → IngredientResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse
+- Responses: `200` → IngredientResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
 ```json
 {"type":"object","properties":{"canonicalName":{"type":"string"},"foodGroup":{"type":"string","enum":["GRAINS","LEGUMES","VEGETABLES","FRUITS","NUTS_SEEDS","MUSHROOMS","DAIRY_EGGS","HERBS_SPICES","OTHER"]},"status":{"type":"string","enum":["ACTIVE","ARCHIVED"]},"allergenCodes":{"type":"array","items":{"type":"string"}},"dietCompatibilities":{"type":"array","items":{"type":"object","required":["dietPattern","compatible"],"properties":{"dietPattern":{"type":"string","_truncated":true},"compatible":{"type":"boolean","_truncated":true}},"additionalProperties":false}},"traditionWarnings":{"type":"array","items":{"type":"object","required":["tradition","warningCode","label"],"properties":{"tradition":{"type":"string","_truncated":true},"warningCode":{"type":"string","_truncated":true},"label":{"type":"string","_truncated":true}},"additionalProperties":false}}},"additionalProperties":false}
@@ -71,14 +71,14 @@ Archive ingredient
 - operationId: `archiveIngredient`
 - Params: `path:id* (string)`
 - Request: —
-- Responses: `200` → CatalogArchiveResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse
+- Responses: `200` → CatalogArchiveResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
 ## POST `/api/v1/admin/ingredients/{id}/aliases`
 Thêm alias ingredient
 - operationId: `addIngredientAlias`
 - Params: `path:id* (string)`
 - Request: `object` (required)
-- Responses: `201` → IngredientResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse
+- Responses: `201` → IngredientResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
 ```json
 {"type":"object","required":["alias"],"properties":{"alias":{"type":"string"}},"additionalProperties":false}
@@ -89,7 +89,7 @@ Xóa alias của ingredient
 - operationId: `deleteIngredientAlias`
 - Params: `path:id* (string)`, `path:aliasId* (string)`
 - Request: —
-- Responses: `204` → Alias đã xóa, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse
+- Responses: `204` → Alias đã xóa, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
 ---
 ### Schemas dùng trong nhóm

@@ -13,7 +13,7 @@ Admin approve/reject Contributor application
 - operationId: `reviewContributorApplicationAdmin`
 - Params: `path:id* (string)`
 - Request: `object` (required)
-- Responses: `200` → ContributorApplicationResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse
+- Responses: `200` → ContributorApplicationResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
 ```json
 {"oneOf":[{"type":"object","required":["decision","contributorType","approvalBasis","reviewNote"],"properties":{"decision":{"type":"string","enum":["APPROVE"]},"contributorType":{"type":"string","enum":["EXPERIENCED_PRACTITIONER","NUTRITION_EXPERT"]},"approvalBasis":{"type":"string"},"reviewNote":{"type":"string"}},"additionalProperties":false},{"type":"object","required":["decision","reviewNote"],"properties":{"decision":{"type":"string","enum":["REJECT"]},"reviewNote":{"type":"string"}},"additionalProperties":false}]}

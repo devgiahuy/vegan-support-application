@@ -156,6 +156,7 @@ enum PostStatus {
   PENDING_REVIEW
   PUBLISHED
   FLAGGED
+  QUARANTINED
   REJECTED
   HIDDEN
   DELETED
@@ -168,6 +169,7 @@ enum PostRevisionStatus {
   PENDING_REVIEW
   PUBLISHED
   FLAGGED
+  QUARANTINED
   REJECTED
 
   @@map("post_revision_status")
@@ -221,6 +223,69 @@ enum CommunityAction {
   @@map("community_action")
 }
 
+enum ReportTargetType {
+  POST
+  COMMENT
+
+  @@map("report_target_type")
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+
+  @@map("report_status")
+}
+
+enum ModerationPriority {
+  NORMAL
+  HIGH
+
+  @@map("moderation_priority")
+}
+
+enum AiFlagRiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+
+  @@map("ai_flag_risk_level")
+}
+
+enum AiFlagStatus {
+  OPEN
+  REVIEWED
+
+  @@map("ai_flag_status")
+}
+
+enum ModerationTargetType {
+  POST
+  COMMENT
+  USER
+  REPORT
+  AI_FLAG
+
+  @@map("moderation_target_type")
+}
+
+enum ModerationDecision {
+  APPROVE
+  REJECT
+  NO_VIOLATION
+  WARN
+  HIDE
+  RESTORE
+  DEMOTE
+  BAN
+  UNBAN
+  LOCK
+  UNLOCK
+  DELETE_ACCOUNT
+
+  @@map("moderation_decision")
+}
+
 model User {
   id                          String                     @id @default(uuid()) @db.Uuid
   email                       String                     @unique @db.VarChar(320)
@@ -235,6 +300,7 @@ model User {
   createdAt                   DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt                   DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
   deletedAt                   DateTime?                  @map("deleted_at") @db.Timestamptz(3)
+  privateDataPurgeAt          DateTime?                  @map("private_data_purge_at") @db.Timestamptz(3)
   refreshSessions             RefreshSession[]
   applications                ContributorApplication[]
   reviewedApplications        ContributorApplication[]   @relation("ContributorApplicationReviewer")
@@ -257,6 +323,12 @@ model User {
   postRatings                 PostRating[]
   postBookmarks               PostBookmark[]
   communityRateLimits         CommunityRateLimitBucket[]
+  reports                     Report[]                   @relation("ReportReporter")
+  resolvedReports             Report[]                   @relation("ReportResolver")
+  reviewedAiFlags             AiFlag[]                   @relation("AiFlagReviewer")
+  moderationActions           ModerationAction[]         @relation("ModerationActor")
+  reviewedPostRevisions       PostRevision[]             @relation("PostRevisionReviewer")
+  hiddenPosts                 Post[]                     @relation("PostHiddenBy")
 
   @@map("users")
 }
@@ -334,10 +406,14 @@ model Post {
   publishedAt         DateTime?      @map("published_at") @db.Timestamptz(3)
   deletedAt           DateTime?      @map("deleted_at") @db.Timestamptz(3)
   deletedById         String?        @map("deleted_by_id") @db.Uuid
+  hiddenAt            DateTime?      @map("hidden_at") @db.Timestamptz(3)
+  hiddenById          String?        @map("hidden_by_id") @db.Uuid
+  hiddenReason        String?        @map("hidden_reason") @db.VarChar(1000)
   createdAt           DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt           DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
   author              User           @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Restrict)
   deletedBy           User?          @relation("PostDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+  hiddenBy            User?          @relation("PostHiddenBy", fields: [hiddenById], references: [id], onDelete: SetNull)
   revisions           PostRevision[] @relation("PostRevisions")
   publishedRevision   PostRevision?  @relation("PublishedRevision", fields: [publishedRevisionId], references: [id], onDelete: SetNull)
   comments            Comment[]
@@ -442,9 +518,13 @@ model PostRevision {
   normalizedBody    String                    @map("normalized_body")
   createdById       String                    @map("created_by_id") @db.Uuid
   reviewNote        String?                   @map("review_note") @db.VarChar(2000)
+  reviewedById      String?                   @map("reviewed_by_id") @db.Uuid
+  reviewedAt        DateTime?                 @map("reviewed_at") @db.Timestamptz(3)
   createdAt         DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
   post              Post                      @relation("PostRevisions", fields: [postId], references: [id], onDelete: Cascade)
   createdBy         User                      @relation("PostRevisionAuthor", fields: [createdById], references: [id], onDelete: Restrict)
+  reviewedBy        User?                     @relation("PostRevisionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  aiFlags           AiFlag[]
   publishedFor      Post?                     @relation("PublishedRevision")
   recipeDetail      RecipeDetail?
   ingredients       RecipeIngredient[]
@@ -458,6 +538,71 @@ model PostRevision {
   @@index([normalizedTitle(ops: raw("gin_trgm_ops"))], type: Gin, map: "post_revisions_normalized_title_trgm_idx")
   @@index([normalizedBody(ops: raw("gin_trgm_ops"))], type: Gin, map: "post_revisions_normalized_body_trgm_idx")
   @@map("post_revisions")
+}
+
+model Report {
+  id               String              @id @default(uuid()) @db.Uuid
+  reporterId       String              @map("reporter_id") @db.Uuid
+  targetType       ReportTargetType    @map("target_type")
+  targetId         String              @map("target_id") @db.Uuid
+  reasonCode       String              @map("reason_code") @db.VarChar(120)
+  details          String?             @db.VarChar(2000)
+  status           ReportStatus        @default(OPEN)
+  priority         ModerationPriority  @default(NORMAL)
+  activeKey        String?             @unique @map("active_key") @db.VarChar(160)
+  resolvedDecision ModerationDecision? @map("resolved_decision")
+  resolvedReason   String?             @map("resolved_reason") @db.VarChar(2000)
+  resolvedById     String?             @map("resolved_by_id") @db.Uuid
+  resolvedAt       DateTime?           @map("resolved_at") @db.Timestamptz(3)
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  reporter         User                @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Restrict)
+  resolvedBy       User?               @relation("ReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([targetType, targetId, status, createdAt])
+  @@index([status, priority, createdAt])
+  @@index([reporterId, status, createdAt])
+  @@map("reports")
+}
+
+model AiFlag {
+  id             String          @id @default(uuid()) @db.Uuid
+  postRevisionId String          @map("post_revision_id") @db.Uuid
+  provider       String          @db.VarChar(80)
+  model          String          @db.VarChar(120)
+  ruleVersion    String          @map("rule_version") @db.VarChar(40)
+  reasonCodes    Json            @map("reason_codes")
+  riskScore      Decimal         @map("risk_score") @db.Decimal(5, 4)
+  riskLevel      AiFlagRiskLevel @map("risk_level")
+  status         AiFlagStatus    @default(OPEN)
+  reviewedById   String?         @map("reviewed_by_id") @db.Uuid
+  reviewedAt     DateTime?       @map("reviewed_at") @db.Timestamptz(3)
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  postRevision   PostRevision    @relation(fields: [postRevisionId], references: [id], onDelete: Cascade)
+  reviewedBy     User?           @relation("AiFlagReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([status, riskLevel, createdAt])
+  @@index([postRevisionId, status])
+  @@map("ai_flags")
+}
+
+model ModerationAction {
+  id               String               @id @default(uuid()) @db.Uuid
+  actorId          String               @map("actor_id") @db.Uuid
+  decision         ModerationDecision
+  targetType       ModerationTargetType @map("target_type")
+  targetId         String               @map("target_id") @db.Uuid
+  reason           String               @db.VarChar(2000)
+  relatedReportIds Json                 @default("[]") @map("related_report_ids")
+  relatedAiFlagIds Json                 @default("[]") @map("related_ai_flag_ids")
+  metadata         Json                 @default("{}")
+  createdAt        DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  actor            User                 @relation("ModerationActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([targetType, targetId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([decision, createdAt])
+  @@map("moderation_actions")
 }
 
 model RecipeDetail {

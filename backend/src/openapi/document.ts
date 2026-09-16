@@ -10,6 +10,7 @@ import { registerCatalogOpenApi } from '../modules/catalog/catalog.openapi.js';
 import { registerContentOpenApi } from '../modules/content/content.openapi.js';
 import { registerCommunityOpenApi } from '../modules/community/community.openapi.js';
 import { registerContributorOpenApi } from '../modules/contributors/contributor.openapi.js';
+import { registerModerationOpenApi } from '../modules/moderation/moderation.openapi.js';
 
 const registry = new OpenAPIRegistry();
 
@@ -44,10 +45,11 @@ registerCatalogOpenApi(registry, registeredErrorResponse);
 registerContentOpenApi(registry, registeredErrorResponse);
 registerCommunityOpenApi(registry, registeredErrorResponse);
 registerContributorOpenApi(registry, registeredErrorResponse);
+registerModerationOpenApi(registry, registeredErrorResponse);
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
-export const openApiDocument = generator.generateDocument({
+const generatedDocument = generator.generateDocument({
   openapi: '3.1.0',
   info: {
     title: 'Vegan Support Application API',
@@ -70,6 +72,37 @@ export const openApiDocument = generator.generateDocument({
       description: 'Contributor applications and approved subtype status',
     },
     { name: 'Contributor Admin', description: 'Admin-only Contributor application review' },
+    { name: 'Moderation', description: 'Content review queue and user reports' },
+    { name: 'Moderation Admin', description: 'Admin decisions, user and comment moderation' },
     { name: 'Uploads', description: 'Safe Cloudinary signed-upload configuration' },
   ],
 });
+
+const lockedMutationResponse = {
+  description: 'Tài khoản LOCKED không được thực hiện mutation',
+  content: {
+    'application/json': {
+      schema: { $ref: '#/components/schemas/ErrorResponse' },
+      example: {
+        success: false,
+        error: {
+          code: 'ACCOUNT_LOCKED',
+          message: 'Tài khoản đang bị khóa',
+          requestId: '0781d468-5eb1-4bd0-9671-e4ca33b76462',
+        },
+      },
+    },
+  },
+};
+
+for (const pathItem of Object.values(generatedDocument.paths ?? {})) {
+  for (const method of ['post', 'put', 'patch', 'delete'] as const) {
+    const operation = pathItem?.[method];
+    if (operation?.security?.length) {
+      operation.responses ??= {};
+      operation.responses['423'] = lockedMutationResponse;
+    }
+  }
+}
+
+export const openApiDocument = generatedDocument;

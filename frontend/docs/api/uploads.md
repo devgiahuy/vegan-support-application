@@ -6,7 +6,7 @@ Tạo Cloudinary signed-upload parameters
 - operationId: `createUploadSignature`
 - Params: —
 - Request: `UploadSignatureRequest` (required)
-- Responses: `200` → UploadSignatureResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse
+- Responses: `200` → UploadSignatureResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `423` → ErrorResponse
 
 ---
 ### Schemas dùng trong nhóm

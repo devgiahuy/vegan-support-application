@@ -13,7 +13,7 @@ Tạo comment hoặc reply một tầng
 - operationId: `createPostComment`
 - Params: `path:id* (string)`
 - Request: `object` (required)
-- Responses: `201` → CommunityCommentResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `429` → ErrorResponse
+- Responses: `201` → CommunityCommentResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `423` → ErrorResponse, `429` → ErrorResponse
 
 ```json
 {"type":"object","required":["content"],"properties":{"content":{"type":"string"},"parentId":{"type":"string","format":"uuid"}},"additionalProperties":false}
@@ -24,7 +24,7 @@ Sửa comment của chính mình
 - operationId: `updateOwnComment`
 - Params: `path:id* (string)`
 - Request: `object` (required)
-- Responses: `200` → CommunityCommentResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `429` → ErrorResponse
+- Responses: `200` → CommunityCommentResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse, `429` → ErrorResponse
 
 ```json
 {"type":"object","required":["content"],"properties":{"content":{"type":"string"}},"additionalProperties":false}
@@ -35,7 +35,7 @@ Soft-delete comment của chính mình
 - operationId: `deleteOwnComment`
 - Params: `path:id* (string)`
 - Request: —
-- Responses: `200` → CommunityCommentResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `429` → ErrorResponse
+- Responses: `200` → CommunityCommentResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse, `429` → ErrorResponse
 
 ## GET `/api/v1/posts/{id}/community-summary`
 Lấy aggregate community và viewer state
@@ -49,21 +49,21 @@ Upvote content idempotent
 - operationId: `putPostVote`
 - Params: `path:id* (string)`
 - Request: —
-- Responses: `200` → CommunityVoteResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `429` → ErrorResponse
+- Responses: `200` → CommunityVoteResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `423` → ErrorResponse, `429` → ErrorResponse
 
 ## DELETE `/api/v1/posts/{id}/vote`
 Gỡ upvote idempotent
 - operationId: `deletePostVote`
 - Params: `path:id* (string)`
 - Request: —
-- Responses: `200` → CommunityVoteResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `429` → ErrorResponse
+- Responses: `200` → CommunityVoteResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `423` → ErrorResponse, `429` → ErrorResponse
 
 ## PUT `/api/v1/posts/{id}/rating`
 Upsert taste/difficulty rating cho Recipe
 - operationId: `putRecipeRating`
 - Params: `path:id* (string)`
 - Request: `object` (required)
-- Responses: `200` → CommunityRatingResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `429` → ErrorResponse
+- Responses: `200` → CommunityRatingResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `423` → ErrorResponse, `429` → ErrorResponse
 
 ```json
 {"type":"object","required":["taste","difficulty"],"properties":{"taste":{"type":"integer"},"difficulty":{"type":"integer"}},"additionalProperties":false}
@@ -74,14 +74,14 @@ Bookmark Recipe/Video idempotent
 - operationId: `putPostBookmark`
 - Params: `path:id* (string)`
 - Request: —
-- Responses: `200` → CommunityBookmarkResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `429` → ErrorResponse
+- Responses: `200` → CommunityBookmarkResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `423` → ErrorResponse, `429` → ErrorResponse
 
 ## DELETE `/api/v1/posts/{id}/bookmark`
 Gỡ bookmark idempotent
 - operationId: `deletePostBookmark`
 - Params: `path:id* (string)`
 - Request: —
-- Responses: `200` → CommunityBookmarkResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `429` → ErrorResponse
+- Responses: `200` → CommunityBookmarkResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `423` → ErrorResponse, `429` → ErrorResponse
 
 ## GET `/api/v1/users/me/bookmarks`
 List bookmark Recipe/Video của current user

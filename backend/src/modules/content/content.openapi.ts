@@ -147,7 +147,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     tags: ['Content'],
     summary: 'Tạo Recipe, Blog hoặc Video',
     description:
-      'Không nhận author/status/publishedAt từ client. Trước Phase 07, mọi user-created content đi Member path PENDING_REVIEW; requested Contributor type không cấp quyền.',
+      'Không nhận author/status/publishedAt từ client. Member đi PENDING_REVIEW. Approved Contributor/Admin được auto-publish khi rule moderation v1 không flag; low/medium flag vào FLAGGED và high spam/harmful-health vào QUARANTINED. Requested Contributor type không cấp quyền.',
     operationId: 'createPost',
     security: authenticated,
     request: {
@@ -189,7 +189,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     },
     responses: {
       201: {
-        description: 'Post và revision PENDING_REVIEW đã tạo',
+        description: 'Post/revision đã tạo với moderation-derived state',
         content: { 'application/json': { schema: postResponse } },
       },
       400: errorResponse(errorSchema, 'Content hoặc reference không hợp lệ', [
@@ -199,7 +199,10 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
         'INVALID_INGREDIENT_REFERENCE',
       ]),
       401: errorResponse(errorSchema, 'Yêu cầu đăng nhập', ['AUTH_REQUIRED']),
-      403: errorResponse(errorSchema, 'Tài khoản bị cấm', ['ACCOUNT_BANNED']),
+      403: errorResponse(errorSchema, 'Tài khoản không được mutation', [
+        'ACCOUNT_BANNED',
+        'ACCOUNT_LOCKED',
+      ]),
       409: errorResponse(errorSchema, 'Slug đã được sử dụng', ['CONTENT_SLUG_CONFLICT']),
     },
   });
@@ -232,7 +235,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     tags: ['Content'],
     summary: 'Tạo revision mới cho content thuộc quyền sở hữu',
     description:
-      'Request là full revision snapshot và bắt buộc expectedVersion. Edit published post tạo PENDING_REVIEW revision mới; published revision cũ vẫn phục vụ public.',
+      'Request là full revision snapshot và bắt buộc expectedVersion. Member edit published post tạo PENDING_REVIEW revision; approved Contributor/Admin được moderation lại và auto-publish nếu sạch. Revision cũ vẫn phục vụ public khi revision mới pending/flagged/quarantined.',
     operationId: 'updatePost',
     security: authenticated,
     request: {

@@ -1,5 +1,7 @@
 import {
   CatalogStatus,
+  ModerationDecision,
+  ModerationTargetType,
   Prisma,
   PostRevisionStatus,
   PostStatus,
@@ -10,10 +12,12 @@ import {
   type PrismaClient,
   type RecipeDifficulty,
   type Tradition,
+  UserStatus,
 } from '@prisma/client';
 import type { MediaInput, PostListQuery } from './content.schemas.js';
 import type { SubmissionDecision } from './content-publication.policy.js';
 import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
+import { MODERATION_RULE_VERSION } from '../moderation/rule-moderation.service.js';
 
 const revisionInclude = {
   recipeDetail: true,
@@ -411,6 +415,13 @@ export class ContentVersionConflictError extends Error {
   }
 }
 
+export class ContentActorInactiveError extends Error {
+  constructor(readonly status: UserStatus) {
+    super('CONTENT_ACTOR_INACTIVE');
+    this.name = 'ContentActorInactiveError';
+  }
+}
+
 export class ContentRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
@@ -600,6 +611,7 @@ export class ContentRepository {
     decision: SubmissionDecision,
   ): Promise<{ post: PostIdentityRecord; revision: RevisionRecord }> {
     return this.prisma.$transaction(async (transaction) => {
+      await this.lockActiveActor(transaction, authorId);
       const post = await transaction.post.create({
         data: { authorId, type, slug, status: decision.postStatus, version: 1 },
         include: postIdentityInclude,
@@ -612,7 +624,37 @@ export class ContentRepository {
         snapshot,
         decision.revisionStatus,
       );
-      return { post, revision };
+      if (decision.moderationFlag) {
+        await transaction.aiFlag.create({
+          data: { postRevisionId: revision.id, ...decision.moderationFlag },
+        });
+      }
+      const createdPost =
+        decision.revisionStatus === PostRevisionStatus.PUBLISHED
+          ? await transaction.post.update({
+              where: { id: post.id },
+              data: { publishedRevisionId: revision.id, publishedAt: new Date() },
+              include: postIdentityInclude,
+            })
+          : post;
+      if (decision.revisionStatus === PostRevisionStatus.PUBLISHED) {
+        await transaction.moderationAction.create({
+          data: {
+            actorId: authorId,
+            decision: ModerationDecision.APPROVE,
+            targetType: ModerationTargetType.POST,
+            targetId: post.id,
+            reason: 'RULE_MODERATION_PASSED',
+            metadata: {
+              automated: true,
+              ruleVersion: MODERATION_RULE_VERSION,
+              revisionId: revision.id,
+              revisionVersion: revision.version,
+            },
+          },
+        });
+      }
+      return { post: createdPost, revision };
     });
   }
 
@@ -622,15 +664,17 @@ export class ContentRepository {
     expectedVersion: number,
     slug: string,
     snapshot: RevisionSnapshot,
+    decision: SubmissionDecision,
   ): Promise<{ post: PostIdentityRecord; revision: RevisionRecord }> {
     return this.prisma.$transaction(async (transaction) => {
+      await this.lockActiveActor(transaction, actorId);
       const nextVersion = expectedVersion + 1;
       const updated = await transaction.post.updateMany({
         where: { id: post.id, version: expectedVersion, status: { not: PostStatus.DELETED } },
         data: {
           slug,
           version: { increment: 1 },
-          ...(post.status === PostStatus.PUBLISHED ? {} : { status: PostStatus.PENDING_REVIEW }),
+          ...(post.publishedRevisionId ? {} : { status: decision.postStatus }),
         },
       });
       if (updated.count !== 1) throw new ContentVersionConflictError();
@@ -640,7 +684,41 @@ export class ContentRepository {
         actorId,
         nextVersion,
         snapshot,
+        decision.revisionStatus,
       );
+      if (decision.moderationFlag) {
+        await transaction.aiFlag.create({
+          data: { postRevisionId: revision.id, ...decision.moderationFlag },
+        });
+      }
+      if (decision.revisionStatus === PostRevisionStatus.PUBLISHED) {
+        await transaction.post.update({
+          where: { id: post.id },
+          data: {
+            status: PostStatus.PUBLISHED,
+            publishedRevisionId: revision.id,
+            publishedAt: new Date(),
+            hiddenAt: null,
+            hiddenById: null,
+            hiddenReason: null,
+          },
+        });
+        await transaction.moderationAction.create({
+          data: {
+            actorId,
+            decision: ModerationDecision.APPROVE,
+            targetType: ModerationTargetType.POST,
+            targetId: post.id,
+            reason: 'RULE_MODERATION_PASSED',
+            metadata: {
+              automated: true,
+              ruleVersion: MODERATION_RULE_VERSION,
+              revisionId: revision.id,
+              revisionVersion: revision.version,
+            },
+          },
+        });
+      }
       const updatedPost = await transaction.post.findUniqueOrThrow({
         where: { id: post.id },
         include: postIdentityInclude,
@@ -741,6 +819,18 @@ export class ContentRepository {
       },
       include: revisionInclude,
     });
+  }
+
+  private async lockActiveActor(
+    transaction: Prisma.TransactionClient,
+    actorId: string,
+  ): Promise<void> {
+    const rows = await transaction.$queryRaw<Array<{ status: UserStatus }>>(Prisma.sql`
+      SELECT "status" FROM "users" WHERE "id" = ${actorId}::uuid FOR UPDATE
+    `);
+    const status = rows[0]?.status;
+    if (status !== UserStatus.ACTIVE)
+      throw new ContentActorInactiveError(status ?? UserStatus.DELETED);
   }
 
   private mediaData(item: MediaInput, position: number) {
