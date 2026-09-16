@@ -38,7 +38,8 @@ function loadEnv() {
 export const env = loadEnv();
 
 /** Base URL cho axios client (qua rewrites /api/v1 -> backend, cùng-domain giữ cookie). */
-export const API_BASE_URL = env.NEXT_PUBLIC_API_URL || '/api/v1';
+export const API_BASE_URL =
+  typeof window !== 'undefined' ? '/api/v1' : env.NEXT_PUBLIC_API_URL || '/api/v1';
 
 /** Base URL server-only cho server-fetch và route handlers (ưu tiên BACKEND_API_URL). */
 export const BACKEND_URL = env.BACKEND_API_URL ?? env.NEXT_PUBLIC_API_URL;

@@ -1,12 +1,4 @@
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
-
-/**
- * Gộp các class name Tailwind an toàn với clsx và twMerge
- */
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+export { cn } from 'cn';
 
 /**
  * Định dạng tiền tệ VND hoặc USD
