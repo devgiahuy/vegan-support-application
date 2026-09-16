@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useDeleteArticleMutation } from '../queries/post.queries';
-import { usePostStore } from '@/store/usePostStore';
 
 interface DeletePostDialogProps {
   open: boolean;
@@ -33,13 +32,9 @@ export function DeletePostDialog({
   onSuccess,
 }: DeletePostDialogProps) {
   const deleteMutation = useDeleteArticleMutation();
-  const { deletePost } = usePostStore();
 
   const handleDelete = async () => {
     try {
-      // Sync local store
-      deletePost(postId);
-      // Run mutation
       await deleteMutation.mutateAsync({ id: postId, expectedVersion });
       onOpenChange(false);
       onSuccess?.();
@@ -60,7 +55,8 @@ export function DeletePostDialog({
           </DialogTitle>
           <DialogDescription className="text-sm text-muted-foreground leading-relaxed">
             Bạn có chắc chắn muốn xoá bài viết{' '}
-            <strong className="text-foreground font-semibold">"{postTitle}"</strong> không?
+            <strong className="text-foreground font-semibold">&quot;{postTitle}&quot;</strong>{' '}
+            không?
           </DialogDescription>
         </DialogHeader>
 

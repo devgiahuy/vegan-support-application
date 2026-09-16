@@ -14,7 +14,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { PostCard } from '@/features/post/components/post-card';
-import { usePostStore } from '@/store/usePostStore';
 import type { DietSchool } from '@/features/post/types/post.model';
 import { CategoryType } from '@/common/enums';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';

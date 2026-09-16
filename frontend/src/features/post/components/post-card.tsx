@@ -18,8 +18,8 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { SafeImage } from '@/components/shared/safe-image';
 import type { Post, Article } from '../types/post.model';
-import { usePostStore } from '@/store/usePostStore';
 
 interface PostCardProps {
   post: Post | Article;
@@ -28,14 +28,15 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, className, horizontal = false }: PostCardProps) {
-  const { toggleSavePost } = usePostStore();
+  // Trạng thái lưu giữ ở state local (API bookmark chưa có), không dùng store toàn cục.
   const [isSaved, setIsSaved] = React.useState<boolean>(
     ('saved' in post ? post.saved : false) ?? false
   );
 
-  const coverImage =
-    ('coverImageUrl' in post ? post.coverImageUrl : post.coverImage) ||
+  const ARTICLE_FALLBACK_COVER =
     'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=800&auto=format&fit=crop&q=80';
+  const coverImage =
+    ('coverImageUrl' in post ? post.coverImageUrl : post.coverImage) || ARTICLE_FALLBACK_COVER;
   const categoryName =
     typeof post.category === 'string' ? post.category : post.category?.name || 'Dinh dưỡng';
   const readingMinutes =
@@ -52,7 +53,6 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
     e.preventDefault();
     e.stopPropagation();
     setIsSaved(!isSaved);
-    toggleSavePost(post.id);
     toast.success(
       !isSaved ? 'Đã lưu bài viết vào danh sách của bạn!' : 'Đã bỏ lưu bài viết khỏi danh sách.'
     );
@@ -119,9 +119,12 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
         <Link href={`/articles/${post.id}`} className="flex flex-col sm:flex-row h-full">
           {/* Cover Image */}
           <div className="relative aspect-video sm:aspect-[4/3] sm:w-56 shrink-0 overflow-hidden bg-muted">
-            <img
+            <SafeImage
               src={coverImage}
+              fallbackSrc={ARTICLE_FALLBACK_COVER}
               alt={post.title}
+              fill
+              sizes="(max-width: 640px) 100vw, 224px"
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             />
             <div className="absolute top-2.5 left-2.5 flex flex-wrap gap-1.5">
@@ -212,9 +215,12 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
         href={`/articles/${post.id}`}
         className="block relative aspect-video w-full overflow-hidden bg-muted"
       >
-        <img
+        <SafeImage
           src={coverImage}
+          fallbackSrc={ARTICLE_FALLBACK_COVER}
           alt={post.title}
+          fill
+          sizes="(max-width: 768px) 100vw, 400px"
           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
         />
         <div className="absolute top-3 left-3 flex flex-wrap gap-1.5">

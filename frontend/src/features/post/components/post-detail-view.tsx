@@ -29,11 +29,11 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { VoteControl } from '@/components/shared/vote-control';
+import { SafeImage } from '@/components/shared/safe-image';
 import { CommentSection } from '@/components/shared/comment-section';
 import { PostCard } from './post-card';
 import { DeletePostDialog } from './delete-post-dialog';
 import type { Post, Article } from '../types/post.model';
-import { usePostStore } from '@/store/usePostStore';
 
 interface PostDetailViewProps {
   post: Post | Article;
@@ -42,15 +42,17 @@ interface PostDetailViewProps {
 
 export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
   const router = useRouter();
-  const { votePost, toggleSavePost } = usePostStore();
+  // Tương tác vote/lưu giữ ở state local của component (API vote/bookmark chưa có).
+  // Không dùng store toàn cục để tránh nhầm dữ liệu mẫu với dữ liệu thật.
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
   const [isSaved, setIsSaved] = React.useState<boolean>(
     ('saved' in post ? post.saved : false) ?? false
   );
 
-  const coverImage =
-    ('coverImageUrl' in post ? post.coverImageUrl : post.coverImage) ||
+  const ARTICLE_FALLBACK_COVER =
     'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=800&auto=format&fit=crop&q=80';
+  const coverImage =
+    ('coverImageUrl' in post ? post.coverImageUrl : post.coverImage) || ARTICLE_FALLBACK_COVER;
   const categoryName =
     typeof post.category === 'string'
       ? post.category
@@ -70,10 +72,13 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
 
   const handleToggleSave = () => {
     setIsSaved(!isSaved);
-    toggleSavePost(post.id);
     toast.success(
       !isSaved ? 'Đã lưu bài viết vào danh sách của bạn!' : 'Đã bỏ lưu bài viết khỏi danh sách.'
     );
+  };
+
+  const handleVoteChange = () => {
+    toast.success('Đã ghi nhận đánh giá của bạn!');
   };
 
   const handleShare = () => {
@@ -379,7 +384,15 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
 
       {/* Featured Cover Image */}
       <div className="relative aspect-video sm:aspect-[21/9] w-full rounded-3xl overflow-hidden shadow-md border bg-muted">
-        <img src={coverImage} alt={post.title} className="h-full w-full object-cover" />
+        <SafeImage
+          src={coverImage}
+          fallbackSrc={ARTICLE_FALLBACK_COVER}
+          alt={post.title}
+          fill
+          sizes="100vw"
+          priority
+          className="h-full w-full object-cover"
+        />
       </div>
 
       {/* Main Body Layout (Content + Sticky Vote Control) */}
@@ -392,7 +405,7 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
               orientation="vertical"
               size="lg"
               itemTitle={post.title}
-              onVoteChange={(_, newScore) => votePost(post.id, newScore - score)}
+              onVoteChange={handleVoteChange}
             />
             <Button
               variant="ghost"
@@ -426,7 +439,7 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
               initialScore={score}
               orientation="horizontal"
               size="sm"
-              onVoteChange={(_, newScore) => votePost(post.id, newScore - score)}
+              onVoteChange={handleVoteChange}
             />
           </div>
 
