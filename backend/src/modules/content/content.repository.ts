@@ -470,6 +470,33 @@ export class ContentRepository {
     });
   }
 
+  async findRecommendationCandidates(
+    constraints: SearchConstraints,
+    limit: number,
+  ): Promise<PublishedPostRecord[]> {
+    const where = publishedWhere({ type: 'RECIPE' }, constraints);
+    const rows = await this.prisma.$queryRaw<SearchIdRow[]>(Prisma.sql`
+      SELECT p."id", 0::double precision AS "score"
+      ${publishedBase}
+      ${where}
+      ORDER BY p."published_at" DESC NULLS LAST, p."id" ASC
+      LIMIT ${limit}
+    `);
+    return this.hydratePublished(rows.map((row) => row.id));
+  }
+
+  findBehaviorSourceRecipes(ids: string[]): Promise<PublishedPostRecord[]> {
+    if (!ids.length) return Promise.resolve([]);
+    return this.prisma.post.findMany({
+      where: {
+        id: { in: ids },
+        type: 'RECIPE',
+        publishedRevisionId: { not: null },
+      },
+      include: publishedPostInclude,
+    });
+  }
+
   async findRelatedPublished(
     source: PublishedPostRecord,
     limitPerType: number,

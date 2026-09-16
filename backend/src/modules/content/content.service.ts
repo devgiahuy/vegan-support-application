@@ -2,7 +2,6 @@ import {
   DietPattern,
   type ContributorType,
   IngredientResolutionStatus,
-  PracticeSchedule,
   PostStatus,
   PostType,
   Prisma,
@@ -33,6 +32,11 @@ import type {
 } from './content.schemas.js';
 import type { MediaService } from './media.service.js';
 import type { ContentPublicationPolicy } from './content-publication.policy.js';
+import {
+  buildAuthenticatedSearchConstraints,
+  buildGuestSearchConstraints,
+  dateOnlyInSearchTimezone,
+} from './search-constraints.js';
 
 export interface ContentActor {
   userId: string;
@@ -41,7 +45,6 @@ export interface ContentActor {
 }
 
 const SEARCH_RANKING_VERSION = 'v1' as const;
-const SEARCH_TIMEZONE = 'Asia/Ho_Chi_Minh' as const;
 
 function pagination(
   page: number,
@@ -57,18 +60,6 @@ function pagination(
     rankingVersion: SEARCH_RANKING_VERSION,
     appliedConstraints,
   };
-}
-
-function dateOnlyInTimezone(date: Date): string {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: SEARCH_TIMEZONE,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(date);
-  const value = (type: Intl.DateTimeFormatPartTypes) =>
-    parts.find((part) => part.type === type)?.value ?? '';
-  return `${value('year')}-${value('month')}-${value('day')}`;
 }
 
 function stringList(value: Prisma.JsonValue): string[] {
@@ -268,75 +259,13 @@ export class ContentService {
     requestedDietPattern: PostListQuery['dietPattern'],
     requestedDate: string | undefined,
   ): Promise<{ constraints: SearchConstraints; summary: AppliedSearchConstraintsOutput }> {
-    const forDate = requestedDate ?? dateOnlyInTimezone(new Date());
+    const forDate = requestedDate ?? dateOnlyInSearchTimezone(new Date());
     if (!userId) {
-      return {
-        constraints: {
-          ...(requestedDietPattern ? { dietPattern: requestedDietPattern } : {}),
-          allergenCodes: [],
-          excludedIngredientIds: [],
-          excludedNormalizedNames: [],
-          traditions: [],
-          requireResolvedIngredients: false,
-        },
-        summary: {
-          authenticated: false,
-          dietPattern: requestedDietPattern ?? null,
-          allergyCount: 0,
-          ingredientExclusionCount: 0,
-          traditions: [],
-          forDate,
-        },
-      };
+      return buildGuestSearchConstraints(requestedDietPattern, forDate);
     }
 
     const profile = await this.repository.findSearchProfile(userId);
-    const preference = profile?.dietPreference;
-    const scheduleApplies =
-      preference?.practiceSchedule === PracticeSchedule.PERMANENT ||
-      (preference?.practiceSchedule === PracticeSchedule.PERIODIC &&
-        profile?.dietScheduleDates.some(
-          (scheduleDate) => scheduleDate.date.toISOString().slice(0, 10) === forDate,
-        ));
-    const traditions = scheduleApplies
-      ? [
-          ...new Set(
-            profile?.dietPreferenceRules.flatMap(({ ruleDefinition }) =>
-              ruleDefinition.active && ruleDefinition.hardConstraint && ruleDefinition.tradition
-                ? [ruleDefinition.tradition]
-                : [],
-            ) ?? [],
-          ),
-        ]
-      : [];
-    const allergenCodes = profile?.allergies.map((allergy) => allergy.allergenCode) ?? [];
-    const exclusions = profile?.ingredientExclusions ?? [];
-    const excludedIngredientIds = exclusions.flatMap((exclusion) =>
-      exclusion.ingredientId ? [exclusion.ingredientId] : [],
-    );
-    const excludedNormalizedNames = exclusions.map((exclusion) => exclusion.normalizedName);
-    const dietPattern = preference?.dietPattern ?? requestedDietPattern;
-    const requireResolvedIngredients = Boolean(
-      dietPattern || allergenCodes.length || exclusions.length || traditions.length,
-    );
-    return {
-      constraints: {
-        ...(dietPattern ? { dietPattern } : {}),
-        allergenCodes,
-        excludedIngredientIds,
-        excludedNormalizedNames,
-        traditions,
-        requireResolvedIngredients,
-      },
-      summary: {
-        authenticated: true,
-        dietPattern: dietPattern ?? null,
-        allergyCount: allergenCodes.length,
-        ingredientExclusionCount: exclusions.length,
-        traditions,
-        forDate,
-      },
-    };
+    return buildAuthenticatedSearchConstraints(profile, requestedDietPattern, forDate);
   }
 
   private async buildRecipeSnapshot(

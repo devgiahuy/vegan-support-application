@@ -63,6 +63,14 @@ import { ProfileRepository } from './modules/profile/profile.repository.js';
 import { ProfileService } from './modules/profile/profile.service.js';
 import { UsersController } from './modules/users/users.controller.js';
 import { createUsersRouter } from './modules/users/users.router.js';
+import { RecommendationController } from './modules/recommendations/recommendation.controller.js';
+import { RecommendationRepository } from './modules/recommendations/recommendation.repository.js';
+import {
+  createBehaviorEventsRouter,
+  createPersonalizationRouter,
+  createRecommendationRouter,
+} from './modules/recommendations/recommendation.router.js';
+import { RecommendationService } from './modules/recommendations/recommendation.service.js';
 import { openApiDocument } from './openapi/document.js';
 
 export interface AppDependencies {
@@ -87,9 +95,10 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   );
   const mediaService = new MediaService(config);
   const ruleModerationService = new RuleModerationService();
+  const contentRepository = new ContentRepository(database.client);
   const contentController = new ContentController(
     new ContentService(
-      new ContentRepository(database.client),
+      contentRepository,
       mediaService,
       new ModeratedPublicationPolicy(ruleModerationService),
     ),
@@ -103,6 +112,9 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   );
   const moderationController = new ModerationController(
     new ModerationService(new ModerationRepository(database.client)),
+  );
+  const recommendationController = new RecommendationController(
+    new RecommendationService(new RecommendationRepository(database.client), contentRepository),
   );
 
   app.disable('x-powered-by');
@@ -143,6 +155,10 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
     createContributorApplicationsRouter(contributorController, authentication),
   );
   app.use('/api/v1/users', createUsersRouter(usersController, authentication));
+  app.use(
+    '/api/v1/users/me',
+    createPersonalizationRouter(recommendationController, authentication),
+  );
   app.use('/api/v1/users', createCommunityUsersRouter(communityController, authentication));
   app.use('/api/v1/diet-rules', createDietRouter(dietController, authentication));
   app.use('/api/v1/categories', createCategoryRouter(catalogController));
@@ -152,6 +168,14 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/admin', createModerationAdminRouter(moderationController, authentication));
   app.use('/api/v1/review-queue', createReviewQueueRouter(moderationController, authentication));
   app.use('/api/v1/reports', createReportsRouter(moderationController, authentication));
+  app.use(
+    '/api/v1/behavior-events',
+    createBehaviorEventsRouter(recommendationController, authentication),
+  );
+  app.use(
+    '/api/v1/recommendations',
+    createRecommendationRouter(recommendationController, authentication),
+  );
   app.use('/api/v1/posts', createPostsRouter(contentController, authentication));
   app.use('/api/v1/posts', createCommunityPostsRouter(communityController, authentication));
   app.use('/api/v1/comments', createCommentsRouter(communityController, authentication));

@@ -2,6 +2,7 @@ import 'dotenv/config';
 import {
   AiFlagRiskLevel,
   AiFlagStatus,
+  BehaviorEventType,
   CatalogStatus,
   CategoryType,
   CommentStatus,
@@ -963,6 +964,102 @@ async function main(): Promise<void> {
   const experiencedContributor = await prisma.user.findUniqueOrThrow({
     where: { email: seedEnvironment.SEED_EXPERIENCED_CONTRIBUTOR_EMAIL.toLowerCase() },
   });
+  const mushroomRecipe = await prisma.post.findUniqueOrThrow({
+    where: { slug: 'chao-nam-gao-lut-demo' },
+  });
+  const behaviorSeededAt = new Date(Date.now() - 30 * 60 * 1_000);
+  await prisma.$transaction(async (transaction) => {
+    for (const user of [member, experiencedContributor]) {
+      await transaction.personalizationPreference.upsert({
+        where: { userId: user.id },
+        update: {
+          enabled: true,
+          consentVersion: 'behavior-personalization-v1',
+          consentedAt: behaviorSeededAt,
+          disabledAt: null,
+        },
+        create: {
+          userId: user.id,
+          enabled: true,
+          consentVersion: 'behavior-personalization-v1',
+          consentedAt: behaviorSeededAt,
+        },
+      });
+    }
+    const behaviorFixtures = [
+      {
+        id: '90000000-0000-4000-8000-000000000001',
+        userId: member.id,
+        type: BehaviorEventType.BOOKMARK,
+        entityId: communityRecipe.id,
+        idempotencyKey: 'seed-member-bookmark-tofu',
+        payloadHash: '1'.repeat(64),
+        metadata: {},
+        occurredAt: behaviorSeededAt,
+      },
+      {
+        id: '90000000-0000-4000-8000-000000000002',
+        userId: member.id,
+        type: BehaviorEventType.VIEW_RECIPE,
+        entityId: communityRecipe.id,
+        idempotencyKey: 'seed-member-view-tofu-1',
+        dedupeKey: 'seed-member-view-tofu-bucket-1',
+        payloadHash: '2'.repeat(64),
+        metadata: {},
+        occurredAt: new Date(behaviorSeededAt.getTime() + 10 * 60 * 1_000),
+      },
+      {
+        id: '90000000-0000-4000-8000-000000000003',
+        userId: member.id,
+        type: BehaviorEventType.VIEW_RECIPE,
+        entityId: communityRecipe.id,
+        idempotencyKey: 'seed-member-view-tofu-2',
+        dedupeKey: 'seed-member-view-tofu-bucket-2',
+        payloadHash: '3'.repeat(64),
+        metadata: {},
+        occurredAt: new Date(behaviorSeededAt.getTime() + 20 * 60 * 1_000),
+      },
+      {
+        id: '90000000-0000-4000-8000-000000000004',
+        userId: experiencedContributor.id,
+        type: BehaviorEventType.CHAT_TOPIC,
+        idempotencyKey: 'seed-contributor-topic-mushroom',
+        dedupeKey: 'seed-contributor-topic-mushroom-bucket',
+        payloadHash: '4'.repeat(64),
+        metadata: { topicCodes: ['MUSHROOM', 'WHOLE_GRAINS'] },
+        occurredAt: behaviorSeededAt,
+      },
+      {
+        id: '90000000-0000-4000-8000-000000000005',
+        userId: experiencedContributor.id,
+        type: BehaviorEventType.VIEW_RECIPE,
+        entityId: mushroomRecipe.id,
+        idempotencyKey: 'seed-contributor-view-mushroom-1',
+        dedupeKey: 'seed-contributor-view-mushroom-bucket-1',
+        payloadHash: '5'.repeat(64),
+        metadata: {},
+        occurredAt: new Date(behaviorSeededAt.getTime() + 10 * 60 * 1_000),
+      },
+      {
+        id: '90000000-0000-4000-8000-000000000006',
+        userId: experiencedContributor.id,
+        type: BehaviorEventType.VIEW_RECIPE,
+        entityId: mushroomRecipe.id,
+        idempotencyKey: 'seed-contributor-view-mushroom-2',
+        dedupeKey: 'seed-contributor-view-mushroom-bucket-2',
+        payloadHash: '6'.repeat(64),
+        metadata: {},
+        occurredAt: new Date(behaviorSeededAt.getTime() + 20 * 60 * 1_000),
+      },
+    ];
+    for (const fixture of behaviorFixtures) {
+      await transaction.behaviorEvent.upsert({
+        where: { id: fixture.id },
+        update: { ...fixture, consentVersion: 'behavior-personalization-v1' },
+        create: { ...fixture, consentVersion: 'behavior-personalization-v1' },
+      });
+    }
+  });
   const quarantinePostId = '80000000-0000-4000-8000-000000000001';
   const quarantineRevisionId = '80000000-0000-4000-8000-000000000002';
   const aiFlagId = '80000000-0000-4000-8000-000000000003';
@@ -1075,7 +1172,7 @@ async function main(): Promise<void> {
     },
   });
   console.info(
-    `Seeded local Member, two approved Contributor subtypes, Admin, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, and moderation queue fixtures.`,
+    `Seeded local Member, two approved Contributor subtypes, Admin, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, behavior recommendation fixtures, and moderation queue fixtures.`,
   );
 }
 

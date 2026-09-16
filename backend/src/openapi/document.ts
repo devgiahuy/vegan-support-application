@@ -11,6 +11,7 @@ import { registerContentOpenApi } from '../modules/content/content.openapi.js';
 import { registerCommunityOpenApi } from '../modules/community/community.openapi.js';
 import { registerContributorOpenApi } from '../modules/contributors/contributor.openapi.js';
 import { registerModerationOpenApi } from '../modules/moderation/moderation.openapi.js';
+import { registerRecommendationOpenApi } from '../modules/recommendations/recommendation.openapi.js';
 
 const registry = new OpenAPIRegistry();
 
@@ -46,6 +47,7 @@ registerContentOpenApi(registry, registeredErrorResponse);
 registerCommunityOpenApi(registry, registeredErrorResponse);
 registerContributorOpenApi(registry, registeredErrorResponse);
 registerModerationOpenApi(registry, registeredErrorResponse);
+registerRecommendationOpenApi(registry, registeredErrorResponse);
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
@@ -67,6 +69,7 @@ const generatedDocument = generator.generateDocument({
     { name: 'Catalog Admin', description: 'Admin-only category and ingredient management' },
     { name: 'Content', description: 'Revisioned Recipe, Blog, and Video content' },
     { name: 'Community', description: 'Comments, votes, ratings, and bookmarks' },
+    { name: 'Recommendations', description: 'Consent-aware behavior events and recipe ranking' },
     {
       name: 'Contributors',
       description: 'Contributor applications and approved subtype status',

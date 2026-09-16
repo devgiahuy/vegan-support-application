@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 1.9
+**Version:** 2.0
 
 **Cập nhật:** 16/09/2026
 
@@ -8,7 +8,7 @@
 
 **Contract target:** `/api/v1`
 
-> Tài liệu này là registry sống cho những capability backend đã sẵn sàng để frontend tích hợp. Foundation, Authentication & Sessions, Profile/Health, Diet Rules, Catalog, Content Core, Content Discovery, Community Interactions, Contributor Applications và Moderation & Reports đã hoàn tất; các feature còn lại giữ `PLANNED` cho tới khi phase tương ứng vượt qua đầy đủ completion gate.
+> Tài liệu này là registry sống cho những capability backend đã sẵn sàng để frontend tích hợp. Foundation, Authentication & Sessions, Profile/Health, Diet Rules, Catalog, Content Core, Content Discovery, Community Interactions, Contributor Applications, Moderation & Reports và Behavioral Recommendation đã hoàn tất; các feature còn lại giữ `PLANNED` cho tới khi phase tương ứng vượt qua đầy đủ completion gate.
 
 ---
 
@@ -197,19 +197,21 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 
 ### 6.2 Auth và Profile
 
-| Method | Path                         | Status    | Backend updated | FE integrated | Ghi chú                                                                                             |
-| ------ | ---------------------------- | --------- | --------------- | ------------- | --------------------------------------------------------------------------------------------------- |
-| POST   | `/auth/register`             | `READY`   | 2026-09-15      | No            | Optional `contributorRequest` chỉ tạo application `PENDING`; account/JWT vẫn là `MEMBER`            |
-| POST   | `/auth/login`                | `READY`   | 2026-09-15      | No            | Trả access token/cookies và approved `contributorProfile`; generic invalid-credential response      |
-| POST   | `/auth/refresh`              | `READY`   | 2026-09-15      | No            | Đọc refresh cookie, rotation mỗi lần dùng; reuse revoke toàn token family                           |
-| POST   | `/auth/logout`               | `READY`   | 2026-09-15      | No            | Idempotent; body `{ allDevices?: boolean }`; revoke phiên hiện tại hoặc toàn bộ phiên của user      |
-| GET    | `/users/me`                  | `READY`   | 2026-09-15      | No            | Trả profile, approved Contributor subtype/label, health `MANUAL`, diet/effective constraints        |
-| PATCH  | `/users/me`                  | `READY`   | 2026-09-15      | No            | Cập nhật `displayName`/HTTP(S) `avatarUrl`; cần ít nhất một field                                   |
-| PUT    | `/users/me/health-profile`   | `READY`   | 2026-09-15      | No            | Upsert manual inputs; backend tính BMI, Mifflin–St Jeor BMR và activity-factor TDEE                 |
-| POST   | `/diet-rules/preview`        | `READY`   | 2026-09-15      | No            | Auth required; trả rule set v1, source/default/hard flag; tradition rule là configurable            |
-| PUT    | `/users/me/diet-preferences` | `READY`   | 2026-09-15      | No            | Exclusion nhận optional canonical `ingredientId`; free-text vẫn hỗ trợ; allergy/exclusion luôn hard |
-| PUT    | `/users/me/diet-schedule`    | `READY`   | 2026-09-15      | No            | Replace lịch PERIODIC bằng `YYYY-MM-DD`, semantic `Asia/Ho_Chi_Minh`, PostgreSQL `DATE`             |
-| DELETE | `/users/me/behavior-history` | `PLANNED` | —               | No            | Reset personalization                                                                               |
+| Method | Path                         | Status  | Backend updated | FE integrated | Ghi chú                                                                                             |
+| ------ | ---------------------------- | ------- | --------------- | ------------- | --------------------------------------------------------------------------------------------------- |
+| POST   | `/auth/register`             | `READY` | 2026-09-15      | No            | Optional `contributorRequest` chỉ tạo application `PENDING`; account/JWT vẫn là `MEMBER`            |
+| POST   | `/auth/login`                | `READY` | 2026-09-15      | No            | Trả access token/cookies và approved `contributorProfile`; generic invalid-credential response      |
+| POST   | `/auth/refresh`              | `READY` | 2026-09-15      | No            | Đọc refresh cookie, rotation mỗi lần dùng; reuse revoke toàn token family                           |
+| POST   | `/auth/logout`               | `READY` | 2026-09-15      | No            | Idempotent; body `{ allDevices?: boolean }`; revoke phiên hiện tại hoặc toàn bộ phiên của user      |
+| GET    | `/users/me`                  | `READY` | 2026-09-15      | No            | Trả profile, approved Contributor subtype/label, health `MANUAL`, diet/effective constraints        |
+| PATCH  | `/users/me`                  | `READY` | 2026-09-15      | No            | Cập nhật `displayName`/HTTP(S) `avatarUrl`; cần ít nhất một field                                   |
+| PUT    | `/users/me/health-profile`   | `READY` | 2026-09-15      | No            | Upsert manual inputs; backend tính BMI, Mifflin–St Jeor BMR và activity-factor TDEE                 |
+| POST   | `/diet-rules/preview`        | `READY` | 2026-09-15      | No            | Auth required; trả rule set v1, source/default/hard flag; tradition rule là configurable            |
+| PUT    | `/users/me/diet-preferences` | `READY` | 2026-09-15      | No            | Exclusion nhận optional canonical `ingredientId`; free-text vẫn hỗ trợ; allergy/exclusion luôn hard |
+| PUT    | `/users/me/diet-schedule`    | `READY` | 2026-09-15      | No            | Replace lịch PERIODIC bằng `YYYY-MM-DD`, semantic `Asia/Ho_Chi_Minh`, PostgreSQL `DATE`             |
+| GET    | `/users/me/personalization`  | `READY` | 2026-09-16      | No            | Auth; default disabled; trả consent version và timestamps                                           |
+| PUT    | `/users/me/personalization`  | `READY` | 2026-09-16      | No            | Auth; bật/tắt riêng với version `behavior-personalization-v1`                                       |
+| DELETE | `/users/me/behavior-history` | `READY` | 2026-09-16      | No            | Xóa event của chính user; giữ nguyên consent                                                        |
 
 ### 6.3 Content và Community
 
@@ -272,15 +274,15 @@ luồng này.
 
 ### 6.5 Meal Plan và Recommendation
 
-| Method | Path                                 | Status    | Backend updated | FE integrated | Ghi chú                               |
-| ------ | ------------------------------------ | --------- | --------------- | ------------- | ------------------------------------- |
-| POST   | `/meal-plans/generate`               | `PLANNED` | —               | No            | Tạo version mới                       |
-| GET    | `/meal-plans`                        | `PLANNED` | —               | No            | User-owned plans                      |
-| GET    | `/meal-plans/:id`                    | `PLANNED` | —               | No            | Ownership required                    |
-| PATCH  | `/meal-plans/:id/items/:itemId/swap` | `PLANNED` | —               | No            | Giữ hard constraints                  |
-| DELETE | `/meal-plans/:id`                    | `PLANNED` | —               | No            | Soft-delete hoặc archive theo OpenAPI |
-| POST   | `/behavior-events`                   | `PLANNED` | —               | No            | Chỉ khi có consent                    |
-| GET    | `/recommendations/home`              | `PLANNED` | —               | No            | Trả reason codes                      |
+| Method | Path                                 | Status    | Backend updated | FE integrated | Ghi chú                                                                   |
+| ------ | ------------------------------------ | --------- | --------------- | ------------- | ------------------------------------------------------------------------- |
+| POST   | `/meal-plans/generate`               | `PLANNED` | —               | No            | Tạo version mới                                                           |
+| GET    | `/meal-plans`                        | `PLANNED` | —               | No            | User-owned plans                                                          |
+| GET    | `/meal-plans/:id`                    | `PLANNED` | —               | No            | Ownership required                                                        |
+| PATCH  | `/meal-plans/:id/items/:itemId/swap` | `PLANNED` | —               | No            | Giữ hard constraints                                                      |
+| DELETE | `/meal-plans/:id`                    | `PLANNED` | —               | No            | Soft-delete hoặc archive theo OpenAPI                                     |
+| POST   | `/behavior-events`                   | `READY`   | 2026-09-16      | No            | Auth + active consent; allowlist metadata, idempotency và 5-minute dedupe |
+| GET    | `/recommendations/home`              | `READY`   | 2026-09-16      | No            | Auth; hard constraints trước ranking; score/reason codes v1               |
 
 ### 6.6 Chat và AI verification
 
@@ -485,8 +487,19 @@ error
 
 - Không block primary action nếu ghi event thất bại.
 - Chỉ gửi event khi backend xác nhận personalization consent đang active.
-- Dedupe rapid repeated views ở client để giảm noise; backend vẫn là nơi quyết định dedupe chính thức.
-- Recommendation UI render `reasonCodes`, không tự đọc raw behavior history.
+- Dùng `idempotencyKey` ổn định khi retry. `SEARCH`, `VIEW_RECIPE` và `CHAT_TOPIC` được backend dedupe
+  theo cửa sổ 5 phút; client có thể giảm noise thêm nhưng không thay thế backend dedupe.
+- Chỉ gửi metadata đúng event type. `CHAT_TOPIC` gửi topic code allowlist, tuyệt đối không gửi raw chat text;
+  `RATE` và `BOOKMARK` được backend đối chiếu với interaction thuộc chính user.
+- `behavioral-v1` dùng lookback 30 ngày và decay half-life 14 ngày. Trọng số ổn định:
+  ingredient overlap `+5`, bookmark similar `+4`, rating >= 4 similar `+3`, chat topic `+2`, repeated
+  view `+2`, recent search `+1`, recent accepted meal `-4`, rejected/swapped similar `-3`.
+- Allergy, explicit ingredient exclusion, diet pattern và enabled tradition được filter trước scoring.
+  Candidate pool lấy tối đa 200 Recipe published mới nhất sau hard-filter. Consent off/no events dùng
+  cold start rating/popularity. Tie-break lần lượt rating average, rating count, vote count, bookmark
+  count, published time và UUID.
+- Recommendation UI render tối đa hai `reasonCodes`, hiển thị `scoringVersion` và
+  `appliedConstraints`; không tự đọc raw behavior history.
 
 ### 7.10 Maps
 
@@ -502,88 +515,94 @@ error
 
 Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 
-| Code                                       | UI behavior                                                            |
-| ------------------------------------------ | ---------------------------------------------------------------------- |
-| `AUTH_REQUIRED`                            | Mở login/redirect có return URL                                        |
-| `INVALID_ACCESS_TOKEN`                     | Xóa auth state; yêu cầu đăng nhập lại                                  |
-| `TOKEN_EXPIRED`                            | Để refresh queue xử lý                                                 |
-| `INVALID_REFRESH_TOKEN`                    | Xóa auth state; yêu cầu đăng nhập lại                                  |
-| `REFRESH_TOKEN_REUSED`                     | Xóa auth state trên thiết bị và cảnh báo phiên đã bị thu hồi           |
-| `INVALID_CREDENTIALS`                      | Báo email hoặc mật khẩu không đúng, không tiết lộ tài khoản tồn tại    |
-| `EMAIL_ALREADY_EXISTS`                     | Hiển thị lỗi email đã được sử dụng tại form đăng ký                    |
-| `ACCOUNT_LOCKED`                           | Hiện thời gian thử lại nếu có                                          |
-| `ACCOUNT_BANNED`                           | Logout và hiển thị lý do/contact                                       |
-| `STALE_ACCESS_TOKEN`                       | Xóa session và yêu cầu đăng nhập lại để nhận role hiện tại             |
-| `FORBIDDEN`                                | Trang/notification không đủ quyền                                      |
-| `VALIDATION_ERROR`                         | Map `fields` vào form                                                  |
-| `NOT_FOUND`                                | Hiển thị trạng thái không tìm thấy phù hợp với resource/page           |
-| `INVALID_JSON`                             | Báo request không hợp lệ; không retry tự động                          |
-| `PAYLOAD_TOO_LARGE`                        | Yêu cầu user giảm kích thước payload/file trước khi thử lại            |
-| `DATABASE_UNAVAILABLE`                     | Hiển thị trạng thái dịch vụ tạm thời không khả dụng và cho phép retry  |
-| `INTERNAL_SERVER_ERROR`                    | Hiển thị lỗi hệ thống kèm mã request để hỗ trợ tra soát                |
-| `CONTRIBUTOR_APPLICATION_PENDING`          | Disable submit, link xem trạng thái                                    |
-| `CONTRIBUTOR_REAPPLY_NOT_ALLOWED`          | Hiển thị ngày được apply lại                                           |
-| `CONTRIBUTOR_APPLICATION_NOT_ALLOWED`      | Ẩn form apply với Admin hoặc role không phù hợp                        |
-| `CONTRIBUTOR_TYPE_UNCHANGED`               | Yêu cầu chọn subtype khác profile Contributor hiện tại                 |
-| `CONTRIBUTOR_APPLICATION_ALREADY_REVIEWED` | Refresh Admin queue; application đã có quyết định                      |
-| `CONTRIBUTOR_APPLICATION_NOT_REVIEWABLE`   | Giữ queue và báo applicant không còn đủ điều kiện                      |
-| `SELF_APPROVAL_FORBIDDEN`                  | Giữ queue và báo lỗi rõ                                                |
-| `ADMIN_REVIEW_REQUIRED`                    | Chỉ hiển thị quyết định final cho Admin với flagged/quarantined target |
-| `REVIEW_ALREADY_DECIDED`                   | Refresh review queue; revision đã có quyết định                        |
-| `REVIEW_CONFLICT`                          | Refresh review queue; reviewer khác vừa xử lý revision                 |
-| `CONTENT_AUTHOR_INACTIVE`                  | Không cho publish content của user đã bị ban/xóa                       |
-| `SELF_REPORT_FORBIDDEN`                    | Không cho report content/comment của chính user                        |
-| `DUPLICATE_ACTIVE_REPORT`                  | Mở report hiện tại thay vì submit report trùng                         |
-| `REPORT_ALREADY_RESOLVED`                  | Refresh Admin report queue                                             |
-| `REPORT_REVIEW_CONFLICT`                   | Refresh queue; Admin khác vừa resolve                                  |
-| `DEMOTION_NOT_APPLICABLE`                  | Refresh target; author không còn là Contributor                        |
-| `SELF_MODERATION_FORBIDDEN`                | Không cho Admin đổi status tài khoản của chính mình                    |
-| `PROTECTED_ADMIN_ACCOUNT`                  | Không cho moderation tài khoản Admin qua endpoint này                  |
-| `USER_STATUS_CONFLICT`                     | Refresh user; transition status không hợp lệ                           |
-| `COMMENT_NOT_MODERATABLE`                  | Comment đã bị author xóa và không thể restore                          |
-| `COMMENT_STATUS_CONFLICT`                  | Refresh comment; item đã ở trạng thái yêu cầu                          |
-| `DIET_RULE_RECONFIRMATION_REQUIRED`        | Mở review rule flow                                                    |
-| `DIET_SCHEDULE_REQUIRED`                   | Yêu cầu chọn ngày periodic                                             |
-| `DIET_RULES_UNAVAILABLE`                   | Không cho lưu preference; hiển thị trạng thái cấu hình chưa sẵn sàng   |
-| `INVALID_DIET_RULE_SELECTION`              | Sync lại preview và yêu cầu user xác nhận toàn bộ rule                 |
-| `DIET_RULE_REQUIRED`                       | Giữ bật hard constraint của diet pattern                               |
-| `DIET_PREFERENCES_REQUIRED`                | Điều hướng user lưu diet preference trước khi chỉnh lịch               |
-| `DIET_SCHEDULE_NOT_APPLICABLE`             | Không gửi ngày khi practice schedule là `PERMANENT`                    |
-| `INVALID_INGREDIENT_EXCLUSIONS`            | Yêu cầu loại mục rỗng/trùng khỏi danh sách exclusion                   |
-| `INVALID_CATALOG_NAME`                     | Báo tên không thể chuẩn hóa thành slug/canonical key hợp lệ            |
-| `INVALID_CATEGORY_PARENT`                  | Yêu cầu chọn parent category active                                    |
-| `CATEGORY_TYPE_MISMATCH`                   | Chỉ cho chọn parent cùng category type                                 |
-| `CATEGORY_DEPTH_EXCEEDED`                  | Không cho tạo/chuyển category vượt quá hai tầng                        |
-| `CATEGORY_SLUG_CONFLICT`                   | Báo slug đã tồn tại trong cùng parent/type                             |
-| `CATEGORY_REPLACEMENT_REQUIRED`            | Mở selector replacement trước khi archive category đang được dùng      |
-| `INVALID_CATEGORY_REPLACEMENT`             | Chỉ chấp nhận replacement active, cùng type và cùng tầng               |
-| `CATEGORY_REPLACEMENT_CONFLICT`            | Refresh cây; replacement gây xung đột slug ở subtree                   |
-| `INVALID_INGREDIENT_METADATA`              | Sync catalog; allergen/diet/tradition metadata không hợp lệ            |
-| `INGREDIENT_NAME_CONFLICT`                 | Báo canonical ingredient đã tồn tại sau normalize không dấu            |
-| `INGREDIENT_ALIAS_CONFLICT`                | Báo alias đã tồn tại trên canonical ingredient này                     |
-| `CATALOG_REFERENCE_CONFLICT`               | Refresh catalog; item/metadata đang có reference không hợp lệ          |
-| `INVALID_CONTENT`                          | Giữ form và hiển thị business validation của Recipe/Blog/Video         |
-| `INVALID_MEDIA_REFERENCE`                  | Yêu cầu upload/chọn lại media hợp lệ trước khi submit                  |
-| `INVALID_INGREDIENT_REFERENCE`             | Sync catalog và yêu cầu chọn lại canonical ingredient                  |
-| `CONTENT_SLUG_CONFLICT`                    | Báo slug đã tồn tại và cho user chỉnh slug                             |
-| `CONTENT_VERSION_CONFLICT`                 | Fetch revision mới nhất trước khi merge/submit lại                     |
-| `CONTENT_STATE_CONFLICT`                   | Khóa edit khi content đang bị giữ để review                            |
-| `CONTENT_DELETED`                          | Đóng editor và hiển thị trạng thái đã xóa cho owner/Admin              |
-| `INVALID_SEARCH_QUERY`                     | Giữ filters hiện tại và yêu cầu từ khóa có chữ hoặc số                 |
-| `INVALID_COMMENT_PARENT`                   | Giữ nội dung và yêu cầu reply lại một root comment còn visible         |
-| `COMMENT_OWNER_REQUIRED`                   | Không mở edit/delete cho comment của user khác                         |
-| `COMMENT_NOT_EDITABLE`                     | Refresh thread; comment đã deleted/hidden không thể sửa hoặc restore   |
-| `RATING_RECIPE_ONLY`                       | Ẩn rating control khỏi Blog/Video                                      |
-| `BOOKMARK_TYPE_NOT_SUPPORTED`              | Ẩn bookmark control khỏi Blog                                          |
-| `COMMUNITY_RATE_LIMITED`                   | Disable action theo `retryAfterSeconds`, không retry tự động           |
-| `HEALTH_PROFILE_INCOMPLETE`                | Link tới health profile                                                |
-| `NO_ELIGIBLE_RECIPE`                       | Hiển thị slot trống/warnings, không crash                              |
-| `VERIFICATION_ALREADY_EXISTS`              | Refresh target và hiển thị reviewer hiện tại                           |
-| `AI_QUOTA_EXCEEDED`                        | Hiển thị reset time/CTA phù hợp role                                   |
-| `AI_FEATURE_DISABLED`                      | Hiển thị maintenance state; history vẫn xem được                       |
-| `AI_PROVIDER_UNAVAILABLE`                  | Retry/fallback message                                                 |
-| `EXTERNAL_LOCATION_UNAVAILABLE`            | Dùng internal restaurant results                                       |
-| `RESOURCE_CONFLICT`                        | Refresh entity/version trước khi sửa lại                               |
+| Code                                          | UI behavior                                                            |
+| --------------------------------------------- | ---------------------------------------------------------------------- |
+| `AUTH_REQUIRED`                               | Mở login/redirect có return URL                                        |
+| `INVALID_ACCESS_TOKEN`                        | Xóa auth state; yêu cầu đăng nhập lại                                  |
+| `TOKEN_EXPIRED`                               | Để refresh queue xử lý                                                 |
+| `INVALID_REFRESH_TOKEN`                       | Xóa auth state; yêu cầu đăng nhập lại                                  |
+| `REFRESH_TOKEN_REUSED`                        | Xóa auth state trên thiết bị và cảnh báo phiên đã bị thu hồi           |
+| `INVALID_CREDENTIALS`                         | Báo email hoặc mật khẩu không đúng, không tiết lộ tài khoản tồn tại    |
+| `EMAIL_ALREADY_EXISTS`                        | Hiển thị lỗi email đã được sử dụng tại form đăng ký                    |
+| `ACCOUNT_LOCKED`                              | Hiện thời gian thử lại nếu có                                          |
+| `ACCOUNT_BANNED`                              | Logout và hiển thị lý do/contact                                       |
+| `STALE_ACCESS_TOKEN`                          | Xóa session và yêu cầu đăng nhập lại để nhận role hiện tại             |
+| `FORBIDDEN`                                   | Trang/notification không đủ quyền                                      |
+| `VALIDATION_ERROR`                            | Map `fields` vào form                                                  |
+| `NOT_FOUND`                                   | Hiển thị trạng thái không tìm thấy phù hợp với resource/page           |
+| `INVALID_JSON`                                | Báo request không hợp lệ; không retry tự động                          |
+| `PAYLOAD_TOO_LARGE`                           | Yêu cầu user giảm kích thước payload/file trước khi thử lại            |
+| `DATABASE_UNAVAILABLE`                        | Hiển thị trạng thái dịch vụ tạm thời không khả dụng và cho phép retry  |
+| `INTERNAL_SERVER_ERROR`                       | Hiển thị lỗi hệ thống kèm mã request để hỗ trợ tra soát                |
+| `CONTRIBUTOR_APPLICATION_PENDING`             | Disable submit, link xem trạng thái                                    |
+| `CONTRIBUTOR_REAPPLY_NOT_ALLOWED`             | Hiển thị ngày được apply lại                                           |
+| `CONTRIBUTOR_APPLICATION_NOT_ALLOWED`         | Ẩn form apply với Admin hoặc role không phù hợp                        |
+| `CONTRIBUTOR_TYPE_UNCHANGED`                  | Yêu cầu chọn subtype khác profile Contributor hiện tại                 |
+| `CONTRIBUTOR_APPLICATION_ALREADY_REVIEWED`    | Refresh Admin queue; application đã có quyết định                      |
+| `CONTRIBUTOR_APPLICATION_NOT_REVIEWABLE`      | Giữ queue và báo applicant không còn đủ điều kiện                      |
+| `SELF_APPROVAL_FORBIDDEN`                     | Giữ queue và báo lỗi rõ                                                |
+| `ADMIN_REVIEW_REQUIRED`                       | Chỉ hiển thị quyết định final cho Admin với flagged/quarantined target |
+| `REVIEW_ALREADY_DECIDED`                      | Refresh review queue; revision đã có quyết định                        |
+| `REVIEW_CONFLICT`                             | Refresh review queue; reviewer khác vừa xử lý revision                 |
+| `CONTENT_AUTHOR_INACTIVE`                     | Không cho publish content của user đã bị ban/xóa                       |
+| `SELF_REPORT_FORBIDDEN`                       | Không cho report content/comment của chính user                        |
+| `DUPLICATE_ACTIVE_REPORT`                     | Mở report hiện tại thay vì submit report trùng                         |
+| `REPORT_ALREADY_RESOLVED`                     | Refresh Admin report queue                                             |
+| `REPORT_REVIEW_CONFLICT`                      | Refresh queue; Admin khác vừa resolve                                  |
+| `DEMOTION_NOT_APPLICABLE`                     | Refresh target; author không còn là Contributor                        |
+| `SELF_MODERATION_FORBIDDEN`                   | Không cho Admin đổi status tài khoản của chính mình                    |
+| `PROTECTED_ADMIN_ACCOUNT`                     | Không cho moderation tài khoản Admin qua endpoint này                  |
+| `USER_STATUS_CONFLICT`                        | Refresh user; transition status không hợp lệ                           |
+| `COMMENT_NOT_MODERATABLE`                     | Comment đã bị author xóa và không thể restore                          |
+| `COMMENT_STATUS_CONFLICT`                     | Refresh comment; item đã ở trạng thái yêu cầu                          |
+| `DIET_RULE_RECONFIRMATION_REQUIRED`           | Mở review rule flow                                                    |
+| `DIET_SCHEDULE_REQUIRED`                      | Yêu cầu chọn ngày periodic                                             |
+| `DIET_RULES_UNAVAILABLE`                      | Không cho lưu preference; hiển thị trạng thái cấu hình chưa sẵn sàng   |
+| `INVALID_DIET_RULE_SELECTION`                 | Sync lại preview và yêu cầu user xác nhận toàn bộ rule                 |
+| `DIET_RULE_REQUIRED`                          | Giữ bật hard constraint của diet pattern                               |
+| `DIET_PREFERENCES_REQUIRED`                   | Điều hướng user lưu diet preference trước khi chỉnh lịch               |
+| `DIET_SCHEDULE_NOT_APPLICABLE`                | Không gửi ngày khi practice schedule là `PERMANENT`                    |
+| `INVALID_INGREDIENT_EXCLUSIONS`               | Yêu cầu loại mục rỗng/trùng khỏi danh sách exclusion                   |
+| `INVALID_CATALOG_NAME`                        | Báo tên không thể chuẩn hóa thành slug/canonical key hợp lệ            |
+| `INVALID_CATEGORY_PARENT`                     | Yêu cầu chọn parent category active                                    |
+| `CATEGORY_TYPE_MISMATCH`                      | Chỉ cho chọn parent cùng category type                                 |
+| `CATEGORY_DEPTH_EXCEEDED`                     | Không cho tạo/chuyển category vượt quá hai tầng                        |
+| `CATEGORY_SLUG_CONFLICT`                      | Báo slug đã tồn tại trong cùng parent/type                             |
+| `CATEGORY_REPLACEMENT_REQUIRED`               | Mở selector replacement trước khi archive category đang được dùng      |
+| `INVALID_CATEGORY_REPLACEMENT`                | Chỉ chấp nhận replacement active, cùng type và cùng tầng               |
+| `CATEGORY_REPLACEMENT_CONFLICT`               | Refresh cây; replacement gây xung đột slug ở subtree                   |
+| `INVALID_INGREDIENT_METADATA`                 | Sync catalog; allergen/diet/tradition metadata không hợp lệ            |
+| `INGREDIENT_NAME_CONFLICT`                    | Báo canonical ingredient đã tồn tại sau normalize không dấu            |
+| `INGREDIENT_ALIAS_CONFLICT`                   | Báo alias đã tồn tại trên canonical ingredient này                     |
+| `CATALOG_REFERENCE_CONFLICT`                  | Refresh catalog; item/metadata đang có reference không hợp lệ          |
+| `INVALID_CONTENT`                             | Giữ form và hiển thị business validation của Recipe/Blog/Video         |
+| `INVALID_MEDIA_REFERENCE`                     | Yêu cầu upload/chọn lại media hợp lệ trước khi submit                  |
+| `INVALID_INGREDIENT_REFERENCE`                | Sync catalog và yêu cầu chọn lại canonical ingredient                  |
+| `CONTENT_SLUG_CONFLICT`                       | Báo slug đã tồn tại và cho user chỉnh slug                             |
+| `CONTENT_VERSION_CONFLICT`                    | Fetch revision mới nhất trước khi merge/submit lại                     |
+| `CONTENT_STATE_CONFLICT`                      | Khóa edit khi content đang bị giữ để review                            |
+| `CONTENT_DELETED`                             | Đóng editor và hiển thị trạng thái đã xóa cho owner/Admin              |
+| `INVALID_SEARCH_QUERY`                        | Giữ filters hiện tại và yêu cầu từ khóa có chữ hoặc số                 |
+| `PERSONALIZATION_CONSENT_REQUIRED`            | Mở consent setting; không retry event cho tới khi user bật             |
+| `PERSONALIZATION_CONSENT_VERSION_UNSUPPORTED` | Sync contract và yêu cầu user xác nhận consent version hiện hành       |
+| `BEHAVIOR_EVENT_INVALID_TARGET`               | Bỏ event stale; refresh published recipe                               |
+| `BEHAVIOR_EVENT_NOT_OWNED`                    | Không retry; sync lại bookmark/rating state của current user           |
+| `BEHAVIOR_EVENT_TIME_INVALID`                 | Tạo event mới với client timestamp hợp lệ trong lookback               |
+| `BEHAVIOR_IDEMPOTENCY_CONFLICT`               | Tạo idempotency key mới chỉ cho primary action mới                     |
+| `INVALID_COMMENT_PARENT`                      | Giữ nội dung và yêu cầu reply lại một root comment còn visible         |
+| `COMMENT_OWNER_REQUIRED`                      | Không mở edit/delete cho comment của user khác                         |
+| `COMMENT_NOT_EDITABLE`                        | Refresh thread; comment đã deleted/hidden không thể sửa hoặc restore   |
+| `RATING_RECIPE_ONLY`                          | Ẩn rating control khỏi Blog/Video                                      |
+| `BOOKMARK_TYPE_NOT_SUPPORTED`                 | Ẩn bookmark control khỏi Blog                                          |
+| `COMMUNITY_RATE_LIMITED`                      | Disable action theo `retryAfterSeconds`, không retry tự động           |
+| `HEALTH_PROFILE_INCOMPLETE`                   | Link tới health profile                                                |
+| `NO_ELIGIBLE_RECIPE`                          | Hiển thị slot trống/warnings, không crash                              |
+| `VERIFICATION_ALREADY_EXISTS`                 | Refresh target và hiển thị reviewer hiện tại                           |
+| `AI_QUOTA_EXCEEDED`                           | Hiển thị reset time/CTA phù hợp role                                   |
+| `AI_FEATURE_DISABLED`                         | Hiển thị maintenance state; history vẫn xem được                       |
+| `AI_PROVIDER_UNAVAILABLE`                     | Retry/fallback message                                                 |
+| `EXTERNAL_LOCATION_UNAVAILABLE`               | Dùng internal restaurant results                                       |
+| `RESOURCE_CONFLICT`                           | Refresh entity/version trước khi sửa lại                               |
 
 ---
 
@@ -644,18 +663,19 @@ Không được mô tả endpoint là READY chỉ vì route đã tồn tại n�
 
 Thêm entry mới nhất ở trên cùng.
 
-| Date       | Version | Module       | Change                                                                                                                               | Breaking | FE action                                                                                      |
-| ---------- | ------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------ | :------: | ---------------------------------------------------------------------------------------------- |
-| 2026-09-16 | 1.9     | Moderation   | Thêm rule flags v1, transactional post review, report escalation, Admin decisions, selective ban/unban và audit trail                |    No    | Sync OpenAPI; map queue/report/user/comment DTO, reason codes và xử lý conflict/state boundary |
-| 2026-09-15 | 1.8     | Contributors | Hoàn thiện shared application state machine, own/Admin list-review, approved subtype profile, cooldown và stale-session protection   |    No    | Sync OpenAPI; map profile/application DTO và buộc đăng nhập lại khi STALE_ACCESS_TOKEN         |
-| 2026-09-15 | 1.7     | Community    | Thêm comment thread một tầng, idempotent vote/bookmark, Recipe rating aggregate, community summary và current-user bookmark list     |    No    | Sync OpenAPI; tạo DTO/Model/Mapper/query hooks và xử lý placeholder/rate limit                 |
-| 2026-09-15 | 1.6     | Search       | Mở rộng GET posts với normalized ranking/filter an toàn và thêm related content theo ba type                                         |    No    | Sync OpenAPI; map search meta/filters và ba list related, không tự nới appliedConstraints      |
-| 2026-09-15 | 1.5     | Content      | Thêm Recipe/Blog/Video revision CRUD, structured recipe constraints, soft-delete/version conflict và signed Cloudinary upload        |    No    | Sync OpenAPI; tạo DTO/Model/Mapper theo post type, upload trực tiếp và xử lý revision conflict |
-| 2026-09-15 | 1.4     | Catalog      | Thêm category tree, canonical ingredient, alias resolution và metadata allergen/diet/tradition; exclusion nhận optional ingredientId |    No    | Sync OpenAPI; tạo DTO/Model/Mapper cho category và ingredient, xử lý AMBIGUOUS                 |
-| 2026-09-15 | 1.3     | Profile/Diet | Thêm profile, BMI/BMR/TDEE, rule preview v1, preference/effective constraints và PERIODIC dates                                      |    No    | Sync OpenAPI; tạo DTO/Model/Mapper riêng cho profile và diet flow                              |
-| 2026-09-15 | 1.2     | Auth         | Hoàn tất register/login/refresh rotation/logout, RBAC primitives và `/users/me`                                                      |    No    | Sync OpenAPI; tích hợp proxy/cookie với `withCredentials=true`                                 |
-| 2026-09-15 | 1.1     | Foundation   | Hoàn tất health, Swagger UI và OpenAPI JSON; thêm request ID và error envelope nền tảng                                              |    No    | Dùng catalog OpenAPI đã sync; chưa cần tạo consumer UI cho health                              |
-| 2026-09-15 | 1.0     | All          | Tạo integration registry; backend chưa triển khai                                                                                    |    No    | Không tích hợp API thật cho tới khi status READY                                               |
+| Date       | Version | Module         | Change                                                                                                                               | Breaking | FE action                                                                                      |
+| ---------- | ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------ | :------: | ---------------------------------------------------------------------------------------------- |
+| 2026-09-16 | 2.0     | Recommendation | Thêm consent/version, behavior event allowlist/idempotency/dedupe, hard-filtered scoring v1, cold start và reason codes              |    No    | Sync OpenAPI; tạo consent/event/recommendation DTO, mapper, hooks và xử lý sáu business errors |
+| 2026-09-16 | 1.9     | Moderation     | Thêm rule flags v1, transactional post review, report escalation, Admin decisions, selective ban/unban và audit trail                |    No    | Sync OpenAPI; map queue/report/user/comment DTO, reason codes và xử lý conflict/state boundary |
+| 2026-09-15 | 1.8     | Contributors   | Hoàn thiện shared application state machine, own/Admin list-review, approved subtype profile, cooldown và stale-session protection   |    No    | Sync OpenAPI; map profile/application DTO và buộc đăng nhập lại khi STALE_ACCESS_TOKEN         |
+| 2026-09-15 | 1.7     | Community      | Thêm comment thread một tầng, idempotent vote/bookmark, Recipe rating aggregate, community summary và current-user bookmark list     |    No    | Sync OpenAPI; tạo DTO/Model/Mapper/query hooks và xử lý placeholder/rate limit                 |
+| 2026-09-15 | 1.6     | Search         | Mở rộng GET posts với normalized ranking/filter an toàn và thêm related content theo ba type                                         |    No    | Sync OpenAPI; map search meta/filters và ba list related, không tự nới appliedConstraints      |
+| 2026-09-15 | 1.5     | Content        | Thêm Recipe/Blog/Video revision CRUD, structured recipe constraints, soft-delete/version conflict và signed Cloudinary upload        |    No    | Sync OpenAPI; tạo DTO/Model/Mapper theo post type, upload trực tiếp và xử lý revision conflict |
+| 2026-09-15 | 1.4     | Catalog        | Thêm category tree, canonical ingredient, alias resolution và metadata allergen/diet/tradition; exclusion nhận optional ingredientId |    No    | Sync OpenAPI; tạo DTO/Model/Mapper cho category và ingredient, xử lý AMBIGUOUS                 |
+| 2026-09-15 | 1.3     | Profile/Diet   | Thêm profile, BMI/BMR/TDEE, rule preview v1, preference/effective constraints và PERIODIC dates                                      |    No    | Sync OpenAPI; tạo DTO/Model/Mapper riêng cho profile và diet flow                              |
+| 2026-09-15 | 1.2     | Auth           | Hoàn tất register/login/refresh rotation/logout, RBAC primitives và `/users/me`                                                      |    No    | Sync OpenAPI; tích hợp proxy/cookie với `withCredentials=true`                                 |
+| 2026-09-15 | 1.1     | Foundation     | Hoàn tất health, Swagger UI và OpenAPI JSON; thêm request ID và error envelope nền tảng                                              |    No    | Dùng catalog OpenAPI đã sync; chưa cần tạo consumer UI cho health                              |
+| 2026-09-15 | 1.0     | All            | Tạo integration registry; backend chưa triển khai                                                                                    |    No    | Không tích hợp API thật cho tới khi status READY                                               |
 
 Template:
 

@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
   "source": "../backend/openapi.json",
-  "generatedAt": "2026-09-16T02:34:56.889Z",
+  "generatedAt": "2026-09-16T02:55:13.273Z",
   "stats": {
-    "operations": 56,
-    "groups": 14,
-    "schemas": 51
+    "operations": 61,
+    "groups": 15,
+    "schemas": 57
   },
   "operations": [
     {
@@ -2094,6 +2094,109 @@
         "404": "ErrorResponse",
         "409": "ErrorResponse",
         "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/behavior-events",
+      "group": "Recommendations",
+      "summary": "Ghi nhận behavior event đã consent",
+      "operationId": "createBehaviorEvent",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "CreateBehaviorEventRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "BehaviorEventResponse",
+        "201": "BehaviorEventResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/users/me/personalization",
+      "group": "Recommendations",
+      "summary": "Đọc personalization consent",
+      "operationId": "getPersonalizationPreference",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "PersonalizationResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/users/me/personalization",
+      "group": "Recommendations",
+      "summary": "Bật hoặc tắt personalization",
+      "operationId": "updatePersonalizationPreference",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "UpdatePersonalizationRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "PersonalizationResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/users/me/behavior-history",
+      "group": "Recommendations",
+      "summary": "Xóa toàn bộ behavior history của chính mình",
+      "operationId": "deleteBehaviorHistory",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "DeleteBehaviorHistoryResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/recommendations/home",
+      "group": "Recommendations",
+      "summary": "Recommendation home đã áp hard constraints",
+      "operationId": "getHomeRecommendations",
+      "params": [
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "forDate",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "RecommendationResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
       }
     }
   ]
