@@ -1,45 +1,97 @@
 /**
- * DTO dữ liệu thô trả về từ Backend (thường có thể thay đổi giữa các phiên bản API)
+ * DTO dữ liệu thô từ Backend theo OpenAPI đã sync (`docs/api/auth.md`, `docs/api/users.md`).
+ * Mọi DTO đều optional/union-compatible: mapper phải dùng `pickField` + `safe*` cho mọi field.
+ * Refresh token KHÔNG nằm trong body — backend chỉ đặt HttpOnly cookie.
  */
+
+/** User thô như backend trả trong `AuthSessionResponse.data.user` / `ProfileResponse.data`. */
 export interface UserDto {
-  // Backend có thể đổi giữa 'id' hoặc '_id' hoặc 'userId'
-  id?: string | number;
-  _id?: string;
-  userId?: string | number;
-
-  // Backend có thể đổi giữa 'email' hoặc 'user_email'
+  id?: string;
   email?: string;
-  user_email?: string;
-
-  // Backend có thể đổi giữa 'full_name', 'name', 'userName'
-  full_name?: string;
-  name?: string;
-  username?: string;
-
-  // Avatar
-  avatar_url?: string;
-  avatarUrl?: string;
-  avatar?: string;
-
-  // Role
+  displayName?: string;
+  display_name?: string;
+  avatarUrl?: string | null;
+  avatar_url?: string | null;
   role?: string;
-  user_role?: string;
-
-  // Status
-  is_active?: boolean | number;
-  status?: string | number;
-
-  created_at?: string;
+  status?: string;
   createdAt?: string;
+  created_at?: string;
+  contributorApplication?: ContributorApplicationDto | null;
+  contributor_application?: ContributorApplicationDto | null;
 }
 
-export interface LoginResponseDto {
-  access_token?: string;
-  accessToken?: string;
-  token?: string;
-  refresh_token?: string;
-  refreshToken?: string;
-  user?: UserDto;
-  userInfo?: UserDto;
-  data?: UserDto;
+/** Đơn nguyện vọng contributor thô (chỉ để hiển thị, không cấp quyền). */
+export interface ContributorApplicationDto {
+  status?: string;
+  requestedType?: string;
+  requested_type?: string;
+}
+
+/** `POST /auth/register` + `POST /auth/login` → `201/200 AuthSessionResponse`. */
+export interface AuthSessionResponseDto {
+  success?: boolean;
+  data?: {
+    user?: UserDto | null;
+    accessToken?: string;
+    access_token?: string;
+    accessTokenExpiresAt?: string;
+    access_token_expires_at?: string;
+  } | null;
+  meta?: null;
+}
+
+/** `POST /auth/refresh` → `200 RefreshResponse`. */
+export interface RefreshResponseDto {
+  success?: boolean;
+  data?: {
+    accessToken?: string;
+    access_token?: string;
+    accessTokenExpiresAt?: string;
+    access_token_expires_at?: string;
+  } | null;
+  meta?: null;
+}
+
+/** `POST /auth/logout` → `200 LogoutResponse`. */
+export interface LogoutResponseDto {
+  success?: boolean;
+  data?: {
+    loggedOut?: boolean;
+    scope?: string;
+  } | null;
+  meta?: null;
+}
+
+/** `GET /users/me` → `200 ProfileResponse`. Consumer auth chỉ map 8 field user đầu;
+ * phần `healthProfile`/`dietPreference` thuộc `features/profile` (ngoài scope slice này). */
+export interface ProfileResponseDto {
+  success?: boolean;
+  data?: (UserDto & Record<string, unknown>) | null;
+  meta?: null;
+}
+
+/** Nguyện vọng contributor gửi kèm khi đăng ký (optional). */
+export interface ContributorRequestDto {
+  requestedType: string;
+  experience: string;
+  referenceLinks?: string[];
+}
+
+/** `POST /auth/register` request. */
+export interface RegisterRequestDto {
+  email: string;
+  password: string;
+  displayName: string;
+  contributorRequest?: ContributorRequestDto;
+}
+
+/** `POST /auth/login` request. Schema backend chỉ có 2 field — không có CAPTCHA. */
+export interface LoginRequestDto {
+  email: string;
+  password: string;
+}
+
+/** `POST /auth/logout` request. Mặc định CURRENT khi không gửi. */
+export interface LogoutRequestDto {
+  allDevices?: boolean;
 }

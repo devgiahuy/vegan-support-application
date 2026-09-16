@@ -2,20 +2,16 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import {
-  Sparkles,
   Check,
   ArrowRight,
   ArrowLeft,
   Heart,
-  Leaf,
-  Flame,
   ShieldAlert,
   Apple,
   Dumbbell,
   Target,
-  Smile,
   CheckCircle2,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -115,7 +111,10 @@ const HEALTH_GOALS = [
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const shouldReduceMotion = useReducedMotion();
+
   const [step, setStep] = React.useState<number>(1);
+  const [direction, setDirection] = React.useState<number>(1);
   const [selectedDiet, setSelectedDiet] = React.useState<DietSchool>('PHAT_GIAO');
   const [selectedAllergies, setSelectedAllergies] = React.useState<string[]>(['ngu_vi_tan']);
   const [selectedGoals, setSelectedGoals] = React.useState<string[]>(['healthy']);
@@ -135,12 +134,13 @@ export default function OnboardingPage() {
 
   const handleNext = () => {
     if (step < 3) {
+      setDirection(1);
       setStep((prev) => prev + 1);
     } else {
       setIsSubmitting(true);
       setTimeout(() => {
         setIsSubmitting(false);
-        toast.success('Hồ sơ dinh dưỡng VeggieConnect đã được lưu!');
+        toast.success('Hồ sơ dinh dưỡng ChayXanh đã được lưu!');
         router.push('/');
       }, 1000);
     }
@@ -148,6 +148,7 @@ export default function OnboardingPage() {
 
   const handleBack = () => {
     if (step > 1) {
+      setDirection(-1);
       setStep((prev) => prev - 1);
     }
   };
@@ -157,206 +158,274 @@ export default function OnboardingPage() {
     router.push('/');
   };
 
+  const stepVariants = {
+    enter: (dir: number) => ({
+      x: shouldReduceMotion ? 0 : dir > 0 ? 36 : -36,
+      opacity: 0,
+    }),
+    center: {
+      x: 0,
+      opacity: 1,
+    },
+    exit: (dir: number) => ({
+      x: shouldReduceMotion ? 0 : dir > 0 ? -36 : 36,
+      opacity: 0,
+    }),
+  };
+
   return (
     <div className="w-full max-w-2xl">
-      <Card className="border-border/60 shadow-xl overflow-hidden">
-        {/* Step progress bar */}
-        <div className="bg-muted/50 px-6 pt-5 pb-3 border-b">
-          <div className="flex items-center justify-between text-xs font-semibold text-muted-foreground mb-2">
-            <span>BƯỚC {step} / 3</span>
-            <span>
-              {step === 1 && 'Trường phái ăn chay'}
-              {step === 2 && 'Kiêng kỵ & Dị ứng thực phẩm'}
-              {step === 3 && 'Mục tiêu dinh dưỡng'}
-            </span>
+      <motion.div
+        initial={shouldReduceMotion ? false : { opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+      >
+        <Card className="overflow-hidden rounded-3xl border-border/70 bg-card/95 shadow-xl backdrop-blur-md">
+          {/* Step progress bar */}
+          <div className="border-b bg-muted/40 px-6 pb-3 pt-5">
+            <div className="mb-2 flex items-center justify-between text-xs font-semibold text-muted-foreground">
+              <span>BƯỚC {step} / 3</span>
+              <span className="text-primary font-medium">
+                {step === 1 && 'Trường phái ăn chay'}
+                {step === 2 && 'Kiêng kỵ & Dị ứng thực phẩm'}
+                {step === 3 && 'Mục tiêu dinh dưỡng'}
+              </span>
+            </div>
+            <Progress value={(step / 3) * 100} className="h-1.5 transition-all duration-300" />
           </div>
-          <Progress value={(step / 3) * 100} className="h-1.5" />
-        </div>
 
-        <CardHeader className="text-center pb-3 pt-6">
-          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-            {step === 1 && <span className="text-2xl">🪷</span>}
-            {step === 2 && <ShieldAlert className="h-6 w-6" />}
-            {step === 3 && <Target className="h-6 w-6" />}
-          </div>
-          <CardTitle className="text-2xl font-bold tracking-tight">
-            {step === 1 && 'Bạn đang thực hành trường phái ăn chay nào?'}
-            {step === 2 && 'Bạn cần kiêng hoặc tránh thực phẩm nào?'}
-            {step === 3 && 'Mục tiêu sức khỏe chính của bạn là gì?'}
-          </CardTitle>
-          <CardDescription className="text-sm text-muted-foreground">
-            {step === 1 &&
-              'VeggieConnect sẽ tự động lọc công thức và gợi ý thực đơn chuẩn xác theo trường phái của bạn.'}
-            {step === 2 &&
-              'Các công thức và gợi ý AI sẽ tự động loại trừ các thành phần bạn đã chọn bên dưới.'}
-            {step === 3 &&
-              'Thuật toán dinh dưỡng sẽ cân bằng lượng Calories và đạm thực vật phù hợp với bạn.'}
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-6 pt-2">
-          {/* STEP 1: Trường phái chay */}
-          {step === 1 && (
-            <div className="grid gap-3">
-              {DIET_SCHOOLS.map((item) => {
-                const isSelected = selectedDiet === item.id;
-                return (
-                  <div
-                    key={item.id}
-                    onClick={() => setSelectedDiet(item.id)}
-                    className={cn(
-                      'relative flex items-start gap-4 p-4 rounded-xl border cursor-pointer transition-all duration-200',
-                      isSelected
-                        ? 'border-primary bg-primary/5 ring-1 ring-primary shadow-sm'
-                        : 'border-border/70 hover:border-primary/50 hover:bg-muted/30'
-                    )}
-                  >
-                    <span className="text-3xl shrink-0 mt-0.5">{item.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-semibold text-foreground text-base">
-                          {item.title}
-                        </span>
-                        <Badge variant="secondary" className="text-[11px] font-normal">
-                          {item.badge}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{item.desc}</p>
-                    </div>
-                    <div
-                      className={cn(
-                        'flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors mt-1',
-                        isSelected
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-muted-foreground/30'
-                      )}
-                    >
-                      {isSelected && <Check className="h-3.5 w-3.5" />}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* STEP 2: Kiêng kỵ & Dị ứng */}
-          {step === 2 && (
-            <div className="space-y-3">
-              <div className="grid gap-2.5 sm:grid-cols-2">
-                {ALLERGIES.map((item) => {
-                  const isChecked = selectedAllergies.includes(item.id);
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => toggleAllergy(item.id)}
-                      className={cn(
-                        'flex items-center justify-between p-3.5 rounded-xl border cursor-pointer transition-all',
-                        isChecked
-                          ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                          : 'border-border/70 hover:border-primary/50 hover:bg-muted/30'
-                      )}
-                    >
-                      <div className="space-y-0.5 pr-2">
-                        <p className="text-sm font-medium text-foreground">{item.label}</p>
-                        <span className="text-[11px] text-muted-foreground">{item.badge}</span>
-                      </div>
-                      <div
-                        className={cn(
-                          'flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors',
-                          isChecked
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : 'border-muted-foreground/40'
-                        )}
-                      >
-                        {isChecked && <Check className="h-3.5 w-3.5" />}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <p className="text-xs text-muted-foreground italic text-center pt-2">
-                💡 Lưu ý: Đối với người ăn chay theo Phật giáo tu tập, việc kiêng Ngũ vị tân (hành,
-                hẹ, tỏi, kiệu, hưng cừ) giúp thân tâm thanh tịnh.
-              </p>
-            </div>
-          )}
-
-          {/* STEP 3: Mục tiêu dinh dưỡng */}
-          {step === 3 && (
-            <div className="grid gap-3 sm:grid-cols-2">
-              {HEALTH_GOALS.map((goal) => {
-                const Icon = goal.icon;
-                const isSelected = selectedGoals.includes(goal.id);
-                return (
-                  <div
-                    key={goal.id}
-                    onClick={() => toggleGoal(goal.id)}
-                    className={cn(
-                      'flex flex-col p-4 rounded-xl border cursor-pointer transition-all',
-                      isSelected
-                        ? 'border-primary bg-primary/5 ring-1 ring-primary shadow-sm'
-                        : 'border-border/70 hover:border-primary/50 hover:bg-muted/30'
-                    )}
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div
-                        className={cn(
-                          'flex h-5 w-5 items-center justify-center rounded-full border transition-colors',
-                          isSelected
-                            ? 'border-primary bg-primary text-primary-foreground'
-                            : 'border-muted-foreground/40'
-                        )}
-                      >
-                        {isSelected && <Check className="h-3.5 w-3.5" />}
-                      </div>
-                    </div>
-                    <h4 className="text-sm font-semibold text-foreground mb-1">{goal.title}</h4>
-                    <p className="text-xs text-muted-foreground leading-relaxed">{goal.desc}</p>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Action buttons */}
-          <div className="flex items-center justify-between pt-4 border-t">
-            {step > 1 ? (
-              <Button variant="outline" onClick={handleBack} className="gap-1.5">
-                <ArrowLeft className="h-4 w-4" /> Quay lại
-              </Button>
-            ) : (
-              <Button
-                variant="ghost"
-                onClick={handleSkip}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                Bỏ qua
-              </Button>
-            )}
-
-            <Button
-              onClick={handleNext}
-              disabled={isSubmitting}
-              className="gap-1.5 px-6 font-semibold"
+          <CardHeader className="pb-3 pt-6 text-center">
+            <motion.div
+              key={step}
+              initial={shouldReduceMotion ? false : { scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+              className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary"
             >
-              {isSubmitting ? (
-                'Đang lưu...'
-              ) : step === 3 ? (
-                <>
-                  Hoàn tất & Bắt đầu <CheckCircle2 className="h-4 w-4" />
-                </>
-              ) : (
-                <>
-                  Tiếp theo <ArrowRight className="h-4 w-4" />
-                </>
+              {step === 1 && <span className="text-2xl">🪷</span>}
+              {step === 2 && <ShieldAlert className="h-6 w-6" />}
+              {step === 3 && <Target className="h-6 w-6" />}
+            </motion.div>
+            <CardTitle className="text-2xl font-bold tracking-tight">
+              {step === 1 && 'Bạn đang thực hành trường phái ăn chay nào?'}
+              {step === 2 && 'Bạn cần kiêng hoặc tránh thực phẩm nào?'}
+              {step === 3 && 'Mục tiêu sức khỏe chính của bạn là gì?'}
+            </CardTitle>
+            <CardDescription className="text-sm text-muted-foreground">
+              {step === 1 &&
+                'ChayXanh sẽ tự động lọc công thức và gợi ý thực đơn chuẩn xác theo trường phái của bạn.'}
+              {step === 2 &&
+                'Các công thức và gợi ý AI sẽ tự động loại trừ các thành phần bạn đã chọn bên dưới.'}
+              {step === 3 &&
+                'Thuật toán dinh dưỡng sẽ cân bằng lượng Calories và đạm thực vật phù hợp với bạn.'}
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-6 pt-2">
+            <AnimatePresence mode="wait" custom={direction}>
+              {/* STEP 1: Trường phái chay */}
+              {step === 1 && (
+                <motion.div
+                  key="step-1"
+                  custom={direction}
+                  variants={stepVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                  className="grid gap-3"
+                >
+                  {DIET_SCHOOLS.map((item) => {
+                    const isSelected = selectedDiet === item.id;
+                    return (
+                      <motion.div
+                        key={item.id}
+                        whileHover={shouldReduceMotion ? undefined : { scale: 1.01 }}
+                        whileTap={shouldReduceMotion ? undefined : { scale: 0.99 }}
+                        onClick={() => setSelectedDiet(item.id)}
+                        className={cn(
+                          'relative flex cursor-pointer items-start gap-4 rounded-2xl border p-4 transition-colors',
+                          isSelected
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary shadow-sm'
+                            : 'border-border/70 hover:border-primary/40 hover:bg-muted/30'
+                        )}
+                      >
+                        <span className="mt-0.5 shrink-0 text-3xl">{item.icon}</span>
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-1 flex items-center gap-2">
+                            <span className="text-base font-semibold text-foreground">
+                              {item.title}
+                            </span>
+                            <Badge variant="secondary" className="text-[11px] font-normal">
+                              {item.badge}
+                            </Badge>
+                          </div>
+                          <p className="text-xs leading-relaxed text-muted-foreground">
+                            {item.desc}
+                          </p>
+                        </div>
+                        <div
+                          className={cn(
+                            'mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border transition-colors',
+                            isSelected
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-muted-foreground/30'
+                          )}
+                        >
+                          {isSelected && <Check className="h-3.5 w-3.5" />}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </motion.div>
               )}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+
+              {/* STEP 2: Kiêng kỵ & Dị ứng */}
+              {step === 2 && (
+                <motion.div
+                  key="step-2"
+                  custom={direction}
+                  variants={stepVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                  className="space-y-3"
+                >
+                  <div className="grid gap-2.5 sm:grid-cols-2">
+                    {ALLERGIES.map((item) => {
+                      const isChecked = selectedAllergies.includes(item.id);
+                      return (
+                        <motion.div
+                          key={item.id}
+                          whileHover={shouldReduceMotion ? undefined : { scale: 1.01 }}
+                          whileTap={shouldReduceMotion ? undefined : { scale: 0.99 }}
+                          onClick={() => toggleAllergy(item.id)}
+                          className={cn(
+                            'flex cursor-pointer items-center justify-between rounded-2xl border p-3.5 transition-colors',
+                            isChecked
+                              ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                              : 'border-border/70 hover:border-primary/40 hover:bg-muted/30'
+                          )}
+                        >
+                          <div className="space-y-0.5 pr-2">
+                            <p className="text-sm font-medium text-foreground">{item.label}</p>
+                            <span className="text-[11px] text-muted-foreground">{item.badge}</span>
+                          </div>
+                          <div
+                            className={cn(
+                              'flex h-5 w-5 shrink-0 items-center justify-center rounded border transition-colors',
+                              isChecked
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-muted-foreground/40'
+                            )}
+                          >
+                            {isChecked && <Check className="h-3.5 w-3.5" />}
+                          </div>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                  <p className="pt-2 text-center text-xs italic text-muted-foreground">
+                    💡 Lưu ý: Đối với người ăn chay theo Phật giáo tu tập, việc kiêng Ngũ vị tân
+                    (hành, hẹ, tỏi, kiệu, hưng cừ) giúp thân tâm thanh tịnh.
+                  </p>
+                </motion.div>
+              )}
+
+              {/* STEP 3: Mục tiêu dinh dưỡng */}
+              {step === 3 && (
+                <motion.div
+                  key="step-3"
+                  custom={direction}
+                  variants={stepVariants}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                  className="grid gap-3 sm:grid-cols-2"
+                >
+                  {HEALTH_GOALS.map((goal) => {
+                    const Icon = goal.icon;
+                    const isSelected = selectedGoals.includes(goal.id);
+                    return (
+                      <motion.div
+                        key={goal.id}
+                        whileHover={shouldReduceMotion ? undefined : { scale: 1.01 }}
+                        whileTap={shouldReduceMotion ? undefined : { scale: 0.99 }}
+                        onClick={() => toggleGoal(goal.id)}
+                        className={cn(
+                          'flex cursor-pointer flex-col rounded-2xl border p-4 transition-colors',
+                          isSelected
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary shadow-sm'
+                            : 'border-border/70 hover:border-primary/40 hover:bg-muted/30'
+                        )}
+                      >
+                        <div className="mb-2 flex items-center justify-between">
+                          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div
+                            className={cn(
+                              'flex h-5 w-5 items-center justify-center rounded-full border transition-colors',
+                              isSelected
+                                ? 'border-primary bg-primary text-primary-foreground'
+                                : 'border-muted-foreground/40'
+                            )}
+                          >
+                            {isSelected && <Check className="h-3.5 w-3.5" />}
+                          </div>
+                        </div>
+                        <h4 className="mb-1 text-sm font-semibold text-foreground">{goal.title}</h4>
+                        <p className="text-xs leading-relaxed text-muted-foreground">{goal.desc}</p>
+                      </motion.div>
+                    );
+                  })}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Action buttons */}
+            <div className="flex items-center justify-between border-t border-border/40 pt-4">
+              {step > 1 ? (
+                <motion.div whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}>
+                  <Button variant="outline" onClick={handleBack} className="gap-1.5 rounded-xl">
+                    <ArrowLeft className="h-4 w-4" /> Quay lại
+                  </Button>
+                </motion.div>
+              ) : (
+                <Button
+                  variant="ghost"
+                  onClick={handleSkip}
+                  className="rounded-xl text-muted-foreground hover:text-foreground"
+                >
+                  Bỏ qua
+                </Button>
+              )}
+
+              <motion.div whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}>
+                <Button
+                  onClick={handleNext}
+                  disabled={isSubmitting}
+                  className="gap-1.5 rounded-xl px-6 font-semibold shadow-md"
+                >
+                  {isSubmitting ? (
+                    'Đang lưu...'
+                  ) : step === 3 ? (
+                    <>
+                      Hoàn tất & Bắt đầu <CheckCircle2 className="h-4 w-4" />
+                    </>
+                  ) : (
+                    <>
+                      Tiếp theo <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              </motion.div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   );
 }
