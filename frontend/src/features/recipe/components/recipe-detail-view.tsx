@@ -77,12 +77,12 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
     toast.success(`Đã thêm "${recipe.title}" vào Kế hoạch bữa ăn tuần này!`);
   };
 
-  const schoolLabel =
-    recipe.dietSchool === 'PHAT_GIAO'
-      ? 'Chay Phật giáo'
-      : recipe.dietSchool === 'DAO_GIAO'
-        ? 'Chay Đạo giáo'
-        : 'Thuần chay';
+  const incompatibilities = (recipe.dietCompatibilities || []).filter((c) => !c.compatible);
+  const hasCompatibilityInfo =
+    (recipe.allergenCodes && recipe.allergenCodes.length > 0) ||
+    (recipe.traditionWarnings && recipe.traditionWarnings.length > 0) ||
+    incompatibilities.length > 0 ||
+    typeof recipe.mealPlannerEligible === 'boolean';
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 lg:px-6">
@@ -111,23 +111,17 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
           {/* Header Info */}
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge className="bg-primary hover:bg-primary/90 text-white gap-1 px-3 py-1 font-medium">
-                <Leaf className="h-3.5 w-3.5" /> {schoolLabel}
-              </Badge>
-              {recipe.expertVerified && (
-                <Badge
-                  variant="secondary"
-                  className="border-primary/30 bg-primary/10 text-primary gap-1 px-3 py-1 font-medium"
-                >
-                  <ShieldCheck className="h-3.5 w-3.5 text-primary" /> Kiểm chứng bởi Chuyên gia
-                </Badge>
-              )}
               <Badge variant="outline" className="px-3 py-1 text-xs">
                 {typeof recipe.category === 'string' ? recipe.category : recipe.category?.name}
               </Badge>
               <Badge variant="outline" className="px-3 py-1 text-xs">
-                {recipe.difficulty}
+                {recipe.difficultyLabel || recipe.difficulty}
               </Badge>
+              {recipe.mealPlannerEligible && (
+                <Badge className="gap-1 bg-emerald-500/15 px-3 py-1 font-medium text-emerald-600 dark:text-emerald-400">
+                  <Leaf className="h-3.5 w-3.5" /> Đủ điều kiện thực đơn
+                </Badge>
+              )}
             </div>
 
             <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
@@ -179,7 +173,7 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
               {/* Action Buttons */}
               <div className="flex flex-wrap items-center gap-2">
                 <VoteControl
-                  initialScore={recipe.ratingCount ? recipe.ratingCount * 3 : 128}
+                  initialScore={recipe.stats?.likes ?? 0}
                   orientation="horizontal"
                   size="sm"
                   itemTitle={recipe.title}
@@ -220,10 +214,12 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
               <span className="flex items-center gap-1 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full">
                 <Clock className="h-4 w-4 text-emerald-400" /> {recipe.minutes} phút chuẩn bị & nấu
               </span>
-              <span className="flex items-center gap-1 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full">
-                <Star className="h-4 w-4 fill-amber-400 text-amber-400" /> {recipe.rating} (
-                {recipe.ratingCount} đánh giá)
-              </span>
+              {typeof recipe.ratingCount === 'number' && recipe.ratingCount > 0 && (
+                <span className="flex items-center gap-1 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full">
+                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" /> {recipe.rating} (
+                  {recipe.ratingCount} đánh giá)
+                </span>
+              )}
             </div>
           </div>
 
@@ -417,72 +413,133 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
             </div>
           </div>
 
-          {/* REVIEWS & COMMUNITY FEEDBACK */}
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="pb-3 flex flex-row items-center justify-between border-b">
-              <div>
-                <CardTitle className="text-xl font-bold flex items-center gap-2">
-                  <MessageSquare className="h-5 w-5 text-primary" /> Đánh giá & Nhận xét
-                </CardTitle>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  Ý kiến từ Chuyên gia dinh dưỡng và cộng đồng người nấu chay
-                </p>
-              </div>
-              <div className="flex items-center gap-1 text-amber-500 font-bold text-lg">
-                <Star className="h-5 w-5 fill-current" />
-                <span>{recipe.rating}</span>
-                <span className="text-xs font-normal text-muted-foreground">
-                  ({recipe.ratingCount})
-                </span>
-              </div>
-            </CardHeader>
-            <CardContent className="p-5 space-y-4">
-              {recipe.reviews && recipe.reviews.length > 0 ? (
-                <div className="space-y-4 divide-y">
-                  {recipe.reviews.map((rev) => (
-                    <div key={rev.id} className="pt-4 first:pt-0 space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2.5">
-                          <Avatar className="h-9 w-9">
-                            <AvatarImage src={rev.userAvatar} alt={rev.userName} />
-                            <AvatarFallback>{rev.userName[0]}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-semibold text-foreground">
-                                {rev.userName}
-                              </span>
-                              {rev.roleBadge && (
-                                <Badge
-                                  variant="secondary"
-                                  className="text-[10px] bg-primary/10 text-primary font-medium"
-                                >
-                                  {rev.roleBadge}
-                                </Badge>
-                              )}
+          {/* REVIEWS & COMMUNITY FEEDBACK — chỉ hiện khi có dữ liệu thật */}
+          {((recipe.reviews && recipe.reviews.length > 0) ||
+            (typeof recipe.ratingCount === 'number' && recipe.ratingCount > 0)) && (
+            <Card className="border-border/60 shadow-sm">
+              <CardHeader className="pb-3 flex flex-row items-center justify-between border-b">
+                <div>
+                  <CardTitle className="text-xl font-bold flex items-center gap-2">
+                    <MessageSquare className="h-5 w-5 text-primary" /> Đánh giá & Nhận xét
+                  </CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Ý kiến từ Chuyên gia dinh dưỡng và cộng đồng người nấu chay
+                  </p>
+                </div>
+                {typeof recipe.ratingCount === 'number' && recipe.ratingCount > 0 && (
+                  <div className="flex items-center gap-1 text-amber-500 font-bold text-lg">
+                    <Star className="h-5 w-5 fill-current" />
+                    <span>{recipe.rating}</span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      ({recipe.ratingCount})
+                    </span>
+                  </div>
+                )}
+              </CardHeader>
+              <CardContent className="p-5 space-y-4">
+                {recipe.reviews && recipe.reviews.length > 0 ? (
+                  <div className="space-y-4 divide-y">
+                    {recipe.reviews.map((rev) => (
+                      <div key={rev.id} className="pt-4 first:pt-0 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <Avatar className="h-9 w-9">
+                              <AvatarImage src={rev.userAvatar} alt={rev.userName} />
+                              <AvatarFallback>{rev.userName[0]}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-semibold text-foreground">
+                                  {rev.userName}
+                                </span>
+                                {rev.roleBadge && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-[10px] bg-primary/10 text-primary font-medium"
+                                  >
+                                    {rev.roleBadge}
+                                  </Badge>
+                                )}
+                              </div>
+                              <span className="text-[11px] text-muted-foreground">{rev.date}</span>
                             </div>
-                            <span className="text-[11px] text-muted-foreground">{rev.date}</span>
+                          </div>
+                          <div className="flex items-center gap-0.5 text-amber-400">
+                            {Array.from({ length: rev.rating }).map((_, i) => (
+                              <Star key={i} className="h-3.5 w-3.5 fill-current" />
+                            ))}
                           </div>
                         </div>
-                        <div className="flex items-center gap-0.5 text-amber-400">
-                          {Array.from({ length: rev.rating }).map((_, i) => (
-                            <Star key={i} className="h-3.5 w-3.5 fill-current" />
-                          ))}
-                        </div>
+                        <p className="text-sm text-muted-foreground leading-relaxed pl-11">
+                          {rev.comment}
+                        </p>
                       </div>
-                      <p className="text-sm text-muted-foreground leading-relaxed pl-11">
-                        {rev.comment}
-                      </p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Chưa có đánh giá nào. Hãy là người đầu tiên thử nấu và để lại nhận xét!
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Tương thích & dị ứng từ backend — chỉ hiện khi có dữ liệu thật */}
+          {hasCompatibilityInfo && (
+            <Card className="border-border/60 shadow-sm">
+              <CardHeader className="pb-3 border-b">
+                <CardTitle className="text-base font-bold flex items-center gap-2 text-foreground">
+                  <ShieldCheck className="h-4 w-4 text-primary" /> Tương thích & dị ứng
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-5 space-y-3 text-sm">
+                {recipe.allergenCodes && recipe.allergenCodes.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      Có thể chứa dị ứng:
+                    </p>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {recipe.allergenCodes.map((code) => (
+                        <Badge
+                          key={code}
+                          variant="outline"
+                          className="rounded-full border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                        >
+                          {code}
+                        </Badge>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  Chưa có đánh giá nào. Hãy là người đầu tiên thử nấu và để lại nhận xét!
-                </p>
-              )}
-            </CardContent>
-          </Card>
+                  </div>
+                )}
+                {typeof recipe.mealPlannerEligible === 'boolean' && !recipe.mealPlannerEligible && (
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Công thức chưa đủ điều kiện đưa vào thực đơn tự động (nguyên liệu chưa chuẩn hóa
+                    hết hoặc thiếu chỉ số dinh dưỡng).
+                  </p>
+                )}
+                {recipe.traditionWarnings && recipe.traditionWarnings.length > 0 && (
+                  <ul className="space-y-1.5">
+                    {recipe.traditionWarnings.map((w) => (
+                      <li
+                        key={`${w.tradition}-${w.warningCode}`}
+                        className="text-xs text-muted-foreground leading-relaxed"
+                      >
+                        <span className="font-semibold text-foreground">{w.tradition}:</span>{' '}
+                        {w.label || w.warningCode}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {incompatibilities.map((c) => (
+                  <p key={c.dietPattern} className="text-xs text-muted-foreground leading-relaxed">
+                    <span className="font-semibold text-foreground">{c.dietPattern}:</span> chưa
+                    tương thích ({c.reasonCodes.join(', ') || 'đang cập nhật nguyên nhân'}).
+                  </p>
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
           {/* UC-03: Community Comment & Discussion Section */}
           <div className="pt-6">

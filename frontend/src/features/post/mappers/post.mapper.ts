@@ -45,18 +45,36 @@ export function parsePostStatus(raw: string): PostStatus {
   ) as PostStatus;
 }
 
-/** Ảnh bìa = media `COVER_IMAGE` đầu tiên, fallback media có URL đầu tiên. */
+/** Ảnh bìa = media `COVER_IMAGE` đầu tiên, bỏ qua media VIDEO/link YouTube để khỏi lọt vào `next/image`. */
 export function coverUrlFromMedia(
   media: (PostMediaDto | null | undefined)[] | null | undefined,
   fallback: string
 ): string {
+  const isImageLike = (m: PostMediaDto | null | undefined): boolean => {
+    const url = safeString(m?.secureUrl);
+    if (!url || url.startsWith('blob:')) return false;
+    if (url.includes('youtube.com/watch') || url.includes('youtu.be')) return false;
+    return true;
+  };
   const list = safeArray<PostMediaDto>(media);
   const cover = list.find(
-    (m) => safeString(m?.kind).toUpperCase() === 'COVER_IMAGE' && safeString(m?.secureUrl)
+    (m) => safeString(m?.kind).toUpperCase() === 'COVER_IMAGE' && isImageLike(m)
   );
-  if (cover?.secureUrl) return cover.secureUrl;
-  const first = list.find((m) => safeString(m?.secureUrl));
-  return first?.secureUrl ?? fallback;
+  if (cover?.secureUrl) return cover.secureUrl as string;
+  // Fallback: media ảnh đầu tiên (COVER_IMAGE/IMAGE/THUMBNAIL), tuyệt đối bỏ qua VIDEO.
+  const firstImage = list.find(
+    (m) =>
+      safeString(m?.kind).toUpperCase() !== 'VIDEO' &&
+      (safeString(m?.kind).toUpperCase() === 'IMAGE' ||
+        safeString(m?.kind).toUpperCase() === 'THUMBNAIL' ||
+        safeString(m?.kind).toUpperCase() === 'COVER_IMAGE' ||
+        !safeString(m?.kind)) &&
+      isImageLike(m)
+  );
+  // Trường hợp backend chỉ trả media VIDEO (video YouTube không ảnh bìa) → dùng fallback,
+  // tầng UI sẽ tự đổi YouTube watch URL sang thumbnail `i.ytimg.com` khi cần.
+  if (firstImage?.secureUrl) return firstImage.secureUrl as string;
+  return fallback;
 }
 
 export function firstCategory(dto: BasePostDto | null | undefined): { id: string; name: string } {
@@ -92,8 +110,9 @@ export function coverMediaInput(
   coverImageUrl: string | undefined,
   meta?: { publicId?: string; mimeType?: string; bytes?: number } | null
 ): MediaInputDto[] {
-  if (!coverImageUrl) return [];
+  if (!coverImageUrl || coverImageUrl.startsWith('blob:')) return [];
   if (!meta?.publicId || !meta?.mimeType || !meta?.bytes) return [];
+  if (meta.publicId.startsWith('mock_')) return [];
   return [
     {
       provider: 'CLOUDINARY',

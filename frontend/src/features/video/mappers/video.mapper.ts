@@ -1,4 +1,5 @@
 import { BaseMapper, pickField, safeString, safeDate, safeNumber } from '@/lib/mapper';
+import { youtubeThumbnailFromUrl } from '@/lib/safe-image';
 import { formatDate } from '@/lib/utils';
 import { VideoSource } from '@/common/enums';
 import { PaginationResult } from '@/types/api';
@@ -60,6 +61,10 @@ export class VideoMapper extends BaseMapper<VideoDetailDto, Video> {
     const durationSeconds = safeNumber(videoMedia?.durationSeconds, 0);
     const videoSource = detectVideoSource(videoUrl, videoMedia?.provider);
     const author = authorFromDto(dto, 'Bếp Chay An Nhiên');
+    // Video YouTube không ảnh bìa → dùng thumbnail i.ytimg.com (đã allow remotePatterns),
+    // thay vì để URL watch lọt vào `next/image` gây crash.
+    const rawCover = coverUrlFromMedia(pickField<PostMediaDto[]>(dto, ['media'], []), '');
+    const coverImageUrl = rawCover || youtubeThumbnailFromUrl(videoUrl) || VIDEO_FALLBACK_COVER;
 
     return {
       id: safeString(pickField(dto, ['id'], '')),
@@ -70,10 +75,7 @@ export class VideoMapper extends BaseMapper<VideoDetailDto, Video> {
       version: safeNumber(pickField(dto, ['version'], 1)),
       author,
       category: firstCategory(dto),
-      coverImageUrl: coverUrlFromMedia(
-        pickField<PostMediaDto[]>(dto, ['media'], []),
-        VIDEO_FALLBACK_COVER
-      ),
+      coverImageUrl,
       coverMedia: null,
       videoUrl,
       videoSource,
@@ -113,7 +115,9 @@ export class VideoMapper extends BaseMapper<VideoDetailDto, Video> {
 
   toCreateDto(domain: Partial<Video>): CreateVideoRequestDto {
     const media: CreateVideoRequestDto['media'] = [];
-    if (domain.videoUrl) {
+    // URL blob:/mock chỉ là preview tạm khi backend chưa cấp chữ ký — loại khỏi
+    // payload để backend khỏi 400 khó hiểu (uploader đã toast cảnh báo riêng).
+    if (domain.videoUrl && !domain.videoUrl.startsWith('blob:')) {
       if (domain.videoSource === VideoSource.YOUTUBE) {
         media.push({
           provider: 'YOUTUBE',
@@ -122,6 +126,7 @@ export class VideoMapper extends BaseMapper<VideoDetailDto, Video> {
         });
       } else if (
         domain.videoMedia?.publicId &&
+        !domain.videoMedia.publicId.startsWith('mock_') &&
         domain.videoMedia?.mimeType &&
         domain.videoMedia?.bytes
       ) {

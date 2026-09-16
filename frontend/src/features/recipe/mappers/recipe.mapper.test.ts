@@ -151,4 +151,48 @@ describe('RecipeMapper', () => {
       '## Bước 1'
     );
   });
+
+  it('omits ingredientId key when null (backend strict optional UUID)', () => {
+    const createDto = recipeMapper.toCreateDto({
+      title: 'Rau xào',
+      category: { id: 'cat-xao', name: 'Xào' },
+      servings: 2,
+      prepTimeMinutes: 5,
+      cookTimeMinutes: 10,
+      difficulty: RecipeDifficulty.EASY,
+      ingredients: [
+        { ingredientId: null, name: 'Rau muống', amount: 300, unit: 'gram', notes: '' },
+      ],
+      steps: [{ stepNumber: 1, instruction: 'Xào nhanh tay', imageUrl: null }],
+    });
+
+    expect(createDto.recipe.ingredients).toHaveLength(1);
+    expect(createDto.recipe.ingredients[0]).not.toHaveProperty('ingredientId');
+    expect(createDto.recipe.ingredients[0].displayName).toBe('Rau muống');
+  });
+
+  it('leaves rating undefined and maps real compatibility data', () => {
+    const dto = backendRecipeDto();
+    if (dto.recipe) {
+      dto.recipe.allergenCodes = ['SOY'];
+      dto.recipe.mealPlannerEligible = false;
+      dto.recipe.traditionWarnings = [
+        { tradition: 'BUDDHIST', warningCode: 'W1', label: 'Kiêng ngũ vị tân' },
+      ];
+      dto.recipe.dietCompatibilities = [
+        { dietPattern: 'VEGAN', compatible: false, reasonCodes: ['UNRESOLVED_INGREDIENT'] },
+      ];
+    }
+    const model = recipeMapper.toModel(dto);
+
+    // Không số giả: UI tự ẩn khối rating.
+    expect(model.rating).toBeUndefined();
+    expect(model.ratingCount).toBeUndefined();
+    expect(model.expertVerified).toBe(false);
+    expect(model.author.verified).toBe(false);
+    expect(model.allergenCodes).toEqual(['SOY']);
+    expect(model.mealPlannerEligible).toBe(false);
+    expect(model.traditionWarnings?.[0].label).toBe('Kiêng ngũ vị tân');
+    expect(model.dietCompatibilities?.[0].compatible).toBe(false);
+  });
 });

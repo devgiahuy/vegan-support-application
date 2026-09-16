@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { toastApiError } from '@/lib/api-error';
 import { recipeApi, RecipeQueryParams } from '../api/recipe.api';
 import type { Recipe } from '../types/recipe.model';
 
@@ -14,11 +15,12 @@ export const RECIPE_QUERY_KEYS = {
 /**
  * Hook truy vấn danh sách công thức nấu ăn
  */
-export function useRecipesQuery(params?: RecipeQueryParams) {
+export function useRecipesQuery(params?: RecipeQueryParams, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: RECIPE_QUERY_KEYS.list(params),
     queryFn: () => recipeApi.getRecipes(params),
     staleTime: 60 * 1000, // 1 phút
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -51,10 +53,8 @@ export function useCreateRecipeMutation() {
             : 'Công thức đã vào hàng đợi chờ duyệt từ chuyên gia.',
       });
     },
-    onError: (err: Error) => {
-      toast.error('Không thể tạo công thức', {
-        description: err.message || 'Vui lòng kiểm tra lại thông tin đã nhập.',
-      });
+    onError: (err: unknown) => {
+      toastApiError(err, 'Không thể tạo công thức', 'Vui lòng kiểm tra lại thông tin đã nhập.');
     },
   });
 }
@@ -73,10 +73,8 @@ export function useUpdateRecipeMutation() {
       queryClient.invalidateQueries({ queryKey: RECIPE_QUERY_KEYS.lists() });
       toast.success('Đã cập nhật công thức!');
     },
-    onError: (err: Error) => {
-      toast.error('Lỗi cập nhật công thức', {
-        description: err.message,
-      });
+    onError: (err: unknown) => {
+      toastApiError(err, 'Lỗi cập nhật công thức');
     },
   });
 }
@@ -94,10 +92,8 @@ export function useDeleteRecipeMutation() {
       queryClient.invalidateQueries({ queryKey: RECIPE_QUERY_KEYS.lists() });
       toast.success('Đã xóa công thức thành công.');
     },
-    onError: (err: Error) => {
-      toast.error('Không thể xóa công thức', {
-        description: err.message,
-      });
+    onError: (err: unknown) => {
+      toastApiError(err, 'Không thể xóa công thức');
     },
   });
 }

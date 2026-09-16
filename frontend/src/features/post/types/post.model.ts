@@ -71,7 +71,8 @@ export interface Article {
 }
 
 // -----------------------------------------------------------------------------
-// Legacy Mock Compatibility Types (for usePostStore & legacy pages)
+// Legacy Compatibility Types (giữ để PostCard/PostDetailView tương thích dần
+// sang Article chuẩn; không còn store mock nào dùng các type này)
 // -----------------------------------------------------------------------------
 export type AuthorRole = 'NUTRITION_EXPERT' | 'EXPERIENCED_COOK' | 'AUTHORIZED_USER' | 'ADMIN';
 export type DietSchool = 'PHAT_GIAO' | 'DAO_GIAO' | 'THUAN_CHAY' | 'ALL';

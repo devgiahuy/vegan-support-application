@@ -1,28 +1,35 @@
 import Link from 'next/link';
-import Image from 'next/image';
+import { SafeImage } from '@/components/shared/safe-image';
 import { ArrowRight, BadgeCheck, Bookmark, Clock, Flame, Star } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import type { Recipe } from '../types/recipe.model';
 
-export function RecipeCard({ recipe, className }: { recipe: Recipe; className?: string }) {
-  const imageUrl =
-    recipe.image ||
-    recipe.coverImageUrl ||
+export function RecipeCard({
+  recipe,
+  priority = false,
+  className,
+}: {
+  recipe: Recipe;
+  priority?: boolean;
+  className?: string;
+}) {
+  const RECIPE_FALLBACK_COVER =
     'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80';
+  const imageUrl = recipe.image || recipe.coverImageUrl || RECIPE_FALLBACK_COVER;
   const authorAvatar =
     (recipe.author && 'avatar' in recipe.author ? recipe.author.avatar : undefined) ||
     recipe.author?.avatarUrl ||
     '';
-  const authorName = recipe.author?.name || 'Đầu bếp chay';
+  const authorName = recipe.author?.name || 'Tác giả ẩn danh';
   const authorVerified =
-    (recipe.author && 'verified' in recipe.author ? recipe.author.verified : undefined) ?? true;
-  const rating = recipe.rating ?? 5.0;
-  const ratingCount = recipe.ratingCount ?? 0;
-  const minutes = recipe.minutes || recipe.totalTimeMinutes || 25;
-  const kcal = recipe.kcal || recipe.nutrition?.calories || 250;
-  const protein = recipe.protein || recipe.nutrition?.protein || 12;
+    recipe.author && 'verified' in recipe.author ? recipe.author.verified === true : false;
+  const rating = recipe.rating;
+  const ratingCount = recipe.ratingCount;
+  const minutes = recipe.minutes || recipe.totalTimeMinutes;
+  const kcal = recipe.kcal ?? recipe.nutrition?.calories;
+  const protein = recipe.protein ?? recipe.nutrition?.protein;
 
   return (
     <article
@@ -32,10 +39,12 @@ export function RecipeCard({ recipe, className }: { recipe: Recipe; className?: 
       )}
     >
       <Link href={`/recipes/${recipe.id}`} className="relative block aspect-[4/3] overflow-hidden">
-        <Image
+        <SafeImage
           src={imageUrl}
+          fallbackSrc={RECIPE_FALLBACK_COVER}
           alt={recipe.title}
           fill
+          priority={priority}
           sizes="(max-width: 768px) 100vw, 320px"
           className="object-cover transition-transform duration-500 group-hover:scale-105"
         />
@@ -59,14 +68,19 @@ export function RecipeCard({ recipe, className }: { recipe: Recipe; className?: 
 
       <div className="flex flex-1 flex-col p-4">
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1 font-medium text-foreground">
-            <Star className="h-3.5 w-3.5 fill-cta text-cta" />
-            {rating.toFixed(1)} ({ratingCount})
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <Flame className="h-3.5 w-3.5" />
-            {kcal} kcal • {protein}g Đạm
-          </span>
+          {typeof rating === 'number' && (
+            <span className="inline-flex items-center gap-1 font-medium text-foreground">
+              <Star className="h-3.5 w-3.5 fill-cta text-cta" />
+              {rating.toFixed(1)} ({ratingCount ?? 0})
+            </span>
+          )}
+          {typeof kcal === 'number' && (
+            <span className="inline-flex items-center gap-1">
+              <Flame className="h-3.5 w-3.5" />
+              {kcal} kcal{typeof protein === 'number' ? ` • ${protein}g Đạm` : ''}
+            </span>
+          )}
+          {typeof minutes === 'number' && <span>{minutes} phút</span>}
         </div>
 
         <h3 className="mt-2 line-clamp-2 text-base font-semibold leading-snug group-hover:text-primary">

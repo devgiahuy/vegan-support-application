@@ -38,16 +38,31 @@ export interface UploadedMediaMeta {
   durationSeconds?: number;
 }
 
+function mimeFromCloudinaryFormat(resourceType: string, format: string): string {
+  const f = format.trim().toLowerCase();
+  if (resourceType.startsWith('video')) {
+    if (f === 'mov' || f === 'quicktime') return 'video/quicktime';
+    return `video/${f || 'mp4'}`;
+  }
+  if (f === 'jpg') return 'image/jpeg';
+  return `image/${f || 'jpeg'}`;
+}
+
 export function toUploadedMeta(
   res: CloudinaryUploadResult,
   fallbackMimeType: string
 ): UploadedMediaMeta {
-  const format = res.format || fallbackMimeType.split('/')[1] || '';
+  // Ưu tiên MIME thật từ File API của browser (`image/jpeg`, `video/mp4`...).
+  // KHÔNG suy từ `format` của Cloudinary vì nó trả `jpg` (thiếu `e`) và `mov`,
+  // backend strict sẽ 400 INVALID_MEDIA_REFERENCE.
+  const fromFile = fallbackMimeType.trim().toLowerCase();
+  const mimeType =
+    fromFile === 'image/jpg'
+      ? 'image/jpeg'
+      : fromFile || mimeFromCloudinaryFormat(res.resource_type, res.format || '');
   return {
     publicId: res.public_id,
-    mimeType: res.resource_type.startsWith('video')
-      ? `video/${format || 'mp4'}`
-      : `image/${format || 'jpeg'}`,
+    mimeType,
     bytes: res.bytes,
     ...(res.width ? { width: res.width } : {}),
     ...(res.height ? { height: res.height } : {}),

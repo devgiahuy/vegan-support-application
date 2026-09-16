@@ -4,7 +4,7 @@ import { ErrorResponse } from '@/types/api';
 import { getAccessToken, setAccessToken, clearAccessToken } from './auth-token';
 import { useAuthStore } from '@/store/useAuthStore';
 import { API_BASE_URL } from './env';
-import { sharedRefresh, clearRefreshState } from './auth-refresh';
+import { sharedRefresh, forceLogout } from './auth-refresh';
 
 declare module 'axios' {
   export interface AxiosRequestConfig {
@@ -145,22 +145,8 @@ api.interceptors.response.use(
           return api(originalRequest);
         } catch (err) {
           processQueue(err, null);
-          // Xóa HttpOnly cookies phía server TRƯỚC khi clear store: nếu chỉ
-          // clear client, cookie mồ côi còn hạn sẽ khiến middleware đá
-          // /login → / và user kẹt ở trạng thái "đã logout nhưng vẫn vào /".
-          // Logout proxy idempotent nên fire-and-forget an toàn.
-          try {
-            await axios.post(
-              '/api/auth/logout',
-              { allDevices: false },
-              { baseURL: '', timeout: 8000 }
-            );
-          } catch {
-            /* BE down vẫn tiếp tục logout phía client */
-          }
-          clearAccessToken();
-          clearRefreshState();
-          useAuthStore.getState().logout();
+          // Đăng xuất triệt để (xóa cả HttpOnly cookies) để không kẹt loop /login → /.
+          await forceLogout();
           // Sự kiện mất phiên là toàn cục: luôn toast 1 lần kể cả khi request
           // kích hoạt có `silent` (silent chỉ áp dụng cho lỗi nghiệp vụ của request đó).
           if (!hasShownSessionExpiredToast) {

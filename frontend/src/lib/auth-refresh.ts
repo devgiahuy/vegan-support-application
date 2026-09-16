@@ -1,7 +1,7 @@
 'use client';
 
 import axios from 'axios';
-import { setAccessToken } from './auth-token';
+import { setAccessToken, clearAccessToken } from './auth-token';
 import { useAuthStore } from '@/store/useAuthStore';
 import { authMapper } from '@/features/auth/mappers/auth.mapper';
 import type { RefreshResponseDto } from '@/features/auth/types/auth.dto';
@@ -135,4 +135,22 @@ export function clearRefreshState(): void {
   refreshPromise = null;
   lastRefreshTime = 0;
   releaseLocalLock();
+}
+
+/**
+ * Đăng xuất triệt để dùng chung cho mọi đường logout client (interceptor khi
+ * refresh gãy, AuthProvider khi silent-refresh fail, nút đăng xuất tay nếu cần).
+ * Luôn gọi logout proxy TRƯỚC để xóa HttpOnly cookies phía server — nếu chỉ
+ * clear store, cookie mồ côi còn hạn sẽ khiến middleware đá `/login` → `/`
+ * và user kẹt ở trạng thái "đã logout nhưng vẫn vào trang chủ".
+ */
+export async function forceLogout(): Promise<void> {
+  try {
+    await axios.post('/api/auth/logout', { allDevices: false }, { baseURL: '', timeout: 8000 });
+  } catch {
+    /* Logout proxy idempotent — BE down vẫn tiếp tục logout phía client */
+  }
+  clearRefreshState();
+  clearAccessToken();
+  useAuthStore.getState().logout();
 }

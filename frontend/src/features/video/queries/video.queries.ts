@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { toastApiError } from '@/lib/api-error';
 import { videoApi, VideoQueryParams } from '../api/video.api';
 import type { Video } from '../types/video.model';
 
@@ -14,11 +15,12 @@ export const VIDEO_QUERY_KEYS = {
 /**
  * Hook truy vấn danh sách video hướng dẫn nấu chay
  */
-export function useVideosQuery(params?: VideoQueryParams) {
+export function useVideosQuery(params?: VideoQueryParams, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: VIDEO_QUERY_KEYS.list(params),
     queryFn: () => videoApi.getVideos(params),
     staleTime: 60 * 1000,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -51,10 +53,8 @@ export function useCreateVideoMutation() {
             : 'Video đã được gửi vào hàng chờ duyệt.',
       });
     },
-    onError: (err: Error) => {
-      toast.error('Không thể tạo video', {
-        description: err.message || 'Vui lòng kiểm tra lại thông tin.',
-      });
+    onError: (err: unknown) => {
+      toastApiError(err, 'Không thể tạo video', 'Vui lòng kiểm tra lại thông tin.');
     },
   });
 }
@@ -73,10 +73,8 @@ export function useUpdateVideoMutation() {
       queryClient.invalidateQueries({ queryKey: VIDEO_QUERY_KEYS.lists() });
       toast.success('Đã cập nhật video thành công!');
     },
-    onError: (err: Error) => {
-      toast.error('Lỗi khi cập nhật video', {
-        description: err.message,
-      });
+    onError: (err: unknown) => {
+      toastApiError(err, 'Lỗi khi cập nhật video');
     },
   });
 }
@@ -94,10 +92,8 @@ export function useDeleteVideoMutation() {
       queryClient.invalidateQueries({ queryKey: VIDEO_QUERY_KEYS.lists() });
       toast.success('Đã xóa video thành công.');
     },
-    onError: (err: Error) => {
-      toast.error('Không thể xóa video', {
-        description: err.message,
-      });
+    onError: (err: unknown) => {
+      toastApiError(err, 'Không thể xóa video');
     },
   });
 }

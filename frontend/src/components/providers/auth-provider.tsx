@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { getAccessToken, setAccessToken } from '@/lib/auth-token';
-import { sharedRefresh } from '@/lib/auth-refresh';
+import { sharedRefresh, forceLogout } from '@/lib/auth-refresh';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isHydrated, setIsHydrated] = useState(false);
@@ -21,9 +21,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!persistedUser) return;
 
       void sharedRefresh().catch(() => {
-        // Refresh cookie hết hạn/bị thu hồi -> giữ guest, không toast
-        // (axios interceptor sẽ toast khi có request cần auth thật).
-        useAuthStore.getState().logout();
+        // Refresh cookie hết hạn/bị thu hồi -> đăng xuất triệt để (xóa cả
+        // HttpOnly cookies) để không kẹt loop /login → / ở lần vào sau.
+        void forceLogout();
       });
     } else if (token && !getAccessToken()) {
       setAccessToken(token);

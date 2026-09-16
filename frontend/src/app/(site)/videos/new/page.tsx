@@ -116,7 +116,7 @@ export default function UploadVideoPage() {
           </Button>
         </div>
 
-        <form onSubmit={void handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={(e) => void handleSubmit(onSubmit)(e)} className="space-y-6" noValidate>
           <Card className="border-border/70 shadow-sm">
             <CardHeader className="border-b pb-4">
               <CardTitle className="text-base font-bold text-foreground">

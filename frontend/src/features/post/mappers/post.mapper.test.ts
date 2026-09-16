@@ -113,6 +113,17 @@ describe('PostMapper', () => {
     expect(createDto.body).toContain('Nội dung bài viết');
   });
 
+  it('drops blob/mock cover from media payload', () => {
+    expect(
+      postMapper.toCreateDto({
+        title: 'T',
+        content: 'Nội dung đủ dài để qua validate backend phía tạo bài viết.',
+        coverImageUrl: 'blob:http://localhost:3000/abc',
+        coverMedia: { publicId: 'mock_x', mimeType: 'image/jpeg', bytes: 10 },
+      }).media
+    ).toEqual([]);
+  });
+
   it('maps UpdateDto with expectedVersion', () => {
     const updateDto = postMapper.toUpdateDto({ title: 'Sửa', version: 4 });
 

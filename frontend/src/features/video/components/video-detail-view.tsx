@@ -20,6 +20,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { VideoPlayer } from './video-player';
+import { SafeImage } from '@/components/shared/safe-image';
+import { VIDEO_FALLBACK_COVER, resolveVideoCover } from '@/lib/safe-image';
 import { VoteControl } from '@/components/shared/vote-control';
 import { CommentSection } from '@/components/shared/comment-section';
 import type { Video } from '../types/video.model';
@@ -232,12 +234,12 @@ export function VideoDetailView({ video, relatedVideos }: VideoDetailViewProps) 
                 className="flex gap-3 p-2.5 rounded-xl border bg-card hover:border-primary/50 transition-all shadow-sm group"
               >
                 <div className="relative aspect-video w-32 shrink-0 rounded-lg overflow-hidden bg-muted">
-                  <img
-                    src={
-                      item.coverImageUrl ||
-                      'https://images.unsplash.com/photo-1556881286-fc6915169721?w=400&q=80'
-                    }
+                  <SafeImage
+                    src={resolveVideoCover(item.coverImageUrl, VIDEO_FALLBACK_COVER)}
+                    fallbackSrc={VIDEO_FALLBACK_COVER}
                     alt={item.title}
+                    fill
+                    sizes="128px"
                     className="h-full w-full object-cover group-hover:scale-105 transition-transform"
                   />
                   <Badge className="absolute bottom-1 right-1 bg-black/80 text-[10px] text-white px-1.5 py-0 font-mono">

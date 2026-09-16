@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { toastApiError } from '@/lib/api-error';
 import { postApi, ArticleQueryParams } from '../api/post.api';
 import type { Article, RelatedGroup } from '../types/post.model';
 
@@ -15,11 +16,12 @@ export const POST_QUERY_KEYS = {
 /**
  * Hook truy vấn danh sách bài viết blog
  */
-export function useArticlesQuery(params?: ArticleQueryParams) {
+export function useArticlesQuery(params?: ArticleQueryParams, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: POST_QUERY_KEYS.articles(params),
     queryFn: () => postApi.getArticles(params),
     staleTime: 60 * 1000,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -65,10 +67,8 @@ export function useCreateArticleMutation() {
             : 'Bài viết đã được gửi vào hàng chờ duyệt của ban biên tập.',
       });
     },
-    onError: (err: Error) => {
-      toast.error('Không thể tạo bài viết', {
-        description: err.message || 'Vui lòng kiểm tra lại thông tin.',
-      });
+    onError: (err: unknown) => {
+      toastApiError(err, 'Không thể tạo bài viết', 'Vui lòng kiểm tra lại thông tin.');
     },
   });
 }
@@ -87,10 +87,8 @@ export function useUpdateArticleMutation() {
       queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.articlesList() });
       toast.success('Đã lưu bài viết thành công!');
     },
-    onError: (err: Error) => {
-      toast.error('Lỗi khi cập nhật bài viết', {
-        description: err.message,
-      });
+    onError: (err: unknown) => {
+      toastApiError(err, 'Lỗi khi cập nhật bài viết');
     },
   });
 }
@@ -108,10 +106,8 @@ export function useDeleteArticleMutation() {
       queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.articlesList() });
       toast.success('Đã xóa bài viết thành công.');
     },
-    onError: (err: Error) => {
-      toast.error('Không thể xóa bài viết', {
-        description: err.message,
-      });
+    onError: (err: unknown) => {
+      toastApiError(err, 'Không thể xóa bài viết');
     },
   });
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import Image from 'next/image';
+import { SafeImage } from '@/components/shared/safe-image';
 import { UploadCloud, X, Loader2, ImagePlus, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -50,7 +50,16 @@ export function ImageUploader({
       });
 
       onChange(res.secure_url || res.url, toUploadedMeta(res, file.type));
-      toast.success('Đã tải ảnh lên thành công!');
+      if (signatureData.apiKey === 'mock_api_key') {
+        // Backend chưa phục vụ chữ ký: URL chỉ là preview tạm (blob:), tạo bài
+        // sẽ bị backend từ chối. Báo rõ để user không submit trong im lặng.
+        toast.warning('Máy chủ upload chưa phản hồi — ảnh chỉ xem trước tạm thời.', {
+          description:
+            'Bài viết dùng ảnh này sẽ bị từ chối khi gửi. Hãy thử lại khi backend sẵn sàng.',
+        });
+      } else {
+        toast.success('Đã tải ảnh lên thành công!');
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Không thể tải ảnh lên';
       toast.error('Lỗi khi tải ảnh', {
@@ -98,12 +107,13 @@ export function ImageUploader({
 
       {value ? (
         <div className="group relative aspect-video w-full overflow-hidden rounded-2xl border border-border/70 bg-muted">
-          <Image
+          <SafeImage
             src={value}
+            fallbackSrc="/logo/logo-mark.png"
             alt="Ảnh xem trước"
             fill
             sizes="(max-width: 768px) 100vw, 640px"
-            className="object-cover"
+            className="h-full w-full object-cover"
           />
           <div className="absolute inset-0 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100 flex items-center justify-center gap-3">
             <Button

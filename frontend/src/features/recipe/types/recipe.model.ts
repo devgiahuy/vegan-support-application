@@ -57,6 +57,18 @@ export interface NutritionFact {
   vitaminB12: number;
 }
 
+export interface TraditionWarning {
+  tradition: string;
+  warningCode: string;
+  label: string;
+}
+
+export interface DietCompatibility {
+  dietPattern: string;
+  compatible: boolean;
+  reasonCodes: string[];
+}
+
 export interface RecipeReview {
   id: string;
   userName: string;
@@ -119,8 +131,9 @@ export interface Recipe {
   carbs?: number;
   fat?: number;
   fiber?: number;
-  rating: number;
-  ratingCount: number;
+  /** Điểm đánh giá trung bình — backend chưa có, chỉ hiện khi có dữ liệu thật. */
+  rating?: number;
+  ratingCount?: number;
   saved?: boolean;
   contentType?: ContentType;
   expertVerified?: boolean;
@@ -128,4 +141,8 @@ export interface Recipe {
   description?: string;
   dietTag?: string;
   dietSchool?: DietSchool;
+  /** Mã dị ứng suy từ nguyên liệu chuẩn (backend, có thể rỗng). */
+  allergenCodes?: string[];
+  traditionWarnings?: TraditionWarning[];
+  dietCompatibilities?: DietCompatibility[];
 }

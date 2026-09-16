@@ -17,7 +17,6 @@ import {
   CheckCircle2,
   Clock,
   Sparkles,
-  BadgeCheck,
   FileText,
   AlertTriangle,
   Send,
@@ -42,12 +41,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { usePostStore } from '@/store/usePostStore';
-import { CategoryType, PostStatus } from '@/common/enums';
+import { CategoryType, PostStatus, UserRole } from '@/common/enums';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
 import { flattenCategories } from '@/features/category/utils/flatten-categories';
 import { ImageUploader } from './image-uploader';
-import type { Post, AuthorRole, DietSchool, PostAuthor, Article } from '../types/post.model';
+import type { Post, DietSchool, Article } from '../types/post.model';
 import { useCreateArticleMutation, useUpdateArticleMutation } from '../queries/post.queries';
 
 const CATEGORIES = [
@@ -115,7 +114,6 @@ interface PostEditorFormProps {
 
 export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFormProps) {
   const router = useRouter();
-  const { addPost, updatePost } = usePostStore();
   const createArticleMutation = useCreateArticleMutation();
   const updateArticleMutation = useUpdateArticleMutation();
 
@@ -170,15 +168,21 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
   );
   const [newTagInput, setNewTagInput] = React.useState('');
 
-  // Cho phép chuyển đổi vai trò tác giả demo: Thành viên thường vs Chuyên gia Dinh dưỡng
-  const [authorRole, setAuthorRole] = React.useState<AuthorRole>(
-    initialPost &&
+  // Quyền xuất bản lấy từ phiên đăng nhập thật (không mô phỏng):
+  // Người đóng góp / Quản trị viên được xuất bản ngay, Thành viên phải chờ duyệt.
+  const sessionUser = useAuthStore((s) => s.user);
+  const canPublishDirectly =
+    sessionUser?.role === UserRole.CONTRIBUTOR || sessionUser?.role === UserRole.ADMIN;
+  // Tên tác giả hiển thị ở xem trước: ưu tiên tác giả gốc của bài đang sửa,
+  // bài mới lấy tên user đang đăng nhập.
+  const previewAuthorName =
+    (isEditing &&
+      initialPost &&
       'author' in initialPost &&
-      'role' in initialPost.author &&
-      initialPost.author.role
-      ? initialPost.author.role
-      : 'AUTHORIZED_USER'
-  );
+      'name' in initialPost.author &&
+      initialPost.author.name) ||
+    sessionUser?.displayName ||
+    'Tác giả VeggieConnect';
 
   const [activeTab, setActiveTab] = React.useState<'edit' | 'preview'>('edit');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -229,27 +233,6 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
     setTags(tags.filter((t) => t !== tagToRemove));
   };
 
-  const getAuthorInfo = (): PostAuthor => {
-    if (authorRole === 'NUTRITION_EXPERT') {
-      return {
-        id: 'expert-lan-anh',
-        name: 'ThS. Bác sĩ Lan Anh',
-        avatar: 'https://i.pravatar.cc/80?img=47',
-        role: 'NUTRITION_EXPERT',
-        roleTitle: 'Chuyên gia Dinh dưỡng & Y học Cổ truyền',
-        verified: true,
-      };
-    }
-    return {
-      id: 'my-user',
-      name: 'Nguyễn Lan Hương (Bạn)',
-      avatar: 'https://i.pravatar.cc/80?img=32',
-      role: 'AUTHORIZED_USER',
-      roleTitle: 'Thành viên Vàng',
-      verified: true,
-    };
-  };
-
   const handleSubmit = async (actionType: 'DRAFT' | 'SUBMIT') => {
     if (!title.trim()) {
       toast.error('Vui lòng nhập tiêu đề bài viết!');
@@ -260,19 +243,12 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
       return;
     }
 
-    const currentAuthor = getAuthorInfo();
-
     let postStatus: PostStatus = PostStatus.PENDING_REVIEW;
     if (actionType === 'DRAFT') {
       postStatus = PostStatus.DRAFT;
     } else {
-      // Nếu tác giả là Chuyên gia dinh dưỡng: xuất bản ngay
-      if (currentAuthor.role === 'NUTRITION_EXPERT') {
-        postStatus = PostStatus.PUBLISHED;
-      } else {
-        // Nếu là Thành viên thường: vào PENDING_REVIEW chờ chuyên gia duyệt
-        postStatus = PostStatus.PENDING_REVIEW;
-      }
+      // Người đóng góp / Quản trị viên: xuất bản ngay; Thành viên: chờ duyệt.
+      postStatus = canPublishDirectly ? PostStatus.PUBLISHED : PostStatus.PENDING_REVIEW;
     }
 
     setIsSubmitting(true);
@@ -280,18 +256,6 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
       // Backend nhận categoryIds (UUID) — map tên chuyên mục đang chọn sang id trong cây thật.
       const categoryId = flatCategories.find((c) => c.name === category)?.id || '';
       if (isEditing && initialPost) {
-        updatePost(initialPost.id, {
-          title,
-          summary: summary || title,
-          contentMarkdown,
-          category,
-          dietSchool,
-          coverImage,
-          tags,
-          status: postStatus,
-          readingMinutes,
-        });
-
         await updateArticleMutation.mutateAsync({
           id: initialPost.id,
           article: {
@@ -319,19 +283,6 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
         );
         router.push(`/articles/${initialPost.id}`);
       } else {
-        const created = addPost({
-          title,
-          summary: summary || title,
-          contentMarkdown,
-          category,
-          dietSchool,
-          coverImage,
-          tags,
-          status: postStatus,
-          author: currentAuthor,
-          readingMinutes,
-        });
-
         const res = await createArticleMutation.mutateAsync({
           title,
           category: { id: categoryId, name: category },
@@ -351,8 +302,8 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
               : '🎉 Bài viết đã gửi thành công! Đang chờ Chuyên gia Dinh dưỡng kiểm duyệt.'
         );
 
-        const targetId = res?.id || created.id;
-        if (postStatus === 'PUBLISHED') {
+        const targetId = res?.id;
+        if (postStatus === 'PUBLISHED' && targetId) {
           router.push(`/articles/${targetId}`);
         } else {
           router.push('/articles');
@@ -431,7 +382,7 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
 
   return (
     <div className="space-y-8">
-      {/* Simulation Bar: Role switcher for testing */}
+      {/* Thông tin quyền xuất bản theo vai trò thật của tài khoản */}
       <Card className="border-primary/30 bg-primary/5">
         <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4">
           <div className="flex items-center gap-3">
@@ -440,35 +391,25 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
             </span>
             <div>
               <p className="text-sm font-semibold text-foreground">
-                Mô phỏng vai trò tác giả (SRS UC-02 & UC-11)
+                {canPublishDirectly
+                  ? 'Bạn có quyền xuất bản ngay'
+                  : 'Bài viết sẽ chờ chuyên gia duyệt'}
               </p>
               <p className="text-xs text-muted-foreground">
-                Chuyên gia đăng bài &rarr; Xuất bản ngay kèm tick kiểm chứng. Thành viên đăng &rarr;
-                Chuyển trạng thái Chờ chuyên gia duyệt (PENDING).
+                {canPublishDirectly
+                  ? 'Vai trò của bạn được xuất bản ngay kèm trạng thái công khai.'
+                  : 'Bài viết sẽ được chuyển vào hàng đợi kiểm duyệt của Chuyên gia Dinh dưỡng trước khi công khai.'}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              variant={authorRole === 'AUTHORIZED_USER' ? 'default' : 'outline'}
-              size="sm"
-              className="rounded-full text-xs"
-              onClick={() => setAuthorRole('AUTHORIZED_USER')}
-            >
-              Thành viên thường
-            </Button>
-            <Button
-              type="button"
-              variant={authorRole === 'NUTRITION_EXPERT' ? 'default' : 'outline'}
-              size="sm"
-              className="rounded-full text-xs gap-1.5"
-              onClick={() => setAuthorRole('NUTRITION_EXPERT')}
-            >
-              <BadgeCheck className="h-3.5 w-3.5 text-emerald-500" /> Chuyên gia Dinh dưỡng
-            </Button>
-          </div>
+          <Badge variant="secondary" className="rounded-full text-xs">
+            {sessionUser?.role === UserRole.ADMIN
+              ? 'Quản trị viên'
+              : sessionUser?.role === UserRole.CONTRIBUTOR
+                ? 'Người đóng góp'
+                : 'Thành viên'}
+          </Badge>
         </CardContent>
       </Card>
 
@@ -649,7 +590,7 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
                     <span>•</span>
                     <span>{readingMinutes} phút đọc</span>
                     <span>•</span>
-                    <span>Tác giả: {getAuthorInfo().name}</span>
+                    <span>Tác giả: {previewAuthorName}</span>
                   </div>
                   <div className="mt-4">{renderPreviewContent(contentMarkdown)}</div>
                 </div>
@@ -813,17 +754,17 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
               <div className="text-xs text-muted-foreground space-y-1">
                 <p className="font-semibold text-foreground flex items-center gap-1.5">
                   <CheckCircle2 className="h-4 w-4 text-primary" />
-                  {authorRole === 'NUTRITION_EXPERT' ? (
+                  {canPublishDirectly ? (
                     <span className="text-emerald-600 dark:text-emerald-400">
-                      Quyền Chuyên gia: Duyệt & Xuất bản ngay
+                      Quyền xuất bản ngay
                     </span>
                   ) : (
                     <span>Quyền Thành viên: Chờ chuyên gia duyệt</span>
                   )}
                 </p>
                 <p className="text-[11px] leading-relaxed">
-                  {authorRole === 'NUTRITION_EXPERT'
-                    ? 'Bài viết sẽ xuất hiện ngay trên trang Cẩm nang kèm huy hiệu "Đã kiểm chứng bởi Chuyên gia Dinh dưỡng".'
+                  {canPublishDirectly
+                    ? 'Bài viết sẽ xuất hiện ngay trên trang Cẩm nang ở trạng thái công khai.'
                     : 'Bài viết sẽ được chuyển vào hàng đợi kiểm duyệt của Chuyên gia Dinh dưỡng trước khi công khai.'}
                 </p>
               </div>
@@ -838,8 +779,8 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
                   <Send className="h-4 w-4" />
                   {isSubmitting
                     ? 'Đang lưu bài viết...'
-                    : authorRole === 'NUTRITION_EXPERT'
-                      ? 'Xuất bản & Kiểm chứng bài viết'
+                    : canPublishDirectly
+                      ? 'Xuất bản bài viết'
                       : 'Gửi Chuyên gia duyệt bài'}
                 </Button>
 

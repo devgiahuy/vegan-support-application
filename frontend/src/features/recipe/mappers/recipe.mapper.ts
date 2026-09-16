@@ -8,7 +8,7 @@ import {
   safeArray,
 } from '@/lib/mapper';
 import { formatDate } from '@/lib/utils';
-import { PostStatus, RecipeDifficulty } from '@/common/enums';
+import { RecipeDifficulty } from '@/common/enums';
 import { PaginationResult } from '@/types/api';
 import {
   authorFromDto,
@@ -22,11 +22,20 @@ import type {
   RecipeDetailDto,
   RecipeIngredientDto,
   NutritionFactDto,
+  TraditionWarningDto,
+  DietCompatibilityDto,
   CreateRecipeRequestDto,
   UpdateRecipeRequestDto,
 } from '../types/recipe.dto';
 import type { PostMediaDto, PostRevisionDto } from '@/features/post/types/post.dto';
-import type { Recipe, RecipeIngredient, RecipeStep, NutritionFact } from '../types/recipe.model';
+import type {
+  Recipe,
+  RecipeIngredient,
+  RecipeStep,
+  NutritionFact,
+  TraditionWarning,
+  DietCompatibility,
+} from '../types/recipe.model';
 
 function getDifficultyLabel(diff: RecipeDifficulty | string): string {
   switch (diff) {
@@ -104,6 +113,21 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
     );
     const author = authorFromDto(dto, 'Bếp Chay An Nhiên');
 
+    const traditionWarnings: TraditionWarning[] = safeArray<TraditionWarningDto>(
+      detail?.traditionWarnings
+    ).map((w) => ({
+      tradition: safeString(w?.tradition),
+      warningCode: safeString(w?.warningCode),
+      label: safeString(w?.label),
+    }));
+    const dietCompatibilities: DietCompatibility[] = safeArray<DietCompatibilityDto>(
+      detail?.dietCompatibilities
+    ).map((c) => ({
+      dietPattern: safeString(c?.dietPattern),
+      compatible: safeBoolean(c?.compatible, false),
+      reasonCodes: safeArray<string>(c?.reasonCodes),
+    }));
+
     return {
       id: safeString(pickField(dto, ['id'], '')),
       title: safeString(revision?.title, 'Công thức chưa có tên'),
@@ -116,8 +140,9 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
         name: author.name,
         avatarUrl: author.avatarUrl,
         avatar: author.avatarUrl || 'https://i.pravatar.cc/80?img=32',
-        verified: true,
-        roleTitle: 'Đầu bếp chay',
+        // Backend không trả trạng thái kiểm chứng tác giả: không claim verified.
+        verified: false,
+        roleTitle: undefined,
       },
       category: firstCategory(dto),
       coverImageUrl,
@@ -138,7 +163,7 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       formattedPublishedAt: formatDate(publishedAt),
       stats: { views: 0, likes: 0, comments: 0 },
 
-      // --- Legacy compatibility properties ---
+      // --- Legacy compatibility properties (chỉ giữ số liệu thật từ backend) ---
       image: coverImageUrl,
       minutes: totalTime,
       kcal: nutrition.calories,
@@ -146,12 +171,16 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       carbs: nutrition.carbs,
       fat: nutrition.fat,
       fiber: nutrition.fiber,
-      rating: 5.0,
-      ratingCount: 0,
+      // Backend chưa có rating/reviews/dietTag: để undefined, UI tự ẩn thay vì số giả.
+      rating: undefined,
+      ratingCount: undefined,
       saved: false,
-      expertVerified: true,
+      expertVerified: false,
       description: safeString(revision?.excerpt, ''),
-      dietTag: 'Thuần chay',
+      dietTag: undefined,
+      allergenCodes: safeArray<string>(detail?.allergenCodes),
+      traditionWarnings,
+      dietCompatibilities,
     };
   }
 
@@ -211,13 +240,19 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
               vitaminB12Mcg: domain.nutrition.vitaminB12,
             }
           : undefined,
-        ingredients: (domain.ingredients || []).map((item) => ({
-          ingredientId: 'ingredientId' in item && item.ingredientId ? item.ingredientId : null,
-          displayName: item.name,
-          amount:
-            typeof item.amount === 'number' ? item.amount : parseFloat(String(item.amount)) || 1,
-          unit: item.unit || 'phần',
-        })),
+        ingredients: (domain.ingredients || []).map((item) => {
+          // Backend `ingredientId` là optional UUID: vắng mặt thì thôi,
+          // gửi explicit `null` sẽ 400 strict. Chỉ kèm key khi có UUID thật.
+          const ingredientId =
+            'ingredientId' in item && item.ingredientId ? item.ingredientId : undefined;
+          return {
+            ...(ingredientId ? { ingredientId } : {}),
+            displayName: item.name,
+            amount:
+              typeof item.amount === 'number' ? item.amount : parseFloat(String(item.amount)) || 1,
+            unit: item.unit || 'phần',
+          };
+        }),
       },
     };
   }

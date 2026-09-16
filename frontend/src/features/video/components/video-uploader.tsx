@@ -60,7 +60,14 @@ export function VideoUploader({
       });
 
       onChange(res.secure_url || res.url, VideoSource.CLOUDINARY, toUploadedMeta(res, file.type));
-      toast.success('Đã tải video lên thành công!');
+      if (signatureData.apiKey === 'mock_api_key') {
+        toast.warning('Máy chủ upload chưa phản hồi — video chỉ xem trước tạm thời.', {
+          description:
+            'Bài viết dùng video này sẽ bị từ chối khi gửi. Hãy thử lại khi backend sẵn sàng.',
+        });
+      } else {
+        toast.success('Đã tải video lên thành công!');
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Không thể tải video lên';
       toast.error('Lỗi khi tải video', {
