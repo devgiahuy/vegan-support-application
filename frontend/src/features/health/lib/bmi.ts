@@ -51,6 +51,7 @@ export const ACTIVITY_LEVELS = [
   { value: 1.375, label: 'Vận động nhẹ (Tập yoga, đi bộ 1-3 ngày/tuần)' },
   { value: 1.55, label: 'Vận động vừa (Tập thể thao đều 3-5 ngày/tuần)' },
   { value: 1.725, label: 'Vận động nhiều (Cường độ cao 6-7 ngày/tuần)' },
+  { value: 1.9, label: 'Vận động rất nhiều (Lao động nặng / tập 2 buổi mỗi ngày)' },
 ];
 
 export function calGoalTargets(tdee: number) {
