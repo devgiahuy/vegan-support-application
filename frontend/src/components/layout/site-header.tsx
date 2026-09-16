@@ -12,12 +12,14 @@ import {
   User as UserIcon,
   LogOut,
   ShieldCheck,
+  ClipboardCheck,
 } from 'lucide-react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { BrandLogo } from './brand-logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +48,8 @@ export function SiteHeader() {
   const { user, isAuthenticated } = useAuthStore();
   const logoutMutation = useLogoutMutation();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+  const [hoveredHref, setHoveredHref] = React.useState<string | null>(null);
+  const shouldReduceMotion = useReducedMotion();
 
   const handleLogout = () => {
     void logoutMutation.mutateAsync().finally(() => router.push('/'));
@@ -58,21 +62,62 @@ export function SiteHeader() {
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 lg:px-6">
         <BrandLogo variant="horizontal" size="md" priority />
 
-        <nav className="ml-2 hidden items-center gap-1 xl:flex">
-          {NAV_ITEMS.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={cn(
-                'rounded-full px-3.5 py-2 text-sm font-medium transition-colors',
-                isActive(item.href)
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-foreground'
-              )}
-            >
-              {item.label}
-            </Link>
-          ))}
+        <nav
+          className="relative ml-2 hidden items-center gap-1 xl:flex"
+          onMouseLeave={() => setHoveredHref(null)}
+        >
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(item.href);
+            const isHovered = hoveredHref === item.href;
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onMouseEnter={() => setHoveredHref(item.href)}
+                onFocus={() => setHoveredHref(item.href)}
+                onBlur={() => setHoveredHref(null)}
+                className={cn(
+                  'relative rounded-full px-3.5 py-2 text-sm font-medium transition-colors select-none outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                  active
+                    ? 'text-primary-foreground font-semibold'
+                    : isHovered
+                      ? 'text-foreground'
+                      : 'text-muted-foreground'
+                )}
+              >
+                {/* Active pill: chuyển động mượt mà khi đổi giữa các trang */}
+                {active && (
+                  <motion.span
+                    layoutId="header-active-pill"
+                    className="absolute inset-0 rounded-full bg-primary shadow-sm"
+                    style={{ borderRadius: 9999 }}
+                    transition={
+                      shouldReduceMotion
+                        ? { duration: 0 }
+                        : { type: 'spring', stiffness: 380, damping: 30 }
+                    }
+                  />
+                )}
+
+                {/* Hover pill: lướt mượt mà dưới con trỏ chuột cho các mục chưa active */}
+                {!active && isHovered && (
+                  <motion.span
+                    layoutId="header-hover-pill"
+                    className="absolute inset-0 rounded-full bg-accent/80 dark:bg-accent/60"
+                    style={{ borderRadius: 9999 }}
+                    transition={
+                      shouldReduceMotion
+                        ? { duration: 0 }
+                        : { type: 'spring', stiffness: 420, damping: 32 }
+                    }
+                  />
+                )}
+
+                <span className="relative z-10">{item.label}</span>
+              </Link>
+            );
+          })}
         </nav>
 
         <form
@@ -99,14 +144,14 @@ export function SiteHeader() {
             </Link>
           </Button>
 
-          <Button
+          {/* <Button
             variant="ghost"
             size="icon"
             aria-label="Thông báo"
             className="hidden sm:inline-flex"
           >
             <Bell className="h-5 w-5" />
-          </Button>
+          </Button> */}
 
           <ThemeToggle />
 
@@ -115,6 +160,7 @@ export function SiteHeader() {
               <DropdownMenuTrigger asChild>
                 <button className="ml-1 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
                   <Avatar className="h-9 w-9">
+                    {user.avatarUrl && <AvatarImage src={user.avatarUrl} alt={user.displayName} />}
                     <AvatarFallback className="bg-primary/10 text-primary">
                       {user.initials || 'U'}
                     </AvatarFallback>
@@ -133,9 +179,23 @@ export function SiteHeader() {
                   </Link>
                 </DropdownMenuItem>
                 {user.role === UserRole.ADMIN && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/dashboard">
+                        <ShieldCheck className="h-4 w-4" /> Bảng điều khiển Quản trị
+                      </Link>
+                    </DropdownMenuItem>
+                    {/* <DropdownMenuItem asChild>
+                      <Link href="/admin/dashboard?tab=queue">
+                        <ClipboardCheck className="h-4 w-4" /> Kiểm duyệt bài viết
+                      </Link>
+                    </DropdownMenuItem> */}
+                  </>
+                )}
+                {user.role === UserRole.CONTRIBUTOR && (
                   <DropdownMenuItem asChild>
-                    <Link href="/admin">
-                      <ShieldCheck className="h-4 w-4" /> Quản trị catalog
+                    <Link href="/contributor/dashboard">
+                      <ClipboardCheck className="h-4 w-4" /> Bảng điều khiển Contributor
                     </Link>
                   </DropdownMenuItem>
                 )}
@@ -162,27 +222,37 @@ export function SiteHeader() {
         </div>
       </div>
 
-      {mobileOpen && (
-        <div className="border-t border-border/70 bg-background xl:hidden">
-          <nav className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-3">
-            {NAV_ITEMS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={() => setMobileOpen(false)}
-                className={cn(
-                  'rounded-xl px-4 py-2.5 text-sm font-medium',
-                  isActive(item.href)
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-foreground hover:bg-accent'
-                )}
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-      )}
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={
+              shouldReduceMotion ? { duration: 0 } : { duration: 0.22, ease: [0.16, 1, 0.3, 1] }
+            }
+            className="overflow-hidden border-t border-border/70 bg-background xl:hidden"
+          >
+            <nav className="mx-auto flex max-w-7xl flex-col gap-1 px-4 py-3">
+              {NAV_ITEMS.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileOpen(false)}
+                  className={cn(
+                    'relative rounded-xl px-4 py-2.5 text-sm font-medium transition-colors',
+                    isActive(item.href)
+                      ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+                      : 'text-foreground hover:bg-accent'
+                  )}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }

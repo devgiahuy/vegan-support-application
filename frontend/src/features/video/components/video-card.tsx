@@ -2,22 +2,24 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { Play, Clock, Eye, Heart } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { SafeImage } from '@/components/shared/safe-image';
 import { cn } from '@/lib/utils';
 import type { Video } from '../types/video.model';
+import { VIDEO_FALLBACK_COVER, resolveVideoCover } from '@/lib/safe-image';
 
 interface VideoCardProps {
   video: Video;
+  priority?: boolean;
   className?: string;
 }
 
-export function VideoCard({ video, className }: VideoCardProps) {
-  const coverImage =
-    video.coverImageUrl ||
-    'https://images.unsplash.com/photo-1556881286-fc6915169721?w=800&auto=format&fit=crop&q=80';
+export function VideoCard({ video, priority = false, className }: VideoCardProps) {
+  // Lọc URL video (youtube watch, blob:...) khỏi `next/image`:
+  // YouTube watch → thumbnail i.ytimg.com, còn lại → ảnh fallback.
+  const coverImage = resolveVideoCover(video.coverImageUrl);
   const categoryName =
     typeof video.category === 'string' ? video.category : video.category?.name || 'Món chay';
   const authorName = video.author?.name || 'Bếp Chay An Nhiên';
@@ -38,10 +40,12 @@ export function VideoCard({ video, className }: VideoCardProps) {
         href={`/videos/${video.id}`}
         className="relative block aspect-video overflow-hidden bg-muted"
       >
-        <Image
+        <SafeImage
           src={coverImage}
+          fallbackSrc={VIDEO_FALLBACK_COVER}
           alt={video.title}
           fill
+          priority={priority}
           sizes="(max-width: 768px) 100vw, 360px"
           className="object-cover transition-transform duration-500 group-hover:scale-105"
         />

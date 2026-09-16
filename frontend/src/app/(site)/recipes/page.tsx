@@ -287,8 +287,8 @@ export default function RecipeDiscoveryPage() {
               />
             ) : (
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {recipes.map((recipe) => (
-                  <RecipeCard key={recipe.id} recipe={recipe} />
+                {recipes.map((recipe, index) => (
+                  <RecipeCard key={recipe.id} recipe={recipe} priority={index === 0} />
                 ))}
               </div>
             )}

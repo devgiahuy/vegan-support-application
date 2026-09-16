@@ -189,8 +189,8 @@ export default function VideoDiscoveryPage() {
         </div>
       ) : filteredVideos.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredVideos.map((video) => (
-            <VideoCard key={video.id} video={video} />
+          {filteredVideos.map((video, index) => (
+            <VideoCard key={video.id} video={video} priority={index === 0} />
           ))}
         </div>
       ) : (
