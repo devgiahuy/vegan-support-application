@@ -1,0 +1,16 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "rootDir": ".",
+    "outDir": "dist-seed",
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false
+  },
+  "include": [
+    "prisma/**/*.ts",
+    "src/modules/auth/password.service.ts",
+    "src/modules/catalog/catalog.normalization.ts"
+  ],
+  "exclude": ["node_modules", "dist", "dist-seed"]
+}

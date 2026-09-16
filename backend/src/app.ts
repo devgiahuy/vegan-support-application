@@ -71,6 +71,16 @@ import {
   createRecommendationRouter,
 } from './modules/recommendations/recommendation.router.js';
 import { RecommendationService } from './modules/recommendations/recommendation.service.js';
+import { MealPlanController } from './modules/meal-plans/meal-plan.controller.js';
+import { MealPlanRepository } from './modules/meal-plans/meal-plan.repository.js';
+import { createMealPlanRouter } from './modules/meal-plans/meal-plan.router.js';
+import { MealPlanService } from './modules/meal-plans/meal-plan.service.js';
+import { createAiProvider } from './modules/chat/ai-provider.js';
+import { ChatController } from './modules/chat/chat.controller.js';
+import { ChatIdentityService } from './modules/chat/chat.identity.js';
+import { ChatRepository } from './modules/chat/chat.repository.js';
+import { createChatRouter } from './modules/chat/chat.router.js';
+import { ChatService } from './modules/chat/chat.service.js';
 import { openApiDocument } from './openapi/document.js';
 
 export interface AppDependencies {
@@ -113,8 +123,27 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   const moderationController = new ModerationController(
     new ModerationService(new ModerationRepository(database.client)),
   );
-  const recommendationController = new RecommendationController(
-    new RecommendationService(new RecommendationRepository(database.client), contentRepository),
+  const recommendationService = new RecommendationService(
+    new RecommendationRepository(database.client),
+    contentRepository,
+  );
+  const recommendationController = new RecommendationController(recommendationService);
+  const mealPlanController = new MealPlanController(
+    new MealPlanService(
+      new MealPlanRepository(database.client),
+      contentRepository,
+      recommendationService,
+      config,
+    ),
+  );
+  const chatController = new ChatController(
+    new ChatService(
+      new ChatRepository(database.client),
+      createAiProvider(config),
+      recommendationService,
+      config,
+    ),
+    new ChatIdentityService(config),
   );
 
   app.disable('x-powered-by');
@@ -176,6 +205,8 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
     '/api/v1/recommendations',
     createRecommendationRouter(recommendationController, authentication),
   );
+  app.use('/api/v1/meal-plans', createMealPlanRouter(mealPlanController, authentication));
+  app.use('/api/v1/chat', createChatRouter(chatController, authentication));
   app.use('/api/v1/posts', createPostsRouter(contentController, authentication));
   app.use('/api/v1/posts', createCommunityPostsRouter(communityController, authentication));
   app.use('/api/v1/comments', createCommentsRouter(communityController, authentication));

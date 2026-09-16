@@ -1,5 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
+  "source": "../backend/openapi.json",
+  "generatedAt": "2026-09-16T08:07:05.561Z",
+  "stats": {
+    "operations": 71,
+    "groups": 17,
+    "schemas": 70
   "source": "http://localhost:4000/api-docs.json",
   "generatedAt": "2026-09-15T16:27:39.407Z",
   "stats": {
@@ -775,6 +781,297 @@
         "403": "ErrorResponse",
         "404": "ErrorResponse",
         "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/meal-plans/generate",
+      "group": "Meal Plans",
+      "summary": "Tạo hoặc regenerate weekly meal plan",
+      "operationId": "generateMealPlan",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "GenerateMealPlanRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "MealPlanResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/meal-plans",
+      "group": "Meal Plans",
+      "summary": "List meal plan versions của current user",
+      "operationId": "listMealPlans",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "weekStart",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "MealPlanListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/meal-plans/{id}",
+      "group": "Meal Plans",
+      "summary": "Đọc meal plan version thuộc current user",
+      "operationId": "getMealPlan",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "MealPlanResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/meal-plans/{id}",
+      "group": "Meal Plans",
+      "summary": "Soft-delete owned meal plan",
+      "operationId": "deleteMealPlan",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "expectedVersion",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "DeleteMealPlanResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/meal-plans/{id}/items/{itemId}/swap",
+      "group": "Meal Plans",
+      "summary": "Swap một meal slot an toàn",
+      "operationId": "swapMealPlanItem",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "path",
+          "name": "itemId",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "SwapMealPlanItemRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "MealPlanResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/sessions",
+      "group": "AI Chat",
+      "summary": "List private chat sessions của authenticated user",
+      "operationId": "listChatSessions",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "ChatSessionListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/chat/sessions",
+      "group": "AI Chat",
+      "summary": "Tạo private chat session cho authenticated user hoặc guest",
+      "operationId": "createChatSession",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "CreateChatSessionRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "ChatSessionResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/sessions/{id}/messages",
+      "group": "AI Chat",
+      "summary": "Đọc message history theo ownership",
+      "operationId": "listChatMessages",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "ChatMessageListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/chat/sessions/{id}/messages",
+      "group": "AI Chat",
+      "summary": "Stream nutrition answer qua SSE",
+      "operationId": "streamChatMessage",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "SendChatMessageRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "ChatSseStream",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/chat/messages/{id}/feedback",
+      "group": "AI Chat",
+      "summary": "Upsert feedback cho owned assistant message",
+      "operationId": "upsertChatFeedback",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "ChatFeedbackRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "ChatFeedbackResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     }
   ]
