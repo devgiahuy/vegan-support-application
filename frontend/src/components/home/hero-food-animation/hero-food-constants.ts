@@ -12,24 +12,16 @@ export const HERO_ANIMATION_CONFIG = {
 } as const;
 
 export const PHASES = {
-  // Phase 1: Chiếc tô nguyên bản, nhấp nhô nhẹ
-  PHASE_1_BOWL_IDLE: { start: 0, end: 25 },
-  // Phase 2: Tô xoay 360 độ tạo động lực
-  PHASE_2_FIRST_ROTATION: { start: 25, end: 65 },
-  // Phase 3: Các nguyên liệu bung nở từ lòng tô ra xung quanh
-  PHASE_3_INGREDIENT_REVEAL: { start: 66, end: 110 },
-  // Phase 4: Các nguyên liệu bay lượn kết nối nhẹ nhàng quanh tô
-  PHASE_4_INGREDIENT_ORBIT: { start: 111, end: 150 },
-  // Phase 5: Xoay chuẩn bị kết hợp món ăn
-  PHASE_5_SECOND_ROTATION: { start: 151, end: 175 },
-  // Phase 6: Nguyên liệu hội tụ xoáy về trung tâm
-  PHASE_6_CONVERGENCE: { start: 176, end: 195 },
-  // Phase 7: Món Rainbow Buddha Bowl hoàn chỉnh xuất hiện
-  PHASE_7_COMPLETED_DISH: { start: 196, end: 220 },
-  // Phase 8: Giữ món ăn hoàn chỉnh, đồng bộ cùng chỉ số dinh dưỡng
-  PHASE_8_PAUSE_SHOWCASE: { start: 221, end: 235 },
-  // Phase 9: Chuyển mượt về đầu vòng lặp
-  PHASE_9_LOOP_WRAP: { start: 236, end: 240 },
+  // Phase 1: Chiếc tô ở giữa cùng các nguyên liệu bay lượn kết nối nhẹ nhàng xung quanh (Orbit Harmony)
+  PHASE_1_ORBIT_HARMONY: { start: 0, end: 60 },
+  // Phase 2: Tô xoay 360 độ tạo động lực, các nguyên liệu xoáy ốc hội tụ vào lòng tô (Vortex Convergence)
+  PHASE_2_VORTEX_CONVERGENCE: { start: 60, end: 95 },
+  // Phase 3: Món Rainbow Buddha Bowl hoàn chỉnh xuất hiện, tỏa sáng và khoe sắc (Dish Showcase)
+  PHASE_3_COMPLETED_DISH_SHOWCASE: { start: 95, end: 145 },
+  // Phase 4: Món ăn tiếp tục xoay 360 độ và biến đổi, tách thành chiếc tô ở giữa & 5 nguyên liệu bung tỏa ra xung quanh (Rotation & Transformation)
+  PHASE_4_ROTATION_TRANSFORMATION: { start: 145, end: 205 },
+  // Phase 5: Ổn định quỹ đạo, kết nối năng lượng mầm xanh, chuyển mượt mà về đầu chu trình (Seamless Loop Settle)
+  PHASE_5_SEAMLESS_LOOP_SETTLE: { start: 205, end: 240 },
 } as const;
 
 export interface IngredientDef {

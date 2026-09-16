@@ -60,7 +60,7 @@ Server: Server Component -> lib/server-fetch.ts (+ mapper) -> Model -> render
 ## 2. Quy tắc import & biên module
 
 1. Alias duy nhất: `@/*` -> `./src/*` (xem `tsconfig.json`). Không dùng relative `../../../`.
-2. Feature độc lập: `features/product` **không import** từ `features/auth` (trừ `common/lib/types/store`).
+2. Feature độc lập: `features/category` **không import** từ `features/auth` (trừ `common/lib/types/store`).
    Muốn dùng chéo -> nâng lên `common/` hoặc `components/`.
 3. `components/ui` không import `features/*`, `store/*`. Chỉ nhận props.
 4. `app/` không gọi trực tiếp `axios`/`fetch`. Gọi qua `features/*/queries` (client) hoặc `lib/server-fetch` (server).
@@ -302,7 +302,9 @@ Checklist review PR/API mới:
 7. Cần form -> thêm `schemas/<d>.schema.ts` (zod) + `react-hook-form`.
 8. Chạy `tsc --noEmit`, tự test BE đổi tên field/`null`/số-dạng-chuỗi mà UI không vỡ.
 
-Tham khảo mẫu hoàn chỉnh: `features/product/*`, `features/auth/*`.
+Tham khảo mẫu hoàn chỉnh: `features/auth/*`, `features/category/*`, `features/profile/*`.
+`features/product/*` là scaffold demo (mock-only, không có backend endpoint); dùng để hiểu cấu trúc
+DTO/Mapper/API/Query khi BE trả field kiểu bất thường (tên khác, null, string-number).
 
 ---
 

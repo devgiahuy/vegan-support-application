@@ -44,7 +44,7 @@ interface RecipeDetailViewProps {
 
 export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewProps) {
   const [servings, setServings] = React.useState<number>(recipe.servings || 2);
-  const [isSaved, setIsSaved] = React.useState<boolean>(recipe.saved || false);
+  const [isSaved, setIsSaved] = React.useState<boolean>(recipe.saved ?? false);
   const [checkedIngredients, setCheckedIngredients] = React.useState<string[]>([]);
 
   // Tỷ lệ nhân khẩu phần
@@ -123,7 +123,7 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
                 </Badge>
               )}
               <Badge variant="outline" className="px-3 py-1 text-xs">
-                {recipe.category}
+                {typeof recipe.category === 'string' ? recipe.category : recipe.category?.name}
               </Badge>
               <Badge variant="outline" className="px-3 py-1 text-xs">
                 {recipe.difficulty}
@@ -144,7 +144,16 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
             <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-y py-4">
               <div className="flex items-center gap-3">
                 <Avatar className="h-12 w-12 ring-2 ring-primary/20">
-                  <AvatarImage src={recipe.author.avatar} alt={recipe.author.name} />
+                  <AvatarImage
+                    src={
+                      (recipe.author && 'avatar' in recipe.author
+                        ? recipe.author.avatar
+                        : undefined) ||
+                      recipe.author?.avatarUrl ||
+                      ''
+                    }
+                    alt={recipe.author.name}
+                  />
                   <AvatarFallback className="bg-primary/10 text-primary font-bold">
                     {recipe.author.name[0]}
                   </AvatarFallback>
@@ -154,12 +163,15 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
                     <span className="font-semibold text-foreground text-sm sm:text-base">
                       {recipe.author.name}
                     </span>
-                    {recipe.author.verified && (
-                      <BadgeCheck className="h-4 w-4 text-primary fill-primary/20" />
-                    )}
+                    {((recipe.author && 'verified' in recipe.author
+                      ? recipe.author.verified
+                      : undefined) ??
+                      true) && <BadgeCheck className="h-4 w-4 text-primary fill-primary/20" />}
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {recipe.author.roleTitle || 'Tác giả công thức'}
+                    {(recipe.author && 'roleTitle' in recipe.author
+                      ? recipe.author.roleTitle
+                      : undefined) || 'Tác giả công thức'}
                   </p>
                 </div>
               </div>
@@ -340,8 +352,18 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
             </h3>
 
             <div className="space-y-4">
-              {recipe.instructions && recipe.instructions.length > 0 ? (
-                recipe.instructions.map((step) => (
+              {(recipe.instructions || recipe.steps) &&
+              (recipe.instructions || recipe.steps)!.length > 0 ? (
+                (
+                  (recipe.instructions || recipe.steps) as Array<{
+                    stepNumber: number;
+                    title?: string;
+                    desc?: string;
+                    instruction?: string;
+                    tip?: string;
+                    durationMinutes?: number;
+                  }>
+                ).map((step) => (
                   <Card
                     key={step.stepNumber}
                     className="border-border/60 shadow-sm overflow-hidden"
@@ -353,7 +375,7 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
                             {step.stepNumber}
                           </span>
                           <CardTitle className="text-base font-bold text-foreground">
-                            {step.title}
+                            {step.title || `Bước ${step.stepNumber}`}
                           </CardTitle>
                         </div>
                         {step.durationMinutes && (
@@ -364,7 +386,9 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
                       </div>
                     </CardHeader>
                     <CardContent className="px-5 pb-5 space-y-3">
-                      <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {step.desc || step.instruction}
+                      </p>
                       {step.tip && (
                         <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-3 text-xs text-amber-900 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200 flex items-start gap-2">
                           <Lightbulb className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
@@ -377,6 +401,14 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
                     </CardContent>
                   </Card>
                 ))
+              ) : recipe.body ? (
+                <Card className="border-border/60 shadow-sm">
+                  <CardContent className="p-6">
+                    <p className="text-sm text-foreground leading-relaxed whitespace-pre-line">
+                      {recipe.body}
+                    </p>
+                  </CardContent>
+                </Card>
               ) : (
                 <Card className="p-6 text-center text-sm text-muted-foreground border-dashed">
                   Đang cập nhật hướng dẫn từng bước cho công thức này...

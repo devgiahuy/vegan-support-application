@@ -43,7 +43,12 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { usePostStore } from '@/store/usePostStore';
-import type { Post, AuthorRole, DietSchool, PostAuthor } from '../types/post.model';
+import { CategoryType, PostStatus } from '@/common/enums';
+import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
+import { flattenCategories } from '@/features/category/utils/flatten-categories';
+import { ImageUploader } from './image-uploader';
+import type { Post, AuthorRole, DietSchool, PostAuthor, Article } from '../types/post.model';
+import { useCreateArticleMutation, useUpdateArticleMutation } from '../queries/post.queries';
 
 const CATEGORIES = [
   'Sức khỏe & Dinh dưỡng',
@@ -62,31 +67,39 @@ const DIET_SCHOOLS: { value: DietSchool; label: string; desc: string }[] = [
   {
     value: 'PHAT_GIAO',
     label: 'Chay Phật giáo',
-    desc: 'Kiêng thịt cá, kiêng ngũ vị tân (hành tỏi kiệu)',
+    desc: 'Kiêng Ngũ vị tân (hành, tỏi, kiệu, hẹ, nén)',
   },
   {
     value: 'DAO_GIAO',
     label: 'Chay Đạo giáo / Cao Đài',
-    desc: 'Kiêng kích thích, chay sóc vọng kỳ',
+    desc: 'Kiêng Ngũ vị tân và một số loại thực phẩm nhất định',
   },
-  { value: 'ALL', label: 'Áp dụng cho mọi trường phái', desc: 'Kiến thức chung hữu ích' },
+  {
+    value: 'ALL',
+    label: 'Áp dụng cho mọi trường phái',
+    desc: 'Thực đơn phù hợp cho tất cả người ăn chay',
+  },
 ];
 
 const COVER_PRESETS = [
   {
-    label: 'Thực dưỡng rau củ & B12',
-    url: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=800&q=80',
-  },
-  {
-    label: 'Nước dùng & Phở nấm',
-    url: 'https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?w=800&q=80',
-  },
-  {
-    label: 'Mâm cơm chay ngày Rằm',
+    label: 'Mâm cơm thuần chay thanh đạm',
     url: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&q=80',
   },
   {
-    label: 'Nem rán giòn chay',
+    label: 'Rau củ quả tươi giàu vi chất',
+    url: 'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=800&q=80',
+  },
+  {
+    label: 'Bát súp nấm ấm cúng',
+    url: 'https://images.unsplash.com/photo-1547592166-23ac45744acd?w=800&q=80',
+  },
+  {
+    label: 'Hạt dinh dưỡng & ngũ cốc nguyên cám',
+    url: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=800&q=80',
+  },
+  {
+    label: 'Nghệ thuật trà đạo & hoa sen',
     url: 'https://images.unsplash.com/photo-1559847844-5315695dadae?w=800&q=80',
   },
   {
@@ -96,27 +109,62 @@ const COVER_PRESETS = [
 ];
 
 interface PostEditorFormProps {
-  initialPost?: Post;
+  initialPost?: Post | Article;
   isEditing?: boolean;
 }
 
 export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFormProps) {
   const router = useRouter();
   const { addPost, updatePost } = usePostStore();
+  const createArticleMutation = useCreateArticleMutation();
+  const updateArticleMutation = useUpdateArticleMutation();
+
+  const { data: categoryTree = [] } = useCategoryTreeQuery(CategoryType.CONTENT_TOPIC);
+  const flatCategories = React.useMemo(() => flattenCategories(categoryTree), [categoryTree]);
 
   const [title, setTitle] = React.useState(initialPost?.title || '');
-  const [summary, setSummary] = React.useState(initialPost?.summary || '');
-  const [category, setCategory] = React.useState(initialPost?.category || CATEGORIES[0]);
-  const [dietSchool, setDietSchool] = React.useState<DietSchool>(
-    initialPost?.dietSchool || 'THUAN_CHAY'
-  );
-  const [coverImage, setCoverImage] = React.useState(
-    initialPost?.coverImage || COVER_PRESETS[0].url
-  );
-  const [contentMarkdown, setContentMarkdown] = React.useState(
-    initialPost?.contentMarkdown ||
-      `## 1. Mở đầu chia sẻ\nViết những dòng chia sẻ chân thành về trải nghiệm ăn chay của bạn...\n\n### 2. Bí quyết dinh dưỡng cần lưu ý\n- **Đảm bảo protein:** Kết hợp các loại đậu và ngũ cốc.\n- **Bổ sung khoáng chất:** Uống đủ nước và bổ sung rau xanh đậm.\n\n> *"Ăn chay nuôi dưỡng tình thương và mang lại sự an lạc nội tâm."*\n\n### 3. Lời khuyên thực hành\nChúc các bạn có những bữa cơm thanh lành tràn đầy năng lượng!`
-  );
+  const [summary, setSummary] = React.useState(() => {
+    if (!initialPost) return '';
+    if ('summary' in initialPost) return initialPost.summary;
+    if ('excerpt' in initialPost) return initialPost.excerpt;
+    return '';
+  });
+  const [category, setCategory] = React.useState(() => {
+    if (!initialPost) return flatCategories[0]?.name || CATEGORIES[0];
+    if ('category' in initialPost) {
+      if (typeof initialPost.category === 'string') return initialPost.category;
+      return initialPost.category?.name || CATEGORIES[0];
+    }
+    return CATEGORIES[0];
+  });
+  const [dietSchool, setDietSchool] = React.useState<DietSchool>(() => {
+    if (initialPost && 'dietSchool' in initialPost && initialPost.dietSchool) {
+      return initialPost.dietSchool;
+    }
+    return 'THUAN_CHAY';
+  });
+  const [coverImage, setCoverImage] = React.useState(() => {
+    if (!initialPost) return COVER_PRESETS[0].url;
+    if ('coverImage' in initialPost) return initialPost.coverImage;
+    if ('coverImageUrl' in initialPost) return initialPost.coverImageUrl;
+    return COVER_PRESETS[0].url;
+  });
+  const [coverMedia, setCoverMedia] = React.useState<{
+    publicId?: string;
+    mimeType?: string;
+    bytes?: number;
+  } | null>(() => {
+    if (initialPost && 'coverMedia' in initialPost) return initialPost.coverMedia ?? null;
+    return null;
+  });
+  const [contentMarkdown, setContentMarkdown] = React.useState(() => {
+    if (!initialPost) {
+      return `## 1. Mở đầu chia sẻ\nViết những dòng chia sẻ chân thành về trải nghiệm ăn chay của bạn...\n\n### 2. Bí quyết dinh dưỡng cần lưu ý\n- **Đảm bảo protein:** Kết hợp các loại đậu và ngũ cốc.\n- **Bổ sung khoáng chất:** Uống đủ nước và bổ sung rau xanh đậm.\n\n> *"Ăn chay nuôi dưỡng tình thương và mang lại sự an lạc nội tâm."*\n\n### 3. Lời khuyên thực hành\nChúc các bạn có những bữa cơm thanh lành tràn đầy năng lượng!`;
+    }
+    if ('contentMarkdown' in initialPost) return initialPost.contentMarkdown;
+    if ('content' in initialPost) return initialPost.content;
+    return '';
+  });
   const [tags, setTags] = React.useState<string[]>(
     initialPost?.tags || ['ĂnChayKhoaHọc', 'DinhDưỡngXanh', 'ThuầnChay']
   );
@@ -124,10 +172,16 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
 
   // Cho phép chuyển đổi vai trò tác giả demo: Thành viên thường vs Chuyên gia Dinh dưỡng
   const [authorRole, setAuthorRole] = React.useState<AuthorRole>(
-    initialPost?.author?.role || 'AUTHORIZED_USER'
+    initialPost &&
+      'author' in initialPost &&
+      'role' in initialPost.author &&
+      initialPost.author.role
+      ? initialPost.author.role
+      : 'AUTHORIZED_USER'
   );
 
   const [activeTab, setActiveTab] = React.useState<'edit' | 'preview'>('edit');
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
   const textareaRef = React.useRef<HTMLTextAreaElement | null>(null);
 
   // Đếm từ & tính thời gian đọc ước tính
@@ -196,7 +250,7 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
     };
   };
 
-  const handleSubmit = (actionType: 'DRAFT' | 'SUBMIT') => {
+  const handleSubmit = async (actionType: 'DRAFT' | 'SUBMIT') => {
     if (!title.trim()) {
       toast.error('Vui lòng nhập tiêu đề bài viết!');
       return;
@@ -208,67 +262,106 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
 
     const currentAuthor = getAuthorInfo();
 
-    let postStatus: 'DRAFT' | 'PENDING' | 'PUBLISHED' = 'PENDING';
+    let postStatus: PostStatus = PostStatus.PENDING_REVIEW;
     if (actionType === 'DRAFT') {
-      postStatus = 'DRAFT';
+      postStatus = PostStatus.DRAFT;
     } else {
       // Nếu tác giả là Chuyên gia dinh dưỡng: xuất bản ngay
       if (currentAuthor.role === 'NUTRITION_EXPERT') {
-        postStatus = 'PUBLISHED';
+        postStatus = PostStatus.PUBLISHED;
       } else {
-        // Nếu là Thành viên thường: vào PENDING chờ chuyên gia duyệt
-        postStatus = 'PENDING';
+        // Nếu là Thành viên thường: vào PENDING_REVIEW chờ chuyên gia duyệt
+        postStatus = PostStatus.PENDING_REVIEW;
       }
     }
 
-    if (isEditing && initialPost) {
-      updatePost(initialPost.id, {
-        title,
-        summary: summary || title,
-        contentMarkdown,
-        category,
-        dietSchool,
-        coverImage,
-        tags,
-        status: postStatus,
-        readingMinutes,
-      });
+    setIsSubmitting(true);
+    try {
+      // Backend nhận categoryIds (UUID) — map tên chuyên mục đang chọn sang id trong cây thật.
+      const categoryId = flatCategories.find((c) => c.name === category)?.id || '';
+      if (isEditing && initialPost) {
+        updatePost(initialPost.id, {
+          title,
+          summary: summary || title,
+          contentMarkdown,
+          category,
+          dietSchool,
+          coverImage,
+          tags,
+          status: postStatus,
+          readingMinutes,
+        });
 
-      toast.success(
-        actionType === 'DRAFT'
-          ? 'Đã cập nhật bản nháp bài viết!'
-          : postStatus === 'PUBLISHED'
-            ? 'Đã cập nhật và xuất bản bài viết thành công!'
-            : 'Đã gửi cập nhật tới Chuyên gia Dinh dưỡng để kiểm duyệt!'
-      );
-      router.push(`/articles/${initialPost.id}`);
-    } else {
-      const created = addPost({
-        title,
-        summary: summary || title,
-        contentMarkdown,
-        category,
-        dietSchool,
-        coverImage,
-        tags,
-        status: postStatus,
-        author: currentAuthor,
-        readingMinutes,
-      });
+        await updateArticleMutation.mutateAsync({
+          id: initialPost.id,
+          article: {
+            title,
+            category: { id: categoryId, name: category },
+            excerpt: summary || title,
+            content: contentMarkdown,
+            coverImageUrl: coverImage,
+            coverMedia,
+            tags,
+            status: postStatus,
+            version:
+              'version' in initialPost && typeof initialPost.version === 'number'
+                ? initialPost.version
+                : 1,
+          },
+        });
 
-      toast.success(
-        actionType === 'DRAFT'
-          ? 'Đã lưu bài viết vào Bản nháp!'
-          : postStatus === 'PUBLISHED'
-            ? '🎉 Bài viết đã được Chuyên gia Dinh dưỡng kiểm chứng và xuất bản!'
-            : '🎉 Bài viết đã gửi thành công! Đang chờ Chuyên gia Dinh dưỡng kiểm duyệt.'
-      );
-
-      if (postStatus === 'PUBLISHED') {
-        router.push(`/articles/${created.id}`);
+        toast.success(
+          actionType === 'DRAFT'
+            ? 'Đã cập nhật bản nháp bài viết!'
+            : postStatus === 'PUBLISHED'
+              ? 'Đã cập nhật và xuất bản bài viết thành công!'
+              : 'Đã gửi cập nhật tới Chuyên gia Dinh dưỡng để kiểm duyệt!'
+        );
+        router.push(`/articles/${initialPost.id}`);
       } else {
-        router.push('/profile?tab=posts');
+        const created = addPost({
+          title,
+          summary: summary || title,
+          contentMarkdown,
+          category,
+          dietSchool,
+          coverImage,
+          tags,
+          status: postStatus,
+          author: currentAuthor,
+          readingMinutes,
+        });
+
+        const res = await createArticleMutation.mutateAsync({
+          title,
+          category: { id: categoryId, name: category },
+          excerpt: summary || title,
+          content: contentMarkdown,
+          coverImageUrl: coverImage,
+          coverMedia,
+          tags,
+          status: postStatus,
+        });
+
+        toast.success(
+          actionType === 'DRAFT'
+            ? 'Đã lưu bài viết vào Bản nháp!'
+            : postStatus === 'PUBLISHED'
+              ? '🎉 Bài viết đã được Chuyên gia Dinh dưỡng kiểm chứng và xuất bản!'
+              : '🎉 Bài viết đã gửi thành công! Đang chờ Chuyên gia Dinh dưỡng kiểm duyệt.'
+        );
+
+        const targetId = res?.id || created.id;
+        if (postStatus === 'PUBLISHED') {
+          router.push(`/articles/${targetId}`);
+        } else {
+          router.push('/articles');
+        }
       }
+    } catch {
+      // Error handled by mutation toast
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -575,24 +668,31 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 space-y-3">
-              <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-muted border">
-                <img
-                  src={coverImage}
-                  alt="Ảnh bìa bài viết"
-                  className="h-full w-full object-cover"
-                />
-              </div>
+              <ImageUploader
+                value={coverImage}
+                onChange={(url, meta) => {
+                  setCoverImage(url);
+                  setCoverMedia(
+                    meta?.publicId && meta?.mimeType && meta?.bytes
+                      ? { publicId: meta.publicId, mimeType: meta.mimeType, bytes: meta.bytes }
+                      : null
+                  );
+                }}
+              />
 
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 pt-1">
                 <Label className="text-xs text-muted-foreground">
-                  Chọn nhanh ảnh bìa chất lượng cao:
+                  Hoặc chọn nhanh ảnh bìa có sẵn:
                 </Label>
                 <div className="grid grid-cols-2 gap-2">
                   {COVER_PRESETS.map((p, idx) => (
                     <button
                       key={idx}
                       type="button"
-                      onClick={() => setCoverImage(p.url)}
+                      onClick={() => {
+                        setCoverImage(p.url);
+                        setCoverMedia(null);
+                      }}
                       className={cn(
                         'text-left text-[11px] p-2 rounded-lg border transition-all truncate',
                         coverImage === p.url
@@ -604,19 +704,6 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
                     </button>
                   ))}
                 </div>
-              </div>
-
-              <div className="space-y-1 pt-1">
-                <Label htmlFor="custom-cover" className="text-xs text-muted-foreground">
-                  Hoặc dán URL ảnh ngoài:
-                </Label>
-                <Input
-                  id="custom-cover"
-                  placeholder="https://..."
-                  value={coverImage}
-                  onChange={(e) => setCoverImage(e.target.value)}
-                  className="h-8 text-xs rounded-lg"
-                />
               </div>
             </CardContent>
           </Card>
@@ -634,9 +721,16 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
                     <SelectValue placeholder="Chọn chuyên mục" />
                   </SelectTrigger>
                   <SelectContent>
-                    {CATEGORIES.map((cat) => (
-                      <SelectItem key={cat} value={cat} className="text-xs">
-                        {cat}
+                    {(flatCategories.length > 0
+                      ? flatCategories.map((cat) => ({
+                          id: cat.id,
+                          value: cat.name,
+                          label: `${cat.parentId ? '— ' : ''}${cat.name}`,
+                        }))
+                      : CATEGORIES.map((c) => ({ id: c, value: c, label: c }))
+                    ).map((cat) => (
+                      <SelectItem key={cat.id} value={cat.value} className="text-xs">
+                        {cat.label}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -737,18 +831,22 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
               <div className="space-y-2 pt-2">
                 <Button
                   type="button"
+                  disabled={isSubmitting}
                   onClick={() => handleSubmit('SUBMIT')}
                   className="w-full rounded-xl gap-2 font-bold h-11 shadow-sm"
                 >
                   <Send className="h-4 w-4" />
-                  {authorRole === 'NUTRITION_EXPERT'
-                    ? 'Xuất bản & Kiểm chứng bài viết'
-                    : 'Gửi Chuyên gia duyệt bài'}
+                  {isSubmitting
+                    ? 'Đang lưu bài viết...'
+                    : authorRole === 'NUTRITION_EXPERT'
+                      ? 'Xuất bản & Kiểm chứng bài viết'
+                      : 'Gửi Chuyên gia duyệt bài'}
                 </Button>
 
                 <Button
                   type="button"
                   variant="outline"
+                  disabled={isSubmitting}
                   onClick={() => handleSubmit('DRAFT')}
                   className="w-full rounded-xl gap-2 text-xs h-9 text-muted-foreground hover:text-foreground"
                 >

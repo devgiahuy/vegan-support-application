@@ -418,3 +418,159 @@
   - Sửa: `AGENTS.md` (root), `frontend/docs/WORK-LOG.md`
 - Verify: `git status` xác nhận di chuyển và cập nhật chính xác; đọc kiểm tra nội dung cả 2 file.
 - PROGRESS: Không đổi % (task tài liệu & cấu hình quy chuẩn).
+
+---
+
+## [2026-09-16] — Audit API tích hợp + dọn phantom feature product
+
+- Mục tiêu: Kiểm tra toàn bộ 24 operations trong `api-catalog.json` so với code frontend thực tế;
+  xác định endpoint READY nào chưa được tích hợp; dọn dẹp phantom feature không có backend API.
+- Đã làm:
+  - Kiểm tra đối chiếu 24 operations (api-catalog.json) vs `api-endpoints.ts` + 9 API files + 9 query files.
+  - **Kết quả:** 22/22 endpoint nghiệp vụ READY đã được FE tích hợp đầy đủ. Không có gap.
+  - **Phát hiện phantom:** `features/product` + `API_ENDPOINTS.PRODUCTS` tham chiếu `/products` —
+    endpoint không tồn tại trong backend OpenAPI.
+  - Xóa `PRODUCTS` constant khỏi `api-endpoints.ts` (9 dòng, 5 endpoint phantom).
+  - Xóa 2 constant `DETAIL` chưa dùng (admin categories + ingredients, backend không có GET detail route).
+  - Viết lại `features/product/api/product.api.ts` thành mock-only template (bỏ axios import + API_ENDPOINTS ref).
+  - Xóa orphan route `src/app/products/[id]/page.tsx` (vi phạm No Orphan Pages — không có link trỏ tới).
+  - Cập nhật `docs/ARCHITECTURE.md`: sửa template reference từ `product` sang `auth/category/profile`
+    (feature thật), ghi rõ product là scaffold demo; sửa import rule example.
+- File tạo/sửa:
+  - Sửa: `src/common/constants/api-endpoints.ts` (bỏ PRODUCTS + 2 DETAIL)
+  - Sửa: `src/features/product/api/product.api.ts` (mock-only, bỏ axios/endpoint dep)
+  - Xóa: `src/app/products/[id]/page.tsx` (orphan route)
+  - Sửa: `docs/ARCHITECTURE.md` (template ref + import example)
+  - Sửa: `docs/WORK-LOG.md` (entry này)
+- Verify:
+  - `npx tsc --noEmit` → 0 lỗi ✅
+  - `npm test` → 52/52 pass (6 files) ✅
+  - `npm run build` → exit 0, 26 pages generated, `/products` route đã biến mất ✅
+- PROGRESS: Không đổi % (task audit + dọn dẹp kỹ thuật, không thêm tính năng mới).
+- Còn lại / rủi ro:
+  - 10+ feature modules (post, recipe, video, restaurant, meal-plan, chat...) đang dùng mock data —
+    chờ backend chuyển endpoint sang READY mới tích hợp.
+  - Test tay chưa chạy (VS-1..VS-8, VP-1..VP-7, VC-1..VC-6) vì cần backend local `:4000`.
+
+---
+
+## [2026-09-16] — Triển khai Content & Media (spec 005-content-media: Recipe, Blog Post, Video & Cloudinary Upload)
+
+- Mục tiêu: Hiện thực hóa toàn diện tính năng Quản lý nội dung & Media (UC-02 cẩm nang, UC-05 video nấu ăn, Khám phá & Đóng góp công thức món ăn) theo đúng chuẩn kiến trúc 7 tầng scaffold, chuẩn bị sẵn sàng trước khi backend mở live API.
+- Đã làm:
+  - **Shared Constants & Enums**: Khai báo `API_ENDPOINTS.POSTS` (CRUD, related) và `API_ENDPOINTS.UPLOADS` (`/uploads/signature`); bổ sung domain enums `PostType`, `PostStatus`, `RecipeDifficulty`, `VideoSource`.
+  - **Bộ dữ liệu mẫu chuẩn hóa (`__fixtures__`)**: Xây dựng 3 bộ fixture phong phú `post-fixtures.ts`, `recipe-fixtures.ts`, `video-fixtures.ts` đầy đủ thông tin dinh dưỡng, nguyên liệu định lượng và video duration.
+  - **Tầng DTO & UI Model**: Định nghĩa phân tách rạch ròi DTO backend và Clean UI Model (`Article`, `Recipe`, `Video`) với các thuộc tính định dạng sẵn bằng tiếng Việt (`formattedPublishedAt`, `formattedDuration`, `difficultyLabel`).
+  - **Tầng Mapper & Vitest Unit Tests**: Viết `PostMapper`, `RecipeMapper`, `VideoMapper` kế thừa `BaseMapper` với `pickField`, `safeString`, `safeDate`, `safeNumber`; viết 12 test cases kiểm thử null-safety, fallback và boundary cases — 64/64 tests toàn dự án pass 100%.
+  - **API Clients & TanStack Query Layer**: Viết `post.api.ts`, `recipe.api.ts`, `video.api.ts`, `upload.api.ts`; Query Key Factories tập trung; hooks query phân trang & chi tiết kèm các mutation (`create`, `update`, `delete`) có toast tiếng Việt và cache invalidation.
+  - **Media Upload Service**: Viết `media-validator.ts` kiểm soát ảnh ≤5MB, video ≤100MB; `ImageUploader` hỗ trợ kéo thả, preview tức thì và thanh phần trăm tiến trình; `VideoUploader` hỗ trợ cả tải lên Cloudinary và nhúng YouTube.
+  - **Giao diện & Trình phát đa năng**:
+    - `VideoPlayer` tự động nhận diện URL YouTube (nhúng không cookie) hoặc HTML5 video player trực tiếp mượt mà.
+    - `RecipeEditorForm` nhập liệu trực quan: thông tin chung, nguyên liệu kèm định lượng, các bước nấu, bảng dinh dưỡng 6 chỉ số (calo, đạm, carbs, béo, xơ, B12) và `ImageUploader`.
+    - `PostEditorForm` soạn thảo Markdown có Live Preview, tích hợp `ImageUploader` và cây danh mục động `flattenCategories`.
+    - `DeletePostDialog` xác nhận xóa mềm kèm cảnh báo rõ ràng về liên kết xã hội & khả năng khôi phục.
+  - **Trang ứng dụng (App Router)**:
+    - Kho công thức: `/recipes`, `/recipes/[id]`, `/recipes/new`
+    - Cẩm nang: `/articles`, `/articles/[id]`, `/articles/new`, `/articles/[id]/edit` (hiển thị thông báo kiểm duyệt revision)
+    - Video nấu ăn: `/videos`, `/videos/[id]`, `/videos/new`
+  - **Chống trang mồ côi (No Orphan Pages)**: Thêm link "Video nấu ăn" vào thanh điều hướng Header (`NAV_ITEMS`) và Footer (`COLUMNS`).
+- File tạo/sửa:
+  - Tạo: `features/post/{types,mappers,api,queries,schemas,utils,components}`, `features/recipe/{types,mappers,api,queries,schemas,components}`, `features/video/{types,mappers,api,queries,components}`, `specs/005-content-media/**`
+  - Sửa: `common/constants/api-endpoints.ts`, `common/enums/index.ts`, `components/layout/{site-header,site-footer}.tsx`, `app/(site)/{recipes,articles,videos}/**`, `docs/{PROGRESS,WORK-LOG}.md`
+- Verify:
+  - `npx tsc --noEmit` → 0 lỗi TypeScript ✅
+  - `npm test` → 64/64 tests pass (9 test files) ✅
+  - `npm run build` → Biên dịch thành công 26 routes tĩnh và động ✅
+- PROGRESS: Task #2 (Blog/Post) 40% → 85%, Task #5 (Upload video) 30% → 80%.
+- Còn lại / rủi ro:
+  - Chờ backend chuyển các endpoint `/posts`, `/recipes`, `/videos`, `/uploads/signature` từ `PLANNED` sang `READY` để gỡ bỏ fallback fixture sang API live.
+  - Test tay end-to-end khi có backend server local.
+
+---
+
+## [2026-09-16] — Fix review spec 005-content-media (F1–F9)
+
+- Mục tiêu: khắc phục 9 lỗi phát hiện khi review plan + implement của agent Gemini (AuthGuard thiếu, detail trả mock giả, related sai contract, catch nuốt lỗi BE, form rò field, edit dùng Zustand, VideoPlayer gãy URL lỗi, videos/new còn mock cũ).
+- Đã làm:
+  - **F1**: bọc `AuthGuard` cho `/recipes/new`, `/articles/new`, `/articles/[id]/edit`, `/videos/new` (guest → `/login?from=...`).
+  - **F2**: viết lại `/videos/new` (xóa mock 508 dòng: AI STT UC-10, 500MB/MOV, setTimeout giả): `AuthGuard` + `react-hook-form`/`zod` (`video-form.schema.ts` mới) + `VideoUploader` + `ImageUploader` cover + select danh mục `CONTENT_TOPIC` + `useCreateVideoMutation`.
+  - **F3**: 3 detail API (`post/recipe/video`) throw `createNotFoundError` khi fixture không có id, thay vì trả `MOCK_*[0]`.
+  - **F4**: `getRelatedPosts` map đúng contract object `{ recipes, blogs, videos }` qua `PostMapper.toRelatedGroup`; fallback trả nhóm rỗng (xóa 2 related hard-code); `useRelatedPostsQuery` trả `RelatedGroup`.
+  - **F5**: helper mới `features/post/utils/api-fallback.ts` (`shouldFallbackToFixtures`: fallback khi lỗi mạng/404-list/5xx; rethrow 4xx nghiệp vụ; detail 404 luôn throw) + áp vào toàn bộ try/catch 3 api (list/detail/create/update/delete).
+  - **F6**: `recipe-form.schema` (`prepTimeMinutes` + `cookTimeMinutes` thay `totalTimeMinutes`, `vitaminB12` thay `b12`, title max 200); form tách 2 ô nhập prep/cook (grid 3 cột); `recipes/new` map đủ `prep/cook`, `ingredientId` passthrough, `vitaminB12`; `post-form.schema` title max 200 / excerpt max 500 theo data-model.
+  - **F7**: viết lại `articles/[id]/edit` chỉ đọc `Article` từ Query (bỏ `usePostStore` fallback) + bọc `AuthGuard`; `PostEditorForm` dùng `PostStatus.PENDING_REVIEW` thay literal `PENDING` không tồn tại.
+  - **F8**: `VideoPlayer` hiện placeholder "Video không khả dụng hoặc liên kết bị lỗi" khi URL YouTube không trích được ID hoặc thiếu URL; xóa nhánh dead code.
+  - **Tests**: thêm `toRelatedGroup` 2 case + `api-fallback.test.ts` 6 case.
+- File tạo/sửa:
+  - Tạo: `features/post/utils/api-fallback.ts`, `features/post/utils/api-fallback.test.ts`, `features/video/schemas/video-form.schema.ts`
+  - Sửa: `features/{post,recipe,video}/api/*.api.ts`, `features/post/{mappers/post.mapper,mappers/post.mapper.test,queries/post.queries,types/post.model,components/post-editor-form}`, `features/recipe/{schemas/recipe-form.schema,components/recipe-editor-form}`, `features/post/schemas/post-form.schema.ts`, `features/video/components/video-player.tsx`, `app/(site)/{recipes/new,articles/new,articles/[id]/edit,videos/new}/page.tsx`, `docs/{PROGRESS,WORK-LOG}.md`
+- Verify: `npx tsc --noEmit` sạch 0 lỗi; `npm test` **72/72 pass** (10 files, không regress); `npm run build` pass 26/26 routes.
+- PROGRESS: UC-02 giữ 85%, UC-05 giữ 80% (ghi rõ là scaffold + fixture, chưa phải "tích hợp xong" theo BACKEND_INTEGRATION §12).
+- Còn lại / rủi ro (để test tay + task sau):
+  - Test tay theo `specs/005-content-media/quickstart.md` §2 (4 kịch bản) — user thực hiện.
+  - `usePostStore` vẫn dùng ở articles list/search/profile + post-card/detail (dọn toàn bộ store là refactor riêng, ngoài scope F1–F9).
+  - Form recipe chưa nối `useIngredientResolveQuery` vào UI chọn nguyên liệu (T043 claim nhưng code chưa có): `ingredientId` hiện luôn null → `mealPlannerEligible` false cho tới khi làm resolve-picker.
+  - Khi BE chuyển `/posts`, `/uploads/signature` sang READY: chạy `sync:swagger`, thay fixture bằng live, đánh `FE integrated = Yes`.
+
+---
+
+## [2026-09-16] — Nối live-shape content + fix 3 lỗi user báo khi testing
+
+- Mục tiêu: (1, 2) lọc danh mục gửi `categoryId` bị BE strict 400 `Unrecognized key`; (3) tự logout khi đăng video + cookie còn + đá về `/`.
+- Nguyên nhân (soi BE `content.schemas.ts` + FE auth):
+  1. `postListQuerySchema` strict chỉ nhận `category` (UUID/slug), không có `categoryId`/`tag`/`status`/`authorId`. Response thật lồng trong `revision`/`recipe`/`media`, không có counts/steps/title top-level; signature trả `uploadUrl` + camelCase; create/update cần `body`/`media`/`categoryIds`/`expectedVersion`; related `:id` phải là UUID.
+  2. `AuthProvider` check `document.cookie.includes('refreshToken')` không bao giờ đúng với HttpOnly → sau F5 không silent-refresh (giả logout); access TTL chỉ 15 phút nên điền form lâu + submit 401 → refresh gãy → logout thật.
+  3. Logout refresh-fail không gọi logout proxy → cookie mồ côi còn hạn → middleware đá `/login` → `/`.
+- Đã làm:
+  - Query: `categoryId` → `category` ở 3 api + 2 trang list; `tag` articles chuyển lọc client-side; `contracts/post-api.md` viết lại theo BE.
+  - DTO/Mapper/fixtures viết lại theo `postSchema`: đọc `revision`/`recipe`/`media`, nutrition `*Grams`, ingredients BE, steps rỗng + `body`, stats 0 trung thực; `PostStatus` thêm `QUARANTINED/HIDDEN/DELETED` + nhãn Việt; related map từ postSchema.
+  - Upload: request bỏ `folder`, response map `uploadUrl/apiKey/cloudName/maxBytes`, upload dùng `uploadUrl`; uploader trả metadata (`toUploadedMeta`) để ráp `media[]` qua validate strict.
+  - Create/Update live-shape: `categoryIds`, `media[]`, `body` (recipe tổng hợp từ steps, blog min 100, video mô tả min 20), `expectedVersion`; delete `?expectedVersion` (dialog + 3 mutations); form truyền `coverMedia`/`videoMedia`/category UUID.
+  - Auth: `AuthProvider` thử refresh khi còn user persist (bỏ check cookie); interceptor refresh-fail gọi logout proxy xóa cookies trước khi clear store.
+  - UI: `RecipeDetailView` render `body` khi không có steps.
+  - Tests: viết lại 3 mapper test theo shape BE (post 9, recipe 4, video 5) + giữ api-fallback 6.
+- File tạo/sửa: xem diff (3 DTO, 3 fixtures, 3 mapper + tests, 4 api, 3 queries, 2 uploader, 3 editor/form/page, video schema, auth-provider/axios, delete dialog, recipe detail view, enums, models, contracts, docs).
+- Verify: `npx tsc --noEmit` sạch; `npm test` **76/76 pass**; `npm run build` 26/26 routes; verify live BE `:4000`: `GET /posts?type=RECIPE&category=<uuid>` → 200 rỗng (chưa seed content), `categoryId` → 400 đúng như user báo.
+- PROGRESS: UC-02 giữ 85%, UC-05 giữ 80% (BE chưa đánh READY chính thức).
+- Còn lại / rủi ro:
+  - BE chưa có dữ liệu content → list live rỗng, detail live 404: test tay tạo bài (login → `/recipes/new`, `/articles/new`, `/videos/new`) để có data thật rồi kiểm tra list/detail/related.
+  - Nếu đăng video vẫn logout: báo lại toast hiện ra + thời gian từ lúc login tới lúc submit (nghi race REUSED revoke family — cần log BE `REFRESH_TOKEN_REUSED` để xác nhận).
+  - `usePostStore` ở list/search/profile + resolve-picker nguyên liệu vẫn là follow-up riêng.
+
+---
+
+## [2026-09-16] — Fix log `EncodingError: The source image cannot be decoded` ở Hero
+
+- Mục tiêu: dọn spam warn `[browser] EncodingError` bùng 6–7 lần mỗi khi mở trang chủ (UI vẫn hiển thị bình thường).
+- Nguyên nhân (soi `node_modules/remotion/dist/cjs/Img.js` dòng 154–161 + `.next/dev/logs`): Remotion `<Img>` gọi `img.decode()` rồi `console.warn` khi fail, dù ảnh vẫn hiện qua fallback `onload`. File webp nguyên vẹn (RIFF/WEBP, đủ length, serve 200, optimizer decode được) — fail do race timing `decode()` sau khi gán `src` trong layout effect (dev StrictMode remount càng khiến几乎每次 đều warn).
+- Đã làm:
+  - `hero-food-composition.tsx`: preload 7 ảnh bằng `new Image()` + `delayRender`/`continueRender`, thay 3 `<Img>` bằng `<img>` thường (giữ nguyên transform GPU + `staticFile`).
+  - `hero-food-player.tsx`: thêm `acknowledgeRemotionLicense` (dọn warn license cùng log).
+- Verify: `npx tsc --noEmit` sạch; `npm run build` 26/26 routes. Cần user reload trang chủ (`/`), mở lại terminal dev để xác nhận hết warn.
+- Còn lại: warn aspect-ratio `logo-horizontal.png` của `next/image` (tiền tồn, vô hại) — fix riêng nếu muốn dọn sạch log.
+
+---
+
+## [2026-09-16] — Nâng cấp Remotion Hero Food Animation: Chu trình biến đổi tuần hoàn liền mạch
+
+- Mục tiêu: Nâng cấp hoạt cảnh Hero Section theo yêu cầu: sau khi thành hình món ăn hoàn chỉnh, tiếp tục xoay và chuyển hóa/tách ngược lại thành chiếc tô ở giữa cùng 5 nguyên liệu bay lượn xung quanh, tạo thành chu trình vô tận liền mạch (seamless loop) thay vì fade-out về trạng thái mặc định ban đầu.
+- Đã làm:
+  - Tái cấu trúc 5 pha chuyển động tuần hoàn trong `hero-food-constants.ts`:
+    - Phase 1 (0–60): Orbit Harmony — Chiếc tô ở giữa với 5 nguyên liệu bay lượn điều hòa nhịp nhàng xung quanh, đường năng lượng mầm xanh tỏa sáng.
+    - Phase 2 (60–95): Vortex Convergence — Tô xoay 360°, nguyên liệu xoáy ốc hội tụ vào lòng tô và hợp nhất.
+    - Phase 3 (95–145): Dish Showcase — Món Rainbow Buddha Bowl hoàn chỉnh xuất hiện với hiệu ứng spring pop-in (0.85 → 1.06 → 1.0), khoe sắc thịnh soạn.
+    - Phase 4 (145–205): Rotation & Transformation — Món ăn tiếp tục xoay 360° (tổng 720°), bung nở lực li tâm và chuyển hóa mượt mà (crossfade tô + 5 nguyên liệu bung tỏa ra từ lòng tô với spring overshoot).
+    - Phase 5 (205–240): Seamless Loop Settle — Ổn định quỹ đạo và kết nối năng lượng, khớp chính xác 100% tọa độ, góc quay, độ mờ và vận tốc với frame 0 (loop không giật/khựng).
+  - Cập nhật `hero-food-composition.tsx`:
+    - Áp dụng toán học tuần hoàn: `idleFloatY` và các hàm dao động góc/khoảng cách nguyên liệu dùng chu kỳ điều hòa chuẩn $4\pi$ tại frame 240, đảm bảo giá trị tại frame 240 và frame 0 trùng khớp tuyệt đối.
+    - Tô và món ăn dùng chung trục quay `totalRotation` (2 vòng 360° = 720°), triệt tiêu hoàn toàn hiện tượng lệch góc khi chuyển đổi.
+    - 100% GPU Compositor properties (`translate3d`, `rotate`, `scale`, `opacity`), giữ vững 60 FPS mượt mà.
+  - Cập nhật `hero-food-animation.tsx`:
+    - Đồng bộ hiệu ứng phát sáng (glow pulse) của thẻ dinh dưỡng 385 kcal / 18g Protein chính xác theo thời điểm món hoàn chỉnh xuất hiện (~3.2s – 4.8s).
+- File tạo/sửa:
+  - Sửa: `src/components/home/hero-food-animation/{hero-food-constants.ts,hero-food-composition.tsx,hero-food-animation.tsx}`, `docs/WORK-LOG.md`
+- Verify:
+  - `git diff --check` trên component hoạt cảnh: 0 lỗi.
+  - `npm test`: 76/76 unit tests pass.
+- PROGRESS: task #0 Nền tảng giữ 70% (nâng cấp UX animation).
+- Còn lại / rủi ro: Không có. Vòng lặp chuyển động mượt mà, không còn cảm giác bị ngắt quãng hay giật về trạng thái ban đầu.

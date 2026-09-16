@@ -17,9 +17,11 @@ import {
   Lightbulb,
   AlertTriangle,
   Pencil,
+  Trash2,
   ArrowLeft,
   CheckCircle2,
 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -29,17 +31,42 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { VoteControl } from '@/components/shared/vote-control';
 import { CommentSection } from '@/components/shared/comment-section';
 import { PostCard } from './post-card';
-import type { Post } from '../types/post.model';
+import { DeletePostDialog } from './delete-post-dialog';
+import type { Post, Article } from '../types/post.model';
 import { usePostStore } from '@/store/usePostStore';
 
 interface PostDetailViewProps {
-  post: Post;
-  relatedPosts: Post[];
+  post: Post | Article;
+  relatedPosts: (Post | Article)[];
 }
 
 export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
+  const router = useRouter();
   const { votePost, toggleSavePost } = usePostStore();
-  const [isSaved, setIsSaved] = React.useState<boolean>(post.saved || false);
+  const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
+  const [isSaved, setIsSaved] = React.useState<boolean>(
+    ('saved' in post ? post.saved : false) ?? false
+  );
+
+  const coverImage =
+    ('coverImageUrl' in post ? post.coverImageUrl : post.coverImage) ||
+    'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=800&auto=format&fit=crop&q=80';
+  const categoryName =
+    typeof post.category === 'string'
+      ? post.category
+      : post.category?.name || 'Dinh dưỡng & Sức khỏe';
+  const readingMinutes =
+    ('readingTimeMinutes' in post ? post.readingTimeMinutes : post.readingMinutes) || 5;
+  const publishedDate =
+    ('formattedPublishedAt' in post ? post.formattedPublishedAt : post.publishedAt) || '';
+  const summary = ('excerpt' in post ? post.excerpt : post.summary) || '';
+  const contentMarkdown = ('content' in post ? post.content : post.contentMarkdown) || '';
+  const authorAvatar = ('avatar' in post.author ? post.author.avatar : post.author.avatarUrl) || '';
+  const authorRoleTitle =
+    ('roleTitle' in post.author ? post.author.roleTitle : undefined) || 'Tác giả';
+  const score = 'stats' in post ? post.stats.likes : post.score;
+  const views = 'stats' in post ? post.stats.views : post.views;
+  const isExpert = 'role' in post.author && post.author.role === 'NUTRITION_EXPERT';
 
   const handleToggleSave = () => {
     setIsSaved(!isSaved);
@@ -56,14 +83,13 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
     }
   };
 
+  const dietSchool = 'dietSchool' in post ? post.dietSchool : undefined;
   const dietSchoolLabel =
-    post.dietSchool === 'PHAT_GIAO'
+    dietSchool === 'PHAT_GIAO'
       ? 'Chay Phật giáo'
-      : post.dietSchool === 'DAO_GIAO'
+      : dietSchool === 'DAO_GIAO'
         ? 'Chay Đạo giáo'
         : 'Thuần chay';
-
-  const isExpert = post.author.role === 'NUTRITION_EXPERT';
 
   // Render markdown cơ bản thành các block UI bắt mắt
   const renderMarkdownContent = (md: string) => {
@@ -231,7 +257,7 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
             <p className="font-bold">Bài viết cần chỉnh sửa theo yêu cầu của Chuyên gia</p>
             <p className="text-xs opacity-90 leading-relaxed">
               Lý do:{' '}
-              {post.moderationReason ||
+              {('moderationReason' in post ? post.moderationReason : undefined) ||
                 'Vui lòng bổ sung đầy đủ định lượng và nguồn gốc thông tin.'}
             </p>
           </div>
@@ -242,7 +268,7 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
       <header className="space-y-4">
         <div className="flex flex-wrap items-center gap-2">
           <Badge className="bg-primary text-primary-foreground font-semibold px-3 py-1">
-            {post.category}
+            {categoryName}
           </Badge>
           <Badge variant="outline" className="border-primary/40 text-primary font-medium">
             {dietSchoolLabel}
@@ -259,14 +285,14 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
         </h1>
 
         <p className="text-base sm:text-xl text-muted-foreground leading-relaxed font-normal">
-          {post.summary}
+          {summary}
         </p>
 
         {/* Author Metadata Bar */}
         <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-border/70">
           <div className="flex items-center gap-3">
             <Avatar className="h-12 w-12 ring-2 ring-primary/20">
-              <AvatarImage src={post.author.avatar} alt={post.author.name} />
+              <AvatarImage src={authorAvatar} alt={post.author.name} />
               <AvatarFallback className="bg-primary/10 text-primary font-bold">
                 {post.author.name.charAt(0)}
               </AvatarFallback>
@@ -281,25 +307,29 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
                     variant="secondary"
                     className="gap-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400 text-[10px]"
                   >
-                    <BadgeCheck className="h-3 w-3" /> {post.author.roleTitle}
+                    <BadgeCheck className="h-3 w-3" /> {authorRoleTitle}
                   </Badge>
                 ) : (
                   <Badge variant="secondary" className="text-[10px] text-muted-foreground">
-                    {post.author.roleTitle || 'Thành viên'}
+                    {authorRoleTitle}
                   </Badge>
                 )}
               </div>
               <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
+                {publishedDate && (
+                  <>
+                    <span className="flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5" /> {publishedDate}
+                    </span>
+                    <span>•</span>
+                  </>
+                )}
                 <span className="flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5" /> {post.publishedAt}
+                  <Clock className="h-3.5 w-3.5" /> {readingMinutes} phút đọc
                 </span>
                 <span>•</span>
                 <span className="flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" /> {post.readingMinutes} phút đọc
-                </span>
-                <span>•</span>
-                <span className="flex items-center gap-1">
-                  <Eye className="h-3.5 w-3.5" /> {post.views.toLocaleString()} lượt xem
+                  <Eye className="h-3.5 w-3.5" /> {views.toLocaleString()} lượt xem
                 </span>
               </div>
             </div>
@@ -334,13 +364,22 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
                 <Pencil className="h-3.5 w-3.5" /> Sửa bài
               </Link>
             </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowDeleteDialog(true)}
+              className="rounded-full gap-1.5 text-destructive hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Xoá bài
+            </Button>
           </div>
         </div>
       </header>
 
       {/* Featured Cover Image */}
       <div className="relative aspect-video sm:aspect-[21/9] w-full rounded-3xl overflow-hidden shadow-md border bg-muted">
-        <img src={post.coverImage} alt={post.title} className="h-full w-full object-cover" />
+        <img src={coverImage} alt={post.title} className="h-full w-full object-cover" />
       </div>
 
       {/* Main Body Layout (Content + Sticky Vote Control) */}
@@ -349,11 +388,11 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
         <div className="hidden lg:flex lg:col-span-1 flex-col items-center">
           <div className="sticky top-24 p-3 rounded-2xl border bg-card/80 backdrop-blur shadow-sm space-y-4 flex flex-col items-center">
             <VoteControl
-              initialScore={post.score}
+              initialScore={score}
               orientation="vertical"
               size="lg"
               itemTitle={post.title}
-              onVoteChange={(_, newScore) => votePost(post.id, newScore - post.score)}
+              onVoteChange={(_, newScore) => votePost(post.id, newScore - score)}
             />
             <Button
               variant="ghost"
@@ -384,16 +423,16 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
               Đánh giá độ hữu ích:
             </span>
             <VoteControl
-              initialScore={post.score}
+              initialScore={score}
               orientation="horizontal"
               size="sm"
-              onVoteChange={(_, newScore) => votePost(post.id, newScore - post.score)}
+              onVoteChange={(_, newScore) => votePost(post.id, newScore - score)}
             />
           </div>
 
           {/* Article Markdown Body */}
           <div className="prose prose-slate dark:prose-invert max-w-none">
-            {renderMarkdownContent(post.contentMarkdown)}
+            {renderMarkdownContent(contentMarkdown)}
           </div>
 
           {/* Tags */}
@@ -419,7 +458,7 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
           <Card className="rounded-3xl border-border/80 bg-gradient-to-br from-card to-primary/5 p-6 shadow-sm">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <Avatar className="h-16 w-16 ring-2 ring-primary/30">
-                <AvatarImage src={post.author.avatar} alt={post.author.name} />
+                <AvatarImage src={authorAvatar} alt={post.author.name} />
                 <AvatarFallback className="text-lg bg-primary/10 text-primary">
                   {post.author.name.charAt(0)}
                 </AvatarFallback>
@@ -427,9 +466,7 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
               <div className="space-y-1 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
                   <h4 className="text-lg font-bold text-foreground">{post.author.name}</h4>
-                  <Badge className="bg-primary/10 text-primary text-xs">
-                    {post.author.roleTitle}
-                  </Badge>
+                  <Badge className="bg-primary/10 text-primary text-xs">{authorRoleTitle}</Badge>
                 </div>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
                   {isExpert
@@ -473,6 +510,17 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
           </div>
         </section>
       )}
+      {/* Soft Delete Confirmation Modal */}
+      <DeletePostDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        postId={post.id}
+        postTitle={post.title}
+        expectedVersion={
+          'version' in post && typeof post.version === 'number' ? post.version : undefined
+        }
+        onSuccess={() => router.push('/articles')}
+      />
     </div>
   );
 }

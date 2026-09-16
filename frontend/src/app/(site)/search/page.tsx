@@ -125,9 +125,12 @@ function SearchContent() {
         (v) =>
           v.title.toLowerCase().includes(normalizedQuery) ||
           v.description.toLowerCase().includes(normalizedQuery) ||
-          v.category.toLowerCase().includes(normalizedQuery) ||
-          v.aiSummary.dishName.toLowerCase().includes(normalizedQuery) ||
-          v.aiSummary.detectedIngredients.some((i) => i.toLowerCase().includes(normalizedQuery)) ||
+          (v.category && v.category.toLowerCase().includes(normalizedQuery)) ||
+          (v.aiSummary?.dishName && v.aiSummary.dishName.toLowerCase().includes(normalizedQuery)) ||
+          (v.aiSummary?.detectedIngredients &&
+            v.aiSummary.detectedIngredients.some((i) =>
+              i.toLowerCase().includes(normalizedQuery)
+            )) ||
           v.author.name.toLowerCase().includes(normalizedQuery)
       );
     }
@@ -154,7 +157,9 @@ function SearchContent() {
         (r) =>
           r.title.toLowerCase().includes(normalizedQuery) ||
           (r.description && r.description.toLowerCase().includes(normalizedQuery)) ||
-          r.category.toLowerCase().includes(normalizedQuery) ||
+          (typeof r.category === 'string'
+            ? r.category.toLowerCase().includes(normalizedQuery)
+            : r.category?.name?.toLowerCase().includes(normalizedQuery)) ||
           (r.dietTag && r.dietTag.toLowerCase().includes(normalizedQuery))
       );
     }

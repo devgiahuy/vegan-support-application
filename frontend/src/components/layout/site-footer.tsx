@@ -7,6 +7,7 @@ const COLUMNS = [
     title: 'Khám phá',
     links: [
       { label: 'Món chay theo mùa', href: '/recipes' },
+      { label: 'Video hướng dẫn nấu', href: '/videos' },
       { label: 'Danh mục món chay', href: '/categories' },
       { label: 'Thực đơn 7 ngày', href: '/meal-plans' },
       { label: 'Bản đồ quán chay', href: '/restaurants' },

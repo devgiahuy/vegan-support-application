@@ -113,3 +113,36 @@ export enum ResolutionMatch {
   EXACT = 'EXACT',
   AMBIGUOUS = 'AMBIGUOUS',
 }
+
+/** Loại bài viết / nội dung (Content & Media). */
+export enum PostType {
+  RECIPE = 'RECIPE',
+  BLOG = 'BLOG',
+  VIDEO = 'VIDEO',
+}
+
+/** Trạng thái vòng đời bài viết (Content & Media, bám backend `PostStatus`). */
+export enum PostStatus {
+  DRAFT = 'DRAFT',
+  PENDING_REVIEW = 'PENDING_REVIEW',
+  PUBLISHED = 'PUBLISHED',
+  FLAGGED = 'FLAGGED',
+  QUARANTINED = 'QUARANTINED',
+  REJECTED = 'REJECTED',
+  HIDDEN = 'HIDDEN',
+  ARCHIVED = 'ARCHIVED',
+  DELETED = 'DELETED',
+}
+
+/** Độ khó của công thức nấu ăn. */
+export enum RecipeDifficulty {
+  EASY = 'EASY',
+  MEDIUM = 'MEDIUM',
+  HARD = 'HARD',
+}
+
+/** Nguồn phát video. */
+export enum VideoSource {
+  CLOUDINARY = 'CLOUDINARY',
+  YOUTUBE = 'YOUTUBE',
+}

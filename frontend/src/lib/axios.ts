@@ -145,6 +145,19 @@ api.interceptors.response.use(
           return api(originalRequest);
         } catch (err) {
           processQueue(err, null);
+          // Xóa HttpOnly cookies phía server TRƯỚC khi clear store: nếu chỉ
+          // clear client, cookie mồ côi còn hạn sẽ khiến middleware đá
+          // /login → / và user kẹt ở trạng thái "đã logout nhưng vẫn vào /".
+          // Logout proxy idempotent nên fire-and-forget an toàn.
+          try {
+            await axios.post(
+              '/api/auth/logout',
+              { allDevices: false },
+              { baseURL: '', timeout: 8000 }
+            );
+          } catch {
+            /* BE down vẫn tiếp tục logout phía client */
+          }
           clearAccessToken();
           clearRefreshState();
           useAuthStore.getState().logout();

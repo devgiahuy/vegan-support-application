@@ -117,7 +117,7 @@ export default function LoginPage() {
                 <span className="h-px flex-1 bg-border" />
               </div>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div className="flex justify-center sm:grid-cols-2">
                 <motion.div whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}>
                   <Button
                     variant="outline"
@@ -268,10 +268,6 @@ export default function LoginPage() {
           Về trang chủ
         </Link>
       </p>
-
-      <Badge variant="secondary" className="mx-auto mt-4 flex w-fit rounded-full">
-        Dữ liệu minh hoạ • Demo giao diện
-      </Badge>
     </div>
   );
 }

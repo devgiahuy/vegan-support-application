@@ -14,14 +14,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const token = useAuthStore.getState().token ?? getAccessToken();
     if (!token) {
-      // Chỉ silent-refresh nếu có khả năng có refresh cookie.
-      // Tránh gọi vô ích cho guest: kiểm tra cookie refreshToken có tồn tại.
-      const hasRefreshCookie =
-        typeof document !== 'undefined' && document.cookie.includes('refreshToken');
-      if (!hasRefreshCookie) return;
+      // Chỉ silent-refresh khi từng đăng nhập (còn user persist trong storage).
+      // KHÔNG kiểm tra `document.cookie`: cookie refresh là HttpOnly nên JS
+      // không bao giờ đọc được — check cũ khiến F5 nào cũng mất phiên.
+      const persistedUser = useAuthStore.getState().user;
+      if (!persistedUser) return;
 
       void sharedRefresh().catch(() => {
-        // Không có phiên hợp lệ -> giữ guest, không toast (axios interceptor sẽ toast khi cần)
+        // Refresh cookie hết hạn/bị thu hồi -> giữ guest, không toast
+        // (axios interceptor sẽ toast khi có request cần auth thật).
+        useAuthStore.getState().logout();
       });
     } else if (token && !getAccessToken()) {
       setAccessToken(token);

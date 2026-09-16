@@ -47,20 +47,20 @@ export function HeroFoodAnimation({ className = '' }: HeroFoodAnimationProps) {
   const [pulseActive, setPulseActive] = React.useState(false);
 
   React.useEffect(() => {
-    // Vòng lặp 8s (8000ms): Món hoàn chỉnh xuất hiện tại ~6.5s (frame 196/240) và kéo dài ~1.2s
+    // Vòng lặp 8s (8000ms): Món hoàn chỉnh xuất hiện tại ~3.2s (frame 95/240) và kéo dài ~1.6s
     let timeoutId: ReturnType<typeof setTimeout>;
     const intervalId = setInterval(() => {
       timeoutId = setTimeout(() => {
         setPulseActive(true);
-        setTimeout(() => setPulseActive(false), 1400);
-      }, 6500);
+        setTimeout(() => setPulseActive(false), 1600);
+      }, 3200);
     }, 8000);
 
     // Kích hoạt ngay cho chu kỳ đầu tiên
     const initialTimeout = setTimeout(() => {
       setPulseActive(true);
-      setTimeout(() => setPulseActive(false), 1400);
-    }, 6500);
+      setTimeout(() => setPulseActive(false), 1600);
+    }, 3200);
 
     return () => {
       clearInterval(intervalId);

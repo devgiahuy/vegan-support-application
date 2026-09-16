@@ -22,8 +22,9 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
-import { MOCK_VIDEOS } from '@/features/video/data/mock-videos';
-import type { VideoItem } from '@/features/video/types/video.model';
+import { useVideosQuery } from '@/features/video/queries/video.queries';
+import { VideoCard } from '@/features/video/components/video-card';
+import type { Video } from '@/features/video/types/video.model';
 
 const CATEGORIES = [
   'Tất cả',
@@ -45,20 +46,24 @@ export default function VideoDiscoveryPage() {
   const [selectedDiet, setSelectedDiet] = React.useState('all');
   const [searchQuery, setSearchQuery] = React.useState('');
 
+  const {
+    data: videosPagination,
+    isLoading: isVideosLoading,
+    isError: isVideosError,
+    refetch: refetchVideos,
+  } = useVideosQuery({
+    q: searchQuery.trim() || undefined,
+  });
+
+  const videos = videosPagination?.items || [];
+
   const filteredVideos = React.useMemo(() => {
-    return MOCK_VIDEOS.filter((v) => {
-      if (selectedCat !== 'Tất cả' && v.category !== selectedCat) return false;
-      if (selectedDiet !== 'all' && v.dietSchool !== selectedDiet) return false;
-      if (
-        searchQuery &&
-        !v.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
-        !v.description.toLowerCase().includes(searchQuery.toLowerCase())
-      ) {
-        return false;
-      }
+    return videos.filter((v) => {
+      const catName = typeof v.category === 'string' ? v.category : v.category?.name || '';
+      if (selectedCat !== 'Tất cả' && catName !== selectedCat) return false;
       return true;
     });
-  }, [selectedCat, selectedDiet, searchQuery]);
+  }, [videos, selectedCat]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 lg:px-6 space-y-8">
@@ -158,81 +163,58 @@ export default function VideoDiscoveryPage() {
         </div>
       </div>
 
-      {/* Video Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredVideos.map((video) => (
-          <Card
-            key={video.id}
-            className="group overflow-hidden rounded-2xl border border-border/70 hover:border-primary/50 transition-all duration-200 shadow-sm hover:shadow-md flex flex-col"
+      {/* Video Grid - 4 States */}
+      {isVideosLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div
+              key={i}
+              className="h-80 animate-pulse rounded-2xl border border-border/60 bg-muted/40"
+            />
+          ))}
+        </div>
+      ) : isVideosError ? (
+        <div className="rounded-3xl border border-destructive/30 bg-destructive/5 p-8 text-center space-y-3">
+          <p className="font-semibold text-destructive">Không thể tải danh sách video.</p>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            Đã có lỗi xảy ra khi nạp video từ máy chủ. Vui lòng thử lại.
+          </p>
+          <Button
+            variant="outline"
+            className="rounded-xl mt-2"
+            onClick={() => void refetchVideos()}
           >
-            {/* Thumbnail with duration badge and play button */}
-            <Link
-              href={`/video/${video.id}`}
-              className="relative aspect-video w-full overflow-hidden bg-muted block"
-            >
-              <img
-                src={video.thumbnail}
-                alt={video.title}
-                className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-              <div className="absolute inset-0 bg-black/25 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-primary shadow-lg group-hover:scale-110 group-hover:bg-primary group-hover:text-white transition-all">
-                  <Play className="h-5 w-5 fill-current ml-0.5" />
-                </div>
-              </div>
-
-              {/* Badges */}
-              <div className="absolute top-2.5 left-2.5">
-                <Badge className="bg-black/60 text-white backdrop-blur border-0 text-[11px] px-2 py-0.5">
-                  {video.category}
-                </Badge>
-              </div>
-              <div className="absolute bottom-2.5 right-2.5">
-                <Badge className="bg-black/70 text-white backdrop-blur border-0 text-[11px] px-2 py-0.5 font-mono">
-                  {video.durationLabel}
-                </Badge>
-              </div>
-            </Link>
-
-            {/* Video content */}
-            <CardContent className="p-4 flex-1 flex flex-col justify-between space-y-3">
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-7 w-7 ring-1 ring-border">
-                    <AvatarImage src={video.author.avatar} alt={video.author.name} />
-                    <AvatarFallback>{video.author.name[0]}</AvatarFallback>
-                  </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1 text-xs font-semibold text-foreground truncate">
-                      <span>{video.author.name}</span>
-                      {video.author.verified && (
-                        <BadgeCheck className="h-3.5 w-3.5 text-primary shrink-0" />
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <h3 className="text-sm sm:text-base font-bold text-foreground leading-snug line-clamp-2 group-hover:text-primary transition-colors">
-                  <Link href={`/video/${video.id}`}>{video.title}</Link>
-                </h3>
-              </div>
-
-              {/* Stats & AI badge */}
-              <div className="pt-2 border-t flex items-center justify-between text-xs text-muted-foreground">
-                <div className="flex items-center gap-3">
-                  <span className="flex items-center gap-1">
-                    <Eye className="h-3.5 w-3.5" /> {video.views.toLocaleString()}
-                  </span>
-                  <span>{video.uploadedAt}</span>
-                </div>
-                <span className="text-[11px] text-primary font-medium flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" /> AI Summary
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+            Thử lại
+          </Button>
+        </div>
+      ) : filteredVideos.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredVideos.map((video) => (
+            <VideoCard key={video.id} video={video} />
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-3xl border border-dashed border-border/80 p-12 text-center space-y-3 bg-muted/20">
+          <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+            <Play className="h-6 w-6" />
+          </div>
+          <h3 className="text-lg font-bold text-foreground">Không tìm thấy video nào phù hợp</h3>
+          <p className="text-sm text-muted-foreground max-w-md mx-auto">
+            Hãy thử tìm bằng từ khoá khác hoặc đổi chuyên mục/trường phái.
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setSearchQuery('');
+              setSelectedCat('Tất cả');
+              setSelectedDiet('all');
+            }}
+            className="rounded-full text-xs mt-2"
+          >
+            Đặt lại bộ lọc
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
