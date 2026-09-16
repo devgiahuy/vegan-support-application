@@ -146,3 +146,24 @@ export enum VideoSource {
   CLOUDINARY = 'CLOUDINARY',
   YOUTUBE = 'YOUTUBE',
 }
+
+/** Quyết định kiểm duyệt nội dung (Content Review). */
+export enum ReviewDecision {
+  APPROVE = 'APPROVE',
+  REJECT = 'REJECT',
+}
+
+/** Trạng thái mục trong hàng chờ kiểm duyệt (backend PostRevisionStatus subset). */
+export enum ReviewItemStatus {
+  PENDING_REVIEW = 'PENDING_REVIEW',
+  FLAGGED = 'FLAGGED',
+  QUARANTINED = 'QUARANTINED',
+}
+
+/** Độ ưu tiên xử lý kiểm duyệt. */
+export enum ModerationPriority {
+  LOW = 'LOW',
+  MEDIUM = 'MEDIUM',
+  HIGH = 'HIGH',
+  URGENT = 'URGENT',
+}

@@ -48,4 +48,9 @@ export const API_ENDPOINTS = {
   UPLOADS: {
     SIGNATURE: '/uploads/signature',
   },
+  REVIEW_QUEUE: {
+    LIST: '/review-queue/posts',
+    APPROVE: (id: string) => `/review-queue/posts/${id}/approve`,
+    REJECT: (id: string) => `/review-queue/posts/${id}/reject`,
+  },
 } as const;

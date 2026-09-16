@@ -110,4 +110,11 @@ describe('ProfileMapper.toUpdateDto', () => {
       avatarUrl: 'https://x/a.png',
     });
   });
+
+  it('giữ nguyên URL Cloudinary từ uploader', () => {
+    const cloudinaryUrl = 'https://res.cloudinary.com/veggie-connect/image/upload/v123/avatar.png';
+    expect(profileMapper.toUpdateDto({ avatarUrl: cloudinaryUrl })).toEqual({
+      avatarUrl: cloudinaryUrl,
+    });
+  });
 });

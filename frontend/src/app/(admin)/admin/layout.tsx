@@ -21,21 +21,42 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
 import { BrandLogo } from '@/components/layout/brand-logo';
 
+import { useSearchParams } from 'next/navigation';
+
 const NAV_MAIN = [
-  { label: 'Tổng quan', href: '/admin', icon: LayoutDashboard },
-  { label: 'Duyệt bài', href: '/admin?tab=queue', icon: ClipboardCheck, badge: '12' },
-  { label: 'Người dùng', href: '/admin?tab=users', icon: Users },
-  { label: 'Chuyên mục', href: '/admin?tab=categories', icon: FolderTree },
+  { label: 'Tổng quan', href: '/admin/dashboard', icon: LayoutDashboard },
+  { label: 'Duyệt bài', href: '/admin/dashboard?tab=queue', icon: ClipboardCheck, badge: '12' },
+  { label: 'Người dùng', href: '/admin/dashboard?tab=users', icon: Users },
+  { label: 'Chuyên mục', href: '/admin/dashboard?tab=categories', icon: FolderTree },
 ];
 
 const NAV_MONITOR = [
-  { label: 'Báo cáo vi phạm', href: '/admin?tab=reports', icon: Flag, badge: '5' },
-  { label: 'Nhật ký hệ thống', href: '/admin?tab=logs', icon: ScrollText },
+  { label: 'Báo cáo vi phạm', href: '/admin/dashboard?tab=reports', icon: Flag, badge: '5' },
+  { label: 'Nhật ký hệ thống', href: '/admin/dashboard?tab=logs', icon: ScrollText },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <React.Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <AdminLayoutInner>{children}</AdminLayoutInner>
+    </React.Suspense>
+  );
+}
+
+function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [mobileOpen, setMobileOpen] = React.useState(false);
+
+  const currentTab = searchParams.get('tab');
+
+  const isItemActive = (href: string) => {
+    if (href.includes('tab=')) {
+      const tabName = href.split('tab=')[1];
+      return currentTab === tabName;
+    }
+    return pathname === '/admin/dashboard' && !currentTab;
+  };
 
   const renderNav = (items: typeof NAV_MAIN, title: string) => (
     <div>
@@ -45,7 +66,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <nav className="mt-1 space-y-1">
         {items.map((item) => {
           const Icon = item.icon;
-          const active = pathname === '/admin' && item.href === '/admin';
+          const active = isItemActive(item.href);
           return (
             <motion.div key={item.label} whileTap={{ scale: 0.98 }}>
               <Link
@@ -75,7 +96,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="flex min-h-screen">
       {/* Sidebar desktop */}
       <aside className="hidden w-72 shrink-0 flex-col border-r bg-card p-4 lg:flex">
-        <Link href="/admin" className="flex items-center px-2">
+        <Link href="/admin/dashboard" className="flex items-center px-2">
           <BrandLogo variant="mark" size="md" withSubtitle="Admin Portal" asLink={false} />
         </Link>
 
