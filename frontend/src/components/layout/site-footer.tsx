@@ -1,18 +1,20 @@
 import Link from 'next/link';
-import { Leaf, ShieldCheck, Lock, Sprout } from 'lucide-react';
+import { ShieldCheck, Lock, Sprout } from 'lucide-react';
+import { BrandLogo } from './brand-logo';
 
 const COLUMNS = [
   {
     title: 'Khám phá',
     links: [
-      { label: 'Món chay theo mùa', href: '/cong-thuc' },
-      { label: 'Thực đơn 7 ngày', href: '/ke-hoach-bua-an' },
-      { label: 'Bản đồ quán chay', href: '/ban-do' },
-      { label: 'Trợ lý AI dinh dưỡng', href: '/tro-ly-ai' },
+      { label: 'Món chay theo mùa', href: '/recipes' },
+      { label: 'Danh mục món chay', href: '/categories' },
+      { label: 'Thực đơn 7 ngày', href: '/meal-plans' },
+      { label: 'Bản đồ quán chay', href: '/restaurants' },
+      { label: 'Trợ lý AI dinh dưỡng', href: '/assistant' },
     ],
   },
   {
-    title: 'Về ChayXanh',
+    title: 'Về VeggieConnect',
     links: [
       { label: 'Sứ mệnh sống xanh', href: '/' },
       { label: 'Đội ngũ chuyên gia', href: '/' },
@@ -25,7 +27,7 @@ const COLUMNS = [
     links: [
       { label: 'Hướng dẫn sử dụng', href: '/' },
       { label: 'Chính sách dinh dưỡng', href: '/' },
-      { label: 'Đóng góp công thức', href: '/dang-cong-thuc' },
+      { label: 'Đóng góp công thức', href: '/recipes/new' },
       { label: 'Liên hệ hỗ trợ', href: '/' },
     ],
   },
@@ -36,12 +38,7 @@ export function SiteFooter() {
     <footer className="mt-16 border-t border-border bg-muted/40">
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 py-12 md:grid-cols-2 lg:grid-cols-5 lg:px-6">
         <div className="lg:col-span-2">
-          <div className="flex items-center gap-2">
-            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              <Leaf className="h-5 w-5" />
-            </span>
-            <span className="text-lg font-bold text-primary">ChayXanh</span>
-          </div>
+          <BrandLogo variant="horizontal" size="md" />
           <p className="mt-3 max-w-sm text-sm text-muted-foreground">
             Ăn chay đủ chất, dễ dàng mỗi ngày. Đồng hành dinh dưỡng thực vật chuẩn vị Việt.
           </p>
@@ -79,7 +76,7 @@ export function SiteFooter() {
 
       <div className="border-t border-border">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-4 text-xs text-muted-foreground sm:flex-row lg:px-6">
-          <p>© 2026 ChayXanh. Lan toả lối sống thuần thực vật an vui.</p>
+          <p>© 2026 VeggieConnect. Lan toả lối sống thuần thực vật an vui.</p>
           <div className="flex gap-4">
             <Link href="/" className="hover:text-primary">
               Điều khoản

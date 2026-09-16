@@ -14,10 +14,12 @@ import {
   Bell,
   ShieldCheck,
 } from 'lucide-react';
+import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { ThemeToggle } from '@/components/layout/theme-toggle';
+import { BrandLogo } from '@/components/layout/brand-logo';
 
 const NAV_MAIN = [
   { label: 'Tổng quan', href: '/admin', icon: LayoutDashboard },
@@ -45,23 +47,24 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           const Icon = item.icon;
           const active = pathname === '/admin' && item.href === '/admin';
           return (
-            <Link
-              key={item.label}
-              href={item.href}
-              onClick={() => setMobileOpen(false)}
-              className={cn(
-                'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium',
-                active ? 'bg-primary text-primary-foreground' : 'hover:bg-accent'
-              )}
-            >
-              <Icon className="h-4 w-4" />
-              {item.label}
-              {item.badge && (
-                <Badge className="ml-auto rounded-full bg-destructive text-destructive-foreground">
-                  {item.badge}
-                </Badge>
-              )}
-            </Link>
+            <motion.div key={item.label} whileTap={{ scale: 0.98 }}>
+              <Link
+                href={item.href}
+                onClick={() => setMobileOpen(false)}
+                className={cn(
+                  'flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition-colors',
+                  active ? 'bg-primary text-primary-foreground shadow-sm' : 'hover:bg-accent'
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                {item.label}
+                {item.badge && (
+                  <Badge className="ml-auto rounded-full bg-destructive text-destructive-foreground">
+                    {item.badge}
+                  </Badge>
+                )}
+              </Link>
+            </motion.div>
           );
         })}
       </nav>
@@ -72,14 +75,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <div className="flex min-h-screen">
       {/* Sidebar desktop */}
       <aside className="hidden w-72 shrink-0 flex-col border-r bg-card p-4 lg:flex">
-        <Link href="/admin" className="flex items-center gap-2 px-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
-            <Leaf className="h-5 w-5" />
-          </span>
-          <span>
-            <span className="block font-bold text-primary">ChayXanh</span>
-            <span className="block text-[11px] text-muted-foreground">Admin Portal</span>
-          </span>
+        <Link href="/admin" className="flex items-center px-2">
+          <BrandLogo variant="mark" size="md" withSubtitle="Admin Portal" asLink={false} />
         </Link>
 
         <div className="mt-4 space-y-4">

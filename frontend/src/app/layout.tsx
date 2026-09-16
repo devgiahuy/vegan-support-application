@@ -14,8 +14,12 @@ const beVietnam = Be_Vietnam_Pro({
 });
 
 export const metadata: Metadata = {
-  title: 'ChayXanh — Ăn chay đủ chất, dễ dàng mỗi ngày',
+  title: 'VeggieConnect — Ăn chay đủ chất, dễ dàng mỗi ngày',
   description: 'Nền tảng cộng đồng, dinh dưỡng và bản đồ quán chay cho người ăn chay tại Việt Nam.',
+  icons: {
+    icon: [{ url: '/logo/logo-mark.png', type: 'image/png' }],
+    apple: [{ url: '/logo/logo-mark.png', type: 'image/png' }],
+  },
 };
 
 export default function RootLayout({
