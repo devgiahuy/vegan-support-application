@@ -45,6 +45,11 @@ type Signals = {
   searchable: string;
 };
 
+export interface CandidateRankingSignal {
+  score: number;
+  reasonCodes: string[];
+}
+
 function sha256(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }
@@ -284,23 +289,18 @@ export class RecommendationService {
       context.constraints,
       CANDIDATE_POOL_SIZE,
     );
-    const preference = await this.repository.getPreference(userId);
-    const events = preference?.enabled
-      ? await this.repository.findEventsSince(
-          userId,
-          new Date(now.getTime() - LOOKBACK_DAYS * 86_400_000),
-        )
-      : [];
-    const sourceIds = [
-      ...new Set(events.flatMap((event) => (event.entityId ? [event.entityId] : []))),
-    ];
-    const sources = await this.contentRepository.findBehaviorSourceRecipes(sourceIds);
-    const sourceSignals = new Map(sources.map((post) => [post.id, recipeSignals(post)]));
-    const metrics = await this.repository.getMetrics(candidates.map((post) => post.id));
-    const personalized = events.length > 0;
-    const ranked = candidates.map((post) =>
-      this.score(post, metrics.get(post.id)!, events, sourceSignals, now, personalized),
-    );
+    const candidateRanking = await this.rankCandidates(userId, candidates, now);
+    const ranked = candidates.map((post) => {
+      const ranking = candidateRanking.byId.get(post.id)!;
+      return this.score(
+        post,
+        ranking.metric,
+        candidateRanking.events,
+        candidateRanking.sourceSignals,
+        now,
+        candidateRanking.personalized,
+      );
+    });
     ranked.sort(
       (a, b) =>
         b.score - a.score ||
@@ -315,12 +315,67 @@ export class RecommendationService {
       data: ranked.slice(0, query.limit).map(({ publishedAt: _publishedAt, ...item }) => item),
       meta: {
         scoringVersion: RECOMMENDATION_SCORING_VERSION,
-        personalized,
+        personalized: candidateRanking.personalized,
         lookbackDays: LOOKBACK_DAYS as 30,
         decayHalfLifeDays: DECAY_HALF_LIFE_DAYS as 14,
         generatedAt: now.toISOString(),
         appliedConstraints: context.summary,
       },
+    };
+  }
+
+  async rankPublishedRecipes(
+    userId: string,
+    candidates: PublishedPostRecord[],
+    now: Date = new Date(),
+  ): Promise<Map<string, CandidateRankingSignal>> {
+    const ranking = await this.rankCandidates(userId, candidates, now);
+    return new Map(
+      candidates.map((post) => {
+        const scored = this.score(
+          post,
+          ranking.byId.get(post.id)!.metric,
+          ranking.events,
+          ranking.sourceSignals,
+          now,
+          ranking.personalized,
+        );
+        return [post.id, { score: scored.score, reasonCodes: scored.reasonCodes }];
+      }),
+    );
+  }
+
+  private async rankCandidates(userId: string, candidates: PublishedPostRecord[], now: Date) {
+    const preference = await this.repository.getPreference(userId);
+    const events = preference?.enabled
+      ? await this.repository.findEventsSince(
+          userId,
+          new Date(now.getTime() - LOOKBACK_DAYS * 86_400_000),
+        )
+      : [];
+    const sourceIds = [
+      ...new Set(events.flatMap((event) => (event.entityId ? [event.entityId] : []))),
+    ];
+    const sources = await this.contentRepository.findBehaviorSourceRecipes(sourceIds);
+    const sourceSignals = new Map(sources.map((post) => [post.id, recipeSignals(post)]));
+    const metrics = await this.repository.getMetrics(candidates.map((post) => post.id));
+    return {
+      events,
+      sourceSignals,
+      personalized: events.length > 0,
+      byId: new Map(
+        candidates.map((post) => [
+          post.id,
+          {
+            metric: metrics.get(post.id) ?? {
+              ratingAverage: 0,
+              ratingCount: 0,
+              voteCount: 0,
+              bookmarkCount: 0,
+            },
+          },
+        ]),
+      ),
     };
   }
 

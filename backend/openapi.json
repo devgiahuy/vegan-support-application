@@ -53,6 +53,10 @@
       "description": "Consent-aware behavior events and recipe ranking"
     },
     {
+      "name": "Meal Plans",
+      "description": "Deterministic weekly plans, swaps and shopping lists"
+    },
+    {
       "name": "Contributors",
       "description": "Contributor applications and approved subtype status"
     },
@@ -10773,6 +10777,631 @@
               "appliedConstraints"
             ],
             "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "GenerateMealPlanRequest": {
+        "type": "object",
+        "properties": {
+          "weekStart": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "goal": {
+            "type": "string",
+            "enum": [
+              "MAINTAIN",
+              "LOSE",
+              "GAIN"
+            ]
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 120
+          },
+          "seed": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "supersedesMealPlanId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "weekStart",
+          "goal",
+          "idempotencyKey"
+        ],
+        "additionalProperties": false
+      },
+      "SwapMealPlanItemRequest": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 120
+          },
+          "seed": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "idempotencyKey"
+        ],
+        "additionalProperties": false
+      },
+      "MealPlanResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "weekStart": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "goal": {
+                "type": "string",
+                "enum": [
+                  "MAINTAIN",
+                  "LOSE",
+                  "GAIN"
+                ]
+              },
+              "targetCalories": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "version": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "lockVersion": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "supersedesMealPlanId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "algorithmVersion": {
+                "type": "string",
+                "minLength": 1
+              },
+              "recommendationVersion": {
+                "type": "string"
+              },
+              "warnings": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "CALORIE_TOLERANCE_WIDENED",
+                    "RECIPE_REPEATED",
+                    "UNFILLED_SLOT",
+                    "SHOPPING_UNIT_NOT_COMBINED",
+                    "MICRONUTRIENT_DATA_PARTIAL",
+                    "MICRONUTRIENT_DATA_UNAVAILABLE"
+                  ]
+                }
+              },
+              "nutritionDataQuality": {
+                "type": "string",
+                "enum": [
+                  "COMPLETE",
+                  "PARTIAL",
+                  "UNAVAILABLE"
+                ]
+              },
+              "micronutrientSummary": {
+                "type": "object",
+                "properties": {
+                  "vitaminB12Mcg": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0
+                  },
+                  "recipesWithData": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "filledRecipeCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "vitaminB12Mcg",
+                  "recipesWithData",
+                  "filledRecipeCount"
+                ],
+                "additionalProperties": false
+              },
+              "explanation": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "filledSlots": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 21
+              },
+              "totalSlots": {
+                "type": "number",
+                "enum": [
+                  21
+                ]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "constraintSnapshot": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "date": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "mealType": {
+                      "type": "string",
+                      "enum": [
+                        "BREAKFAST",
+                        "LUNCH",
+                        "DINNER"
+                      ]
+                    },
+                    "position": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "FILLED",
+                        "UNFILLED"
+                      ]
+                    },
+                    "targetCalories": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "calories": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "exclusiveMinimum": 0
+                    },
+                    "tolerancePercent": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "recipe": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "revisionId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "coverImageUrl": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "uri"
+                        },
+                        "difficulty": {
+                          "type": "string",
+                          "enum": [
+                            "EASY",
+                            "MEDIUM",
+                            "HARD"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "revisionId",
+                        "slug",
+                        "title",
+                        "coverImageUrl",
+                        "difficulty"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "reasonCodes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "maxItems": 3
+                    },
+                    "warningCodes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "CALORIE_TOLERANCE_WIDENED",
+                          "RECIPE_REPEATED",
+                          "UNFILLED_SLOT",
+                          "SHOPPING_UNIT_NOT_COMBINED",
+                          "MICRONUTRIENT_DATA_PARTIAL",
+                          "MICRONUTRIENT_DATA_UNAVAILABLE"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "date",
+                    "mealType",
+                    "position",
+                    "status",
+                    "targetCalories",
+                    "calories",
+                    "tolerancePercent",
+                    "recipe",
+                    "reasonCodes",
+                    "warningCodes"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "shoppingList": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "ingredientId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "canonicalName": {
+                      "type": "string"
+                    },
+                    "amount": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "unit": {
+                      "type": "string"
+                    },
+                    "sourceItemCount": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    }
+                  },
+                  "required": [
+                    "ingredientId",
+                    "canonicalName",
+                    "amount",
+                    "unit",
+                    "sourceItemCount"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "id",
+              "weekStart",
+              "goal",
+              "targetCalories",
+              "version",
+              "lockVersion",
+              "supersedesMealPlanId",
+              "algorithmVersion",
+              "recommendationVersion",
+              "warnings",
+              "nutritionDataQuality",
+              "micronutrientSummary",
+              "explanation",
+              "filledSlots",
+              "totalSlots",
+              "createdAt",
+              "updatedAt",
+              "constraintSnapshot",
+              "items",
+              "shoppingList"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "MealPlanListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "weekStart": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "goal": {
+                  "type": "string",
+                  "enum": [
+                    "MAINTAIN",
+                    "LOSE",
+                    "GAIN"
+                  ]
+                },
+                "targetCalories": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "version": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "lockVersion": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "supersedesMealPlanId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "algorithmVersion": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "recommendationVersion": {
+                  "type": "string"
+                },
+                "warnings": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "CALORIE_TOLERANCE_WIDENED",
+                      "RECIPE_REPEATED",
+                      "UNFILLED_SLOT",
+                      "SHOPPING_UNIT_NOT_COMBINED",
+                      "MICRONUTRIENT_DATA_PARTIAL",
+                      "MICRONUTRIENT_DATA_UNAVAILABLE"
+                    ]
+                  }
+                },
+                "nutritionDataQuality": {
+                  "type": "string",
+                  "enum": [
+                    "COMPLETE",
+                    "PARTIAL",
+                    "UNAVAILABLE"
+                  ]
+                },
+                "micronutrientSummary": {
+                  "type": "object",
+                  "properties": {
+                    "vitaminB12Mcg": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "recipesWithData": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "filledRecipeCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "vitaminB12Mcg",
+                    "recipesWithData",
+                    "filledRecipeCount"
+                  ],
+                  "additionalProperties": false
+                },
+                "explanation": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "filledSlots": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 21
+                },
+                "totalSlots": {
+                  "type": "number",
+                  "enum": [
+                    21
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "weekStart",
+                "goal",
+                "targetCalories",
+                "version",
+                "lockVersion",
+                "supersedesMealPlanId",
+                "algorithmVersion",
+                "recommendationVersion",
+                "warnings",
+                "nutritionDataQuality",
+                "micronutrientSummary",
+                "explanation",
+                "filledSlots",
+                "totalSlots",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "DeleteMealPlanResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "deleted": {
+                "type": "boolean",
+                "enum": [
+                  true
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "deleted"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
           }
         },
         "required": [
@@ -22617,6 +23246,926 @@
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meal-plans/generate": {
+      "post": {
+        "tags": [
+          "Meal Plans"
+        ],
+        "summary": "Tạo hoặc regenerate weekly meal plan",
+        "description": "Tạo version mới gồm 7 ngày × 3 bữa. MAINTAIN/LOSE/GAIN dùng TDEE × 1/0.9/1.1 từ config. Backend hard-filter theo từng ngày trước scoring, thử calorie ±15% rồi ±20% kèm warning, không lặp nếu pool đủ, tối đa 2 lần/recipe và để UNFILLED nếu không có candidate. seed cho kết quả deterministic; supersedesMealPlanId liên kết version regenerate.",
+        "operationId": "generateMealPlan",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "weekStart": "2026-09-21",
+                "goal": "MAINTAIN",
+                "idempotencyKey": "plan-2026-09-21-maintain-01",
+                "seed": "demo-week-39"
+              },
+              "schema": {
+                "$ref": "#/components/schemas/GenerateMealPlanRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Meal plan version mới cùng shopping list và warnings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealPlanResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Payload generate không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Payload generate không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Profile, schedule, supersedes hoặc idempotency conflict",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "HEALTH_PROFILE_INCOMPLETE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "HEALTH_PROFILE_INCOMPLETE",
+                        "message": "Profile, schedule, supersedes hoặc idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "DIET_SCHEDULE_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DIET_SCHEDULE_REQUIRED",
+                        "message": "Profile, schedule, supersedes hoặc idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "MEAL_PLAN_SUPERSEDES_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEAL_PLAN_SUPERSEDES_INVALID",
+                        "message": "Profile, schedule, supersedes hoặc idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "MEAL_PLAN_IDEMPOTENCY_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEAL_PLAN_IDEMPOTENCY_CONFLICT",
+                        "message": "Profile, schedule, supersedes hoặc idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meal-plans": {
+      "get": {
+        "tags": [
+          "Meal Plans"
+        ],
+        "summary": "List meal plan versions của current user",
+        "operationId": "listMealPlans",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": false,
+            "name": "weekStart",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Meal plan summaries phân trang",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealPlanListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Query list không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Query list không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meal-plans/{id}": {
+      "get": {
+        "tags": [
+          "Meal Plans"
+        ],
+        "summary": "Đọc meal plan version thuộc current user",
+        "operationId": "getMealPlan",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "21 slots, constraint snapshot, shopping list và nutrition quality",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealPlanResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Meal plan ID không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Meal plan ID không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy owned meal plan",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy owned meal plan",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Meal Plans"
+        ],
+        "summary": "Soft-delete owned meal plan",
+        "operationId": "deleteMealPlan",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            },
+            "required": true,
+            "name": "expectedVersion",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delete idempotent; plan không còn xuất hiện trong list/detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteMealPlanResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID hoặc expectedVersion không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "ID hoặc expectedVersion không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy owned meal plan",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy owned meal plan",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Meal plan version conflict",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "MEAL_PLAN_VERSION_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEAL_PLAN_VERSION_CONFLICT",
+                        "message": "Meal plan version conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meal-plans/{id}/items/{itemId}/swap": {
+      "patch": {
+        "tags": [
+          "Meal Plans"
+        ],
+        "summary": "Swap một meal slot an toàn",
+        "description": "Chỉ chọn published eligible Recipe còn thỏa hard constraints của ngày. Ưu tiên calorie trong ±100 kcal so với món cũ; nếu không có dùng ±20% target và trả warning. expectedVersion chống concurrent update, idempotencyKey chống apply lặp.",
+        "operationId": "swapMealPlanItem",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "itemId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwapMealPlanItemRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Meal plan sau swap và shopping list đã tính lại",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealPlanResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Payload swap không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Payload swap không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy plan hoặc item thuộc user",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy plan hoặc item thuộc user",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Không có candidate hoặc version/idempotency conflict",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NO_ELIGIBLE_RECIPE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NO_ELIGIBLE_RECIPE",
+                        "message": "Không có candidate hoặc version/idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "MEAL_PLAN_VERSION_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEAL_PLAN_VERSION_CONFLICT",
+                        "message": "Không có candidate hoặc version/idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "MEAL_PLAN_IDEMPOTENCY_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEAL_PLAN_IDEMPOTENCY_CONFLICT",
+                        "message": "Không có candidate hoặc version/idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
                 }
               }
             }

@@ -1,6 +1,6 @@
 # Backend Implementation Phases
 
-**Version:** 2.0
+**Version:** 2.1
 
 **Cập nhật:** 16/09/2026
 
@@ -117,7 +117,7 @@ Cập nhật bảng này trong commit của phase. `Commit` phải là hash th�
 | 07    | `COMPLETED`   | 2026-09-15     | This phase commit | Contributor application/profile and subtype RBAC ready           |
 | 08    | `COMPLETED`   | 2026-09-16     | This phase commit | Review/report/rule flags, selective ban restore and audit ready  |
 | 09    | `COMPLETED`   | 2026-09-16     | This phase commit | Consent, dedupe, hard-filtered scoring v1 and explanations ready |
-| 10    | `NOT_STARTED` | —              | —                 | —                                                                |
+| 10    | `COMPLETED`   | 2026-09-16     | This phase commit | Versioned weekly planner, safe swap and shopping list ready      |
 | 11    | `NOT_STARTED` | —              | —                 | —                                                                |
 | 12    | `NOT_STARTED` | —              | —                 | —                                                                |
 | 13    | `NOT_STARTED` | —              | —                 | —                                                                |

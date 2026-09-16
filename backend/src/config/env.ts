@@ -53,6 +53,9 @@ const environmentSchema = z
       .default('vegan-support/posts'),
     MAX_UPLOAD_IMAGE_BYTES: z.coerce.number().int().min(1).max(25_000_000).default(10_000_000),
     MAX_UPLOAD_VIDEO_BYTES: z.coerce.number().int().min(1).max(250_000_000).default(100_000_000),
+    MEAL_PLAN_MAINTAIN_FACTOR: z.coerce.number().min(0.8).max(1.2).default(1),
+    MEAL_PLAN_LOSE_FACTOR: z.coerce.number().min(0.8).max(1).default(0.9),
+    MEAL_PLAN_GAIN_FACTOR: z.coerce.number().min(1).max(1.2).default(1.1),
   })
   .transform((environment) => ({
     nodeEnv: environment.NODE_ENV,
@@ -78,6 +81,11 @@ const environmentSchema = z
     cloudinaryUploadFolder: environment.CLOUDINARY_UPLOAD_FOLDER,
     maxUploadImageBytes: environment.MAX_UPLOAD_IMAGE_BYTES,
     maxUploadVideoBytes: environment.MAX_UPLOAD_VIDEO_BYTES,
+    mealPlanGoalFactors: {
+      MAINTAIN: environment.MEAL_PLAN_MAINTAIN_FACTOR,
+      LOSE: environment.MEAL_PLAN_LOSE_FACTOR,
+      GAIN: environment.MEAL_PLAN_GAIN_FACTOR,
+    },
     cookieSecure: environment.NODE_ENV === 'production',
   }));
 

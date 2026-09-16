@@ -299,6 +299,43 @@ enum BehaviorEventType {
   @@map("behavior_event_type")
 }
 
+enum MealGoal {
+  MAINTAIN
+  LOSE
+  GAIN
+
+  @@map("meal_goal")
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+
+  @@map("meal_type")
+}
+
+enum MealSlotStatus {
+  FILLED
+  UNFILLED
+
+  @@map("meal_slot_status")
+}
+
+enum NutritionDataQuality {
+  COMPLETE
+  PARTIAL
+  UNAVAILABLE
+
+  @@map("nutrition_data_quality")
+}
+
+enum MealPlanMutationType {
+  SWAP
+
+  @@map("meal_plan_mutation_type")
+}
+
 model User {
   id                          String                     @id @default(uuid()) @db.Uuid
   email                       String                     @unique @db.VarChar(320)
@@ -344,6 +381,8 @@ model User {
   hiddenPosts                 Post[]                     @relation("PostHiddenBy")
   personalizationPreference   PersonalizationPreference?
   behaviorEvents              BehaviorEvent[]
+  mealPlans                   MealPlan[]
+  mealPlanMutations           MealPlanMutation[]
 
   @@map("users")
 }
@@ -392,19 +431,20 @@ model CategoryProposal {
 }
 
 model Ingredient {
-  id                  String                        @id @default(uuid()) @db.Uuid
-  canonicalName       String                        @map("canonical_name") @db.VarChar(160)
-  normalizedName      String                        @unique @map("normalized_name") @db.VarChar(160)
-  foodGroup           FoodGroup                     @map("food_group")
-  status              CatalogStatus                 @default(ACTIVE)
-  createdAt           DateTime                      @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt           DateTime                      @updatedAt @map("updated_at") @db.Timestamptz(3)
-  aliases             IngredientAlias[]
-  allergens           IngredientAllergen[]
-  dietCompatibilities IngredientDietCompatibility[]
-  traditionWarnings   IngredientTraditionWarning[]
-  userExclusions      UserIngredientExclusion[]
-  recipeIngredients   RecipeIngredient[]
+  id                    String                        @id @default(uuid()) @db.Uuid
+  canonicalName         String                        @map("canonical_name") @db.VarChar(160)
+  normalizedName        String                        @unique @map("normalized_name") @db.VarChar(160)
+  foodGroup             FoodGroup                     @map("food_group")
+  status                CatalogStatus                 @default(ACTIVE)
+  createdAt             DateTime                      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime                      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  aliases               IngredientAlias[]
+  allergens             IngredientAllergen[]
+  dietCompatibilities   IngredientDietCompatibility[]
+  traditionWarnings     IngredientTraditionWarning[]
+  userExclusions        UserIngredientExclusion[]
+  recipeIngredients     RecipeIngredient[]
+  mealPlanShoppingItems MealPlanShoppingItem[]
 
   @@index([status, foodGroup, canonicalName])
   @@map("ingredients")
@@ -435,6 +475,7 @@ model Post {
   votes               PostVote[]
   ratings             PostRating[]
   bookmarks           PostBookmark[]
+  mealPlanItems       MealPlanItem[]
 
   @@index([status, type, publishedAt])
   @@index([authorId, status, updatedAt])
@@ -547,6 +588,7 @@ model PostRevision {
   categories        PostCategory[]
   tags              PostTag[]
   media             PostMedia[]
+  mealPlanItems     MealPlanItem[]
 
   @@unique([postId, version])
   @@index([postId, status, createdAt])
@@ -653,6 +695,106 @@ model BehaviorEvent {
   @@index([userId, entityId, occurredAt])
   @@index([occurredAt])
   @@map("behavior_events")
+}
+
+model MealPlan {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  userId                String                 @map("user_id") @db.Uuid
+  weekStart             DateTime               @map("week_start") @db.Date
+  goal                  MealGoal
+  targetCalories        Int                    @map("target_calories")
+  version               Int
+  lockVersion           Int                    @default(1) @map("lock_version")
+  supersedesMealPlanId  String?                @map("supersedes_meal_plan_id") @db.Uuid
+  idempotencyKey        String                 @map("idempotency_key") @db.VarChar(120)
+  payloadHash           String                 @map("payload_hash") @db.Char(64)
+  seedHash              String                 @map("seed_hash") @db.Char(64)
+  algorithmVersion      String                 @map("algorithm_version") @db.VarChar(80)
+  recommendationVersion String                 @map("recommendation_version") @db.VarChar(80)
+  constraintSnapshot    Json                   @map("constraint_snapshot")
+  warnings              Json                   @default("[]")
+  nutritionDataQuality  NutritionDataQuality   @map("nutrition_data_quality")
+  micronutrientSummary  Json                   @map("micronutrient_summary")
+  explanation           String?
+  deletedAt             DateTime?              @map("deleted_at") @db.Timestamptz(3)
+  createdAt             DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supersedes            MealPlan?              @relation("MealPlanVersions", fields: [supersedesMealPlanId], references: [id], onDelete: SetNull)
+  supersededBy          MealPlan[]             @relation("MealPlanVersions")
+  items                 MealPlanItem[]
+  shoppingItems         MealPlanShoppingItem[]
+  mutations             MealPlanMutation[]
+
+  @@unique([userId, idempotencyKey])
+  @@unique([userId, weekStart, version])
+  @@index([userId, weekStart, deletedAt, version])
+  @@index([supersedesMealPlanId])
+  @@map("meal_plans")
+}
+
+model MealPlanItem {
+  id               String             @id @default(uuid()) @db.Uuid
+  mealPlanId       String             @map("meal_plan_id") @db.Uuid
+  date             DateTime           @db.Date
+  mealType         MealType           @map("meal_type")
+  position         Int
+  status           MealSlotStatus
+  recipeId         String?            @map("recipe_id") @db.Uuid
+  recipeRevisionId String?            @map("recipe_revision_id") @db.Uuid
+  targetCalories   Int                @map("target_calories")
+  calories         Int?
+  tolerancePercent Decimal?           @map("tolerance_percent") @db.Decimal(5, 2)
+  reasonCodes      Json               @default("[]") @map("reason_codes")
+  warningCodes     Json               @default("[]") @map("warning_codes")
+  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  mealPlan         MealPlan           @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  recipe           Post?              @relation(fields: [recipeId], references: [id], onDelete: Restrict)
+  recipeRevision   PostRevision?      @relation(fields: [recipeRevisionId], references: [id], onDelete: Restrict)
+  mutations        MealPlanMutation[]
+
+  @@unique([mealPlanId, date, mealType])
+  @@index([mealPlanId, position])
+  @@index([recipeId, date])
+  @@map("meal_plan_items")
+}
+
+model MealPlanShoppingItem {
+  id              String     @id @default(uuid()) @db.Uuid
+  mealPlanId      String     @map("meal_plan_id") @db.Uuid
+  ingredientId    String     @map("ingredient_id") @db.Uuid
+  canonicalName   String     @map("canonical_name") @db.VarChar(160)
+  amount          Decimal    @db.Decimal(14, 3)
+  unit            String     @db.VarChar(40)
+  sourceItemCount Int        @map("source_item_count")
+  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  mealPlan        MealPlan   @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  ingredient      Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@unique([mealPlanId, ingredientId, unit])
+  @@index([mealPlanId, canonicalName])
+  @@map("meal_plan_shopping_items")
+}
+
+model MealPlanMutation {
+  id                   String               @id @default(uuid()) @db.Uuid
+  userId               String               @map("user_id") @db.Uuid
+  mealPlanId           String               @map("meal_plan_id") @db.Uuid
+  mealPlanItemId       String               @map("meal_plan_item_id") @db.Uuid
+  type                 MealPlanMutationType
+  idempotencyKey       String               @map("idempotency_key") @db.VarChar(120)
+  payloadHash          String               @map("payload_hash") @db.Char(64)
+  resultingLockVersion Int                  @map("resulting_lock_version")
+  createdAt            DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mealPlan             MealPlan             @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  mealPlanItem         MealPlanItem         @relation(fields: [mealPlanItemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, idempotencyKey])
+  @@index([mealPlanId, createdAt])
+  @@map("meal_plan_mutations")
 }
 
 model RecipeDetail {

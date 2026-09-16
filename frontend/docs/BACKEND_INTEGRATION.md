@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 2.0
+**Version:** 2.1
 
 **Cập nhật:** 16/09/2026
 
@@ -8,7 +8,7 @@
 
 **Contract target:** `/api/v1`
 
-> Tài liệu này là registry sống cho những capability backend đã sẵn sàng để frontend tích hợp. Foundation, Authentication & Sessions, Profile/Health, Diet Rules, Catalog, Content Core, Content Discovery, Community Interactions, Contributor Applications, Moderation & Reports và Behavioral Recommendation đã hoàn tất; các feature còn lại giữ `PLANNED` cho tới khi phase tương ứng vượt qua đầy đủ completion gate.
+> Tài liệu này là registry sống cho những capability backend đã sẵn sàng để frontend tích hợp. Foundation, Authentication & Sessions, Profile/Health, Diet Rules, Catalog, Content Core, Content Discovery, Community Interactions, Contributor Applications, Moderation & Reports, Behavioral Recommendation và Meal Planner đã hoàn tất; các feature còn lại giữ `PLANNED` cho tới khi phase tương ứng vượt qua đầy đủ completion gate.
 
 ---
 
@@ -274,15 +274,15 @@ luồng này.
 
 ### 6.5 Meal Plan và Recommendation
 
-| Method | Path                                 | Status    | Backend updated | FE integrated | Ghi chú                                                                   |
-| ------ | ------------------------------------ | --------- | --------------- | ------------- | ------------------------------------------------------------------------- |
-| POST   | `/meal-plans/generate`               | `PLANNED` | —               | No            | Tạo version mới                                                           |
-| GET    | `/meal-plans`                        | `PLANNED` | —               | No            | User-owned plans                                                          |
-| GET    | `/meal-plans/:id`                    | `PLANNED` | —               | No            | Ownership required                                                        |
-| PATCH  | `/meal-plans/:id/items/:itemId/swap` | `PLANNED` | —               | No            | Giữ hard constraints                                                      |
-| DELETE | `/meal-plans/:id`                    | `PLANNED` | —               | No            | Soft-delete hoặc archive theo OpenAPI                                     |
-| POST   | `/behavior-events`                   | `READY`   | 2026-09-16      | No            | Auth + active consent; allowlist metadata, idempotency và 5-minute dedupe |
-| GET    | `/recommendations/home`              | `READY`   | 2026-09-16      | No            | Auth; hard constraints trước ranking; score/reason codes v1               |
+| Method | Path                                 | Status  | Backend updated | FE integrated | Ghi chú                                                                   |
+| ------ | ------------------------------------ | ------- | --------------- | ------------- | ------------------------------------------------------------------------- |
+| POST   | `/meal-plans/generate`               | `READY` | 2026-09-16      | No            | Auth; tạo version mới 7×3, deterministic seed + idempotency               |
+| GET    | `/meal-plans`                        | `READY` | 2026-09-16      | No            | Auth; own plans, pagination/filter tuần                                   |
+| GET    | `/meal-plans/:id`                    | `READY` | 2026-09-16      | No            | Auth + ownership; 21 slots, snapshots, warnings và shopping list          |
+| PATCH  | `/meal-plans/:id/items/:itemId/swap` | `READY` | 2026-09-16      | No            | Auth + ownership; expectedVersion/idempotency; hard-safe candidate        |
+| DELETE | `/meal-plans/:id`                    | `READY` | 2026-09-16      | No            | Auth + ownership; idempotent soft-delete với expectedVersion              |
+| POST   | `/behavior-events`                   | `READY` | 2026-09-16      | No            | Auth + active consent; allowlist metadata, idempotency và 5-minute dedupe |
+| GET    | `/recommendations/home`              | `READY` | 2026-09-16      | No            | Auth; hard constraints trước ranking; score/reason codes v1               |
 
 ### 6.6 Chat và AI verification
 
@@ -501,7 +501,28 @@ error
 - Recommendation UI render tối đa hai `reasonCodes`, hiển thị `scoringVersion` và
   `appliedConstraints`; không tự đọc raw behavior history.
 
-### 7.10 Maps
+### 7.10 Meal Planner
+
+- `POST /meal-plans/generate` yêu cầu `weekStart` là thứ Hai, `goal`, `idempotencyKey`; `seed` và
+  `supersedesMealPlanId` là optional. Mỗi lần generate/regenerate tạo record version mới, không
+  overwrite plan cũ. `MAINTAIN/LOSE/GAIN` lần lượt dùng TDEE × `1/0.9/1.1` từ backend config.
+- Plan cố định 7 ngày × 3 bữa với split sáng/trưa/tối `25/40/35`. Candidate phải là published Recipe,
+  `mealPlannerEligible`, có calories và toàn bộ ingredient đã canonical hóa. Backend áp allergy,
+  explicit exclusion, diet pattern và enabled tradition theo từng ngày trước mọi scoring.
+- Calorie tolerance bắt đầu ±15%; chỉ nới ±20% khi không có candidate và trả
+  `CALORIE_TOLERANCE_WIDENED`. Recipe không lặp khi pool đủ; thiếu pool được dùng tối đa hai lần với
+  `RECIPE_REPEATED`; không có món hợp lệ thì slot `UNFILLED`, không nới hard constraint.
+- `PERIODIC` phải có ít nhất một ngày được chọn trong tuần generate; `DIET_SCHEDULE_REQUIRED` trả
+  `fields.availableDates`. Behavioral score và ingredient coverage chỉ xếp hạng candidate đã an toàn.
+- Swap dùng `expectedVersion` và `idempotencyKey`; ưu tiên ±100 kcal so với món cũ, sau đó mới dùng
+  ±20% target có warning. Khi `MEAL_PLAN_VERSION_CONFLICT`, refetch detail trước khi retry.
+- Shopping list chỉ cộng canonical ingredient theo cùng unit hoặc conversion chắc chắn `kg→g`,
+  `l→ml`; unit không tương thích giữ thành dòng riêng và trả `SHOPPING_UNIT_NOT_COMBINED`.
+- `nutritionDataQuality` là `COMPLETE/PARTIAL/UNAVAILABLE`. Tổng B12 chỉ có khi recipe thật sự có dữ
+  liệu; backend không suy luận micronutrient từ calories. UI render warning/reason code từ response,
+  không tự diễn giải lại hard constraints.
+
+### 7.11 Maps
 
 - Browser lấy geolocation sau thao tác/consent rõ ràng.
 - Từ chối permission phải chuyển sang form địa chỉ.
@@ -597,6 +618,9 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `COMMUNITY_RATE_LIMITED`                      | Disable action theo `retryAfterSeconds`, không retry tự động           |
 | `HEALTH_PROFILE_INCOMPLETE`                   | Link tới health profile                                                |
 | `NO_ELIGIBLE_RECIPE`                          | Hiển thị slot trống/warnings, không crash                              |
+| `MEAL_PLAN_SUPERSEDES_INVALID`                | Chỉ regenerate từ own plan cùng tuần                                   |
+| `MEAL_PLAN_IDEMPOTENCY_CONFLICT`              | Không retry payload khác với cùng key; tạo key mới cho thao tác mới    |
+| `MEAL_PLAN_VERSION_CONFLICT`                  | Refetch plan detail và cho user thực hiện lại swap/delete              |
 | `VERIFICATION_ALREADY_EXISTS`                 | Refresh target và hiển thị reviewer hiện tại                           |
 | `AI_QUOTA_EXCEEDED`                           | Hiển thị reset time/CTA phù hợp role                                   |
 | `AI_FEATURE_DISABLED`                         | Hiển thị maintenance state; history vẫn xem được                       |
@@ -663,19 +687,20 @@ Không được mô tả endpoint là READY chỉ vì route đã tồn tại n�
 
 Thêm entry mới nhất ở trên cùng.
 
-| Date       | Version | Module         | Change                                                                                                                               | Breaking | FE action                                                                                      |
-| ---------- | ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------ | :------: | ---------------------------------------------------------------------------------------------- |
-| 2026-09-16 | 2.0     | Recommendation | Thêm consent/version, behavior event allowlist/idempotency/dedupe, hard-filtered scoring v1, cold start và reason codes              |    No    | Sync OpenAPI; tạo consent/event/recommendation DTO, mapper, hooks và xử lý sáu business errors |
-| 2026-09-16 | 1.9     | Moderation     | Thêm rule flags v1, transactional post review, report escalation, Admin decisions, selective ban/unban và audit trail                |    No    | Sync OpenAPI; map queue/report/user/comment DTO, reason codes và xử lý conflict/state boundary |
-| 2026-09-15 | 1.8     | Contributors   | Hoàn thiện shared application state machine, own/Admin list-review, approved subtype profile, cooldown và stale-session protection   |    No    | Sync OpenAPI; map profile/application DTO và buộc đăng nhập lại khi STALE_ACCESS_TOKEN         |
-| 2026-09-15 | 1.7     | Community      | Thêm comment thread một tầng, idempotent vote/bookmark, Recipe rating aggregate, community summary và current-user bookmark list     |    No    | Sync OpenAPI; tạo DTO/Model/Mapper/query hooks và xử lý placeholder/rate limit                 |
-| 2026-09-15 | 1.6     | Search         | Mở rộng GET posts với normalized ranking/filter an toàn và thêm related content theo ba type                                         |    No    | Sync OpenAPI; map search meta/filters và ba list related, không tự nới appliedConstraints      |
-| 2026-09-15 | 1.5     | Content        | Thêm Recipe/Blog/Video revision CRUD, structured recipe constraints, soft-delete/version conflict và signed Cloudinary upload        |    No    | Sync OpenAPI; tạo DTO/Model/Mapper theo post type, upload trực tiếp và xử lý revision conflict |
-| 2026-09-15 | 1.4     | Catalog        | Thêm category tree, canonical ingredient, alias resolution và metadata allergen/diet/tradition; exclusion nhận optional ingredientId |    No    | Sync OpenAPI; tạo DTO/Model/Mapper cho category và ingredient, xử lý AMBIGUOUS                 |
-| 2026-09-15 | 1.3     | Profile/Diet   | Thêm profile, BMI/BMR/TDEE, rule preview v1, preference/effective constraints và PERIODIC dates                                      |    No    | Sync OpenAPI; tạo DTO/Model/Mapper riêng cho profile và diet flow                              |
-| 2026-09-15 | 1.2     | Auth           | Hoàn tất register/login/refresh rotation/logout, RBAC primitives và `/users/me`                                                      |    No    | Sync OpenAPI; tích hợp proxy/cookie với `withCredentials=true`                                 |
-| 2026-09-15 | 1.1     | Foundation     | Hoàn tất health, Swagger UI và OpenAPI JSON; thêm request ID và error envelope nền tảng                                              |    No    | Dùng catalog OpenAPI đã sync; chưa cần tạo consumer UI cho health                              |
-| 2026-09-15 | 1.0     | All            | Tạo integration registry; backend chưa triển khai                                                                                    |    No    | Không tích hợp API thật cho tới khi status READY                                               |
+| Date       | Version | Module         | Change                                                                                                                                | Breaking | FE action                                                                                            |
+| ---------- | ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- | :------: | ---------------------------------------------------------------------------------------------------- |
+| 2026-09-16 | 2.1     | Meal Planner   | Thêm weekly generate/version/regenerate, per-day hard filters, calorie/repeat fallback, safe swap, shopping list và nutrition quality |    No    | Sync OpenAPI; tạo DTO/Model/Mapper/hooks cho 21 slots, warnings, optimistic version và shopping list |
+| 2026-09-16 | 2.0     | Recommendation | Thêm consent/version, behavior event allowlist/idempotency/dedupe, hard-filtered scoring v1, cold start và reason codes               |    No    | Sync OpenAPI; tạo consent/event/recommendation DTO, mapper, hooks và xử lý sáu business errors       |
+| 2026-09-16 | 1.9     | Moderation     | Thêm rule flags v1, transactional post review, report escalation, Admin decisions, selective ban/unban và audit trail                 |    No    | Sync OpenAPI; map queue/report/user/comment DTO, reason codes và xử lý conflict/state boundary       |
+| 2026-09-15 | 1.8     | Contributors   | Hoàn thiện shared application state machine, own/Admin list-review, approved subtype profile, cooldown và stale-session protection    |    No    | Sync OpenAPI; map profile/application DTO và buộc đăng nhập lại khi STALE_ACCESS_TOKEN               |
+| 2026-09-15 | 1.7     | Community      | Thêm comment thread một tầng, idempotent vote/bookmark, Recipe rating aggregate, community summary và current-user bookmark list      |    No    | Sync OpenAPI; tạo DTO/Model/Mapper/query hooks và xử lý placeholder/rate limit                       |
+| 2026-09-15 | 1.6     | Search         | Mở rộng GET posts với normalized ranking/filter an toàn và thêm related content theo ba type                                          |    No    | Sync OpenAPI; map search meta/filters và ba list related, không tự nới appliedConstraints            |
+| 2026-09-15 | 1.5     | Content        | Thêm Recipe/Blog/Video revision CRUD, structured recipe constraints, soft-delete/version conflict và signed Cloudinary upload         |    No    | Sync OpenAPI; tạo DTO/Model/Mapper theo post type, upload trực tiếp và xử lý revision conflict       |
+| 2026-09-15 | 1.4     | Catalog        | Thêm category tree, canonical ingredient, alias resolution và metadata allergen/diet/tradition; exclusion nhận optional ingredientId  |    No    | Sync OpenAPI; tạo DTO/Model/Mapper cho category và ingredient, xử lý AMBIGUOUS                       |
+| 2026-09-15 | 1.3     | Profile/Diet   | Thêm profile, BMI/BMR/TDEE, rule preview v1, preference/effective constraints và PERIODIC dates                                       |    No    | Sync OpenAPI; tạo DTO/Model/Mapper riêng cho profile và diet flow                                    |
+| 2026-09-15 | 1.2     | Auth           | Hoàn tất register/login/refresh rotation/logout, RBAC primitives và `/users/me`                                                       |    No    | Sync OpenAPI; tích hợp proxy/cookie với `withCredentials=true`                                       |
+| 2026-09-15 | 1.1     | Foundation     | Hoàn tất health, Swagger UI và OpenAPI JSON; thêm request ID và error envelope nền tảng                                               |    No    | Dùng catalog OpenAPI đã sync; chưa cần tạo consumer UI cho health                                    |
+| 2026-09-15 | 1.0     | All            | Tạo integration registry; backend chưa triển khai                                                                                     |    No    | Không tích hợp API thật cho tới khi status READY                                                     |
 
 Template:
 
