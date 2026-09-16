@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 2.2
+**Version:** 2.3
 
 **Cập nhật:** 16/09/2026
 
@@ -8,7 +8,7 @@
 
 **Contract target:** `/api/v1`
 
-> Tài liệu này là registry sống cho những capability backend đã sẵn sàng để frontend tích hợp. Foundation, Authentication & Sessions, Profile/Health, Diet Rules, Catalog, Content Core, Content Discovery, Community Interactions, Contributor Applications, Moderation & Reports, Behavioral Recommendation và Meal Planner đã hoàn tất; các feature còn lại giữ `PLANNED` cho tới khi phase tương ứng vượt qua đầy đủ completion gate.
+> Tài liệu này là registry sống cho những capability backend đã sẵn sàng để frontend tích hợp. Foundation, Authentication & Sessions, Profile/Health, Diet Rules, Catalog, Content Core, Content Discovery, Community Interactions, Contributor Applications, Moderation & Reports, Behavioral Recommendation, Meal Planner và AI Chat Gateway đã hoàn tất; các feature còn lại giữ `PLANNED` cho tới khi phase tương ứng vượt qua đầy đủ completion gate.
 
 ---
 
@@ -288,18 +288,19 @@ luồng này.
 
 > Provider decision: live AI dùng OpenAI Responses API; chat mặc định `gpt-5.6-terra`, moderation
 > dùng `omni-moderation-latest`. Frontend chỉ gọi backend SSE contract, không gọi OpenAI trực tiếp và
-> không phụ thuộc provider event shape. Các endpoint vẫn `PLANNED` tới khi Phase 11 vượt gate.
+> không phụ thuộc provider event shape. Năm endpoint private chat đã `READY`; public sharing và expert
+> verification vẫn `PLANNED` cho Phase 12.
 
-| Method | Path                              | Status    | Backend updated | FE integrated | Ghi chú                         |
-| ------ | --------------------------------- | --------- | --------------- | ------------- | ------------------------------- |
-| POST   | `/chat/sessions`                  | `PLANNED` | —               | No            | Guest hoặc authenticated        |
-| GET    | `/chat/sessions`                  | `PLANNED` | —               | No            | Authenticated history           |
-| GET    | `/chat/sessions/:id/messages`     | `PLANNED` | —               | No            | Ownership/public rules          |
-| POST   | `/chat/sessions/:id/messages`     | `PLANNED` | —               | No            | SSE stream                      |
-| POST   | `/chat/messages/:id/feedback`     | `PLANNED` | —               | No            | Up/down + reason                |
-| PATCH  | `/chat/messages/:id/share`        | `PLANNED` | —               | No            | Authenticated only              |
-| GET    | `/chat/public`                    | `PLANNED` | —               | No            | Public shared answers           |
-| POST   | `/chat/messages/:id/verification` | `PLANNED` | —               | No            | Approved Nutrition Expert/Admin |
+| Method | Path                              | Status    | Backend updated | FE integrated | Ghi chú                                      |
+| ------ | --------------------------------- | --------- | --------------- | ------------- | -------------------------------------------- |
+| POST   | `/chat/sessions`                  | `READY`   | 2026-09-16      | No            | Guest signed cookie hoặc authenticated       |
+| GET    | `/chat/sessions`                  | `READY`   | 2026-09-16      | No            | Authenticated private history                |
+| GET    | `/chat/sessions/:id/messages`     | `READY`   | 2026-09-16      | No            | Auth/guest ownership; guest retention 7 ngày |
+| POST   | `/chat/sessions/:id/messages`     | `READY`   | 2026-09-16      | No            | SSE, idempotency, quota, fallback            |
+| POST   | `/chat/messages/:id/feedback`     | `READY`   | 2026-09-16      | No            | Owned assistant message; upsert up/down      |
+| PATCH  | `/chat/messages/:id/share`        | `PLANNED` | —               | No            | Authenticated only                           |
+| GET    | `/chat/public`                    | `PLANNED` | —               | No            | Public shared answers                        |
+| POST   | `/chat/messages/:id/verification` | `PLANNED` | —               | No            | Approved Nutrition Expert/Admin              |
 
 ### 6.7 Restaurants và Location
 
@@ -486,6 +487,20 @@ error
 - Abort navigation phải đóng stream.
 - `error` có thể xuất hiện sau HTTP 200; không chỉ dựa vào Axios error interceptor.
 - Disclaimer render cố định kể cả khi stream lỗi một phần.
+- `POST /chat/sessions` cấp signed HttpOnly `chatGuest` cookie khi chưa đăng nhập; frontend không gửi
+  `guestId`. Guest session hết hạn và bị purge sau 7 ngày. `GET /chat/sessions` chỉ dành cho user đã
+  đăng nhập; guest mở history qua session ID cùng cookie ownership.
+- Daily quota mặc định: Guest `5`, Member `20`, Contributor/Admin `50`; backend config có thể thay đổi
+  các giá trị này. Reset lúc `00:00 Asia/Ho_Chi_Minh`. Reservation ngăn concurrent request vượt quota,
+  và chỉ provider response hoàn chỉnh mới consume quota.
+- Validation, topic/safety block, timeout, provider failure, client abort và static fallback không trừ
+  quota. Retry phải giữ nguyên `idempotencyKey`; completed turn được replay, payload khác trả conflict.
+- Live provider là OpenAI Responses API với `gpt-5.6-terra`; thiếu key/provider down trả static fallback
+  và core API vẫn hoạt động. Local development có thể đặt `AI_PROVIDER=fake`.
+- Raw chat chỉ nằm trong private message history. AI request log chỉ giữ prompt hash, allowlisted topic
+  codes, provider/model, latency/token usage và status; không ghi raw prompt/profile.
+- Khi personalization consent active, backend tự emit `CHAT_TOPIC` từ allowlist; frontend không được
+  tự gửi raw chat text vào behavior event.
 
 ### 7.9 Behavioral events
 
@@ -627,8 +642,11 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `MEAL_PLAN_VERSION_CONFLICT`                  | Refetch plan detail và cho user thực hiện lại swap/delete              |
 | `VERIFICATION_ALREADY_EXISTS`                 | Refresh target và hiển thị reviewer hiện tại                           |
 | `AI_QUOTA_EXCEEDED`                           | Hiển thị reset time/CTA phù hợp role                                   |
+| `AI_RATE_LIMITED`                             | Tôn trọng `retryAfterSeconds`; không tự đổi guest identity             |
 | `AI_FEATURE_DISABLED`                         | Hiển thị maintenance state; history vẫn xem được                       |
 | `AI_PROVIDER_UNAVAILABLE`                     | Retry/fallback message                                                 |
+| `CHAT_IDEMPOTENCY_CONFLICT`                   | Chỉ tạo key mới cho user action mới; không đổi payload của key cũ      |
+| `CHAT_REQUEST_IN_PROGRESS`                    | Giữ stream hiện tại hoặc chờ rồi retry cùng idempotency key            |
 | `EXTERNAL_LOCATION_UNAVAILABLE`               | Dùng internal restaurant results                                       |
 | `RESOURCE_CONFLICT`                           | Refresh entity/version trước khi sửa lại                               |
 
@@ -693,7 +711,8 @@ Thêm entry mới nhất ở trên cùng.
 
 | Date       | Version | Module         | Change                                                                                                                                | Breaking | FE action                                                                                            |
 | ---------- | ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- | :------: | ---------------------------------------------------------------------------------------------------- |
-| 2026-09-16 | 2.2     | AI baseline    | Chốt OpenAI Responses API, `gpt-5.6-terra` cho chat và `omni-moderation-latest`; endpoint vẫn PLANNED                                |    No    | Không gọi OpenAI từ browser; chờ backend SSE contract Phase 11                                          |
+| 2026-09-16 | 2.3     | AI Chat        | Thêm private auth/guest sessions, OpenAI/fake adapter, SSE, atomic daily quota, fallback, feedback và redacted logs                   |    No    | Sync OpenAPI; xây SSE client, giữ idempotency key, signed-cookie credentials và fixed disclaimer     |
+| 2026-09-16 | 2.2     | AI baseline    | Chốt OpenAI Responses API, `gpt-5.6-terra` cho chat và `omni-moderation-latest`; endpoint vẫn PLANNED                                 |    No    | Không gọi OpenAI từ browser; chờ backend SSE contract Phase 11                                       |
 | 2026-09-16 | 2.1     | Meal Planner   | Thêm weekly generate/version/regenerate, per-day hard filters, calorie/repeat fallback, safe swap, shopping list và nutrition quality |    No    | Sync OpenAPI; tạo DTO/Model/Mapper/hooks cho 21 slots, warnings, optimistic version và shopping list |
 | 2026-09-16 | 2.0     | Recommendation | Thêm consent/version, behavior event allowlist/idempotency/dedupe, hard-filtered scoring v1, cold start và reason codes               |    No    | Sync OpenAPI; tạo consent/event/recommendation DTO, mapper, hooks và xử lý sáu business errors       |
 | 2026-09-16 | 1.9     | Moderation     | Thêm rule flags v1, transactional post review, report escalation, Admin decisions, selective ban/unban và audit trail                 |    No    | Sync OpenAPI; map queue/report/user/comment DTO, reason codes và xử lý conflict/state boundary       |

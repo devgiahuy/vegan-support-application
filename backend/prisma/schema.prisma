@@ -336,6 +336,39 @@ enum MealPlanMutationType {
   @@map("meal_plan_mutation_type")
 }
 
+enum ChatMessageRole {
+  USER
+  ASSISTANT
+
+  @@map("chat_message_role")
+}
+
+enum ChatMessageStatus {
+  PENDING
+  COMPLETED
+  FAILED
+
+  @@map("chat_message_status")
+}
+
+enum ChatFeedbackValue {
+  UP
+  DOWN
+
+  @@map("chat_feedback_value")
+}
+
+enum AiRequestStatus {
+  IN_PROGRESS
+  SUCCESS
+  FALLBACK
+  BLOCKED
+  FAILED
+  ABORTED
+
+  @@map("ai_request_status")
+}
+
 model User {
   id                          String                     @id @default(uuid()) @db.Uuid
   email                       String                     @unique @db.VarChar(320)
@@ -383,6 +416,8 @@ model User {
   behaviorEvents              BehaviorEvent[]
   mealPlans                   MealPlan[]
   mealPlanMutations           MealPlanMutation[]
+  chatSessions                ChatSession[]
+  aiRequestLogs               AiRequestLog[]
 
   @@map("users")
 }
@@ -795,6 +830,123 @@ model MealPlanMutation {
   @@unique([userId, idempotencyKey])
   @@index([mealPlanId, createdAt])
   @@map("meal_plan_mutations")
+}
+
+model ChatSession {
+  id          String         @id @default(uuid()) @db.Uuid
+  userId      String?        @map("user_id") @db.Uuid
+  guestIdHash String?        @map("guest_id_hash") @db.Char(64)
+  title       String         @default("Cuộc trò chuyện dinh dưỡng") @db.VarChar(160)
+  expiresAt   DateTime?      @map("expires_at") @db.Timestamptz(3)
+  deletedAt   DateTime?      @map("deleted_at") @db.Timestamptz(3)
+  createdAt   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user        User?          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages    ChatMessage[]
+  requestLogs AiRequestLog[]
+
+  @@index([userId, deletedAt, updatedAt])
+  @@index([guestIdHash, expiresAt, deletedAt])
+  @@index([expiresAt])
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id                 String            @id @default(uuid()) @db.Uuid
+  sessionId          String            @map("session_id") @db.Uuid
+  role               ChatMessageRole
+  status             ChatMessageStatus
+  content            String
+  idempotencyKey     String?           @map("idempotency_key") @db.VarChar(120)
+  payloadHash        String?           @map("payload_hash") @db.Char(64)
+  requestMessageId   String?           @unique @map("request_message_id") @db.Uuid
+  provider           String?           @db.VarChar(40)
+  modelId            String?           @map("model_id") @db.VarChar(100)
+  providerResponseId String?           @map("provider_response_id") @db.VarChar(160)
+  fallback           Boolean           @default(false)
+  topicCodes         Json              @default("[]") @map("topic_codes")
+  completedAt        DateTime?         @map("completed_at") @db.Timestamptz(3)
+  createdAt          DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+  session            ChatSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  requestMessage     ChatMessage?      @relation("ChatMessageReply", fields: [requestMessageId], references: [id], onDelete: Cascade)
+  responseMessage    ChatMessage?      @relation("ChatMessageReply")
+  feedback           ChatFeedback?
+  requestLog         AiRequestLog?
+
+  @@unique([sessionId, idempotencyKey])
+  @@index([sessionId, createdAt, id])
+  @@index([status, updatedAt])
+  @@map("chat_messages")
+}
+
+model ChatFeedback {
+  messageId String            @id @map("message_id") @db.Uuid
+  value     ChatFeedbackValue
+  reason    String?           @db.VarChar(500)
+  createdAt DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+  message   ChatMessage       @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([value, updatedAt])
+  @@map("chat_feedback")
+}
+
+model AiRequestLog {
+  id                String          @id @default(uuid()) @db.Uuid
+  sessionId         String?         @map("session_id") @db.Uuid
+  requestMessageId  String          @unique @map("request_message_id") @db.Uuid
+  userId            String?         @map("user_id") @db.Uuid
+  guestIdHash       String?         @map("guest_id_hash") @db.Char(64)
+  provider          String          @db.VarChar(40)
+  modelId           String          @map("model_id") @db.VarChar(100)
+  status            AiRequestStatus
+  providerCallCount Int             @default(0) @map("provider_call_count")
+  latencyMs         Int?            @map("latency_ms")
+  inputTokens       Int?            @map("input_tokens")
+  outputTokens      Int?            @map("output_tokens")
+  errorCode         String?         @map("error_code") @db.VarChar(100)
+  redactedMetadata  Json            @default("{}") @map("redacted_metadata")
+  startedAt         DateTime        @map("started_at") @db.Timestamptz(3)
+  completedAt       DateTime?       @map("completed_at") @db.Timestamptz(3)
+  createdAt         DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime        @updatedAt @map("updated_at") @db.Timestamptz(3)
+  session           ChatSession?    @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  requestMessage    ChatMessage     @relation(fields: [requestMessageId], references: [id], onDelete: Cascade)
+  user              User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([provider, modelId, createdAt])
+  @@index([userId, createdAt])
+  @@index([guestIdHash, createdAt])
+  @@map("ai_request_logs")
+}
+
+model AiQuotaBucket {
+  subjectKey           String    @map("subject_key") @db.Char(64)
+  usageDate            DateTime  @map("usage_date") @db.Date
+  successfulCount      Int       @default(0) @map("successful_count")
+  quotaLimit           Int       @map("quota_limit")
+  reservationKey       String?   @map("reservation_key") @db.VarChar(160)
+  reservationExpiresAt DateTime? @map("reservation_expires_at") @db.Timestamptz(3)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@id([subjectKey, usageDate])
+  @@index([usageDate, updatedAt])
+  @@map("ai_quota_buckets")
+}
+
+model AiRateLimitBucket {
+  keyHash     String   @map("key_hash") @db.Char(64)
+  windowStart DateTime @map("window_start") @db.Timestamptz(3)
+  count       Int
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@id([keyHash, windowStart])
+  @@index([windowStart])
+  @@map("ai_rate_limit_buckets")
 }
 
 model RecipeDetail {

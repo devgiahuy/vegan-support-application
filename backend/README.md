@@ -7,7 +7,7 @@ discovery.
 
 ## Prerequisites
 
-- Node.js 20.19 or newer
+- Node.js 22 or newer
 - PostgreSQL 14 or newer
 - npm 10 or newer
 
@@ -47,6 +47,11 @@ Phase 05 adds accent-insensitive search, structured Recipe filters, deterministi
 groups, and backend-enforced profile constraints. Search persists normalized revision text and uses
 PostgreSQL `pg_trgm` GIN indexes; local query-plan evidence is recorded in
 `docs/SEARCH_PERFORMANCE.md`.
+
+Phase 11 uses the official OpenAI SDK and Responses API behind an `AiProvider` boundary. The live
+default is `gpt-5.6-terra` with `omni-moderation-latest`; set `AI_PROVIDER=fake` for deterministic
+local development or provide `OPENAI_API_KEY` for the live path. Missing/unavailable OpenAI access
+degrades to a static safe response without consuming daily quota.
 
 ## Quality gates
 

@@ -213,7 +213,7 @@ VeggieConnect là hệ thống độc lập (không phụ thuộc hệ thống l
 - **Alternative Flow:** Câu hỏi ngoài phạm vi dinh dưỡng chay (vd hỏi về chính trị) → chatbot lịch sự từ chối, hướng lại chủ đề.
 - **Exception Flow:**
   - Guest hết quota trial → trả 429 kèm CTA đăng ký.
-  - LLM provider lỗi → fallback provider dự phòng; nếu tất cả lỗi → trả câu trả lời tĩnh xin lỗi + gợi ý câu hỏi thường gặp.
+  - OpenAI lỗi/timeout → trả câu trả lời tĩnh an toàn + gợi ý câu hỏi thường gặp; không tự chuyển raw chat sang provider khác và không trừ quota.
 - **Post-condition:** Hội thoại được lưu vào `ChatSession`/`ChatMessage` (nếu là Authorized User; Guest lưu tạm 7 ngày). Với user đã consent, message được gắn tag chủ đề/dị ứng/món đã nhắc tới để phục vụ UC-08; user có quyền xoá lịch sử và tắt cá nhân hoá.
 
 ### 3.8. UC-08: AI Personalized Meal Planner — gợi ý chủ động theo hành vi (GenAI + Behavioral Analysis) [MH — nâng từ NTH theo góp ý GV]

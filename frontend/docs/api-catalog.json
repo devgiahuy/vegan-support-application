@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
   "source": "../backend/openapi.json",
-  "generatedAt": "2026-09-16T07:23:49.849Z",
+  "generatedAt": "2026-09-16T08:07:05.561Z",
   "stats": {
-    "operations": 66,
-    "groups": 16,
-    "schemas": 62
+    "operations": 71,
+    "groups": 17,
+    "schemas": 70
   },
   "operations": [
     {
@@ -2342,6 +2342,151 @@
         "403": "ErrorResponse",
         "404": "ErrorResponse",
         "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/sessions",
+      "group": "AI Chat",
+      "summary": "List private chat sessions của authenticated user",
+      "operationId": "listChatSessions",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "ChatSessionListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/chat/sessions",
+      "group": "AI Chat",
+      "summary": "Tạo private chat session cho authenticated user hoặc guest",
+      "operationId": "createChatSession",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "CreateChatSessionRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "ChatSessionResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/chat/sessions/{id}/messages",
+      "group": "AI Chat",
+      "summary": "Đọc message history theo ownership",
+      "operationId": "listChatMessages",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "ChatMessageListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/chat/sessions/{id}/messages",
+      "group": "AI Chat",
+      "summary": "Stream nutrition answer qua SSE",
+      "operationId": "streamChatMessage",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "SendChatMessageRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "ChatSseStream",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/chat/messages/{id}/feedback",
+      "group": "AI Chat",
+      "summary": "Upsert feedback cho owned assistant message",
+      "operationId": "upsertChatFeedback",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "ChatFeedbackRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "ChatFeedbackResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
         "423": "ErrorResponse"
       }
     }
