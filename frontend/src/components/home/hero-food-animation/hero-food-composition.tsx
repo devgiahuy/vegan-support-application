@@ -1,14 +1,5 @@
 import * as React from 'react';
-import { AbsoluteFill, interpolate, useCurrentFrame, Easing } from 'remotion';
-import { FoodBowlCeramic } from './components/food-bowl-ceramic';
-import {
-  AvocadoVector,
-  ChickpeasVector,
-  TomatoVector,
-  CarrotVector,
-  GreensVector,
-} from './components/ingredients-vectors';
-import { CompletedBuddhaBowl } from './components/completed-buddha-bowl';
+import { AbsoluteFill, interpolate, useCurrentFrame, Easing, Img, staticFile } from 'remotion';
 import { EnergyConnections } from './components/energy-connections';
 import { HERO_ANIMATION_CONFIG, INGREDIENTS_CONFIG, PHASES } from './hero-food-constants';
 
@@ -16,12 +7,12 @@ export const HeroFoodComposition: React.FC = () => {
   const frame = useCurrentFrame();
 
   // ---------------------------------------------------------------------------
-  // 1. TÔ GỐM SỨ BAN ĐẦU (Empty Ceramic Bowl)
+  // 1. TÔ GỖ TỰ NHIÊN BAN ĐẦU (Wooden Bowl)
   // ---------------------------------------------------------------------------
-  // Floating nhấp nhô nhẹ nhàng
+  // Nhấp nhô nhẹ nhàng
   const idleFloatY = Math.sin((frame / HERO_ANIMATION_CONFIG.FPS) * Math.PI * 1.5) * 4;
 
-  // Lần xoay thứ 1 (Phase 2: frame 25 -> 65): xoay 360 độ
+  // Lần xoay thứ 1 (Phase 2: frame 25 -> 65): xoay 360 độ tạo động lực
   const firstRotation = interpolate(
     frame,
     [PHASES.PHASE_2_FIRST_ROTATION.start, PHASES.PHASE_2_FIRST_ROTATION.end],
@@ -33,11 +24,11 @@ export const HeroFoodComposition: React.FC = () => {
     }
   );
 
-  // Lần xoay thứ 2 (Phase 5: frame 151 -> 175): xoay 90 độ chuẩn bị hợp nhất
+  // Lần xoay thứ 2 (Phase 5: frame 151 -> 175): xoay nhẹ chuẩn bị hội tụ
   const secondRotation = interpolate(
     frame,
     [PHASES.PHASE_5_SECOND_ROTATION.start, PHASES.PHASE_5_SECOND_ROTATION.end],
-    [0, 90],
+    [0, 75],
     {
       easing: Easing.bezier(0.4, 0, 0.2, 1),
       extrapolateLeft: 'clamp',
@@ -47,37 +38,19 @@ export const HeroFoodComposition: React.FC = () => {
 
   const totalBowlRotation = firstRotation + secondRotation;
 
-  // Độ mờ của tô gốm ban đầu (chuyển sang món hoàn chỉnh ở Phase 6->7 và hồi lại ở Phase 9)
+  // Độ mờ của tô gỗ rỗng ban đầu (chuyển giao sang món hoàn chỉnh ở Phase 6->7)
   const emptyBowlOpacity = interpolate(frame, [185, 195, 236, 240], [1, 0, 0, 1], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
 
   // ---------------------------------------------------------------------------
-  // 2. CÁC NGUYÊN LIỆU (5 Ingredients Reveal & Orbit & Convergence)
+  // 2. KẾT NỐI NĂNG LƯỢNG THỰC VẬT (Phase 3 & 4)
   // ---------------------------------------------------------------------------
   const connectionOpacity = interpolate(frame, [85, 110, 150, 172], [0, 0.85, 0.85, 0], {
     extrapolateLeft: 'clamp',
     extrapolateRight: 'clamp',
   });
-
-  // Render từng nguyên liệu
-  const renderIngredientComponent = (id: string) => {
-    switch (id) {
-      case 'avocado':
-        return <AvocadoVector size={110} />;
-      case 'chickpeas':
-        return <ChickpeasVector size={105} />;
-      case 'tomato':
-        return <TomatoVector size={105} />;
-      case 'carrot':
-        return <CarrotVector size={110} />;
-      case 'greens':
-        return <GreensVector size={115} />;
-      default:
-        return null;
-    }
-  };
 
   return (
     <AbsoluteFill
@@ -90,7 +63,7 @@ export const HeroFoodComposition: React.FC = () => {
         backgroundColor: 'transparent',
       }}
     >
-      {/* Hào quang nền xanh ngọc dịu dàng */}
+      {/* Vầng hào quang mầm xanh thanh nhẹ phía sau */}
       <div
         style={{
           position: 'absolute',
@@ -98,7 +71,7 @@ export const HeroFoodComposition: React.FC = () => {
           height: 480,
           borderRadius: '50%',
           background:
-            'radial-gradient(circle, rgba(21,128,61,0.12) 0%, rgba(13,148,136,0.06) 55%, transparent 75%)',
+            'radial-gradient(circle, rgba(21,128,61,0.14) 0%, rgba(13,148,136,0.06) 55%, transparent 75%)',
           transform: `scale(${1 + Math.sin(frame * 0.05) * 0.04})`,
         }}
       />
@@ -107,41 +80,51 @@ export const HeroFoodComposition: React.FC = () => {
       <EnergyConnections progress={frame / 240} opacity={connectionOpacity} />
 
       {/* =========================================================
-          TÔ GỐM SỨ BAN ĐẦU
+          TÔ GỖ BAN ĐẦU (FOOD PHOTOGRAPHY BOWL)
           ========================================================= */}
       <div
         style={{
           position: 'absolute',
-          transform: `translateY(${idleFloatY}px) rotate(${totalBowlRotation}deg)`,
+          width: 340,
+          height: 340,
+          transform: `translate3d(0, ${idleFloatY}px, 0) rotate(${totalBowlRotation}deg)`,
           opacity: emptyBowlOpacity,
           display: emptyBowlOpacity > 0 ? 'block' : 'none',
           willChange: 'transform, opacity',
         }}
       >
-        <FoodBowlCeramic size={330} />
+        <Img
+          src={staticFile('hero/optimized/bowl.webp')}
+          alt="Tô gỗ tự nhiên"
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'contain',
+            filter: 'drop-shadow(0 14px 24px rgba(15, 23, 42, 0.22))',
+          }}
+        />
       </div>
 
       {/* =========================================================
-          5 NGUYÊN LIỆU (BUNG RA -> QUỸ ĐẠO -> HỘI TỤ)
+          5 NGUYÊN LIỆU THỰC TẾ (BƠ, ĐẬU HŨ, CÀ CHUA, CÀ RỐT, XÀ LÁCH)
+          Toàn bộ chuyển động sử dụng translate3d (Compositor-only)
           ========================================================= */}
       {INGREDIENTS_CONFIG.map((ing, idx) => {
         const revealStart = PHASES.PHASE_3_INGREDIENT_REVEAL.start + ing.delayFrames;
         const revealEnd = revealStart + 26;
 
-        // 1. Khoảng cách từ tâm
         let currentDistance = 0;
         let ingOpacity = 0;
         let ingScale = 0;
         let floatAngle = (ing.angle * Math.PI) / 180;
 
         if (frame < revealStart) {
-          // Chưa xuất hiện
           currentDistance = 0;
           ingOpacity = 0;
           ingScale = 0;
         } else if (frame <= revealEnd) {
-          // Đang bung ra từ lòng tô
-          currentDistance = interpolate(frame, [revealStart, revealEnd], [30, ing.distance], {
+          // Bung ra từ lòng tô
+          currentDistance = interpolate(frame, [revealStart, revealEnd], [25, ing.distance], {
             easing: Easing.bezier(0.16, 1, 0.3, 1),
             extrapolateLeft: 'clamp',
             extrapolateRight: 'clamp',
@@ -168,11 +151,10 @@ export const HeroFoodComposition: React.FC = () => {
           ingOpacity = 1;
           ingScale = ing.scale + Math.sin(orbitTime * 0.08 + idx) * 0.03;
         } else if (frame <= PHASES.PHASE_6_CONVERGENCE.end) {
-          // Chuẩn bị và hội tụ xoáy về tâm tô
+          // Hội tụ xoáy ốc về tâm tô
           const convStart = PHASES.PHASE_6_CONVERGENCE.start;
           const convEnd = PHASES.PHASE_6_CONVERGENCE.end;
 
-          // Xoay thêm góc theo vòng xoáy
           const vortexAngleOffset = interpolate(frame, [convStart, convEnd], [0, 1.2], {
             easing: Easing.in(Easing.quad),
             extrapolateLeft: 'clamp',
@@ -195,7 +177,6 @@ export const HeroFoodComposition: React.FC = () => {
             extrapolateRight: 'clamp',
           });
         } else {
-          // Đã hội tụ xong
           currentDistance = 0;
           ingOpacity = 0;
           ingScale = 0;
@@ -203,30 +184,38 @@ export const HeroFoodComposition: React.FC = () => {
 
         if (ingOpacity <= 0.01) return null;
 
-        // Tọa độ tính từ tâm 350, 350
-        const posX = 350 + Math.cos(floatAngle) * currentDistance - 50;
-        const posY = 350 + Math.sin(floatAngle) * currentDistance - 50;
+        // Tọa độ lệch tâm (offset) từ 0, 0
+        const offsetX = Math.cos(floatAngle) * currentDistance;
+        const offsetY = Math.sin(floatAngle) * currentDistance;
 
         return (
           <div
             key={ing.id}
             style={{
               position: 'absolute',
-              left: `${posX}px`,
-              top: `${posY}px`,
+              width: ing.size,
+              height: ing.size,
               opacity: ingOpacity,
-              transform: `scale(${ingScale}) rotate(${ing.rotationOffset}deg)`,
-              transformOrigin: 'center center',
-              willChange: 'transform, opacity, left, top',
+              transform: `translate3d(${offsetX}px, ${offsetY}px, 0) scale(${ingScale}) rotate(${ing.rotationOffset}deg)`,
+              willChange: 'transform, opacity',
             }}
           >
-            {renderIngredientComponent(ing.id)}
+            <Img
+              src={staticFile(ing.file)}
+              alt={ing.name}
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'contain',
+                filter: 'drop-shadow(0 8px 16px rgba(15, 23, 42, 0.18))',
+              }}
+            />
           </div>
         );
       })}
 
       {/* =========================================================
-          MÓN ĂN HOÀN CHỈNH: RAINBOW BUDDHA BOWL (Phase 7 & 8)
+          MÓN ĂN HOÀN CHỈNH: RAINBOW BUDDHA BOWL (FOOD PHOTOGRAPHY)
           ========================================================= */}
       {frame >= 194 &&
         (() => {
@@ -235,7 +224,7 @@ export const HeroFoodComposition: React.FC = () => {
             extrapolateRight: 'clamp',
           });
 
-          const dishScale = interpolate(frame, [195, 206, 218], [0.78, 1.05, 1.0], {
+          const dishScale = interpolate(frame, [195, 206, 218], [0.85, 1.05, 1.0], {
             easing: Easing.bezier(0.16, 1, 0.3, 1),
             extrapolateLeft: 'clamp',
             extrapolateRight: 'clamp',
@@ -247,12 +236,23 @@ export const HeroFoodComposition: React.FC = () => {
             <div
               style={{
                 position: 'absolute',
-                transform: `translateY(${dishFloat}px) scale(${dishScale})`,
+                width: 340,
+                height: 340,
+                transform: `translate3d(0, ${dishFloat}px, 0) scale(${dishScale})`,
                 opacity: dishOpacity,
                 willChange: 'transform, opacity',
               }}
             >
-              <CompletedBuddhaBowl size={330} />
+              <Img
+                src={staticFile('hero/optimized/completed-dish.webp')}
+                alt="Tô Rainbow Buddha Bowl hoàn chỉnh"
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  objectFit: 'contain',
+                  filter: 'drop-shadow(0 16px 28px rgba(15, 23, 42, 0.25))',
+                }}
+              />
             </div>
           );
         })()}

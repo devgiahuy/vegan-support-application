@@ -369,3 +369,29 @@
   - `npm run build`: pass hoàn toàn (Compiled successfully in 43s, static generation 26/26 routes).
 - PROGRESS: task #0 Nền tảng 65% → 70%.
 - Còn lại / rủi ro: Không có. Animation hoàn toàn tự chủ (100% vector SVG), không phụ thuộc network tải ảnh ngoài, render siêu nhẹ và mượt mà trên cả desktop lẫn mobile.
+
+---
+
+## [2026-09-16] — Tích hợp ảnh thực tế vào Hero Food Animation (Remotion)
+
+- Mục tiêu: Thay thế đồ họa vector SVG bằng bộ 7 ảnh thực tế của người dùng cung cấp trong `public/hero/`, xử lý loại bỏ nền caro giả, tối ưu dung lượng WebP và giữ vững 60 FPS theo tiêu chuẩn Remotion + motion performance.
+- Đã làm:
+  - Xử lý nén & tách nền asset bằng `sharp`:
+    - `completed-dish.png` (gốc 7.4 MB, 2048x2048, nền caro dính liền RGB do AI sinh): tính toán tâm tô (1024, 1022.5) và bán kính 894px với feather 2px tạo circular mask, loại bỏ triệt để 100% nền caro giả, crop sát và nén sang `public/hero/optimized/completed-dish.webp` (640x640, 122 KB).
+    - `bowl.png`: tối ưu và nén sang `bowl.webp` (640x640, 128.5 KB).
+    - 5 nguyên liệu thực tế (`avocado.png`, `chickpeas.png` / khối đậu hũ cắt vuông, `tomato.png`, `carrot.png`, `greens.png`): tự động trim vùng trong suốt và nén sang WebP trong suốt (280x280, ~27–38 KB mỗi ảnh).
+    - Tổng dung lượng bộ asset giảm hơn 97% từ ~18 MB xuống chỉ còn 412.2 KB.
+  - Cập nhật code animation:
+    - `hero-food-constants.ts`: Khai báo đường dẫn `hero/optimized/*.webp`, cập nhật kích thước chuẩn, tọa độ khoảng cách và xoay nhẹ cho 5 nguyên liệu.
+    - `hero-food-composition.tsx`: Dùng `<Img src={staticFile('...')} />` của Remotion; chuyển toàn bộ animation sang 100% GPU Compositor properties (`translate3d`, `rotate`, `scale`, `opacity`) thay vì layout `left`/`top`, đạt 60 FPS mượt mà tuyệt đối.
+    - `hero-food-player.tsx`: Nâng cấp fallback `prefers-reduced-motion` dùng `completed-dish.webp` kèm `priority`.
+    - `hero-food-animation.tsx`: Nâng cấp skeleton placeholder dùng `bowl.webp` chống nhảy layout (CLS).
+- File tạo/sửa:
+  - Tạo: `public/hero/optimized/{completed-dish,bowl,avocado,chickpeas,tomato,carrot,greens}.webp`
+  - Sửa: `src/components/home/hero-food-animation/{hero-food-constants.ts,hero-food-composition.tsx,hero-food-player.tsx,hero-food-animation.tsx}`, `docs/{PROGRESS,WORK-LOG}.md`
+- Verify:
+  - `node node_modules/typescript/bin/tsc --noEmit`: 0 lỗi.
+  - `npm test`: 66/66 unit tests pass.
+  - `npm run build`: pass 26/26 routes tĩnh và động.
+- PROGRESS: task #0 Nền tảng 70% → 70% (giữ nguyên).
+- Còn lại / rủi ro: Không có. Ảnh thực tế hiển thị sắc nét, sống động, chân thực và tối ưu tốc độ tải trang cao.

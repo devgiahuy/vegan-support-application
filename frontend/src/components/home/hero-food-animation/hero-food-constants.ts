@@ -35,6 +35,8 @@ export const PHASES = {
 export interface IngredientDef {
   id: string;
   name: string;
+  file: string;
+  size: number;
   angle: number; // góc bung ra (độ)
   distance: number; // khoảng cách từ tâm (px)
   delayFrames: number; // stagger delay
@@ -43,52 +45,62 @@ export interface IngredientDef {
 }
 
 /**
- * 5 nguyên liệu đặc trưng của món Buddha Bowl thuần chay chuẩn vị
+ * 5 nguyên liệu thực tế tương ứng với hình ảnh trong public/hero/optimized/
  */
 export const INGREDIENTS_CONFIG: IngredientDef[] = [
   {
     id: 'avocado',
     name: 'Bơ sáp tươi',
+    file: 'hero/optimized/avocado.webp',
+    size: 115,
     angle: -135, // Trên - Trái
-    distance: 215,
+    distance: 220,
     delayFrames: 0,
-    scale: 1.05,
+    scale: 1.0,
     rotationOffset: -15,
   },
   {
     id: 'chickpeas',
-    name: 'Đậu gà nướng giòn',
+    name: 'Đậu hũ áp chảo',
+    file: 'hero/optimized/chickpeas.webp',
+    size: 110,
     angle: -45, // Trên - Phải
-    distance: 210,
+    distance: 215,
     delayFrames: 6,
-    scale: 0.95,
-    rotationOffset: 20,
+    scale: 1.0,
+    rotationOffset: 12,
   },
   {
     id: 'tomato',
     name: 'Cà chua bi mọng',
+    file: 'hero/optimized/tomato.webp',
+    size: 112,
     angle: 0, // Phải
-    distance: 220,
+    distance: 225,
     delayFrames: 12,
     scale: 1.0,
     rotationOffset: -10,
   },
   {
     id: 'carrot',
-    name: 'Cà rốt giòn ngọt',
+    name: 'Cà rốt tươi giòn',
+    file: 'hero/optimized/carrot.webp',
+    size: 120,
     angle: 80, // Dưới - Phải
-    distance: 210,
+    distance: 215,
     delayFrames: 18,
     scale: 1.0,
     rotationOffset: 25,
   },
   {
     id: 'greens',
-    name: 'Rau mầm & xà lách',
+    name: 'Xà lách tươi xanh',
+    file: 'hero/optimized/greens.webp',
+    size: 125,
     angle: 150, // Dưới - Trái
-    distance: 215,
+    distance: 220,
     delayFrames: 24,
-    scale: 1.1,
+    scale: 1.0,
     rotationOffset: -20,
   },
 ];

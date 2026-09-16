@@ -2,9 +2,9 @@
 
 import * as React from 'react';
 import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import { Leaf, Flame, Calendar, Sparkles } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { FoodBowlCeramic } from './components/food-bowl-ceramic';
 
 /**
  * Skeleton tải trước hiển thị chiếc tô tĩnh và các badge, giữ layout ổn định (tránh CLS).
@@ -13,7 +13,14 @@ export function HeroFoodSkeleton() {
   return (
     <div className="relative flex h-full w-full items-center justify-center p-6">
       <div className="animate-pulse">
-        <FoodBowlCeramic size={310} />
+        <Image
+          src="/hero/optimized/bowl.webp"
+          alt="Đang tải..."
+          width={310}
+          height={310}
+          className="object-contain opacity-70"
+          priority
+        />
       </div>
     </div>
   );

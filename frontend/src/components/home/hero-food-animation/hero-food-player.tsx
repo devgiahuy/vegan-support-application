@@ -1,9 +1,9 @@
 'use client';
 
 import * as React from 'react';
+import Image from 'next/image';
 import { Player } from '@remotion/player';
 import { HeroFoodComposition } from './hero-food-composition';
-import { CompletedBuddhaBowl } from './components/completed-buddha-bowl';
 import { HERO_ANIMATION_CONFIG } from './hero-food-constants';
 
 export interface HeroFoodPlayerProps {
@@ -29,10 +29,17 @@ export function HeroFoodPlayer({ className = '' }: HeroFoodPlayerProps) {
   if (prefersReducedMotion) {
     return (
       <div
-        className={`relative flex h-full w-full items-center justify-center ${className}`}
+        className={`relative flex h-full w-full items-center justify-center p-6 ${className}`}
         aria-label="Minh họa món ăn chay Rainbow Buddha Bowl"
       >
-        <CompletedBuddhaBowl size={340} />
+        <Image
+          src="/hero/optimized/completed-dish.webp"
+          alt="Tô Rainbow Buddha Bowl hoàn chỉnh"
+          width={340}
+          height={340}
+          className="object-contain drop-shadow-xl"
+          priority
+        />
       </div>
     );
   }
