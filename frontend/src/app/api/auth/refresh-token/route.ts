@@ -9,7 +9,9 @@ import { BACKEND_URL } from '@/lib/env';
  */
 export async function POST(req: NextRequest) {
   const cookieHeader = req.headers.get('cookie') ?? '';
-  const candidates = ['/auth/refresh-token', '/auth/refresh'];
+  // Contract backend hiện tại: `POST /auth/refresh` (READY từ 2026-09-15).
+  // Giữ `/auth/refresh-token` làm fallback khi BE cũ trả 404.
+  const candidates = ['/auth/refresh', '/auth/refresh-token'];
 
   let lastError: unknown = null;
 
@@ -33,15 +35,33 @@ export async function POST(req: NextRequest) {
           lastError = data;
           continue;
         }
-        return NextResponse.json(data, { status: res.status });
+        // Forward Set-Cookie ngay cả khi lỗi (backend clear cookie khi REUSED/EXPIRED)
+        const errorResponse = NextResponse.json(data, { status: res.status });
+        const headersWithCookiesErr = res.headers as Headers & {
+          getSetCookie?: () => string[];
+        };
+        const setCookieErr: string[] =
+          typeof headersWithCookiesErr.getSetCookie === 'function'
+            ? headersWithCookiesErr.getSetCookie()
+            : res.headers.get('set-cookie')
+              ? [res.headers.get('set-cookie') as string]
+              : [];
+        for (const c of setCookieErr) {
+          errorResponse.headers.append('set-cookie', c);
+        }
+        return errorResponse;
       }
 
       const response = NextResponse.json(data);
 
-      // Forward Set-Cookie từ BE (refresh rotation) về browser
-      const setCookie =
-        typeof (res.headers as any).getSetCookie === 'function'
-          ? (res.headers as any).getSetCookie()
+      // Forward Set-Cookie từ BE (refresh rotation) về browser.
+      // `getSetCookie()` chỉ có ở Node runtime mới — kiểm tra an toàn qua type guard, không `any`.
+      const headersWithCookies = res.headers as Headers & {
+        getSetCookie?: () => string[];
+      };
+      const setCookie: string[] =
+        typeof headersWithCookies.getSetCookie === 'function'
+          ? headersWithCookies.getSetCookie()
           : res.headers.get('set-cookie')
             ? [res.headers.get('set-cookie') as string]
             : [];

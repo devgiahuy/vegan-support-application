@@ -4,6 +4,7 @@ import { ErrorResponse } from '@/types/api';
 import { getAccessToken, setAccessToken, clearAccessToken } from './auth-token';
 import { useAuthStore } from '@/store/useAuthStore';
 import { API_BASE_URL } from './env';
+import { sharedRefresh, clearRefreshState } from './auth-refresh';
 
 declare module 'axios' {
   export interface AxiosRequestConfig {
@@ -41,23 +42,39 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+/** Route cần đăng nhập theo `middleware.ts` — redirect về login kèm `from` khi mất phiên. */
+const PROTECTED_PREFIXES = ['/dashboard', '/profile', '/admin'];
+
+/**
+ * Đưa về `/login?from=<path>` khi mất phiên mà đang ở route bảo vệ.
+ * Trang public giữ nguyên (không redirect gây khó chịu); AuthGuard/middleware
+ * xử lý tiếp ở lần điều hướng sau. Không bao giờ redirect khi đã ở `/login`.
+ */
+function redirectToLoginIfProtected(): void {
+  if (typeof window === 'undefined') return;
+  const pathname = window.location.pathname;
+  if (pathname === '/login') return;
+  const isProtected = PROTECTED_PREFIXES.some((p) => pathname.startsWith(p));
+  if (!isProtected) return;
+  const from = encodeURIComponent(pathname + window.location.search);
+  window.location.href = `/login?from=${from}`;
+}
+
 // Response Interceptor: Refresh token queue & toast handling
-let isRefreshing = false;
-let failedQueue: Array<{
-  resolve: (value?: unknown) => void;
-  reject: (reason?: unknown) => void;
-}> = [];
 let hasShownSessionExpiredToast = false;
 
+const failedQueue: Array<{
+  resolve: (token: string | null) => void;
+  reject: (reason: unknown) => void;
+}> = [];
+let queueProcessing = false;
+
 const processQueue = (error: unknown, token: string | null = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else {
-      prom.resolve(token);
-    }
+  queueProcessing = false;
+  failedQueue.splice(0).forEach((prom) => {
+    if (error) prom.reject(error);
+    else prom.resolve(token);
   });
-  failedQueue = [];
 };
 
 api.interceptors.response.use(
@@ -65,7 +82,7 @@ api.interceptors.response.use(
     return response;
   },
   async (error: AxiosError<ErrorResponse>) => {
-    const originalRequest = error.config as any;
+    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
     const silent = originalRequest?.silent === true;
     const showErrorToast = originalRequest?.showErrorToast === true;
     const customErrorMessage = originalRequest?.errorToastMessage;
@@ -74,13 +91,20 @@ api.interceptors.response.use(
       const status = error.response.status;
       const errorData = error.response.data;
 
-      // Kiểm tra lỗi xác thực 401
+      // Kiểm tra lỗi xác thực 401 (hỗ trợ cả envelope mới lồng `error`)
+      const nestedMessage = errorData?.error?.message;
       const isAuthError =
         status === 401 ||
         (status === 500 &&
-          (errorData?.message === 'Vui lòng đăng nhập' ||
+          (nestedMessage === 'Vui lòng đăng nhập' ||
+            errorData?.message === 'Vui lòng đăng nhập' ||
             errorData?.detail === 'Vui lòng đăng nhập' ||
             errorData?.Detail === 'Vui lòng đăng nhập'));
+
+      // Chỉ thử refresh khi từng có phiên (token memory/store hoặc user đã persist).
+      // Guest chưa đăng nhập gặp 401 thì reject ngay: không gọi refresh vô ích, không toast sai.
+      const hadSession =
+        !!getAccessToken() || !!useAuthStore.getState().token || !!useAuthStore.getState().user;
 
       if (
         isAuthError &&
@@ -95,8 +119,12 @@ api.interceptors.response.use(
           return Promise.reject(error);
         }
 
-        if (isRefreshing) {
-          return new Promise((resolve, reject) => {
+        if (!hadSession) {
+          return Promise.reject(error);
+        }
+
+        if (queueProcessing) {
+          return new Promise<string | null>((resolve, reject) => {
             failedQueue.push({ resolve, reject });
           })
             .then(() => api(originalRequest))
@@ -104,38 +132,38 @@ api.interceptors.response.use(
         }
 
         originalRequest._retry = true;
-        isRefreshing = true;
+        queueProcessing = true;
 
         try {
-          // Gọi Next Route Handler /api/auth/refresh-token (proxy tới BE, gửi HttpOnly cookie).
-          // Handler này đã được tạo ở src/app/api/auth/refresh-token/route.ts
-          const refreshRes = await axios.post('/api/auth/refresh-token', {}, { baseURL: '' });
-          // BE có thể trả {access_token | accessToken | token} hoặc {data: {...}}
-          const payload = (refreshRes.data as any)?.data ?? refreshRes.data;
-          const newToken: string =
-            payload?.access_token ?? payload?.accessToken ?? payload?.token ?? '';
-
-          if (newToken) {
-            setAccessToken(newToken);
-            useAuthStore.getState().setToken(newToken);
-            if (originalRequest.headers) {
-              originalRequest.headers.Authorization = `Bearer ${newToken}`;
-            }
-          }
+          // Dùng sharedRefresh để dedup với AuthProvider + cross-tab (Web Locks)
+          const newToken = await sharedRefresh();
           processQueue(null, newToken || null);
           hasShownSessionExpiredToast = false;
+          if (newToken && originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+          }
           return api(originalRequest);
         } catch (err) {
           processQueue(err, null);
           clearAccessToken();
+          clearRefreshState();
           useAuthStore.getState().logout();
-          if (!hasShownSessionExpiredToast && !silent) {
-            toast.error('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
+          // Sự kiện mất phiên là toàn cục: luôn toast 1 lần kể cả khi request
+          // kích hoạt có `silent` (silent chỉ áp dụng cho lỗi nghiệp vụ của request đó).
+          if (!hasShownSessionExpiredToast) {
+            const refreshCode =
+              err instanceof AxiosError ? err.response?.data?.error?.code : undefined;
+            toast.error(
+              refreshCode === 'REFRESH_TOKEN_REUSED'
+                ? 'Phiên đăng nhập đã bị thu hồi trên thiết bị khác. Vui lòng đăng nhập lại.'
+                : 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+            );
             hasShownSessionExpiredToast = true;
           }
+          redirectToLoginIfProtected();
           return Promise.reject(error);
         } finally {
-          isRefreshing = false;
+          queueProcessing = false;
         }
       }
 
@@ -147,13 +175,17 @@ api.interceptors.response.use(
           toast.error('Lỗi hệ thống máy chủ. Vui lòng thử lại sau.');
         } else if (status === 403) {
           toast.error(
-            errorData?.message || errorData?.detail || 'Bạn không có quyền thực hiện thao tác này.'
+            nestedMessage ||
+              errorData?.message ||
+              errorData?.detail ||
+              'Bạn không có quyền thực hiện thao tác này.'
           );
         } else if (status === 429) {
           toast.error('Bạn đang gửi quá nhiều yêu cầu. Vui lòng thử lại sau.');
         } else if (showErrorToast) {
           toast.error(
-            errorData?.message ||
+            nestedMessage ||
+              errorData?.message ||
               errorData?.detail ||
               errorData?.title ||
               'Thao tác thất bại. Vui lòng thử lại.'
@@ -169,5 +201,11 @@ api.interceptors.response.use(
     return Promise.reject(error);
   }
 );
+
+export function resetAxiosAuthState(): void {
+  hasShownSessionExpiredToast = false;
+  queueProcessing = false;
+  failedQueue.splice(0);
+}
 
 export default api;

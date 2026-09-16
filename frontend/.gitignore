@@ -36,4 +36,8 @@ API-WORKFLOW.md
 next-env.d.ts
 
 # agent
-.agent/
+.agents/
+.codegraph
+.specify
+stitch_vietvegan_companion/
+specs
