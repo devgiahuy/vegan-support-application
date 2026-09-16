@@ -89,10 +89,14 @@ Mapper cô lập rủi ro tại 1 file duy nhất.
 ```ts
 // features/order/types/order.dto.ts — thô, chấp nhận biến thể BE
 export interface OrderDto {
-  id?: string | number; order_id?: string | number; _id?: string;
-  total?: number | string; total_amount?: number | string;
+  id?: string | number;
+  order_id?: string | number;
+  _id?: string;
+  total?: number | string;
+  total_amount?: number | string;
   status?: string | number;
-  created_at?: string; createdAt?: string;
+  created_at?: string;
+  createdAt?: string;
 }
 export interface CreateOrderReqDto {
   items: Array<{ product_id: string; qty: number }>;
@@ -113,7 +117,12 @@ import { formatCurrency } from '@/lib/utils';
 import type { OrderDto, CreateOrderReqDto } from '../types/order.dto';
 import type { Order } from '../types/order.model';
 
-export class OrderMapper extends BaseBidirectionalMapper<OrderDto, Order, CreateOrderReqDto, Partial<CreateOrderReqDto>> {
+export class OrderMapper extends BaseBidirectionalMapper<
+  OrderDto,
+  Order,
+  CreateOrderReqDto,
+  Partial<CreateOrderReqDto>
+> {
   toModel(dto: OrderDto | null | undefined): Order {
     const total = safeNumber(pickField(dto, ['total', 'total_amount'], 0));
     return {
@@ -127,7 +136,9 @@ export class OrderMapper extends BaseBidirectionalMapper<OrderDto, Order, Create
   toCreateDto(domain: Partial<Order>): CreateOrderReqDto {
     return { items: [] }; // map từ domain sang payload BE yêu cầu
   }
-  toUpdateDto(domain: Partial<Order>): Partial<CreateOrderReqDto> { return {}; }
+  toUpdateDto(domain: Partial<Order>): Partial<CreateOrderReqDto> {
+    return {};
+  }
 }
 export const orderMapper = new OrderMapper();
 
@@ -140,8 +151,14 @@ import type { Order } from '../types/order.model';
 import { orderMapper } from '../mappers/order.mapper';
 
 export const orderApi = {
-  getOrders: async (params?: { page?: number; limit?: number }): Promise<PaginationResult<Order>> => {
-    const res = await api.get<APIResponse<PaginationResult<OrderDto>>>('/orders', { params, silent: true });
+  getOrders: async (params?: {
+    page?: number;
+    limit?: number;
+  }): Promise<PaginationResult<Order>> => {
+    const res = await api.get<APIResponse<PaginationResult<OrderDto>>>('/orders', {
+      params,
+      silent: true,
+    });
     return orderMapper.toPaginationModel(res.data.data);
   },
 };
@@ -166,7 +183,13 @@ Checklist review PR/API mới:
 - [ ] Có `types/*.dto.ts` + `types/*.model.ts` riêng, không dùng chung, không `any`.
 - [ ] Có `mappers/*.mapper.ts` extends `BaseMapper`/`BaseBidirectionalMapper`, dùng
       `pickField` + `safe*` cho **mọi field** (kể cả khi tin BE).
-- [ ] `api/*.api.ts` typed `api.get<APIResponse<...>>`, dùng hằng số endpoint, trả về `Model`, không leak DTO.
+- [ ] `api/*.api.ts` typed đúng shape body thật, dùng hằng số endpoint, trả về `Model`, không leak DTO.
+      **Quy tắc envelope (bắt buộc):** generic của `api.get/post/put/patch<T>` phải là **đúng shape body BE trả**.
+      DTO `*ResponseDto` (`AuthSessionResponseDto`, `ProfileResponseDto`, `RefreshResponseDto`,
+      `LogoutResponseDto`, `DietRulePreviewResponseDto`...) **đã là envelope** `{success,data,meta}` →
+      dùng trực tiếp (`api.get<ProfileResponseDto>` + đọc `res.data`), **cấm** bọc thêm `APIResponse<>`
+      (bọc 2 tầng khiến `res.data.data` thành object con và mapper đọc nhầm tầng — lỗi thực tế 2026-09-15).
+      Chỉ dùng `APIResponse<T>` khi `T` là shape **dữ liệu trong** `data`.
 - [ ] Chạy `node node_modules/typescript/bin/tsc --noEmit` không lỗi mới.
 
 ---
@@ -241,6 +264,23 @@ Checklist review PR/API mới:
    alias `@/components` + `@/lib/utils`. CSS token ở `src/app/globals.css`.
 6. **Class merging:** dùng `cn()` (import từ `@/lib/utils`, thực thi bởi package `cn`).
    Không thêm `clsx`/`tailwind-merge` mới.
+
+### Route — RULE BẮT BUỘC: cấm trang mồ côi (orphan page)
+
+> Bài học 2026-09-16: route `/danh-muc` (nay là `/categories`) tồn tại nhưng không có link nào trỏ tới
+> (header/footer/sidebar đều hard-code), user không thể vào. Không lặp lại.
+
+1. Mọi route trong `src/app/**/page.tsx` phải có **ít nhất 1 đường dẫn vào** từ UI:
+   nav header, footer, link ngữ cảnh trong trang liên quan ("Xem tất cả", breadcrumb...).
+   Tạo trang mà không gắn link = task chưa xong.
+2. Không nhồi mọi trang lên header (giữ ~6 mục chính cho đỡ chật).
+   Trang phụ đi vào footer, link ngữ cảnh, hoặc nhúng làm block/filter tái dùng.
+3. Route nhận query param (vd `/categories?type=`) phải đọc param qua
+   `useSearchParams` + bọc `Suspense` (client component) để link đến đúng trạng thái.
+4. Mục admin (`/admin/*`, đã có `AuthGuard` + middleware) phải có lối vào theo role
+   (vd dropdown user chỉ hiện khi `role === ADMIN`), không để admin phải gõ URL tay.
+5. Checklist khi thêm route mới: entry point đã có ở đâu? mobile menu có không?
+   Ghi entry point vào entry WORK-LOG của task.
 
 ### TypeScript
 

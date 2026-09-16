@@ -1,8 +1,8 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 1.4
+**Version:** 1.8
 
-**Cập nhật:** 15/09/2026
+**Cập nhật:** 16/09/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
@@ -164,23 +164,25 @@ Không sử dụng `any`, không trả DTO trực tiếp về component và khô
 
 ## 5. Mapping module frontend
 
-| Backend tag/module               | Frontend feature đề xuất                                       |
-| -------------------------------- | -------------------------------------------------------------- |
-| Auth                             | `features/auth`                                                |
-| Users/Profile                    | `features/profile`                                             |
-| Diet Rules                       | `features/diet-preferences`                                    |
-| Posts/Recipes/Videos             | `features/content` hoặc tách `recipe`, `blog`, `video` nếu lớn |
-| Comments/Votes/Ratings/Bookmarks | `features/community`                                           |
-| Contributors                     | `features/contributor`                                         |
-| Moderation/Admin Users           | `features/admin`                                               |
-| Categories                       | `features/category`                                            |
-| Ingredients                      | `features/ingredient`                                          |
-| Meal Plans                       | `features/meal-plan`                                           |
-| Recommendations/Behavior         | `features/recommendation`                                      |
-| Chat                             | `features/chat`                                                |
-| Restaurants/Location             | `features/restaurant`                                          |
-| AI Governance                    | `features/admin-ai`                                            |
-| Notifications                    | `features/notification`                                        |
+| Backend tag/module               | Frontend feature đề xuất                                       | Route FE (tiếng Anh)                                                   |
+| -------------------------------- | -------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Auth                             | `features/auth`                                                | `/login`, `/verify-otp`, `/onboarding`                                 |
+| Users/Profile                    | `features/profile`                                             | `/profile`                                                             |
+| Diet Rules                       | `features/diet-preferences`                                    | `/profile` (tab diet)                                                  |
+| Posts/Recipes/Videos             | `features/content` hoặc tách `recipe`, `blog`, `video` nếu lớn | `/recipes`, `/articles`, `/videos`                                     |
+| Comments/Votes/Ratings/Bookmarks | `features/community`                                           | (trong trang detail `/recipes/[id]`, `/articles/[id]`, `/videos/[id]`) |
+| Contributors                     | `features/contributor`                                         | `/articles/new`, `/recipes/new`                                        |
+| Moderation/Admin Users           | `features/admin`                                               | `/admin`                                                               |
+| Categories                       | `features/category`                                            | `/categories`                                                          |
+| Ingredients                      | `features/ingredient`                                          | `/categories#tra-cuu`                                                  |
+| Meal Plans                       | `features/meal-plan`                                           | `/meal-plans`, `/meal-plans/saved`                                     |
+| Recommendations/Behavior         | `features/recommendation`                                      | `/` (khối gợi ý trang chủ)                                             |
+| Chat                             | `features/chat`                                                | `/assistant`                                                           |
+| Restaurants/Location             | `features/restaurant`                                          | `/restaurants`, `/restaurants/[id]`                                    |
+| AI Governance                    | `features/admin-ai`                                            | `/admin`                                                               |
+| Notifications                    | `features/notification`                                        | (header bell — trang riêng ngoài MVP)                                  |
+
+> Quy ước route (từ 16/09/2026): slug FE dùng tiếng Anh, đồng bộ tên backend module. URL tiếng Việt cũ 308 về URL mới (xem `next.config.ts` → `redirects()`), giữ query/hash. Chi tiết xem `specs/004-fe-english-routes/contracts/route-contract.md`.
 
 Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation model dùng chung phải được nâng lên `src/common` hoặc `src/types` sau khi review.
 
@@ -197,19 +199,19 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 
 ### 6.2 Auth và Profile
 
-| Method | Path                         | Status    | Backend updated | FE integrated | Ghi chú                                                                                             |
-| ------ | ---------------------------- | --------- | --------------- | ------------- | --------------------------------------------------------------------------------------------------- |
-| POST   | `/auth/register`             | `READY`   | 2026-09-15      | No            | Optional `contributorRequest` chỉ tạo application `PENDING`; account/JWT vẫn là `MEMBER`            |
-| POST   | `/auth/login`                | `READY`   | 2026-09-15      | No            | Trả access token và đặt access/refresh HttpOnly cookies; generic invalid-credential response        |
-| POST   | `/auth/refresh`              | `READY`   | 2026-09-15      | No            | Đọc refresh cookie, rotation mỗi lần dùng; reuse revoke toàn token family                           |
-| POST   | `/auth/logout`               | `READY`   | 2026-09-15      | No            | Idempotent; body `{ allDevices?: boolean }`; revoke phiên hiện tại hoặc toàn bộ phiên của user      |
-| GET    | `/users/me`                  | `READY`   | 2026-09-15      | No            | Trả profile, health `MANUAL`, diet snapshot/effective constraints; không lộ hash/session            |
-| PATCH  | `/users/me`                  | `READY`   | 2026-09-15      | No            | Cập nhật `displayName`/HTTP(S) `avatarUrl`; cần ít nhất một field                                   |
-| PUT    | `/users/me/health-profile`   | `READY`   | 2026-09-15      | No            | Upsert manual inputs; backend tính BMI, Mifflin–St Jeor BMR và activity-factor TDEE                 |
-| POST   | `/diet-rules/preview`        | `READY`   | 2026-09-15      | No            | Auth required; trả rule set v1, source/default/hard flag; tradition rule là configurable            |
-| PUT    | `/users/me/diet-preferences` | `READY`   | 2026-09-15      | No            | Exclusion nhận optional canonical `ingredientId`; free-text vẫn hỗ trợ; allergy/exclusion luôn hard |
-| PUT    | `/users/me/diet-schedule`    | `READY`   | 2026-09-15      | No            | Replace lịch PERIODIC bằng `YYYY-MM-DD`, semantic `Asia/Ho_Chi_Minh`, PostgreSQL `DATE`             |
-| DELETE | `/users/me/behavior-history` | `PLANNED` | —               | No            | Reset personalization                                                                               |
+| Method | Path                         | Status    | Backend updated | FE integrated    | Ghi chú                                                                                                                                                   |
+| ------ | ---------------------------- | --------- | --------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/auth/register`             | `READY`   | 2026-09-15      | Yes (2026-09-15) | Optional `contributorRequest` chỉ tạo application `PENDING`; account/JWT vẫn là `MEMBER`; FE: `features/auth` register + session + contributor form       |
+| POST   | `/auth/login`                | `READY`   | 2026-09-15      | Yes (2026-09-15) | Trả access token và đặt access/refresh HttpOnly cookies; generic invalid-credential response; FE: login form xử lý theo `error.code`                      |
+| POST   | `/auth/refresh`              | `READY`   | 2026-09-15      | Yes (2026-09-15) | Đọc refresh cookie, rotation mỗi lần dùng; reuse revoke toàn token family; FE: Next proxy `/api/auth/refresh-token` + refresh-queue                       |
+| POST   | `/auth/logout`               | `READY`   | 2026-09-15      | Yes (2026-09-15) | Idempotent; body `{ allDevices?: boolean }`; revoke phiên hiện tại hoặc toàn bộ phiên của user; FE: Next proxy + xóa 4 cookie                             |
+| GET    | `/users/me`                  | `READY`   | 2026-09-15      | Yes (2026-09-15) | Trả profile, health `MANUAL`, diet snapshot/effective constraints; không lộ hash/session; FE auth chỉ map 8 field user, health/diet để `features/profile` |
+| PATCH  | `/users/me`                  | `READY`   | 2026-09-15      | Yes (2026-09-15) | Cập nhật `displayName`/HTTP(S) `avatarUrl`; cần ít nhất một field                                                                                         |
+| PUT    | `/users/me/health-profile`   | `READY`   | 2026-09-15      | Yes (2026-09-15) | Upsert manual inputs; backend tính BMI, Mifflin–St Jeor BMR và activity-factor TDEE                                                                       |
+| POST   | `/diet-rules/preview`        | `READY`   | 2026-09-15      | Yes (2026-09-15) | Auth required; trả rule set v1, source/default/hard flag; tradition rule là configurable                                                                  |
+| PUT    | `/users/me/diet-preferences` | `READY`   | 2026-09-15      | Yes (2026-09-15) | Exclusion nhận optional canonical `ingredientId`; free-text vẫn hỗ trợ; allergy/exclusion luôn hard                                                       |
+| PUT    | `/users/me/diet-schedule`    | `READY`   | 2026-09-15      | Yes (2026-09-15) | Replace lịch PERIODIC bằng `YYYY-MM-DD`, semantic `Asia/Ho_Chi_Minh`, PostgreSQL `DATE`                                                                   |
+| DELETE | `/users/me/behavior-history` | `PLANNED` | —               | No               | Reset personalization                                                                                                                                     |
 
 ### 6.3 Content và Community
 
@@ -234,34 +236,34 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 
 ### 6.4 Contributor, Moderation và Catalog
 
-| Method | Path                                         | Status    | Backend updated | FE integrated | Ghi chú                                                                            |
-| ------ | -------------------------------------------- | --------- | --------------- | ------------- | ---------------------------------------------------------------------------------- |
-| POST   | `/contributor-applications`                  | `PLANNED` | —               | No            | Member upgrade; không có certificate MVP                                           |
-| GET    | `/admin/contributor-applications`            | `PLANNED` | —               | No            | Admin only                                                                         |
-| PATCH  | `/admin/contributor-applications/:id/review` | `PLANNED` | —               | No            | Approve/reject + type + basis                                                      |
-| GET    | `/review-queue/posts`                        | `PLANNED` | —               | No            | Contributor/Admin filtering                                                        |
-| PATCH  | `/review-queue/posts/:id/approve`            | `PLANNED` | —               | No            | Cấm self-approve                                                                   |
-| PATCH  | `/review-queue/posts/:id/reject`             | `PLANNED` | —               | No            | Reason required                                                                    |
-| POST   | `/reports`                                   | `PLANNED` | —               | No            | One active report/user/target                                                      |
-| GET    | `/admin/reports`                             | `PLANNED` | —               | No            | Admin only                                                                         |
-| PATCH  | `/admin/reports/:id/resolve`                 | `PLANNED` | —               | No            | Audit required                                                                     |
-| GET    | `/admin/users`                               | `PLANNED` | —               | No            | Search/filter/pagination                                                           |
-| PATCH  | `/admin/users/:id/status`                    | `PLANNED` | —               | No            | Lock/ban/unban/delete rules                                                        |
-| GET    | `/admin/comments`                            | `PLANNED` | —               | No            | Moderation list                                                                    |
-| PATCH  | `/admin/comments/:id/status`                 | `PLANNED` | —               | No            | Hide/restore                                                                       |
-| GET    | `/categories`                                | `READY`   | 2026-09-15      | No            | Public active tree tối đa hai tầng; filter `type`                                  |
-| GET    | `/admin/categories`                          | `READY`   | 2026-09-15      | No            | Admin only; pagination; xem cả archived                                            |
-| POST   | `/admin/categories`                          | `READY`   | 2026-09-15      | No            | Admin only; parent/child cùng type                                                 |
-| PATCH  | `/admin/categories/:id`                      | `READY`   | 2026-09-15      | No            | Admin only; enforce depth và scoped slug                                           |
-| DELETE | `/admin/categories/:id`                      | `READY`   | 2026-09-15      | No            | Archive; child/proposal đang dùng cần replacement cùng type/tầng trong transaction |
-| GET    | `/ingredients`                               | `READY`   | 2026-09-15      | No            | Public active list; q không dấu, foodGroup, pagination                             |
-| GET    | `/ingredients/resolve`                       | `READY`   | 2026-09-15      | No            | `NONE/EXACT/AMBIGUOUS`; ambiguous luôn trả candidates                              |
-| GET    | `/admin/ingredients`                         | `READY`   | 2026-09-15      | No            | Admin only; xem active/archived và metadata                                        |
-| POST   | `/admin/ingredients`                         | `READY`   | 2026-09-15      | No            | Admin only; canonical + allergen/diet/tradition metadata                           |
-| PATCH  | `/admin/ingredients/:id`                     | `READY`   | 2026-09-15      | No            | Admin only; metadata array là full snapshot khi gửi                                |
-| DELETE | `/admin/ingredients/:id`                     | `READY`   | 2026-09-15      | No            | Archive; public endpoint ngừng trả item                                            |
-| POST   | `/admin/ingredients/:id/aliases`             | `READY`   | 2026-09-15      | No            | Admin only; normalize tiếng Việt có/không dấu                                      |
-| DELETE | `/admin/ingredients/:id/aliases/:aliasId`    | `READY`   | 2026-09-15      | No            | Admin only; 204 khi xóa thành công                                                 |
+| Method | Path                                         | Status    | Backend updated | FE integrated         | Ghi chú                                                                            |
+| ------ | -------------------------------------------- | --------- | --------------- | --------------------- | ---------------------------------------------------------------------------------- |
+| POST   | `/contributor-applications`                  | `PLANNED` | —               | No                    | Member upgrade; không có certificate MVP                                           |
+| GET    | `/admin/contributor-applications`            | `PLANNED` | —               | No                    | Admin only                                                                         |
+| PATCH  | `/admin/contributor-applications/:id/review` | `PLANNED` | —               | No                    | Approve/reject + type + basis                                                      |
+| GET    | `/review-queue/posts`                        | `PLANNED` | —               | No                    | Contributor/Admin filtering                                                        |
+| PATCH  | `/review-queue/posts/:id/approve`            | `PLANNED` | —               | No                    | Cấm self-approve                                                                   |
+| PATCH  | `/review-queue/posts/:id/reject`             | `PLANNED` | —               | No                    | Reason required                                                                    |
+| POST   | `/reports`                                   | `PLANNED` | —               | No                    | One active report/user/target                                                      |
+| GET    | `/admin/reports`                             | `PLANNED` | —               | No                    | Admin only                                                                         |
+| PATCH  | `/admin/reports/:id/resolve`                 | `PLANNED` | —               | No                    | Audit required                                                                     |
+| GET    | `/admin/users`                               | `PLANNED` | —               | No                    | Search/filter/pagination                                                           |
+| PATCH  | `/admin/users/:id/status`                    | `PLANNED` | —               | No                    | Lock/ban/unban/delete rules                                                        |
+| GET    | `/admin/comments`                            | `PLANNED` | —               | No                    | Moderation list                                                                    |
+| PATCH  | `/admin/comments/:id/status`                 | `PLANNED` | —               | No                    | Hide/restore                                                                       |
+| GET    | `/categories`                                | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Public active tree tối đa hai tầng; filter `type`                                  |
+| GET    | `/admin/categories`                          | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Admin only; pagination; xem cả archived                                            |
+| POST   | `/admin/categories`                          | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Admin only; parent/child cùng type                                                 |
+| PATCH  | `/admin/categories/:id`                      | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Admin only; enforce depth và scoped slug                                           |
+| DELETE | `/admin/categories/:id`                      | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Archive; child/proposal đang dùng cần replacement cùng type/tầng trong transaction |
+| GET    | `/ingredients`                               | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Public active list; q không dấu, foodGroup, pagination                             |
+| GET    | `/ingredients/resolve`                       | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | `NONE/EXACT/AMBIGUOUS`; ambiguous luôn trả candidates                              |
+| GET    | `/admin/ingredients`                         | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Admin only; xem active/archived và metadata                                        |
+| POST   | `/admin/ingredients`                         | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Admin only; canonical + allergen/diet/tradition metadata                           |
+| PATCH  | `/admin/ingredients/:id`                     | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Admin only; metadata array là full snapshot khi gửi                                |
+| DELETE | `/admin/ingredients/:id`                     | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Archive; public endpoint ngừng trả item                                            |
+| POST   | `/admin/ingredients/:id/aliases`             | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Admin only; normalize tiếng Việt có/không dấu                                      |
+| DELETE | `/admin/ingredients/:id/aliases/:aliasId`    | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Admin only; 204 khi xóa thành công                                                 |
 
 Persistence cho `category_proposals` đã có để giữ BL-12, nhưng endpoint Contributor submit/Admin
 review proposal vẫn là `PLANNED` cho tới Phase 07; frontend chưa được tạo API consumer cho luồng này.
@@ -526,13 +528,17 @@ Không được mô tả endpoint là READY chỉ vì route đã tồn tại n�
 
 Thêm entry mới nhất ở trên cùng.
 
-| Date       | Version | Module       | Change                                                                                                                               | Breaking | FE action                                                                      |
-| ---------- | ------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------ | :------: | ------------------------------------------------------------------------------ |
-| 2026-09-15 | 1.4     | Catalog      | Thêm category tree, canonical ingredient, alias resolution và metadata allergen/diet/tradition; exclusion nhận optional ingredientId |    No    | Sync OpenAPI; tạo DTO/Model/Mapper cho category và ingredient, xử lý AMBIGUOUS |
-| 2026-09-15 | 1.3     | Profile/Diet | Thêm profile, BMI/BMR/TDEE, rule preview v1, preference/effective constraints và PERIODIC dates                                      |    No    | Sync OpenAPI; tạo DTO/Model/Mapper riêng cho profile và diet flow              |
-| 2026-09-15 | 1.2     | Auth         | Hoàn tất register/login/refresh rotation/logout, RBAC primitives và `/users/me`                                                      |    No    | Sync OpenAPI; tích hợp proxy/cookie với `withCredentials=true`                 |
-| 2026-09-15 | 1.1     | Foundation   | Hoàn tất health, Swagger UI và OpenAPI JSON; thêm request ID và error envelope nền tảng                                              |    No    | Dùng catalog OpenAPI đã sync; chưa cần tạo consumer UI cho health              |
-| 2026-09-15 | 1.0     | All          | Tạo integration registry; backend chưa triển khai                                                                                    |    No    | Không tích hợp API thật cho tới khi status READY                               |
+| Date       | Version | Module            | Change                                                                                                                                                                                                                                | Breaking | FE action                                                                                         |
+| ---------- | ------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------: | ------------------------------------------------------------------------------------------------- |
+| 2026-09-16 | 1.8     | Routes (FE)       | Đổi slug trang FE sang tiếng Anh (`/recipes`, `/articles`, `/videos`, `/categories`, `/restaurants`, `/meal-plans`, `/assistant`, `/search`, `/profile`, `/verify-otp`); URL Việt cũ 308 về URL mới giữ query/hash; UI giữ tiếng Việt |    No    | Dùng URL Anh cho mọi link/bookmark mới; test tay theo `specs/004-fe-english-routes/quickstart.md` |
+| 2026-09-15 | 1.5     | Auth (FE)         | Frontend tích hợp register/login/refresh rotation/logout và `GET /users/me` theo contract READY (DTO/Model/Mapper/Query, xử lý `error.code`, lock/ban dùng thông báo chung)                                                           |    No    | Không cần action thêm; test tay end-to-end khi backend local chạy ở `:4000`                       |
+| 2026-09-15 | 1.6     | Profile/Diet (FE) | Frontend tích hợp `GET/PATCH /users/me`, health-profile (BMI/BMR/TDEE), diet preview/preferences/schedule theo contract READY (wizard 3 bước, mã lỗi diet, ngày `YYYY-MM-DD`)                                                         |    No    | Không cần action thêm; test tay VP-1..VP-7 khi backend local chạy                                 |
+| 2026-09-15 | 1.7     | Catalog (FE)      | Frontend tích hợp cây public, tìm/phân giải nguyên liệu, admin CRUD danh mục/nguyên liệu + alias theo contract READY (meta catalog chuẩn hóa, replacement, full snapshot, 204 alias)                                                  |    No    | Không cần action thêm; test tay VC-1..VC-6 khi backend local chạy                                 |
+| 2026-09-15 | 1.4     | Catalog           | Thêm category tree, canonical ingredient, alias resolution và metadata allergen/diet/tradition; exclusion nhận optional ingredientId                                                                                                  |    No    | Sync OpenAPI; tạo DTO/Model/Mapper cho category và ingredient, xử lý AMBIGUOUS                    |
+| 2026-09-15 | 1.3     | Profile/Diet      | Thêm profile, BMI/BMR/TDEE, rule preview v1, preference/effective constraints và PERIODIC dates                                                                                                                                       |    No    | Sync OpenAPI; tạo DTO/Model/Mapper riêng cho profile và diet flow                                 |
+| 2026-09-15 | 1.2     | Auth              | Hoàn tất register/login/refresh rotation/logout, RBAC primitives và `/users/me`                                                                                                                                                       |    No    | Sync OpenAPI; tích hợp proxy/cookie với `withCredentials=true`                                    |
+| 2026-09-15 | 1.1     | Foundation        | Hoàn tất health, Swagger UI và OpenAPI JSON; thêm request ID và error envelope nền tảng                                                                                                                                               |    No    | Dùng catalog OpenAPI đã sync; chưa cần tạo consumer UI cho health                                 |
+| 2026-09-15 | 1.0     | All               | Tạo integration registry; backend chưa triển khai                                                                                                                                                                                     |    No    | Không tích hợp API thật cho tới khi status READY                                                  |
 
 Template:
 

@@ -16,17 +16,17 @@
 
 ## 1. Mapping màn hình Stitch (đã có) → route
 
-| #   | Màn Stitch                  | Route              | Nhóm layout | SRS/UC       |
-| --- | --------------------------- | ------------------ | ----------- | ------------ |
-| 1   | Trang chủ                   | `/`                | (site)      | UC-04, UC-14 |
-| 2   | Đăng nhập/Đăng ký/Khôi phục | `/login`           | (auth)      | UC-01        |
-| 3   | Khám phá công thức          | `/cong-thuc`       | (site)      | UC-04        |
-| 4   | Đăng công thức              | `/dang-cong-thuc`  | (site)      | UC-02, UC-16 |
-| 5   | Kế hoạch bữa ăn 7 ngày      | `/ke-hoach-bua-an` | (site)      | UC-06, UC-08 |
-| 6   | Hồ sơ & BMI                 | `/ho-so`           | (site)      | UC-13, UC-06 |
-| 7   | Bản đồ quán chay            | `/ban-do`          | (site)      | UC-12        |
-| 8   | Trợ lý AI                   | `/tro-ly-ai`       | (site)      | UC-07        |
-| 9   | Admin dashboard             | `/admin`           | (admin)     | UC-11, UC-15 |
+| #   | Màn Stitch                  | Route          | Nhóm layout | SRS/UC       |
+| --- | --------------------------- | -------------- | ----------- | ------------ |
+| 1   | Trang chủ                   | `/`            | (site)      | UC-04, UC-14 |
+| 2   | Đăng nhập/Đăng ký/Khôi phục | `/login`       | (auth)      | UC-01        |
+| 3   | Khám phá công thức          | `/recipes`     | (site)      | UC-04        |
+| 4   | Đăng công thức              | `/recipes/new` | (site)      | UC-02, UC-16 |
+| 5   | Kế hoạch bữa ăn 7 ngày      | `/meal-plans`  | (site)      | UC-06, UC-08 |
+| 6   | Hồ sơ & BMI                 | `/profile`     | (site)      | UC-13, UC-06 |
+| 7   | Bản đồ quán chay            | `/restaurants` | (site)      | UC-12        |
+| 8   | Trợ lý AI                   | `/assistant`   | (site)      | UC-07        |
+| 9   | Admin dashboard             | `/admin`       | (admin)     | UC-11, UC-15 |
 
 → Stitch **không dư trang nào** so với SRS/UI-UX (tất cả đều map được vào UC).
 
@@ -35,10 +35,10 @@
 ### Ưu tiên cao (luồng chính chưa có)
 
 1. **Onboarding / Splash + Khai báo trường phái chay** (Phật giáo/Đạo giáo, chay trường/chay kỳ) — UC-01.
-2. **Chi tiết công thức** `/[cong-thuc]/[id]` — UC-04 (hiện chỉ có danh sách).
+2. **Chi tiết công thức** `/recipes/[id]` — UC-04 (hiện chỉ có danh sách).
 3. **Trung tâm gợi ý "Vì sao tôi thấy gợi ý này"** + tắt cá nhân hoá — UC-08.
 4. **Danh sách + chi tiết Video** & **Upload video** — UC-05, UC-10.
-5. **Chi tiết quán ăn** `/[ban-do]/[id]` — UC-12.
+5. **Chi tiết quán ăn** `/restaurants/[id]` — UC-12.
 6. **Danh sách thực đơn đã lưu** — UC-06/UC-08.
 7. **Xác thực email / OTP** — UC-01.
 
@@ -64,12 +64,12 @@ src/app/
 ├── (site)/                    # nhóm layout public: SiteHeader + children + SiteFooter
 │   ├── layout.tsx
 │   ├── page.tsx               # Trang chủ
-│   ├── cong-thuc/page.tsx
-│   ├── dang-cong-thuc/page.tsx
-│   ├── ke-hoach-bua-an/page.tsx
-│   ├── ho-so/page.tsx
-│   ├── ban-do/page.tsx
-│   └── tro-ly-ai/page.tsx
+│   ├── recipes/page.tsx
+│   ├── recipes/new/page.tsx
+│   ├── meal-plans/page.tsx
+│   ├── profile/page.tsx
+│   ├── restaurants/page.tsx
+│   └── assistant/page.tsx
 ├── (auth)/layout.tsx          # layout tối giản cho auth
 │   └── login/page.tsx
 └── (admin)/admin/page.tsx     # sidebar admin riêng

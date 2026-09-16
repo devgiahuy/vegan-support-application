@@ -8,7 +8,6 @@ import {
   Leaf,
   Star,
   Flame,
-  BedDouble,
   BadgeCheck,
   UtensilsCrossed,
   MapPin,
@@ -27,6 +26,7 @@ import { cn } from '@/lib/utils';
 import { RecipeCard } from '@/features/recipe/components/recipe-card';
 import { MOCK_RECIPES } from '@/features/recipe/data/mock-recipes';
 import { WhyRecommendedDialog } from '@/components/shared/why-recommended-dialog';
+import { HeroFoodAnimation } from '@/components/home/hero-food-animation';
 
 const CATEGORIES = [
   'Tất cả',
@@ -104,12 +104,12 @@ export default function HomePage() {
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Button asChild size="lg" className="gap-2 rounded-full">
-              <Link href="/cong-thuc">
+              <Link href="/recipes">
                 <UtensilsCrossed className="h-5 w-5" /> Tìm công thức ngay
               </Link>
             </Button>
             <Button asChild size="lg" variant="secondary" className="gap-2 rounded-full">
-              <Link href="/tro-ly-ai">
+              <Link href="/assistant">
                 <Sparkles className="h-5 w-5" /> Hỏi AI Dinh dưỡng
               </Link>
             </Button>
@@ -132,28 +132,7 @@ export default function HomePage() {
         </div>
 
         <div className="relative lg:col-span-6 xl:col-span-5">
-          <div className="relative aspect-[4/4.2] overflow-hidden rounded-3xl border shadow-sm">
-            <Image
-              src="https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=900&q=80"
-              alt="Món chay Việt"
-              fill
-              priority
-              sizes="(max-width: 1024px) 100vw, 480px"
-              className="object-cover"
-            />
-            <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/55 to-transparent" />
-            <Badge className="absolute right-3 top-3 gap-1 rounded-full bg-background/90 text-foreground backdrop-blur">
-              <BedDouble className="h-3.5 w-3.5" /> Lịch Chay: Hôm nay Mùng Một
-            </Badge>
-            <div className="absolute bottom-3 left-3 rounded-2xl bg-background/95 p-3 shadow-sm backdrop-blur">
-              <div className="flex items-center gap-2 text-sm font-semibold">
-                <Flame className="h-4 w-4 text-cta" /> 385 kcal
-              </div>
-              <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                <Leaf className="h-3.5 w-3.5 text-primary" /> 18g Protein thực vật
-              </div>
-            </div>
-          </div>
+          <HeroFoodAnimation />
         </div>
       </section>
 
@@ -248,7 +227,7 @@ export default function HomePage() {
             </div>
 
             <Button asChild variant="secondary" className="mt-5 w-full gap-2 rounded-xl">
-              <Link href="/tro-ly-ai">
+              <Link href="/assistant">
                 Hỏi bất kỳ nguyên liệu hoặc mục tiêu cân nặng... <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
@@ -352,7 +331,7 @@ export default function HomePage() {
             </div>
 
             <Button asChild className="mt-5 w-full gap-2 rounded-xl">
-              <Link href="/ke-hoach-bua-an">
+              <Link href="/meal-plans">
                 <CalendarDays className="h-4 w-4" /> Tạo thực đơn 7 ngày của riêng bạn
               </Link>
             </Button>
@@ -372,7 +351,7 @@ export default function HomePage() {
             </h2>
           </div>
           <Button asChild variant="outline" className="gap-2 rounded-full">
-            <Link href="/ban-do">
+            <Link href="/restaurants">
               <Navigation className="h-4 w-4" /> Mở bản đồ
             </Link>
           </Button>
@@ -411,7 +390,7 @@ export default function HomePage() {
                         {r.tag}
                       </Badge>
                       <Link
-                        href="/ban-do"
+                        href="/restaurants"
                         className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
                       >
                         <Navigation className="h-3.5 w-3.5" /> Đường đi
@@ -431,7 +410,7 @@ export default function HomePage() {
         size="lg"
         className="fixed bottom-6 right-6 z-40 gap-2 rounded-full shadow-lg lg:hidden"
       >
-        <Link href="/tro-ly-ai">
+        <Link href="/assistant">
           <Sparkles className="h-5 w-5" /> Hỏi AI nhanh
         </Link>
       </Button>

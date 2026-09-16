@@ -1,7 +1,7 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
-  "source": "../backend/openapi.json",
-  "generatedAt": "2026-09-15T11:23:20.172Z",
+  "source": "http://localhost:4000/api-docs.json",
+  "generatedAt": "2026-09-15T16:27:39.407Z",
   "stats": {
     "operations": 24,
     "groups": 7,
@@ -281,10 +281,7 @@
       "request": {
         "schema": {
           "type": "object",
-          "required": [
-            "name",
-            "type"
-          ],
+          "required": ["name", "type"],
           "properties": {
             "name": {
               "type": "string"
@@ -294,17 +291,10 @@
             },
             "type": {
               "type": "string",
-              "enum": [
-                "FOOD_TYPE",
-                "RECIPE_GROUP",
-                "CONTENT_TOPIC"
-              ]
+              "enum": ["FOOD_TYPE", "RECIPE_GROUP", "CONTENT_TOPIC"]
             },
             "parentId": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "format": "uuid"
             },
             "sortOrder": {
@@ -350,17 +340,10 @@
             },
             "type": {
               "type": "string",
-              "enum": [
-                "FOOD_TYPE",
-                "RECIPE_GROUP",
-                "CONTENT_TOPIC"
-              ]
+              "enum": ["FOOD_TYPE", "RECIPE_GROUP", "CONTENT_TOPIC"]
             },
             "parentId": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": ["string", "null"],
               "format": "uuid"
             },
             "sortOrder": {
@@ -526,10 +509,7 @@
       "request": {
         "schema": {
           "type": "object",
-          "required": [
-            "canonicalName",
-            "foodGroup"
-          ],
+          "required": ["canonicalName", "foodGroup"],
           "properties": {
             "canonicalName": {
               "type": "string"
@@ -558,10 +538,7 @@
               "type": "array",
               "items": {
                 "type": "object",
-                "required": [
-                  "dietPattern",
-                  "compatible"
-                ],
+                "required": ["dietPattern", "compatible"],
                 "properties": {
                   "dietPattern": {
                     "type": "string",
@@ -579,11 +556,7 @@
               "type": "array",
               "items": {
                 "type": "object",
-                "required": [
-                  "tradition",
-                  "warningCode",
-                  "label"
-                ],
+                "required": ["tradition", "warningCode", "label"],
                 "properties": {
                   "tradition": {
                     "type": "string",
@@ -652,10 +625,7 @@
             },
             "status": {
               "type": "string",
-              "enum": [
-                "ACTIVE",
-                "ARCHIVED"
-              ]
+              "enum": ["ACTIVE", "ARCHIVED"]
             },
             "allergenCodes": {
               "type": "array",
@@ -667,10 +637,7 @@
               "type": "array",
               "items": {
                 "type": "object",
-                "required": [
-                  "dietPattern",
-                  "compatible"
-                ],
+                "required": ["dietPattern", "compatible"],
                 "properties": {
                   "dietPattern": {
                     "type": "string",
@@ -688,11 +655,7 @@
               "type": "array",
               "items": {
                 "type": "object",
-                "required": [
-                  "tradition",
-                  "warningCode",
-                  "label"
-                ],
+                "required": ["tradition", "warningCode", "label"],
                 "properties": {
                   "tradition": {
                     "type": "string",
@@ -765,9 +728,7 @@
       "request": {
         "schema": {
           "type": "object",
-          "required": [
-            "alias"
-          ],
+          "required": ["alias"],
           "properties": {
             "alias": {
               "type": "string"
