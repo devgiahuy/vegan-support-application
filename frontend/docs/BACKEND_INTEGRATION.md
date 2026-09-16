@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 2.1
+**Version:** 2.2
 
 **Cập nhật:** 16/09/2026
 
@@ -285,6 +285,10 @@ luồng này.
 | GET    | `/recommendations/home`              | `READY` | 2026-09-16      | No            | Auth; hard constraints trước ranking; score/reason codes v1               |
 
 ### 6.6 Chat và AI verification
+
+> Provider decision: live AI dùng OpenAI Responses API; chat mặc định `gpt-5.6-terra`, moderation
+> dùng `omni-moderation-latest`. Frontend chỉ gọi backend SSE contract, không gọi OpenAI trực tiếp và
+> không phụ thuộc provider event shape. Các endpoint vẫn `PLANNED` tới khi Phase 11 vượt gate.
 
 | Method | Path                              | Status    | Backend updated | FE integrated | Ghi chú                         |
 | ------ | --------------------------------- | --------- | --------------- | ------------- | ------------------------------- |
@@ -689,6 +693,7 @@ Thêm entry mới nhất ở trên cùng.
 
 | Date       | Version | Module         | Change                                                                                                                                | Breaking | FE action                                                                                            |
 | ---------- | ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- | :------: | ---------------------------------------------------------------------------------------------------- |
+| 2026-09-16 | 2.2     | AI baseline    | Chốt OpenAI Responses API, `gpt-5.6-terra` cho chat và `omni-moderation-latest`; endpoint vẫn PLANNED                                |    No    | Không gọi OpenAI từ browser; chờ backend SSE contract Phase 11                                          |
 | 2026-09-16 | 2.1     | Meal Planner   | Thêm weekly generate/version/regenerate, per-day hard filters, calorie/repeat fallback, safe swap, shopping list và nutrition quality |    No    | Sync OpenAPI; tạo DTO/Model/Mapper/hooks cho 21 slots, warnings, optimistic version và shopping list |
 | 2026-09-16 | 2.0     | Recommendation | Thêm consent/version, behavior event allowlist/idempotency/dedupe, hard-filtered scoring v1, cold start và reason codes               |    No    | Sync OpenAPI; tạo consent/event/recommendation DTO, mapper, hooks và xử lý sáu business errors       |
 | 2026-09-16 | 1.9     | Moderation     | Thêm rule flags v1, transactional post review, report escalation, Admin decisions, selective ban/unban và audit trail                 |    No    | Sync OpenAPI; map queue/report/user/comment DTO, reason codes và xử lý conflict/state boundary       |

@@ -6,13 +6,14 @@ Triển khai Phase 11 trong repository `/Users/thienel/hhnthienn/fptu/sem8/wdp/v
 
 ## Mục tiêu
 
-Triển khai provider-neutral nutrition chatbot với quota, SSE, private history, feedback, privacy và graceful fallback.
+Triển khai OpenAI-backed nutrition chatbot với quota, SSE, private history, feedback, privacy và graceful fallback. OpenAI là live provider duy nhất của MVP; integration vẫn nằm sau `AiProvider` boundary để development/fallback không phụ thuộc external service.
 
 ## Scope bắt buộc
 
 - Models/migrations: chat sessions/messages, AI request logs tối thiểu, feedback và quota accounting phù hợp concurrency.
-- `AiProvider` adapter; provider/model/timeout/token config từ environment/database, không hard-code model ID trong domain.
-- Fake/local provider cho development; optional live provider path khi có secret.
+- `AiProvider` adapter với OpenAI implementation dùng official SDK và Responses API streaming; không để OpenAI event shape rò ra API contract nội bộ.
+- Config mặc định: `AI_PROVIDER=openai`, `AI_MODEL_CHAT=gpt-5.6-terra`, `AI_MODEL_MODERATION=omni-moderation-latest`; model/timeout/token vẫn đọc từ environment/database, không hard-code trong domain.
+- Fake/local provider cho development. Live OpenAI path chỉ active khi có `OPENAI_API_KEY`; thiếu secret hoặc provider lỗi phải graceful fallback. Không thêm live LLM provider khác trong MVP.
 - Chat session create/list/messages; SSE event contract `message_start/content_delta/message_complete/quota/error`.
 - Quota chỉ trừ khi successful completed response; retry nội bộ không trừ thêm.
 - Guest signed anonymous cookie + IP/device limit; history tối đa 7 ngày, không public/personalization.
@@ -24,7 +25,7 @@ Triển khai provider-neutral nutrition chatbot với quota, SSE, private histor
 ## Acceptance
 
 - Xử lý đầy đủ SSE success/partial error/abort, quota concurrency/reset Asia/Ho_Chi_Minh, retry accounting, guest spoof resistance, history ownership, provider timeout/fallback và redacted log.
-- Core API không fail khi provider unavailable.
+- Core API không fail khi OpenAI unavailable.
 - OpenAPI mô tả streaming events và business errors.
 - Integration guide/status/changelog/phase record cập nhật.
 - Lint/typecheck/build pass.

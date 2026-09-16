@@ -1,10 +1,13 @@
 # Backend Implementation Phases
 
-**Version:** 2.1
+**Version:** 2.2
 
 **Cập nhật:** 16/09/2026
 
 **Stack baseline:** Node.js · Express · TypeScript · PostgreSQL · Prisma · Zod · OpenAPI
+
+**AI baseline:** OpenAI Responses API · `gpt-5.6-terra` chat · `omni-moderation-latest`
+moderation · fake/local adapter cho development
 
 Tài liệu này chia backend thành các phase đủ nhỏ để triển khai, xác minh và commit riêng. Mỗi phase được thực hiện trong một session mới bằng prompt tương ứng trong `backend/docs/prompts/`.
 
@@ -34,7 +37,7 @@ Tài liệu này chia backend thành các phase đủ nhỏ để triển khai, 
 | 08    | Moderation & Reports             | 04, 06, 07     | Review queue, AI flags, reports, hide/restore/ban, audit     | `feat(moderation): add review reports and audit workflow`     |
 | 09    | Behavior Events & Recommendation | 02, 04, 06     | Consent-aware events, scoring v1, explanations               | `feat(recommendations): add behavioral ranking v1`            |
 | 10    | Meal Planner                     | 02, 03, 04, 09 | Generate/version/swap/shopping list, hard constraints        | `feat(meal-plans): implement weekly planner`                  |
-| 11    | AI Chat Gateway                  | 01, 02         | Provider adapter, quota, SSE, private history, feedback      | `feat(chat): implement nutrition ai gateway`                  |
+| 11    | AI Chat Gateway                  | 01, 02         | OpenAI adapter, quota, SSE, private history, feedback        | `feat(chat): implement nutrition ai gateway`                  |
 | 12    | AI Sharing & Expert Verification | 07, 11         | Public answers, correction records, expert/Admin permissions | `feat(ai-review): add sharing and expert verification`        |
 | 13    | Restaurants & Google Maps        | 01, 02         | Internal/Google hybrid, nearby/search/submission/review      | `feat(restaurants): add location and maps integration`        |
 | 14    | Notifications                    | 01, 07, 08, 13 | In-app notifications, dedupe, read/read-all, retention       | `feat(notifications): add in-app event notifications`         |

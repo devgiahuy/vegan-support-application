@@ -2,7 +2,12 @@
 
 ## Ứng dụng hỗ trợ người ăn chay — VeggieConnect
 
-**Chuẩn tham chiếu:** IEEE Std 830-1998 | **Phiên bản:** 1.4 (MVP Demo) | **Ngày:** 2026-09-15
+**Chuẩn tham chiếu:** IEEE Std 830-1998 | **Phiên bản:** 1.5 (MVP Demo) | **Ngày:** 2026-09-16
+
+> **Changelog v1.4 → v1.5 (ngày 2026-09-16):**
+>
+> - Chốt OpenAI là live LLM provider của MVP: Responses API, `gpt-5.6-terra` cho chatbot và
+>   `omni-moderation-latest` cho moderation. Backend giữ adapter fake/local cho development và fallback.
 
 > **Changelog v1.3 → v1.4 MVP (ngày 2026-09-15 — chỉ phục vụ demo chấm điểm):**
 >
@@ -80,7 +85,7 @@ Mục 2 mô tả bối cảnh tổng thể hệ thống. Mục 3 đặc tả chi
 
 ### 2.1. Bối cảnh sản phẩm (Product Perspective)
 
-VeggieConnect là hệ thống độc lập (không phụ thuộc hệ thống legacy nào), nhưng tích hợp với các dịch vụ bên thứ ba: Google/Apple OAuth, **Google Maps Platform (Maps SDK, Places API, Geocoding API, Directions API)** cho toàn bộ tính năng bản đồ/quán ăn, Apple HealthKit / Google Fit / **Health Connect** (kênh ưu tiên) **+ cảm biến on-device của điện thoại** (kênh fallback) cho dữ liệu sức khoẻ, và các nhà cung cấp AI (Anthropic/OpenAI cho LLM, dịch vụ STT).
+VeggieConnect là hệ thống độc lập (không phụ thuộc hệ thống legacy nào), nhưng tích hợp với các dịch vụ bên thứ ba: Google/Apple OAuth, **Google Maps Platform (Maps SDK, Places API, Geocoding API, Directions API)** cho toàn bộ tính năng bản đồ/quán ăn, Apple HealthKit / Google Fit / **Health Connect** (kênh ưu tiên) **+ cảm biến on-device của điện thoại** (kênh fallback) cho dữ liệu sức khoẻ, và **OpenAI API** cho LLM/moderation cùng dịch vụ STT.
 
 ### 2.2. Chức năng sản phẩm (tóm tắt)
 
@@ -111,7 +116,7 @@ VeggieConnect là hệ thống độc lập (không phụ thuộc hệ thống l
 
 ### 2.5. Giả định và phụ thuộc (Assumptions and Dependencies)
 
-- Giả định nhà cung cấp LLM (Anthropic/OpenAI) duy trì SLA uptime ≥ 99.9%; nếu không, hệ thống phụ thuộc vào cơ chế fallback nội bộ (mục 4.1.4 Tài liệu 1).
+- Giả định OpenAI API duy trì SLA uptime ≥ 99.9%; nếu không, hệ thống phụ thuộc vào fake/local adapter và cơ chế fallback nội bộ (mục 4.1.4 Tài liệu 1).
 - Giả định người dùng cung cấp thông tin chiều cao/cân nặng/vòng eo trung thực; cảm biến điện thoại chỉ hỗ trợ đo gián tiếp (đếm bước, ước lượng vận động, nhịp tim) — **không thể tự đo chính xác chiều cao/cân nặng**, nên BMI/BMR vẫn cần ít nhất một đầu vào thủ công hoặc từ HealthKit/Fit. Mọi khuyến nghị chỉ mang tính tham khảo, không thay thế tư vấn y khoa.
 - Phụ thuộc Google Maps Platform (Places/Geocoding/Directions) cho việc tìm/định vị/dẫn đường quán chay — cần API key, quota và tuân thủ điều khoản hiển thị bản đồ của Google.
 - Phụ thuộc Apple HealthKit / Google Fit / Health Connect cho kênh sức khoẻ ưu tiên; khi kênh này không khả dụng (không có thiết bị, từ chối quyền, lỗi token) hệ thống fallback sang cảm biến on-device + nhập thủ công (chi tiết UC-13).
@@ -347,7 +352,7 @@ VeggieConnect là hệ thống độc lập (không phụ thuộc hệ thống l
 > **MVP demo: hàng S3/CDN dưới là bản full. Khi demo dùng Cloudinary (upload API + CDN + transcode sẵn) — xem PHỤ LỤC B.1.**
 > | Hệ thống ngoài | Giao thức | Mục đích |
 > |---|---|---|
-> | Anthropic Claude API / OpenAI API | HTTPS/REST, streaming SSE | LLM cho Chatbot, Meal Planner hành vi, Video Summarizer |
+> | OpenAI Responses API (`gpt-5.6-terra`) / Moderations API (`omni-moderation-latest`) | HTTPS/REST, streaming | LLM cho Chatbot; moderation; roadmap Meal Planner hành vi và Video Summarizer |
 > | Google Maps Platform: Maps SDK / Places API / Geocoding API / Directions API | Native SDK + HTTPS/REST | Hiển thị bản đồ, tìm/đối chiếu quán chay, địa chỉ ↔ toạ độ, dẫn đường (UC-12 bắt buộc) |
 > | Apple HealthKit | Native SDK (iOS) | Kênh ưu tiên đồng bộ sức khoẻ iOS (UC-13 Tầng 1) |
 > | Google Fit REST API + Health Connect API | HTTPS/REST + OAuth2 / Native SDK (Android 14+) | Kênh ưu tiên đồng bộ sức khoẻ Android (UC-13 Tầng 1) |
