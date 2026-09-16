@@ -395,3 +395,26 @@
   - `npm run build`: pass 26/26 routes tĩnh và động.
 - PROGRESS: task #0 Nền tảng 70% → 70% (giữ nguyên).
 - Còn lại / rủi ro: Không có. Ảnh thực tế hiển thị sắc nét, sống động, chân thực và tối ưu tốc độ tải trang cao.
+
+---
+
+## [2026-09-16] — Dời AGENTS.md ra root frontend + bổ sung rule dùng skills bắt buộc
+
+- Mục tiêu: Di chuyển `frontend/docs/AGENTS.md` ra thư mục gốc frontend (`frontend/AGENTS.md`) để Antigravity tự động phát hiện và nạp làm `<user_rules>` trong mọi đoạn chat mới; bổ sung quy chuẩn bắt buộc áp dụng các bộ kỹ năng `.agents/skills/` theo ngữ cảnh.
+- Đã làm:
+  - Dùng `git mv` chuyển `frontend/docs/AGENTS.md` ra `frontend/AGENTS.md`.
+  - Cập nhật nội dung `frontend/AGENTS.md`:
+    - Giữ nguyên các quy chuẩn cốt lõi: 9 bước đọc bắt buộc, 3 câu hỏi xác nhận, kiến trúc DTO → Model → Mapper, cấm `any`, cấm trang mồ côi, 5 bước nhận task.
+    - Thêm mục 2: **Quy tắc BẮT BUỘC sử dụng Skills (`.agents/skills/`) theo ngữ cảnh**:
+      - UI / Component / Styling: Bắt buộc mở `shadcn`, `ui-ux-pro-max`, `baseline-ui`, `design-taste-frontend`/`impeccable`.
+      - Hoạt cảnh & Motion: Bắt buộc mở `remotion-best-practices` và `fixing-motion-performance` (chỉ dùng GPU Compositor, 60 FPS, không dùng layout properties).
+      - Kiến trúc Next.js: Bắt buộc mở `next-best-practices`.
+      - Tracing & Blast Radius: Dùng `codegraph`.
+      - Lập kế hoạch: Dùng bộ `speckit-*`.
+      - Chất lượng sinh mã: Bắt buộc tuân thủ `full-output-enforcement` (chống cắt xén code).
+  - Cập nhật file root `D:\Project\vegan-support-application\AGENTS.md`: Bổ sung tham chiếu `frontend/AGENTS.md` vào danh mục bắt buộc đọc và điều khoản tuân thủ skills trong Frontend Integration.
+- File tạo/sửa:
+  - Move + Sửa: `frontend/AGENTS.md` (từ `frontend/docs/AGENTS.md`)
+  - Sửa: `AGENTS.md` (root), `frontend/docs/WORK-LOG.md`
+- Verify: `git status` xác nhận di chuyển và cập nhật chính xác; đọc kiểm tra nội dung cả 2 file.
+- PROGRESS: Không đổi % (task tài liệu & cấu hình quy chuẩn).
