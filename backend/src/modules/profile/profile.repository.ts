@@ -21,6 +21,7 @@ const profileInclude = {
     orderBy: { createdAt: 'desc' },
     take: 1,
   },
+  contributorProfile: true,
   healthProfile: true,
   dietPreference: true,
   dietPreferenceRules: {

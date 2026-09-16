@@ -154,7 +154,7 @@ export class CatalogService {
             statusCode: 409,
             code: 'CATEGORY_REPLACEMENT_REQUIRED',
             message:
-              'Category đang có child hoặc proposal tham chiếu; cần replacementId cùng type và cùng tầng',
+              'Category đang có child, proposal hoặc content tham chiếu; cần replacementId cùng type và cùng tầng',
           });
         }
         throw new AppError({

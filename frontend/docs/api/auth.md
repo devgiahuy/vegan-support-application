@@ -66,7 +66,8 @@ Rotate refresh token và cấp access token mới
             "role",
             "status",
             "createdAt",
-            "contributorApplication"
+            "contributorApplication",
+            "contributorProfile"
           ],
           "properties": {
             "id": {
@@ -101,6 +102,13 @@ Rotate refresh token và cấp access token mới
               "_truncated": true
             },
             "contributorApplication": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "_truncated": true
+            },
+            "contributorProfile": {
               "type": [
                 "object",
                 "null"

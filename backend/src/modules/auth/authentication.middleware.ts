@@ -65,6 +65,16 @@ export class AuthenticationMiddleware {
     const claims = await this.tokenService.verifyAccessToken(token);
     const user = await this.repository.findUserById(claims.userId);
     if (!user || user.status === UserStatus.DELETED) throw new InvalidAccessTokenError();
+    if (
+      user.status === UserStatus.LOCKED &&
+      ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)
+    ) {
+      throw new AppError({
+        statusCode: 423,
+        code: 'ACCOUNT_LOCKED',
+        message: 'Tài khoản đang bị khóa',
+      });
+    }
     if (user.status === UserStatus.BANNED) {
       throw new AppError({
         statusCode: 403,
@@ -72,10 +82,18 @@ export class AuthenticationMiddleware {
         message: 'Tài khoản đã bị cấm',
       });
     }
+    if (claims.role !== user.role) {
+      throw new AppError({
+        statusCode: 401,
+        code: 'STALE_ACCESS_TOKEN',
+        message: 'Quyền tài khoản đã thay đổi, vui lòng đăng nhập lại',
+      });
+    }
     request.auth = {
       userId: user.id,
       email: user.email,
       role: user.role,
+      contributorType: user.contributorProfile?.contributorType ?? null,
       status: user.status,
     };
   }

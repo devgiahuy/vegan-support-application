@@ -37,6 +37,15 @@ export const contributorApplicationSummarySchema = z
   })
   .strict();
 
+export const contributorProfileSummarySchema = z
+  .object({
+    contributorType: z.enum(ContributorType),
+    label: z.string(),
+    approvalBasis: z.string(),
+    approvedAt: z.string().datetime(),
+  })
+  .strict();
+
 export const userResponseSchema = z
   .object({
     id: z.string().uuid(),
@@ -47,6 +56,7 @@ export const userResponseSchema = z
     status: z.enum(UserStatus),
     createdAt: z.string().datetime(),
     contributorApplication: contributorApplicationSummarySchema.nullable(),
+    contributorProfile: contributorProfileSummarySchema.nullable(),
   })
   .strict();
 

@@ -143,30 +143,207 @@ enum FoodGroup {
   @@map("food_group")
 }
 
+enum PostType {
+  RECIPE
+  BLOG
+  VIDEO
+
+  @@map("post_type")
+}
+
+enum PostStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  FLAGGED
+  QUARANTINED
+  REJECTED
+  HIDDEN
+  DELETED
+
+  @@map("post_status")
+}
+
+enum PostRevisionStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  FLAGGED
+  QUARANTINED
+  REJECTED
+
+  @@map("post_revision_status")
+}
+
+enum RecipeDifficulty {
+  EASY
+  MEDIUM
+  HARD
+
+  @@map("recipe_difficulty")
+}
+
+enum IngredientResolutionStatus {
+  EXACT
+  AMBIGUOUS
+  UNKNOWN
+
+  @@map("ingredient_resolution_status")
+}
+
+enum MediaKind {
+  COVER_IMAGE
+  VIDEO
+
+  @@map("media_kind")
+}
+
+enum MediaProvider {
+  CLOUDINARY
+  YOUTUBE
+
+  @@map("media_provider")
+}
+
+enum CommentStatus {
+  VISIBLE
+  HIDDEN
+  DELETED
+
+  @@map("comment_status")
+}
+
+enum CommunityAction {
+  COMMENT_CREATE
+  COMMENT_EDIT
+  VOTE
+  RATING
+  BOOKMARK
+
+  @@map("community_action")
+}
+
+enum ReportTargetType {
+  POST
+  COMMENT
+
+  @@map("report_target_type")
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+
+  @@map("report_status")
+}
+
+enum ModerationPriority {
+  NORMAL
+  HIGH
+
+  @@map("moderation_priority")
+}
+
+enum AiFlagRiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+
+  @@map("ai_flag_risk_level")
+}
+
+enum AiFlagStatus {
+  OPEN
+  REVIEWED
+
+  @@map("ai_flag_status")
+}
+
+enum ModerationTargetType {
+  POST
+  COMMENT
+  USER
+  REPORT
+  AI_FLAG
+
+  @@map("moderation_target_type")
+}
+
+enum ModerationDecision {
+  APPROVE
+  REJECT
+  NO_VIOLATION
+  WARN
+  HIDE
+  RESTORE
+  DEMOTE
+  BAN
+  UNBAN
+  LOCK
+  UNLOCK
+  DELETE_ACCOUNT
+
+  @@map("moderation_decision")
+}
+
+enum BehaviorEventType {
+  SEARCH
+  VIEW_RECIPE
+  BOOKMARK
+  RATE
+  CHAT_TOPIC
+  ACCEPT_MEAL
+  SWAP_MEAL
+  REJECT_MEAL
+
+  @@map("behavior_event_type")
+}
+
 model User {
-  id                        String                    @id @default(uuid()) @db.Uuid
-  email                     String                    @unique @db.VarChar(320)
-  passwordHash              String                    @map("password_hash")
-  displayName               String                    @map("display_name") @db.VarChar(100)
-  avatarUrl                 String?                   @map("avatar_url") @db.VarChar(2048)
-  role                      Role                      @default(MEMBER)
-  status                    UserStatus                @default(ACTIVE)
-  failedLoginAttempts       Int                       @default(0) @map("failed_login_attempts")
-  lockedUntil               DateTime?                 @map("locked_until") @db.Timestamptz(3)
-  lastLoginAt               DateTime?                 @map("last_login_at") @db.Timestamptz(3)
-  createdAt                 DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt                 DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt                 DateTime?                 @map("deleted_at") @db.Timestamptz(3)
-  refreshSessions           RefreshSession[]
-  applications              ContributorApplication[]
-  healthProfile             HealthProfile?
-  dietPreference            DietPreference?
-  dietPreferenceRules       DietPreferenceRule[]
-  dietScheduleDates         DietScheduleDate[]
-  allergies                 UserAllergy[]
-  ingredientExclusions      UserIngredientExclusion[]
-  categoryProposals         CategoryProposal[]        @relation("CategoryProposalAuthor")
-  reviewedCategoryProposals CategoryProposal[]        @relation("CategoryProposalReviewer")
+  id                          String                     @id @default(uuid()) @db.Uuid
+  email                       String                     @unique @db.VarChar(320)
+  passwordHash                String                     @map("password_hash")
+  displayName                 String                     @map("display_name") @db.VarChar(100)
+  avatarUrl                   String?                    @map("avatar_url") @db.VarChar(2048)
+  role                        Role                       @default(MEMBER)
+  status                      UserStatus                 @default(ACTIVE)
+  failedLoginAttempts         Int                        @default(0) @map("failed_login_attempts")
+  lockedUntil                 DateTime?                  @map("locked_until") @db.Timestamptz(3)
+  lastLoginAt                 DateTime?                  @map("last_login_at") @db.Timestamptz(3)
+  createdAt                   DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                   DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt                   DateTime?                  @map("deleted_at") @db.Timestamptz(3)
+  privateDataPurgeAt          DateTime?                  @map("private_data_purge_at") @db.Timestamptz(3)
+  refreshSessions             RefreshSession[]
+  applications                ContributorApplication[]
+  reviewedApplications        ContributorApplication[]   @relation("ContributorApplicationReviewer")
+  contributorProfile          ContributorProfile?        @relation("ContributorProfileUser")
+  approvedContributorProfiles ContributorProfile[]       @relation("ContributorProfileApprover")
+  healthProfile               HealthProfile?
+  dietPreference              DietPreference?
+  dietPreferenceRules         DietPreferenceRule[]
+  dietScheduleDates           DietScheduleDate[]
+  allergies                   UserAllergy[]
+  ingredientExclusions        UserIngredientExclusion[]
+  categoryProposals           CategoryProposal[]         @relation("CategoryProposalAuthor")
+  reviewedCategoryProposals   CategoryProposal[]         @relation("CategoryProposalReviewer")
+  posts                       Post[]                     @relation("PostAuthor")
+  deletedPosts                Post[]                     @relation("PostDeletedBy")
+  postRevisions               PostRevision[]             @relation("PostRevisionAuthor")
+  comments                    Comment[]                  @relation("CommentAuthor")
+  hiddenComments              Comment[]                  @relation("CommentHiddenBy")
+  postVotes                   PostVote[]
+  postRatings                 PostRating[]
+  postBookmarks               PostBookmark[]
+  communityRateLimits         CommunityRateLimitBucket[]
+  reports                     Report[]                   @relation("ReportReporter")
+  resolvedReports             Report[]                   @relation("ReportResolver")
+  reviewedAiFlags             AiFlag[]                   @relation("AiFlagReviewer")
+  moderationActions           ModerationAction[]         @relation("ModerationActor")
+  reviewedPostRevisions       PostRevision[]             @relation("PostRevisionReviewer")
+  hiddenPosts                 Post[]                     @relation("PostHiddenBy")
+  personalizationPreference   PersonalizationPreference?
+  behaviorEvents              BehaviorEvent[]
 
   @@map("users")
 }
@@ -185,6 +362,7 @@ model Category {
   children          Category[]         @relation("CategoryTree")
   childProposals    CategoryProposal[] @relation("CategoryProposalParent")
   resolvedProposals CategoryProposal[] @relation("CategoryProposalResolution")
+  postCategories    PostCategory[]
 
   @@index([type, parentId, status, sortOrder])
   @@map("categories")
@@ -226,9 +404,353 @@ model Ingredient {
   dietCompatibilities IngredientDietCompatibility[]
   traditionWarnings   IngredientTraditionWarning[]
   userExclusions      UserIngredientExclusion[]
+  recipeIngredients   RecipeIngredient[]
 
   @@index([status, foodGroup, canonicalName])
   @@map("ingredients")
+}
+
+model Post {
+  id                  String         @id @default(uuid()) @db.Uuid
+  authorId            String         @map("author_id") @db.Uuid
+  type                PostType
+  slug                String         @unique @db.VarChar(220)
+  status              PostStatus     @default(PENDING_REVIEW)
+  version             Int            @default(1)
+  publishedRevisionId String?        @unique @map("published_revision_id") @db.Uuid
+  publishedAt         DateTime?      @map("published_at") @db.Timestamptz(3)
+  deletedAt           DateTime?      @map("deleted_at") @db.Timestamptz(3)
+  deletedById         String?        @map("deleted_by_id") @db.Uuid
+  hiddenAt            DateTime?      @map("hidden_at") @db.Timestamptz(3)
+  hiddenById          String?        @map("hidden_by_id") @db.Uuid
+  hiddenReason        String?        @map("hidden_reason") @db.VarChar(1000)
+  createdAt           DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  author              User           @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  deletedBy           User?          @relation("PostDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+  hiddenBy            User?          @relation("PostHiddenBy", fields: [hiddenById], references: [id], onDelete: SetNull)
+  revisions           PostRevision[] @relation("PostRevisions")
+  publishedRevision   PostRevision?  @relation("PublishedRevision", fields: [publishedRevisionId], references: [id], onDelete: SetNull)
+  comments            Comment[]
+  votes               PostVote[]
+  ratings             PostRating[]
+  bookmarks           PostBookmark[]
+
+  @@index([status, type, publishedAt])
+  @@index([authorId, status, updatedAt])
+  @@map("posts")
+}
+
+model Comment {
+  id           String        @id @default(uuid()) @db.Uuid
+  postId       String        @map("post_id") @db.Uuid
+  authorId     String        @map("author_id") @db.Uuid
+  parentId     String?       @map("parent_id") @db.Uuid
+  content      String        @db.VarChar(2000)
+  status       CommentStatus @default(VISIBLE)
+  editedAt     DateTime?     @map("edited_at") @db.Timestamptz(3)
+  deletedAt    DateTime?     @map("deleted_at") @db.Timestamptz(3)
+  hiddenAt     DateTime?     @map("hidden_at") @db.Timestamptz(3)
+  hiddenById   String?       @map("hidden_by_id") @db.Uuid
+  hiddenReason String?       @map("hidden_reason") @db.VarChar(1000)
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime      @updatedAt @map("updated_at") @db.Timestamptz(3)
+  post         Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author       User          @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Restrict)
+  parent       Comment?      @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Restrict)
+  replies      Comment[]     @relation("CommentReplies")
+  hiddenBy     User?         @relation("CommentHiddenBy", fields: [hiddenById], references: [id], onDelete: SetNull)
+
+  @@index([postId, status, createdAt, id])
+  @@index([parentId, status, createdAt, id])
+  @@index([authorId, status, createdAt])
+  @@map("comments")
+}
+
+model PostVote {
+  userId    String   @map("user_id") @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@index([postId, createdAt])
+  @@map("post_votes")
+}
+
+model PostRating {
+  userId     String   @map("user_id") @db.Uuid
+  postId     String   @map("post_id") @db.Uuid
+  taste      Int
+  difficulty Int
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@index([postId, active])
+  @@map("post_ratings")
+}
+
+model PostBookmark {
+  userId    String   @map("user_id") @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@index([postId, createdAt])
+  @@index([userId, createdAt, postId])
+  @@map("post_bookmarks")
+}
+
+model CommunityRateLimitBucket {
+  userId      String          @map("user_id") @db.Uuid
+  action      CommunityAction
+  windowStart DateTime        @map("window_start") @db.Timestamptz(0)
+  count       Int             @default(1)
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, action, windowStart])
+  @@index([windowStart])
+  @@map("community_rate_limit_buckets")
+}
+
+model PostRevision {
+  id                String                    @id @default(uuid()) @db.Uuid
+  postId            String                    @map("post_id") @db.Uuid
+  version           Int
+  status            PostRevisionStatus        @default(PENDING_REVIEW)
+  title             String                    @db.VarChar(200)
+  normalizedTitle   String                    @map("normalized_title") @db.VarChar(200)
+  excerpt           String?                   @db.VarChar(500)
+  normalizedExcerpt String?                   @map("normalized_excerpt") @db.VarChar(500)
+  body              String
+  normalizedBody    String                    @map("normalized_body")
+  createdById       String                    @map("created_by_id") @db.Uuid
+  reviewNote        String?                   @map("review_note") @db.VarChar(2000)
+  reviewedById      String?                   @map("reviewed_by_id") @db.Uuid
+  reviewedAt        DateTime?                 @map("reviewed_at") @db.Timestamptz(3)
+  createdAt         DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
+  post              Post                      @relation("PostRevisions", fields: [postId], references: [id], onDelete: Cascade)
+  createdBy         User                      @relation("PostRevisionAuthor", fields: [createdById], references: [id], onDelete: Restrict)
+  reviewedBy        User?                     @relation("PostRevisionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  aiFlags           AiFlag[]
+  publishedFor      Post?                     @relation("PublishedRevision")
+  recipeDetail      RecipeDetail?
+  ingredients       RecipeIngredient[]
+  dietCompatibility RecipeDietCompatibility[]
+  categories        PostCategory[]
+  tags              PostTag[]
+  media             PostMedia[]
+
+  @@unique([postId, version])
+  @@index([postId, status, createdAt])
+  @@index([normalizedTitle(ops: raw("gin_trgm_ops"))], type: Gin, map: "post_revisions_normalized_title_trgm_idx")
+  @@index([normalizedBody(ops: raw("gin_trgm_ops"))], type: Gin, map: "post_revisions_normalized_body_trgm_idx")
+  @@map("post_revisions")
+}
+
+model Report {
+  id               String              @id @default(uuid()) @db.Uuid
+  reporterId       String              @map("reporter_id") @db.Uuid
+  targetType       ReportTargetType    @map("target_type")
+  targetId         String              @map("target_id") @db.Uuid
+  reasonCode       String              @map("reason_code") @db.VarChar(120)
+  details          String?             @db.VarChar(2000)
+  status           ReportStatus        @default(OPEN)
+  priority         ModerationPriority  @default(NORMAL)
+  activeKey        String?             @unique @map("active_key") @db.VarChar(160)
+  resolvedDecision ModerationDecision? @map("resolved_decision")
+  resolvedReason   String?             @map("resolved_reason") @db.VarChar(2000)
+  resolvedById     String?             @map("resolved_by_id") @db.Uuid
+  resolvedAt       DateTime?           @map("resolved_at") @db.Timestamptz(3)
+  createdAt        DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  reporter         User                @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Restrict)
+  resolvedBy       User?               @relation("ReportResolver", fields: [resolvedById], references: [id], onDelete: SetNull)
+
+  @@index([targetType, targetId, status, createdAt])
+  @@index([status, priority, createdAt])
+  @@index([reporterId, status, createdAt])
+  @@map("reports")
+}
+
+model AiFlag {
+  id             String          @id @default(uuid()) @db.Uuid
+  postRevisionId String          @map("post_revision_id") @db.Uuid
+  provider       String          @db.VarChar(80)
+  model          String          @db.VarChar(120)
+  ruleVersion    String          @map("rule_version") @db.VarChar(40)
+  reasonCodes    Json            @map("reason_codes")
+  riskScore      Decimal         @map("risk_score") @db.Decimal(5, 4)
+  riskLevel      AiFlagRiskLevel @map("risk_level")
+  status         AiFlagStatus    @default(OPEN)
+  reviewedById   String?         @map("reviewed_by_id") @db.Uuid
+  reviewedAt     DateTime?       @map("reviewed_at") @db.Timestamptz(3)
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  postRevision   PostRevision    @relation(fields: [postRevisionId], references: [id], onDelete: Cascade)
+  reviewedBy     User?           @relation("AiFlagReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([status, riskLevel, createdAt])
+  @@index([postRevisionId, status])
+  @@map("ai_flags")
+}
+
+model ModerationAction {
+  id               String               @id @default(uuid()) @db.Uuid
+  actorId          String               @map("actor_id") @db.Uuid
+  decision         ModerationDecision
+  targetType       ModerationTargetType @map("target_type")
+  targetId         String               @map("target_id") @db.Uuid
+  reason           String               @db.VarChar(2000)
+  relatedReportIds Json                 @default("[]") @map("related_report_ids")
+  relatedAiFlagIds Json                 @default("[]") @map("related_ai_flag_ids")
+  metadata         Json                 @default("{}")
+  createdAt        DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  actor            User                 @relation("ModerationActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([targetType, targetId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([decision, createdAt])
+  @@map("moderation_actions")
+}
+
+model PersonalizationPreference {
+  userId         String    @id @map("user_id") @db.Uuid
+  enabled        Boolean   @default(false)
+  consentVersion String    @map("consent_version") @db.VarChar(80)
+  consentedAt    DateTime? @map("consented_at") @db.Timestamptz(3)
+  disabledAt     DateTime? @map("disabled_at") @db.Timestamptz(3)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([enabled, updatedAt])
+  @@map("personalization_preferences")
+}
+
+model BehaviorEvent {
+  id             String            @id @default(uuid()) @db.Uuid
+  userId         String            @map("user_id") @db.Uuid
+  type           BehaviorEventType
+  entityId       String?           @map("entity_id") @db.Uuid
+  idempotencyKey String            @map("idempotency_key") @db.VarChar(120)
+  dedupeKey      String?           @unique @map("dedupe_key") @db.VarChar(255)
+  payloadHash    String            @map("payload_hash") @db.Char(64)
+  consentVersion String            @map("consent_version") @db.VarChar(80)
+  metadata       Json              @default("{}")
+  occurredAt     DateTime          @map("occurred_at") @db.Timestamptz(3)
+  createdAt      DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, idempotencyKey])
+  @@index([userId, occurredAt, type])
+  @@index([userId, entityId, occurredAt])
+  @@index([occurredAt])
+  @@map("behavior_events")
+}
+
+model RecipeDetail {
+  revisionId          String           @id @map("revision_id") @db.Uuid
+  servings            Int
+  prepTimeMinutes     Int              @map("prep_time_minutes")
+  cookTimeMinutes     Int              @map("cook_time_minutes")
+  difficulty          RecipeDifficulty
+  calories            Int?
+  proteinGrams        Decimal?         @map("protein_grams") @db.Decimal(8, 2)
+  carbsGrams          Decimal?         @map("carbs_grams") @db.Decimal(8, 2)
+  fatGrams            Decimal?         @map("fat_grams") @db.Decimal(8, 2)
+  fiberGrams          Decimal?         @map("fiber_grams") @db.Decimal(8, 2)
+  vitaminB12Mcg       Decimal?         @map("vitamin_b12_mcg") @db.Decimal(8, 2)
+  mealPlannerEligible Boolean          @default(false) @map("meal_planner_eligible")
+  allergenCodes       Json             @default("[]") @map("allergen_codes")
+  traditionWarnings   Json             @default("[]") @map("tradition_warnings")
+  revision            PostRevision     @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+
+  @@index([difficulty, cookTimeMinutes, revisionId], map: "recipe_details_search_filters_idx")
+  @@map("recipe_details")
+}
+
+model RecipeIngredient {
+  id               String                     @id @default(uuid()) @db.Uuid
+  revisionId       String                     @map("revision_id") @db.Uuid
+  ingredientId     String?                    @map("ingredient_id") @db.Uuid
+  position         Int
+  displayName      String                     @map("display_name") @db.VarChar(160)
+  normalizedName   String                     @map("normalized_name") @db.VarChar(160)
+  amount           Decimal                    @db.Decimal(10, 2)
+  unit             String                     @db.VarChar(40)
+  optional         Boolean                    @default(false)
+  resolutionStatus IngredientResolutionStatus @map("resolution_status")
+  revision         PostRevision               @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  ingredient       Ingredient?                @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@unique([revisionId, position])
+  @@index([ingredientId])
+  @@index([revisionId, resolutionStatus])
+  @@index([normalizedName(ops: raw("gin_trgm_ops"))], type: Gin, map: "recipe_ingredients_normalized_name_trgm_idx")
+  @@index([ingredientId, revisionId], map: "recipe_ingredients_search_ingredient_revision_idx")
+  @@map("recipe_ingredients")
+}
+
+model RecipeDietCompatibility {
+  revisionId  String       @map("revision_id") @db.Uuid
+  dietPattern DietPattern  @map("diet_pattern")
+  compatible  Boolean
+  reasonCodes Json         @default("[]") @map("reason_codes")
+  revision    PostRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+
+  @@id([revisionId, dietPattern])
+  @@index([dietPattern, compatible])
+  @@map("recipe_diet_compatibilities")
+}
+
+model PostCategory {
+  revisionId String       @map("revision_id") @db.Uuid
+  categoryId String       @map("category_id") @db.Uuid
+  revision   PostRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  category   Category     @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@id([revisionId, categoryId])
+  @@index([categoryId])
+  @@index([categoryId, revisionId], map: "post_categories_search_category_revision_idx")
+  @@map("post_categories")
+}
+
+model PostTag {
+  revisionId    String       @map("revision_id") @db.Uuid
+  normalizedTag String       @map("normalized_tag") @db.VarChar(80)
+  tag           String       @db.VarChar(80)
+  revision      PostRevision @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+
+  @@id([revisionId, normalizedTag])
+  @@index([normalizedTag(ops: raw("gin_trgm_ops"))], type: Gin, map: "post_tags_normalized_tag_trgm_idx")
+  @@map("post_tags")
+}
+
+model PostMedia {
+  id              String        @id @default(uuid()) @db.Uuid
+  revisionId      String        @map("revision_id") @db.Uuid
+  kind            MediaKind
+  provider        MediaProvider
+  publicId        String?       @map("public_id") @db.VarChar(255)
+  secureUrl       String        @map("secure_url") @db.VarChar(2048)
+  mimeType        String?       @map("mime_type") @db.VarChar(100)
+  bytes           Int?
+  width           Int?
+  height          Int?
+  durationSeconds Decimal?      @map("duration_seconds") @db.Decimal(10, 2)
+  position        Int           @default(0)
+  revision        PostRevision  @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+
+  @@unique([revisionId, kind])
+  @@index([publicId])
+  @@map("post_media")
 }
 
 model IngredientAlias {
@@ -312,19 +834,48 @@ model RefreshSession {
 }
 
 model ContributorApplication {
-  id             String                       @id @default(uuid()) @db.Uuid
-  userId         String                       @map("user_id") @db.Uuid
-  requestedType  ContributorType              @map("requested_type")
-  experience     String
-  referenceLinks Json                         @default("[]") @map("reference_links")
-  source         ContributorApplicationSource @default(REGISTRATION)
-  status         ContributorApplicationStatus @default(PENDING)
-  createdAt      DateTime                     @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt      DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(3)
-  user           User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                 String                       @id @default(uuid()) @db.Uuid
+  userId             String                       @map("user_id") @db.Uuid
+  requestedType      ContributorType              @map("requested_type")
+  experience         String
+  referenceLinks     Json                         @default("[]") @map("reference_links")
+  source             ContributorApplicationSource @default(REGISTRATION)
+  status             ContributorApplicationStatus @default(PENDING)
+  approvedType       ContributorType?             @map("approved_type")
+  approvalBasis      String?                      @map("approval_basis") @db.VarChar(2000)
+  reviewNote         String?                      @map("review_note") @db.VarChar(2000)
+  reviewedById       String?                      @map("reviewed_by_id") @db.Uuid
+  reviewedAt         DateTime?                    @map("reviewed_at") @db.Timestamptz(3)
+  reapplyEligibleAt  DateTime?                    @map("reapply_eligible_at") @db.Timestamptz(3)
+  createdAt          DateTime                     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user               User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy         User?                        @relation("ContributorApplicationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  contributorProfile ContributorProfile?
 
+  @@index([status, createdAt, id])
+  @@index([requestedType, status, createdAt])
   @@index([userId, createdAt])
+  @@index([reviewedById, reviewedAt])
   @@map("contributor_applications")
+}
+
+model ContributorProfile {
+  userId              String                 @id @map("user_id") @db.Uuid
+  contributorType     ContributorType        @map("contributor_type")
+  approvalBasis       String                 @map("approval_basis") @db.VarChar(2000)
+  approvedAt          DateTime               @map("approved_at") @db.Timestamptz(3)
+  approvedById        String                 @map("approved_by_id") @db.Uuid
+  sourceApplicationId String                 @unique @map("source_application_id") @db.Uuid
+  createdAt           DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user                User                   @relation("ContributorProfileUser", fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy          User                   @relation("ContributorProfileApprover", fields: [approvedById], references: [id], onDelete: Restrict)
+  sourceApplication   ContributorApplication @relation(fields: [sourceApplicationId], references: [id], onDelete: Restrict)
+
+  @@index([contributorType, approvedAt])
+  @@index([approvedById, approvedAt])
+  @@map("contributor_profiles")
 }
 
 model HealthProfile {

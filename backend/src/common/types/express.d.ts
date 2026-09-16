@@ -1,6 +1,6 @@
 export {};
 
-import type { Role, UserStatus } from '@prisma/client';
+import type { ContributorType, Role, UserStatus } from '@prisma/client';
 
 declare global {
   namespace Express {
@@ -13,6 +13,7 @@ declare global {
         userId: string;
         email: string;
         role: Role;
+        contributorType: ContributorType | null;
         status: UserStatus;
       };
     }

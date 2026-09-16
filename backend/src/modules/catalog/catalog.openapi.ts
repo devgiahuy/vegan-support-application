@@ -204,7 +204,7 @@ export function registerCatalogOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     tags: ['Catalog Admin'],
     summary: 'Archive category',
     description:
-      'Category có child active hoặc pending proposal bắt buộc replacementId active, cùng type và cùng tầng. Reparent và archive chạy trong một transaction. Phase 04 sẽ dùng cùng policy cho content references.',
+      'Category có child active, pending proposal hoặc content reference bắt buộc replacementId active, cùng type và cùng tầng. Reparent, thay content reference và archive chạy trong một transaction.',
     operationId: 'archiveCategory',
     security: adminSecurity,
     request: { params: idParamsSchema, query: archiveCategoryQuerySchema },

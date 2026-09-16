@@ -1,6 +1,6 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 1.1
+**Version:** 1.3
 
 **Ngày chốt:** 15/09/2026
 
@@ -229,8 +229,8 @@ Pagination:
 | `diet_rule_definitions`      | code, type, tradition nullable, ingredientId nullable, defaultEnabled, version, active                                       |
 | `user_allergies`             | userId, ingredient/allergen code, severity optional, active                                                                  |
 | `user_ingredient_exclusions` | userId, ingredientId nullable, ingredientName, normalizedName, reason, active; free-text vẫn được giữ khi chưa map canonical |
-| `contributor_profiles`       | userId, contributorType, approvalBasis, approvedAt, approvedBy                                                               |
-| `contributor_applications`   | userId, requestedType, experience, referenceLinks, source, status, reviewNote                                                |
+| `contributor_profiles`       | userId, contributorType, approvalBasis, approvedAt, approvedBy, sourceApplicationId                                          |
+| `contributor_applications`   | userId, requestedType, experience, referenceLinks, source, status, final type, review/cooldown audit fields                  |
 
 Enums MVP:
 
@@ -250,27 +250,35 @@ Health calculation MVP dùng dữ liệu `MANUAL`: `BMI = weightKg / heightMeter
 
 ### 4.2 Content và community
 
-| Table                             | Trường chính                                                                                    |
-| --------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `categories`                      | id, parentId, name, slug, type, status, sortOrder                                               |
-| `category_proposals`              | proposedById, parentId, name, slug, type, status, reviewedById, resolvedCategoryId              |
-| `posts`                           | id, authorId, type, title, slug, body, status, coverUrl, videoUrl, youtubeUrl, publishedAt      |
-| `post_revisions`                  | postId, version, payload, status, reviewedBy, reviewNote                                        |
-| `recipe_details`                  | postId, servings, cookTimeMinutes, difficulty, calories, protein, carbs, fat, fiber, vitaminB12 |
-| `ingredients`                     | id, canonicalName, normalizedName, foodGroup, status                                            |
-| `ingredient_aliases`              | ingredientId, alias, normalizedAlias; alias có thể map nhiều candidate                          |
-| `allergen_definitions`            | code, label, description, active                                                                |
-| `ingredient_allergens`            | ingredientId, allergenCode                                                                      |
-| `ingredient_diet_compatibilities` | ingredientId, dietPattern, compatible                                                           |
-| `ingredient_tradition_warnings`   | ingredientId, tradition, warningCode, label                                                     |
-| `recipe_ingredients`              | postId, ingredientId, displayName, amount, unit, optional                                       |
-| `recipe_diet_rules`               | postId, compatibleDietPattern, compatibleTradition                                              |
-| `comments`                        | id, postId, authorId, parentId, content, status, editedAt, deletedAt                            |
-| `votes`                           | userId, postId, createdAt; unique(userId, postId)                                               |
-| `ratings`                         | userId, postId, taste, difficulty, createdAt; unique(userId, postId)                            |
-| `bookmarks`                       | userId, postId, createdAt; unique(userId, postId)                                               |
+| Table                             | Trường chính                                                                                             |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `categories`                      | id, parentId, name, slug, type, status, sortOrder                                                        |
+| `category_proposals`              | proposedById, parentId, name, slug, type, status, reviewedById, resolvedCategoryId                       |
+| `posts`                           | id, authorId, type, slug, status, version, publishedRevisionId, publishedAt, deletedAt, deletedById      |
+| `post_revisions`                  | postId, version, title/body + normalized search fields, status, createdById, reviewNote                  |
+| `recipe_details`                  | revisionId, servings, prep/cook time, difficulty, nutrition, mealPlannerEligible, derived constraints    |
+| `ingredients`                     | id, canonicalName, normalizedName, foodGroup, status                                                     |
+| `ingredient_aliases`              | ingredientId, alias, normalizedAlias; alias có thể map nhiều candidate                                   |
+| `allergen_definitions`            | code, label, description, active                                                                         |
+| `ingredient_allergens`            | ingredientId, allergenCode                                                                               |
+| `ingredient_diet_compatibilities` | ingredientId, dietPattern, compatible                                                                    |
+| `ingredient_tradition_warnings`   | ingredientId, tradition, warningCode, label                                                              |
+| `recipe_ingredients`              | revisionId, ingredientId nullable, displayName, normalizedName, amount, unit, optional, resolutionStatus |
+| `recipe_diet_compatibilities`     | revisionId, dietPattern, compatible, reasonCodes                                                         |
+| `post_categories`                 | revisionId, categoryId                                                                                   |
+| `post_tags`                       | revisionId, tag, normalizedTag                                                                           |
+| `post_media`                      | revisionId, kind, provider, publicId, secureUrl, MIME/size/dimension metadata                            |
+| `comments`                        | id, postId, authorId, parentId, content, status, edit/delete/hide audit fields                           |
+| `post_votes`                      | userId, postId, createdAt; unique(userId, postId)                                                        |
+| `post_ratings`                    | userId, postId, taste, difficulty, active, timestamps; unique(userId, postId)                            |
+| `post_bookmarks`                  | userId, postId, createdAt; unique(userId, postId)                                                        |
+| `community_rate_limit_buckets`    | userId, action, windowStart, count; unique(userId, action, windowStart)                                  |
 
 `post_revisions` cho phép bản published cũ tiếp tục hiển thị trong lúc bản sửa mới chờ duyệt.
+Search v1 dùng normalized ASCII fields với GIN trigram indexes; ranking theo title > canonical
+ingredient > category/tag > body. Allergy, ingredient exclusion, diet pattern và enabled tradition rule
+của user đăng nhập luôn được lọc trước ranking. Related content dùng category/tag/ingredient overlap và
+trả ba nhóm Recipe/Blog/Video riêng.
 
 ### 4.3 Moderation, AI và behavior
 
@@ -534,6 +542,7 @@ Các hệ số phải để trong config và được người có chuyên môn 
 - Average rating tính từ active ratings, không dựa vào cached number do client gửi.
 - Bookmark chỉ áp dụng Recipe/Video; unique theo `(userId, postId)`.
 - Comment bị Admin hide không được author tự restore.
+- Community mutation dùng fixed-window rate limit do backend lưu; client không tự suy luận hoặc gửi counter.
 
 ### BL-12 — Category
 
@@ -715,11 +724,13 @@ GET    /api/v1/posts/:id/comments
 POST   /api/v1/posts/:id/comments
 PATCH  /api/v1/comments/:id
 DELETE /api/v1/comments/:id
+GET    /api/v1/posts/:id/community-summary
 PUT    /api/v1/posts/:id/vote
 DELETE /api/v1/posts/:id/vote
 PUT    /api/v1/posts/:id/rating
 PUT    /api/v1/posts/:id/bookmark
 DELETE /api/v1/posts/:id/bookmark
+GET    /api/v1/users/me/bookmarks
 ```
 
 UI:
@@ -754,6 +765,7 @@ API:
 
 ```text
 POST   /api/v1/contributor-applications
+GET    /api/v1/contributor-applications/me
 GET    /api/v1/admin/contributor-applications
 PATCH  /api/v1/admin/contributor-applications/:id/review
 

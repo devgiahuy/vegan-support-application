@@ -7,6 +7,11 @@ import {
 import { registerAuthOpenApi } from '../modules/auth/auth.openapi.js';
 import { registerProfileOpenApi } from '../modules/profile/profile.openapi.js';
 import { registerCatalogOpenApi } from '../modules/catalog/catalog.openapi.js';
+import { registerContentOpenApi } from '../modules/content/content.openapi.js';
+import { registerCommunityOpenApi } from '../modules/community/community.openapi.js';
+import { registerContributorOpenApi } from '../modules/contributors/contributor.openapi.js';
+import { registerModerationOpenApi } from '../modules/moderation/moderation.openapi.js';
+import { registerRecommendationOpenApi } from '../modules/recommendations/recommendation.openapi.js';
 
 const registry = new OpenAPIRegistry();
 
@@ -38,10 +43,15 @@ registry.registerPath({
 registerAuthOpenApi(registry, registeredErrorResponse);
 registerProfileOpenApi(registry, registeredErrorResponse);
 registerCatalogOpenApi(registry, registeredErrorResponse);
+registerContentOpenApi(registry, registeredErrorResponse);
+registerCommunityOpenApi(registry, registeredErrorResponse);
+registerContributorOpenApi(registry, registeredErrorResponse);
+registerModerationOpenApi(registry, registeredErrorResponse);
+registerRecommendationOpenApi(registry, registeredErrorResponse);
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
-export const openApiDocument = generator.generateDocument({
+const generatedDocument = generator.generateDocument({
   openapi: '3.1.0',
   info: {
     title: 'Vegan Support Application API',
@@ -57,5 +67,45 @@ export const openApiDocument = generator.generateDocument({
     { name: 'Categories', description: 'Public active category tree' },
     { name: 'Ingredients', description: 'Canonical ingredient discovery and alias resolution' },
     { name: 'Catalog Admin', description: 'Admin-only category and ingredient management' },
+    { name: 'Content', description: 'Revisioned Recipe, Blog, and Video content' },
+    { name: 'Community', description: 'Comments, votes, ratings, and bookmarks' },
+    { name: 'Recommendations', description: 'Consent-aware behavior events and recipe ranking' },
+    {
+      name: 'Contributors',
+      description: 'Contributor applications and approved subtype status',
+    },
+    { name: 'Contributor Admin', description: 'Admin-only Contributor application review' },
+    { name: 'Moderation', description: 'Content review queue and user reports' },
+    { name: 'Moderation Admin', description: 'Admin decisions, user and comment moderation' },
+    { name: 'Uploads', description: 'Safe Cloudinary signed-upload configuration' },
   ],
 });
+
+const lockedMutationResponse = {
+  description: 'Tài khoản LOCKED không được thực hiện mutation',
+  content: {
+    'application/json': {
+      schema: { $ref: '#/components/schemas/ErrorResponse' },
+      example: {
+        success: false,
+        error: {
+          code: 'ACCOUNT_LOCKED',
+          message: 'Tài khoản đang bị khóa',
+          requestId: '0781d468-5eb1-4bd0-9671-e4ca33b76462',
+        },
+      },
+    },
+  },
+};
+
+for (const pathItem of Object.values(generatedDocument.paths ?? {})) {
+  for (const method of ['post', 'put', 'patch', 'delete'] as const) {
+    const operation = pathItem?.[method];
+    if (operation?.security?.length) {
+      operation.responses ??= {};
+      operation.responses['423'] = lockedMutationResponse;
+    }
+  }
+}
+
+export const openApiDocument = generatedDocument;

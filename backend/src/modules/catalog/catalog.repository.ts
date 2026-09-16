@@ -100,13 +100,14 @@ export class CatalogRepository {
       if (!target) throw new CatalogRepositoryConstraintError('CATEGORY_NOT_FOUND');
       if (target.status === CatalogStatus.ARCHIVED) return target;
 
-      const [children, pendingProposals] = await Promise.all([
+      const [children, pendingProposals, contentReferences] = await Promise.all([
         transaction.category.count({
           where: { parentId: id, status: CatalogStatus.ACTIVE },
         }),
         transaction.categoryProposal.count({ where: { parentId: id, status: 'PENDING' } }),
+        transaction.postCategory.count({ where: { categoryId: id } }),
       ]);
-      if ((children > 0 || pendingProposals > 0) && !replacementId) {
+      if ((children > 0 || pendingProposals > 0 || contentReferences > 0) && !replacementId) {
         throw new CatalogRepositoryConstraintError('CATEGORY_REPLACEMENT_REQUIRED');
       }
 
@@ -129,6 +130,27 @@ export class CatalogRepository {
           where: { parentId: target.id, status: 'PENDING' },
           data: { parentId: replacement.id },
         });
+        const targetLinks = await transaction.postCategory.findMany({
+          where: { categoryId: target.id },
+          select: { revisionId: true },
+        });
+        const linkedRevisionIds = targetLinks.map((link) => link.revisionId);
+        if (linkedRevisionIds.length) {
+          const duplicateLinks = await transaction.postCategory.findMany({
+            where: { categoryId: replacement.id, revisionId: { in: linkedRevisionIds } },
+            select: { revisionId: true },
+          });
+          const duplicateRevisionIds = duplicateLinks.map((link) => link.revisionId);
+          if (duplicateRevisionIds.length) {
+            await transaction.postCategory.deleteMany({
+              where: { categoryId: target.id, revisionId: { in: duplicateRevisionIds } },
+            });
+          }
+          await transaction.postCategory.updateMany({
+            where: { categoryId: target.id },
+            data: { categoryId: replacement.id },
+          });
+        }
       }
 
       return transaction.category.update({

@@ -13,28 +13,28 @@ Cập nhật hồ sơ cơ bản
 - operationId: `updateMe`
 - Params: —
 - Request: `UpdateBasicProfileRequest` (required)
-- Responses: `200` → ProfileResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse
+- Responses: `200` → ProfileResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `423` → ErrorResponse
 
 ## PUT `/api/v1/users/me/health-profile`
 Lưu dữ liệu sức khỏe thủ công và tính BMI/BMR/TDEE
 - operationId: `updateHealthProfile`
 - Params: —
 - Request: `HealthProfileRequest` (required)
-- Responses: `200` → HealthProfileResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse
+- Responses: `200` → HealthProfileResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `423` → ErrorResponse
 
 ## PUT `/api/v1/users/me/diet-preferences`
 Xác nhận diet preferences, rules và hard constraints cá nhân
 - operationId: `saveDietPreferences`
 - Params: —
 - Request: `SaveDietPreferencesRequest` (required)
-- Responses: `200` → DietPreferenceResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `409` → ErrorResponse, `503` → ErrorResponse
+- Responses: `200` → DietPreferenceResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse, `503` → ErrorResponse
 
 ## PUT `/api/v1/users/me/diet-schedule`
 Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
 - operationId: `updateDietSchedule`
 - Params: —
 - Request: `UpdateDietScheduleRequest` (required)
-- Responses: `200` → DietScheduleResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `409` → ErrorResponse
+- Responses: `200` → DietScheduleResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
 ---
 ### Schemas dùng trong nhóm
@@ -426,6 +426,7 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
         "status",
         "createdAt",
         "contributorApplication",
+        "contributorProfile",
         "healthProfile",
         "dietPreference"
       ],
@@ -490,6 +491,37 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
           },
           "additionalProperties": false
         },
+        "contributorProfile": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "required": [
+            "contributorType",
+            "label",
+            "approvalBasis",
+            "approvedAt"
+          ],
+          "properties": {
+            "contributorType": {
+              "type": "string",
+              "_truncated": true
+            },
+            "label": {
+              "type": "string",
+              "_truncated": true
+            },
+            "approvalBasis": {
+              "type": "string",
+              "_truncated": true
+            },
+            "approvedAt": {
+              "type": "string",
+              "_truncated": true
+            }
+          },
+          "additionalProperties": false
+        },
         "healthProfile": {
           "type": [
             "object",
@@ -509,37 +541,6 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
           ],
           "properties": {
             "heightCm": {
-              "type": "number",
-              "_truncated": true
-            },
-            "weightKg": {
-              "type": "number",
-              "_truncated": true
-            },
-            "age": {
-              "type": "integer",
-              "_truncated": true
-            },
-            "sex": {
-              "type": "string",
-              "_truncated": true
-            },
-            "activityLevel": {
-              "type": "string",
-              "_truncated": true
-            },
-            "bmi": {
-              "type": "number",
-              "_truncated": true
-            },
-            "bmr": {
-              "type": "number",
-              "_truncated": true
-            },
-            "tdee": {
-              "type": "number",
-              "_truncated": true
-            }
   …(truncated — xem api-catalog.json)
 ```
 
