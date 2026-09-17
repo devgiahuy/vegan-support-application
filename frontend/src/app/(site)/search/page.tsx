@@ -30,6 +30,8 @@ import { RecipeCard } from '@/features/recipe/components/recipe-card';
 import { useArticlesQuery } from '@/features/post/queries/post.queries';
 import { useVideosQuery } from '@/features/video/queries/video.queries';
 import { useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
+import { useTrackBehaviorEvent } from '@/hooks/use-track-behavior-event';
+import { BehaviorEventType } from '@/common/enums';
 
 const POPULAR_KEYWORDS = [
   'Phở nấm',
@@ -45,6 +47,7 @@ const POPULAR_KEYWORDS = [
 function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const trackEvent = useTrackBehaviorEvent();
   const initialQuery = searchParams.get('q') || '';
 
   const [query, setQuery] = React.useState(initialQuery);
@@ -62,11 +65,15 @@ function SearchContent() {
 
   const handleSearchSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    const keyword = query.trim();
+    // Ghi SEARCH ngầm khi submit có từ khóa (fire-and-forget).
+    if (keyword.length > 0) trackEvent(BehaviorEventType.SEARCH, { query: keyword });
     router.push(`/search?q=${encodeURIComponent(query.trim())}`);
   };
 
   const handleKeywordClick = (kw: string) => {
     setQuery(kw);
+    trackEvent(BehaviorEventType.SEARCH, { query: kw });
     router.push(`/search?q=${encodeURIComponent(kw)}`);
   };
 

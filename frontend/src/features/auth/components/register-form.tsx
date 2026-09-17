@@ -129,14 +129,19 @@ export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
         )}
 
         <div className="space-y-1.5">
-          <Label htmlFor="register-displayName">Họ và tên</Label>
+          <Label
+            htmlFor="register-displayName"
+            className="text-xs font-semibold uppercase tracking-wider text-[#718078] dark:text-neutral-300"
+          >
+            Họ và tên
+          </Label>
           <div className="relative">
-            <UserIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <UserIcon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="register-displayName"
               autoComplete="name"
               placeholder="Ví dụ: Lê Minh Tâm"
-              className="pl-9"
+              className="h-12 rounded-xl pl-10 text-sm border-border/80 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
               {...form.register('displayName')}
             />
           </div>
@@ -146,15 +151,20 @@ export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="register-email">Địa chỉ Email</Label>
+          <Label
+            htmlFor="register-email"
+            className="text-xs font-semibold uppercase tracking-wider text-[#718078] dark:text-neutral-300"
+          >
+            Địa chỉ Email
+          </Label>
           <div className="relative">
-            <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="register-email"
               type="email"
               autoComplete="email"
               placeholder="ban@gmail.com"
-              className="pl-9"
+              className="h-12 rounded-xl pl-10 text-sm border-border/80 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
               {...form.register('email')}
             />
           </div>
@@ -164,15 +174,20 @@ export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="register-password">Mật khẩu mới</Label>
+          <Label
+            htmlFor="register-password"
+            className="text-xs font-semibold uppercase tracking-wider text-[#718078] dark:text-neutral-300"
+          >
+            Mật khẩu mới
+          </Label>
           <div className="relative">
-            <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
               id="register-password"
               type="password"
               autoComplete="new-password"
               placeholder="Tối thiểu 8 ký tự..."
-              className="pl-9"
+              className="h-12 rounded-xl pl-10 text-sm border-border/80 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
               {...form.register('password')}
             />
           </div>
@@ -184,12 +199,18 @@ export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="register-confirmPassword">Nhập lại mật khẩu</Label>
+          <Label
+            htmlFor="register-confirmPassword"
+            className="text-xs font-semibold uppercase tracking-wider text-[#718078] dark:text-neutral-300"
+          >
+            Nhập lại mật khẩu
+          </Label>
           <Input
             id="register-confirmPassword"
             type="password"
             autoComplete="new-password"
             placeholder="Nhập lại mật khẩu..."
+            className="h-12 rounded-xl px-4 text-sm border-border/80 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
             {...form.register('confirmPassword')}
           />
           {form.formState.errors.confirmPassword && (
@@ -203,10 +224,10 @@ export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
 
         <Button
           type="submit"
-          className="w-full gap-2 rounded-xl"
+          className="h-12 w-full gap-2 rounded-xl font-semibold bg-primary hover:bg-primary/95 active:scale-[0.99] transition-all shadow-xs"
           disabled={registerMutation.isPending}
         >
-          {registerMutation.isPending ? 'Đang tạo tài khoản...' : 'Tạo tài khoản ChayXanh'}
+          {registerMutation.isPending ? 'Đang tạo tài khoản...' : 'Tạo tài khoản VeggieConnect'}
           <ArrowRight className="h-4 w-4" />
         </Button>
       </form>

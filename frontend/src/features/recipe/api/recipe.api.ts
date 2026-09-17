@@ -12,7 +12,7 @@ import type {
   CreateRecipeRequestDto,
   UpdateRecipeRequestDto,
 } from '../types/recipe.dto';
-import type { Recipe } from '../types/recipe.model';
+import type { Recipe, RecipePaginationResult } from '../types/recipe.model';
 
 export interface RecipeQueryParams {
   page?: number;
@@ -40,7 +40,7 @@ export const recipeApi = {
   /**
    * Lấy danh sách công thức nấu ăn (hỗ trợ phân trang, lọc danh mục, độ khó, từ khóa)
    */
-  getRecipes: async (params?: RecipeQueryParams): Promise<PaginationResult<Recipe>> => {
+  getRecipes: async (params?: RecipeQueryParams): Promise<RecipePaginationResult> => {
     try {
       const res = await api.get<RecipeListResponseDto>(API_ENDPOINTS.POSTS.LIST, {
         params: {

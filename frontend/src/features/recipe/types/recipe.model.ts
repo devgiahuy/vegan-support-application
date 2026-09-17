@@ -146,3 +146,27 @@ export interface Recipe {
   traditionWarnings?: TraditionWarning[];
   dietCompatibilities?: DietCompatibility[];
 }
+
+export interface AppliedSearchConstraints {
+  authenticated: boolean;
+  dietPattern: string | null;
+  allergyCount: number;
+  ingredientExclusionCount: number;
+  traditions: string[];
+  forDate: string;
+}
+
+export interface RecipePaginationMetadata {
+  page: number;
+  limit: number;
+  totalPages: number;
+  totalItems: number;
+  hasNextPage?: boolean;
+  hasPrevPage?: boolean;
+  appliedConstraints?: AppliedSearchConstraints;
+}
+
+export interface RecipePaginationResult {
+  items: Recipe[];
+  metadata: RecipePaginationMetadata;
+}

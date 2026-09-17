@@ -32,6 +32,7 @@ import { useCategoryTreeQuery } from '@/features/category/queries/category.queri
 import { flattenCategories } from '@/features/category/utils/flatten-categories';
 import { ImageUploader } from '@/features/post/components/image-uploader';
 import { recipeFormSchema, RecipeFormValues } from '../schemas/recipe-form.schema';
+import { RecipeIngredientRow } from './recipe-ingredient-row';
 
 interface RecipeEditorFormProps {
   initialValues?: Partial<RecipeFormValues>;
@@ -262,69 +263,61 @@ export function RecipeEditorForm({
       {/* 2. NGUYÊN LIỆU ĐỊNH LƯỢNG */}
       <Card className="rounded-2xl border-border/80 shadow-sm">
         <CardHeader className="border-b bg-muted/20 pb-4 flex flex-row items-center justify-between">
-          <CardTitle className="text-lg font-bold flex items-center gap-2">
-            <Utensils className="h-5 w-5 text-primary" /> 2. Danh sách nguyên liệu định lượng
-          </CardTitle>
+          <div>
+            <CardTitle className="text-lg font-bold flex items-center gap-2">
+              <Utensils className="h-5 w-5 text-primary" /> 2. Danh sách nguyên liệu định lượng
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Nhập tên và chọn nguyên liệu từ gợi ý để hệ thống liên kết chuẩn và bảo chứng an toàn
+              ăn chay.
+            </p>
+          </div>
           <Button
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => appendIngredient({ name: '', amount: 100, unit: 'gram', notes: '' })}
+            onClick={() =>
+              appendIngredient({
+                name: '',
+                ingredientId: null,
+                amount: 100,
+                unit: 'gram',
+                notes: '',
+              })
+            }
             className="rounded-xl gap-1.5"
           >
             <Plus className="h-4 w-4" /> Thêm nguyên liệu
           </Button>
         </CardHeader>
         <CardContent className="p-6 space-y-4">
-          {ingredientFields.map((field, idx) => (
-            <div
-              key={field.id}
-              className="grid grid-cols-12 gap-3 items-center p-3 rounded-xl border bg-card"
-            >
-              <div className="col-span-5 sm:col-span-4">
-                <Input
-                  placeholder="Tên nguyên liệu"
-                  className="h-10 rounded-lg text-sm"
-                  {...form.register(`ingredients.${idx}.name`)}
-                />
-              </div>
-              <div className="col-span-3 sm:col-span-2">
-                <Input
-                  type="number"
-                  step="any"
-                  placeholder="Số lượng"
-                  className="h-10 rounded-lg text-sm"
-                  {...form.register(`ingredients.${idx}.amount` as const, { valueAsNumber: true })}
-                />
-              </div>
-              <div className="col-span-3 sm:col-span-2">
-                <Input
-                  placeholder="Đơn vị (gram, ml...)"
-                  className="h-10 rounded-lg text-sm"
-                  {...form.register(`ingredients.${idx}.unit`)}
-                />
-              </div>
-              <div className="col-span-11 sm:col-span-3">
-                <Input
-                  placeholder="Ghi chú (sơ chế, thái hạt lựu...)"
-                  className="h-10 rounded-lg text-sm"
-                  {...form.register(`ingredients.${idx}.notes`)}
-                />
-              </div>
-              <div className="col-span-1 flex justify-end">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeIngredient(idx)}
-                  disabled={ingredientFields.length <= 1}
-                  className="h-9 w-9 text-muted-foreground hover:text-destructive"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+          <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground flex items-start gap-2.5">
+            <Sparkles className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+            <div>
+              <p className="font-semibold text-foreground">
+                Mẹo hiển thị an toàn cho mọi tài khoản:
+              </p>
+              <p className="mt-0.5">
+                Khi gõ tên nguyên liệu, hãy nhấp chọn từ danh sách{' '}
+                <strong>Gợi ý nguyên liệu chuẩn</strong>. Các nguyên liệu chuẩn giúp công thức hiển
+                thị được cho các thành viên có cài đặt chế độ ăn kiêng nghiêm ngặt (Thuần chay,
+                tránh dị ứng...).
+              </p>
             </div>
-          ))}
+          </div>
+
+          <div className="space-y-3">
+            {ingredientFields.map((field, idx) => (
+              <RecipeIngredientRow
+                key={field.id}
+                index={idx}
+                form={form}
+                onRemove={() => removeIngredient(idx)}
+                canRemove={ingredientFields.length > 1}
+              />
+            ))}
+          </div>
+
           {form.formState.errors.ingredients && (
             <p className="text-xs text-destructive">{form.formState.errors.ingredients.message}</p>
           )}

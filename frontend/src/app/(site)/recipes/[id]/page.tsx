@@ -7,10 +7,13 @@ import { ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RecipeDetailView } from '@/features/recipe/components/recipe-detail-view';
 import { useRecipeDetailQuery, useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
+import { useTrackBehaviorEvent } from '@/hooks/use-track-behavior-event';
+import { BehaviorEventType } from '@/common/enums';
 
 export default function RecipeDetailPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? '';
+  const trackEvent = useTrackBehaviorEvent();
 
   const {
     data: recipe,
@@ -23,6 +26,15 @@ export default function RecipeDetailPage() {
   const relatedRecipes = React.useMemo(() => {
     return (recipesPagination?.items || []).filter((r) => r.id !== id);
   }, [recipesPagination?.items, id]);
+
+  // Ghi VIEW_RECIPE ngầm khi detail thật load xong (fire-and-forget, không await).
+  const trackedIdRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (recipe && trackedIdRef.current !== recipe.id) {
+      trackedIdRef.current = recipe.id;
+      trackEvent(BehaviorEventType.VIEW_RECIPE, { entityId: recipe.id });
+    }
+  }, [recipe, trackEvent]);
 
   if (isRecipeLoading) {
     return (
