@@ -53,6 +53,14 @@
       "description": "Consent-aware behavior events and recipe ranking"
     },
     {
+      "name": "Meal Plans",
+      "description": "Deterministic weekly plans, swaps and shopping lists"
+    },
+    {
+      "name": "AI Chat",
+      "description": "OpenAI-backed private nutrition chat, quota, SSE and feedback"
+    },
+    {
       "name": "Contributors",
       "description": "Contributor applications and approved subtype status"
     },
@@ -86,6 +94,12 @@
         "in": "cookie",
         "name": "accessToken",
         "description": "Access JWT cookie; role claim được đối chiếu với database và có thể trả STALE_ACCESS_TOKEN sau role change."
+      },
+      "ChatGuestCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "chatGuest",
+        "description": "Signed HttpOnly guest identity do backend cấp; client không được tự tạo hoặc gửi guestId trong payload."
       }
     },
     "schemas": {
@@ -10781,6 +10795,1070 @@
           "meta"
         ],
         "additionalProperties": false
+      },
+      "GenerateMealPlanRequest": {
+        "type": "object",
+        "properties": {
+          "weekStart": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "goal": {
+            "type": "string",
+            "enum": [
+              "MAINTAIN",
+              "LOSE",
+              "GAIN"
+            ]
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 120
+          },
+          "seed": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "supersedesMealPlanId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "weekStart",
+          "goal",
+          "idempotencyKey"
+        ],
+        "additionalProperties": false
+      },
+      "SwapMealPlanItemRequest": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 120
+          },
+          "seed": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "expectedVersion",
+          "idempotencyKey"
+        ],
+        "additionalProperties": false
+      },
+      "MealPlanResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "weekStart": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "goal": {
+                "type": "string",
+                "enum": [
+                  "MAINTAIN",
+                  "LOSE",
+                  "GAIN"
+                ]
+              },
+              "targetCalories": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "version": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "lockVersion": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "supersedesMealPlanId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "algorithmVersion": {
+                "type": "string",
+                "minLength": 1
+              },
+              "recommendationVersion": {
+                "type": "string"
+              },
+              "warnings": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "CALORIE_TOLERANCE_WIDENED",
+                    "RECIPE_REPEATED",
+                    "UNFILLED_SLOT",
+                    "SHOPPING_UNIT_NOT_COMBINED",
+                    "MICRONUTRIENT_DATA_PARTIAL",
+                    "MICRONUTRIENT_DATA_UNAVAILABLE"
+                  ]
+                }
+              },
+              "nutritionDataQuality": {
+                "type": "string",
+                "enum": [
+                  "COMPLETE",
+                  "PARTIAL",
+                  "UNAVAILABLE"
+                ]
+              },
+              "micronutrientSummary": {
+                "type": "object",
+                "properties": {
+                  "vitaminB12Mcg": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0
+                  },
+                  "recipesWithData": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "filledRecipeCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "vitaminB12Mcg",
+                  "recipesWithData",
+                  "filledRecipeCount"
+                ],
+                "additionalProperties": false
+              },
+              "explanation": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "filledSlots": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 21
+              },
+              "totalSlots": {
+                "type": "number",
+                "enum": [
+                  21
+                ]
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "constraintSnapshot": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "date": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "mealType": {
+                      "type": "string",
+                      "enum": [
+                        "BREAKFAST",
+                        "LUNCH",
+                        "DINNER"
+                      ]
+                    },
+                    "position": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "FILLED",
+                        "UNFILLED"
+                      ]
+                    },
+                    "targetCalories": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "calories": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "exclusiveMinimum": 0
+                    },
+                    "tolerancePercent": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0,
+                      "maximum": 100
+                    },
+                    "recipe": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "revisionId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "slug": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "coverImageUrl": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "uri"
+                        },
+                        "difficulty": {
+                          "type": "string",
+                          "enum": [
+                            "EASY",
+                            "MEDIUM",
+                            "HARD"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "revisionId",
+                        "slug",
+                        "title",
+                        "coverImageUrl",
+                        "difficulty"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "reasonCodes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "maxItems": 3
+                    },
+                    "warningCodes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "CALORIE_TOLERANCE_WIDENED",
+                          "RECIPE_REPEATED",
+                          "UNFILLED_SLOT",
+                          "SHOPPING_UNIT_NOT_COMBINED",
+                          "MICRONUTRIENT_DATA_PARTIAL",
+                          "MICRONUTRIENT_DATA_UNAVAILABLE"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "date",
+                    "mealType",
+                    "position",
+                    "status",
+                    "targetCalories",
+                    "calories",
+                    "tolerancePercent",
+                    "recipe",
+                    "reasonCodes",
+                    "warningCodes"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "shoppingList": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "ingredientId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "canonicalName": {
+                      "type": "string"
+                    },
+                    "amount": {
+                      "type": "number",
+                      "exclusiveMinimum": 0
+                    },
+                    "unit": {
+                      "type": "string"
+                    },
+                    "sourceItemCount": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    }
+                  },
+                  "required": [
+                    "ingredientId",
+                    "canonicalName",
+                    "amount",
+                    "unit",
+                    "sourceItemCount"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "id",
+              "weekStart",
+              "goal",
+              "targetCalories",
+              "version",
+              "lockVersion",
+              "supersedesMealPlanId",
+              "algorithmVersion",
+              "recommendationVersion",
+              "warnings",
+              "nutritionDataQuality",
+              "micronutrientSummary",
+              "explanation",
+              "filledSlots",
+              "totalSlots",
+              "createdAt",
+              "updatedAt",
+              "constraintSnapshot",
+              "items",
+              "shoppingList"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "MealPlanListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "weekStart": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "goal": {
+                  "type": "string",
+                  "enum": [
+                    "MAINTAIN",
+                    "LOSE",
+                    "GAIN"
+                  ]
+                },
+                "targetCalories": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "version": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "lockVersion": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "supersedesMealPlanId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uuid"
+                },
+                "algorithmVersion": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "recommendationVersion": {
+                  "type": "string"
+                },
+                "warnings": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "CALORIE_TOLERANCE_WIDENED",
+                      "RECIPE_REPEATED",
+                      "UNFILLED_SLOT",
+                      "SHOPPING_UNIT_NOT_COMBINED",
+                      "MICRONUTRIENT_DATA_PARTIAL",
+                      "MICRONUTRIENT_DATA_UNAVAILABLE"
+                    ]
+                  }
+                },
+                "nutritionDataQuality": {
+                  "type": "string",
+                  "enum": [
+                    "COMPLETE",
+                    "PARTIAL",
+                    "UNAVAILABLE"
+                  ]
+                },
+                "micronutrientSummary": {
+                  "type": "object",
+                  "properties": {
+                    "vitaminB12Mcg": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "recipesWithData": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "filledRecipeCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "vitaminB12Mcg",
+                    "recipesWithData",
+                    "filledRecipeCount"
+                  ],
+                  "additionalProperties": false
+                },
+                "explanation": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "filledSlots": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 21
+                },
+                "totalSlots": {
+                  "type": "number",
+                  "enum": [
+                    21
+                  ]
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "weekStart",
+                "goal",
+                "targetCalories",
+                "version",
+                "lockVersion",
+                "supersedesMealPlanId",
+                "algorithmVersion",
+                "recommendationVersion",
+                "warnings",
+                "nutritionDataQuality",
+                "micronutrientSummary",
+                "explanation",
+                "filledSlots",
+                "totalSlots",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "DeleteMealPlanResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "deleted": {
+                "type": "boolean",
+                "enum": [
+                  true
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "deleted"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "CreateChatSessionRequest": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          }
+        },
+        "additionalProperties": false
+      },
+      "SendChatMessageRequest": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "content",
+          "idempotencyKey"
+        ],
+        "additionalProperties": false
+      },
+      "ChatFeedbackRequest": {
+        "type": "object",
+        "properties": {
+          "value": {
+            "type": "string",
+            "enum": [
+              "UP",
+              "DOWN"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "value"
+        ],
+        "additionalProperties": false
+      },
+      "ChatSessionResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "title": {
+                "type": "string"
+              },
+              "ownerType": {
+                "type": "string",
+                "enum": [
+                  "AUTHENTICATED",
+                  "GUEST"
+                ]
+              },
+              "expiresAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "ownerType",
+              "expiresAt",
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "ChatSessionListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "ownerType": {
+                  "type": "string",
+                  "enum": [
+                    "AUTHENTICATED",
+                    "GUEST"
+                  ]
+                },
+                "expiresAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "ownerType",
+                "expiresAt",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "ChatMessageListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "sessionId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "role": {
+                  "type": "string",
+                  "enum": [
+                    "USER",
+                    "ASSISTANT"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "PENDING",
+                    "COMPLETED",
+                    "FAILED"
+                  ]
+                },
+                "content": {
+                  "type": "string"
+                },
+                "provider": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "modelId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "fallback": {
+                  "type": "boolean"
+                },
+                "topicCodes": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "TOFU",
+                      "MUSHROOM",
+                      "PROTEIN",
+                      "QUICK_MEALS",
+                      "BREAKFAST",
+                      "DINNER",
+                      "LOW_CALORIE",
+                      "WHOLE_GRAINS",
+                      "VEGETABLES"
+                    ]
+                  }
+                },
+                "disclaimer": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "feedback": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "value": {
+                      "type": "string",
+                      "enum": [
+                        "UP",
+                        "DOWN"
+                      ]
+                    },
+                    "reason": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "value",
+                    "reason",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false
+                },
+                "completedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "sessionId",
+                "role",
+                "status",
+                "content",
+                "provider",
+                "modelId",
+                "fallback",
+                "topicCodes",
+                "disclaimer",
+                "feedback",
+                "completedAt",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "ChatFeedbackResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "messageId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "value": {
+                "type": "string",
+                "enum": [
+                  "UP",
+                  "DOWN"
+                ]
+              },
+              "reason": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "messageId",
+              "value",
+              "reason",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "ChatSseStream": {
+        "type": "string",
+        "description": "SSE events: message_start, content_delta, message_complete, quota, error. data là JSON theo event type; chỉ cache assistant message sau message_complete.",
+        "example": "event: message_start\ndata: {\"requestMessageId\":\"0781d468-5eb1-4bd0-9671-e4ca33b76462\",\"assistantMessageId\":\"1781d468-5eb1-4bd0-9671-e4ca33b76462\",\"replayed\":false}\n\nevent: content_delta\ndata: {\"delta\":\"Đậu hũ là một nguồn đạm...\"}\n\nevent: message_complete\ndata: {\"message\":{\"id\":\"1781d468-5eb1-4bd0-9671-e4ca33b76462\"},\"quota\":{\"limit\":20,\"used\":1,\"remaining\":19,\"resetAt\":\"2026-09-16T17:00:00.000Z\"}}\n\n"
       }
     },
     "parameters": {}
@@ -22617,6 +23695,1788 @@
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meal-plans/generate": {
+      "post": {
+        "tags": [
+          "Meal Plans"
+        ],
+        "summary": "Tạo hoặc regenerate weekly meal plan",
+        "description": "Tạo version mới gồm 7 ngày × 3 bữa. MAINTAIN/LOSE/GAIN dùng TDEE × 1/0.9/1.1 từ config. Backend hard-filter theo từng ngày trước scoring, thử calorie ±15% rồi ±20% kèm warning, không lặp nếu pool đủ, tối đa 2 lần/recipe và để UNFILLED nếu không có candidate. seed cho kết quả deterministic; supersedesMealPlanId liên kết version regenerate.",
+        "operationId": "generateMealPlan",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "example": {
+                "weekStart": "2026-09-21",
+                "goal": "MAINTAIN",
+                "idempotencyKey": "plan-2026-09-21-maintain-01",
+                "seed": "demo-week-39"
+              },
+              "schema": {
+                "$ref": "#/components/schemas/GenerateMealPlanRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Meal plan version mới cùng shopping list và warnings",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealPlanResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Payload generate không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Payload generate không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Profile, schedule, supersedes hoặc idempotency conflict",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "HEALTH_PROFILE_INCOMPLETE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "HEALTH_PROFILE_INCOMPLETE",
+                        "message": "Profile, schedule, supersedes hoặc idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "DIET_SCHEDULE_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DIET_SCHEDULE_REQUIRED",
+                        "message": "Profile, schedule, supersedes hoặc idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "MEAL_PLAN_SUPERSEDES_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEAL_PLAN_SUPERSEDES_INVALID",
+                        "message": "Profile, schedule, supersedes hoặc idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "MEAL_PLAN_IDEMPOTENCY_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEAL_PLAN_IDEMPOTENCY_CONFLICT",
+                        "message": "Profile, schedule, supersedes hoặc idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meal-plans": {
+      "get": {
+        "tags": [
+          "Meal Plans"
+        ],
+        "summary": "List meal plan versions của current user",
+        "operationId": "listMealPlans",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+            },
+            "required": false,
+            "name": "weekStart",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Meal plan summaries phân trang",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealPlanListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Query list không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Query list không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meal-plans/{id}": {
+      "get": {
+        "tags": [
+          "Meal Plans"
+        ],
+        "summary": "Đọc meal plan version thuộc current user",
+        "operationId": "getMealPlan",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "21 slots, constraint snapshot, shopping list và nutrition quality",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealPlanResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Meal plan ID không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Meal plan ID không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy owned meal plan",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy owned meal plan",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Meal Plans"
+        ],
+        "summary": "Soft-delete owned meal plan",
+        "operationId": "deleteMealPlan",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "exclusiveMinimum": 0
+            },
+            "required": true,
+            "name": "expectedVersion",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delete idempotent; plan không còn xuất hiện trong list/detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteMealPlanResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID hoặc expectedVersion không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "ID hoặc expectedVersion không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy owned meal plan",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy owned meal plan",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Meal plan version conflict",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "MEAL_PLAN_VERSION_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEAL_PLAN_VERSION_CONFLICT",
+                        "message": "Meal plan version conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meal-plans/{id}/items/{itemId}/swap": {
+      "patch": {
+        "tags": [
+          "Meal Plans"
+        ],
+        "summary": "Swap một meal slot an toàn",
+        "description": "Chỉ chọn published eligible Recipe còn thỏa hard constraints của ngày. Ưu tiên calorie trong ±100 kcal so với món cũ; nếu không có dùng ±20% target và trả warning. expectedVersion chống concurrent update, idempotencyKey chống apply lặp.",
+        "operationId": "swapMealPlanItem",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "itemId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwapMealPlanItemRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Meal plan sau swap và shopping list đã tính lại",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealPlanResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Payload swap không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Payload swap không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy plan hoặc item thuộc user",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Không tìm thấy plan hoặc item thuộc user",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Không có candidate hoặc version/idempotency conflict",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NO_ELIGIBLE_RECIPE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NO_ELIGIBLE_RECIPE",
+                        "message": "Không có candidate hoặc version/idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "MEAL_PLAN_VERSION_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEAL_PLAN_VERSION_CONFLICT",
+                        "message": "Không có candidate hoặc version/idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "MEAL_PLAN_IDEMPOTENCY_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEAL_PLAN_IDEMPOTENCY_CONFLICT",
+                        "message": "Không có candidate hoặc version/idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chat/sessions": {
+      "post": {
+        "tags": [
+          "AI Chat"
+        ],
+        "summary": "Tạo private chat session cho authenticated user hoặc guest",
+        "description": "Guest nhận signed HttpOnly chatGuest cookie và session hết hạn sau 7 ngày. Authenticated session không hết hạn tự động và luôn private.",
+        "operationId": "createChatSession",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          },
+          {
+            "ChatGuestCookie": []
+          },
+          {}
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateChatSessionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Private chat session đã tạo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatSessionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Payload session không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Payload session không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Access token được gửi nhưng không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Access token được gửi nhưng không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Access token được gửi nhưng không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "AI Chat"
+        ],
+        "summary": "List private chat sessions của authenticated user",
+        "operationId": "listChatSessions",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Session summaries phân trang",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatSessionListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Pagination không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Pagination không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu đăng nhập",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu đăng nhập",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chat/sessions/{id}/messages": {
+      "get": {
+        "tags": [
+          "AI Chat"
+        ],
+        "summary": "Đọc message history theo ownership",
+        "operationId": "listChatMessages",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          },
+          {
+            "ChatGuestCookie": []
+          },
+          {}
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Message history private; assistant message luôn trả fixed disclaimer",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMessageListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID hoặc pagination không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "ID hoặc pagination không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Access token được gửi nhưng không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Access token được gửi nhưng không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Access token được gửi nhưng không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Session không tồn tại hoặc không thuộc identity",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Session không tồn tại hoặc không thuộc identity",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "AI Chat"
+        ],
+        "summary": "Stream nutrition answer qua SSE",
+        "description": "OpenAI Responses API được bọc sau internal SSE contract. Quota chỉ consume sau provider completion; fallback, validation, moderation block, timeout, abort và partial error không consume. Reset 00:00 Asia/Ho_Chi_Minh. Retry cùng idempotencyKey replay completed response hoặc tiếp tục an toàn mà không trừ quota hai lần.",
+        "operationId": "streamChatMessage",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          },
+          {
+            "ChatGuestCookie": []
+          },
+          {}
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendChatMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "SSE stream. error event có thể xuất hiện sau HTTP 200; message chỉ hoàn chỉnh khi nhận message_complete.",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatSseStream"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Payload message không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Payload message không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Access token được gửi nhưng không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Access token được gửi nhưng không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Access token được gửi nhưng không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Session không tồn tại hoặc không thuộc identity",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Session không tồn tại hoặc không thuộc identity",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Idempotency hoặc concurrent request conflict",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CHAT_IDEMPOTENCY_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_IDEMPOTENCY_CONFLICT",
+                        "message": "Idempotency hoặc concurrent request conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CHAT_REQUEST_IN_PROGRESS": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CHAT_REQUEST_IN_PROGRESS",
+                        "message": "Idempotency hoặc concurrent request conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Daily quota hoặc guest network rate limit",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AI_QUOTA_EXCEEDED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AI_QUOTA_EXCEEDED",
+                        "message": "Daily quota hoặc guest network rate limit",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "AI_RATE_LIMITED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AI_RATE_LIMITED",
+                        "message": "Daily quota hoặc guest network rate limit",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Chatbot bị tắt bằng configuration",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AI_FEATURE_DISABLED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AI_FEATURE_DISABLED",
+                        "message": "Chatbot bị tắt bằng configuration",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/chat/messages/{id}/feedback": {
+      "post": {
+        "tags": [
+          "AI Chat"
+        ],
+        "summary": "Upsert feedback cho owned assistant message",
+        "operationId": "upsertChatFeedback",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          },
+          {
+            "ChatGuestCookie": []
+          },
+          {}
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatFeedbackRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Feedback upserted; DOWN bắt buộc có reason",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatFeedbackResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Feedback không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Feedback không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Access token được gửi nhưng không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Access token được gửi nhưng không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Access token được gửi nhưng không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Message không tồn tại hoặc không thuộc identity",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Message không tồn tại hoặc không thuộc identity",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
                 }
               }
             }

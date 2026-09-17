@@ -29,6 +29,18 @@ export const InnerMoon = React.forwardRef<HTMLButtonElement, InnerMoonProps>(fun
   const isToggled = toggled === true;
   const shouldReduceMotion = useReducedMotion();
   const animDuration = shouldReduceMotion ? 0 : Math.min(duration / 1000, 0.25);
+  const [rippling, setRippling] = React.useState(false);
+  const mountedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    if (!mountedRef.current) {
+      mountedRef.current = true;
+      return;
+    }
+    setRippling(true);
+    const timer = setTimeout(() => setRippling(false), 550);
+    return () => clearTimeout(timer);
+  }, [toggled]);
 
   return (
     <button
@@ -46,6 +58,15 @@ export const InnerMoon = React.forwardRef<HTMLButtonElement, InnerMoonProps>(fun
         .filter(Boolean)
         .join(' ')}
     >
+      {/* Vòng sóng ripple cục bộ quanh nút toggle khi chuyển theme */}
+      {rippling && !shouldReduceMotion && (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute -inset-1 rounded-full border border-primary/50 animate-ping"
+          style={{ animationDuration: '550ms' }}
+        />
+      )}
+
       <motion.svg
         width="1em"
         height="1em"

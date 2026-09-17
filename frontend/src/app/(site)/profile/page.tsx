@@ -12,13 +12,13 @@ import {
   HeartPulse,
   BookOpen,
   CheckCircle2,
-  AlertTriangle,
   UtensilsCrossed,
   Eye,
   Pencil,
   Trash2,
   Search,
   ShieldCheck,
+  BadgeCheck,
   CalendarDays,
   FileDown,
   ChevronRight,
@@ -31,71 +31,74 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { WhyRecommendedDialog } from '@/components/shared/why-recommended-dialog';
 import { calGoalTargets } from '@/features/health/lib/bmi';
 
-import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { LoadingState } from '@/components/shared/loading-state';
 import { ErrorState } from '@/components/shared/error-state';
-import { usePostStore } from '@/store/usePostStore';
-import type { Post } from '@/features/post/types/post.model';
+import { SafeImage } from '@/components/shared/safe-image';
+import { DeletePostDialog } from '@/features/post/components/delete-post-dialog';
+import { useArticlesQuery } from '@/features/post/queries/post.queries';
+import { useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
+import { useAuthStore } from '@/store/useAuthStore';
+import type { Article } from '@/features/post/types/post.model';
 import { useDetailedProfileQuery } from '@/features/profile/queries/profile.queries';
 import { BasicProfileForm } from '@/features/profile/components/basic-profile-form';
 import { HealthProfileForm } from '@/features/profile/components/health-profile-form';
 import { HealthSummary } from '@/features/profile/components/health-summary';
 import { DietWizard } from '@/features/diet-preferences/components/diet-wizard';
 import { CurrentDietCard } from '@/features/diet-preferences/components/current-diet-card';
+import { ConsentSwitch } from '@/features/recommendation/components/consent-switch';
+import { BookmarksList } from '@/features/community/components/bookmarks-list';
+import { ApplicationForm } from '@/features/contributor/components/application-form';
+import { MyApplications } from '@/features/contributor/components/my-applications';
+import { DeleteHistoryButton } from '@/features/safety/components/delete-history-button';
+import { useMyApplicationsQuery } from '@/features/contributor/queries/contributor.queries';
 import { ScheduleEditor } from '@/features/diet-preferences/components/schedule-editor';
 
-type Tab = 'info' | 'health' | 'diet' | 'posts' | 'privacy';
+type Tab = 'info' | 'health' | 'diet' | 'posts' | 'privacy' | 'contributor';
 
 const DIET_MODES = ['Thuần chay (Vegan)', 'Chay bán phần', 'Ăn chay rằm/mùng 1'];
 
-const POSTS = [
-  {
-    status: 'Đã duyệt',
-    tone: 'primary',
-    title: 'Phở Nấm Thuần Chay Dưỡng Sinh Nước Dùng Thanh Ngọt',
-    meta: 'Món nước • Đăng ngày 12/10/2024',
-    desc: 'Bí quyết ninh củ cải trắng, mía lau và các loại nấm tươi để có nồi nước dùng ngọt tự nhiên.',
-    views: '1,420 lượt xem • 248 yêu thích',
-  },
-  {
-    status: 'Chờ duyệt',
-    tone: 'cta',
-    title: 'Nem Rán Chay Nhân Nấm Mộc Nhĩ & Đậu Xanh Bùi Béo',
-    meta: 'Món chiên giòn • Gửi lúc 15:30 hôm nay',
-    desc: 'Vỏ bánh ram giòn rụm nhiều giờ, công thức nhân đậu bùi thơm dinh dưỡng cho ngày lễ rằm.',
-    views: 'Ban kiểm duyệt sẽ phản hồi trong 24 giờ',
-  },
-  {
-    status: 'Cần chỉnh sửa',
-    tone: 'destructive',
-    title: 'Cà Tím Kho Tiêu Nồi Đất Cay Nồng Đậm Đà Đưa Cơm',
-    meta: 'Món kho • Cập nhật 2 ngày trước',
-    desc: 'Lý do: Vui lòng bổ sung định lượng chi tiết cho nguyên liệu gia vị tiêu và nước tương.',
-    views: 'Phiên bản nháp v1.2',
-  },
-];
+/** Tab Đóng góp: form nộp đơn + lịch sử đơn (1 query dùng chung cho cả 2). */
+function ContributorTab() {
+  const { data, isLoading, isError, refetch } = useMyApplicationsQuery();
+  const apps = data?.items ?? [];
 
-const toneClass: Record<string, string> = {
-  primary: 'bg-primary/10 text-primary',
-  cta: 'bg-cta/15 text-cta',
-  destructive: 'bg-destructive/10 text-destructive',
-};
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <div className="rounded-2xl border bg-card p-4">
+        <h3 className="text-base font-bold text-foreground">Đăng ký người đóng góp</h3>
+        <p className="mt-0.5 text-xs text-muted-foreground">
+          Đơn được duyệt không tự nâng quyền — hãy đăng nhập lại sau khi có kết quả.
+        </p>
+        <div className="mt-3">
+          <ApplicationForm existing={apps} />
+        </div>
+      </div>
+      <div className="space-y-3">
+        <h3 className="text-base font-bold text-foreground">Lịch sử đơn của bạn</h3>
+        {isLoading && <LoadingState message="Đang tải lịch sử đơn..." />}
+        {isError && (
+          <ErrorState title="Không tải được lịch sử đơn." onRetry={() => void refetch()} />
+        )}
+        {!isLoading && !isError && <MyApplications apps={apps} />}
+      </div>
+    </div>
+  );
+}
 
 export default function ProfilePage() {
-  const [tab, setTab] = React.useState<Tab>('health');
+  // Đọc tab khởi đầu từ URL một lần duy nhất lúc mount (không setState trong effect).
+  const [tab, setTab] = React.useState<Tab>(() => {
+    if (typeof window === 'undefined') return 'health';
+    const urlTab = new URLSearchParams(window.location.search).get('tab');
+    return urlTab && ['info', 'health', 'diet', 'posts', 'privacy', 'contributor'].includes(urlTab)
+      ? (urlTab as Tab)
+      : 'health';
+  });
   const shouldReduceMotion = useReducedMotion();
-  const [personalizationEnabled, setPersonalizationEnabled] = React.useState(true);
   const [healthSyncEnabled, setHealthSyncEnabled] = React.useState(true);
   const [isWhyDialogOpen, setIsWhyDialogOpen] = React.useState(false);
 
@@ -106,33 +109,61 @@ export default function ProfilePage() {
     refetch: refetchProfile,
   } = useDetailedProfileQuery();
 
-  const { posts, deletePost } = usePostStore();
+  const { user } = useAuthStore();
+  const { data: articlesPagination, isLoading: isArticlesLoading } = useArticlesQuery({
+    limit: 50,
+  });
+  const { data: recipesPagination, isLoading: isRecipesLoading } = useRecipesQuery({ limit: 50 });
+  const isMyPostsLoading = isArticlesLoading || isRecipesLoading;
+
   const [postSearch, setPostSearch] = React.useState('');
   const [postStatusFilter, setPostStatusFilter] = React.useState<
-    'ALL' | 'PUBLISHED' | 'PENDING' | 'FLAGGED' | 'DRAFT'
+    'ALL' | 'PUBLISHED' | 'PENDING_REVIEW' | 'FLAGGED' | 'DRAFT'
   >('ALL');
-  const [postToDelete, setPostToDelete] = React.useState<Post | null>(null);
+  const [postToDelete, setPostToDelete] = React.useState<{
+    id: string;
+    title: string;
+    version?: number;
+  } | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
 
-  React.useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const params = new URLSearchParams(window.location.search);
-      const urlTab = params.get('tab');
-      if (urlTab && ['info', 'health', 'diet', 'posts', 'privacy'].includes(urlTab)) {
-        setTab(urlTab as Tab);
-      }
-    }
-  }, []);
-
+  // Bài viết của tôi: kết hợp Công thức + Cẩm nang, lọc theo tác giả đang đăng nhập.
   const myPosts = React.useMemo(() => {
-    return posts.filter(
-      (p) =>
-        p.author.id === 'my-user' ||
-        p.author.id === 'expert-lan-anh' ||
-        p.tags?.includes('BàiCủaTôi') ||
-        p.author.name.includes('Lan Hương')
+    if (!user) return [];
+    const articles = (articlesPagination?.items || []).map((a) => ({
+      id: a.id,
+      type: 'BLOG' as const,
+      title: a.title,
+      excerpt: a.excerpt,
+      coverImageUrl: a.coverImageUrl,
+      status: a.status,
+      statusLabel: a.statusLabel,
+      categoryName: a.category.name,
+      formattedPublishedAt: a.formattedPublishedAt,
+      authorId: a.author.id,
+      authorName: a.author.name,
+      version: a.version,
+    }));
+
+    const recipes = (recipesPagination?.items || []).map((r) => ({
+      id: r.id,
+      type: 'RECIPE' as const,
+      title: r.title,
+      excerpt: r.description || '',
+      coverImageUrl: r.coverImageUrl,
+      status: r.status,
+      statusLabel: r.statusLabel,
+      categoryName: typeof r.category === 'string' ? r.category : r.category?.name || 'Món chay',
+      formattedPublishedAt: r.formattedPublishedAt,
+      authorId: r.author.id,
+      authorName: r.author.name,
+      version: r.version,
+    }));
+
+    return [...articles, ...recipes].filter(
+      (p) => p.authorId === user.id || (user.displayName && p.authorName === user.displayName)
     );
-  }, [posts]);
+  }, [articlesPagination?.items, recipesPagination?.items, user]);
 
   const filteredMyPosts = React.useMemo(() => {
     let list = [...myPosts];
@@ -142,17 +173,14 @@ export default function ProfilePage() {
     if (postSearch.trim()) {
       const q = postSearch.toLowerCase();
       list = list.filter(
-        (p) =>
-          p.title.toLowerCase().includes(q) ||
-          p.summary.toLowerCase().includes(q) ||
-          p.tags?.some((t) => t.toLowerCase().includes(q))
+        (p) => p.title.toLowerCase().includes(q) || p.excerpt.toLowerCase().includes(q)
       );
     }
     return list;
   }, [myPosts, postStatusFilter, postSearch]);
 
   const publishedCount = myPosts.filter((p) => p.status === 'PUBLISHED').length;
-  const pendingCount = myPosts.filter((p) => p.status === 'PENDING').length;
+  const pendingCount = myPosts.filter((p) => p.status === 'PENDING_REVIEW').length;
   const flaggedCount = myPosts.filter((p) => p.status === 'FLAGGED').length;
   const draftCount = myPosts.filter((p) => p.status === 'DRAFT').length;
 
@@ -162,6 +190,7 @@ export default function ProfilePage() {
     { id: 'diet', label: 'Chế độ ăn', icon: UtensilsCrossed },
     { id: 'posts', label: 'Bài viết của tôi', icon: BookOpen, badge: `${myPosts.length}` },
     { id: 'privacy', label: 'Cá nhân hoá & Dữ liệu', icon: ShieldCheck, badge: 'NĐ 13/2023' },
+    { id: 'contributor', label: 'Đóng góp', icon: BadgeCheck },
   ];
 
   return (
@@ -181,6 +210,13 @@ export default function ProfilePage() {
           <CardContent className="flex flex-col gap-5 p-6 md:flex-row md:items-center">
             <div className="relative">
               <Avatar className="h-20 w-20 rounded-2xl">
+                {detailedProfile.user.avatarUrl && (
+                  <AvatarImage
+                    src={detailedProfile.user.avatarUrl}
+                    alt={detailedProfile.user.displayName}
+                    className="rounded-2xl"
+                  />
+                )}
                 <AvatarFallback className="rounded-2xl bg-primary/10 text-2xl text-primary">
                   {detailedProfile.user.initials || 'U'}
                 </AvatarFallback>
@@ -220,17 +256,17 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
-            <Button asChild className="gap-1.5 rounded-full">
+            {/* <Button asChild className="gap-1.5 rounded-full">
               <Link href="/recipes/new">
                 <Plus className="h-4 w-4" /> Tạo công thức mới
               </Link>
-            </Button>
+            </Button> */}
           </CardContent>
         </Card>
       )}
 
       {/* Tabs Bar với Motion Animation */}
-      <div className="relative mt-6 grid grid-cols-2 gap-1 rounded-full border border-border/80 bg-muted/80 p-1.5 shadow-sm backdrop-blur-sm sm:grid-cols-5">
+      <div className="relative mt-6 grid grid-cols-2 gap-1 rounded-2xl border border-border/80 bg-muted/80 p-1.5 shadow-sm backdrop-blur-sm sm:grid-cols-3 lg:grid-cols-6 lg:rounded-full">
         {tabs.map((t) => {
           const Icon = t.icon;
           const isActive = tab === t.id;
@@ -289,7 +325,8 @@ export default function ProfilePage() {
           className="mt-6"
         >
           {/* TAB: INFO — form thật (PATCH /users/me: displayName + avatarUrl).
-          Số điện thoại / bio / đổi mật khẩu / tải file ảnh không có endpoint READY nên không render. */}
+          Ảnh upload qua POST /uploads/signature → Cloudinary rồi PATCH URL.
+          Số điện thoại / bio / đổi mật khẩu không có endpoint READY nên không render. */}
           {tab === 'info' && (
             <div>
               {isProfileLoading && <LoadingState message="Đang tải thông tin..." />}
@@ -466,17 +503,19 @@ export default function ProfilePage() {
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex flex-wrap gap-1.5">
-                  {[
-                    { id: 'ALL', label: `Tất cả (${myPosts.length})` },
-                    { id: 'PUBLISHED', label: `Đã duyệt (${publishedCount})` },
-                    { id: 'PENDING', label: `Chờ duyệt (${pendingCount})` },
-                    { id: 'FLAGGED', label: `Cần sửa (${flaggedCount})` },
-                    { id: 'DRAFT', label: `Bản nháp (${draftCount})` },
-                  ].map((f) => (
+                  {(
+                    [
+                      { id: 'ALL', label: `Tất cả (${myPosts.length})` },
+                      { id: 'PUBLISHED', label: `Đã duyệt (${publishedCount})` },
+                      { id: 'PENDING_REVIEW', label: `Chờ duyệt (${pendingCount})` },
+                      { id: 'FLAGGED', label: `Cần sửa (${flaggedCount})` },
+                      { id: 'DRAFT', label: `Bản nháp (${draftCount})` },
+                    ] as const
+                  ).map((f) => (
                     <Badge
                       key={f.id}
                       variant={postStatusFilter === f.id ? 'default' : 'secondary'}
-                      onClick={() => setPostStatusFilter(f.id as any)}
+                      onClick={() => setPostStatusFilter(f.id)}
                       className="rounded-full px-3 py-1 cursor-pointer text-xs transition-all"
                     >
                       {f.label}
@@ -495,10 +534,17 @@ export default function ProfilePage() {
               </div>
 
               <div className="mt-4 space-y-3">
-                {filteredMyPosts.length > 0 ? (
+                {isMyPostsLoading ? (
+                  [1, 2].map((i) => (
+                    <div
+                      key={i}
+                      className="h-28 animate-pulse rounded-2xl border border-border/60 bg-muted/40"
+                    />
+                  ))
+                ) : filteredMyPosts.length > 0 ? (
                   filteredMyPosts.map((p) => {
                     const isPublished = p.status === 'PUBLISHED';
-                    const isPending = p.status === 'PENDING';
+                    const isPending = p.status === 'PENDING_REVIEW';
                     const isFlagged = p.status === 'FLAGGED';
 
                     return (
@@ -508,9 +554,12 @@ export default function ProfilePage() {
                       >
                         <CardContent className="flex flex-col gap-4 p-4 md:flex-row md:items-center">
                           <div className="relative h-24 w-full shrink-0 overflow-hidden rounded-xl bg-muted md:w-36">
-                            <img
-                              src={p.coverImage}
+                            <SafeImage
+                              src={p.coverImageUrl || ''}
+                              fallbackSrc="https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=400&auto=format&fit=crop&q=80"
                               alt={p.title}
+                              fill
+                              sizes="(max-width: 768px) 100vw, 144px"
                               className="h-full w-full object-cover"
                             />
                           </div>
@@ -530,11 +579,21 @@ export default function ProfilePage() {
                               >
                                 {p.statusLabel || p.status}
                               </Badge>
-                              <span className="text-[11px] text-muted-foreground">•</span>
-                              <span className="text-xs text-muted-foreground">{p.category}</span>
+                              <Badge
+                                variant="outline"
+                                className="rounded-full text-[10px] px-2 py-0.5"
+                              >
+                                {p.type === 'RECIPE' ? 'Công thức' : 'Cẩm nang'}
+                              </Badge>
                               <span className="text-[11px] text-muted-foreground">•</span>
                               <span className="text-xs text-muted-foreground">
-                                Đăng ngày {p.publishedAt}
+                                {p.categoryName}
+                              </span>
+                              <span className="text-[11px] text-muted-foreground">•</span>
+                              <span className="text-xs text-muted-foreground">
+                                {p.formattedPublishedAt
+                                  ? `Đăng ngày ${p.formattedPublishedAt}`
+                                  : 'Chưa xuất bản'}
                               </span>
                             </div>
 
@@ -543,25 +602,8 @@ export default function ProfilePage() {
                             </h3>
 
                             <p className="line-clamp-1 text-xs text-muted-foreground">
-                              {p.summary}
+                              {p.excerpt}
                             </p>
-
-                            {p.moderationReason && (
-                              <div className="mt-1 flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded-md">
-                                <AlertTriangle className="h-3 w-3 shrink-0" />
-                                <span className="truncate">{p.moderationReason}</span>
-                              </div>
-                            )}
-
-                            <div className="flex items-center gap-3 text-[11px] text-muted-foreground pt-0.5">
-                              <span>{p.views.toLocaleString()} lượt xem</span>
-                              <span>•</span>
-                              <span className="text-primary font-semibold">
-                                Net vote: {p.score}
-                              </span>
-                              <span>•</span>
-                              <span>{p.commentCount} bình luận</span>
-                            </div>
                           </div>
 
                           <div className="flex gap-1 shrink-0 self-end md:self-center">
@@ -569,31 +611,37 @@ export default function ProfilePage() {
                               asChild
                               variant="ghost"
                               size="icon"
-                              aria-label="Xem bài viết"
+                              aria-label="Xem chi tiết"
                               className="rounded-xl"
                             >
-                              <Link href={`/articles/${p.id}`}>
+                              <Link
+                                href={
+                                  p.type === 'RECIPE' ? `/recipes/${p.id}` : `/articles/${p.id}`
+                                }
+                              >
                                 <Eye className="h-4 w-4" />
                               </Link>
                             </Button>
-                            <Button
-                              asChild
-                              variant="ghost"
-                              size="icon"
-                              aria-label="Sửa bài viết"
-                              className="rounded-xl"
-                            >
-                              <Link href={`/articles/${p.id}/edit`}>
-                                <Pencil className="h-4 w-4" />
-                              </Link>
-                            </Button>
+                            {p.type === 'BLOG' && (
+                              <Button
+                                asChild
+                                variant="ghost"
+                                size="icon"
+                                aria-label="Sửa bài viết"
+                                className="rounded-xl"
+                              >
+                                <Link href={`/articles/${p.id}/edit`}>
+                                  <Pencil className="h-4 w-4" />
+                                </Link>
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"
                               aria-label="Xoá bài viết"
                               className="text-destructive hover:bg-destructive/10 rounded-xl"
                               onClick={() => {
-                                setPostToDelete(p);
+                                setPostToDelete({ id: p.id, title: p.title, version: p.version });
                                 setIsDeleteDialogOpen(true);
                               }}
                             >
@@ -607,15 +655,32 @@ export default function ProfilePage() {
                 ) : (
                   <div className="rounded-2xl border border-dashed p-8 text-center space-y-2">
                     <p className="text-sm text-muted-foreground">
-                      Chưa có bài viết nào trong danh mục này.
+                      Chưa có bài viết hoặc công thức nào trong danh mục này.
                     </p>
-                    <Button asChild size="sm" variant="outline" className="rounded-full text-xs">
-                      <Link href="/articles/new">
-                        <Plus className="h-3.5 w-3.5 mr-1" /> Viết bài chia sẻ đầu tiên
-                      </Link>
-                    </Button>
+                    <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+                      <Button asChild size="sm" variant="outline" className="rounded-full text-xs">
+                        <Link href="/recipes/new">
+                          <Plus className="h-3.5 w-3.5 mr-1" /> Đăng công thức mới
+                        </Link>
+                      </Button>
+                      <Button asChild size="sm" variant="outline" className="rounded-full text-xs">
+                        <Link href="/articles/new">
+                          <Plus className="h-3.5 w-3.5 mr-1" /> Viết cẩm nang mới
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
                 )}
+              </div>
+
+              <div className="rounded-2xl border bg-card p-4">
+                <h3 className="text-base font-bold text-foreground">Nội dung đã lưu</h3>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Món ăn và video bạn đã lưu để xem lại sau.
+                </p>
+                <div className="mt-3">
+                  <BookmarksList />
+                </div>
               </div>
             </div>
           )}
@@ -641,7 +706,7 @@ export default function ProfilePage() {
                 </CardHeader>
 
                 <CardContent className="space-y-6">
-                  {/* Quick links to Saved Menus */}
+                  {/* Quick links to Meal Plans */}
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 rounded-2xl border bg-primary/5 border-primary/20 gap-3">
                     <div className="flex items-center gap-3">
                       <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
@@ -649,48 +714,33 @@ export default function ProfilePage() {
                       </span>
                       <div>
                         <h4 className="text-sm font-bold text-foreground">
-                          Thực đơn đã lưu của bạn (3 kế hoạch)
+                          Kế hoạch bữa ăn & Thực đơn tuần
                         </h4>
                         <p className="text-xs text-muted-foreground">
-                          Xem lại, chỉnh sửa hoặc áp dụng các thực đơn 7 ngày đã lưu
+                          Tạo thực đơn 7 ngày mới theo thể trạng hoặc xem lại các kế hoạch đã lưu
                         </p>
                       </div>
                     </div>
 
-                    <Button asChild size="sm" className="gap-1.5 font-semibold shrink-0">
-                      <Link href="/meal-plans/saved">
-                        Mở Thực đơn đã lưu <ChevronRight className="h-4 w-4" />
-                      </Link>
-                    </Button>
+                    <div className="flex flex-wrap items-center gap-2 shrink-0">
+                      <Button asChild variant="outline" size="sm" className="gap-1.5 font-medium">
+                        <Link href="/meal-plans/saved">Thực đơn đã lưu</Link>
+                      </Button>
+                      <Button asChild size="sm" className="gap-1.5 font-semibold">
+                        <Link href="/meal-plans">
+                          <Plus className="h-4 w-4" /> Tạo thực đơn mới
+                        </Link>
+                      </Button>
+                    </div>
                   </div>
 
                   {/* Consent Switches */}
                   <div className="space-y-4 divide-y">
-                    <div className="flex items-start justify-between gap-4 pt-4 first:pt-0">
-                      <div className="space-y-1">
-                        <Label className="text-sm font-semibold text-foreground">
-                          Cá nhân hoá thực đơn theo dữ liệu hành vi (UC-08)
-                        </Label>
-                        <p className="text-xs text-muted-foreground leading-relaxed">
-                          Cho phép AI sử dụng câu hỏi của bạn với Trợ lý AI (UC-07), món ăn bạn đã
-                          lưu và lịch sử tìm kiếm để tự động tinh chỉnh gợi ý thực đơn phù hợp nhất.
-                          Khi tắt, hệ thống chỉ dùng công thức quy chuẩn cứng (UC-06).
-                        </p>
-                      </div>
-                      <Switch
-                        checked={personalizationEnabled}
-                        onCheckedChange={(val) => {
-                          setPersonalizationEnabled(val);
-                          toast.success(
-                            val
-                              ? 'Đã bật cá nhân hoá thực đơn theo hành vi.'
-                              : 'Đã tắt cá nhân hoá. Hệ thống sẽ chỉ sử dụng bộ lọc quy chuẩn.'
-                          );
-                        }}
-                      />
+                    <div className="pt-4 first:pt-0">
+                      <ConsentSwitch />
                     </div>
 
-                    <div className="flex items-start justify-between gap-4 pt-4">
+                    {/* <div className="flex items-start justify-between gap-4 pt-4">
                       <div className="space-y-1">
                         <Label className="text-sm font-semibold text-foreground">
                           Đồng bộ dữ liệu thể trạng &amp; vận động (UC-13)
@@ -711,11 +761,11 @@ export default function ProfilePage() {
                           );
                         }}
                       />
-                    </div>
+                    </div> */}
                   </div>
 
                   {/* Transparency explanation button */}
-                  <div className="rounded-2xl border p-4 bg-muted/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                  {/* <div className="rounded-2xl border p-4 bg-muted/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
                       <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                         <Sparkles className="h-4 w-4 text-primary" /> Minh bạch thuật toán gợi ý AI
@@ -733,10 +783,10 @@ export default function ProfilePage() {
                     >
                       <Sparkles className="h-3.5 w-3.5 text-primary" /> Xem căn cứ giải trình
                     </Button>
-                  </div>
+                  </div> */}
 
                   {/* Data Rights: Download & Delete */}
-                  <div className="space-y-3 pt-2 border-t">
+                  {/* <div className="space-y-3 pt-2 border-t">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                       Quyền đối với dữ liệu cá nhân (Nghị định 13/2023)
                     </h4>
@@ -755,22 +805,16 @@ export default function ProfilePage() {
                         <FileDown className="h-4 w-4 text-primary" /> Tải về bản sao dữ liệu của tôi
                       </Button>
 
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          toast.success('Đã xóa toàn bộ lịch sử hành vi cá nhân hóa thành công.')
-                        }
-                        className="gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4" /> Xóa toàn bộ lịch sử hành vi &amp; chat AI
-                      </Button>
+                      <DeleteHistoryButton />
                     </div>
-                  </div>
+                  </div> */}
                 </CardContent>
               </Card>
             </div>
           )}
+
+          {/* TAB: CONTRIBUTOR — nộp đơn + lịch sử đơn (features/contributor, fixture) */}
+          {tab === 'contributor' && <ContributorTab />}
         </motion.div>
       </AnimatePresence>
 
@@ -782,21 +826,17 @@ export default function ProfilePage() {
       />
 
       {/* Delete Post Confirmation Dialog */}
-      <ConfirmDialog
+      <DeletePostDialog
         open={isDeleteDialogOpen}
-        onOpenChange={setIsDeleteDialogOpen}
-        title="Xoá bài viết này?"
-        description={`Bạn có chắc chắn muốn xoá bài viết "${postToDelete?.title}"? Hành động này không thể hoàn tác.`}
-        confirmLabel="Xoá bài viết"
-        cancelLabel="Huỷ bỏ"
-        danger={true}
-        onConfirm={() => {
-          if (postToDelete) {
-            deletePost(postToDelete.id);
-            toast.success(`Đã xoá bài viết "${postToDelete.title}" thành công!`);
-            setIsDeleteDialogOpen(false);
-            setPostToDelete(null);
-          }
+        onOpenChange={(open) => {
+          setIsDeleteDialogOpen(open);
+          if (!open) setPostToDelete(null);
+        }}
+        postId={postToDelete?.id || ''}
+        postTitle={postToDelete?.title || ''}
+        expectedVersion={postToDelete?.version}
+        onSuccess={() => {
+          setPostToDelete(null);
         }}
       />
     </div>

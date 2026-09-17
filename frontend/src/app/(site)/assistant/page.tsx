@@ -1,345 +1,457 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
+import { Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
+  Sparkles,
+  TriangleAlert,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Menu,
   Plus,
-  Search,
-  BadgeCheck,
-  MessageCircle,
-  Trash2,
-  Send,
-  Copy,
-  ThumbsUp,
-  RefreshCw,
-  BookmarkPlus,
-  AlertTriangle,
-  Phone,
-  ImagePlus,
-  Mic,
-  Leaf,
-  Brain,
+  ArrowDown,
+  Globe,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { LoadingState } from '@/components/shared/loading-state';
+import { ErrorState } from '@/components/shared/error-state';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Progress } from '@/components/ui/progress';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { cn } from '@/lib/utils';
+import { ChatMessageStatus, ChatRole } from '@/common/enums';
+import type { ChatMessage } from '@/features/chat/types/chat.model';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import { toast } from 'sonner';
+  useChatMessagesQuery,
+  useChatSessionsQuery,
+  useCreateChatSessionMutation,
+  useSendChatMessage,
+} from '@/features/chat/queries/chat.queries';
+import { MessageBubble } from '@/features/chat/components/message-bubble';
+import { Composer } from '@/features/chat/components/composer';
+import { Disclaimer } from '@/features/chat/components/disclaimer';
+import { SessionList } from '@/features/chat/components/session-list';
+import { FeedbackButtons } from '@/features/chat/components/feedback-buttons';
+import { ShareAnswerButton } from '@/features/chat/components/share-answer-button';
+import { VerifyAnswerButton } from '@/features/chat/components/verify-answer-button';
+import { QuotaBanner } from '@/features/chat/components/quota-banner';
+import { FallbackNotice } from '@/features/chat/components/fallback-notice';
+import { ChatWelcome } from '@/features/chat/components/chat-welcome';
 
-const HISTORY = [
-  {
-    group: 'Hôm nay',
-    items: ['Thực đơn chay 1500 kcal đủ đạm', 'Cách nấu bún bò Huế chay chuẩn vị'],
-  },
-  {
-    group: '7 ngày qua',
-    items: [
-      'Thay thế trứng trong làm bánh',
-      'Phân tích vi chất B12 & Sắt',
-      'Mâm cỗ chay Rằm tháng 7',
-    ],
-  },
-];
+const streamingPlaceholder = (sessionId: string, content: string): ChatMessage => ({
+  id: 'streaming',
+  sessionId,
+  role: ChatRole.ASSISTANT,
+  roleLabel: 'Trợ lý',
+  status: ChatMessageStatus.STREAMING,
+  content,
+  isFallback: false,
+  disclaimer: null,
+  feedback: null,
+  completedAt: null,
+  createdAt: null,
+});
 
-const NUTRIENTS = [
-  { name: 'Đậu hũ non + nước dùng', amount: '150g', kcal: 120, p: 11.2, c: 3.5, f: 7.1 },
-  { name: 'Nấm đùi gà áp chảo', amount: '120g', kcal: 95, p: 8.4, c: 9.2, f: 2.8 },
-  { name: 'Đậu Edamame rang muối hồng', amount: '80g', kcal: 110, p: 9.1, c: 8.0, f: 4.6 },
-  { name: 'Cơm gạo lứt', amount: '1 chén', kcal: 110, p: 2.6, c: 24.1, f: 2.0 },
-];
+const pendingUserPlaceholder = (sessionId: string, content: string): ChatMessage => ({
+  id: 'pending-user',
+  sessionId,
+  role: ChatRole.USER,
+  roleLabel: 'Bạn',
+  status: ChatMessageStatus.COMPLETE,
+  content,
+  isFallback: false,
+  disclaimer: null,
+  feedback: null,
+  completedAt: null,
+  createdAt: null,
+});
 
-export default function AiAssistantPage() {
-  const [messages, setMessages] = React.useState<{ from: 'user' | 'ai'; text: string }[]>([]);
-  const [draft, setDraft] = React.useState('');
+/**
+ * Trang Trợ lý AI VeggieConnect:
+ * - Giao diện conversational canvas toàn màn hình chuẩn ChatGPT/Claude.
+ * - Sidebar thông minh cho cả Khách và Thành viên đã đăng nhập.
+ * - Bento Hero gợi ý câu hỏi khi mở phiên mới.
+ * - Render Markdown phong phú cho công thức và dinh dưỡng.
+ */
+function AssistantContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [sessionId, setSessionId] = React.useState(() => searchParams.get('session') ?? '');
+  const [createFailed, setCreateFailed] = React.useState(false);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = React.useState(true);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = React.useState(false);
+  const [isAtBottom, setIsAtBottom] = React.useState(true);
+  const creatingRef = React.useRef(false);
+  const threadRef = React.useRef<HTMLDivElement>(null);
 
-  const send = () => {
-    const text = draft.trim();
-    if (!text) return;
-    setMessages((m) => [...m, { from: 'user', text }]);
-    setDraft('');
-    window.setTimeout(() => {
-      setMessages((m) => [
-        ...m,
-        {
-          from: 'ai',
-          text: 'Cảm ơn bạn! Đây là giao diện minh hoạ — AI dinh dưỡng sẽ trả lời chi tiết khi kết nối AI Gateway (UC-07). Hãy thử hỏi: "Tôi ăn chay trường theo Phật giáo thì bổ sung protein từ đâu?"',
-        },
-      ]);
-    }, 600);
+  const createSession = useCreateChatSessionMutation();
+  const messagesQuery = useChatMessagesQuery(sessionId, sessionId.length > 0);
+  const sessionsQuery = useChatSessionsQuery();
+  const {
+    isStreaming,
+    streamingContent,
+    streamError,
+    quota,
+    maintenance,
+    pendingUserContent,
+    send,
+    abort,
+  } = useSendChatMessage(sessionId);
+
+  // Tự tạo phiên đầu tiên nếu chưa có tham số `?session=`
+  React.useEffect(() => {
+    if (sessionId.length > 0 || creatingRef.current || createFailed) return;
+    creatingRef.current = true;
+    createSession.mutate(undefined, {
+      onSuccess: (session) => {
+        setSessionId(session.id);
+        router.replace(`/assistant?session=${session.id}`);
+      },
+      onError: () => {
+        creatingRef.current = false;
+        setCreateFailed(true);
+      },
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sessionId, createFailed]);
+
+  const messages = messagesQuery.data?.items ?? [];
+  const currentSession = sessionsQuery.data?.items.find((s) => s.id === sessionId);
+
+  // Tự động cuộn xuống cuối khi có tin nhắn mới hoặc streaming
+  React.useEffect(() => {
+    if (isAtBottom && threadRef.current) {
+      threadRef.current.scrollTo({
+        top: threadRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
+  }, [messages.length, streamingContent, pendingUserContent, isAtBottom]);
+
+  // Kiểm tra vị trí cuộn để hiển thị nút "Cuộn xuống cuối"
+  const handleScroll = () => {
+    const el = threadRef.current;
+    if (!el) return;
+    const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setIsAtBottom(distanceToBottom < 100);
+  };
+
+  const scrollToBottom = () => {
+    if (threadRef.current) {
+      threadRef.current.scrollTo({
+        top: threadRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+      setIsAtBottom(true);
+    }
+  };
+
+  const retryCreate = () => {
+    setCreateFailed(false);
+    creatingRef.current = false;
+  };
+
+  const handleSelectSession = (id: string) => {
+    abort();
+    setSessionId(id);
+    router.replace(`/assistant?session=${id}`);
+  };
+
+  const handleNewChat = () => {
+    abort();
+    createSession.mutate(undefined, {
+      onSuccess: (session) => {
+        setSessionId(session.id);
+        router.replace(`/assistant?session=${session.id}`);
+      },
+    });
   };
 
   return (
-    <div className="mx-auto max-w-[1400px] px-4 py-6 lg:px-6">
-      <div className="flex h-[calc(100vh-10rem)] min-h-[540px] gap-4 overflow-hidden">
-        {/* Sidebar */}
-        <aside className="hidden w-72 shrink-0 flex-col rounded-2xl border bg-card p-4 lg:flex">
-          <Button className="gap-1.5 rounded-xl" onClick={() => setMessages([])}>
-            <Plus className="h-4 w-4" /> Cuộc trò chuyện mới
-          </Button>
-          <div className="relative mt-3">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input placeholder="Tìm hội thoại cũ..." className="pl-9" />
+    <div className="fixed inset-x-0 bottom-0 top-16 z-10 flex overflow-hidden bg-background">
+      {/* 1. Mobile Sidebar Sheet */}
+      <Sheet open={mobileSidebarOpen} onOpenChange={setMobileSidebarOpen}>
+        <SheetContent side="left" className="w-[300px] p-4 sm:w-[340px]">
+          <SheetHeader className="mb-4">
+            <SheetTitle className="flex items-center gap-2 text-sm font-semibold">
+              <Sparkles className="size-4 text-emerald-600 dark:text-emerald-400" />
+              Lịch sử trò chuyện
+            </SheetTitle>
+          </SheetHeader>
+          <div className="overflow-y-auto">
+            <SessionList
+              activeId={sessionId}
+              onSelect={(id) => {
+                handleSelectSession(id);
+                setMobileSidebarOpen(false);
+              }}
+              onNewChat={() => {
+                handleNewChat();
+                setMobileSidebarOpen(false);
+              }}
+            />
           </div>
-          <div className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs">
-            <p className="flex items-center gap-1.5 font-semibold text-primary">
-              <BadgeCheck className="h-4 w-4" /> Hội thoại bảo mật ChayXanh
-            </p>
-            <p className="mt-1 text-muted-foreground">
-              Lưu lịch sử 90 ngày • Ngữ cảnh 10 lượt gần nhất
-            </p>
-          </div>
+        </SheetContent>
+      </Sheet>
 
-          <div className="mt-3 flex-1 space-y-3 overflow-y-auto">
-            {HISTORY.map((g) => (
-              <div key={g.group}>
-                <p className="px-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  {g.group}
-                </p>
-                {g.items.map((item, i) => (
-                  <button
-                    key={item}
-                    className={cn(
-                      'mt-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm',
-                      i === 0 && g.group === 'Hôm nay'
-                        ? 'bg-primary/10 font-medium text-primary'
-                        : 'hover:bg-accent'
-                    )}
-                  >
-                    <MessageCircle className="h-4 w-4 shrink-0" />
-                    <span className="line-clamp-1">{item}</span>
-                  </button>
-                ))}
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-3 border-t pt-3">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-medium">Thành viên ChayXanh • 42/50 tin</span>
-              <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Xoá lịch sử">
-                <Trash2 className="h-3.5 w-3.5" />
+      {/* 2. Desktop Sidebar */}
+      <aside
+        className={cn(
+          'hidden flex-col border-r border-border/70 bg-muted/20 backdrop-blur-xs transition-all duration-200 lg:flex',
+          desktopSidebarOpen ? 'w-[280px] p-3.5' : 'w-0 overflow-hidden border-r-0 p-0'
+        )}
+      >
+        <div className="flex h-full flex-col justify-between overflow-y-auto pr-1">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between px-1">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Lịch sử trò chuyện
+              </h2>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setDesktopSidebarOpen(false)}
+                className="size-7 text-muted-foreground hover:text-foreground"
+                aria-label="Thu gọn thanh bên"
+                title="Thu gọn thanh bên"
+              >
+                <PanelLeftClose className="size-4" />
               </Button>
             </div>
-            <Progress value={84} className="mt-2" />
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              Hạn mức ngày • Đặt lại lúc 00:00
-            </p>
-          </div>
-        </aside>
-
-        {/* Chat */}
-        <div className="flex min-w-0 flex-1 flex-col rounded-2xl border bg-card">
-          <div className="flex flex-wrap items-center gap-2 border-b p-3">
-            <Badge className="gap-1.5 rounded-full">
-              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary-foreground" />
-              Gemini 1.5 Flash • Bếp chay &amp; Dinh dưỡng
-            </Badge>
-            <span className="text-xs text-muted-foreground">480 tokens • 1.2s</span>
-          </div>
-
-          <div className="rounded-xl border border-cta/30 bg-cta/5 p-3 text-xs text-muted-foreground">
-            <Brain className="mr-1 inline h-3.5 w-3.5 text-cta" />
-            <strong className="text-foreground">Lưu ý:</strong> Trợ lý AI chuyên thuần chay &amp;
-            công thức Việt. Không thay thế chẩn đoán y khoa. Thông tin mang tính tham khảo, không
-            thay thế tư vấn từ chuyên gia dinh dưỡng/bác sĩ.
-          </div>
-
-          <div className="flex-1 space-y-4 overflow-y-auto p-4">
-            {messages.length === 0 && (
-              <>
-                <UserBubble
-                  time="10:14"
-                  text="Em tập gym, muốn 30g protein thực vật sau tập, món nào dễ nấu dưới 30 phút và phân tích luôn calo giúp em?"
-                />
-                <div className="max-w-[92%]">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        <Leaf className="h-4 w-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <p className="text-xs text-muted-foreground">ChayXanh AI (Gemini 1.5)</p>
-                  </div>
-                  <div className="ml-10 mt-2 rounded-2xl rounded-tl-sm border bg-muted/40 p-4">
-                    <p className="font-semibold">
-                      Đậu hũ sốt nấm đùi gà &amp; đậu Edamame rang muối hồng — ăn kèm cơm gạo lứt
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Thời gian: 22 phút • Độ khó: Dễ
-                    </p>
-                    <Table className="mt-3 bg-card">
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Nguyên liệu / Món</TableHead>
-                          <TableHead>Khối lượng</TableHead>
-                          <TableHead>Calo</TableHead>
-                          <TableHead>Protein</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {NUTRIENTS.map((n) => (
-                          <TableRow key={n.name}>
-                            <TableCell className="font-medium">{n.name}</TableCell>
-                            <TableCell>{n.amount}</TableCell>
-                            <TableCell>{n.kcal} kcal</TableCell>
-                            <TableCell>{n.p}g</TableCell>
-                          </TableRow>
-                        ))}
-                        <TableRow className="bg-primary/5 font-semibold">
-                          <TableCell>Tổng</TableCell>
-                          <TableCell>—</TableCell>
-                          <TableCell>~435 kcal</TableCell>
-                          <TableCell>31.3g</TableCell>
-                        </TableRow>
-                      </TableBody>
-                    </Table>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {[
-                        { icon: Copy, label: 'Sao chép' },
-                        { icon: ThumbsUp, label: 'Đánh giá' },
-                        { icon: RefreshCw, label: 'Thử lại' },
-                        { icon: BookmarkPlus, label: 'Lưu vào Thực đơn tuần' },
-                      ].map((a) => {
-                        const Icon = a.icon;
-                        return (
-                          <Button
-                            key={a.label}
-                            variant="outline"
-                            size="sm"
-                            className="gap-1.5 rounded-full"
-                            onClick={() => toast.success('Đã ghi nhận')}
-                          >
-                            <Icon className="h-3.5 w-3.5" /> {a.label}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {[
-                        'Thêm món vào giỏ đi chợ tuần',
-                        'Gợi ý món thay thế Edamame',
-                        'Cần bổ sung gì để hấp thu kẽm & sắt?',
-                      ].map((q) => (
-                        <button
-                          key={q}
-                          onClick={() => setDraft(q)}
-                          className="rounded-full border px-3 py-1.5 text-xs hover:border-primary hover:text-primary"
-                        >
-                          {q}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <UserBubble
-                  time="10:22"
-                  text="Em bị đau dạ dày dữ dội, có nên nhịn ăn thải độc 7 ngày không?"
-                />
-                <div className="max-w-[92%] rounded-2xl border-l-4 border-l-destructive bg-destructive/5 p-4">
-                  <p className="flex items-center gap-1.5 text-sm font-semibold text-destructive">
-                    <AlertTriangle className="h-4 w-4" /> Từ chối tư vấn y tế với tình trạng cấp
-                    tính
-                  </p>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Tôi không thể tư vấn cho cơn đau cấp tính. Hãy đến ngay cơ sở y tế gần nhất.
-                    Không nhịn ăn hoàn toàn, không uống nước cam/chanh hay gia vị cay nóng. Uống
-                    từng ngụm nước ấm nhỏ hoặc ăn vài thìa cháo loãng.
-                  </p>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    className="mt-3 gap-1.5 rounded-full"
-                    asChild
-                  >
-                    <Link href="tel:115">
-                      <Phone className="h-3.5 w-3.5" /> Cấp cứu y tế: Gọi 115
-                    </Link>
-                  </Button>
-                </div>
-              </>
-            )}
-
-            {messages.map((m, i) =>
-              m.from === 'user' ? (
-                <UserBubble key={i} time="Bây giờ" text={m.text} />
-              ) : (
-                <div key={i} className="max-w-[92%]">
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback className="bg-primary/10 text-primary">
-                        <Leaf className="h-4 w-4" />
-                      </AvatarFallback>
-                    </Avatar>
-                    <p className="text-xs text-muted-foreground">ChayXanh AI</p>
-                  </div>
-                  <div className="ml-10 mt-2 rounded-2xl rounded-tl-sm border bg-muted/40 p-4 text-sm">
-                    {m.text}
-                  </div>
-                </div>
-              )
-            )}
-          </div>
-
-          <div className="border-t p-3">
-            <div className="flex items-end gap-2">
-              <Button variant="ghost" size="icon" aria-label="Tải ảnh" className="shrink-0">
-                <ImagePlus className="h-5 w-5" />
-              </Button>
-              <Button variant="ghost" size="icon" aria-label="Ghi âm" className="shrink-0">
-                <Mic className="h-5 w-5" />
-              </Button>
-              <Input
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    send();
-                  }
-                }}
-                placeholder="Hỏi chuyên gia AI về công thức, dinh dưỡng... (Enter để gửi)"
-                className="min-h-11 rounded-xl"
-              />
-              <Button size="icon" aria-label="Gửi" className="shrink-0 rounded-xl" onClick={send}>
-                <Send className="h-4 w-4" />
-              </Button>
-            </div>
-            <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
-              <span>Đã sẵn sàng • Độ trễ 48ms</span>
-              <span className="flex items-center gap-1.5">
-                <Checkbox id="save-history" defaultChecked />{' '}
-                <Label htmlFor="save-history" className="text-[11px]">
-                  Lưu lịch sử để cá nhân hoá gợi ý
-                </Label>
-              </span>
-            </p>
+            <SessionList
+              activeId={sessionId}
+              onSelect={handleSelectSession}
+              onNewChat={handleNewChat}
+            />
           </div>
         </div>
-      </div>
+      </aside>
+
+      {/* 3. Main Chat Canvas */}
+      <main className="relative flex flex-1 flex-col overflow-hidden bg-background">
+        {/* Chat Top Bar */}
+        <header className="flex h-13 shrink-0 items-center justify-between border-b border-border/60 bg-background/85 px-4 backdrop-blur-md">
+          <div className="flex items-center gap-2.5">
+            {/* Mobile drawer trigger */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setMobileSidebarOpen(true)}
+              className="size-8 text-muted-foreground lg:hidden"
+              aria-label="Mở danh sách đoạn chat"
+            >
+              <Menu className="size-4" />
+            </Button>
+
+            {/* Desktop re-open button */}
+            {!desktopSidebarOpen && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setDesktopSidebarOpen(true)}
+                className="hidden size-8 text-muted-foreground hover:text-foreground lg:inline-flex"
+                aria-label="Mở thanh bên"
+                title="Mở thanh bên"
+              >
+                <PanelLeftOpen className="size-4" />
+              </Button>
+            )}
+
+            {/* Session Info */}
+            <div className="flex items-center gap-2">
+              <div className="flex size-7 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <Sparkles className="size-3.5" />
+              </div>
+              <div>
+                <h1 className="text-sm font-semibold text-foreground tracking-tight line-clamp-1">
+                  {currentSession?.title || 'Trợ lý Dinh dưỡng Chay'}
+                </h1>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Quota Badge */}
+            <QuotaBanner quota={quota} variant="pill" />
+
+            {/* New chat quick button */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={handleNewChat}
+              disabled={createSession.isPending}
+              className="hidden h-8 gap-1.5 rounded-xl border-border/80 px-2.5 text-xs sm:inline-flex"
+              aria-label="Đoạn chat mới"
+            >
+              <Plus className="size-3.5" />
+              <span>Mới</span>
+            </Button>
+
+            {/* Khám phá câu trả lời công khai */}
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push('/assistant/public')}
+              className="hidden h-8 gap-1.5 rounded-xl px-2.5 text-xs sm:inline-flex"
+              aria-label="Khám phá câu trả lời công khai"
+            >
+              <Globe className="size-3.5" />
+              <span>Khám phá</span>
+            </Button>
+          </div>
+        </header>
+
+        {/* Maintenance notice if active */}
+        {maintenance && (
+          <div className="px-4 pt-3">
+            <FallbackNotice maintenance={maintenance} />
+          </div>
+        )}
+
+        {/* Quota exhausted banner if active */}
+        {quota?.exhausted && (
+          <div className="px-4 pt-3">
+            <QuotaBanner quota={quota} variant="banner" />
+          </div>
+        )}
+
+        {/* Message Thread Scroll Container */}
+        <div
+          ref={threadRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto px-4 pt-4 pb-8 sm:px-6"
+        >
+          <div className="mx-auto max-w-3xl space-y-4">
+            {/* Creating session loading */}
+            {!createFailed && sessionId.length === 0 && (
+              <div className="py-16">
+                <LoadingState message="Đang kết nối Trợ lý Dinh dưỡng..." />
+              </div>
+            )}
+
+            {/* Loading messages */}
+            {sessionId.length > 0 && messagesQuery.isLoading && (
+              <div className="py-16">
+                <LoadingState message="Đang tải lịch sử tin nhắn..." />
+              </div>
+            )}
+
+            {/* Error loading messages */}
+            {sessionId.length > 0 && messagesQuery.isError && (
+              <div className="py-12">
+                <ErrorState
+                  title="Không tải được tin nhắn."
+                  onRetry={() => void messagesQuery.refetch()}
+                />
+              </div>
+            )}
+
+            {/* Session creation failed */}
+            {createFailed && (
+              <div className="py-12">
+                <ErrorState title="Không khởi tạo được phiên trò chuyện." onRetry={retryCreate} />
+              </div>
+            )}
+
+            {/* Empty State / Welcome Screen */}
+            {sessionId.length > 0 &&
+              !messagesQuery.isLoading &&
+              !messagesQuery.isError &&
+              messages.length === 0 &&
+              !isStreaming && <ChatWelcome onSelectPrompt={(prompt) => void send(prompt)} />}
+
+            {/* Messages */}
+            {messages.map((message) => (
+              <MessageBubble
+                key={message.id}
+                message={message}
+                actions={(item) => (
+                  <div className="flex items-center">
+                    <FeedbackButtons message={item} sessionId={sessionId} />
+                    <ShareAnswerButton message={item} />
+                    <VerifyAnswerButton messageId={item.id} />
+                  </div>
+                )}
+              />
+            ))}
+
+            {/* Tin nhắn người dùng đang gửi (optimistic) hiển thị ngay khi đang chờ/streaming phản hồi */}
+            {pendingUserContent && isStreaming && (
+              <MessageBubble message={pendingUserPlaceholder(sessionId, pendingUserContent)} />
+            )}
+
+            {/* Streaming message */}
+            {(isStreaming || streamingContent.length > 0) && (
+              <MessageBubble
+                message={streamingPlaceholder(sessionId, streamingContent)}
+                streamingText={streamingContent}
+              />
+            )}
+
+            {/* Stream Error Alert */}
+            {streamError && (
+              <Alert variant="destructive" className="rounded-2xl">
+                <TriangleAlert className="size-4" />
+                <AlertTitle>Chưa gửi được câu hỏi</AlertTitle>
+                <AlertDescription className="text-xs">{streamError}</AlertDescription>
+              </Alert>
+            )}
+          </div>
+        </div>
+
+        {/* Floating Scroll-to-Bottom Button */}
+        {!isAtBottom && (
+          <div className="absolute bottom-28 left-1/2 -translate-x-1/2 z-20">
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={scrollToBottom}
+              className="gap-1.5 rounded-full border border-border/80 bg-background/95 px-3.5 py-1 text-xs shadow-md backdrop-blur-md hover:bg-background"
+              aria-label="Cuộn xuống cuối tin nhắn"
+            >
+              <ArrowDown className="size-3.5 animate-bounce text-emerald-600 dark:text-emerald-400" />
+              <span>Cuộn xuống cuối</span>
+            </Button>
+          </div>
+        )}
+
+        {/* Bottom Floating Composer */}
+        <footer className="shrink-0 border-t border-border/40 bg-gradient-to-t from-background via-background/95 to-transparent px-4 pb-4 pt-2 sm:px-6">
+          <div className="mx-auto max-w-3xl space-y-2">
+            {sessionId.length > 0 && !maintenance && !quota?.exhausted ? (
+              <Composer
+                isStreaming={isStreaming}
+                onSend={(content) => void send(content)}
+                onAbort={abort}
+              />
+            ) : (
+              <div className="rounded-2xl border border-border/80 bg-muted/40 p-3 text-center text-xs text-muted-foreground">
+                {quota?.exhausted
+                  ? 'Bạn đã đạt giới hạn câu hỏi hôm nay. Lịch sử vẫn được lưu trữ bình thường.'
+                  : 'Trợ lý đang tạm bảo trì hệ thống. Vui lòng quay lại sau ít phút.'}
+              </div>
+            )}
+
+            <div className="px-1">
+              <Disclaimer />
+            </div>
+          </div>
+        </footer>
+      </main>
     </div>
   );
 }
 
-function UserBubble({ time, text }: { time: string; text: string }) {
+export default function AssistantPage() {
   return (
-    <div className="ml-auto max-w-[85%]">
-      <div className="rounded-2xl rounded-tr-sm bg-primary px-4 py-3 text-sm text-primary-foreground">
-        {text}
-      </div>
-      <p className="mt-1 text-right text-[11px] text-muted-foreground">Bạn • {time}</p>
-    </div>
+    <Suspense fallback={<LoadingState message="Đang tải trợ lý dinh dưỡng..." />}>
+      <AssistantContent />
+    </Suspense>
   );
 }

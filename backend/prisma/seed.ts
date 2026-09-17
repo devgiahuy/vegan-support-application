@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import {
+  ActivityLevel,
   AiFlagRiskLevel,
   AiFlagStatus,
   BehaviorEventType,
@@ -12,6 +13,8 @@ import {
   DietPattern,
   DietRuleSource,
   FoodGroup,
+  HealthDataSource,
+  HealthSex,
   IngredientResolutionStatus,
   MediaKind,
   MediaProvider,
@@ -19,6 +22,7 @@ import {
   PostRevisionStatus,
   PostStatus,
   PostType,
+  PracticeSchedule,
   PrismaClient,
   RecipeDifficulty,
   ReportStatus,
@@ -30,6 +34,7 @@ import {
 import { z } from 'zod';
 import { PasswordService } from '../src/modules/auth/password.service.js';
 import { normalizeVietnameseText } from '../src/modules/catalog/catalog.normalization.js';
+import { seedScenarioData } from './seed-scenarios.js';
 
 const prisma = new PrismaClient();
 const passwordService = new PasswordService();
@@ -702,6 +707,92 @@ async function main(): Promise<void> {
     });
   }
 
+  const plannerRecipeDefinitions = [
+    { slug: 'to-dau-hu-rau-xanh-420-demo', title: 'Tô đậu hũ rau xanh 420 kcal', calories: 420 },
+    { slug: 'com-nam-gao-lut-500-demo', title: 'Cơm nấm gạo lứt 500 kcal', calories: 500 },
+    { slug: 'com-dau-hu-nam-520-demo', title: 'Cơm đậu hũ nấm 520 kcal', calories: 520 },
+    { slug: 'gao-lut-bong-cai-540-demo', title: 'Gạo lứt bông cải 540 kcal', calories: 540 },
+    { slug: 'to-nam-rau-xanh-560-demo', title: 'Tô nấm rau xanh 560 kcal', calories: 560 },
+    { slug: 'com-dau-hu-bong-cai-580-demo', title: 'Cơm đậu hũ bông cải 580 kcal', calories: 580 },
+    { slug: 'gao-lut-dau-hu-600-demo', title: 'Gạo lứt đậu hũ 600 kcal', calories: 600 },
+    { slug: 'com-nam-bong-cai-610-demo', title: 'Cơm nấm bông cải 610 kcal', calories: 610 },
+  ] as const;
+  for (const [index, definition] of plannerRecipeDefinitions.entries()) {
+    if (await prisma.post.findUnique({ where: { slug: definition.slug } })) continue;
+    const firstIngredient = index % 2 === 0 ? tofu : mushroom;
+    const secondIngredient = index % 3 === 0 ? broccoli : brownRice;
+    await prisma.$transaction(async (transaction) => {
+      const post = await transaction.post.create({
+        data: {
+          authorId: admin.id,
+          type: PostType.RECIPE,
+          slug: definition.slug,
+          status: PostStatus.PUBLISHED,
+          version: 1,
+          publishedAt: new Date(),
+        },
+      });
+      const revision = await transaction.postRevision.create({
+        data: {
+          postId: post.id,
+          createdById: admin.id,
+          version: 1,
+          status: PostRevisionStatus.PUBLISHED,
+          title: definition.title,
+          normalizedTitle: normalizeVietnameseText(definition.title),
+          excerpt: 'Fixture Recipe có nutrition và canonical ingredients cho Meal Planner.',
+          normalizedExcerpt: normalizeVietnameseText(
+            'Fixture Recipe có nutrition và canonical ingredients cho Meal Planner.',
+          ),
+          body: 'Sơ chế nguyên liệu, nấu chín và chia khẩu phần theo hướng dẫn Meal Planner demo.',
+          normalizedBody: normalizeVietnameseText(
+            'Sơ chế nguyên liệu, nấu chín và chia khẩu phần theo hướng dẫn Meal Planner demo.',
+          ),
+          categories: { create: [{ categoryId: recipeCategory.id }] },
+          tags: { create: postTagRows(['meal planner', 'bữa chính']) },
+          recipeDetail: {
+            create: {
+              servings: 2,
+              prepTimeMinutes: 15,
+              cookTimeMinutes: 25,
+              difficulty: RecipeDifficulty.EASY,
+              calories: definition.calories,
+              proteinGrams: 22,
+              carbsGrams: 58,
+              fatGrams: 14,
+              fiberGrams: 10,
+              ...(index % 2 === 0 ? { vitaminB12Mcg: 0 } : {}),
+              mealPlannerEligible: true,
+              allergenCodes: firstIngredient.id === tofu.id ? ['SOY'] : [],
+              traditionWarnings: [],
+            },
+          },
+          ingredients: {
+            create: [firstIngredient, secondIngredient].map((ingredient, position) => ({
+              ingredientId: ingredient.id,
+              position,
+              displayName: ingredient.canonicalName,
+              normalizedName: ingredient.normalizedName,
+              amount: position === 0 ? 180 : 140,
+              unit: 'g',
+              resolutionStatus: IngredientResolutionStatus.EXACT,
+            })),
+          },
+          dietCompatibility: {
+            create: [
+              { dietPattern: DietPattern.VEGAN, compatible: true, reasonCodes: [] },
+              { dietPattern: DietPattern.LACTO_OVO, compatible: true, reasonCodes: [] },
+            ],
+          },
+        },
+      });
+      await transaction.post.update({
+        where: { id: post.id },
+        data: { publishedRevisionId: revision.id },
+      });
+    });
+  }
+
   if (!(await prisma.post.findUnique({ where: { slug: 'dam-thuc-vat-trong-bua-an-demo' } }))) {
     await prisma.$transaction(async (transaction) => {
       const post = await transaction.post.create({
@@ -886,6 +977,155 @@ async function main(): Promise<void> {
     prisma.post.findUniqueOrThrow({ where: { slug: 'dau-hu-xao-bong-cai-demo' } }),
     prisma.post.findUniqueOrThrow({ where: { slug: 'video-bua-an-xanh-demo' } }),
   ]);
+  await prisma.healthProfile.upsert({
+    where: { userId: member.id },
+    update: {
+      heightCm: 160,
+      weightKg: 50,
+      age: 28,
+      sex: HealthSex.FEMALE,
+      activityLevel: ActivityLevel.SEDENTARY,
+      bmi: 19.53,
+      bmr: 1199,
+      tdee: 1438.8,
+      dataSource: HealthDataSource.MANUAL,
+    },
+    create: {
+      userId: member.id,
+      heightCm: 160,
+      weightKg: 50,
+      age: 28,
+      sex: HealthSex.FEMALE,
+      activityLevel: ActivityLevel.SEDENTARY,
+      bmi: 19.53,
+      bmr: 1199,
+      tdee: 1438.8,
+      dataSource: HealthDataSource.MANUAL,
+    },
+  });
+
+  const [constraintsMember, periodicMember] = await Promise.all([
+    prisma.user.findUniqueOrThrow({
+      where: { email: seedEnvironment.SEED_EXPERIENCED_CONTRIBUTOR_EMAIL.toLowerCase() },
+    }),
+    prisma.user.findUniqueOrThrow({
+      where: { email: seedEnvironment.SEED_NUTRITION_EXPERT_EMAIL.toLowerCase() },
+    }),
+  ]);
+  const scenarioHealthProfile = {
+    heightCm: 160,
+    weightKg: 50,
+    age: 28,
+    sex: HealthSex.FEMALE,
+    activityLevel: ActivityLevel.SEDENTARY,
+    bmi: 19.53,
+    bmr: 1199,
+    tdee: 1438.8,
+    dataSource: HealthDataSource.MANUAL,
+  } as const;
+  const nextMonday = new Date();
+  nextMonday.setUTCHours(0, 0, 0, 0);
+  nextMonday.setUTCDate(nextMonday.getUTCDate() + ((8 - nextMonday.getUTCDay()) % 7 || 7));
+  const buddhistRule = await prisma.dietRuleDefinition.findUniqueOrThrow({
+    where: {
+      code_ruleSetVersion: {
+        code: 'TRADITION_BUDDHIST_EXCLUDE_FIVE_PUNGENT_ROOTS',
+        ruleSetVersion: dietRuleSetVersion,
+      },
+    },
+  });
+
+  await prisma.$transaction(async (transaction) => {
+    for (const userId of [member.id, constraintsMember.id, periodicMember.id]) {
+      await transaction.healthProfile.upsert({
+        where: { userId },
+        update: scenarioHealthProfile,
+        create: { userId, ...scenarioHealthProfile },
+      });
+    }
+    await transaction.healthProfile.deleteMany({ where: { userId: admin.id } });
+
+    for (const userId of [member.id, constraintsMember.id]) {
+      await transaction.dietPreference.upsert({
+        where: { userId },
+        update: {
+          dietPattern: DietPattern.VEGAN,
+          practiceSchedule: PracticeSchedule.PERMANENT,
+          tradition: Tradition.NONE,
+          ruleSetVersion: dietRuleSetVersion,
+          confirmedAt: new Date(),
+        },
+        create: {
+          userId,
+          dietPattern: DietPattern.VEGAN,
+          practiceSchedule: PracticeSchedule.PERMANENT,
+          tradition: Tradition.NONE,
+          ruleSetVersion: dietRuleSetVersion,
+          confirmedAt: new Date(),
+        },
+      });
+    }
+    await transaction.dietPreference.upsert({
+      where: { userId: periodicMember.id },
+      update: {
+        dietPattern: DietPattern.VEGAN,
+        practiceSchedule: PracticeSchedule.PERIODIC,
+        tradition: Tradition.BUDDHIST,
+        ruleSetVersion: dietRuleSetVersion,
+        confirmedAt: new Date(),
+      },
+      create: {
+        userId: periodicMember.id,
+        dietPattern: DietPattern.VEGAN,
+        practiceSchedule: PracticeSchedule.PERIODIC,
+        tradition: Tradition.BUDDHIST,
+        ruleSetVersion: dietRuleSetVersion,
+        confirmedAt: new Date(),
+      },
+    });
+    await transaction.dietPreferenceRule.upsert({
+      where: {
+        userId_ruleDefinitionId: {
+          userId: periodicMember.id,
+          ruleDefinitionId: buddhistRule.id,
+        },
+      },
+      update: { enabled: true, source: DietRuleSource.TRADITION },
+      create: {
+        userId: periodicMember.id,
+        ruleDefinitionId: buddhistRule.id,
+        enabled: true,
+        source: DietRuleSource.TRADITION,
+      },
+    });
+    await transaction.dietScheduleDate.deleteMany({ where: { userId: periodicMember.id } });
+    await transaction.dietScheduleDate.create({
+      data: { userId: periodicMember.id, date: nextMonday, enabled: true },
+    });
+
+    await transaction.userAllergy.deleteMany({ where: { userId: constraintsMember.id } });
+    await transaction.userAllergy.create({
+      data: {
+        userId: constraintsMember.id,
+        allergenCode: 'SOY',
+        label: 'Đậu nành',
+        active: true,
+      },
+    });
+    await transaction.userIngredientExclusion.deleteMany({
+      where: { userId: constraintsMember.id },
+    });
+    await transaction.userIngredientExclusion.create({
+      data: {
+        userId: constraintsMember.id,
+        ingredientId: mushroom.id,
+        ingredientName: mushroom.canonicalName,
+        normalizedName: mushroom.normalizedName,
+        reason: 'Scenario fixture: hard constraint must never be relaxed',
+        active: true,
+      },
+    });
+  });
   const rootCommentId = '60000000-0000-4000-8000-000000000001';
   const replyCommentId = '60000000-0000-4000-8000-000000000002';
   await prisma.$transaction(async (transaction) => {
@@ -1171,8 +1411,16 @@ async function main(): Promise<void> {
       activeKey: `${member.id}:${ReportTargetType.POST}:${communityRecipe.id}`,
     },
   });
+  await seedScenarioData(prisma, {
+    memberEmail: seedEnvironment.SEED_MEMBER_EMAIL.toLowerCase(),
+    memberPasswordHash,
+    adminEmail: seedEnvironment.SEED_ADMIN_EMAIL.toLowerCase(),
+    experiencedContributorEmail: seedEnvironment.SEED_EXPERIENCED_CONTRIBUTOR_EMAIL.toLowerCase(),
+    nutritionExpertEmail: seedEnvironment.SEED_NUTRITION_EXPERT_EMAIL.toLowerCase(),
+    nextMonday,
+  });
   console.info(
-    `Seeded local Member, two approved Contributor subtypes, Admin, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, behavior recommendation fixtures, and moderation queue fixtures.`,
+    `Seeded local Member, two approved Contributor subtypes, Admin, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
   );
 }
 

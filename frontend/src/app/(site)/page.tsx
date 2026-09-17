@@ -1,14 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import {
   Sparkles,
   Leaf,
-  Star,
-  Flame,
-  BadgeCheck,
   UtensilsCrossed,
   MapPin,
   Navigation,
@@ -16,7 +12,9 @@ import {
   ArrowRight,
   TrendingUp,
   Moon,
+  CheckCircle2,
 } from 'lucide-react';
+import { motion } from 'motion/react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,50 +22,11 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { RecipeCard } from '@/features/recipe/components/recipe-card';
-import { MOCK_RECIPES } from '@/features/recipe/data/mock-recipes';
+import { useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
+import { RecommendedForYou } from '@/features/recommendation/components/recommended-for-you';
 import { WhyRecommendedDialog } from '@/components/shared/why-recommended-dialog';
 import { HeroFoodAnimation } from '@/components/home/hero-food-animation';
-
-const CATEGORIES = [
-  'Tất cả',
-  'Món chính đậm vị',
-  'Canh / Súp thanh nhiệt',
-  'Salad & Gỏi tươi cuốn',
-  'Bún / Mì / Phở',
-  'Bánh chay truyền thống',
-  'Đồ uống & Sữa hạt',
-  'Mâm cỗ & Giả mặn',
-];
-
-const RESTAURANTS = [
-  {
-    name: 'Nhà hàng Chay Mãn Tự',
-    rating: 4.9,
-    distance: '0.8 km',
-    open: 'Mở cửa (07:00 - 21:30)',
-    desc: 'Buffet tùy tâm • Không gian thiền thanh tịnh',
-    tag: 'Buffet chay',
-    image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=200&q=80',
-  },
-  {
-    name: 'Bếp Chay Thanh Lương',
-    rating: 4.8,
-    distance: '1.2 km',
-    open: 'Mở cửa (06:30 - 20:00)',
-    desc: 'Bún bò Huế chay, cơm phần văn phòng thơm ngon',
-    tag: 'Bình dân',
-    image: 'https://images.unsplash.com/photo-1552566626-52f8b828add9?w=200&q=80',
-  },
-  {
-    name: 'Quán Cơm Chay Tịnh Tâm',
-    rating: 4.7,
-    distance: '2.1 km',
-    open: 'Mở cửa (08:00 - 22:00)',
-    desc: 'Cơm niêu nấm kho quẹt • Lẩu nấm tươi dưỡng sinh',
-    tag: 'Gia đình',
-    image: 'https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?w=200&q=80',
-  },
-];
+import { VerticalCutReveal } from '@/components/ui/vertical-cut-reveal';
 
 const WEEK_DAYS = [
   { label: 'T2', date: 14 },
@@ -80,7 +39,8 @@ const WEEK_DAYS = [
 ];
 
 export default function HomePage() {
-  const recipes = MOCK_RECIPES.slice(0, 4);
+  const { data: recipesPagination, isLoading: isRecipesLoading } = useRecipesQuery({ limit: 4 });
+  const recipes = recipesPagination?.items || [];
   const [personalizationEnabled, setPersonalizationEnabled] = React.useState(true);
   const [isWhyDialogOpen, setIsWhyDialogOpen] = React.useState(false);
 
@@ -91,44 +51,161 @@ export default function HomePage() {
         <div className="absolute -left-24 top-10 h-56 w-56 rounded-full bg-secondary/50 blur-3xl" />
         <div className="absolute right-0 top-40 h-56 w-56 rounded-full bg-cta/10 blur-3xl" />
 
-        <div className="relative lg:col-span-6 xl:col-span-7">
-          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-3 py-1 text-xs font-semibold uppercase tracking-wide text-primary">
-            <Leaf className="h-3.5 w-3.5" /> Ứng dụng hỗ trợ ăn chay #1 tại Việt Nam
-          </span>
-          <h1 className="mt-4 text-4xl font-bold leading-tight tracking-tight md:text-5xl">
-            Ăn chay <span className="text-primary">đủ chất</span>, dễ dàng mỗi ngày
+        <div className="relative lg:col-span-6 xl:col-span-7 flex flex-col justify-center">
+          {/* Badge với hiệu ứng glow nhẹ */}
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <span className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary shadow-xs backdrop-blur-md transition-all hover:border-primary/40 hover:bg-primary/15">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+              </span>
+              <Leaf className="h-3.5 w-3.5 text-primary" />
+              <span>Ứng dụng hỗ trợ ăn chay #1 tại Việt Nam</span>
+            </span>
+          </motion.div>
+
+          {/* Tiêu đề chính sử dụng VerticalCutReveal animation */}
+          <h1 className="mt-5 text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-[3.25rem] xl:text-[3.65rem] leading-[1.14]">
+            <span className="block">
+              <VerticalCutReveal
+                splitBy="words"
+                staggerDuration={0.08}
+                staggerFrom="first"
+                transition={{ type: 'spring', stiffness: 220, damping: 24 }}
+              >
+                Ăn chay
+              </VerticalCutReveal>{' '}
+              <span className="inline-block bg-gradient-to-r from-primary via-emerald-500 to-sprout bg-clip-text text-transparent">
+                <VerticalCutReveal
+                  splitBy="characters"
+                  staggerDuration={0.035}
+                  staggerFrom="first"
+                  transition={{ type: 'spring', stiffness: 220, damping: 24, delay: 0.15 }}
+                >
+                  đủ chất,
+                </VerticalCutReveal>
+              </span>
+            </span>
+            <span className="block mt-1 sm:mt-1.5 text-foreground">
+              <VerticalCutReveal
+                splitBy="words"
+                staggerDuration={0.08}
+                staggerFrom="first"
+                transition={{ type: 'spring', stiffness: 200, damping: 24, delay: 0.35 }}
+              >
+                dễ dàng mỗi ngày
+              </VerticalCutReveal>
+            </span>
           </h1>
-          <p className="mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
+
+          {/* Mô tả giải pháp với hiệu ứng fade-in mượt mà */}
+          <motion.p
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.55, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-5 max-w-xl text-base leading-relaxed text-muted-foreground sm:text-lg text-pretty"
+          >
             Khám phá hàng trăm món chay thuần Việt chuẩn vị, tự động tính toán đạm &amp; calo cùng
             trợ lý AI dinh dưỡng thông minh cá nhân hoá theo thể trạng của bạn.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Button asChild size="lg" className="gap-2 rounded-full">
-              <Link href="/recipes">
-                <UtensilsCrossed className="h-5 w-5" /> Tìm công thức ngay
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="secondary" className="gap-2 rounded-full">
-              <Link href="/assistant">
-                <Sparkles className="h-5 w-5" /> Hỏi AI Dinh dưỡng
-              </Link>
-            </Button>
-          </div>
+          </motion.p>
 
-          <dl className="mt-8 grid grid-cols-3 gap-4 border-t border-border pt-6">
-            <div>
-              <dt className="text-2xl font-bold text-primary">500+</dt>
-              <dd className="text-xs text-muted-foreground">Món thuần Việt</dd>
+          {/* Nhóm nút kêu gọi hành động (CTAs) */}
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-7 flex flex-wrap items-center gap-3.5"
+          >
+            <Button
+              asChild
+              size="lg"
+              className="group relative gap-2.5 rounded-full px-6 py-6 text-base font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all duration-200 active:translate-y-0"
+            >
+              <Link href="/recipes">
+                <UtensilsCrossed className="h-5 w-5 transition-transform duration-200 group-hover:rotate-12" />
+                <span>Tìm công thức ngay</span>
+                <ArrowRight className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-1" />
+              </Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="secondary"
+              className="group relative gap-2.5 rounded-full border border-border/80 bg-background/80 px-6 py-6 text-base font-semibold backdrop-blur-md hover:bg-accent hover:border-border hover:-translate-y-0.5 transition-all duration-200 active:translate-y-0"
+            >
+              <Link href="/assistant">
+                <Sparkles className="h-5 w-5 text-cta transition-transform duration-200 group-hover:scale-110" />
+                <span>Hỏi AI Dinh dưỡng</span>
+              </Link>
+            </Button>
+          </motion.div>
+
+          {/* Social Proof & Cam kết */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5, delay: 0.85 }}
+            className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground"
+          >
+            <span className="flex items-center gap-1 font-medium text-primary">
+              <CheckCircle2 className="h-3.5 w-3.5" /> Miễn phí 100%
+            </span>
+            <span>•</span>
+            <span>Không yêu cầu thẻ tín dụng</span>
+            <span className="hidden sm:inline">•</span>
+            <span className="hidden sm:inline">Cá nhân hóa theo thể trạng</span>
+          </motion.div>
+
+          {/* Thống kê nổi bật (Metric Cards) */}
+          <motion.dl
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.95, ease: [0.16, 1, 0.3, 1] }}
+            className="mt-8 grid grid-cols-3 gap-3 border-t border-border/70 pt-6 sm:gap-4"
+          >
+            <div className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card/60 p-3.5 backdrop-blur-sm transition-all duration-200 hover:border-primary/40 hover:bg-card/90 hover:shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-transform group-hover:scale-105">
+                  <UtensilsCrossed className="size-3.5" />
+                </div>
+                <dt className="text-xl sm:text-2xl font-bold tracking-tight text-primary">500+</dt>
+              </div>
+              <dd className="mt-1.5 text-xs font-medium text-foreground">Món thuần Việt</dd>
+              <p className="mt-0.5 hidden text-[11px] text-muted-foreground sm:block">
+                Định lượng &amp; chuẩn vị
+              </p>
             </div>
-            <div>
-              <dt className="text-2xl font-bold text-primary">50+</dt>
-              <dd className="text-xs text-muted-foreground">Quán verified</dd>
+
+            <div className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card/60 p-3.5 backdrop-blur-sm transition-all duration-200 hover:border-primary/40 hover:bg-card/90 hover:shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-transform group-hover:scale-105">
+                  <MapPin className="size-3.5" />
+                </div>
+                <dt className="text-xl sm:text-2xl font-bold tracking-tight text-primary">50+</dt>
+              </div>
+              <dd className="mt-1.5 text-xs font-medium text-foreground">Quán verified</dd>
+              <p className="mt-0.5 hidden text-[11px] text-muted-foreground sm:block">
+                Review từ cộng đồng
+              </p>
             </div>
-            <div>
-              <dt className="text-2xl font-bold text-cta">100%</dt>
-              <dd className="text-xs text-muted-foreground">Đo Calo miễn phí</dd>
+
+            <div className="group relative overflow-hidden rounded-2xl border border-border/60 bg-card/60 p-3.5 backdrop-blur-sm transition-all duration-200 hover:border-cta/40 hover:bg-card/90 hover:shadow-sm">
+              <div className="flex items-center gap-2">
+                <div className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-cta/10 text-cta transition-transform group-hover:scale-105">
+                  <TrendingUp className="size-3.5" />
+                </div>
+                <dt className="text-xl sm:text-2xl font-bold tracking-tight text-cta">100%</dt>
+              </div>
+              <dd className="mt-1.5 text-xs font-medium text-foreground">Đo Calo &amp; Đạm</dd>
+              <p className="mt-0.5 hidden text-[11px] text-muted-foreground sm:block">
+                Tự động theo mục tiêu
+              </p>
             </div>
-          </dl>
+          </motion.dl>
         </div>
 
         <div className="relative lg:col-span-6 xl:col-span-5">
@@ -136,26 +213,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Categories */}
-      <section className="py-4">
-        <div className="flex items-center gap-2 text-sm font-semibold">
-          <UtensilsCrossed className="h-4 w-4 text-primary" /> Danh mục món chay chọn lọc
-        </div>
-        <div className="no-scrollbar mt-3 flex gap-2 overflow-x-auto pb-1">
-          {CATEGORIES.map((cat, i) => (
-            <span
-              key={cat}
-              className={
-                i === 0
-                  ? 'whitespace-nowrap rounded-full bg-primary px-4 py-2 text-sm font-medium text-primary-foreground'
-                  : 'whitespace-nowrap rounded-full border bg-card px-4 py-2 text-sm font-medium text-muted-foreground hover:border-primary hover:text-primary'
-              }
-            >
-              {cat}
-            </span>
-          ))}
-        </div>
-      </section>
+      {/* Gợi ý cá nhân (member) — guest giữ khối phổ biến bên dưới */}
+      <RecommendedForYou />
 
       {/* Popular recipes */}
       <section className="py-10">
@@ -179,9 +238,26 @@ export default function HomePage() {
           </div>
         </div>
         <div className="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {recipes.map((r) => (
-            <RecipeCard key={r.id} recipe={r} />
-          ))}
+          {isRecipesLoading ? (
+            [1, 2, 3, 4].map((i) => (
+              <div
+                key={i}
+                className="h-80 animate-pulse rounded-2xl border border-border/60 bg-muted/40"
+              />
+            ))
+          ) : recipes.length === 0 ? (
+            <div className="col-span-full rounded-2xl border border-dashed border-border/70 p-8 text-center">
+              <p className="font-semibold text-foreground">Chưa có công thức nào</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Hãy là người đầu tiên chia sẻ món chay của bạn với cộng đồng.
+              </p>
+              <Button asChild size="sm" className="mt-4 gap-1.5 rounded-full">
+                <Link href="/recipes/new">Đăng công thức mới</Link>
+              </Button>
+            </div>
+          ) : (
+            recipes.map((r) => <RecipeCard key={r.id} recipe={r} />)
+          )}
         </div>
       </section>
 
@@ -361,45 +437,24 @@ export default function HomePage() {
           <div className="relative flex min-h-72 items-center justify-center overflow-hidden rounded-3xl border bg-secondary/40 lg:col-span-5">
             <div className="absolute inset-0 opacity-70 [background-image:radial-gradient(circle_at_20%_30%,rgba(46,125,50,0.18),transparent_45%),radial-gradient(circle_at_75%_70%,rgba(255,143,0,0.12),transparent_45%)]" />
             <div className="relative z-10 rounded-full border bg-background/90 px-4 py-2 text-sm font-medium shadow-sm backdrop-blur">
-              <MapPin className="mr-1 inline h-4 w-4 text-primary" /> 18 quán chay quanh bạn
+              <MapPin className="mr-1 inline h-4 w-4 text-primary" /> Bản đồ quán chay sắp ra mắt
             </div>
           </div>
 
           <div className="space-y-3 lg:col-span-7">
-            {RESTAURANTS.map((r) => (
-              <Card key={r.name} className="overflow-hidden">
-                <CardContent className="flex gap-4 p-3 sm:p-4">
-                  <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl">
-                    <Image src={r.image} alt={r.name} fill sizes="80px" className="object-cover" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="truncate font-semibold">{r.name}</h3>
-                      <BadgeCheck className="h-4 w-4 shrink-0 text-primary" />
-                    </div>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                      <span className="inline-flex items-center gap-1 font-medium text-foreground">
-                        <Star className="h-3.5 w-3.5 fill-cta text-cta" /> {r.rating}
-                      </span>
-                      <span>{r.distance}</span>
-                      <span className="text-primary">{r.open}</span>
-                    </div>
-                    <p className="mt-1 line-clamp-1 text-sm text-muted-foreground">{r.desc}</p>
-                    <div className="mt-2 flex items-center justify-between">
-                      <Badge variant="secondary" className="rounded-full">
-                        {r.tag}
-                      </Badge>
-                      <Link
-                        href="/restaurants"
-                        className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-                      >
-                        <Navigation className="h-3.5 w-3.5" /> Đường đi
-                      </Link>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+            <Card className="border-dashed">
+              <CardContent className="p-6 text-center">
+                <p className="font-semibold text-foreground">Đang hoàn thiện bản đồ quán chay</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Danh sách quán ăn sẽ hiển thị ngay khi API địa điểm sẵn sàng.
+                </p>
+                <Button asChild variant="outline" size="sm" className="mt-4 gap-2 rounded-full">
+                  <Link href="/restaurants">
+                    <Navigation className="h-4 w-4" /> Xem trang quán ăn
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>

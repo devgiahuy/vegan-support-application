@@ -4,6 +4,12 @@
 **Trạng thái:** 🔶 REFERENCE — đã căn chỉnh theo `docs/IMPLEMENTATION_PLAN.md` v1.1
 **Stack:** Next.js 16 · Node/Express + TypeScript · PostgreSQL + Prisma · AI Provider Adapter · Cloudinary + YouTube URL · Google Maps Platform
 
+**Chuẩn tham chiếu:** IEEE Std 830-1998 | **Phiên bản:** 1.5 (MVP Demo) | **Ngày:** 2026-09-16
+
+> **Changelog v1.4 → v1.5 (ngày 2026-09-16):**
+>
+> - Chốt OpenAI là live LLM provider của MVP: Responses API, `gpt-5.6-terra` cho chatbot và
+>   `omni-moderation-latest` cho moderation. Backend giữ adapter fake/local cho development và fallback.
 ---
 
 > **📌 Nguồn sự thật (Single Source of Truth):**
@@ -416,6 +422,7 @@ User chọn dietPattern/practiceSchedule/tradition
 
 #### FR-C02 — Content lifecycle (BL-05)
 
+VeggieConnect là hệ thống độc lập (không phụ thuộc hệ thống legacy nào), nhưng tích hợp với các dịch vụ bên thứ ba: Google/Apple OAuth, **Google Maps Platform (Maps SDK, Places API, Geocoding API, Directions API)** cho toàn bộ tính năng bản đồ/quán ăn, Apple HealthKit / Google Fit / **Health Connect** (kênh ưu tiên) **+ cảm biến on-device của điện thoại** (kênh fallback) cho dữ liệu sức khoẻ, và **OpenAI API** cho LLM/moderation cùng dịch vụ STT.
 - Member submit → `PENDING_REVIEW`. Contributor submit → moderation; không flag → `PUBLISHED`, có flag → `FLAGGED`. Admin tạo vẫn validation + audit.
 - Member sửa published → revision mới `PENDING_REVIEW`, bản cũ vẫn hiển thị. Contributor sửa → moderation lại, không flag thì publish revision mới.
 - Owner delete soft-delete; public 404/410, Admin vẫn audit. Admin hide không xóa revision, restore được.
@@ -446,6 +453,219 @@ User chọn dietPattern/practiceSchedule/tradition
 - Detail → Related `{recipes[], blogs[], videos[]}` (cùng category + overlap nguyên liệu + cùng effective rules).
 - 0 kết quả → empty-state + popular + nút Hỏi AI.
 
+- Giả định OpenAI API duy trì SLA uptime ≥ 99.9%; nếu không, hệ thống phụ thuộc vào fake/local adapter và cơ chế fallback nội bộ (mục 4.1.4 Tài liệu 1).
+- Giả định người dùng cung cấp thông tin chiều cao/cân nặng/vòng eo trung thực; cảm biến điện thoại chỉ hỗ trợ đo gián tiếp (đếm bước, ước lượng vận động, nhịp tim) — **không thể tự đo chính xác chiều cao/cân nặng**, nên BMI/BMR vẫn cần ít nhất một đầu vào thủ công hoặc từ HealthKit/Fit. Mọi khuyến nghị chỉ mang tính tham khảo, không thay thế tư vấn y khoa.
+- Phụ thuộc Google Maps Platform (Places/Geocoding/Directions) cho việc tìm/định vị/dẫn đường quán chay — cần API key, quota và tuân thủ điều khoản hiển thị bản đồ của Google.
+- Phụ thuộc Apple HealthKit / Google Fit / Health Connect cho kênh sức khoẻ ưu tiên; khi kênh này không khả dụng (không có thiết bị, từ chối quyền, lỗi token) hệ thống fallback sang cảm biến on-device + nhập thủ công (chi tiết UC-13).
+
+---
+
+## 3. SYSTEM FEATURES & FUNCTIONAL REQUIREMENTS
+
+> Ký hiệu: **[MH]** = Must-Have, **[NTH]** = Nice-to-Have
+
+### 3.1. UC-01: Đăng ký / Đăng nhập tài khoản [MH]
+
+- **Actor:** Unauthorized User (trở thành Authorized User / Contributor)
+- **Pre-condition:** Chưa có tài khoản hoặc chưa đăng nhập.
+- **Main Flow:**
+  1. User chọn "Đăng ký", nhập email/mật khẩu hoặc chọn OAuth (Google/Apple).
+  2. Hệ thống validate định dạng email, độ mạnh mật khẩu (≥8 ký tự, có số/chữ hoa).
+  3. Hệ thống gửi email xác thực (OTP hoặc link).
+  4. User xác thực → tài khoản chuyển `ACTIVE`, gán role mặc định `AUTHORIZED_USER`; đồng thời khai báo hồ sơ chay cơ bản: `dietSchool` (PHAT_GIAO / DAO_GIAO / KHONG_TON_GIAO), `vegetarianMode` (chay trường/chay kỳ/vegan/lacto-ovo...).
+  5. Nếu user muốn nâng cấp lên **Contributor** → rẽ sang UC-17 (xét duyệt hồ sơ).
+- **Alternative Flow:** Email đã tồn tại → hệ thống trả lỗi 409, gợi ý "Đăng nhập hoặc quên mật khẩu".
+- **Exception Flow:** Dịch vụ gửi email lỗi → cho phép resend tối đa 3 lần/giờ, hiển thị thông báo rõ ràng.
+- **Post-condition:** User có tài khoản `ACTIVE`, nhận JWT access + refresh token (JWT claim chứa `role` và `dietSchool`).
+
+### 3.2. UC-02: Quản lý bài đăng cá nhân (CRUD Post) [MH]
+
+> **Bản full (S3). MVP demo: thay bằng Cloudinary — xem PHỤ LỤC B.1/B.2 (upload qua `upload_preset`, ảnh ≤10MB, không dùng `/uploads/presigned`).**
+
+- **Actor:** Authorized User, Contributor (phân quyền tạo nội dung theo role, xem UC-16)
+- **Pre-condition:** Đã đăng nhập.
+- **Main Flow:**
+  1. User tạo bài viết (tiêu đề, nội dung markdown, ảnh bìa, chọn danh mục, gắn nhãn `dietSchool` áp dụng nếu là công thức món chay).
+  2. Ảnh bìa upload dùng chung flow pre-signed như UC-05: client xin `POST /uploads/presigned` (auth bắt buộc, khai báo `contentType`, `contentLength`) → nhận URL hết hạn 5 phút, giới hạn `image/jpeg|png|webp ≤ 5MB` → upload trực tiếp lên S3 → gửi `objectKey` kèm request tạo post. BE validate lại MIME + dung lượng trước khi lưu.
+  3. Hệ thống chạy Content Moderation tự động (xem UC-11) trước khi publish.
+  4. Nếu không bị flag → bài viết `PUBLISHED` ngay; nếu bị flag → `FLAGGED`, chờ Admin duyệt (nội dung dinh dưỡng có thể được chuyển thêm cho Contributor kiểm chứng — xem UC-17).
+- **Alternative Flow:** User sửa/xoá bài viết của chính mình — hệ thống kiểm tra `authorId == currentUser.id` hoặc role Admin.
+- **Exception Flow:** Người dùng cố sửa bài của người khác → trả 403 Forbidden.
+- **Post-condition:** Bài viết được lưu với trạng thái tương ứng, ghi rõ `authorRole` tại thời điểm đăng.
+
+### 3.3. UC-03: Comment & Vote bài viết [MH]
+
+- **Actor:** Authorized User
+- **Pre-condition:** Đã đăng nhập, bài viết ở trạng thái `PUBLISHED`.
+- **Main Flow:** User bình luận hoặc vote (up/down); hệ thống cập nhật đếm vote real-time, chạy moderation nhẹ cho comment.
+- **Alternative Flow:** User đổi vote (từ up sang down) → hệ thống update thay vì tạo record mới (unique constraint).
+- **Exception Flow:** Spam comment liên tục (>10 comment/phút) → tạm khoá chức năng comment của user 15 phút (rate-limit chống spam).
+- **Post-condition:** Comment/vote được ghi nhận, hiển thị cập nhật cho tất cả người xem.
+
+### 3.4. UC-04: Tìm kiếm & xem Video/Blog [MH]
+
+- **Actor:** Tất cả (Admin, Authorized User, Unauthorized User)
+- **Pre-condition:** Không yêu cầu đăng nhập.
+- **Main Flow:** User nhập từ khoá → hệ thống search full-text (Elasticsearch) trên tiêu đề/nội dung/transcript video → trả kết quả phân trang, sắp xếp theo độ liên quan/mới nhất.
+- **Alternative Flow:** Không có kết quả → hệ thống gợi ý từ khoá liên quan hoặc danh mục phổ biến.
+- **Post-condition:** Danh sách kết quả hiển thị; lượt xem (`viewCount`) tăng khi user mở chi tiết.
+
+### 3.5. UC-05: Upload Video dạy nấu ăn [MH]
+
+> **Bản full (S3 multipart + SSE + DLQ). MVP demo: thay bằng Cloudinary — xem PHỤ LỤC B.1/B.2 (video ≤100MB, `upload_preset` signed, progress đơn giản, không `/complete`/SSE/resume 24h/webhook).**
+
+- **Actor:** Authorized User
+- **Pre-condition:** Đã đăng nhập, video ≤ giới hạn dung lượng/thời lượng cấu hình (vd 500MB / 60 phút, định dạng MP4/MOV).
+- **Main Flow:**
+  1. Client nén sơ bộ + chia chunk (khuyến nghị 5-10MB/chunk) → xin `POST /uploads/presigned` (auth bắt buộc, khai báo `contentType=video/mp4|quicktime`, `contentLength`, số part multipart) → nhận pre-signed URL(s) hết hạn 15 phút, ràng buộc đúng MIME + size.
+  2. Client upload trực tiếp lên S3 (multipart, hiển thị progress % + nút huỷ/thử lại từng part, timeout 30s/part, retry tối đa 3 lần).
+  3. Client gọi `POST /videos/complete` với `objectKey` + metadata (duration, size, checksum) → BE verify object tồn tại + validate MIME/size → tạo record `Video` với `processingStatus=UPLOADED`.
+  4. Hệ thống queue job transcode (HLS) chạy song song với pipeline STT/Summarization (Nice-to-Have, xem UC-09); trạng thái đẩy về client qua **SSE `GET /videos/:id/events`** (`UPLOADED → TRANSCODING → READY/FAILED`), fallback polling 5s nếu mất SSE.
+- **Alternative Flow:** Mạng yếu (3G) → client giảm chunk còn 2MB, tạm dừng/tiếp tục thủ công; user offline quá 24h → part hết hạn, phải xin URL mới.
+- **Exception Flow:** Upload thất bại giữa chừng → cho phép resume upload (multipart, giữ `uploadId` 24h) hoặc yêu cầu upload lại; video không tạo record rác trong DB nếu chưa gọi `/complete`. Job transcode/STT treo quá SLA (§5.1) → đánh `FAILED` + DLQ + cho phép retry thủ công; webhook Media→Core retry 5 lần (backoff) với `eventId` idempotency.
+- **Post-condition:** Video ở trạng thái `READY` sau khi transcode xong (file HLS phát qua CDN), hiển thị công khai theo `status=PUBLISHED`.
+
+### 3.6. UC-06: Tạo thực đơn tuần theo BMI (rule-based) [MH]
+
+- **Actor:** Authorized User (bao gồm Contributor khi dùng cho bản thân)
+- **Pre-condition:** Đã nhập chiều cao, cân nặng (từ UC-13: HealthKit/Fit hoặc cảm biến + thủ công), mức độ vận động, và **trường phái chay `dietSchool` + `vegetarianMode`**.
+- **Main Flow:**
+  1. Hệ thống tính BMI = weight/(height/100)² + các chỉ số liên quan: BMR (Mifflin-St Jeor theo giới tính/tuổi), TDEE (BMR × hệ số vận động, hiệu chỉnh bằng dữ liệu bước chân/cảm biến nếu có), WHtR (nếu có vòng eo).
+  2. Phân loại BMI chuẩn châu Á: <18.5 thiếu cân, 18.5-22.9 bình thường, 23-24.9 thừa cân, ≥25 béo phì.
+  3. Tính calo mục tiêu theo BMR/TDEE + mục tiêu (giữ/tăng/giảm cân).
+  4. Hệ thống **lọc công thức theo `dietSchool`**: vd `PHAT_GIAO` → loại món chứa Ngũ vị tân (hành/hẹ/tỏi/kiệu/hưng cừ) nếu user chọn kiêng; `DAO_GIAO` → áp dụng bộ lọc kiêng tương ứng + ưu tiên món chay kỳ (mùng 1/rằm); sau đó chọn công thức theo rule (calo/bữa, dị ứng) sinh thực đơn 7 ngày x 3-4 bữa.
+- **Alternative Flow:** Thiếu dữ liệu (chưa nhập cân nặng) → yêu cầu hoàn thiện hồ sơ trước khi tạo thực đơn (đề xuất kết nối UC-13).
+- **Exception Flow:** Không đủ công thức trong DB thoả điều kiện calo + `dietSchool` → hệ thống nới lỏng ngưỡng ±10% và cảnh báo "thực đơn có thể chưa tối ưu hoàn toàn / đã nới bộ lọc trường phái".
+- **Post-condition:** `WeeklyMenu` được tạo với `generatedBy="system_rule"` + `dietSchool` tương ứng.
+
+### 3.7. UC-07: AI Nutrition Chatbot (LLM) [MH]
+
+- **Actor:** Authorized User (mọi role), Unauthorized User (giới hạn trial)
+- **Pre-condition:** Không bắt buộc đăng nhập (Guest được trial giới hạn). Với Authorized User đã bật consent cá nhân hoá, lịch sử chat được phép tái sử dụng cho UC-08.
+- **Main Flow:**
+  1. User nhập câu hỏi (vd: "Tôi ăn chay trường theo Phật giáo thì bổ sung protein từ đâu, có cần kiêng ngũ vị tân không?").
+  2. Hệ thống kiểm tra rate limit theo role.
+  3. Truy xuất RAG context từ kho công thức/kiến thức dinh dưỡng **có lọc theo `dietSchool` của user** (vd không gợi ý món có hành/tỏi cho user Phật giáo chọn kiêng).
+  4. Gọi LLM sinh câu trả lời, kiểm duyệt output, trả về kèm trích dẫn công thức liên quan + disclaimer y tế. Nếu nội dung dinh dưỡng quan trọng, hệ thống gắn cờ để Contributor kiểm chứng sau (xem UC-17).
+- **Alternative Flow:** Câu hỏi ngoài phạm vi dinh dưỡng chay (vd hỏi về chính trị) → chatbot lịch sự từ chối, hướng lại chủ đề.
+- **Exception Flow:**
+  - Guest hết quota trial → trả 429 kèm CTA đăng ký.
+  - OpenAI lỗi/timeout → trả câu trả lời tĩnh an toàn + gợi ý câu hỏi thường gặp; không tự chuyển raw chat sang provider khác và không trừ quota.
+- **Post-condition:** Hội thoại được lưu vào `ChatSession`/`ChatMessage` (nếu là Authorized User; Guest lưu tạm 7 ngày). Với user đã consent, message được gắn tag chủ đề/dị ứng/món đã nhắc tới để phục vụ UC-08; user có quyền xoá lịch sử và tắt cá nhân hoá.
+
+### 3.8. UC-08: AI Personalized Meal Planner — gợi ý chủ động theo hành vi (GenAI + Behavioral Analysis) [MH — nâng từ NTH theo góp ý GV]
+
+- **Actor:** Authorized User (mọi role đã đăng nhập)
+- **Mục tiêu (theo gợi ý của thầy):** hệ thống **tự động gợi ý theo ý muốn của người dùng** — dùng AI phân tích dữ liệu/hành vi như **lịch sử chat (UC-07), lịch sử món ăn đã xem/lưu/đánh giá, favourite, tìm kiếm, thực đơn cũ và phản hồi 👍/👎** — thay vì chỉ sinh thực đơn một lần theo rule/calо cứng.
+- **Pre-condition:** Đã có hồ sơ dinh dưỡng cơ bản (BMI/BMR/TDEE từ UC-06/UC-13, dị ứng, `dietSchool`); có ít nhất một nguồn hành vi (nếu chưa có → chạy ở chế độ cold-start, xem Alternative Flow). User đã bật consent "cá nhân hoá theo hành vi" (có thể tắt — khi tắt chỉ dùng rule cơ bản như UC-06).
+- **Main Flow:**
+  1. Hệ thống thu thập tín hiệu hành vi đã consent: topic chat gần đây (vd hay hỏi món nhiều đạm), món đã xem/lưu/bỏ qua, rating, tần suất món lặp, thời gian chay kỳ (mùng 1/rằm đối với Đạo giáo/Phật giáo).
+  2. Engine gợi ý kết hợp: (a) ràng buộc cứng — calo mục tiêu, dị ứng, `dietSchool` (loại Ngũ vị tân / món kiêng Đạo giáo); (b) mô hình hành vi — xếp hạng món theo sở thích suy luận + đa dạng hoá (tránh lặp >2 lần/tuần, cân bằng đạm/xơ).
+  3. LLM sinh thực đơn kèm **lý giải cá nhân hoá** ("Vì bạn hay hỏi món đậu hũ và đã lưu 3 món nấm, tuần này gợi ý...") + gắn nhãn nguồn gốc `ai_genai_behavioral` và disclaimer.
+  4. Hệ thống chủ động đề xuất (push/in-app "Gợi ý hôm nay cho bạn") khi phát hiện ngữ cảnh: gần giờ ăn, đến ngày chay kỳ, hoặc user vừa chat về một nhu cầu (vd hỏi "tăng cân") — user có thể chấp nhận/lưu/đổi món.
+  5. Mọi tương tác (chấp nhận/bỏ qua/regenerate với feedback "ít cay hơn", "nhiều đạm hơn", "hợp chay Phật giáo hơn") được ghi lại làm tín hiệu vòng lặp cho lần gợi ý sau.
+- **Alternative Flow:**
+  - Cold-start (user mới, chưa có hành vi) → dùng gợi ý theo mùa/vùng miền (UC-14) + món phổ biến cùng `dietSchool`, đồng thời giải thích "đang gợi ý chung vì chưa có lịch sử của bạn".
+  - User không hài lòng → nút "Tạo lại" (regenerate) với feedback tự nhiên.
+  - User tắt cá nhân hoá → hệ thống chỉ dùng UC-06 rule-based, xoá/không dùng vector hành vi.
+- **Exception Flow:** LLM sinh món ăn không tồn tại trong DB công thức (hallucination) → hệ thống validate: nếu tên món không match DB, chỉ hiển thị như "gợi ý tham khảo" không link được vào chi tiết công thức, đồng thời log để rà soát và chuyển cho Contributor kiểm chứng (UC-17) nếu món được nhiều user quan tâm.
+- **Post-condition:** `WeeklyMenu`/`DailySuggestion` với `generatedBy="ai_genai_behavioral"` + `explanation` + log tín hiệu hành vi đã dùng (phục vụ giải trình và quyền xoá dữ liệu của user).
+
+### 3.9. UC-09: Nhận diện nguyên liệu qua ảnh tủ lạnh (CV) [NTH]
+
+- **Actor:** Authorized User
+- **Pre-condition:** Đã đăng nhập, cấp quyền camera/thư viện ảnh.
+- **Main Flow:** User chụp/upload ảnh tủ lạnh → hệ thống detect nguyên liệu + đánh giá độ tươi → gợi ý công thức phù hợp với nguyên liệu sẵn có.
+- **Alternative Flow:** Phát hiện nguyên liệu độ tin cậy thấp → hiển thị kèm cảnh báo "độ chính xác chưa cao, vui lòng xác nhận lại".
+- **Exception Flow:** Ảnh không chứa thực phẩm nhận diện được → thông báo hướng dẫn chụp lại, không trừ quota.
+- **Post-condition:** Danh sách nguyên liệu + gợi ý công thức hiển thị cho user.
+
+### 3.10. UC-10: Tóm tắt công thức từ video (STT + LLM) [NTH]
+
+- **Actor:** Authorized User (là consumer của tính năng, trigger tự động khi video khác được upload)
+- **Pre-condition:** Video đã upload xong, ở trạng thái `TRANSCODING` hoặc sau đó.
+- **Main Flow:** Xem chi tiết pipeline STT→Chunking→Summarize ở Tài liệu 1 mục 4.3. Kết quả: tóm tắt công thức có cấu trúc (tên món, nguyên liệu ước tính, các bước chính) hiển thị kèm video.
+- **Alternative Flow:** Video không có giọng nói rõ ràng → hệ thống không tạo summary, hiển thị "Video này chưa hỗ trợ tóm tắt tự động".
+- **Post-condition:** `Video.summary` được cập nhật, hiển thị công khai cùng video.
+
+### 3.11. UC-11: Content Moderation tự động + Admin/Contributor duyệt [MH ở mức cơ bản, NTH ở mức nâng cao]
+
+- **Actor:** Hệ thống AI (tự động), Administrator (xác nhận), **Contributor (kiểm chứng chuyên môn dinh dưỡng)**
+- **Pre-condition:** Có nội dung mới được đăng (post/comment/video) hoặc AI output dinh dưỡng cần kiểm chứng (từ UC-07/UC-08/UC-10).
+- **Main Flow:** Xem pipeline chi tiết Tài liệu 1 mục 4.4. Nội dung điểm rủi ro trung bình được đưa vào hàng chờ (`FLAGGED`): (a) vi phạm cộng đồng → Admin duyệt; (b) **kiến thức dinh dưỡng/sức khoẻ → chuyển thêm cho Contributor kiểm chứng** (approve/correct/request-changes kèm ghi chú chuyên môn). Admin xem lý do AI đưa ra, quyết định Approve/Reject cuối cùng.
+- **Alternative Flow:** Admin/Contributor không đồng ý với đánh giá AI (false positive) → Approve thủ công, hệ thống ghi nhận để cải thiện classifier; nội dung do Contributor duyệt được gắn nhãn `EXPERT_VERIFIED` + `expertId` + thời điểm.
+- **Exception Flow:** Nội dung vi phạm nghiêm trọng rõ ràng (điểm > 0.8) → tự động `REJECTED` ngay, không cần chờ Admin, nhưng vẫn lưu log để Admin audit sau (tránh false positive gây mất nội dung hợp lệ oan mà không ai biết).
+- **Post-condition:** Nội dung ở trạng thái cuối cùng (`PUBLISHED`/`REJECTED`/`EXPERT_VERIFIED`), ghi vào `ModerationAction` (mở rộng thêm `reviewerRole`, `expertNote`).
+
+### 3.12. UC-12: Xem quán ăn chay gần nhất & gợi ý theo món — tích hợp Google Maps Platform [MH]
+
+- **Actor:** Tất cả
+- **Pre-condition:** App đã cấu hình Google Maps API key; user cấp quyền vị trí **hoặc** nhập địa chỉ thủ công.
+- **Main Flow:**
+  1. Client lấy vị trí hiện tại bằng GPS/Fused Location (mobile) hoặc Geolocation API (web); hiển thị bản đồ nền bằng **Maps SDK (Android/iOS/Web)** kèm attribution Google.
+  2. Hệ thống chuẩn hoá vị trí: nếu có toạ độ → **Geocoding API** suy ra địa chỉ; nếu user nhập địa chỉ text → Geocoding chuyển thành toạ độ.
+  3. Hệ thống query `VegRestaurant` nội bộ trong bán kính (mặc định 5km) + gọi **Places API (Nearby Search/Text Search)** để đối chiếu/làm giàu (giờ mở cửa, rating, ảnh) — kết quả hợp nhất, khử trùng theo `placeId`, ưu tiên dữ liệu nội bộ đã xác minh.
+  4. Nếu user tìm theo tên món cụ thể → ưu tiên quán có `cuisineTags` khớp + lọc theo `dietSchool` (vd quán ghi rõ "chay Phật giáo, không ngũ vị tân").
+  5. User chọn quán → xem chi tiết trên bản đồ + list view; nút "Chỉ đường" gọi **Directions API / Universal Link sang Google Maps** để dẫn đường.
+- **Alternative Flow:** Không có quán trong bán kính → tự động mở rộng bán kính (5km→10km→20km) và thông báo cho user. User từ chối quyền vị trí → dùng địa chỉ nhập tay + Geocoding, vẫn xem được danh sách (không có khoảng cách chính xác).
+- **Exception Flow:** Hết quota/lỗi Google API → fallback hiển thị dữ liệu nội bộ thuần tuý + thông báo "chế độ offline bản đồ, thiếu thông tin giờ mở cửa/rating"; không block toàn màn hình.
+- **Post-condition:** Danh sách quán hiển thị trên bản đồ + list view; lượt xem/click quán được log (phục vụ gợi ý hành vi UC-08 khi user consent).
+
+### 3.13. UC-13: Thu thập dữ liệu sức khoẻ — HealthKit/Fit ưu tiên + fallback cảm biến điện thoại [MH — nâng từ NTH]
+
+- **Actor:** Authorized User (mọi role đã đăng nhập)
+- **Pre-condition:** User mở màn hình "Hồ sơ sức khoẻ"; app khai báo quyền sức khoẻ/vận động/vị trí theo OS.
+- **Main Flow (2 tầng ưu tiên):**
+  1. **Tầng 1 — Kênh ưu tiên (Health platform):** User kết nối Apple HealthKit (iOS) / Google Fit + Health Connect (Android) qua OAuth → hệ thống lấy bước chân, calo tiêu thụ, cân nặng, nhịp tim, giấc ngủ (nếu có) → dùng để tính/tinh chỉnh BMR/TDEE/WHtR/BMI trong UC-06/UC-08. Đồng bộ định kỳ (vd mỗi 6 giờ), lưu mã hoá.
+  2. **Tầng 2 — Fallback khi không lấy được Tầng 1 (tìm hiểu theo note review):** nếu thiết bị không hỗ trợ / user từ chối quyền / token lỗi / không có wearable → app **lấy trực tiếp từ cảm biến điện thoại**: pedometer/step-counter + accelerometer + gyroscope (đếm bước, ước lượng mức vận động), GPS (quãng đường di chuyển), PPG/nhịp tim (nếu máy hỗ trợ), kết hợp **nhập thủ công chiều cao/cân nặng/vòng eo** (bắt buộc vì cảm biến không đo được các số này chính xác; camera/AR chỉ hỗ trợ ước lượng chiều cao tham khảo). Từ đó vẫn tính được BMI (= kg/m²), BMR (Mifflin-St Jeor), TDEE (BMR × hệ số vận động từ cảm biến), WHtR (nếu có vòng eo).
+  3. Hệ thống hiển thị rõ nguồn dữ liệu (`healthkit` / `health_connect` / `on_device_sensor` / `manual`) và độ tin cậy (vd "TDEE ước tính từ cảm biến — độ chính xác thấp hơn HealthKit").
+- **Alternative Flow:** User chỉ muốn nhập tay, không cấp bất kỳ quyền nào → vẫn dùng được UC-06 với dữ liệu `manual` thuần tuý.
+- **Exception Flow:** Token hết hạn/thu hồi quyền (lỗi 401 từ API bên thứ 3) → đánh dấu `WearableConnection` là "cần kết nối lại", tự chuyển sang chế độ `on_device_sensor`/`manual`, không làm gián đoạn các tính năng khác. Cảm biến không khả dụng (máy cũ, tắt sensor) → yêu cầu nhập thủ công toàn phần.
+- **Post-condition:** Hồ sơ `HealthProfile` (height/weight/waist/age/sex/activityLevel + `dataSource`) được lưu mã hoá; là đầu vào chuẩn cho UC-06/UC-08.
+
+### 3.14. UC-14: Gợi ý món ăn theo mùa/vùng miền + trường phái chay [NTH]
+
+- **Actor:** Authorized User, Unauthorized User
+- **Pre-condition:** Hệ thống xác định được mùa hiện tại (theo tháng) và vùng miền (theo profile hoặc GPS), cùng `dietSchool` của user (nếu đã khai báo).
+- **Main Flow:** Hệ thống filter/rank công thức theo `Recipe.season` và `Recipe.region` **và `Recipe.dietSchool`** (vd món chay Phật giáo không ngũ vị tân được ưu tiên cho user `PHAT_GIAO`; món chay kỳ mùng 1/rằm được đẩy mạnh đúng lịch cho cả 2 trường phái), hiển thị ở trang chủ dạng "Gợi ý cho bạn hôm nay". Đây cũng là nguồn cold-start cho UC-08.
+- **Post-condition:** Danh sách gợi ý cá nhân hoá hiển thị.
+
+### 3.15. UC-15: Admin giám sát AI Models [NTH nâng cao]
+
+- **Actor:** Administrator
+- **Pre-condition:** Đã đăng nhập với role ADMIN.
+- **Main Flow:** Admin xem dashboard: số lượng request/feature, chi phí, latency, tỷ lệ lỗi, tỷ lệ fallback được kích hoạt, biểu đồ accuracy CV model theo thời gian (dựa trên feedback thumbs up/down), **tỷ lệ AI output đã được Contributor kiểm chứng (UC-17)** và tỷ lệ Admin override.
+- **Alternative Flow:** Phát hiện model drift (accuracy giảm liên tục) → Admin có thể "đóng băng" (disable) tạm thời 1 tính năng AI cụ thể mà không ảnh hưởng toàn hệ thống.
+- **Post-condition:** Quyết định can thiệp của Admin được ghi log, phục vụ audit và cải tiến model (chi tiết mục 6).
+
+### 3.16. UC-16: Contributor chia sẻ/tạo món ăn & thực đơn cộng đồng [MH]
+
+- **Actor:** Contributor (Người đóng góp)
+- **Pre-condition:** Tài khoản đã được duyệt role `CONTRIBUTOR` (xem UC-17).
+- **Main Flow:**
+  1. User tạo **Món ăn** (tên, mô tả, nguyên liệu định lượng, các bước, ảnh/video, thời gian nấu, độ khó, calo ước tính, gắn nhãn `dietSchool`: PHAT_GIAO / DAO_GIAO / chung, `vegetarianMode`, mùa/vùng miền).
+  2. User tạo **Thực đơn cộng đồng** (ghép nhiều món có sẵn + món tự tạo thành menu ngày/tuần/chay kỳ, ghi chú đối tượng phù hợp).
+  3. Hệ thống chạy moderation (UC-11); nội dung đạt → `PUBLISHED` với nhãn `CONTRIBUTOR` mặc định hoặc `EXPERT_VERIFIED` (nếu tác giả có bằng cấp hoặc đã qua kiểm chứng UC-17).
+  4. Cộng đồng đánh giá (rating/bình luận/lưu); món điểm cao được ưu tiên vào pool của UC-06/UC-08/UC-14.
+- **Alternative Flow:** Món gắn nhãn `CONTRIBUTOR` muốn nâng lên `EXPERT_VERIFIED` → gửi yêu cầu kiểm chứng sang hàng chờ UC-17.
+- **Exception Flow:** Món vi phạm (chứa nguyên liệu mặn, thông tin dinh dưỡng sai lệch nghiêm trọng, ảnh đạo nhái) → `REJECTED` + trừ uy tín; tái phạm nhiều lần → thu hồi role về `AUTHORIZED_USER`.
+- **Post-condition:** `Recipe`/`CommunityMenu` được lưu với `createdBy`, `authorRole=CONTRIBUTOR`, `verificationStatus ∈ {UNVERIFIED, PENDING_EXPERT, EXPERT_VERIFIED, REJECTED}`.
+
+### 3.17. UC-17: Contributor kiểm chứng lại content của AI + xét duyệt vai trò [MH]
+
+- **Actor:** Contributor (kiểm chứng), Administrator (duyệt role, quyết định cuối), Hệ thống AI (đề xuất nội dung cần kiểm chứng)
+- **Pre-condition:** (a) Có AI output/công thức cần kiểm chứng (`verificationStatus=PENDING_EXPERT` hoặc AI confidence thấp/nhiều báo cáo sai); (b) Đối với xét duyệt role: có hồ sơ đăng ký Contributor đang chờ.
+- **Main Flow — (A) Kiểm chứng content AI:**
+  1. Hệ thống gom hàng chờ: AI chatbot answer/món GenAI (UC-07/UC-08) bị user báo sai, món hallucination được quan tâm, video summary dinh dưỡng (UC-10), món gắn nhãn `CONTRIBUTOR` xin nâng lên `EXPERT_VERIFIED`.
+  2. Contributor mở hàng chờ, xem kèm nguồn RAG + công thức gốc + lý do AI bị nghi ngờ.
+  3. Contributor thực hiện một trong: `APPROVE` (giữ nguyên, gắn `EXPERT_VERIFIED`), `CORRECT` (sửa trực tiếp nguyên liệu/liều lượng/calo/khuyến nghị + ghi `expertNote`), hoặc `REJECT` (gỡ/không cho hiển thị, ghi lý do).
+  4. Hệ thống cập nhật nhãn hiển thị cho end-user ("Đã được kiểm chứng bởi [Tên contributor]"), lưu `ExpertReview {reviewerId, targetType, targetId, decision, note, timestamp}`, đồng thời đẩy feedback về pipeline retrain/prompt-tuning (mục 6).
+- **Main Flow — (B) Xét duyệt vai trò:**
+  1. User nộp hồ sơ Contributor: mô tả kinh nghiệm + món đã làm/link, kèm bằng cấp/chứng chỉ-giấy hành nghề nếu có (upload ảnh/PDF).
+  2. Admin (có thể tham khảo ý kiến Contributor hiện hữu) duyệt/từ chối trong SLA 3 ngày làm việc; Contributor được cấp huy hiệu + quyền vào hàng chờ kiểm chứng.
+- **Alternative Flow:** Contributor không chắc chắn → chuyển trạng thái `NEED_SECOND_OPINION`, mời contributor thứ hai hoặc Admin quyết định.
+- **Exception Flow:** Phát hiện chứng chỉ giả / cố tình xác nhận sai lệch → thu hồi role, gỡ nhãn `EXPERT_VERIFIED` khỏi các nội dung đã duyệt, log audit; nội dung sức khoẻ nguy hiểm (vd khuyên nhịn ăn cực đoan) → Admin ẩn khẩn cấp + cảnh báo người dùng đã xem.
+- **Post-condition:** Nội dung có `verificationStatus` cuối cùng + audit trail đầy đủ; role của user được cập nhật trong RBAC/JWT.
 **API:** `GET /api/v1/posts?q=&type=&category=&...` · `GET /api/v1/posts/:id/related`
 
 #### FR-R03 — Category (Slice 4, Phase 03)
@@ -503,6 +723,17 @@ Search món X → Top3 quán có `menuTags` chứa X trong 10km + Top3 video cù
 
 **AC:**
 
+> **MVP demo: hàng S3/CDN dưới là bản full. Khi demo dùng Cloudinary (upload API + CDN + transcode sẵn) — xem PHỤ LỤC B.1.**
+> | Hệ thống ngoài | Giao thức | Mục đích |
+> |---|---|---|
+> | OpenAI Responses API (`gpt-5.6-terra`) / Moderations API (`omni-moderation-latest`) | HTTPS/REST, streaming | LLM cho Chatbot; moderation; roadmap Meal Planner hành vi và Video Summarizer |
+> | Google Maps Platform: Maps SDK / Places API / Geocoding API / Directions API | Native SDK + HTTPS/REST | Hiển thị bản đồ, tìm/đối chiếu quán chay, địa chỉ ↔ toạ độ, dẫn đường (UC-12 bắt buộc) |
+> | Apple HealthKit | Native SDK (iOS) | Kênh ưu tiên đồng bộ sức khoẻ iOS (UC-13 Tầng 1) |
+> | Google Fit REST API + Health Connect API | HTTPS/REST + OAuth2 / Native SDK (Android 14+) | Kênh ưu tiên đồng bộ sức khoẻ Android (UC-13 Tầng 1) |
+> | Native Sensor API (Android SensorManager / iOS CoreMotion) | Native SDK | Kênh fallback UC-13 Tầng 2 khi Health platform không khả dụng |
+> | AWS S3 / MinIO | HTTPS, pre-signed URL (single + multipart) | Lưu trữ media + hồ sơ Contributor (chứng chỉ nếu có, riêng bucket giới hạn truy cập). Pre-signed: auth bắt buộc, expiry 5 phút (ảnh) / 15 phút (video part), ràng buộc MIME + `contentLength`, BE verify lại trước khi tạo record |
+> | CDN (CloudFront/Cloudflare) | HTTPS, HLS (.m3u8 + .ts) | Phân phối video HLS + ảnh bìa đã nén; S3 origin private, chỉ phát qua signed URL/origin-access |
+> | Payment Gateway (tương lai, ngoài phạm vi hiện tại) | — | Không thuộc phạm vi tài liệu này |
 - Nhập nguyên liệu + goal (`MAINTAIN=TDEE, LOSE=TDEE×0.90, GAIN=TDEE×1.10`, hệ số trong config, review chuyên môn) + 7 ngày × 3 bữa → 21 món từ `PUBLISHED + mealPlannerEligible` <3s.
 - Phân bổ Sáng 25% / Trưa 40% / Tối 35% TDEE, tolerance `±15% → ±20% + warning`. Tổng ngày `±15%`.
 - Hard constraints không nới: allergy/exclusion/dietPattern + tradition đã bật theo ngày PERIODIC + calorie tolerance. Behavioral không đưa món vi phạm trở lại.

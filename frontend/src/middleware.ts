@@ -43,6 +43,9 @@ function getTokenRole(token: string): string | null {
 /** Role được phép vào /admin/*. Token không có claim role -> cho qua, AuthGuard client chặn tiếp. */
 const ADMIN_ROLES = ['ADMIN'];
 
+/** Role được phép vào /contributor/*. */
+const CONTRIBUTOR_ROLES = ['CONTRIBUTOR', 'ADMIN'];
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -54,6 +57,7 @@ export function middleware(request: NextRequest) {
   // Ví dụ bảo vệ route dashboard:
   const isProtectedPath = pathname.startsWith('/dashboard') || pathname.startsWith('/profile');
   const isAdminPath = pathname.startsWith('/admin');
+  const isContributorPath = pathname.startsWith('/contributor');
 
   if (isProtectedPath) {
     if (!accessToken || isTokenExpired(accessToken)) {
@@ -76,6 +80,19 @@ export function middleware(request: NextRequest) {
     }
   }
 
+  // Route /contributor/*: cần token hợp lệ + role CONTRIBUTOR hoặc ADMIN.
+  if (isContributorPath) {
+    if (!accessToken || isTokenExpired(accessToken)) {
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('from', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
+    const role = getTokenRole(accessToken);
+    if (role && !CONTRIBUTOR_ROLES.includes(role)) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+  }
+
   // Đã login rồi thì không cho quay lại /login nữa
   if (pathname === '/login' && accessToken && !isTokenExpired(accessToken)) {
     return NextResponse.redirect(new URL('/', request.url));
@@ -85,5 +102,11 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/profile/:path*', '/admin/:path*', '/login'],
+  matcher: [
+    '/dashboard/:path*',
+    '/profile/:path*',
+    '/admin/:path*',
+    '/contributor/:path*',
+    '/login',
+  ],
 };

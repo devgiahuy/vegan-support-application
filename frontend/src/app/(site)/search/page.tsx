@@ -8,21 +8,15 @@ import {
   BookOpen,
   Video,
   UtensilsCrossed,
-  Filter,
   ArrowUpDown,
-  Sparkles,
   ChevronRight,
   TrendingUp,
-  Tag,
-  Clock,
-  ArrowRight,
-  X,
   Compass,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -30,13 +24,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { usePostStore } from '@/store/usePostStore';
 import { PostCard } from '@/features/post/components/post-card';
-import { MOCK_VIDEOS } from '@/features/video/data/mock-videos';
-import { MOCK_RECIPES } from '@/features/recipe/data/mock-recipes';
+import { VideoCard } from '@/features/video/components/video-card';
 import { RecipeCard } from '@/features/recipe/components/recipe-card';
-import type { DietSchool } from '@/features/post/types/post.model';
+import { useArticlesQuery } from '@/features/post/queries/post.queries';
+import { useVideosQuery } from '@/features/video/queries/video.queries';
+import { useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
+import { useTrackBehaviorEvent } from '@/hooks/use-track-behavior-event';
+import { BehaviorEventType } from '@/common/enums';
 
 const POPULAR_KEYWORDS = [
   'Phở nấm',
@@ -49,128 +44,82 @@ const POPULAR_KEYWORDS = [
   'Chả lụa chay',
 ];
 
-const DIET_FILTERS: { value: 'ALL' | DietSchool; label: string }[] = [
-  { value: 'ALL', label: 'Tất cả trường phái' },
-  { value: 'PHAT_GIAO', label: 'Chay Phật giáo' },
-  { value: 'DAO_GIAO', label: 'Chay Đạo giáo' },
-  { value: 'THUAN_CHAY', label: 'Thuần chay' },
-];
-
 function SearchContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const trackEvent = useTrackBehaviorEvent();
   const initialQuery = searchParams.get('q') || '';
 
   const [query, setQuery] = React.useState(initialQuery);
   const [activeTab, setActiveTab] = React.useState<'all' | 'posts' | 'videos' | 'recipes'>('all');
-  const [schoolFilter, setSchoolFilter] = React.useState<'ALL' | DietSchool>('ALL');
-  const [sortBy, setSortBy] = React.useState<'relevance' | 'newest' | 'score'>('relevance');
+  const [sortBy, setSortBy] = React.useState<'relevance' | 'newest'>('relevance');
 
-  const { posts } = usePostStore();
-
-  // Đồng bộ khi URL query params thay đổi
-  React.useEffect(() => {
-    const qParam = searchParams.get('q');
-    if (qParam !== null) {
-      setQuery(qParam);
-    }
-  }, [searchParams]);
+  // Đồng bộ khi URL query params thay đổi (back/forward). Guard trong render
+  // thay vì setState trong effect để tránh cascading renders.
+  const qParam = searchParams.get('q') ?? '';
+  const [prevQueryParam, setPrevQueryParam] = React.useState(qParam);
+  if (qParam !== prevQueryParam) {
+    setPrevQueryParam(qParam);
+    setQuery(qParam);
+  }
 
   const handleSearchSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    const keyword = query.trim();
+    // Ghi SEARCH ngầm khi submit có từ khóa (fire-and-forget).
+    if (keyword.length > 0) trackEvent(BehaviorEventType.SEARCH, { query: keyword });
     router.push(`/search?q=${encodeURIComponent(query.trim())}`);
   };
 
   const handleKeywordClick = (kw: string) => {
     setQuery(kw);
+    trackEvent(BehaviorEventType.SEARCH, { query: kw });
     router.push(`/search?q=${encodeURIComponent(kw)}`);
   };
 
-  const normalizedQuery = query.trim().toLowerCase();
+  const normalizedQuery = query.trim();
+  const hasQuery = normalizedQuery.length > 0;
 
-  // 1. Lọc Bài viết (Posts)
+  // Tìm kiếm thật qua API (backend hỗ trợ `q` không dấu). Chưa nhập từ khóa thì không gọi.
+  const articlesQuery = useArticlesQuery(hasQuery ? { q: normalizedQuery, limit: 12 } : undefined, {
+    enabled: hasQuery,
+  });
+  const videosQuery = useVideosQuery(hasQuery ? { q: normalizedQuery, limit: 12 } : undefined, {
+    enabled: hasQuery,
+  });
+  const recipesQuery = useRecipesQuery(hasQuery ? { q: normalizedQuery, limit: 12 } : undefined, {
+    enabled: hasQuery,
+  });
+
+  const isLoading = articlesQuery.isLoading || videosQuery.isLoading || recipesQuery.isLoading;
+
   const matchedPosts = React.useMemo(() => {
-    let list = posts.filter((p) => p.status === 'PUBLISHED');
-
-    if (normalizedQuery) {
-      list = list.filter(
-        (p) =>
-          p.title.toLowerCase().includes(normalizedQuery) ||
-          p.summary.toLowerCase().includes(normalizedQuery) ||
-          p.contentMarkdown.toLowerCase().includes(normalizedQuery) ||
-          p.tags?.some((t) => t.toLowerCase().includes(normalizedQuery)) ||
-          p.category.toLowerCase().includes(normalizedQuery)
-      );
-    }
-
-    if (schoolFilter !== 'ALL') {
-      list = list.filter((p) => p.dietSchool === schoolFilter || p.dietSchool === 'ALL');
-    }
-
+    const list = [...(articlesQuery.data?.items || [])];
     if (sortBy === 'newest') {
-      list.sort((a, b) => b.id.localeCompare(a.id));
-    } else if (sortBy === 'score') {
-      list.sort((a, b) => b.score - a.score);
+      list.sort((a, b) => (b.publishedAt?.getTime() || 0) - (a.publishedAt?.getTime() || 0));
     }
-
     return list;
-  }, [posts, normalizedQuery, schoolFilter, sortBy]);
+  }, [articlesQuery.data?.items, sortBy]);
 
-  // 2. Lọc Video nấu ăn
   const matchedVideos = React.useMemo(() => {
-    let list = [...MOCK_VIDEOS];
-
-    if (normalizedQuery) {
-      list = list.filter(
-        (v) =>
-          v.title.toLowerCase().includes(normalizedQuery) ||
-          v.description.toLowerCase().includes(normalizedQuery) ||
-          v.category.toLowerCase().includes(normalizedQuery) ||
-          v.aiSummary.dishName.toLowerCase().includes(normalizedQuery) ||
-          v.aiSummary.detectedIngredients.some((i) => i.toLowerCase().includes(normalizedQuery)) ||
-          v.author.name.toLowerCase().includes(normalizedQuery)
-      );
+    const list = [...(videosQuery.data?.items || [])];
+    if (sortBy === 'newest') {
+      list.sort((a, b) => (b.publishedAt?.getTime() || 0) - (a.publishedAt?.getTime() || 0));
     }
-
-    if (schoolFilter !== 'ALL') {
-      list = list.filter((v) => v.dietSchool === schoolFilter || !v.dietSchool);
-    }
-
-    if (sortBy === 'score') {
-      list.sort((a, b) => b.likes - a.likes);
-    } else if (sortBy === 'newest') {
-      list.sort((a, b) => b.views - a.views);
-    }
-
     return list;
-  }, [normalizedQuery, schoolFilter, sortBy]);
+  }, [videosQuery.data?.items, sortBy]);
 
-  // 3. Lọc Công thức nấu ăn (Recipes)
   const matchedRecipes = React.useMemo(() => {
-    let list = [...MOCK_RECIPES];
-
-    if (normalizedQuery) {
-      list = list.filter(
-        (r) =>
-          r.title.toLowerCase().includes(normalizedQuery) ||
-          (r.description && r.description.toLowerCase().includes(normalizedQuery)) ||
-          r.category.toLowerCase().includes(normalizedQuery) ||
-          (r.dietTag && r.dietTag.toLowerCase().includes(normalizedQuery))
-      );
+    const list = [...(recipesQuery.data?.items || [])];
+    if (sortBy === 'newest') {
+      list.sort((a, b) => (b.publishedAt?.getTime() || 0) - (a.publishedAt?.getTime() || 0));
     }
-
-    if (schoolFilter !== 'ALL') {
-      list = list.filter((r) => r.dietSchool === schoolFilter || !r.dietSchool);
-    }
-
-    if (sortBy === 'score') {
-      list.sort((a, b) => b.rating - a.rating);
-    }
-
     return list;
-  }, [normalizedQuery, schoolFilter, sortBy]);
+  }, [recipesQuery.data?.items, sortBy]);
 
-  const totalResults = matchedPosts.length + matchedVideos.length + matchedRecipes.length;
+  const totalResults = hasQuery
+    ? matchedPosts.length + matchedVideos.length + matchedRecipes.length
+    : 0;
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 lg:px-6 space-y-8">
@@ -236,350 +185,290 @@ function SearchContent() {
         </div>
       </div>
 
-      {/* Control Bar: Tabs & Filters */}
-      <div className="space-y-4">
-        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 border-b border-border/70 pb-4">
-          {/* Main Category Tabs */}
-          <div className="flex flex-wrap gap-1.5 p-1 rounded-2xl bg-muted/40 border">
-            <Button
-              variant={activeTab === 'all' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setActiveTab('all')}
-              className="rounded-xl text-xs sm:text-sm font-semibold gap-1.5 h-9"
-            >
-              Tất cả ({totalResults})
-            </Button>
-            <Button
-              variant={activeTab === 'posts' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setActiveTab('posts')}
-              className="rounded-xl text-xs sm:text-sm font-semibold gap-1.5 h-9"
-            >
-              <BookOpen className="h-4 w-4" /> Bài viết ({matchedPosts.length})
-            </Button>
-            <Button
-              variant={activeTab === 'videos' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setActiveTab('videos')}
-              className="rounded-xl text-xs sm:text-sm font-semibold gap-1.5 h-9"
-            >
-              <Video className="h-4 w-4" /> Video ({matchedVideos.length})
-            </Button>
-            <Button
-              variant={activeTab === 'recipes' ? 'default' : 'ghost'}
-              size="sm"
-              onClick={() => setActiveTab('recipes')}
-              className="rounded-xl text-xs sm:text-sm font-semibold gap-1.5 h-9"
-            >
-              <UtensilsCrossed className="h-4 w-4" /> Công thức ({matchedRecipes.length})
-            </Button>
-          </div>
-
-          {/* Filters & Sorting */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Diet School Filter */}
-            <Select value={schoolFilter} onValueChange={(val) => setSchoolFilter(val as any)}>
-              <SelectTrigger className="h-9 text-xs rounded-xl w-[150px] bg-card">
-                <Filter className="h-3.5 w-3.5 mr-1 text-primary" />
-                <SelectValue placeholder="Trường phái" />
-              </SelectTrigger>
-              <SelectContent>
-                {DIET_FILTERS.map((f) => (
-                  <SelectItem key={f.value} value={f.value} className="text-xs">
-                    {f.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Sort Filter */}
-            <Select value={sortBy} onValueChange={(val) => setSortBy(val as any)}>
-              <SelectTrigger className="h-9 text-xs rounded-xl w-[140px] bg-card">
-                <ArrowUpDown className="h-3.5 w-3.5 mr-1 text-primary" />
-                <SelectValue placeholder="Sắp xếp" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="relevance" className="text-xs">
-                  Phù hợp nhất
-                </SelectItem>
-                <SelectItem value="newest" className="text-xs">
-                  Mới nhất
-                </SelectItem>
-                <SelectItem value="score" className="text-xs">
-                  Vote cao nhất
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* Results summary message */}
-        {query && (
-          <p className="text-xs sm:text-sm text-muted-foreground">
-            Tìm thấy <strong>{totalResults}</strong> kết quả phù hợp cho từ khoá "
-            <span className="text-primary font-semibold">{query}</span>"
-          </p>
-        )}
-      </div>
-
-      {/* ZERO-STATE: When no results are found (SRS UC-04 Alternative Flow) */}
-      {totalResults === 0 && (
-        <div className="rounded-3xl border border-dashed border-border/80 p-10 text-center space-y-6 bg-muted/20">
+      {!hasQuery ? (
+        <div className="rounded-3xl border border-dashed border-border/80 p-10 text-center space-y-4 bg-muted/20">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
             <Compass className="h-8 w-8" />
           </div>
-
           <div className="space-y-2 max-w-md mx-auto">
-            <h3 className="text-xl font-bold text-foreground">
-              Không tìm thấy kết quả cho "{query}"
-            </h3>
+            <h3 className="text-xl font-bold text-foreground">Bắt đầu tìm kiếm</h3>
             <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-              Hãy thử kiểm tra lại chính tả hoặc chọn các từ khoá cẩm nang phổ biến dưới đây để khám
-              phá các món ăn thanh lành:
+              Nhập từ khóa ở khung tìm kiếm phía trên hoặc chọn một gợi ý để khám phá các món ăn
+              thanh lành.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Control Bar: Tabs & Sorting */}
+          <div className="space-y-4">
+            <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4 border-b border-border/70 pb-4">
+              <div className="flex flex-wrap gap-1.5 p-1 rounded-2xl bg-muted/40 border">
+                <Button
+                  variant={activeTab === 'all' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setActiveTab('all')}
+                  className="rounded-xl text-xs sm:text-sm font-semibold gap-1.5 h-9"
+                >
+                  Tất cả ({totalResults})
+                </Button>
+                <Button
+                  variant={activeTab === 'posts' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setActiveTab('posts')}
+                  className="rounded-xl text-xs sm:text-sm font-semibold gap-1.5 h-9"
+                >
+                  <BookOpen className="h-4 w-4" /> Bài viết ({matchedPosts.length})
+                </Button>
+                <Button
+                  variant={activeTab === 'videos' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setActiveTab('videos')}
+                  className="rounded-xl text-xs sm:text-sm font-semibold gap-1.5 h-9"
+                >
+                  <Video className="h-4 w-4" /> Video ({matchedVideos.length})
+                </Button>
+                <Button
+                  variant={activeTab === 'recipes' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setActiveTab('recipes')}
+                  className="rounded-xl text-xs sm:text-sm font-semibold gap-1.5 h-9"
+                >
+                  <UtensilsCrossed className="h-4 w-4" /> Công thức ({matchedRecipes.length})
+                </Button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                <Select
+                  value={sortBy}
+                  onValueChange={(val) => setSortBy(val as 'relevance' | 'newest')}
+                >
+                  <SelectTrigger className="h-9 text-xs rounded-xl w-[140px] bg-card">
+                    <ArrowUpDown className="h-3.5 w-3.5 mr-1 text-primary" />
+                    <SelectValue placeholder="Sắp xếp" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="relevance" className="text-xs">
+                      Phù hợp nhất
+                    </SelectItem>
+                    <SelectItem value="newest" className="text-xs">
+                      Mới nhất
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Tìm thấy <strong>{totalResults}</strong> kết quả phù hợp cho từ khoá &quot;
+              <span className="text-primary font-semibold">{query}</span>&quot;
             </p>
           </div>
 
-          {/* Quick suggestions */}
-          <div className="flex flex-wrap justify-center gap-2 max-w-xl mx-auto">
-            {POPULAR_KEYWORDS.map((kw) => (
-              <Button
-                key={kw}
-                variant="outline"
-                size="sm"
-                onClick={() => handleKeywordClick(kw)}
-                className="rounded-full text-xs"
-              >
-                🔍 {kw}
-              </Button>
-            ))}
-          </div>
-
-          <div className="pt-4 border-t border-border/60 max-w-lg mx-auto flex justify-center gap-3">
-            <Button asChild variant="default" size="sm" className="rounded-full text-xs">
-              <Link href="/articles">Xem Cẩm Nang Ăn Chay</Link>
-            </Button>
-            <Button asChild variant="secondary" size="sm" className="rounded-full text-xs">
-              <Link href="/recipes">Khám Phá Công Thức</Link>
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* RESULTS DISPLAY */}
-
-      {/* 1. SECTION-BASED: Tab "Tất cả" */}
-      {activeTab === 'all' && totalResults > 0 && (
-        <div className="space-y-12">
-          {/* Section: Bài viết cẩm nang */}
-          {matchedPosts.length > 0 && (
-            <section className="space-y-4">
-              <div className="flex items-center justify-between border-b pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                    <BookOpen className="h-4 w-4" />
-                  </span>
-                  <div>
-                    <h2 className="text-lg font-bold text-foreground">
-                      Bài viết &amp; Cẩm nang dinh dưỡng ({matchedPosts.length})
-                    </h2>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setActiveTab('posts')}
-                  className="gap-1 text-xs text-primary font-medium"
-                >
-                  Xem tất cả bài viết <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {matchedPosts.slice(0, 3).map((post) => (
-                  <PostCard key={post.id} post={post} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Section: Video nấu ăn */}
-          {matchedVideos.length > 0 && (
-            <section className="space-y-4">
-              <div className="flex items-center justify-between border-b pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-cta/15 text-cta">
-                    <Video className="h-4 w-4" />
-                  </span>
-                  <div>
-                    <h2 className="text-lg font-bold text-foreground">
-                      Video hướng dẫn nấu món ({matchedVideos.length})
-                    </h2>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setActiveTab('videos')}
-                  className="gap-1 text-xs text-primary font-medium"
-                >
-                  Xem tất cả video <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {matchedVideos.slice(0, 3).map((item) => (
-                  <Card
-                    key={item.id}
-                    className="overflow-hidden rounded-2xl border border-border/70 group hover:border-primary/50 transition-all shadow-sm"
-                  >
-                    <Link
-                      href={`/video/${item.id}`}
-                      className="relative aspect-video block overflow-hidden bg-muted"
-                    >
-                      <img
-                        src={item.thumbnail}
-                        alt={item.title}
-                        className="h-full w-full object-cover group-hover:scale-105 transition-transform"
-                      />
-                      <Badge className="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-mono">
-                        {item.durationLabel}
-                      </Badge>
-                    </Link>
-                    <CardContent className="p-4 space-y-2">
-                      <Link href={`/video/${item.id}`}>
-                        <h4 className="font-bold text-sm text-foreground line-clamp-2 group-hover:text-primary transition-colors">
-                          {item.title}
-                        </h4>
-                      </Link>
-                      <p className="text-xs text-muted-foreground line-clamp-2">
-                        {item.description}
-                      </p>
-                      <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-2 border-t">
-                        <span>{item.author.name}</span>
-                        <span>{item.views.toLocaleString()} lượt xem</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Section: Công thức món chay */}
-          {matchedRecipes.length > 0 && (
-            <section className="space-y-4">
-              <div className="flex items-center justify-between border-b pb-3">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
-                    <UtensilsCrossed className="h-4 w-4" />
-                  </span>
-                  <div>
-                    <h2 className="text-lg font-bold text-foreground">
-                      Công thức món chay ({matchedRecipes.length})
-                    </h2>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setActiveTab('recipes')}
-                  className="gap-1 text-xs text-primary font-medium"
-                >
-                  Xem tất cả công thức <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {matchedRecipes.slice(0, 3).map((r) => (
-                  <RecipeCard key={r.id} recipe={r} />
-                ))}
-              </div>
-            </section>
-          )}
-        </div>
-      )}
-
-      {/* 2. TAB: Chỉ hiển thị Bài viết */}
-      {activeTab === 'posts' && (
-        <div className="space-y-6">
-          <h3 className="text-lg font-bold text-foreground">
-            Danh sách bài viết cẩm nang ({matchedPosts.length})
-          </h3>
-          {matchedPosts.length > 0 ? (
+          {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {matchedPosts.map((p) => (
-                <PostCard key={p.id} post={p} />
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div
+                  key={i}
+                  className="h-80 animate-pulse rounded-2xl border border-border/60 bg-muted/40"
+                />
               ))}
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Không có bài viết nào khớp với bộ lọc.</p>
-          )}
-        </div>
-      )}
+          ) : totalResults === 0 ? (
+            <div className="rounded-3xl border border-dashed border-border/80 p-10 text-center space-y-6 bg-muted/20">
+              <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+                <Compass className="h-8 w-8" />
+              </div>
 
-      {/* 3. TAB: Chỉ hiển thị Video */}
-      {activeTab === 'videos' && (
-        <div className="space-y-6">
-          <h3 className="text-lg font-bold text-foreground">
-            Video hướng dẫn nấu món ({matchedVideos.length})
-          </h3>
-          {matchedVideos.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {matchedVideos.map((item) => (
-                <Card
-                  key={item.id}
-                  className="overflow-hidden rounded-2xl border border-border/70 group hover:border-primary/50 transition-all shadow-sm"
-                >
-                  <Link
-                    href={`/video/${item.id}`}
-                    className="relative aspect-video block overflow-hidden bg-muted"
+              <div className="space-y-2 max-w-md mx-auto">
+                <h3 className="text-xl font-bold text-foreground">
+                  Không tìm thấy kết quả cho &quot;{query}&quot;
+                </h3>
+                <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                  Hãy thử kiểm tra lại chính tả hoặc chọn các từ khoá cẩm nang phổ biến dưới đây để
+                  khám phá các món ăn thanh lành:
+                </p>
+              </div>
+
+              <div className="flex flex-wrap justify-center gap-2 max-w-xl mx-auto">
+                {POPULAR_KEYWORDS.map((kw) => (
+                  <Button
+                    key={kw}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleKeywordClick(kw)}
+                    className="rounded-full text-xs"
                   >
-                    <img
-                      src={item.thumbnail}
-                      alt={item.title}
-                      className="h-full w-full object-cover group-hover:scale-105 transition-transform"
-                    />
-                    <Badge className="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-mono">
-                      {item.durationLabel}
-                    </Badge>
-                  </Link>
-                  <CardContent className="p-4 space-y-2">
-                    <Link href={`/video/${item.id}`}>
-                      <h4 className="font-bold text-sm text-foreground line-clamp-2 group-hover:text-primary transition-colors">
-                        {item.title}
-                      </h4>
-                    </Link>
-                    <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>
-                    <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-2 border-t">
-                      <span>{item.author.name}</span>
-                      <span>{item.views.toLocaleString()} lượt xem</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">Không có video nào khớp với bộ lọc.</p>
-          )}
-        </div>
-      )}
+                    🔍 {kw}
+                  </Button>
+                ))}
+              </div>
 
-      {/* 4. TAB: Chỉ hiển thị Công thức */}
-      {activeTab === 'recipes' && (
-        <div className="space-y-6">
-          <h3 className="text-lg font-bold text-foreground">
-            Công thức món chay ({matchedRecipes.length})
-          </h3>
-          {matchedRecipes.length > 0 ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {matchedRecipes.map((r) => (
-                <RecipeCard key={r.id} recipe={r} />
-              ))}
+              <div className="pt-4 border-t border-border/60 max-w-lg mx-auto flex justify-center gap-3">
+                <Button asChild variant="default" size="sm" className="rounded-full text-xs">
+                  <Link href="/articles">Xem Cẩm Nang Ăn Chay</Link>
+                </Button>
+                <Button asChild variant="secondary" size="sm" className="rounded-full text-xs">
+                  <Link href="/recipes">Khám Phá Công Thức</Link>
+                </Button>
+              </div>
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Không có công thức nào khớp với bộ lọc.</p>
+            <>
+              {/* Tab "Tất cả" */}
+              {activeTab === 'all' && (
+                <div className="space-y-12">
+                  {matchedPosts.length > 0 && (
+                    <section className="space-y-4">
+                      <div className="flex items-center justify-between border-b pb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                            <BookOpen className="h-4 w-4" />
+                          </span>
+                          <h2 className="text-lg font-bold text-foreground">
+                            Bài viết &amp; Cẩm nang dinh dưỡng ({matchedPosts.length})
+                          </h2>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setActiveTab('posts')}
+                          className="gap-1 text-xs text-primary font-medium"
+                        >
+                          Xem tất cả bài viết <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {matchedPosts.slice(0, 3).map((post) => (
+                          <PostCard key={post.id} post={post} />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {matchedVideos.length > 0 && (
+                    <section className="space-y-4">
+                      <div className="flex items-center justify-between border-b pb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-cta/15 text-cta">
+                            <Video className="h-4 w-4" />
+                          </span>
+                          <h2 className="text-lg font-bold text-foreground">
+                            Video hướng dẫn nấu món ({matchedVideos.length})
+                          </h2>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setActiveTab('videos')}
+                          className="gap-1 text-xs text-primary font-medium"
+                        >
+                          Xem tất cả video <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {matchedVideos.slice(0, 3).map((video) => (
+                          <VideoCard key={video.id} video={video} />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {matchedRecipes.length > 0 && (
+                    <section className="space-y-4">
+                      <div className="flex items-center justify-between border-b pb-3">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
+                            <UtensilsCrossed className="h-4 w-4" />
+                          </span>
+                          <h2 className="text-lg font-bold text-foreground">
+                            Công thức món chay ({matchedRecipes.length})
+                          </h2>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setActiveTab('recipes')}
+                          className="gap-1 text-xs text-primary font-medium"
+                        >
+                          Xem tất cả công thức <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {matchedRecipes.slice(0, 3).map((r) => (
+                          <RecipeCard key={r.id} recipe={r} />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+                </div>
+              )}
+
+              {/* Tab: Chỉ hiển thị Bài viết */}
+              {activeTab === 'posts' && (
+                <div className="space-y-6">
+                  <h3 className="text-lg font-bold text-foreground">
+                    Danh sách bài viết cẩm nang ({matchedPosts.length})
+                  </h3>
+                  {matchedPosts.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {matchedPosts.map((p) => (
+                        <PostCard key={p.id} post={p} />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Không có bài viết nào khớp với bộ lọc.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Tab: Chỉ hiển thị Video */}
+              {activeTab === 'videos' && (
+                <div className="space-y-6">
+                  <h3 className="text-lg font-bold text-foreground">
+                    Video hướng dẫn nấu món ({matchedVideos.length})
+                  </h3>
+                  {matchedVideos.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {matchedVideos.map((video) => (
+                        <VideoCard key={video.id} video={video} />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Không có video nào khớp với bộ lọc.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Tab: Chỉ hiển thị Công thức */}
+              {activeTab === 'recipes' && (
+                <div className="space-y-6">
+                  <h3 className="text-lg font-bold text-foreground">
+                    Công thức món chay ({matchedRecipes.length})
+                  </h3>
+                  {matchedRecipes.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {matchedRecipes.map((r) => (
+                        <RecipeCard key={r.id} recipe={r} />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Không có công thức nào khớp với bộ lọc.
+                    </p>
+                  )}
+                </div>
+              )}
+            </>
           )}
-        </div>
+        </>
       )}
     </div>
   );

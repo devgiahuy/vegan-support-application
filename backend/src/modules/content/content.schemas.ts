@@ -108,7 +108,13 @@ const nutritionInputSchema = z
 
 const recipeIngredientInputSchema = z
   .object({
-    ingredientId: z.string().uuid().optional(),
+    // Client hay gửi explicit `null` khi chưa resolve được nguyên liệu chuẩn.
+    // Coi null như vắng mặt (free-text) thay vì 400, để service đánh
+    // resolutionStatus UNKNOWN và mealPlannerEligible=false như thiết kế.
+    ingredientId: z.preprocess(
+      (value) => (value === null ? undefined : value),
+      z.string().uuid().optional(),
+    ),
     displayName: z.string().trim().min(1).max(160),
     amount: z.number().positive().max(1_000_000),
     unit: z.string().trim().min(1).max(40),

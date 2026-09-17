@@ -3,9 +3,22 @@ import { z } from 'zod';
 const httpUrlSchema = z
   .string()
   .max(2048, 'URL ảnh quá dài')
-  .refine((v) => v.trim().length === 0 || /^https?:\/\/.+/.test(v.trim()), {
-    message: 'URL ảnh phải bắt đầu bằng http:// hoặc https://',
-  });
+  .refine(
+    (v) => {
+      const t = v.trim();
+      // Form cho phép `blob:`/`data:image` để xem trước khi upload mock;
+      // lúc submit form sẽ chặn và yêu cầu URL http(s) thật từ Cloudinary.
+      return (
+        t.length === 0 ||
+        /^https?:\/\/.+/.test(t) ||
+        t.startsWith('blob:') ||
+        t.startsWith('data:image')
+      );
+    },
+    {
+      message: 'URL ảnh phải bắt đầu bằng http:// hoặc https://',
+    }
+  );
 
 export const basicProfileSchema = z
   .object({

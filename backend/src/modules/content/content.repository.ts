@@ -485,6 +485,26 @@ export class ContentRepository {
     return this.hydratePublished(rows.map((row) => row.id));
   }
 
+  async findMealPlannerCandidates(constraints: SearchConstraints): Promise<PublishedPostRecord[]> {
+    const where = publishedWhere({ type: 'RECIPE' }, constraints);
+    const rows = await this.prisma.$queryRaw<SearchIdRow[]>(Prisma.sql`
+      SELECT p."id", 0::double precision AS "score"
+      ${publishedBase}
+      ${where}
+        AND rd."meal_planner_eligible" = true
+        AND rd."calories" IS NOT NULL
+        AND rd."calories" > 0
+        AND NOT EXISTS (
+          SELECT 1
+          FROM "recipe_ingredients" ri
+          WHERE ri."revision_id" = pr."id"
+            AND (ri."ingredient_id" IS NULL OR ri."resolution_status" <> 'EXACT'::"ingredient_resolution_status")
+        )
+      ORDER BY p."published_at" DESC NULLS LAST, p."id" ASC
+    `);
+    return this.hydratePublished(rows.map((row) => row.id));
+  }
+
   findBehaviorSourceRecipes(ids: string[]): Promise<PublishedPostRecord[]> {
     if (!ids.length) return Promise.resolve([]);
     return this.prisma.post.findMany({

@@ -3,36 +3,14 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import {
-  Home,
-  ChevronRight,
-  UploadCloud,
-  Video,
-  Play,
-  Sparkles,
-  CheckCircle2,
-  Bookmark,
-  Eye,
-  FileVideo,
-  RotateCcw,
-  Trash2,
-  ImageIcon,
-  Clock,
-  Flame,
-  Users,
-  Info,
-  ShieldCheck,
-  Check,
-} from 'lucide-react';
-import { toast } from 'sonner';
-import { cn } from '@/lib/utils';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Home, ChevronRight, Video, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import {
   Select,
   SelectContent,
@@ -40,469 +18,258 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-
-const CATEGORIES = [
-  { id: 'mon-chinh', label: 'Món chính đậm vị' },
-  { id: 'canh-sup', label: 'Canh & Súp thanh nhiệt' },
-  { id: 'lau-chay', label: 'Lẩu chay dưỡng sinh' },
-  { id: 'chien-rim', label: 'Món chiên & rim giòn' },
-  { id: 'salad-goi', label: 'Salad & Gỏi tươi' },
-  { id: 'trang-mieng', label: 'Bánh ngọt & Tráng miệng' },
-];
-
-const DIET_SCHOOLS = [
-  { id: 'PHAT_GIAO', label: 'Chay Phật giáo', desc: 'Thanh tịnh, tùy chọn kiêng ngũ vị tân' },
-  { id: 'DAO_GIAO', label: 'Chay Đạo giáo', desc: 'Theo lịch kỳ sóc vọng, kiêng mùi nồng' },
-  { id: 'THUAN_CHAY', label: 'Thuần chay (Vegan)', desc: '100% nguồn gốc thực vật' },
-];
+import { AuthGuard } from '@/components/shared/auth-guard';
+import { CategoryType, VideoSource } from '@/common/enums';
+import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
+import { flattenCategories } from '@/features/category/utils/flatten-categories';
+import { VideoUploader } from '@/features/video/components/video-uploader';
+import { ImageUploader } from '@/features/post/components/image-uploader';
+import { useCreateVideoMutation } from '@/features/video/queries/video.queries';
+import { videoFormSchema, type VideoFormValues } from '@/features/video/schemas/video-form.schema';
 
 export default function UploadVideoPage() {
   const router = useRouter();
+  const createVideoMutation = useCreateVideoMutation();
+  const { data: categoryTree = [] } = useCategoryTreeQuery(CategoryType.CONTENT_TOPIC);
+  const flatCategories = React.useMemo(() => flattenCategories(categoryTree), [categoryTree]);
 
-  // Form states
-  const [videoFile, setVideoFile] = React.useState<{ name: string; size: string } | null>(null);
-  const [uploadProgress, setUploadProgress] = React.useState<number>(0);
-  const [isUploading, setIsUploading] = React.useState<boolean>(false);
-  const [title, setTitle] = React.useState('Cách Nấu Nồi Lẩu Nấm Dưỡng Sinh Nước Dùng Trong Vắt');
-  const [description, setDescription] = React.useState(
-    'Chia sẻ bí quyết nấu nước dùng lẩu chay ngọt tự nhiên từ mía lau, táo đỏ và 7 loại nấm tươi không cần mì chính.'
-  );
-  const [category, setCategory] = React.useState('lau-chay');
-  const [dietSchool, setDietSchool] = React.useState('PHAT_GIAO');
-  const [avoidAlliums, setAvoidAlliums] = React.useState(true);
-  const [durationMinutes, setDurationMinutes] = React.useState('12');
-  const [servings, setServings] = React.useState('4');
-  const [difficulty, setDifficulty] = React.useState('Dễ làm');
-  const [estCalories, setEstCalories] = React.useState('280');
-  const [autoSttEnabled, setAutoSttEnabled] = React.useState(true);
-  const [isSubmitting, setIsSubmitting] = React.useState(false);
+  const {
+    register,
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<VideoFormValues>({
+    resolver: zodResolver(videoFormSchema),
+    defaultValues: {
+      title: '',
+      categoryId: '',
+      coverImageUrl: '',
+      coverMedia: null,
+      videoUrl: '',
+      videoSource: VideoSource.CLOUDINARY,
+      videoMedia: null,
+      durationSeconds: 0,
+      description: '',
+    },
+  });
 
-  // Giả lập tải lên video
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const videoUrl = watch('videoUrl');
+  const videoSource = watch('videoSource');
 
-    setVideoFile({
-      name: file.name,
-      size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-    });
-    setIsUploading(true);
-    setUploadProgress(15);
-
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsUploading(false);
-          toast.success('Video đã tải lên và sẵn sàng phân tích!');
-          return 100;
-        }
-        return prev + 25;
+  const onSubmit = async (values: VideoFormValues) => {
+    try {
+      const created = await createVideoMutation.mutateAsync({
+        title: values.title,
+        category: { id: values.categoryId, name: '' },
+        coverImageUrl: values.coverImageUrl || '',
+        coverMedia: values.coverMedia ?? null,
+        videoUrl: values.videoUrl,
+        videoSource: values.videoSource,
+        videoMedia: values.videoMedia ?? null,
+        durationSeconds: values.durationSeconds ?? 0,
+        description: values.description ?? '',
       });
-    }, 400);
-  };
-
-  const handleResetVideo = () => {
-    setVideoFile(null);
-    setUploadProgress(0);
-    setIsUploading(false);
-  };
-
-  const handleSubmit = (isDraft: boolean = false) => {
-    if (!title.trim()) {
-      toast.error('Vui lòng nhập tiêu đề cho video.');
-      return;
-    }
-
-    setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      if (isDraft) {
-        toast.success('Đã lưu bản nháp video thành công!');
+      if (created?.id) {
+        router.push(`/videos/${created.id}`);
       } else {
-        toast.success(
-          'Đăng tải video thành công! Hệ thống đang kích hoạt AI STT tóm tắt công thức.'
-        );
         router.push('/videos');
       }
-    }, 1000);
+    } catch {
+      // Toast lỗi đã xử lý trong mutation onError
+    }
   };
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 lg:px-6 space-y-8">
-      {/* Breadcrumbs */}
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1 hover:text-primary transition-colors"
-        >
-          <Home className="h-4 w-4" /> Trang chủ
-        </Link>
-        <ChevronRight className="h-3.5 w-3.5" />
-        <Link href="/videos" className="hover:text-primary transition-colors">
-          Video nấu ăn
-        </Link>
-        <ChevronRight className="h-3.5 w-3.5" />
-        <span className="font-semibold text-primary">Đăng tải video mới (UC-05)</span>
-      </nav>
+    <AuthGuard>
+      <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 lg:px-6">
+        <nav className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1 transition-colors hover:text-primary"
+          >
+            <Home className="h-4 w-4" /> Trang chủ
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5" />
+          <Link href="/videos" className="transition-colors hover:text-primary">
+            Video nấu ăn
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5" />
+          <span className="font-semibold text-primary">Đăng video mới</span>
+        </nav>
 
-      {/* Header title & Draft actions */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b pb-6">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Badge className="bg-primary text-white text-xs gap-1 font-semibold">
-              <Video className="h-3.5 w-3.5" /> Chuẩn Video Nấu Ăn (UC-05)
-            </Badge>
-            <Badge variant="secondary" className="text-xs text-primary font-medium">
-              Tích hợp AI STT (UC-10)
-            </Badge>
+        <div className="flex flex-col justify-between gap-4 border-b border-border/70 pb-5 sm:flex-row sm:items-center">
+          <div>
+            <h1 className="flex items-center gap-2.5 text-2xl font-extrabold text-foreground sm:text-3xl">
+              <Video className="h-7 w-7 text-primary" /> Đăng Video Hướng Dẫn Nấu Chay
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Tải lên tệp MP4/WebM tối đa 100MB hoặc nhúng link YouTube. Video của thành viên sẽ vào
+              hàng chờ duyệt trước khi xuất bản.
+            </p>
           </div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
-            Đăng Tải Video Hướng Dẫn Nấu Chay
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Chia sẻ các món chay thanh lành của bạn đến cộng đồng hàng chục nghìn người ăn chay Việt
-            Nam
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => handleSubmit(true)}
-            disabled={isSubmitting}
-            className="gap-1.5 rounded-full"
-          >
-            <Bookmark className="h-4 w-4" /> Lưu nháp
-          </Button>
-          <Button
-            size="sm"
-            onClick={() => handleSubmit(false)}
-            disabled={isSubmitting}
-            className="gap-1.5 rounded-full font-semibold shadow-md"
-          >
-            <UploadCloud className="h-4 w-4" /> Đăng tải video ngay
+          <Button asChild variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
+            <Link href="/videos">
+              <ArrowLeft className="h-4 w-4" /> Huỷ bỏ &amp; Quay lại
+            </Link>
           </Button>
         </div>
-      </div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-        {/* LEFT COLUMN: Video File Upload & Media Preview (7 cols) */}
-        <div className="space-y-6 lg:col-span-7">
-          {/* VIDEO DROPZONE CARD */}
-          <Card className="border-border/70 shadow-sm overflow-hidden">
-            <CardHeader className="bg-muted/40 pb-3 border-b">
-              <CardTitle className="text-base font-bold flex items-center gap-2 text-foreground">
-                <FileVideo className="h-4 w-4 text-primary" /> Tệp video nấu ăn (MP4 / WebM / MOV)
+        <form onSubmit={(e) => void handleSubmit(onSubmit)(e)} className="space-y-6" noValidate>
+          <Card className="border-border/70 shadow-sm">
+            <CardHeader className="border-b pb-4">
+              <CardTitle className="text-base font-bold text-foreground">
+                Tệp video (MP4 / WebM, tối đa 100MB)
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6 space-y-4">
-              {!videoFile ? (
-                <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-primary/40 p-10 text-center bg-muted/20 hover:border-primary hover:bg-primary/5 transition-all">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary mb-3">
-                    <UploadCloud className="h-7 w-7 animate-bounce" />
-                  </div>
-                  <h4 className="text-base font-bold text-foreground">
-                    Kéo &amp; thả video nấu ăn vào đây
-                  </h4>
-                  <p className="text-xs text-muted-foreground mt-1 max-w-sm leading-relaxed">
-                    Hỗ trợ tệp MP4, WebM, MOV. Dung lượng tối đa 500MB hoặc thời lượng &le; 60 phút
-                    theo chuẩn hệ thống.
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-4 pointer-events-none rounded-full"
-                  >
-                    Duyệt tệp từ thiết bị
-                  </Button>
-                  <input
-                    type="file"
-                    accept="video/mp4,video/webm,video/quicktime"
-                    onChange={handleFileChange}
-                    className="hidden"
+            <CardContent className="space-y-2 p-5">
+              <Controller
+                control={control}
+                name="videoUrl"
+                render={() => (
+                  <VideoUploader
+                    value={videoUrl}
+                    source={videoSource}
+                    disabled={createVideoMutation.isPending}
+                    onChange={(url, source, meta) => {
+                      setValue('videoUrl', url, { shouldValidate: true });
+                      setValue('videoSource', source, { shouldValidate: true });
+                      setValue(
+                        'videoMedia',
+                        meta?.publicId && meta?.mimeType && meta?.bytes
+                          ? { publicId: meta.publicId, mimeType: meta.mimeType, bytes: meta.bytes }
+                          : null,
+                        { shouldValidate: true }
+                      );
+                      if (typeof meta?.durationSeconds === 'number') {
+                        setValue('durationSeconds', meta.durationSeconds, { shouldValidate: true });
+                      }
+                    }}
                   />
-                </label>
-              ) : (
-                <div className="space-y-4">
-                  {/* Uploaded state info */}
-                  <div className="flex items-center justify-between p-4 rounded-xl border bg-card">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                        <Video className="h-5 w-5" />
-                      </div>
-                      <div className="min-w-0 space-y-0.5">
-                        <p className="text-sm font-semibold text-foreground truncate">
-                          {videoFile.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{videoFile.size}</p>
-                      </div>
-                    </div>
-
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleResetVideo}
-                      className="text-muted-foreground hover:text-destructive shrink-0"
-                      aria-label="Xoá video"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  {/* Upload progress */}
-                  {isUploading ? (
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>Đang tải lên và mã hóa HLS...</span>
-                        <span className="font-semibold text-primary">{uploadProgress}%</span>
-                      </div>
-                      <Progress value={uploadProgress} className="h-2" />
-                    </div>
-                  ) : (
-                    <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs text-muted-foreground flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                      <span>Video đã được tải lên thành công và sẵn sàng để xuất bản.</span>
-                    </div>
-                  )}
-
-                  {/* Video preview simulation */}
-                  <div className="relative aspect-video w-full rounded-xl overflow-hidden bg-black flex items-center justify-center">
-                    <img
-                      src="https://images.unsplash.com/photo-1547592180-85f173990554?w=800&q=80"
-                      alt="Preview"
-                      className="h-full w-full object-cover opacity-60"
-                    />
-                    <div className="absolute flex h-12 w-12 items-center justify-center rounded-full bg-white/90 text-primary shadow-lg cursor-pointer hover:scale-110 transition-transform">
-                      <Play className="h-5 w-5 fill-current ml-0.5" />
-                    </div>
-                    <Badge className="absolute bottom-2.5 right-2.5 bg-black/80 text-white font-mono text-[11px]">
-                      Xem trước ({durationMinutes}:00)
-                    </Badge>
-                  </div>
-                </div>
+                )}
+              />
+              {errors.videoUrl && (
+                <p className="text-xs font-medium text-destructive">{errors.videoUrl.message}</p>
               )}
             </CardContent>
           </Card>
 
-          {/* AI SPEECH-TO-TEXT NOTICE (UC-10) */}
-          <Card className="border-primary/30 bg-gradient-to-br from-primary/5 via-card to-card shadow-sm">
-            <CardHeader className="pb-3 pt-5 px-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                    <Sparkles className="h-4 w-4" />
-                  </span>
-                  <CardTitle className="text-sm font-bold text-foreground">
-                    Quy trình tóm tắt tự động từ AI (STT • UC-10)
-                  </CardTitle>
-                </div>
-                <Badge variant="secondary" className="bg-primary/10 text-primary text-[11px]">
-                  Tự động kích hoạt
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="px-5 pb-5 text-xs text-muted-foreground space-y-2 leading-relaxed">
-              <p>
-                Sau khi đăng tải, hệ thống sẽ tự động lắng nghe giọng nói trong video qua pipeline{' '}
-                <strong>Speech-to-Text</strong>:
-              </p>
-              <ul className="list-disc pl-4 space-y-1">
-                <li>Tự động nhận diện danh sách nguyên liệu và định lượng.</li>
-                <li>
-                  Tạo các mốc thời gian (timestamps) cho từng bước nấu ăn để người xem bấm tua
-                  nhanh.
-                </li>
-                <li>Tạo tóm tắt súc tích giúp tăng khả năng tìm kiếm trên nền tảng.</li>
-              </ul>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* RIGHT COLUMN: Video Metadata & Recipe Details (5 cols) */}
-        <div className="space-y-6 lg:col-span-5">
           <Card className="border-border/70 shadow-sm">
-            <CardHeader className="pb-4 border-b">
+            <CardHeader className="border-b pb-4">
               <CardTitle className="text-base font-bold text-foreground">
-                Thông tin video &amp; Món ăn
+                Thông tin video &amp; món ăn
               </CardTitle>
             </CardHeader>
-
-            <CardContent className="p-5 space-y-4">
-              {/* Title */}
+            <CardContent className="space-y-4 p-5">
               <div className="space-y-1.5">
-                <div className="flex justify-between text-xs">
-                  <Label htmlFor="title" className="font-semibold">
-                    Tiêu đề video *
-                  </Label>
-                  <span className="text-muted-foreground">{title.length}/120</span>
-                </div>
+                <Label htmlFor="title" className="font-semibold">
+                  Tiêu đề video *
+                </Label>
                 <Input
                   id="title"
-                  maxLength={120}
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
                   placeholder="Ví dụ: Bí quyết nấu bún bò Huế chay nước dùng thanh ngọt..."
+                  {...register('title')}
                 />
+                {errors.title && (
+                  <p className="text-xs font-medium text-destructive">{errors.title.message}</p>
+                )}
               </div>
 
-              {/* Description */}
               <div className="space-y-1.5">
-                <Label htmlFor="desc" className="font-semibold text-xs">
-                  Mô tả &amp; Hướng dẫn sơ lược
+                <Label className="font-semibold">Danh mục *</Label>
+                <Controller
+                  control={control}
+                  name="categoryId"
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Chọn danh mục cho video" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {flatCategories.map((cat) => (
+                          <SelectItem key={cat.id} value={cat.id} className="text-xs">
+                            {cat.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.categoryId && (
+                  <p className="text-xs font-medium text-destructive">
+                    {errors.categoryId.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="font-semibold">Ảnh bìa video</Label>
+                <Controller
+                  control={control}
+                  name="coverImageUrl"
+                  render={({ field }) => (
+                    <ImageUploader
+                      value={field.value || null}
+                      disabled={createVideoMutation.isPending}
+                      onChange={(url, meta) => {
+                        setValue('coverImageUrl', url, { shouldValidate: true });
+                        setValue(
+                          'coverMedia',
+                          meta?.publicId && meta?.mimeType && meta?.bytes
+                            ? {
+                                publicId: meta.publicId,
+                                mimeType: meta.mimeType,
+                                bytes: meta.bytes,
+                              }
+                            : null,
+                          { shouldValidate: true }
+                        );
+                      }}
+                    />
+                  )}
+                />
+                {errors.coverImageUrl && (
+                  <p className="text-xs font-medium text-destructive">
+                    {errors.coverImageUrl.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-1.5">
+                <Label htmlFor="description" className="font-semibold">
+                  Mô tả &amp; hướng dẫn sơ lược
                 </Label>
                 <Textarea
-                  id="desc"
+                  id="description"
                   rows={3}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
                   placeholder="Giới thiệu món ăn, mẹo nấu hoặc nguyên liệu đặc biệt..."
-                  className="resize-none text-xs"
+                  className="resize-none"
+                  {...register('description')}
                 />
+                {errors.description && (
+                  <p className="text-xs font-medium text-destructive">
+                    {errors.description.message}
+                  </p>
+                )}
               </div>
 
-              {/* Category */}
-              <div className="space-y-1.5">
-                <Label className="font-semibold text-xs">Danh mục món ăn *</Label>
-                <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger className="w-full text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CATEGORIES.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id} className="text-xs">
-                        {cat.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Diet School */}
-              <div className="space-y-2">
-                <Label className="font-semibold text-xs">Trường phái ăn chay áp dụng *</Label>
-                <div className="grid gap-2">
-                  {DIET_SCHOOLS.map((school) => {
-                    const isSelected = dietSchool === school.id;
-                    return (
-                      <div
-                        key={school.id}
-                        onClick={() => setDietSchool(school.id)}
-                        className={cn(
-                          'flex items-center justify-between p-2.5 rounded-xl border cursor-pointer transition-all text-xs',
-                          isSelected
-                            ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                            : 'border-border/70 hover:border-primary/40'
-                        )}
-                      >
-                        <div>
-                          <p className="font-semibold text-foreground">{school.label}</p>
-                          <p className="text-[11px] text-muted-foreground">{school.desc}</p>
-                        </div>
-                        {isSelected && <Check className="h-4 w-4 text-primary shrink-0" />}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Avoid Alliums Checkbox */}
-              <div className="flex items-start gap-2 pt-1">
-                <Checkbox
-                  id="alliums"
-                  checked={avoidAlliums}
-                  onCheckedChange={(checked) => setAvoidAlliums(!!checked)}
-                  className="mt-0.5"
-                />
-                <label
-                  htmlFor="alliums"
-                  className="text-xs text-muted-foreground leading-relaxed cursor-pointer"
-                >
-                  <strong className="text-foreground">Không chứa Ngũ vị tân</strong> (hành, hẹ, tỏi,
-                  kiệu, hưng cừ) — phù hợp cho người ăn chay Phật giáo tu tập.
-                </label>
-              </div>
-
-              {/* Cooking Metrics (2x2 grid) */}
-              <div className="grid grid-cols-2 gap-3 pt-2">
-                <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground flex items-center gap-1">
-                    <Clock className="h-3 w-3" /> Thời lượng (phút)
-                  </Label>
-                  <Input
-                    type="number"
-                    value={durationMinutes}
-                    onChange={(e) => setDurationMinutes(e.target.value)}
-                    className="h-8 text-xs"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground flex items-center gap-1">
-                    <Users className="h-3 w-3" /> Khẩu phần (người)
-                  </Label>
-                  <Input
-                    type="number"
-                    value={servings}
-                    onChange={(e) => setServings(e.target.value)}
-                    className="h-8 text-xs"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground">Độ khó</Label>
-                  <Select value={difficulty} onValueChange={setDifficulty}>
-                    <SelectTrigger className="h-8 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Dễ làm" className="text-xs">
-                        Dễ làm
-                      </SelectItem>
-                      <SelectItem value="Trung bình" className="text-xs">
-                        Trung bình
-                      </SelectItem>
-                      <SelectItem value="Nâng cao" className="text-xs">
-                        Nâng cao
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1">
-                  <Label className="text-[11px] text-muted-foreground flex items-center gap-1">
-                    <Flame className="h-3 w-3" /> Calo (kcal/phần)
-                  </Label>
-                  <Input
-                    type="number"
-                    value={estCalories}
-                    onChange={(e) => setEstCalories(e.target.value)}
-                    className="h-8 text-xs"
-                  />
-                </div>
-              </div>
-
-              {/* Bottom Submit Action */}
-              <div className="pt-4 border-t space-y-2">
+              <div className="border-t pt-4">
                 <Button
-                  onClick={() => handleSubmit(false)}
-                  disabled={isSubmitting}
-                  className="w-full gap-2 font-semibold shadow-md text-sm"
+                  type="submit"
+                  disabled={createVideoMutation.isPending}
+                  className="w-full gap-2 text-sm font-semibold shadow-md"
                 >
-                  <UploadCloud className="h-4 w-4" />
-                  {isSubmitting ? 'Đang xuất bản...' : 'Đăng tải video ngay'}
+                  {createVideoMutation.isPending ? 'Đang gửi video...' : 'Đăng tải video'}
                 </Button>
-
-                <p className="text-[11px] text-center text-muted-foreground italic">
-                  Video sau khi đăng sẽ tuân thủ quy tắc kiểm duyệt nội dung cộng đồng (UC-11).
+                <p className="mt-2 text-center text-[11px] italic text-muted-foreground">
+                  Video sau khi đăng sẽ tuân thủ quy tắc kiểm duyệt nội dung cộng đồng.
                 </p>
               </div>
             </CardContent>
           </Card>
-        </div>
+        </form>
       </div>
-    </div>
+    </AuthGuard>
   );
 }

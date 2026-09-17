@@ -12,6 +12,8 @@ import { registerCommunityOpenApi } from '../modules/community/community.openapi
 import { registerContributorOpenApi } from '../modules/contributors/contributor.openapi.js';
 import { registerModerationOpenApi } from '../modules/moderation/moderation.openapi.js';
 import { registerRecommendationOpenApi } from '../modules/recommendations/recommendation.openapi.js';
+import { registerMealPlanOpenApi } from '../modules/meal-plans/meal-plan.openapi.js';
+import { registerChatOpenApi } from '../modules/chat/chat.openapi.js';
 
 const registry = new OpenAPIRegistry();
 
@@ -48,6 +50,8 @@ registerCommunityOpenApi(registry, registeredErrorResponse);
 registerContributorOpenApi(registry, registeredErrorResponse);
 registerModerationOpenApi(registry, registeredErrorResponse);
 registerRecommendationOpenApi(registry, registeredErrorResponse);
+registerMealPlanOpenApi(registry, registeredErrorResponse);
+registerChatOpenApi(registry, registeredErrorResponse);
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
@@ -70,6 +74,11 @@ const generatedDocument = generator.generateDocument({
     { name: 'Content', description: 'Revisioned Recipe, Blog, and Video content' },
     { name: 'Community', description: 'Comments, votes, ratings, and bookmarks' },
     { name: 'Recommendations', description: 'Consent-aware behavior events and recipe ranking' },
+    { name: 'Meal Plans', description: 'Deterministic weekly plans, swaps and shopping lists' },
+    {
+      name: 'AI Chat',
+      description: 'OpenAI-backed private nutrition chat, quota, SSE and feedback',
+    },
     {
       name: 'Contributors',
       description: 'Contributor applications and approved subtype status',

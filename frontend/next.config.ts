@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
       { protocol: 'https', hostname: 'res.cloudinary.com' },
       { protocol: 'https', hostname: 'i.pravatar.cc' },
+      // Thumbnail ảnh bìa video YouTube (resolveVideoCover đổi watch URL sang i.ytimg.com).
+      { protocol: 'https', hostname: 'i.ytimg.com' },
+      { protocol: 'https', hostname: 'img.youtube.com' },
     ],
   },
   async redirects() {

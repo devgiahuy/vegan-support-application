@@ -29,22 +29,22 @@ export interface BrandLogoProps {
 
 const SIZE_STYLES = {
   horizontal: {
-    sm: { height: 28, width: 167, className: 'h-7 w-auto' },
-    md: { height: 36, width: 215, className: 'h-9 w-auto' },
-    lg: { height: 44, width: 263, className: 'h-11 w-auto' },
-    xl: { height: 52, width: 310, className: 'h-13 w-auto' },
+    sm: { height: 28, width: 167 },
+    md: { height: 36, width: 215 },
+    lg: { height: 44, width: 263 },
+    xl: { height: 52, width: 310 },
   },
   mark: {
-    sm: { height: 28, width: 28, className: 'h-7 w-7' },
-    md: { height: 36, width: 36, className: 'h-9 w-9' },
-    lg: { height: 44, width: 44, className: 'h-11 w-11' },
-    xl: { height: 56, width: 56, className: 'h-14 w-14' },
+    sm: { height: 28, width: 28 },
+    md: { height: 36, width: 36 },
+    lg: { height: 44, width: 44 },
+    xl: { height: 56, width: 56 },
   },
   full: {
-    sm: { height: 48, width: 80, className: 'h-12 w-auto' },
-    md: { height: 64, width: 107, className: 'h-16 w-auto' },
-    lg: { height: 80, width: 134, className: 'h-20 w-auto' },
-    xl: { height: 112, width: 188, className: 'h-28 w-auto' },
+    sm: { height: 48, width: 80 },
+    md: { height: 64, width: 107 },
+    lg: { height: 80, width: 134 },
+    xl: { height: 112, width: 188 },
   },
 };
 
@@ -71,11 +71,8 @@ export function BrandLogo({
               width={currentSize.width}
               height={currentSize.height}
               priority={priority}
-              className={cn(
-                'block object-contain dark:hidden',
-                currentSize.className,
-                imageClassName
-              )}
+              style={{ width: currentSize.width, height: currentSize.height }}
+              className={cn('block object-contain dark:hidden', imageClassName)}
             />
             {/* Dark mode horizontal logo (chữ Connect chuyển sang sáng màu) */}
             <Image
@@ -84,11 +81,8 @@ export function BrandLogo({
               width={currentSize.width}
               height={currentSize.height}
               priority={priority}
-              className={cn(
-                'hidden object-contain dark:block',
-                currentSize.className,
-                imageClassName
-              )}
+              style={{ width: currentSize.width, height: currentSize.height }}
+              className={cn('hidden object-contain dark:block', imageClassName)}
             />
           </div>
           {withSubtitle && (
@@ -105,7 +99,8 @@ export function BrandLogo({
             width={currentSize.width}
             height={currentSize.height}
             priority={priority}
-            className={cn('object-contain', currentSize.className, imageClassName)}
+            style={{ width: currentSize.width, height: currentSize.height }}
+            className={cn('object-contain', imageClassName)}
           />
           {withSubtitle && (
             <div className="flex flex-col">
@@ -127,7 +122,8 @@ export function BrandLogo({
             width={currentSize.width}
             height={currentSize.height}
             priority={priority}
-            className={cn('object-contain', currentSize.className, imageClassName)}
+            style={{ width: currentSize.width, height: currentSize.height }}
+            className={cn('object-contain', imageClassName)}
           />
           {withSubtitle && (
             <span className="text-[11px] font-medium text-muted-foreground">{withSubtitle}</span>
