@@ -18,6 +18,21 @@
 
 ---
 
+## [2026-09-17] — Khắc phục ẩn bài khi đăng nhập: Hiển thị bộ lọc an toàn ăn kiêng + Gợi ý nguyên liệu chuẩn hóa
+
+- Mục tiêu: Khắc phục hiện tượng người dùng đăng nhập không thấy công thức vừa tạo hoặc món cũ (do Backend tự động kích hoạt Dietary Safety Engine lọc bỏ các món có nguyên liệu tự do `UNKNOWN` hoặc xung đột với Chế độ ăn/Dị ứng cá nhân), đồng thời cung cấp công cụ chuẩn hóa nguyên liệu ngay khi tạo món.
+- Đã làm:
+  - Tầng DTO/Model/Mapper: Mở rộng `RecipeListResponseDto.meta` và `RecipePaginationMetadata` ánh xạ `appliedConstraints` (gồm `authenticated`, `dietPattern`, `allergyCount`, `ingredientExclusionCount`, `traditions`). Thêm unit test kiểm tra ánh xạ và truyền `ingredientId`.
+  - Tầng UI Tạo món (`/recipes/new`): Tạo component `RecipeIngredientRow` tích hợp tìm kiếm và gợi ý nguyên liệu chuẩn (`/api/v1/ingredients`) với debounce, tự động gắn `ingredientId` và hiển thị huy hiệu `✓ Chuẩn hóa` (xanh) hoặc `Tự do` (amber), kèm mẹo an toàn ăn chay.
+  - Tầng UI Khám phá (`/recipes`): Bổ sung Banner thông báo Bộ lọc an toàn theo tài khoản khi `appliedConstraints.authenticated = true`, hiển thị chi tiết chế độ ăn (`Thuần chay`, `Có trứng sữa`...), số lượng chất dị ứng và nguyên liệu kiêng kỵ được bảo vệ. Cập nhật `EmptyState` giải thích rõ lý do món bị ẩn và cung cấp lối tắt tới Cài đặt hồ sơ.
+- File tạo/sửa:
+  - Tạo mới: `src/features/recipe/components/recipe-ingredient-row.tsx`
+  - Sửa đổi: `src/features/recipe/types/recipe.dto.ts`, `src/features/recipe/types/recipe.model.ts`, `src/features/recipe/mappers/recipe.mapper.ts`, `src/features/recipe/mappers/recipe.mapper.test.ts`, `src/features/recipe/api/recipe.api.ts`, `src/features/recipe/components/recipe-editor-form.tsx`, `src/app/(site)/recipes/page.tsx`, `docs/WORK-LOG.md`
+- Verify: `npx tsc --noEmit` (0 lỗi), `npm test` (17/17 test files passed, 139/139 unit tests passed), `npm run build` (Next.js 16 build thành công toàn bộ 29 routes).
+- PROGRESS: Module Công thức & Bộ lọc cá nhân hóa đạt 100% về độ minh bạch UX và tương thích dữ liệu chuẩn với Backend.
+- Còn lại / rủi ro: Không có.
+
+
 ## [2026-09-15] — Khởi tạo PROGRESS + WORK-LOG + rule ARCHITECTURE
 
 - Mục tiêu: có 2 file theo dõi + rule bắt agent cập nhật sau mỗi task.
@@ -823,3 +838,284 @@
   - `npm test` toàn bộ 14 test files, 99/99 unit tests pass.
   - `npm run build` Next.js 16 build thành công toàn bộ 29 routes (exit code 0).
 - PROGRESS: Task 10 (Moderation UC-11 + Contributor UC-16/17) 70% → 80%.
+
+---
+
+## [2026-09-16] — Tích hợp Meal Planner API thật (spec 007-meal-planner-integration, T001–T027)
+
+- Mục tiêu: thay UI mock (`const PLAN`, `INITIAL_SAVED_PLANS`) ở `/meal-plans` + `/meal-plans/saved` bằng consumer API thật cho 5 endpoint đã `READY` (generate/list/detail/swap/delete), đúng kiến trúc DTO→Model→Mapper→API→Query.
+- Đã làm:
+  - `sync:swagger` thành công với BE `:4000` (71 endpoints, catalog hết stale) — `docs/api/meal-plans.md` không lệch contract.
+  - `api-endpoints.ts` (+nhánh `MEAL_PLANS` 5 path), `enums` (+`MealPlanGoal`, `NutritionDataQuality`, `MealType`).
+  - `features/meal-plan` mới: DTO/Model/Mapper/test (envelope đọc trực tiếp, `toListModel`/`toDetailModel` riêng, `pickField` + `safe*` mọi field), api 5 ops, queries (Key Factory + 5 hooks, toast + invalidate theo `error.code`), zod schema (weekStart Thứ Hai UTC + goal), util `newIdempotencyKey`, 7 components (generate-form, plan-card, day-grid, shopping-list, warnings-banner, swap-dialog, delete-dialog).
+  - Viết lại `/meal-plans` (AuthGuard + form + 5 bản gần nhất), `/meal-plans/saved` (lịch sử + `?weekStart=` + phân trang), tạo `/meal-plans/[id]` (21 ô + đi chợ + warnings + B12 + swap/delete).
+  - Contract verification live bằng tài khoản seed member: generate ✓ (21/21 FILLED, warnings `CALORIE_TOLERANCE_WIDENED/RECIPE_REPEATED/MICRONUTRIENT_DATA_PARTIAL`), list ✓ (summary không slots), detail ✓, swap ✓ (`expectedVersion` = `lockVersion`, món mới về), delete ✓ (`{deleted:true}`).
+  - Phát hiện và đã fix từ shape thật: shopping item là `{ingredientId,canonicalName,amount,unit}` (không phải `name/quantity`); calories nằm ở slot-level, recipe không có nutrition (ẩn dòng macro khi = 0); thêm mapping `MICRONUTRIENT_DATA_PARTIAL`.
+  - Test data đã dọn (xóa plan test vừa tạo, không còn rác).
+- File tạo/sửa:
+  - Tạo: `src/features/meal-plan/{types,mappers,api,queries,schemas,utils,components}`, `src/app/(site)/meal-plans/[id]/page.tsx`, `specs/007-meal-planner-integration/**`
+  - Sửa: `common/constants/api-endpoints.ts`, `common/enums/index.ts`, `app/(site)/meal-plans/{page,saved/page}.tsx`, `docs/{BACKEND_INTEGRATION,PROGRESS,WORK-LOG}.md`
+- Verify: `tsc --noEmit` sạch (0 lỗi); `npm test` 113/113 pass (meal-plan 14/14, không regress); `eslint` scope sạch (0 errors, 0 warnings — fix `set-state-in-effect` ở swap-dialog và `form.watch` memo warning ở generate-form); `npm run build` pass (27 routes, thêm `/meal-plans/[id]`).
+- PROGRESS: task #6 (Menu UC-06) 30% → 95% (còn test tay trình duyệt MP-1..MP-6).
+- Còn lại / rủi ro: (1) test tay trình duyệt MP-1..MP-6 theo quickstart 007 với tài khoản seed member; (2) `personalization` GET/PUT vắng trong registry BACKEND_INTEGRATION (có trong swagger) — cần BE bổ sung trước khi làm recommendations.
+
+---
+
+## [2026-09-17] — Khắc phục luồng hiển thị công thức mới tạo (PENDING_REVIEW) và đồng bộ trạng thái kiểm duyệt
+
+- Mục tiêu (user báo):
+  - Khi tạo công thức tại `/recipes/new` báo thành công, nhưng quay lại trang `/recipes` thì không thấy hiển thị, call API không có data.
+- Chẩn đoán từ code Backend (`content.service.ts`, `content-publication.policy.ts`, `content.repository.ts`):
+  1. Theo quy định nghiệp vụ Backend (`ModeratedPublicationPolicy`), mọi công thức do `MEMBER` (hoặc `CONTRIBUTOR` chưa duyệt chuyên môn) tạo ra đều được lưu vào CSDL với trạng thái `PENDING_REVIEW` (Chờ duyệt).
+  2. Trang `/recipes` gọi `GET /api/v1/posts?type=RECIPE` (`listPublished`), backend truy vấn SQL bắt buộc `status = 'PUBLISHED'` và `published_revision_id IS NOT NULL`. Vì công thức vừa tạo đang ở `PENDING_REVIEW`, CSDL trả về 0 kết quả (`data: []`).
+  3. Frontend trước đó không có thông báo rõ ràng sau khi gửi, trang chi tiết `/recipes/[id]` thiếu banner `PENDING_REVIEW`, trang `/recipes` chỉ hiện EmptyState thông thường gây hiểu nhầm API bị mất dữ liệu, và khi Admin duyệt bài ở review-queue thì chưa invalidate cache `recipes`.
+- Đã làm:
+  - Sửa `src/app/(site)/recipes/new/page.tsx`:
+    - Thêm Dialog thông báo gửi công thức thành công khi trạng thái là `PENDING_REVIEW`, giải thích rõ bài viết đang chờ Ban kiểm định duyệt trước khi xuất bản công khai.
+    - Cung cấp các nút điều hướng rõ ràng: "Xem bài viết của bạn", "Về kho công thức", và nút "Phê duyệt ngay" nếu tài khoản là Admin/Contributor.
+  - Sửa `src/features/recipe/components/recipe-detail-view.tsx`:
+    - Thêm Banner màu hổ phách cảnh báo công thức đang ở trạng thái `PENDING_REVIEW` (chỉ tác giả và người kiểm duyệt xem được).
+    - Thêm Banner cảnh báo khi công thức bị `REJECTED` kèm thông tin từ chối.
+  - Sửa `src/app/(site)/recipes/page.tsx`:
+    - Cập nhật `EmptyState` giải thích rõ quy trình kiểm duyệt thuần chay 100% cho người dùng.
+    - Thêm nút tắt đến "Hàng chờ duyệt bài" cho Admin/Contributor.
+    - Thêm link hướng dẫn theo dõi bài viết tại "Hồ sơ › Bài viết của tôi".
+  - Sửa `src/app/(site)/profile/page.tsx`:
+    - Hợp nhất cả Công thức (`useRecipesQuery`) và Cẩm nang (`useArticlesQuery`) vào tab "Bài viết của tôi", cho phép tác giả xem danh sách tất cả các bài viết do mình tạo cùng trạng thái kiểm duyệt tương ứng.
+  - Sửa `src/features/review/queries/review.queries.ts`:
+    - Bổ sung invalidate query cache cho `['recipes']`, `['articles']`, `['videos']` khi duyệt bài thành công (`useApprovePostMutation`), giúp trang `/recipes` cập nhật ngay lập tức sau khi duyệt.
+- File tạo/sửa:
+  - Sửa: `src/app/(site)/recipes/new/page.tsx`
+  - Sửa: `src/features/recipe/components/recipe-detail-view.tsx`
+  - Sửa: `src/app/(site)/recipes/page.tsx`
+  - Sửa: `src/app/(site)/profile/page.tsx`
+  - Sửa: `src/features/review/queries/review.queries.ts`
+  - Sửa: `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit` đạt 0 lỗi type.
+  - `npm test` toàn bộ 15 test files, 113/113 unit tests pass.
+  - `npm run build` Next.js 16 build thành công toàn bộ 29 routes (exit code 0).
+
+---
+
+## [2026-09-17] — Redesign toàn bộ giao diện Authentication VeggieConnect (SaaS Scandinavian Split 50/50)
+
+- Mục tiêu:
+  - Biến trang Authentication từ cảm giác "form đăng nhập + mockup điện thoại Remotion ở cột trái" thành trải nghiệm authentication premium, hiện đại, đậm chất thương hiệu VeggieConnect (Minimal Scandinavian + AI-Powered Plant-based Lifestyle).
+  - Nghiêm cấm phá vỡ logic: bảo toàn 100% auth flow, API endpoints, DTO/Model/Mapper, hooks, Zod validation schemas, token/cookie handling, role-based redirect logic.
+- Đã làm:
+  - Cột trái: Loại bỏ Remotion video player và thay thế bằng `AuthEditorialHero`:
+    - Eyebrow: `YOUR PLANT-BASED COMPANION` với botanical badge.
+    - Headline: `Eat well. Connect deeply.` (Be Vietnam Pro, 48-60px, tương phản cao, nhịp nhàng).
+    - Supporting text: "Khám phá công thức, địa điểm và những lựa chọn phù hợp với hành trình ăn chay của bạn."
+    - Visual composition: Tận dụng ảnh ẩm thực thực tế WebP tối ưu (`/hero/optimized/completed-dish.webp`), nền organic shapes và 3 floating ecosystem feature cards (`✦ VEGGIE AI`, `📍 GẦN BẠN`, `♡ CỘNG ĐỒNG`) với GPU compositor micro-motion (`transform: translate3d`, `opacity`, hỗ trợ `prefers-reduced-motion`).
+  - Cột phải: Nâng cấp `AuthCard` trong `src/app/(auth)/login/page.tsx`:
+    - Bo góc lớn cao cấp `rounded-[28px]`, khoảng đệm `p-7 sm:p-9`, đổ bóng mịn màng đa tầng (`shadow-[0_20px_50px_rgba(29,43,34,0.06)]`).
+    - Segmented control tabs hiện đại `[ Đăng nhập ] [ Tạo tài khoản ] [ Khôi phục ]` với hiệu ứng lò xo mượt mà (`layoutId="active-auth-tab"`).
+    - Nút Google ID viền thanh lịch, chỉ báo an toàn dữ liệu và cộng đồng chuẩn mực.
+  - Layout & Header/Footer (`src/app/(auth)/layout.tsx`):
+    - Chia đôi tỷ lệ chuẩn 50/50 trên desktop (`lg:grid-cols-2`).
+    - Header: Căn chỉnh logo thương hiệu, nút "← Về trang chủ" dạng pill thanh lịch kèm `ThemeToggle`.
+    - Mobile: Bố cục dọc thông minh Logo → Auth Card (tiêu điểm chính) → `AuthCompactBrand` bên dưới, triệt tiêu 100% tràn viền ngang.
+  - Form Fields (`login-form.tsx`, `register-form.tsx`):
+    - Chuẩn hóa chiều cao ô nhập liệu `h-12` (48px), bo góc `rounded-xl` (12px), focus ring xanh thương hiệu (`#287D32`).
+    - Chuẩn hóa nút submit `h-12` (48px), bo góc 12px, font-semibold với micro-interaction `active:scale-[0.99]`.
+    - Nâng cấp bộ đo `PasswordStrength` trong `RegisterForm` với thanh tiến trình 4 nấc bo tròn.
+    - Sửa type `SafeImageProps.src` cho phép `string | null | undefined` an toàn tuyệt đối với dữ liệu người dùng.
+- File tạo/sửa:
+  - Tạo:
+    - `src/features/auth/components/auth-editorial-hero.tsx`
+    - `src/features/auth/components/auth-compact-brand.tsx`
+  - Sửa:
+    - `src/app/(auth)/layout.tsx`
+    - `src/app/(auth)/login/page.tsx`
+    - `src/features/auth/components/login-form.tsx`
+    - `src/features/auth/components/register-form.tsx`
+    - `src/components/shared/safe-image.tsx`
+    - `docs/PROGRESS.md`
+    - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type (hoàn toàn sạch).
+  - `npm test`: Toàn bộ 15 test files, 113/113 tests pass (auth mapper 12/12 pass, không hồi quy).
+  - `npm run build`: Next.js production build thành công 100% cả 29 routes tĩnh và dynamic.
+  - Browser testing với `browser_subagent`: Kiểm tra trực tiếp trên Chrome ở độ phân giải Desktop (1280x800) và Mobile (390x844), xác nhận tab transition mượt mà, không có console errors, không tràn viền ngang, video recording đã lưu.
+- PROGRESS: Task #1 (Auth UC-01) giữ 95% (hoàn thành nâng cấp giao diện toàn diện, bảo toàn toàn bộ logic nghiệp vụ).
+
+---
+
+## [2026-09-16] — Tích hợp Chat AI private (spec 008-ai-chat-integration, T001–T026)
+
+- Mục tiêu: thay UI mock (`HISTORY`, `NUTRIENTS` cứng) ở `/assistant` bằng consumer API thật cho 5 endpoint chat private đã `READY` (sessions, history, SSE stream, feedback), khách dùng được không cần đăng nhập.
+- Đã làm:
+  - `sync:swagger` thành công với BE `:4000` (71 endpoints) — `docs/api/ai-chat.md` không lệch contract.
+  - `api-endpoints.ts` (+nhánh `CHAT` 3 path), `enums` (+`ChatRole`, `ChatMessageStatus`, `FeedbackValue`, `ChatOwnerType`).
+  - `features/chat` mới: DTO/Model/Mapper/test (envelope trực tiếp, `parseSseEvent` thuần test không mạng), api axios 4 ops + `chat-stream.ts` (`fetch` POST + `AbortController`, tách khỏi interceptor), queries (Key Factory, list sessions `enabled: isAuthenticated`, buffer stream ephemeral ở `useState`, commit khi `message_complete`), zod composer (rỗng/2000 ký tự), 7 components (bubble, composer, disclaimer, session-list, feedback-buttons, quota-banner, fallback-notice).
+  - Viết lại `/assistant` (thread + composer + sidebar phiên + `?session=` deep-link, KHÔNG AuthGuard, đủ 4 trạng thái).
+  - Contract verification live: guest tạo phiên ✓ (`owner=GUEST`, cookie `chatGuest` HttpOnly 7 ngày), member tạo/liệt kê phiên ✓, SSE stream ✓ (`message_start`/`content_delta`/`message_complete`/`quota`), history ✓ đúng shape DTO, feedback upsert ✓ (`UP`).
+  - Phát hiện và đã fix từ shape thật: quota có `resetAt` ISO trong event `quota` (mapper format `HH:mm dd/MM` thay vì hiện ISO thô); `message_complete` kèm full message + quota inline.
+- File tạo/sửa:
+  - Tạo: `src/features/chat/{types,mappers,api,queries,schemas,components}`, `specs/008-ai-chat-integration/**`
+  - Sửa: `common/constants/api-endpoints.ts`, `common/enums/index.ts`, `app/(site)/assistant/page.tsx`, `docs/{BACKEND_INTEGRATION,PROGRESS,WORK-LOG}.md`
+- Verify: `tsc --noEmit` sạch (0 lỗi); `npm test` 125/125 pass (chat 12/12, không regress); `eslint` scope sạch (0 errors, 0 warnings); `npm run build` pass (gồm `/assistant` viết lại).
+- PROGRESS: task #7 (Chatbot UC-07) 20% → 95% (còn test tay trình duyệt AC-1..AC-6).
+- Còn lại / rủi ro: (1) test tay trình duyệt AC-1..AC-6 theo quickstart 008 (khách ẩn danh + member seed); (2) sharing công khai + verification chuyên gia vẫn `PLANNED` — UI không giới thiệu 2 khả năng này.
+
+---
+
+## [2026-09-17] — Sửa lỗi chữ bị xuống dòng trên Navbar khi chưa đăng nhập
+
+- Mục tiêu: Khắc phục triệt để hiện tượng các mục điều hướng trên thanh Navbar ("Trang chủ", "Khám phá món", "Cẩm nang", "Video nấu ăn", "Thực đơn tuần", "Bản đồ quán") bị ngắt xuống 2 dòng trên màn hình desktop (1280px–1440px) khi người dùng chưa đăng nhập.
+- Nguyên nhân:
+  - Khi chưa đăng nhập, nút "Đăng nhập" chiếm chiều ngang lớn hơn (~95px) so với Avatar (~36px).
+  - Mục `Thực đơn tuần` vừa được kích hoạt lại trong `NAV_ITEMS` (tổng 6 mục thay vì 5).
+  - Các thẻ `Link` thiếu `whitespace-nowrap` và `shrink-0`, dẫn tới việc flexbox tự động bẻ chữ xuống 2 dòng khi không gian bị ép.
+  - Ô tìm kiếm `<form>` mang `flex-1` không giới hạn `min-w` khiến trên màn hình `xl` (1280px) bị co rúm thành một nút tròn nhỏ.
+- Đã làm:
+  - Thêm `whitespace-nowrap` và `shrink-0` vào toàn bộ các `Link` trong `nav` (chữ không bao giờ bị gãy dòng).
+  - Tinh chỉnh padding & typography responsive: `px-2.5 py-1.5 text-xs xl:text-[13px] 2xl:px-3.5 2xl:py-2 2xl:text-sm`.
+  - Thêm `shrink-0` cho `<nav>`, bỏ `ml-2` dư thừa, thu gọn gap giữa các nav items `gap-0.5 2xl:gap-1`.
+  - Chuẩn hóa container: `gap-2 xl:gap-3 2xl:gap-4`.
+  - Cấu hình ô tìm kiếm responsive chính xác: `hidden items-center md:flex md:flex-1 md:max-w-xs xl:w-40 xl:flex-none 2xl:w-60 2xl:max-w-xs`, đổi placeholder ngắn gọn `Tìm món chay...` không bị xén chữ.
+  - Chuẩn hóa nút "AI Trợ lý" thành `size="sm"` (`h-9`) đồng bộ với nút "Đăng nhập" và `ThemeToggle`.
+  - Bổ sung nút tìm kiếm icon cho mobile view (`md:hidden`).
+- File tạo/sửa:
+  - Sửa `src/components/layout/site-header.tsx`
+  - Sửa `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 16 test files, 125/125 tests passed.
+  - Kiểm tra trực quan bằng subagent ở các viewport 1280x800, 1366x768, 1440x900 ở cả Light mode và Dark mode: tất cả các mục điều hướng, ô tìm kiếm và các nút hành động hiển thị thẳng hàng, sang trọng, không còn bất kỳ hiện tượng xuống dòng hay vỡ giao diện nào.
+- PROGRESS: Giữ nguyên tiến độ các module chức năng, hoàn thành tối ưu UX/UI Shell Header.
+
+---
+
+## [2026-09-16] — Tích hợp Recommendations (spec 009-recommendations-integration, T001–T026)
+
+- Mục tiêu: gợi ý home đã lọc luật cứng + bật/tắt consent + ghi behavior event ngầm (fire-and-forget) cho 4 capability đã xác minh live.
+- Đã làm:
+  - `sync:swagger` thành công với BE `:4000` (71 endpoints) — `docs/api/recommendations.md` không lệch.
+  - `api-endpoints.ts` (+nhánh `RECOMMENDATIONS` 3 path), `enums` (+`BehaviorEventType` 8 loại).
+  - `features/recommendation` mới: DTO/Model/Mapper/test (7 nhãn lý do + fallback mã gốc, constraints gọn, 8 builders đúng shape từng loại, sai → null không gửi), api 4 ops (event nuốt lỗi), queries (home/consent `enabled: isAuthenticated`, set-consent mutation + invalidate), hook dùng chung `src/hooks/use-track-behavior-event.ts` (check consent cache, dedupe view 60s, UUID mới mỗi thao tác — đặt ở `src/hooks/` để không vi phạm biên feature).
+  - US1: 4 components + `RecommendedForYou` gắn vào `page.tsx` (member only, skeleton chống CLS, thay vị trí mock slice).
+  - US2: `ConsentSwitch` thật thay switch mock ở tab privacy `/profile` (gửi lại `consentVersion` từ GET).
+  - US3: điểm chạm VIEW_RECIPE (`recipes/[id]`), SEARCH (`search`), RATE/BOOKMARK (cơ chế `entityId` optional ở `vote-control` — chưa caller nào truyền nên 0 traffic giả), CHAT_TOPIC (mã BE phân loại từ `message_complete`, mở rộng stream result + callback).
+  - Contract verification live: personalization GET ✓ (`behavior-personalization-v1`), home ✓ (`behavioral-v1`, reasons thật), event SEARCH ✓, PUT off → home `personalized:false` + event bị `PERSONALIZATION_CONSENT_REQUIRED` ✓, restore on ✓ (không để lại rác trạng thái).
+- File tạo/sửa:
+  - Tạo: `src/features/recommendation/{types,mappers,api,queries,components}`, `src/hooks/use-track-behavior-event.ts`, `specs/009-recommendations-integration/**`
+  - Sửa: `common/constants/api-endpoints.ts`, `common/enums/index.ts`, `app/(site)/{page.tsx,profile/page.tsx,search/page.tsx,recipes/[id]/page.tsx,assistant/page.tsx}`, `components/shared/vote-control.tsx`, `features/chat/{api/chat-stream.ts,queries/chat.queries.ts}`, `docs/{BACKEND_INTEGRATION,PROGRESS,WORK-LOG}.md`
+- Verify: `tsc --noEmit` sạch (0 lỗi); `npm test` 137/137 pass (recommendation 12/12, không regress); `eslint` scope 0 errors (3 warnings có sẵn từ trước); `npm run build` pass.
+- PROGRESS: task #12 mới (Recommendations) → 90% (còn test tay trình duyệt RC-1..RC-5).
+- Còn lại / rủi ro: (1) test tay RC-1..RC-5 với 2 tài khoản seed khác khẩu vị; (2) `DELETE behavior-history` vẫn `PLANNED` — UI không giới thiệu; (3) `profile/page.tsx` + `search` + home đang có session khác sửa — phối hợp khi merge.
+
+---
+
+## [2026-09-16] — Scaffold Community live-shape + fixture (spec 010-community-integration, T001–T029)
+
+- Mục tiêu: đủ 7 tầng community theo đúng contract dù BE còn `PLANNED`; API đọc fixture, 0 request live; ngày nối live chỉ sửa 1 file api.
+- Đã làm:
+  - `sync:swagger` thành công (71 endpoints) — `docs/api/community.md` không lệch.
+  - `api-endpoints.ts` (+nhánh `COMMUNITY` 7 path kèm `TODO(BE-READY)`, chưa import ở đâu), `enums` (+`CommentStatus`).
+  - `features/community` mới: DTO đủ 11 ops/Model/Mapper/test (ép reply 1 tầng ở mapper, placeholder null-safe, rating/bookmark null-safe) + 12 tests; 3 fixtures bám contract; api fixture 11 hàm (kho trong bộ nhớ, delay 300ms, `USE_FIXTURES`, 0 axios/fetch — kiểm tra tĩnh); queries (Key Factory + 8 hooks, invalidate đúng key); zod comment/rating; 7 components (item/form/thread/vote/summary/rating/bookmark/list).
+  - Nâng cấp `comment-section` shared (xóa 404 dòng mock: bác sĩ Lan Anh, pravatar, setTimeout, rate-limit giả) thành wrapper `CommentThread`; gắn thread/summary/vote vào 3 detail (recipe/post/video) + rating/bookmark (recipe) + bookmark (video) + bookmarks list ở tab posts `/profile`.
+  - KHÔNG truyền `entityId` vào `VoteControl` mock (tránh event giả từ vote giả); cơ chế `entityId` optional sẵn cho ngày community live.
+  - Sự cố encoding: 1 lần dùng `Set-Content` qua shell làm hỏng UTF-8 file mapper — đã viết lại toàn bộ bằng Write tool, verify bytes + 12/12 tests; từ nay chỉ dùng Read/Edit/Write.
+- File tạo/sửa:
+  - Tạo: `src/features/community/{types,mappers,api,queries,schemas,components,__fixtures__}`, `specs/010-community-integration/**`
+  - Sửa: `common/constants/api-endpoints.ts`, `common/enums/index.ts`, `components/shared/comment-section.tsx`, `app/(site)/profile/page.tsx`, `features/{recipe,post,video}/components/*-detail-view.tsx`, `docs/{PROGRESS,WORK-LOG}.md` (+ `BACKEND_INTEGRATION.md` ghi chú scaffold)
+- Verify: `tsc --noEmit` sạch (0 lỗi); `npm test` 151/151 pass (community 12/12, không regress); `eslint` scope 0 errors (1 warning `itemTitle` có sẵn); `npm run build` pass; kiểm tra tĩnh 0 axios/fetch trong community api.
+- PROGRESS: task #3 (Comment/Vote UC-03) 20% → 70% (scaffold live-shape; test tay CM + BE READY còn lại).
+- Còn lại / rủi ro: (1) test tay CM-1..CM-4 + check Network 0 request; (2) nối live khi BE READY (task riêng: thay thân api, xóa fixtures khỏi bundle); (3) các file detail/profile đang có session khác sửa — phối hợp khi merge.
+
+---
+
+## [2026-09-16] — Scaffold Moderation-admin live-shape + fixture (spec 011-moderation-admin-integration, T001–T026)
+
+- Mục tiêu: đủ 7 tầng moderation-admin theo đúng contract dù BE còn `PLANNED`; API đọc fixture, 0 request live; 3 tabs mới trong `/admin/dashboard` hiện có.
+- Đã làm:
+  - `sync:swagger` thành công (71 endpoints) — `docs/api/moderation-admin.md` không lệch.
+  - `api-endpoints.ts` (+nhánh `MODERATION_ADMIN` 6 path kèm `TODO(BE-READY)`, chưa import ở đâu), `enums` (+`ModerationDecision`, `ReportStatus`, `ReportTargetType`).
+  - `features/moderation` mới: DTO đủ 6 ops/Model/Mapper/test (label Việt, audit entry, null-safe) + 12 tests; 3 fixtures bám contract; api fixture 6 hàm (kho bộ nhớ, delay 300ms, `USE_FIXTURES`, 0 axios/fetch — kiểm tra tĩnh); queries (Key Factory + 6 hooks, map sẵn `REPORT_REVIEW_CONFLICT`/`SELF_MODERATION_FORBIDDEN`/`PROTECTED_ADMIN_ACCOUNT`/`USER_STATUS_CONFLICT`/`COMMENT_NOT_MODERATABLE`); zod 3 schema (reason bắt buộc); 6 components (reports-table, resolve-dialog, mod-users-table, user-status-dialog, mod-comments-table, comment-status-dialog).
+  - Mở rộng `Tab` union + `parseTabParam` + mảng tabs dashboard (`reports`/`mod-users`/`mod-comments`, icon Flag/UserCog/MessagesSquare); KHÔNG đụng tab `users` sẵn có; giữ `Suspense`/`?tab=`/RBAC hiện có.
+  - Lỗi `eslint set-state-in-effect` ở dashboard là có sẵn (không thuộc diff) — không sửa, để session sở hữu xử lý.
+- File tạo/sửa:
+  - Tạo: `src/features/moderation/{types,mappers,api,queries,schemas,components,__fixtures__}`, `specs/011-moderation-admin-integration/**`
+  - Sửa: `common/constants/api-endpoints.ts`, `common/enums/index.ts`, `app/(admin)/admin/dashboard/page.tsx` (tabs only), `docs/{PROGRESS,WORK-LOG}.md` (+ `BACKEND_INTEGRATION.md` ghi chú scaffold)
+- Verify: `tsc --noEmit` sạch (0 lỗi); `npm test` 163/163 pass (moderation 12/12, không regress); `eslint` scope 0 errors (lỗi dashboard có sẵn, ngoài scope); `npm run build` pass; kiểm tra tĩnh 0 axios/fetch trong moderation api.
+- PROGRESS: task #10 (UC-11/16/17) 80% → 85% (scaffold moderation-admin; test tay MA + BE READY còn lại).
+- Còn lại / rủi ro: (1) test tay MA-1..MA-4 + check Network 0 request + verify MEMBER bị đá khỏi dashboard; (2) nối live khi BE READY; (3) dashboard đang có session khác sửa — phối hợp khi merge.
+
+---
+
+## [2026-09-16] — Scaffold Contributors live-shape + fixture (spec 012-contributor-applications, T001–T025)
+
+- Mục tiêu: đủ 7 tầng contributors theo đúng contract dù BE còn `PLANNED`; API đọc fixture, 0 request live; tuyệt đối không cấp quyền theo `requestedType`, không đụng luồng đăng ký của auth.
+- Đã làm:
+  - `sync:swagger` thành công (71 endpoints) — 2 file contract không lệch.
+  - `api-endpoints.ts` (+nhánh `CONTRIBUTOR`/`ADMIN_CONTRIBUTOR` kèm `TODO(BE-READY)`, chưa import ở đâu); dùng lại enum `ContributorType`/`ContributorApplicationStatus` (T003 rà soát, không tạo mới).
+  - `features/contributor` mới: DTO đủ 4 ops (review oneOf đúng BE)/Model/Mapper/test (label Việt, rút gọn experience, oneOf mapping) + 12 tests; fixtures (pending/history/cooldown/queue bám contract); api fixture 4 hàm (kho bộ nhớ, delay 300ms, `USE_FIXTURES`, 0 axios/fetch — kiểm tra tĩnh); queries (Key Factory + 4 hooks, map sẵn PENDING/REAPPLY/NOT_ALLOWED/TYPE_UNCHANGED/ALREADY_REVIEWED); zod (submit min 20 + links URI ≤5, review discriminatedUnion).
+  - US1: form nộp (chặn admin/PENDING/cooldown kèm ngày) + lịch sử + tab `contributor` ở `/profile` (query 1 lần truyền xuống, tránh setState-in-render).
+  - US2: queue-table (lọc/tìm kiếm) + review dialog (oneOf qua safeParse, không RHF vì discriminated union) + tab `contrib-apps` dashboard.
+  - US3: chặn đổi cùng nhóm (`CONTRIBUTOR_TYPE_UNCHANGED` ở form) + hiện người duyệt/ngày.
+  - Fix eslint `react-hooks/purity` (Date.now trong render → useState initializer).
+- File tạo/sửa:
+  - Tạo: `src/features/contributor/{types,mappers,api,queries,schemas,components,__fixtures__}`, `specs/012-contributor-applications/**`
+  - Sửa: `common/constants/api-endpoints.ts`, `app/(site)/profile/page.tsx` (tab only), `app/(admin)/admin/dashboard/page.tsx` (tab only), `docs/{PROGRESS,WORK-LOG}.md` (+ `BACKEND_INTEGRATION.md` ghi chú scaffold)
+- Verify: `tsc --noEmit` sạch (0 lỗi); `npm test` 175/175 pass (contributor 12/12, không regress); `eslint` scope 0 errors; `npm run build` pass; kiểm tra tĩnh 0 axios/fetch trong contributor api.
+- PROGRESS: task #10 (UC-11/16/17) 85% → 90% (scaffold contributors; test tay CA + BE READY còn lại).
+- Còn lại / rủi ro: (1) test tay CA-1..CA-4 + check Network 0 request; (2) nối live khi BE READY; (3) profile/dashboard đang có session khác sửa — phối hợp khi merge.
+
+---
+
+## [2026-09-17] — Scaffold Trust-safety leftovers (spec 013-trust-safety-leftovers, T001–T024)
+
+- Mục tiêu: quét sạch 2 endpoint còn sót (`POST /reports`, `DELETE behavior-history`) ở dạng scaffold fixture, 0 request live; thay nút toast giả ở privacy.
+- Đã làm:
+  - `sync:swagger` thành công (71 endpoints) — 2 file contract không lệch.
+  - `api-endpoints.ts` (+nhánh `SAFETY` kèm `TODO(BE-READY)`, chưa import ở đâu), `enums` (+`ReportReasonCode`, `ReportTargetKind` riêng, suýt ghi đè `CommentStatus` — đã khôi phục và kiểm kê đủ 37 enum).
+  - `features/safety` mới: DTO đủ 2 ops/Model/Mapper/test (6 nhãn Việt + fallback, UUID guard) + 12 tests; fixtures; api fixture 2 hàm (kho trùng, `USE_FIXTURES`, 0 axios/fetch — kiểm tra tĩnh); queries (2 hooks, map sẵn SELF/DUPLICATE, xóa xong invalidate home+consent cold-start); zod; 4 components (2 dialogs ở lại feature, nút báo cáo nâng lên `components/shared` để community dùng chéo đúng biên module).
+  - Gắn `ReportButton` vào 3 detail (authorId chặn tự báo cáo; video không có author id nên bỏ qua chặn) + `CommentItem`; thay nút toast giả privacy bằng `DeleteHistoryButton` (giữ nút download-data ngoài phạm vi).
+- File tạo/sửa:
+  - Tạo: `src/features/safety/{types,mappers,api,queries,schemas,components,__fixtures__}`, `src/components/shared/report-{button,dialog}.tsx`, `specs/013-trust-safety-leftovers/**`
+  - Sửa: `common/constants/api-endpoints.ts`, `common/enums/index.ts`, `features/{recipe,post,video}/components/*-detail-view.tsx`, `features/community/components/comment-item.tsx`, `app/(site)/profile/page.tsx` (nút xóa), `docs/{PROGRESS,WORK-LOG}.md` (+ `BACKEND_INTEGRATION.md` ghi chú scaffold)
+- Verify: `tsc --noEmit` sạch (0 lỗi); `npm test` 187/187 pass (safety 12/12, không regress); `eslint` scope 0 errors; `npm run build` pass; kiểm tra tĩnh 0 axios/fetch trong safety api; grep 0 chuỗi toast giả cũ.
+- PROGRESS: task #13 mới → 70% (scaffold; test tay TS + BE READY còn lại).
+- Còn lại / rủi ro: (1) test tay TS-1..TS-3 + check Network 0 request; (2) nối live khi BE READY; (3) detail/profile/comment đang có session khác sửa — phối hợp khi merge.
+
+---
+
+## [2026-09-17] — Scaffold Chat sharing/verification (spec 014-chat-sharing-verification, T001–T026)
+
+- Mục tiêu: quét sạch 3 endpoint chat còn sót (share/public/verify) ở dạng scaffold fixture, 0 request live; DTO suy luận vì không có schema swagger.
+- Đã làm:
+  - `sync:swagger` thành công (71 endpoints) — `docs/api/ai-chat.md` vẫn chỉ 5 private ops (3 endpoint mới vắng mặt, đúng PLANNED).
+  - `api-endpoints.ts` (+nhánh `CHAT_SHARING` kèm `TODO(BE-READY)`, chưa import ở đâu); dùng lại enum hiện có (T003 rà soát, không tạo mới).
+  - Mở rộng `features/chat`: DTO suy luận/Model/Mapper/test (shareUrl `?share=`, ẩn danh hóa, vai trò) + 12 tests; fixtures (share mở/thu hồi/public gồm 1 đã verify); api fixture 3 hàm (share lại sinh shareId mới, tìm kiếm client, `USE_FIXTURES`, 0 axios/fetch — kiểm tra tĩnh); queries (public KHÔNG gate auth, mutations + invalidate); zod (xác nhận phạm vi + note kiểm chứng).
+  - US1: nút chia sẻ qua slot `actions` có sẵn + dialog (xác nhận phạm vi bắt buộc, copy clipboard + fallback, thu hồi) + link Khám phá ở header.
+  - US2: route `/assistant/public` (list + view theo `?share=`, không AuthGuard, link 2 chiều).
+  - US3: huy hiệu + dialog kiểm chứng + nút gate theo role thật (ADMIN/đơn duyệt, không suy từ requestedType); mở rộng stream result `topicCodes` cho behavior event.
+  - Sự cố build giữa chừng: session khác refactor dashboard dở (mất const USERS/LOGS) — chờ họ sửa xong, build lại xanh; xác nhận tab wiring của mình còn nguyên (họ còn reuse moderation queries cho KPI).
+- File tạo/sửa:
+  - Tạo: `src/features/chat/{types/chat-sharing.*,mappers/chat-sharing.*,api/chat-sharing.api.ts,queries/chat-sharing.queries.ts,schemas/chat-sharing.schema.ts,components/share-*,public-*,verification-*,verify-* }`, `src/app/(site)/assistant/public/page.tsx`, `specs/014-chat-sharing-verification/**`
+  - Sửa: `common/constants/api-endpoints.ts`, `app/(site)/assistant/page.tsx` (nút share/verify + link Khám phá), `features/chat/{api/chat-stream.ts,queries/chat.queries.ts}` (topicCodes), `docs/{PROGRESS,WORK-LOG}.md` (+ `BACKEND_INTEGRATION.md` ghi chú scaffold)
+- Verify: `tsc --noEmit` sạch (0 lỗi); `npm test` 200/200 pass (sharing 12/12, không regress); `eslint` scope 0 errors; `npm run build` pass (gồm `/assistant/public`); kiểm tra tĩnh 0 axios/fetch trong sharing api.
+- PROGRESS: task #7 (UC-07) giữ 95% (scaffold sharing/verify; test tay CS + BE READY còn lại).
+- Còn lại / rủi ro: (1) test tay CS-1..CS-4 + check Network 0 request + 2 vai; (2) reconfirm shape 3 endpoint + nối live khi BE READY; (3) assistant page đang có session khác sửa — phối hợp khi merge.
+
+---
+
+## [2026-09-17] — Scaffold Notifications (spec 015-notifications, T001–T022)
+
+- Mục tiêu: đủ 7 tầng notifications theo suy luận contract dù BE còn `PLANNED` (không có schema swagger); chuông header + panel + đánh dấu, 0 request live.
+- Đã làm:
+  - `sync:swagger` thành công (71 endpoints) — xác nhận vẫn chưa có file tag notifications.
+  - `api-endpoints.ts` (+nhánh `NOTIFICATIONS` kèm `TODO(BE-READY)`, chưa import ở đâu); dùng string union + fallback, không tạo enum mới.
+  - `features/notification` mới: DTO suy luận/Model/Mapper/test (4 nhãn loại + fallback, `timeAgo` Việt, đếm capped `9+`, link ngoài → null) + 12 tests; fixtures đa loại/trạng thái; api fixture 3 hàm (kho bộ nhớ, delay 300ms, `USE_FIXTURES`, 0 axios/fetch — kiểm tra tĩnh); queries (Key Factory, list gate member + polling 60s dừng tab ẩn, mark-read lạc quan + rollback); 3 components (bell badge capped + dropdown panel, panel tìm điều hướng + mark-all, item).
+  - Khôi phục chuông ở `site-header.tsx` thay khối comment-out (xóa import `Bell` thừa, giữ style); khách không thấy chuông/không request.
+- File tạo/sửa:
+  - Tạo: `src/features/notification/{types,mappers,api,queries,components,__fixtures__}`, `specs/015-notifications/**`
+  - Sửa: `common/constants/api-endpoints.ts`, `components/layout/site-header.tsx` (chuông), `docs/{PROGRESS,WORK-LOG}.md` (+ `BACKEND_INTEGRATION.md` ghi chú scaffold)
+- Verify: `tsc --noEmit` sạch (0 lỗi); `npm test` 212/212 pass (notification 12/12, không regress); `eslint` scope 0 errors (xóa helper chết + unused); `npm run build` pass; kiểm tra tĩnh 0 axios/fetch trong notification api.
+- PROGRESS: task #14 mới → 70% (scaffold; test tay NT + BE READY còn lại).
+- Còn lại / rủi ro: (1) test tay NT-1..NT-3 + check Network 0 request + 2 vai; (2) reconfirm shape 3 endpoint + nối live khi BE READY; (3) header đang có session khác sửa — phối hợp khi merge.
+
+
