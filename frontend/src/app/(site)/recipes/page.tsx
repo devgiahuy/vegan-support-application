@@ -2,7 +2,16 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Search, Home, ChevronRight, SlidersHorizontal, Sparkles, PlusCircle } from 'lucide-react';
+import {
+  Search,
+  Home,
+  ChevronRight,
+  SlidersHorizontal,
+  Sparkles,
+  PlusCircle,
+  ShieldCheck,
+} from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +23,8 @@ import { CategoryFilterList } from '@/features/category/components/category-filt
 import { findCategoryById } from '@/features/category/utils/flatten-categories';
 import { useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
 import { RecipeCard } from '@/features/recipe/components/recipe-card';
+import { useAuthStore } from '@/store/useAuthStore';
+import { UserRole } from '@/common/enums';
 
 const TIMES = ['Tất cả thời gian', 'Dưới 15 phút', '15 – 30 phút', '30 – 60 phút', 'Trên 1 giờ'];
 const DIFFICULTIES = [
@@ -23,11 +34,32 @@ const DIFFICULTIES = [
   { label: 'Nâng cao', value: 'HARD' },
 ];
 
+function getDietPatternLabel(pattern: string | null | undefined): string {
+  switch (pattern) {
+    case 'VEGAN':
+      return 'Thuần chay';
+    case 'LACTO_OVO':
+      return 'Chay có trứng & sữa';
+    case 'LACTO':
+      return 'Chay có sữa';
+    case 'OVO':
+      return 'Chay có trứng';
+    case 'PESCATARIAN':
+      return 'Ăn chay kèm cá';
+    case 'FLEXITARIAN':
+      return 'Bán chay (Linh hoạt)';
+    default:
+      return pattern || 'Chay';
+  }
+}
+
 export default function RecipeDiscoveryPage() {
   const [query, setQuery] = React.useState('');
   const [time, setTime] = React.useState('Tất cả thời gian');
   const [difficulty, setDifficulty] = React.useState('');
   const [checkedIds, setCheckedIds] = React.useState<string[]>([]);
+  const { user, isAuthenticated } = useAuthStore();
+  const isModerator = user?.role === UserRole.ADMIN || user?.role === UserRole.CONTRIBUTOR;
 
   const {
     data: categoryTree = [],
@@ -238,6 +270,62 @@ export default function RecipeDiscoveryPage() {
             </h1>
           </div>
 
+          {/* Banner thông báo bộ lọc an toàn cá nhân hóa theo hồ sơ */}
+          {recipesPagination?.metadata?.appliedConstraints?.authenticated && (
+            <div className="mt-4 rounded-2xl border border-emerald-500/25 bg-emerald-50/60 dark:bg-emerald-950/25 p-4 text-sm shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start sm:items-center gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-semibold text-foreground text-sm">
+                        Bộ lọc an toàn tài khoản:
+                      </span>
+                      {recipesPagination.metadata.appliedConstraints.dietPattern && (
+                        <Badge
+                          variant="outline"
+                          className="border-emerald-600/30 text-emerald-700 dark:text-emerald-300 bg-emerald-100/50 dark:bg-emerald-900/40 font-medium text-xs"
+                        >
+                          {getDietPatternLabel(
+                            recipesPagination.metadata.appliedConstraints.dietPattern
+                          )}
+                        </Badge>
+                      )}
+                      {recipesPagination.metadata.appliedConstraints.allergyCount > 0 && (
+                        <Badge variant="secondary" className="text-xs">
+                          Tránh {recipesPagination.metadata.appliedConstraints.allergyCount} chất dị
+                          ứng
+                        </Badge>
+                      )}
+                      {recipesPagination.metadata.appliedConstraints.ingredientExclusionCount >
+                        0 && (
+                        <Badge variant="secondary" className="text-xs">
+                          Kiêng{' '}
+                          {recipesPagination.metadata.appliedConstraints.ingredientExclusionCount}{' '}
+                          nguyên liệu
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
+                      Hệ thống tự động bảo vệ bạn: Chỉ hiển thị các món ăn có nguyên liệu chuẩn hóa
+                      an toàn và phù hợp với hồ sơ ăn kiêng của bạn.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 rounded-xl h-9 text-xs"
+                >
+                  <Link href="/profile">Quản lý hồ sơ</Link>
+                </Button>
+              </div>
+            </div>
+          )}
+
           {/* 4 Trạng thái: Loading, Error, Empty, Success */}
           <div className="mt-5">
             {isRecipesLoading ? (
@@ -264,27 +352,80 @@ export default function RecipeDiscoveryPage() {
                 </Button>
               </div>
             ) : recipes.length === 0 ? (
-              <EmptyState
-                title="Chưa có công thức nào"
-                description={
-                  query.trim()
-                    ? `Không tìm thấy công thức phù hợp với từ khóa "${query.trim()}". Hãy thử từ khóa khác.`
-                    : 'Không tìm thấy công thức nào phù hợp với bộ lọc hiện tại.'
-                }
-                action={
-                  <Button
-                    variant="outline"
-                    className="mt-2 rounded-xl"
-                    onClick={() => {
-                      setCheckedIds([]);
-                      setDifficulty('');
-                      setQuery('');
-                    }}
-                  >
-                    Xóa tất cả bộ lọc
-                  </Button>
-                }
-              />
+              <div className="space-y-4">
+                <EmptyState
+                  title={
+                    recipesPagination?.metadata?.appliedConstraints?.authenticated
+                      ? 'Không có món phù hợp với hồ sơ an toàn hiện tại'
+                      : 'Chưa có công thức nào'
+                  }
+                  description={
+                    query.trim()
+                      ? `Không tìm thấy công thức phù hợp với từ khóa "${query.trim()}". Hãy thử từ khóa khác.`
+                      : recipesPagination?.metadata?.appliedConstraints?.authenticated
+                        ? `Hiện tại không có món nào vừa vặn với cài đặt chế độ ăn (${recipesPagination.metadata.appliedConstraints.dietPattern ? getDietPatternLabel(recipesPagination.metadata.appliedConstraints.dietPattern) : 'của bạn'}${recipesPagination.metadata.appliedConstraints.allergyCount > 0 ? `, tránh ${recipesPagination.metadata.appliedConstraints.allergyCount} dị ứng` : ''}). Các món có nguyên liệu tự do chưa chuẩn hóa hoặc chứa thành phần kiêng kỵ sẽ được ẩn.`
+                        : 'Kho công thức hiện chưa có bài viết xuất bản nào phù hợp với bộ lọc hiện tại.'
+                  }
+                  action={
+                    <div className="flex flex-wrap items-center justify-center gap-2 mt-3">
+                      <Button
+                        variant="outline"
+                        className="rounded-full"
+                        onClick={() => {
+                          setCheckedIds([]);
+                          setDifficulty('');
+                          setQuery('');
+                        }}
+                      >
+                        Xóa tất cả bộ lọc
+                      </Button>
+                      <Button asChild className="rounded-full gap-1.5">
+                        <Link href="/recipes/new">
+                          <PlusCircle className="h-4 w-4" /> Đăng công thức mới
+                        </Link>
+                      </Button>
+                      {isModerator && (
+                        <Button asChild variant="secondary" className="rounded-full">
+                          <Link
+                            href={
+                              user?.role === UserRole.ADMIN
+                                ? '/admin/dashboard?tab=queue'
+                                : '/contributor/dashboard'
+                            }
+                          >
+                            Hàng chờ duyệt bài
+                          </Link>
+                        </Button>
+                      )}
+                    </div>
+                  }
+                />
+                {isAuthenticated && (
+                  <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-center text-xs text-muted-foreground max-w-xl mx-auto space-y-2">
+                    <p className="leading-relaxed">
+                      💡 <strong>Tại sao khách thấy nhiều món hơn bạn?</strong> Khi bạn đăng nhập,
+                      hệ thống tự động lọc bỏ các món chứa chất dị ứng hoặc nguyên liệu chưa được
+                      kiểm định an toàn theo hồ sơ cá nhân. Bạn có thể kiểm tra hoặc điều chỉnh cài
+                      đặt tại{' '}
+                      <Link href="/profile" className="font-semibold text-primary underline">
+                        Cài đặt hồ sơ ăn kiêng
+                      </Link>
+                      .
+                    </p>
+                    <p className="leading-relaxed border-t border-primary/10 pt-2">
+                      Nếu bạn vừa tạo công thức mới, bài viết cần qua bước phê duyệt từ chuyên gia
+                      trước khi xuất bản. Theo dõi trạng thái tại{' '}
+                      <Link
+                        href="/profile?tab=posts"
+                        className="font-semibold text-primary underline"
+                      >
+                        Hồ sơ › Bài viết của tôi
+                      </Link>
+                      .
+                    </p>
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {recipes.map((recipe, index) => (
