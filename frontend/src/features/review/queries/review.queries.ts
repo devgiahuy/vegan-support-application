@@ -31,6 +31,9 @@ export function useApprovePostMutation() {
       reviewApi.approvePost(postId, reason),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: REVIEW_QUEUE_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: ['recipes'] });
+      queryClient.invalidateQueries({ queryKey: ['articles'] });
+      queryClient.invalidateQueries({ queryKey: ['videos'] });
       toast.success('Đã duyệt bài viết!', {
         description: 'Bài viết đã được xuất bản công khai.',
       });

@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { isAllowedImageHost } from '@/lib/safe-image';
 
 interface SafeImageProps {
-  src: string;
+  src?: string | null;
   alt: string;
   /** Ảnh dự phòng khi `src` 404 (thumbnail YouTube giả, host lạ, file đã xoá...). */
   fallbackSrc: string;

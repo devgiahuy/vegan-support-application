@@ -31,6 +31,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { VoteControl } from '@/components/shared/vote-control';
 import { SafeImage } from '@/components/shared/safe-image';
 import { CommentSection } from '@/components/shared/comment-section';
+import { CommunitySummary } from '@/features/community/components/community-summary';
+import { VoteButton } from '@/features/community/components/vote-button';
+import { ReportButton } from '@/components/shared/report-button';
+import { ReportTargetKind } from '@/common/enums';
 import { PostCard } from './post-card';
 import { DeletePostDialog } from './delete-post-dialog';
 import type { Post, Article } from '../types/post.model';
@@ -491,8 +495,17 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
           </Card>
 
           {/* UC-03: Comment Section */}
-          <div className="pt-8">
-            <CommentSection itemTitle={post.title} itemType="bài viết" />
+          <div className="space-y-3 pt-8">
+            <div className="flex flex-wrap items-center gap-2">
+              <CommunitySummary postId={post.id} />
+              <VoteButton postId={post.id} />
+              <ReportButton
+                targetKind={ReportTargetKind.POST}
+                targetId={post.id}
+                authorId={post.author.id}
+              />
+            </div>
+            <CommentSection postId={post.id} itemType="bài viết" />
           </div>
         </article>
       </div>

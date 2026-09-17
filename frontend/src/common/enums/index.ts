@@ -167,3 +167,106 @@ export enum ModerationPriority {
   HIGH = 'HIGH',
   URGENT = 'URGENT',
 }
+
+/** Mục tiêu thực đơn tuần (`GenerateMealPlanRequest.goal`). */
+export enum MealPlanGoal {
+  MAINTAIN = 'MAINTAIN',
+  LOSE = 'LOSE',
+  GAIN = 'GAIN',
+}
+
+/** Chất lượng dữ liệu dinh dưỡng của thực đơn (`MealPlanResponse.nutritionDataQuality`). */
+export enum NutritionDataQuality {
+  COMPLETE = 'COMPLETE',
+  PARTIAL = 'PARTIAL',
+  UNAVAILABLE = 'UNAVAILABLE',
+}
+
+/** Bữa trong ngày của ô thực đơn. */
+export enum MealType {
+  BREAKFAST = 'BREAKFAST',
+  LUNCH = 'LUNCH',
+  DINNER = 'DINNER',
+}
+
+/** Vai trò tin nhắn chat. */
+export enum ChatRole {
+  USER = 'USER',
+  ASSISTANT = 'ASSISTANT',
+}
+
+/** Trạng thái tin nhắn chat (`COMPLETE` từ BE; `STREAMING`/`FAILED` chỉ ở local). */
+export enum ChatMessageStatus {
+  COMPLETE = 'COMPLETE',
+  STREAMING = 'STREAMING',
+  FAILED = 'FAILED',
+}
+
+/** Giá trị đánh giá câu trả lời (`ChatFeedbackRequest.value`). */
+export enum FeedbackValue {
+  UP = 'UP',
+  DOWN = 'DOWN',
+}
+
+/** Loại sở hữu phiên chat. */
+export enum ChatOwnerType {
+  AUTHENTICATED = 'AUTHENTICATED',
+  GUEST = 'GUEST',
+}
+
+/** Loại behavior event (`CreateBehaviorEventRequest.type`). */
+export enum BehaviorEventType {
+  SEARCH = 'SEARCH',
+  VIEW_RECIPE = 'VIEW_RECIPE',
+  BOOKMARK = 'BOOKMARK',
+  RATE = 'RATE',
+  CHAT_TOPIC = 'CHAT_TOPIC',
+  ACCEPT_MEAL = 'ACCEPT_MEAL',
+  SWAP_MEAL = 'SWAP_MEAL',
+  REJECT_MEAL = 'REJECT_MEAL',
+}
+
+/** Trạng thái bình luận cộng đồng. */
+export enum CommentStatus {
+  VISIBLE = 'VISIBLE',
+  HIDDEN = 'HIDDEN',
+  DELETED = 'DELETED',
+}
+
+/** Loại mục tiêu bị báo cáo (user-facing, khác enum admin). */
+export enum ReportTargetKind {
+  POST = 'POST',
+  COMMENT = 'COMMENT',
+}
+
+/** Mã lý do báo cáo vi phạm (`createModerationReport.reasonCode`). */
+export enum ReportReasonCode {
+  SPAM = 'SPAM',
+  HARMFUL_HEALTH = 'HARMFUL_HEALTH',
+  HARASSMENT = 'HARASSMENT',
+  MISINFORMATION = 'MISINFORMATION',
+  COPYRIGHT = 'COPYRIGHT',
+  OTHER = 'OTHER',
+}
+
+/** Quyết định kiểm duyệt báo cáo (`resolveModerationReportAdmin.decision`). */
+export enum ModerationDecision {
+  NO_VIOLATION = 'NO_VIOLATION',
+  WARN = 'WARN',
+  HIDE = 'HIDE',
+  RESTORE = 'RESTORE',
+  DEMOTE = 'DEMOTE',
+  BAN = 'BAN',
+}
+
+/** Trạng thái báo cáo kiểm duyệt. */
+export enum ReportStatus {
+  OPEN = 'OPEN',
+  RESOLVED = 'RESOLVED',
+}
+
+/** Loại mục tiêu bị báo cáo. */
+export enum ReportTargetType {
+  POST = 'POST',
+  COMMENT = 'COMMENT',
+}

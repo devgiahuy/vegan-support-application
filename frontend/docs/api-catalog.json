@@ -1,17 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
-  "source": "../backend/openapi.json",
-  "generatedAt": "2026-09-16T08:07:05.561Z",
+  "source": "http://localhost:4000/api-docs.json",
+  "generatedAt": "2026-09-17T03:57:40.072Z",
   "stats": {
     "operations": 71,
     "groups": 17,
     "schemas": 70
-  "source": "http://localhost:4000/api-docs.json",
-  "generatedAt": "2026-09-15T16:27:39.407Z",
-  "stats": {
-    "operations": 24,
-    "groups": 7,
-    "schemas": 26
   },
   "operations": [
     {
@@ -128,7 +122,8 @@
         "200": "ProfileResponse",
         "400": "ErrorResponse",
         "401": "ErrorResponse",
-        "403": "ErrorResponse"
+        "403": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -148,7 +143,8 @@
         "200": "HealthProfileResponse",
         "400": "ErrorResponse",
         "401": "ErrorResponse",
-        "403": "ErrorResponse"
+        "403": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -169,6 +165,7 @@
         "400": "ErrorResponse",
         "401": "ErrorResponse",
         "403": "ErrorResponse",
+        "423": "ErrorResponse",
         "503": "ErrorResponse"
       }
     },
@@ -191,6 +188,7 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "409": "ErrorResponse",
+        "423": "ErrorResponse",
         "503": "ErrorResponse"
       }
     },
@@ -212,7 +210,8 @@
         "400": "ErrorResponse",
         "401": "ErrorResponse",
         "403": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -287,7 +286,10 @@
       "request": {
         "schema": {
           "type": "object",
-          "required": ["name", "type"],
+          "required": [
+            "name",
+            "type"
+          ],
           "properties": {
             "name": {
               "type": "string"
@@ -297,10 +299,17 @@
             },
             "type": {
               "type": "string",
-              "enum": ["FOOD_TYPE", "RECIPE_GROUP", "CONTENT_TOPIC"]
+              "enum": [
+                "FOOD_TYPE",
+                "RECIPE_GROUP",
+                "CONTENT_TOPIC"
+              ]
             },
             "parentId": {
-              "type": ["string", "null"],
+              "type": [
+                "string",
+                "null"
+              ],
               "format": "uuid"
             },
             "sortOrder": {
@@ -317,7 +326,8 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -346,10 +356,17 @@
             },
             "type": {
               "type": "string",
-              "enum": ["FOOD_TYPE", "RECIPE_GROUP", "CONTENT_TOPIC"]
+              "enum": [
+                "FOOD_TYPE",
+                "RECIPE_GROUP",
+                "CONTENT_TOPIC"
+              ]
             },
             "parentId": {
-              "type": ["string", "null"],
+              "type": [
+                "string",
+                "null"
+              ],
               "format": "uuid"
             },
             "sortOrder": {
@@ -366,7 +383,8 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -396,7 +414,8 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -515,7 +534,10 @@
       "request": {
         "schema": {
           "type": "object",
-          "required": ["canonicalName", "foodGroup"],
+          "required": [
+            "canonicalName",
+            "foodGroup"
+          ],
           "properties": {
             "canonicalName": {
               "type": "string"
@@ -544,7 +566,10 @@
               "type": "array",
               "items": {
                 "type": "object",
-                "required": ["dietPattern", "compatible"],
+                "required": [
+                  "dietPattern",
+                  "compatible"
+                ],
                 "properties": {
                   "dietPattern": {
                     "type": "string",
@@ -562,7 +587,11 @@
               "type": "array",
               "items": {
                 "type": "object",
-                "required": ["tradition", "warningCode", "label"],
+                "required": [
+                  "tradition",
+                  "warningCode",
+                  "label"
+                ],
                 "properties": {
                   "tradition": {
                     "type": "string",
@@ -591,7 +620,8 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -631,7 +661,10 @@
             },
             "status": {
               "type": "string",
-              "enum": ["ACTIVE", "ARCHIVED"]
+              "enum": [
+                "ACTIVE",
+                "ARCHIVED"
+              ]
             },
             "allergenCodes": {
               "type": "array",
@@ -643,7 +676,10 @@
               "type": "array",
               "items": {
                 "type": "object",
-                "required": ["dietPattern", "compatible"],
+                "required": [
+                  "dietPattern",
+                  "compatible"
+                ],
                 "properties": {
                   "dietPattern": {
                     "type": "string",
@@ -661,7 +697,11 @@
               "type": "array",
               "items": {
                 "type": "object",
-                "required": ["tradition", "warningCode", "label"],
+                "required": [
+                  "tradition",
+                  "warningCode",
+                  "label"
+                ],
                 "properties": {
                   "tradition": {
                     "type": "string",
@@ -690,7 +730,8 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -714,7 +755,8 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -734,7 +776,9 @@
       "request": {
         "schema": {
           "type": "object",
-          "required": ["alias"],
+          "required": [
+            "alias"
+          ],
           "properties": {
             "alias": {
               "type": "string"
@@ -750,7 +794,8 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {
@@ -780,7 +825,1378 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
-        "409": "ErrorResponse"
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts",
+      "group": "Content",
+      "summary": "List nội dung published",
+      "operationId": "listPublishedPosts",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "type",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "category",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "maxCookTimeMinutes",
+          "required": false,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        {
+          "in": "query",
+          "name": "difficulty",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "dietPattern",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "ingredientIds",
+          "required": false,
+          "type": "array<string>"
+        },
+        {
+          "in": "query",
+          "name": "forDate",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "PostListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts",
+      "group": "Content",
+      "summary": "Tạo Recipe, Blog hoặc Video",
+      "operationId": "createPost",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "CreatePostRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "PostResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/{id}/related",
+      "group": "Content",
+      "summary": "Lấy related Recipe, Blog và Video",
+      "operationId": "getRelatedPosts",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "limitPerType",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "forDate",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "RelatedPostsResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/{idOrSlug}",
+      "group": "Content",
+      "summary": "Lấy content detail theo UUID hoặc slug",
+      "operationId": "getPost",
+      "params": [
+        {
+          "in": "path",
+          "name": "idOrSlug",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "PostResponse",
+        "400": "ErrorResponse",
+        "404": "ErrorResponse",
+        "410": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/posts/{id}",
+      "group": "Content",
+      "summary": "Tạo revision mới cho content thuộc quyền sở hữu",
+      "operationId": "updatePost",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "UpdatePostRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "PostResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "410": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/posts/{id}",
+      "group": "Content",
+      "summary": "Soft-delete content thuộc quyền sở hữu",
+      "operationId": "deletePost",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "expectedVersion",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "DeletePostResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/uploads/signature",
+      "group": "Uploads",
+      "summary": "Tạo Cloudinary signed-upload parameters",
+      "operationId": "createUploadSignature",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "UploadSignatureRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "UploadSignatureResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/{id}/comments",
+      "group": "Community",
+      "summary": "List thread comment của published content",
+      "operationId": "listPostComments",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "order",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "CommunityCommentListResponse",
+        "400": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/{id}/comments",
+      "group": "Community",
+      "summary": "Tạo comment hoặc reply một tầng",
+      "operationId": "createPostComment",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "content"
+          ],
+          "properties": {
+            "content": {
+              "type": "string"
+            },
+            "parentId": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "CommunityCommentResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "423": "ErrorResponse",
+        "429": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/comments/{id}",
+      "group": "Community",
+      "summary": "Sửa comment của chính mình",
+      "operationId": "updateOwnComment",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "content"
+          ],
+          "properties": {
+            "content": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "CommunityCommentResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse",
+        "429": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/comments/{id}",
+      "group": "Community",
+      "summary": "Soft-delete comment của chính mình",
+      "operationId": "deleteOwnComment",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "CommunityCommentResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse",
+        "429": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/{id}/community-summary",
+      "group": "Community",
+      "summary": "Lấy aggregate community và viewer state",
+      "operationId": "getPostCommunitySummary",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "CommunitySummaryResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/posts/{id}/vote",
+      "group": "Community",
+      "summary": "Upvote content idempotent",
+      "operationId": "putPostVote",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "CommunityVoteResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "423": "ErrorResponse",
+        "429": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/posts/{id}/vote",
+      "group": "Community",
+      "summary": "Gỡ upvote idempotent",
+      "operationId": "deletePostVote",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "CommunityVoteResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "423": "ErrorResponse",
+        "429": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/posts/{id}/rating",
+      "group": "Community",
+      "summary": "Upsert taste/difficulty rating cho Recipe",
+      "operationId": "putRecipeRating",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "taste",
+            "difficulty"
+          ],
+          "properties": {
+            "taste": {
+              "type": "integer"
+            },
+            "difficulty": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "CommunityRatingResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "423": "ErrorResponse",
+        "429": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/posts/{id}/bookmark",
+      "group": "Community",
+      "summary": "Bookmark Recipe/Video idempotent",
+      "operationId": "putPostBookmark",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "CommunityBookmarkResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "423": "ErrorResponse",
+        "429": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/posts/{id}/bookmark",
+      "group": "Community",
+      "summary": "Gỡ bookmark idempotent",
+      "operationId": "deletePostBookmark",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "CommunityBookmarkResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "423": "ErrorResponse",
+        "429": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/users/me/bookmarks",
+      "group": "Community",
+      "summary": "List bookmark Recipe/Video của current user",
+      "operationId": "listOwnBookmarks",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "type",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "CommunityBookmarkListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/contributor-applications",
+      "group": "Contributors",
+      "summary": "Gửi Contributor application hoặc yêu cầu đổi subtype",
+      "operationId": "submitContributorApplication",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "requestedType",
+            "experience"
+          ],
+          "properties": {
+            "requestedType": {
+              "type": "string",
+              "enum": [
+                "EXPERIENCED_PRACTITIONER",
+                "NUTRITION_EXPERT"
+              ]
+            },
+            "experience": {
+              "type": "string"
+            },
+            "referenceLinks": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uri"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "ContributorApplicationResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/contributor-applications/me",
+      "group": "Contributors",
+      "summary": "List lịch sử Contributor application của current user",
+      "operationId": "listOwnContributorApplications",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "ContributorApplicationListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/contributor-applications",
+      "group": "Contributor Admin",
+      "summary": "Admin list/filter Contributor applications",
+      "operationId": "listContributorApplicationsAdmin",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "requestedType",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "source",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "ContributorApplicationListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/contributor-applications/{id}/review",
+      "group": "Contributor Admin",
+      "summary": "Admin approve/reject Contributor application",
+      "operationId": "reviewContributorApplicationAdmin",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "decision",
+                "contributorType",
+                "approvalBasis",
+                "reviewNote"
+              ],
+              "properties": {
+                "decision": {
+                  "type": "string",
+                  "enum": [
+                    "APPROVE"
+                  ]
+                },
+                "contributorType": {
+                  "type": "string",
+                  "enum": [
+                    "EXPERIENCED_PRACTITIONER",
+                    "NUTRITION_EXPERT"
+                  ]
+                },
+                "approvalBasis": {
+                  "type": "string"
+                },
+                "reviewNote": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "decision",
+                "reviewNote"
+              ],
+              "properties": {
+                "decision": {
+                  "type": "string",
+                  "enum": [
+                    "REJECT"
+                  ]
+                },
+                "reviewNote": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "ContributorApplicationResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/review-queue/posts",
+      "group": "Moderation",
+      "summary": "List post revisions awaiting editorial or Admin moderation review",
+      "operationId": "listPostReviewQueue",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "type",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "priority",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "ReviewQueueListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/review-queue/posts/{id}/approve",
+      "group": "Moderation",
+      "summary": "Approve latest post revision",
+      "operationId": "approvePostReview",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "reason"
+          ],
+          "properties": {
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "ReviewQueueItemResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/review-queue/posts/{id}/reject",
+      "group": "Moderation",
+      "summary": "Reject latest post revision",
+      "operationId": "rejectPostReview",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "reason"
+          ],
+          "properties": {
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "ReviewQueueItemResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/reports",
+      "group": "Moderation",
+      "summary": "Report a visible post or comment",
+      "operationId": "createModerationReport",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "targetType",
+            "targetId",
+            "reasonCode"
+          ],
+          "properties": {
+            "targetType": {
+              "type": "string",
+              "enum": [
+                "POST",
+                "COMMENT"
+              ]
+            },
+            "targetId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "reasonCode": {
+              "type": "string",
+              "enum": [
+                "SPAM",
+                "HARMFUL_HEALTH",
+                "HARASSMENT",
+                "MISINFORMATION",
+                "COPYRIGHT",
+                "OTHER"
+              ]
+            },
+            "details": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "ModerationReportResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/reports",
+      "group": "Moderation Admin",
+      "summary": "Admin list reports",
+      "operationId": "listModerationReportsAdmin",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "priority",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "targetType",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "ModerationReportListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/reports/{id}/resolve",
+      "group": "Moderation Admin",
+      "summary": "Resolve all active reports for the same target with an Admin decision",
+      "operationId": "resolveModerationReportAdmin",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "decision",
+            "reason"
+          ],
+          "properties": {
+            "decision": {
+              "type": "string",
+              "enum": [
+                "NO_VIOLATION",
+                "WARN",
+                "HIDE",
+                "RESTORE",
+                "DEMOTE",
+                "BAN"
+              ]
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "ModerationReportResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/users",
+      "group": "Moderation Admin",
+      "summary": "Admin search and filter users",
+      "operationId": "listUsersAdmin",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "role",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "AdminModerationUserListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/users/{id}/status",
+      "group": "Moderation Admin",
+      "summary": "Lock, unlock, ban, unban or delete a user account",
+      "operationId": "updateUserStatusAdmin",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "status",
+            "reason"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "LOCKED",
+                "BANNED",
+                "DELETED"
+              ]
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "AdminModerationUserResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/comments",
+      "group": "Moderation Admin",
+      "summary": "Admin list comments for moderation",
+      "operationId": "listCommentsAdmin",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "postId",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "authorId",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "AdminModerationCommentListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/comments/{id}/status",
+      "group": "Moderation Admin",
+      "summary": "Admin hide or restore a comment",
+      "operationId": "updateCommentStatusAdmin",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "status",
+            "reason"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "VISIBLE",
+                "HIDDEN"
+              ]
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "AdminModerationCommentResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/behavior-events",
+      "group": "Recommendations",
+      "summary": "Ghi nhận behavior event đã consent",
+      "operationId": "createBehaviorEvent",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "CreateBehaviorEventRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "BehaviorEventResponse",
+        "201": "BehaviorEventResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/users/me/personalization",
+      "group": "Recommendations",
+      "summary": "Đọc personalization consent",
+      "operationId": "getPersonalizationPreference",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "PersonalizationResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/users/me/personalization",
+      "group": "Recommendations",
+      "summary": "Bật hoặc tắt personalization",
+      "operationId": "updatePersonalizationPreference",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "UpdatePersonalizationRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "PersonalizationResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/users/me/behavior-history",
+      "group": "Recommendations",
+      "summary": "Xóa toàn bộ behavior history của chính mình",
+      "operationId": "deleteBehaviorHistory",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "DeleteBehaviorHistoryResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/recommendations/home",
+      "group": "Recommendations",
+      "summary": "Recommendation home đã áp hard constraints",
+      "operationId": "getHomeRecommendations",
+      "params": [
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "forDate",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "RecommendationResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
       }
     },
     {

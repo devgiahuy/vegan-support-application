@@ -195,4 +195,44 @@ describe('RecipeMapper', () => {
     expect(model.traditionWarnings?.[0].label).toBe('Kiêng ngũ vị tân');
     expect(model.dietCompatibilities?.[0].compatible).toBe(false);
   });
+
+  it('includes ingredientId when provided as valid UUID string', () => {
+    const validUuid = 'c56a4180-65aa-42ec-a945-5fd21dec0538';
+    const createDto = recipeMapper.toCreateDto({
+      title: 'Đậu hũ chiên sả',
+      category: 'cat-chien',
+      servings: 2,
+      ingredients: [{ ingredientId: validUuid, name: 'Đậu hũ', amount: 200, unit: 'g', notes: '' }],
+      steps: [{ stepNumber: 1, instruction: 'Chiên vàng đều' }],
+    });
+
+    expect(createDto.recipe.ingredients).toHaveLength(1);
+    expect(createDto.recipe.ingredients[0].ingredientId).toBe(validUuid);
+    expect(createDto.recipe.ingredients[0].displayName).toBe('Đậu hũ');
+  });
+
+  it('maps appliedConstraints in toPaginationFromEnvelope', () => {
+    const pagination = recipeMapper.toPaginationFromEnvelope([backendRecipeDto()], {
+      page: 1,
+      limit: 10,
+      total: 1,
+      totalPages: 1,
+      appliedConstraints: {
+        authenticated: true,
+        dietPattern: 'VEGAN',
+        allergyCount: 2,
+        ingredientExclusionCount: 1,
+        traditions: ['BUDDHIST'],
+        forDate: '2026-09-17',
+      },
+    });
+
+    expect(pagination.items).toHaveLength(1);
+    expect(pagination.metadata.appliedConstraints).toBeDefined();
+    expect(pagination.metadata.appliedConstraints?.authenticated).toBe(true);
+    expect(pagination.metadata.appliedConstraints?.dietPattern).toBe('VEGAN');
+    expect(pagination.metadata.appliedConstraints?.allergyCount).toBe(2);
+    expect(pagination.metadata.appliedConstraints?.ingredientExclusionCount).toBe(1);
+    expect(pagination.metadata.appliedConstraints?.traditions).toEqual(['BUDDHIST']);
+  });
 });

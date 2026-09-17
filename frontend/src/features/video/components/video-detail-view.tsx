@@ -24,6 +24,11 @@ import { SafeImage } from '@/components/shared/safe-image';
 import { VIDEO_FALLBACK_COVER, resolveVideoCover } from '@/lib/safe-image';
 import { VoteControl } from '@/components/shared/vote-control';
 import { CommentSection } from '@/components/shared/comment-section';
+import { CommunitySummary } from '@/features/community/components/community-summary';
+import { VoteButton } from '@/features/community/components/vote-button';
+import { BookmarkButton } from '@/features/community/components/bookmark-button';
+import { ReportButton } from '@/components/shared/report-button';
+import { ReportTargetKind } from '@/common/enums';
 import type { Video } from '../types/video.model';
 
 interface VideoDetailViewProps {
@@ -218,8 +223,14 @@ export function VideoDetailView({ video, relatedVideos }: VideoDetailViewProps) 
           )}
 
           {/* Comments & Discussion */}
-          <div className="pt-4">
-            <CommentSection itemTitle={video.title} itemType="video" />
+          <div className="space-y-3 pt-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <CommunitySummary postId={video.id} />
+              <VoteButton postId={video.id} />
+              <BookmarkButton postId={video.id} />
+              <ReportButton targetKind={ReportTargetKind.POST} targetId={video.id} />
+            </div>
+            <CommentSection postId={video.id} itemType="video" />
           </div>
         </div>
 

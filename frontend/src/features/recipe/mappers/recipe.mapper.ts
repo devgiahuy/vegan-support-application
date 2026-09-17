@@ -26,6 +26,7 @@ import type {
   DietCompatibilityDto,
   CreateRecipeRequestDto,
   UpdateRecipeRequestDto,
+  AppliedConstraintsDto,
 } from '../types/recipe.dto';
 import type { PostMediaDto, PostRevisionDto } from '@/features/post/types/post.dto';
 import type {
@@ -35,6 +36,7 @@ import type {
   NutritionFact,
   TraditionWarning,
   DietCompatibility,
+  RecipePaginationResult,
 } from '../types/recipe.model';
 
 function getDifficultyLabel(diff: RecipeDifficulty | string): string {
@@ -186,8 +188,14 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
 
   toPaginationFromEnvelope(
     data: (RecipeDetailDto | null | undefined)[] | null | undefined,
-    meta?: { page?: number; limit?: number; total?: number; totalPages?: number } | null
-  ): PaginationResult<Recipe> {
+    meta?: {
+      page?: number;
+      limit?: number;
+      total?: number;
+      totalPages?: number;
+      appliedConstraints?: AppliedConstraintsDto;
+    } | null
+  ): RecipePaginationResult {
     const items = this.toModelList(data);
     return {
       items,
@@ -196,6 +204,19 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
         limit: safeNumber(meta?.limit, 20),
         totalItems: safeNumber(meta?.total, items.length),
         totalPages: safeNumber(meta?.totalPages, 1),
+        appliedConstraints: meta?.appliedConstraints
+          ? {
+              authenticated: safeBoolean(meta.appliedConstraints.authenticated, false),
+              dietPattern: meta.appliedConstraints.dietPattern ?? null,
+              allergyCount: safeNumber(meta.appliedConstraints.allergyCount, 0),
+              ingredientExclusionCount: safeNumber(
+                meta.appliedConstraints.ingredientExclusionCount,
+                0
+              ),
+              traditions: safeArray<string>(meta.appliedConstraints.traditions),
+              forDate: safeString(meta.appliedConstraints.forDate, ''),
+            }
+          : undefined,
       },
     };
   }

@@ -82,15 +82,20 @@ export function LoginForm({
       )}
 
       <div className="space-y-1.5">
-        <Label htmlFor="login-email">Email hoặc Tên đăng nhập</Label>
+        <Label
+          htmlFor="login-email"
+          className="text-xs font-semibold uppercase tracking-wider text-[#718078] dark:text-neutral-300"
+        >
+          Email hoặc Tên đăng nhập
+        </Label>
         <div className="relative">
-          <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             id="login-email"
             type="email"
             autoComplete="email"
-            placeholder="vidu@chayxanh.vn"
-            className="pl-9"
+            placeholder="vidu@veggieconnect.vn"
+            className="h-12 rounded-xl pl-10 text-sm border-border/80 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
             {...form.register('email')}
           />
         </div>
@@ -101,7 +106,12 @@ export function LoginForm({
 
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <Label htmlFor="login-password">Mật khẩu</Label>
+          <Label
+            htmlFor="login-password"
+            className="text-xs font-semibold uppercase tracking-wider text-[#718078] dark:text-neutral-300"
+          >
+            Mật khẩu
+          </Label>
           <button
             type="button"
             onClick={() => onForgotPassword?.()}
@@ -111,20 +121,20 @@ export function LoginForm({
           </button>
         </div>
         <div className="relative">
-          <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             id="login-password"
             type={showPassword ? 'text' : 'password'}
             autoComplete="current-password"
             placeholder="••••••••"
-            className="px-9"
+            className="h-12 rounded-xl px-10 text-sm border-border/80 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
             {...form.register('password')}
           />
           <button
             type="button"
             aria-label="Hiện/ẩn mật khẩu"
             onClick={() => setShowPassword((v) => !v)}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
           >
             {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
@@ -134,16 +144,11 @@ export function LoginForm({
         )}
       </div>
 
-      {/* <label className="flex items-center gap-2 text-sm">
-        <input
-          type="checkbox"
-          defaultChecked
-          className="h-4 w-4 rounded border-input accent-primary"
-        />
-        Ghi nhớ đăng nhập trên thiết bị này
-      </label> */}
-
-      <Button type="submit" className="w-full gap-2 rounded-xl" disabled={loginMutation.isPending}>
+      <Button
+        type="submit"
+        className="h-12 w-full gap-2 rounded-xl font-semibold bg-primary hover:bg-primary/95 active:scale-[0.99] transition-all shadow-xs"
+        disabled={loginMutation.isPending}
+      >
         {loginMutation.isPending ? 'Đang xác thực...' : 'Đăng nhập'}
         <LogIn className="h-4 w-4" />
       </Button>

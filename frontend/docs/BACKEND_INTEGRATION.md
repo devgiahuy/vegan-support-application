@@ -238,19 +238,20 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 
 | Method | Path                                         | Status    | Backend updated | FE integrated         | Ghi chú                                                                            |
 | ------ | -------------------------------------------- | --------- | --------------- | --------------------- | ---------------------------------------------------------------------------------- |
-| POST   | `/contributor-applications`                  | `PLANNED` | —               | No                    | Member upgrade; không có certificate MVP                                           |
-| GET    | `/admin/contributor-applications`            | `PLANNED` | —               | No                    | Admin only                                                                         |
-| PATCH  | `/admin/contributor-applications/:id/review` | `PLANNED` | —               | No                    | Approve/reject + type + basis                                                      |
+| POST   | `/contributor-applications`                  | `READY`   | 2026-09-17      | Yes (2026-09-17)      | Member upgrade; không có certificate MVP; FE: `features/contributor` |
+| GET    | `/contributor-applications/me`               | `READY`   | 2026-09-17      | Yes (2026-09-17)      | Member xem lịch sử đơn; FE: `features/contributor` |
+| GET    | `/admin/contributor-applications`            | `READY`   | 2026-09-17      | Yes (2026-09-17)      | Admin only; hàng chờ duyệt; FE: `features/contributor` |
+| PATCH  | `/admin/contributor-applications/:id/review` | `READY`   | 2026-09-17      | Yes (2026-09-17)      | Approve/reject + type + basis; FE: `features/contributor` |
 | GET    | `/review-queue/posts`                        | `PLANNED` | —               | Yes (2026-09-16, chờ READY chính thức) | Contributor/Admin filtering; FE: `features/review` list + filter + pagination |
 | PATCH  | `/review-queue/posts/:id/approve`            | `PLANNED` | —               | Yes (2026-09-16, chờ READY chính thức) | Cấm self-approve; FE: dialog reason bắt buộc + chặn tự duyệt 2 lớp              |
 | PATCH  | `/review-queue/posts/:id/reject`             | `PLANNED` | —               | Yes (2026-09-16, chờ READY chính thức) | Reason required; FE: chung dialog + toast lý do cho tác giả                     |
 | POST   | `/reports`                                   | `PLANNED` | —               | No                    | One active report/user/target                                                      |
-| GET    | `/admin/reports`                             | `PLANNED` | —               | No                    | Admin only                                                                         |
-| PATCH  | `/admin/reports/:id/resolve`                 | `PLANNED` | —               | No                    | Audit required                                                                     |
-| GET    | `/admin/users`                               | `PLANNED` | —               | No                    | Search/filter/pagination                                                           |
-| PATCH  | `/admin/users/:id/status`                    | `PLANNED` | —               | No                    | Lock/ban/unban/delete rules                                                        |
-| GET    | `/admin/comments`                            | `PLANNED` | —               | No                    | Moderation list                                                                    |
-| PATCH  | `/admin/comments/:id/status`                 | `PLANNED` | —               | No                    | Hide/restore                                                                       |
+| GET    | `/admin/reports`                             | `READY`   | 2026-09-16      | Yes (2026-09-17) | Admin only; filter status/priority/targetType                                      |
+| PATCH  | `/admin/reports/:id/resolve`                 | `READY`   | 2026-09-16      | Yes (2026-09-17) | Audit required; reason min 10 chars; resolve gộp cùng target                       |
+| GET    | `/admin/users`                               | `READY`   | 2026-09-16      | Yes (2026-09-17) | Search/filter/pagination                                                           |
+| PATCH  | `/admin/users/:id/status`                    | `READY`   | 2026-09-16      | Yes (2026-09-17) | Lock/ban/unban/delete rules; chặn self & protected admin                           |
+| GET    | `/admin/comments`                            | `READY`   | 2026-09-16      | Yes (2026-09-17) | Moderation list; filter status/post/author                                         |
+| PATCH  | `/admin/comments/:id/status`                 | `READY`   | 2026-09-16      | Yes (2026-09-17) | Hide/restore; chặn comment đã bị tác giả xóa                                       |
 | GET    | `/categories`                                | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Public active tree tối đa hai tầng; filter `type`                                  |
 | GET    | `/admin/categories`                          | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Admin only; pagination; xem cả archived                                            |
 | POST   | `/admin/categories`                          | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Admin only; parent/child cùng type                                                 |
@@ -272,13 +273,15 @@ review proposal vẫn là `PLANNED` cho tới Phase 07; frontend chưa được 
 
 | Method | Path                                 | Status  | Backend updated | FE integrated | Ghi chú                                                                   |
 | ------ | ------------------------------------ | ------- | --------------- | ------------- | ------------------------------------------------------------------------- |
-| POST   | `/meal-plans/generate`               | `READY` | 2026-09-16      | No            | Auth; tạo version mới 7×3, deterministic seed + idempotency               |
-| GET    | `/meal-plans`                        | `READY` | 2026-09-16      | No            | Auth; own plans, pagination/filter tuần                                   |
-| GET    | `/meal-plans/:id`                    | `READY` | 2026-09-16      | No            | Auth + ownership; 21 slots, snapshots, warnings và shopping list          |
-| PATCH  | `/meal-plans/:id/items/:itemId/swap` | `READY` | 2026-09-16      | No            | Auth + ownership; expectedVersion/idempotency; hard-safe candidate        |
-| DELETE | `/meal-plans/:id`                    | `READY` | 2026-09-16      | No            | Auth + ownership; idempotent soft-delete với expectedVersion              |
-| POST   | `/behavior-events`                   | `READY` | 2026-09-16      | No            | Auth + active consent; allowlist metadata, idempotency và 5-minute dedupe |
-| GET    | `/recommendations/home`              | `READY` | 2026-09-16      | No            | Auth; hard constraints trước ranking; score/reason codes v1               |
+| POST   | `/meal-plans/generate`               | `READY` | 2026-09-16      | Yes (2026-09-16)  | Auth; tạo version mới 7×3, deterministic seed + idempotency               |
+| GET    | `/meal-plans`                        | `READY` | 2026-09-16      | Yes (2026-09-16)  | Auth; own plans, pagination/filter tuần                                   |
+| GET    | `/meal-plans/:id`                    | `READY` | 2026-09-16      | Yes (2026-09-16)  | Auth + ownership; 21 slots, snapshots, warnings và shopping list          |
+| PATCH  | `/meal-plans/:id/items/:itemId/swap` | `READY` | 2026-09-16      | Yes (2026-09-16)  | Auth + ownership; expectedVersion/idempotency; hard-safe candidate        |
+| DELETE | `/meal-plans/:id`                    | `READY` | 2026-09-16      | Yes (2026-09-16)  | Auth + ownership; idempotent soft-delete với expectedVersion              |
+| POST   | `/behavior-events`                   | `READY` | 2026-09-16      | Yes (2026-09-16)  | Auth + active consent; allowlist metadata, idempotency và 5-minute dedupe |
+| GET    | `/users/me/personalization`          | `READY` | 2026-09-16      | Yes (2026-09-16)  | Auth; đọc consent + consentVersion (verify live, bổ sung registry)        |
+| PUT    | `/users/me/personalization`          | `READY` | 2026-09-16      | Yes (2026-09-16)  | Auth; body `{enabled, consentVersion}` đều bắt buộc (verify live)         |
+| GET    | `/recommendations/home`              | `READY` | 2026-09-16      | Yes (2026-09-16)  | Auth; hard constraints trước ranking; score/reason codes v1               |
 
 ### 6.6 Chat và AI verification
 
@@ -289,11 +292,11 @@ review proposal vẫn là `PLANNED` cho tới Phase 07; frontend chưa được 
 
 | Method | Path                              | Status    | Backend updated | FE integrated | Ghi chú                                      |
 | ------ | --------------------------------- | --------- | --------------- | ------------- | -------------------------------------------- |
-| POST   | `/chat/sessions`                  | `READY`   | 2026-09-16      | No            | Guest signed cookie hoặc authenticated       |
-| GET    | `/chat/sessions`                  | `READY`   | 2026-09-16      | No            | Authenticated private history                |
-| GET    | `/chat/sessions/:id/messages`     | `READY`   | 2026-09-16      | No            | Auth/guest ownership; guest retention 7 ngày |
-| POST   | `/chat/sessions/:id/messages`     | `READY`   | 2026-09-16      | No            | SSE, idempotency, quota, fallback            |
-| POST   | `/chat/messages/:id/feedback`     | `READY`   | 2026-09-16      | No            | Owned assistant message; upsert up/down      |
+| POST   | `/chat/sessions`                  | `READY`   | 2026-09-16      | Yes (2026-09-16) | Guest signed cookie hoặc authenticated       |
+| GET    | `/chat/sessions`                  | `READY`   | 2026-09-16      | Yes (2026-09-16) | Authenticated private history                |
+| GET    | `/chat/sessions/:id/messages`     | `READY`   | 2026-09-16      | Yes (2026-09-16) | Auth/guest ownership; guest retention 7 ngày |
+| POST   | `/chat/sessions/:id/messages`     | `READY`   | 2026-09-16      | Yes (2026-09-16) | SSE, idempotency, quota, fallback            |
+| POST   | `/chat/messages/:id/feedback`     | `READY`   | 2026-09-16      | Yes (2026-09-16) | Owned assistant message; upsert up/down      |
 | PATCH  | `/chat/messages/:id/share`        | `PLANNED` | —               | No            | Authenticated only                           |
 | GET    | `/chat/public`                    | `PLANNED` | —               | No            | Public shared answers                        |
 | POST   | `/chat/messages/:id/verification` | `PLANNED` | —               | No            | Approved Nutrition Expert/Admin              |
@@ -630,6 +633,16 @@ Thêm entry mới nhất ở trên cùng.
 
 | Date       | Version | Module         | Change                                                                                                                                | Breaking | FE action                                                                                            |
 | ---------- | ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- | :------: | ---------------------------------------------------------------------------------------------------- |
+| 2026-09-17 | 3.5     | Notifications  | FE scaffold 3 ops notifications theo spec 015 (DTO suy luận + reconfirm ở task nối live/Mapper/test/fixtures/API fixture 0 request/Query polling 60s + lạc quan rollback/chuông + panel + item ở header); endpoint giữ `PLANNED`, `FE integrated` giữ `No` |    No    | Test tay NT-1..NT-3 + check Network 0 request (member + khách) theo `specs/015-notifications/quickstart.md`; nối live khi BE đánh `READY` |
+| 2026-09-17 | 3.4     | Contributors   | FE kết nối live API thực tế cho 4 endpoints contributor (nộp đơn, xem đơn cá nhân, hàng chờ duyệt admin, review phê duyệt/từ chối), bỏ mock data |    No    | Test tay CA-1..CA-4 với dữ liệu thật và tài khoản Member/Admin seed |
+| 2026-09-17 | 3.3     | Chat Sharing   | FE scaffold 3 ops chat share/public/verify theo spec 014 (DTO suy luận + reconfirm ở task nối live/Mapper/test/fixtures/API fixture 0 request/Query/route `/assistant/public` + huy hiệu theo role thật); endpoint giữ `PLANNED`, `FE integrated` giữ `No` |    No    | Test tay CS-1..CS-4 + check Network 0 request theo `specs/014-chat-sharing-verification/quickstart.md`; nối live khi BE đánh `READY` |
+| 2026-09-17 | 3.2     | Trust Safety   | FE scaffold 2 endpoint còn sót (`POST /reports`, `DELETE behavior-history`) theo spec 013 (DTO đủ/Mapper/test/fixtures/API fixture 0 request/Query/nút shared + dialogs, thay toast giả privacy); endpoint giữ `PLANNED`, `FE integrated` giữ `No` |    No    | Test tay TS-1..TS-3 + check Network 0 request + grep 0 toast giả theo `specs/013-trust-safety-leftovers/quickstart.md`; nối live khi BE đánh `READY` |
+| 2026-09-16 | 3.1     | Contributors   | FE scaffold live-shape 4 ops contributors theo spec 012 (DTO đủ/oneOf review/Mapper/test/fixtures/API fixture 0 request/Query/tab profile + tab dashboard, không cấp quyền theo requestedType, không đụng auth); endpoint giữ `PLANNED`, `FE integrated` giữ `No` |    No    | Test tay CA-1..CA-4 + check Network 0 request theo `specs/012-contributor-applications/quickstart.md`; nối live khi BE đánh `READY` |
+| 2026-09-16 | 3.0     | Moderation Admin | FE scaffold live-shape 6 ops moderation-admin theo spec 011 (DTO đủ/Mapper/test/fixtures/API fixture 0 request/Query/3 tabs dashboard); endpoint giữ `PLANNED`, `FE integrated` giữ `No` — ngày nối live chỉ sửa thân api |    No    | Test tay MA-1..MA-4 + check Network 0 request theo `specs/011-moderation-admin-integration/quickstart.md`; nối live khi BE đánh `READY` |
+| 2026-09-16 | 2.9     | Community      | FE scaffold live-shape 11 ops community theo spec 010 (DTO đủ/Mapper/test/fixtures/API fixture 0 request/Query/components); endpoint giữ `PLANNED`, `FE integrated` giữ `No` — ngày nối live chỉ sửa thân api |    No    | Test tay CM-1..CM-4 + check Network 0 request theo `specs/010-community-integration/quickstart.md`; nối live khi BE đánh `READY` |
+| 2026-09-16 | 2.8     | Recommendations | FE tích hợp home/consent/behavior-events theo spec 009 (khối home member, switch consent thật, hook event fire-and-forget + 4 điểm chạm); verify live (PUT off → cold-start + chặn event, restore on; bổ sung 2 dòng personalization vào registry) |    No    | Test tay RC-1..RC-5 theo `specs/009-recommendations-integration/quickstart.md` (2 tài khoản seed khác khẩu vị) |
+| 2026-09-16 | 2.7     | AI Chat        | FE tích hợp 5 endpoint chat private (sessions/history/SSE stream/feedback) theo spec 008; verify live với BE `:4000` (guest cookie `chatGuest`, SSE đủ 5 events, quota `resetAt`, feedback upsert); sharing/verification vẫn `PLANNED` ngoài phạm vi |    No    | Test tay trình duyệt AC-1..AC-6 theo `specs/008-ai-chat-integration/quickstart.md` (khách ẩn danh + member seed) |
+| 2026-09-16 | 2.6     | Meal Planner   | FE tích hợp 5 endpoint meal-plans (generate/list/detail/swap/delete) theo spec 007; verify live với BE `:4000` (generate 21/21, swap theo `lockVersion`, delete idempotent; shape thật `canonicalName/amount`, slot-level calories) |    No    | Test tay trình duyệt MP-1..MP-6 theo `specs/007-meal-planner-integration/quickstart.md` |
 | 2026-09-16 | 2.5     | Review Queue   | FE nối `GET /review-queue/posts` + approve/reject (reason bắt buộc, cấm self-approve) theo code BE local; endpoint vẫn `PLANNED`      |    No    | Test tay theo `specs/006-content-review-queue/quickstart.md`; chờ BE đánh `READY` chính thức          |
 | 2026-09-16 | 2.2     | AI baseline    | Chốt OpenAI Responses API, `gpt-5.6-terra` cho chat và `omni-moderation-latest`; endpoint vẫn PLANNED                                 |    No    | Không gọi OpenAI từ browser; chờ backend SSE contract Phase 11                                       |
 | 2026-09-16 | 2.1     | Meal Planner   | Thêm weekly generate/version/regenerate, per-day hard filters, calorie/repeat fallback, safe swap, shopping list và nutrition quality |    No    | Sync OpenAPI; tạo DTO/Model/Mapper/hooks cho 21 slots, warnings, optimistic version và shopping list |

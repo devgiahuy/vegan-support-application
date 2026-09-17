@@ -16,6 +16,10 @@ import {
   Download,
   Search,
   Plus,
+  Flag,
+  UserCog,
+  MessagesSquare,
+  UserCheck,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -32,92 +36,32 @@ import {
 } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { AuthGuard } from '@/components/shared/auth-guard';
+import { EmptyState } from '@/components/shared/empty-state';
 import { UserRole } from '@/common/enums';
 import { CategoryManager } from '@/features/admin-catalog/components/category-manager';
 import { IngredientManager } from '@/features/admin-catalog/components/ingredient-manager';
 import { ReviewQueueTable } from '@/features/review/components/review-queue-table';
+import { useReviewQueueQuery } from '@/features/review/queries/review.queries';
+import { ReportsTable } from '@/features/moderation/components/reports-table';
+import { ModUsersTable } from '@/features/moderation/components/mod-users-table';
+import { ModCommentsTable } from '@/features/moderation/components/mod-comments-table';
+import {
+  useModeratedUsersQuery,
+  useReportsQuery,
+} from '@/features/moderation/queries/moderation.queries';
+import { useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
+import { ContribQueueTable } from '@/features/contributor/components/contrib-queue-table';
 
-type Tab = 'queue' | 'users' | 'categories' | 'ingredients' | 'logs';
-
-const KPIS = [
-  {
-    label: 'Công thức chờ duyệt',
-    value: '48',
-    sub: '+12 mới hôm nay • 6 bài cảnh báo cao',
-    icon: ClipboardCheck,
-    tone: 'text-cta',
-  },
-  {
-    label: 'Người dùng hoạt động',
-    value: '24,850',
-    sub: '+320 tuần này • 98.2% tuân thủ',
-    icon: Users,
-    tone: 'text-primary',
-  },
-  {
-    label: 'Báo cáo vi phạm',
-    value: '15',
-    sub: '5 bài report ≥ 5 cần xử lý ngay',
-    icon: ShieldAlert,
-    tone: 'text-destructive',
-  },
-  {
-    label: 'Công thức đang live',
-    value: '1,420',
-    sub: '7 nhóm chính • 24 danh mục con',
-    icon: FolderTree,
-    tone: 'text-secondary-foreground',
-  },
-];
-
-const USERS = [
-  {
-    name: 'Võ Minh Tuấn (Bạn)',
-    email: 'tuan.vm@chayxanh.vn • UID #ADM-001',
-    role: 'SuperAdmin',
-    posts: '158 công thức',
-    violations: '0 cảnh báo',
-    status: 'Hoạt động',
-    self: true,
-  },
-  {
-    name: 'TranHoang_Spam',
-    email: 'hoang99@tempmail.com • UID #USR-8821',
-    role: 'Thành viên',
-    posts: '2 bài (Đã ẩn)',
-    violations: '3 lần vi phạm (Spam link)',
-    status: 'Khóa 30 ngày',
-  },
-  {
-    name: 'LanAnh_Cook',
-    email: 'lananh.vegan@gmail.com • UID #CRE-349',
-    role: 'Creator Món Chay',
-    posts: '42 công thức',
-    violations: '0 vi phạm',
-    status: 'Đang hoạt động',
-  },
-];
-
-const LOGS = [
-  {
-    actor: 'Admin Minh Trang',
-    action: 'đã Duyệt công thức #REC-1092',
-    time: '10:42 • Vừa xong',
-    detail: 'Tác giả @bepchay_annhien • Đạt kiểm định 100% nguyên liệu thuần thực vật.',
-  },
-  {
-    actor: 'Hệ thống Auto-Flag',
-    action: 'đẩy bài #REC-1088 lên đầu hàng chờ',
-    time: '10:15 • 27 phút trước',
-    detail: 'Bài viết đạt 7 lượt báo cáo vi phạm từ cộng đồng.',
-  },
-  {
-    actor: 'Mod Đức Hải',
-    action: 'đã Khóa tạm thời @spam_bot_01',
-    time: '09:30 • 1 giờ trước',
-    detail: 'Thời hạn 30 ngày. Lý do: rải liên kết thương mại độc hại.',
-  },
-];
+type Tab =
+  | 'queue'
+  | 'users'
+  | 'categories'
+  | 'ingredients'
+  | 'logs'
+  | 'reports'
+  | 'mod-users'
+  | 'mod-comments'
+  | 'contrib-apps';
 
 export default function AdminDashboardPage() {
   return (
@@ -135,7 +79,11 @@ function parseTabParam(value: string | null): Tab {
     value === 'users' ||
     value === 'categories' ||
     value === 'ingredients' ||
-    value === 'logs'
+    value === 'logs' ||
+    value === 'reports' ||
+    value === 'mod-users' ||
+    value === 'mod-comments' ||
+    value === 'contrib-apps'
   ) {
     return value;
   }
@@ -148,6 +96,69 @@ function AdminDashboardContent() {
   const [tab, setTab] = React.useState<Tab>(() => parseTabParam(searchParams.get('tab')));
   const shouldReduceMotion = useReducedMotion();
 
+  // Queries cho 4 chỉ số KPI thực tế
+  const {
+    data: queueData,
+    refetch: refetchQueue,
+    isLoading: loadingQueue,
+  } = useReviewQueueQuery({ limit: 1 });
+  const {
+    data: usersData,
+    refetch: refetchUsers,
+    isLoading: loadingUsers,
+  } = useModeratedUsersQuery({ status: 'ACTIVE', limit: 1 });
+  const {
+    data: reportsData,
+    refetch: refetchReports,
+    isLoading: loadingReports,
+  } = useReportsQuery({ status: 'OPEN', limit: 1 });
+  const {
+    data: recipesData,
+    refetch: refetchRecipes,
+    isLoading: loadingRecipes,
+  } = useRecipesQuery({ limit: 1 });
+
+  const queueCount = queueData?.metadata?.totalItems ?? 0;
+  const activeUsersCount = usersData?.metadata?.totalItems ?? 0;
+  const openReportsCount = reportsData?.metadata?.totalItems ?? 0;
+  const liveRecipesCount = recipesData?.metadata?.totalItems ?? 0;
+
+  const kpis = [
+    {
+      label: 'Công thức chờ duyệt',
+      value: loadingQueue ? '...' : queueCount.toLocaleString('vi-VN'),
+      sub: `${queueCount} yêu cầu đang chờ xử lý`,
+      icon: ClipboardCheck,
+      tone: 'text-cta',
+    },
+    {
+      label: 'Người dùng hoạt động',
+      value: loadingUsers ? '...' : activeUsersCount.toLocaleString('vi-VN'),
+      sub: `${activeUsersCount} tài khoản hoạt động`,
+      icon: Users,
+      tone: 'text-primary',
+    },
+    {
+      label: 'Báo cáo vi phạm',
+      value: loadingReports ? '...' : openReportsCount.toLocaleString('vi-VN'),
+      sub: `${openReportsCount} báo cáo cần xử lý`,
+      icon: ShieldAlert,
+      tone: 'text-destructive',
+    },
+    {
+      label: 'Công thức đang live',
+      value: loadingRecipes ? '...' : liveRecipesCount.toLocaleString('vi-VN'),
+      sub: `${liveRecipesCount} công thức đã xuất bản`,
+      icon: FolderTree,
+      tone: 'text-secondary-foreground',
+    },
+  ];
+
+  const handleRefresh = async () => {
+    await Promise.all([refetchQueue(), refetchUsers(), refetchReports(), refetchRecipes()]);
+    toast.success('Đã làm mới dữ liệu');
+  };
+
   React.useEffect(() => {
     const tabParam = searchParams.get('tab');
     if (tabParam) {
@@ -157,7 +168,11 @@ function AdminDashboardContent() {
 
   const tabs: { id: Tab; label: string; icon: React.ElementType; badge?: string }[] = [
     { id: 'queue', label: 'Kiểm duyệt', icon: ClipboardCheck },
+    { id: 'reports', label: 'Báo cáo', icon: Flag },
     { id: 'users', label: 'Người dùng & Roles', icon: Users },
+    { id: 'mod-users', label: 'Kiểm soát TK', icon: UserCog },
+    { id: 'mod-comments', label: 'Kiểm duyệt BL', icon: MessagesSquare },
+    { id: 'contrib-apps', label: 'Đơn cộng tác', icon: UserCheck },
     { id: 'categories', label: 'Cây danh mục', icon: FolderTree },
     { id: 'ingredients', label: 'Nguyên liệu', icon: Leaf },
     { id: 'logs', label: 'Audit logs', icon: ScrollText },
@@ -176,22 +191,25 @@ function AdminDashboardContent() {
               </Badge>
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Hàng đợi duyệt: <strong className="text-foreground">48 yêu cầu</strong> • Chỉ
-              SuperAdmin &amp; Moderator
+              Hàng đợi duyệt:{' '}
+              <strong className="text-foreground">
+                {loadingQueue ? '...' : `${queueCount} yêu cầu`}
+              </strong>{' '}
+              • Chỉ SuperAdmin &amp; Moderator
             </p>
           </div>
           <Button
             variant="outline"
             size="icon"
             aria-label="Làm mới dữ liệu"
-            onClick={() => toast.success('Đã làm mới dữ liệu')}
+            onClick={() => void handleRefresh()}
           >
             <RefreshCw className="h-4 w-4" />
           </Button>
         </div>
 
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {KPIS.map((k) => {
+          {kpis.map((k) => {
             const Icon = k.icon;
             return (
               <Card key={k.label}>
@@ -258,83 +276,20 @@ function AdminDashboardContent() {
             {/* TAB: QUEUE — hàng chờ kiểm duyệt thật (features/review) */}
             {tab === 'queue' && <ReviewQueueTable />}
 
-            {/* TAB: USERS */}
-            {tab === 'users' && (
-              <Card>
-                <CardContent className="p-0">
-                  <div className="flex flex-col gap-3 border-b p-4 lg:flex-row lg:items-center">
-                    <div className="relative flex-1">
-                      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      <Input placeholder="Tìm theo tên, email, ID..." className="pl-9" />
-                    </div>
-                    <Button className="gap-1.5 rounded-full">
-                      <Plus className="h-4 w-4" /> Thêm Mod mới
-                    </Button>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Người dùng</TableHead>
-                          <TableHead>Vai trò</TableHead>
-                          <TableHead>Bài đăng</TableHead>
-                          <TableHead>Vi phạm</TableHead>
-                          <TableHead>Trạng thái</TableHead>
-                          <TableHead className="text-right">Hành động</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {USERS.map((u) => (
-                          <TableRow key={u.email}>
-                            <TableCell>
-                              <p className="font-medium">{u.name}</p>
-                              <p className="text-xs text-muted-foreground">{u.email}</p>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="secondary" className="rounded-full">
-                                {u.role}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-sm">{u.posts}</TableCell>
-                            <TableCell className="text-sm">{u.violations}</TableCell>
-                            <TableCell className="text-sm">{u.status}</TableCell>
-                            <TableCell>
-                              <div className="flex justify-end gap-1">
-                                {u.self ? (
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    disabled
-                                    className="rounded-full"
-                                    title="Không thể tự khóa chính mình"
-                                  >
-                                    Khóa tài khoản
-                                  </Button>
-                                ) : (
-                                  <>
-                                    <Button size="sm" variant="outline" className="rounded-full">
-                                      Đổi vai trò
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="outline"
-                                      className="rounded-full text-destructive"
-                                      onClick={() => toast.info('Đã ghi nhận thao tác bảo mật')}
-                                    >
-                                      Khóa
-                                    </Button>
-                                  </>
-                                )}
-                              </div>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            {/* TAB: REPORTS — hàng chờ báo cáo (features/moderation) */}
+            {tab === 'reports' && <ReportsTable />}
+
+            {/* TAB: USERS — danh sách người dùng & roles (features/moderation) */}
+            {tab === 'users' && <ModUsersTable />}
+
+            {/* TAB: MOD-USERS — kiểm soát tài khoản (features/moderation) */}
+            {tab === 'mod-users' && <ModUsersTable />}
+
+            {/* TAB: MOD-COMMENTS — kiểm duyệt bình luận (features/moderation) */}
+            {tab === 'mod-comments' && <ModCommentsTable />}
+
+            {/* TAB: CONTRIB-APPS — duyệt đơn cộng tác (features/contributor, fixture) */}
+            {tab === 'contrib-apps' && <ContribQueueTable />}
 
             {/* TAB: CATEGORIES — quản trị thật (CRUD + archive qua replacement) */}
             {tab === 'categories' && (
@@ -356,30 +311,18 @@ function AdminDashboardContent() {
                 <CardContent className="p-5">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <h2 className="font-semibold">Nhật ký thao tác hệ thống</h2>
+                      <h2 className="font-semibold">Nhật ký thao tác hệ thống (Audit Logs)</h2>
                       <p className="text-xs text-muted-foreground">
-                        Toàn bộ hành động quản trị viên và bot giám sát tự động theo chuẩn
-                        ISO-27001.
+                        Lịch sử hành động quản trị viên và bot giám sát tự động.
                       </p>
                     </div>
-                    <Button variant="outline" size="sm" className="gap-1.5 rounded-full">
-                      <Download className="h-4 w-4" /> Xuất CSV
-                    </Button>
                   </div>
-                  <ul className="mt-4 space-y-3">
-                    {LOGS.map((log) => (
-                      <li key={log.action} className="flex gap-3 rounded-xl border p-3">
-                        <Hourglass className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                        <div className="text-sm">
-                          <p>
-                            <strong>{log.actor}</strong> {log.action}
-                          </p>
-                          <p className="mt-0.5 text-muted-foreground">{log.detail}</p>
-                          <p className="mt-1 text-xs text-muted-foreground">{log.time}</p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="mt-4">
+                    <EmptyState
+                      title="Chưa có API Audit Logs"
+                      description="Backend hiện tại chưa cung cấp endpoint cho Nhật ký thao tác hệ thống (/api/v1/admin/logs)."
+                    />
+                  </div>
                 </CardContent>
               </Card>
             )}

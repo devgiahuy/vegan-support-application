@@ -23,6 +23,7 @@ import { Switch } from '@/components/ui/switch';
 import { cn } from '@/lib/utils';
 import { RecipeCard } from '@/features/recipe/components/recipe-card';
 import { useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
+import { RecommendedForYou } from '@/features/recommendation/components/recommended-for-you';
 import { WhyRecommendedDialog } from '@/components/shared/why-recommended-dialog';
 import { HeroFoodAnimation } from '@/components/home/hero-food-animation';
 import { VerticalCutReveal } from '@/components/ui/vertical-cut-reveal';
@@ -211,6 +212,9 @@ export default function HomePage() {
           <HeroFoodAnimation />
         </div>
       </section>
+
+      {/* Gợi ý cá nhân (member) — guest giữ khối phổ biến bên dưới */}
+      <RecommendedForYou />
 
       {/* Popular recipes */}
       <section className="py-10">

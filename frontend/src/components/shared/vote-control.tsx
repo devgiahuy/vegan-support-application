@@ -5,6 +5,8 @@ import { ArrowBigUp, ArrowBigDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useTrackBehaviorEvent } from '@/hooks/use-track-behavior-event';
+import { BehaviorEventType } from '@/common/enums';
 
 export type UserVoteState = 'up' | 'down' | null;
 
@@ -16,6 +18,13 @@ interface VoteControlProps {
   onVoteChange?: (vote: UserVoteState, score: number) => void;
   className?: string;
   itemTitle?: string;
+  /**
+   * UUID thật của entity + loại event để ghi hành vi ngầm.
+   * Chỉ gửi khi có UUID (hiện tại vote còn mock nên không caller nào truyền —
+   * cơ chế sẵn sàng cho lúc community API READY).
+   */
+  entityId?: string;
+  eventKind?: BehaviorEventType.RATE | BehaviorEventType.BOOKMARK;
 }
 
 export function VoteControl({
@@ -26,9 +35,16 @@ export function VoteControl({
   onVoteChange,
   className,
   itemTitle,
+  entityId,
+  eventKind = BehaviorEventType.RATE,
 }: VoteControlProps) {
   const [score, setScore] = React.useState<number>(initialScore);
   const [userVote, setUserVote] = React.useState<UserVoteState>(initialUserVote);
+  const trackEvent = useTrackBehaviorEvent();
+
+  const trackAction = (vote: UserVoteState) => {
+    if (vote !== null && entityId) trackEvent(eventKind, { entityId });
+  };
 
   const handleUpvote = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -57,6 +73,7 @@ export function VoteControl({
     setUserVote(newVote);
     setScore(newScore);
     onVoteChange?.(newVote, newScore);
+    trackAction(newVote);
   };
 
   const handleDownvote = (e: React.MouseEvent) => {
@@ -86,6 +103,7 @@ export function VoteControl({
     setUserVote(newVote);
     setScore(newScore);
     onVoteChange?.(newVote, newScore);
+    trackAction(newVote);
   };
 
   const isVertical = orientation === 'vertical';

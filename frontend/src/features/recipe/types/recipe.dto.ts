@@ -49,6 +49,15 @@ export interface RecipeDetailDto extends BasePostDto {
   } | null;
 }
 
+export interface AppliedConstraintsDto {
+  authenticated: boolean;
+  dietPattern: string | null;
+  allergyCount: number;
+  ingredientExclusionCount: number;
+  traditions: string[];
+  forDate: string;
+}
+
 export interface RecipeListResponseDto {
   success: boolean;
   data: RecipeDetailDto[];
@@ -57,6 +66,8 @@ export interface RecipeListResponseDto {
     limit: number;
     total: number;
     totalPages: number;
+    rankingVersion?: string;
+    appliedConstraints?: AppliedConstraintsDto;
   };
 }
 

@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import {
   Clock,
@@ -24,6 +25,8 @@ import {
   Leaf,
   Plus,
   Minus,
+  Hourglass,
+  AlertTriangle,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -36,6 +39,15 @@ import { RecipeCard } from './recipe-card';
 import type { Recipe } from '../types/recipe.model';
 import { VoteControl } from '@/components/shared/vote-control';
 import { CommentSection } from '@/components/shared/comment-section';
+import { CommunitySummary } from '@/features/community/components/community-summary';
+import { VoteButton } from '@/features/community/components/vote-button';
+import { ReportButton } from '@/components/shared/report-button';
+import { ReportTargetKind } from '@/common/enums';
+import { RatingInput } from '@/features/community/components/rating-input';
+import { BookmarkButton } from '@/features/community/components/bookmark-button';
+import { useCommunitySummaryQuery } from '@/features/community/queries/community.queries';
+import { useAuthStore } from '@/store/useAuthStore';
+import { UserRole } from '@/common/enums';
 
 interface RecipeDetailViewProps {
   recipe: Recipe;
@@ -43,6 +55,10 @@ interface RecipeDetailViewProps {
 }
 
 export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewProps) {
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const { data: summary } = useCommunitySummaryQuery(recipe.id);
+  const canModerate = user?.role === UserRole.ADMIN || user?.role === UserRole.CONTRIBUTOR;
   const [servings, setServings] = React.useState<number>(recipe.servings || 2);
   const [isSaved, setIsSaved] = React.useState<boolean>(recipe.saved ?? false);
   const [checkedIngredients, setCheckedIngredients] = React.useState<string[]>([]);
@@ -74,7 +90,12 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
   };
 
   const handleAddToMealPlan = () => {
-    toast.success(`Đã thêm "${recipe.title}" vào Kế hoạch bữa ăn tuần này!`);
+    toast.success(`Đã thêm "${recipe.title}" vào Kế hoạch bữa ăn tuần này!`, {
+      action: {
+        label: 'Mở thực đơn',
+        onClick: () => router.push('/meal-plans'),
+      },
+    });
   };
 
   const incompatibilities = (recipe.dietCompatibilities || []).filter((c) => !c.compatible);
@@ -108,6 +129,64 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
         {/* LEFT COLUMN: Main Recipe Details */}
         <div className="space-y-8 lg:col-span-8">
+          {/* Status Alert Banners */}
+          {recipe.status === 'PENDING_REVIEW' && (
+            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="rounded-xl bg-amber-500/20 p-2 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
+                  <Hourglass className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="font-semibold text-amber-900 dark:text-amber-200">
+                      Công thức đang chờ kiểm duyệt
+                    </p>
+                    <Badge className="rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300 hover:bg-amber-500/30 border-amber-500/30 text-xs">
+                      Chưa xuất bản
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-amber-800/80 dark:text-amber-300/80 mt-1 leading-relaxed">
+                    Công thức đang được Ban biên tập kiểm định tiêu chuẩn thuần chay 100%. Hiện tại
+                    chỉ tác giả và người kiểm duyệt mới xem được liên kết này.
+                  </p>
+                </div>
+              </div>
+              {canModerate && (
+                <Button asChild size="sm" className="rounded-full shrink-0">
+                  <Link
+                    href={
+                      user?.role === UserRole.ADMIN
+                        ? '/admin/dashboard?tab=queue'
+                        : '/contributor/dashboard'
+                    }
+                  >
+                    Đi tới hàng chờ duyệt
+                  </Link>
+                </Button>
+              )}
+            </div>
+          )}
+
+          {recipe.status === 'REJECTED' && (
+            <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 sm:p-5 flex items-start gap-3">
+              <div className="rounded-xl bg-destructive/20 p-2 text-destructive shrink-0 mt-0.5">
+                <AlertTriangle className="h-5 w-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-destructive">Công thức không được phê duyệt</p>
+                  <Badge variant="destructive" className="rounded-full text-xs">
+                    Từ chối
+                  </Badge>
+                </div>
+                <p className="text-sm text-destructive/80 mt-1 leading-relaxed">
+                  Bài viết không đáp ứng tiêu chuẩn thuần chay hoặc an toàn thực phẩm. Vui lòng
+                  chỉnh sửa lại theo góp ý của kiểm duyệt viên.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Header Info */}
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -120,6 +199,15 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
               {recipe.mealPlannerEligible && (
                 <Badge className="gap-1 bg-emerald-500/15 px-3 py-1 font-medium text-emerald-600 dark:text-emerald-400">
                   <Leaf className="h-3.5 w-3.5" /> Đủ điều kiện thực đơn
+                </Badge>
+              )}
+              {(summary?.ratingCount ?? 0) > 0 && summary?.tasteAverage !== null && (
+                <Badge
+                  variant="secondary"
+                  className="gap-1 bg-amber-500/15 text-amber-700 dark:text-amber-400 px-3 py-1 text-xs font-semibold"
+                >
+                  <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                  {summary?.tasteAverage?.toFixed(1)} ({summary?.ratingCount} đánh giá)
                 </Badge>
               )}
             </div>
@@ -214,10 +302,12 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
               <span className="flex items-center gap-1 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full">
                 <Clock className="h-4 w-4 text-emerald-400" /> {recipe.minutes} phút chuẩn bị & nấu
               </span>
-              {typeof recipe.ratingCount === 'number' && recipe.ratingCount > 0 && (
+              {(((summary?.ratingCount ?? 0) > 0 && summary?.tasteAverage !== null) ||
+                (typeof recipe.ratingCount === 'number' && recipe.ratingCount > 0)) && (
                 <span className="flex items-center gap-1 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full">
-                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" /> {recipe.rating} (
-                  {recipe.ratingCount} đánh giá)
+                  <Star className="h-4 w-4 fill-amber-400 text-amber-400" />{' '}
+                  {summary?.tasteAverage?.toFixed(1) ?? recipe.rating} (
+                  {summary?.ratingCount ?? recipe.ratingCount} đánh giá)
                 </span>
               )}
             </div>
@@ -415,6 +505,7 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
 
           {/* REVIEWS & COMMUNITY FEEDBACK — chỉ hiện khi có dữ liệu thật */}
           {((recipe.reviews && recipe.reviews.length > 0) ||
+            (summary?.ratingCount ?? 0) > 0 ||
             (typeof recipe.ratingCount === 'number' && recipe.ratingCount > 0)) && (
             <Card className="border-border/60 shadow-sm">
               <CardHeader className="pb-3 flex flex-row items-center justify-between border-b">
@@ -426,12 +517,13 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
                     Ý kiến từ Chuyên gia dinh dưỡng và cộng đồng người nấu chay
                   </p>
                 </div>
-                {typeof recipe.ratingCount === 'number' && recipe.ratingCount > 0 && (
+                {(((summary?.ratingCount ?? 0) > 0 && summary?.tasteAverage !== null) ||
+                  (typeof recipe.ratingCount === 'number' && recipe.ratingCount > 0)) && (
                   <div className="flex items-center gap-1 text-amber-500 font-bold text-lg">
                     <Star className="h-5 w-5 fill-current" />
-                    <span>{recipe.rating}</span>
+                    <span>{summary?.tasteAverage?.toFixed(1) ?? recipe.rating}</span>
                     <span className="text-xs font-normal text-muted-foreground">
-                      ({recipe.ratingCount})
+                      ({summary?.ratingCount ?? recipe.ratingCount})
                     </span>
                   </div>
                 )}
@@ -542,15 +634,30 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
           )}
 
           {/* UC-03: Community Comment & Discussion Section */}
-          <div className="pt-6">
-            <CommentSection itemTitle={recipe.title} itemType="công thức" />
+          <div className="space-y-3 pt-6">
+            <div className="flex flex-wrap items-center gap-2">
+              <CommunitySummary postId={recipe.id} />
+              <VoteButton postId={recipe.id} />
+              <BookmarkButton postId={recipe.id} />
+              <ReportButton
+                targetKind={ReportTargetKind.POST}
+                targetId={recipe.id}
+                authorId={recipe.author.id}
+              />
+            </div>
+            <RatingInput
+              postId={recipe.id}
+              initialTaste={summary?.viewerTaste ?? 0}
+              initialDifficulty={summary?.viewerDifficulty ?? 0}
+            />
+            <CommentSection postId={recipe.id} itemType="công thức" />
           </div>
         </div>
 
         {/* RIGHT COLUMN: Nutrition Breakdown & Related Recipes (Sidebar) */}
         <div className="space-y-6 lg:col-span-4">
           {/* Nutrition Facts Detailed Card */}
-          <Card className="border-border/60 shadow-sm sticky top-20">
+          <Card className="border-border/60 shadow-sm">
             <CardHeader className="bg-primary/5 pb-3 border-b">
               <CardTitle className="text-base font-bold flex items-center gap-2 text-foreground">
                 <ShieldCheck className="h-4 w-4 text-primary" /> Phân tích dinh dưỡng (1 khẩu phần)
@@ -590,14 +697,16 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
           </Card>
 
           {/* Related Recipes */}
-          <div className="space-y-3">
-            <h4 className="text-base font-bold text-foreground">Món chay cùng chuyên mục</h4>
+          {relatedRecipes.length > 0 && (
             <div className="space-y-3">
-              {relatedRecipes.slice(0, 3).map((item) => (
-                <RecipeCard key={item.id} recipe={item} />
-              ))}
+              <h4 className="text-base font-bold text-foreground">Món chay cùng chuyên mục</h4>
+              <div className="space-y-3">
+                {relatedRecipes.slice(0, 3).map((item) => (
+                  <RecipeCard key={item.id} recipe={item} />
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>
