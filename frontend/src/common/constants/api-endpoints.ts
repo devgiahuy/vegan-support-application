@@ -53,4 +53,66 @@ export const API_ENDPOINTS = {
     APPROVE: (id: string) => `/review-queue/posts/${id}/approve`,
     REJECT: (id: string) => `/review-queue/posts/${id}/reject`,
   },
+  MEAL_PLANS: {
+    GENERATE: '/meal-plans/generate',
+    LIST: '/meal-plans',
+    DETAIL: (id: string) => `/meal-plans/${id}`,
+    SWAP: (id: string, itemId: string) => `/meal-plans/${id}/items/${itemId}/swap`,
+    DELETE: (id: string) => `/meal-plans/${id}`,
+  },
+  CHAT: {
+    SESSIONS: '/chat/sessions',
+    SESSION_MESSAGES: (id: string) => `/chat/sessions/${id}/messages`,
+    MESSAGE_FEEDBACK: (id: string) => `/chat/messages/${id}/feedback`,
+  },
+  RECOMMENDATIONS: {
+    EVENTS: '/behavior-events',
+    CONSENT: '/users/me/personalization',
+    HOME: '/recommendations/home',
+  },
+  // TODO(BE-READY): Community còn PLANNED — nhánh dưới CHƯA được import ở đâu.
+  COMMUNITY: {
+    COMMENTS: (postId: string) => `/posts/${postId}/comments`,
+    COMMENT: (id: string) => `/comments/${id}`,
+    SUMMARY: (postId: string) => `/posts/${postId}/community-summary`,
+    VOTE: (postId: string) => `/posts/${postId}/vote`,
+    RATING: (postId: string) => `/posts/${postId}/rating`,
+    BOOKMARK: (postId: string) => `/posts/${postId}/bookmark`,
+    MY_BOOKMARKS: '/users/me/bookmarks',
+  },
+  // TODO(BE-READY): Moderation-admin còn PLANNED — nhánh dưới CHƯA được import ở đâu.
+  MODERATION_ADMIN: {
+    REPORTS: '/admin/reports',
+    REPORT_RESOLVE: (id: string) => `/admin/reports/${id}/resolve`,
+    USERS: '/admin/users',
+    USER_STATUS: (id: string) => `/admin/users/${id}/status`,
+    COMMENTS: '/admin/comments',
+    COMMENT_STATUS: (id: string) => `/admin/comments/${id}/status`,
+  },
+  // TODO(BE-READY): Contributors còn PLANNED — 2 nhánh dưới CHƯA được import ở đâu.
+  CONTRIBUTOR: {
+    APPLY: '/contributor-applications',
+    MY_APPLICATIONS: '/contributor-applications/me',
+  },
+  ADMIN_CONTRIBUTOR: {
+    LIST: '/admin/contributor-applications',
+    REVIEW: (id: string) => `/admin/contributor-applications/${id}/review`,
+  },
+  // TODO(BE-READY): Trust-safety leftovers còn PLANNED — nhánh dưới CHƯA được import ở đâu.
+  SAFETY: {
+    REPORTS: '/reports',
+    BEHAVIOR_HISTORY: '/users/me/behavior-history',
+  },
+  // TODO(BE-READY): Chat sharing/verification còn PLANNED — nhánh dưới CHƯA được import ở đâu.
+  CHAT_SHARING: {
+    SHARE: (id: string) => `/chat/messages/${id}/share`,
+    PUBLIC_LIST: '/chat/public',
+    VERIFY: (id: string) => `/chat/messages/${id}/verification`,
+  },
+  // TODO(BE-READY): Notifications còn PLANNED — nhánh dưới CHƯA được import ở đâu.
+  NOTIFICATIONS: {
+    LIST: '/notifications',
+    READ: (id: string) => `/notifications/${id}/read`,
+    READ_ALL: '/notifications/read-all',
+  },
 } as const;
