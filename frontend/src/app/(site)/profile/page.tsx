@@ -786,28 +786,15 @@ export default function ProfilePage() {
                   </div> */}
 
                   {/* Data Rights: Download & Delete */}
-                  {/* <div className="space-y-3 pt-2 border-t">
+                  <div className="space-y-3 pt-2 border-t">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
                       Quyền đối với dữ liệu cá nhân (Nghị định 13/2023)
                     </h4>
 
                     <div className="flex flex-wrap gap-3">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          toast.info(
-                            'Yêu cầu trích xuất dữ liệu của bạn đã được tiếp nhận. Bản sao lưu sẽ được gửi vào email trong 24 giờ.'
-                          )
-                        }
-                        className="gap-1.5 text-xs"
-                      >
-                        <FileDown className="h-4 w-4 text-primary" /> Tải về bản sao dữ liệu của tôi
-                      </Button>
-
                       <DeleteHistoryButton />
                     </div>
-                  </div> */}
+                  </div>
                 </CardContent>
               </Card>
             </div>

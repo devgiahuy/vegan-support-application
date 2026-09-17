@@ -1,24 +1,13 @@
+import api from '@/lib/axios';
+import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import type {
+  DeleteBehaviorHistoryResponseDto,
+  ViolationReportResponseDto,
+} from '../types/safety.dto';
 import type { DeletionResult, SubmitReportInput, ViolationReport } from '../types/safety.model';
 import { safetyMapper } from '../mappers/safety.mapper';
-import { deletedHistoryFixture, submittedReportFixture } from '../__fixtures__/safety-fixtures';
 
-/**
- * API trust-safety — PHASE SCAFFOLD: đọc fixture, 0 request mạng.
- * Backend (`POST /reports`, `DELETE behavior-history`) còn `PLANNED`
- * nên 2 hàm dưới MÔ PHỎNG đúng signature live.
- *
- * Ngày nối live (TODO(BE-READY)): thay thân hàm bằng axios qua
- * `API_ENDPOINTS.SAFETY`, giữ nguyên chữ ký + kiểu trả về —
- * queries/components KHÔNG đổi. Đồng thời chuyển `__fixtures__`
- * sang test-only hoặc xóa khỏi bundle.
- */
-export const USE_FIXTURES = true;
-
-const SIMULATED_DELAY_MS = 300;
-
-function delay(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, SIMULATED_DELAY_MS));
-}
+export const USE_FIXTURES = false;
 
 // Báo cáo đã gửi (theo targetId) để chặn trùng ở UI.
 const reportedTargets = new Set<string>();
@@ -32,21 +21,20 @@ export function __isReported(targetId: string): boolean {
 }
 
 export const safetyApi = {
-  /** `POST /reports` (fixture). UUID sai → mapper trả null → ném lỗi rõ. */
+  /** `POST /reports` */
   submitReport: async (input: SubmitReportInput): Promise<ViolationReport> => {
-    await delay();
     const payload = safetyMapper.toSubmitDto(input);
     if (!payload) throw new Error('Mục tiêu báo cáo không hợp lệ.');
-    const report = safetyMapper.toSingleReport(
-      submittedReportFixture(payload.targetId, payload.reasonCode)
-    );
+    const res = await api.post<ViolationReportResponseDto>(API_ENDPOINTS.SAFETY.REPORTS, payload);
     reportedTargets.add(payload.targetId);
-    return report;
+    return safetyMapper.toSingleReport(res.data);
   },
 
-  /** `DELETE /users/me/behavior-history` (fixture). */
+  /** `DELETE /users/me/behavior-history` */
   deleteBehaviorHistory: async (): Promise<DeletionResult> => {
-    await delay();
-    return safetyMapper.toDeletionResult(deletedHistoryFixture);
+    const res = await api.delete<DeleteBehaviorHistoryResponseDto>(
+      API_ENDPOINTS.SAFETY.BEHAVIOR_HISTORY
+    );
+    return safetyMapper.toDeletionResult(res.data);
   },
 };
