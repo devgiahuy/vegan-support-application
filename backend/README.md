@@ -5,6 +5,10 @@ foundation, authentication/sessions, user profiles, manual health metrics, versi
 the category/ingredient catalog, revisioned Recipe/Blog/Video content, and profile-safe content
 discovery.
 
+Runtime capability and future phase status are tracked in `frontend/docs/BACKEND_INTEGRATION.md` and
+`backend/docs/IMPLEMENTATION_PHASES.md`. The reviewed requirements are in `docs/SRS.md`. Phases
+12–27 are planned and must not be inferred as implemented from planning documents.
+
 ## Prerequisites
 
 - Node.js 22 or newer
@@ -57,10 +61,12 @@ degrades to a static safe response without consuming daily quota.
 
 ## Seed data for local API and frontend development
 
-`npm run seed` is idempotent and uses only the existing `SEED_*` credentials. In addition to the
-configured Member, two approved Contributor subtypes, and Admin, it derives scenario accounts from
-`SEED_MEMBER_EMAIL` by adding the following suffixes before `@`; every scenario account uses
-`SEED_MEMBER_PASSWORD`:
+`npm run seed` is idempotent and uses only the existing `SEED_*` credentials. The two approved
+Contributor subtype fixtures reflect the current legacy Phase 07 schema only. Phase 14 will migrate
+them to one Contributor permission set with an approval basis; new code must not extend subtype-based
+RBAC. In addition to the configured Member, legacy Contributor fixtures, and Admin, the seed derives
+scenario accounts from `SEED_MEMBER_EMAIL` by adding the following suffixes before `@`; every
+scenario account uses `SEED_MEMBER_PASSWORD`:
 
 - `+seed-pending-contributor` and `+seed-rejected-contributor`
 - `+seed-cold-start`, `+seed-reporter-two`, and `+seed-reporter-three`

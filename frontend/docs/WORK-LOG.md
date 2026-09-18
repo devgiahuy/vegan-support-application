@@ -1205,4 +1205,19 @@
 - PROGRESS: task #14 giữ 70% (scaffold + converge sạch; test tay NT + BE READY còn lại).
 - Còn lại / rủi ro: header vẫn là file tranh chấp giữa 2 session — phối hợp khi merge/commit.
 
+---
 
+## [2026-09-18] — Đồng bộ reviewed MVP, Backend Phases 12–27 và Roadmap Phase 2
+
+- Mục tiêu: hợp nhất quyết định sau review Phase 11 thành một nguồn yêu cầu chuẩn và không làm sai trạng thái runtime hiện tại.
+- Đã làm:
+  - Tạo `/docs/SRS.md` canonical và `/docs/ROADMAP_PHASE_2.md` đầy đủ.
+  - Viết lại `/docs/IMPLEMENTATION_PLAN.md` v4.0 với unified Contributor, canonical food data, cooking-aware nutrition, quota, video review parity, custom meals/tags, meal compatibility, multi-week, pantry, fridge multi-image, receipt và shopping gaps.
+  - Mở rộng backend plan từ Phase 12 tới 27 và thay prompts 12–16 cũ bằng 16 prompt độc lập cho Phases 12–27.
+  - Chuẩn hóa toàn bộ 28 prompt Phase 00–27 dùng “current repository root”/“thư mục gốc của repository hiện tại”; loại bỏ đường dẫn tuyệt đối của máy cá nhân để teammate có thể dùng trên mọi môi trường.
+  - Cập nhật `BACKEND_INTEGRATION.md` bằng target contract `PLANNED`; giữ endpoint runtime hiện tại trung thực và ghi Phase 14 là future breaking migration.
+  - Cập nhật UI plan/design prompt, `frontend/AGENTS.md`, PROGRESS; đánh dấu hai frontend SRS cũ là superseded/deprecated.
+  - Ghi rõ user tag `shopee` chỉ là metadata; certificate/payment/DMCA/STT/wearable/additional traditions và các ý tưởng khác được giữ trong Roadmap Phase 2.
+- Verify: docs-only; kiểm tra link/prompt index, legacy-term audit, `git diff --check`. Không chạy frontend typecheck/test/build vì không sửa source hoặc runtime contract.
+- PROGRESS: không đổi % feature; thêm bảng backlog tích hợp Phases 12–27.
+- Còn lại: mỗi backend phase phải cập nhật OpenAPI/integration registry và frontend chỉ tích hợp khi endpoint thật sự `READY`.
