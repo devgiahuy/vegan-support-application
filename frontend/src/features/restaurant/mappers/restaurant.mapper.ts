@@ -19,11 +19,24 @@ import type {
   SubmitRestaurantRequestDto,
 } from '../types/restaurant.dto';
 import type { LocationQuery, Restaurant, SubmitRestaurantInput } from '../types/restaurant.model';
-import { RestaurantStatus } from '@/common/enums';
+import { RestaurantStatus, PlaceDietType, PlaceOpeningStatus } from '@/common/enums';
 
 const SOURCE_LABELS: Record<string, string> = {
   INTERNAL: 'Nội bộ',
   GOOGLE: 'Google',
+};
+
+const DIET_LABELS: Record<PlaceDietType, string> = {
+  [PlaceDietType.VEGAN]: 'Thuần chay',
+  [PlaceDietType.VEGETARIAN]: 'Quán chay',
+  [PlaceDietType.VEGAN_FRIENDLY]: 'Thân thiện với người ăn chay',
+  [PlaceDietType.UNKNOWN]: 'Có thể phù hợp với người ăn chay',
+};
+
+const OPENING_LABELS: Record<PlaceOpeningStatus, string> = {
+  [PlaceOpeningStatus.OPEN]: 'Đang mở cửa',
+  [PlaceOpeningStatus.CLOSED]: 'Đã đóng cửa',
+  [PlaceOpeningStatus.UNKNOWN]: 'Chưa rõ giờ mở cửa',
 };
 
 const STATUS_LABELS: Record<RestaurantStatus, string> = {
@@ -85,8 +98,15 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
     const fetchedAt = safeDate(pickField(dto, ['fetchedAt', 'fetched_at'], null));
     const distanceM = toNum(pickField(dto, ['distanceM', 'distance_m'], null));
     const submitter = pickField(dto, ['submittedBy'], null) as RestaurantDto['submittedBy'];
+    // Quán nội bộ/cộng đồng đã qua duyệt (PUBLISHED) được coi là xác thực chay;
+    // hàng chờ (PENDING) vẫn gắn nhãn hạn định như suy đoán (FR-007).
+    const dietType =
+      status === RestaurantStatus.PUBLISHED && source !== 'GOOGLE'
+        ? PlaceDietType.VEGETARIAN
+        : PlaceDietType.UNKNOWN;
     return {
       id: safeString(pickField(dto, ['id'], '')),
+      providerId: safeString(pickField(dto, ['id'], '')),
       name: safeString(pickField(dto, ['name'], '')) || 'Quán chay',
       address: safeString(pickField(dto, ['address'], '')),
       lat: toNum(pickField(dto, ['lat', 'latitude'], null)),
@@ -97,6 +117,14 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
         safeString(dish)
       ).filter((dish) => dish.length > 0),
       openingHours: safeString(pickField(dto, ['openingHours', 'opening_hours'], '')) || null,
+      openingStatus: PlaceOpeningStatus.UNKNOWN,
+      openingStatusLabel: OPENING_LABELS[PlaceOpeningStatus.UNKNOWN],
+      rating: null,
+      reviewCount: null,
+      dietType,
+      dietLabel: DIET_LABELS[dietType],
+      photos: [],
+      googleMapsUri: null,
       source,
       sourceLabel: SOURCE_LABELS[source] ?? source,
       fetchedAt,

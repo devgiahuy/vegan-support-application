@@ -15,20 +15,26 @@ import {
 import { useAuthStore } from '@/store/useAuthStore';
 import { DEFAULT_RADIUS_M } from '@/features/restaurant/schemas/restaurant.schema';
 import type { LocationQuery } from '@/features/restaurant/types/restaurant.model';
+import { resolveProviderName } from '@/features/restaurant/providers/place-provider';
 import { useRestaurantSearchQuery } from '@/features/restaurant/queries/restaurant.queries';
 import {
   LocationPrompt,
   type UserCoordinates,
 } from '@/features/restaurant/components/location-prompt';
 import { AddressForm } from '@/features/restaurant/components/address-form';
-import { RestaurantFilters } from '@/features/restaurant/components/restaurant-filters';
+import {
+  RestaurantFilters,
+  applyPlaceFilters,
+  type DietFilter,
+} from '@/features/restaurant/components/restaurant-filters';
 import { RestaurantList } from '@/features/restaurant/components/restaurant-list';
-import { MapPlaceholder } from '@/features/restaurant/components/map-placeholder';
+import { RestaurantMap } from '@/features/restaurant/components/restaurant-map';
 import { SubmitForm } from '@/features/restaurant/components/submit-form';
 
 /**
- * Trang quán chay: vị trí/form địa chỉ + tìm món + list + khung bản đồ.
- * Dữ liệu fixture ở phase scaffold (BE còn PLANNED, 0 gọi maps ngoài).
+ * Trang quán chay: vị trí/form địa chỉ + tìm món + bản đồ tương tác + list
+ * đồng bộ 2 chiều (FR-001/FR-002). Nguồn dữ liệu qua PlaceProvider (mock khi
+ * thiếu key Google); trang công khai, chỉ đóng góp quán cần đăng nhập (Q5).
  */
 export default function RestaurantMapPage() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -37,7 +43,11 @@ export default function RestaurantMapPage() {
   const [deniedMessage, setDeniedMessage] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState('');
   const [radiusM, setRadiusM] = React.useState(DEFAULT_RADIUS_M);
+  const [diet, setDiet] = React.useState<DietFilter>('ALL');
+  const [openNow, setOpenNow] = React.useState(false);
+  const [minRating, setMinRating] = React.useState(0);
   const [submitOpen, setSubmitOpen] = React.useState(false);
+  const [selectedPlaceId, setSelectedPlaceId] = React.useState<string | null>(null);
 
   const searchQuery: LocationQuery = {
     ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
@@ -48,7 +58,20 @@ export default function RestaurantMapPage() {
     searchQuery,
     coords !== null
   );
-  const restaurants = data?.items ?? [];
+  // Lọc phía ứng dụng trên cùng tập kết quả cho cả bản đồ và danh sách (FR-002/FR-004).
+  const restaurants = React.useMemo(
+    () => applyPlaceFilters(data?.items ?? [], { diet, openNow, minRating }),
+    [data, diet, openNow, minRating]
+  );
+  const isLive = resolveProviderName() === 'google';
+
+  const handleSelect = React.useCallback((id: string) => {
+    setSelectedPlaceId(id);
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    document
+      .getElementById(`restaurant-card-${id}`)
+      ?.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'nearest' });
+  }, []);
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-4 px-4 py-6 lg:px-6">
@@ -86,12 +109,23 @@ export default function RestaurantMapPage() {
           <RestaurantFilters
             query={query}
             radiusM={radiusM}
+            diet={diet}
+            openNow={openNow}
+            minRating={minRating}
             onQueryChange={setQuery}
             onRadiusChange={setRadiusM}
+            onDietChange={setDiet}
+            onOpenNowChange={setOpenNow}
+            onMinRatingChange={setMinRating}
           />
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
             <div className="xl:col-span-7">
-              <MapPlaceholder items={restaurants} />
+              <RestaurantMap
+                items={restaurants}
+                center={coords}
+                selectedPlaceId={selectedPlaceId}
+                onSelect={handleSelect}
+              />
             </div>
             <div className="space-y-3 xl:col-span-5">
               <div className="flex items-center justify-between gap-2">
@@ -126,7 +160,11 @@ export default function RestaurantMapPage() {
                 isLoading={isLoading}
                 isError={isError}
                 onRetry={() => void refetch()}
-                externalNotice="Dữ liệu minh họa — danh sách thật khi backend sẵn sàng."
+                selectedPlaceId={selectedPlaceId}
+                onSelectCard={handleSelect}
+                externalNotice={
+                  isLive ? null : 'Dữ liệu minh họa — danh sách thật khi có khóa Google Maps.'
+                }
               />
             </div>
           </div>

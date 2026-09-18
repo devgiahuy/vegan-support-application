@@ -85,3 +85,29 @@ export interface ReviewRestaurantResponseDto {
   data?: RestaurantDto | null;
   meta?: null;
 }
+
+/**
+ * Google Places (New) thô — DTO SUY LUẬN (không có swagger, xem contract §2).
+ * Mọi field optional; tầng mapper đọc qua `pickField` + `safe*`, KHÔNG để
+ * cấu trúc Google lọt tới UI (FR-006).
+ */
+export interface GooglePlacePhotoDto {
+  url?: string | null;
+  attribution?: string | null;
+}
+
+/** 1 địa điểm Google thô (đã rút gọn ở field mask, chỉ xin đúng trường UI cần). */
+export interface GooglePlaceDto {
+  id?: string | null;
+  displayName?: string | null;
+  formattedAddress?: string | null;
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+  rating?: number | string | null;
+  userRatingCount?: number | string | null;
+  photos?: (GooglePlacePhotoDto | null)[] | null;
+  openingHours?: (string | null)[] | string | null;
+  openNow?: boolean | null;
+  googleMapsUri?: string | null;
+  types?: (string | null)[] | null;
+}

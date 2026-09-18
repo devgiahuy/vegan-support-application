@@ -2,9 +2,9 @@ import { MapPin } from 'lucide-react';
 import type { Restaurant } from '../types/restaurant.model';
 
 /**
- * Khung bản đồ minh họa (KHÔNG tải SDK ngoài ở phase scaffold):
+ * Khung bản đồ dự phòng (fallback khi thiếu key Google hoặc SDK lỗi):
  * giữ chỗ đúng tỉ lệ + pins CSS theo tọa độ tương đối của cùng tập kết quả.
- * Ghi rõ minh họa để không lừa user.
+ * Danh sách bên cạnh luôn đầy đủ (US-3).
  */
 export function MapPlaceholder({ items }: { items: Restaurant[] }) {
   const plotted = items.filter((item) => item.lat !== null && item.lng !== null).slice(0, 20);
@@ -48,7 +48,7 @@ export function MapPlaceholder({ items }: { items: Restaurant[] }) {
         );
       })}
       <p className="absolute bottom-2 left-2 rounded-full bg-background/90 px-2.5 py-1 text-[11px] text-muted-foreground">
-        Bản đồ minh họa — bản đồ tương tác có khi backend sẵn sàng
+        Bản đồ tương tác chưa sẵn sàng — danh sách bên dưới vẫn đầy đủ.
       </p>
     </div>
   );

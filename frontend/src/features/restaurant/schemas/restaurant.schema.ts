@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 export const MIN_RADIUS_M = 500;
-export const MAX_RADIUS_M = 50000;
-export const DEFAULT_RADIUS_M = 5000;
+export const MAX_RADIUS_M = 10000;
+export const DEFAULT_RADIUS_M = 3000;
 export const MAX_DISHES = 10;
 
 export const locationQuerySchema = z.object({

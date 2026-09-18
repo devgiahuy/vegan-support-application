@@ -12,7 +12,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "prepare": "git -C .. config core.hooksPath frontend/.husky || true",
-    "sync:swagger": "node scripts/sync-swagger.mjs"
+    "sync:swagger": "node scripts/sync-swagger.mjs",
+    "check:endpoints": "node scripts/check-unused-endpoints.mjs"
   },
   "lint-staged": {
     "*.{ts,tsx}": [
@@ -20,6 +21,8 @@
     ]
   },
   "dependencies": {
+    "@googlemaps/js-api-loader": "^2.1.1",
+    "@googlemaps/markerclusterer": "^2.6.2",
     "@hookform/resolvers": "^5.4.0",
     "@radix-ui/react-avatar": "^1.1.11",
     "@radix-ui/react-dialog": "^1.1.15",
