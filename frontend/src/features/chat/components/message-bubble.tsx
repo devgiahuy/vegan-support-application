@@ -1,13 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import { Bot, User, Copy, Check, Sparkles, ShieldAlert } from 'lucide-react';
+import { User, Copy, Check, Sparkles, ShieldAlert } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ChatMessageStatus, ChatRole } from '@/common/enums';
 import type { ChatMessage } from '../types/chat.model';
 import { ChatMarkdown } from './chat-markdown';
+import { AssistantThinking } from './assistant-thinking';
 
 /**
  * Bong bóng tin nhắn người dùng / trợ lý:
@@ -66,10 +67,15 @@ export function MessageBubble({
         {/* Bubble */}
         <div
           className={cn(
-            'relative text-sm',
+            'relative text-sm transition-colors duration-200',
             isUser
               ? 'rounded-2xl rounded-tr-xs bg-primary px-4 py-2.5 text-primary-foreground shadow-xs'
-              : 'rounded-2xl rounded-tl-xs border border-border/80 bg-card/80 px-4 py-3.5 text-card-foreground shadow-xs dark:bg-muted/40'
+              : cn(
+                  'rounded-2xl rounded-tl-xs border px-4 py-3.5 text-card-foreground shadow-xs',
+                  text.length === 0
+                    ? 'border-emerald-500/25 bg-gradient-to-br from-card via-card to-emerald-500/5 dark:bg-muted/30 dark:to-emerald-950/20'
+                    : 'border-border/80 bg-card/80 dark:bg-muted/40'
+                )
           )}
         >
           {isUser ? (
@@ -77,17 +83,18 @@ export function MessageBubble({
           ) : (
             <div>
               {text.length > 0 ? (
-                <ChatMarkdown content={text} />
+                <div className="relative">
+                  <ChatMarkdown content={text} />
+                  {/* Streaming Cursor */}
+                  {isStreaming && (
+                    <span
+                      aria-hidden="true"
+                      className="ml-1 inline-block h-3.5 w-1.5 -translate-y-0.5 animate-pulse rounded-full bg-emerald-500 align-middle shadow-[0_0_8px_rgba(16,185,129,0.5)] motion-reduce:animate-none"
+                    />
+                  )}
+                </div>
               ) : (
-                <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <Bot className="size-4 animate-spin text-emerald-500" />
-                  Đang suy nghĩ...
-                </span>
-              )}
-
-              {/* Streaming Cursor */}
-              {isStreaming && (
-                <span className="ml-1 inline-block h-4 w-1.5 translate-y-0.5 animate-pulse rounded-full bg-emerald-500" />
+                <AssistantThinking />
               )}
             </div>
           )}
