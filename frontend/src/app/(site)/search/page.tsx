@@ -131,7 +131,7 @@ function SearchContent() {
           </Badge>
 
           <h1 className="text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight">
-            Tìm Kiếm Món Chay, Cẩm Nang &amp; Video
+            Tìm Kiếm Món Chay, Tin Tức &amp; Video
           </h1>
           <p className="text-sm sm:text-base text-muted-foreground">
             Khám phá công thức nấu ăn, mẹo thực dưỡng dinh dưỡng và các video hướng dẫn từng bước.
@@ -285,7 +285,7 @@ function SearchContent() {
                   Không tìm thấy kết quả cho &quot;{query}&quot;
                 </h3>
                 <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
-                  Hãy thử kiểm tra lại chính tả hoặc chọn các từ khoá cẩm nang phổ biến dưới đây để
+                  Hãy thử kiểm tra lại chính tả hoặc chọn các từ khoá tin tức phổ biến dưới đây để
                   khám phá các món ăn thanh lành:
                 </p>
               </div>
@@ -306,7 +306,7 @@ function SearchContent() {
 
               <div className="pt-4 border-t border-border/60 max-w-lg mx-auto flex justify-center gap-3">
                 <Button asChild variant="default" size="sm" className="rounded-full text-xs">
-                  <Link href="/articles">Xem Cẩm Nang Ăn Chay</Link>
+                  <Link href="/articles">Xem Tin Tức Chay</Link>
                 </Button>
                 <Button asChild variant="secondary" size="sm" className="rounded-full text-xs">
                   <Link href="/recipes">Khám Phá Công Thức</Link>
@@ -326,7 +326,7 @@ function SearchContent() {
                             <BookOpen className="h-4 w-4" />
                           </span>
                           <h2 className="text-lg font-bold text-foreground">
-                            Bài viết &amp; Cẩm nang dinh dưỡng ({matchedPosts.length})
+                            Bài viết &amp; Tin tức dinh dưỡng ({matchedPosts.length})
                           </h2>
                         </div>
                         <Button
@@ -411,7 +411,7 @@ function SearchContent() {
               {activeTab === 'posts' && (
                 <div className="space-y-6">
                   <h3 className="text-lg font-bold text-foreground">
-                    Danh sách bài viết cẩm nang ({matchedPosts.length})
+                    Danh sách bài viết tin tức ({matchedPosts.length})
                   </h3>
                   {matchedPosts.length > 0 ? (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

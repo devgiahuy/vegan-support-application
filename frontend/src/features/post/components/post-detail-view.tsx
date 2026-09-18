@@ -236,7 +236,7 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
         <Link href="/articles" className="hover:text-primary transition-colors">
-          Cẩm nang & Chia sẻ
+          Tin tức & Chia sẻ
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
         <span className="font-medium text-foreground truncate max-w-xs sm:max-w-md">
@@ -516,7 +516,7 @@ export function PostDetailView({ post, relatedPosts }: PostDetailViewProps) {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-xl sm:text-2xl font-bold text-foreground">
-                Bài viết cẩm nang liên quan
+                Bài viết tin tức liên quan
               </h3>
               <p className="text-xs sm:text-sm text-muted-foreground">
                 Khám phá thêm kiến thức dinh dưỡng và kinh nghiệm ăn chay cùng chuyên mục

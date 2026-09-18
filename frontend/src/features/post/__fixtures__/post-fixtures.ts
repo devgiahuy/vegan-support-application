@@ -82,7 +82,7 @@ Sắt trong thực vật là dạng **Sắt không-heme (Non-heme Iron)**. Nhân
       id: 'rev-art-002',
       version: 1,
       status: 'PUBLISHED',
-      title: 'Cẩm nang đi chợ và sắp xếp tủ lạnh thuần chay cho tuần bận rộn',
+      title: 'Tin tức đi chợ và sắp xếp tủ lạnh thuần chay cho tuần bận rộn',
       excerpt:
         'Phương pháp sơ chế, bảo quản rau củ tươi xanh suốt 7 ngày và cách chuẩn bị trước các loại hạt, sốt để tiết kiệm 70% thời gian nấu nướng mỗi ngày.',
       body: `### Nguyên tắc đi chợ thuần chay

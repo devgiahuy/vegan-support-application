@@ -21,7 +21,7 @@ export default function CreatePostPage() {
           </Link>
           <ChevronRight className="h-3.5 w-3.5" />
           <Link href="/articles" className="hover:text-primary transition-colors">
-            Cẩm nang &amp; Chia sẻ
+            Tin tức &amp; Chia sẻ
           </Link>
           <ChevronRight className="h-3.5 w-3.5" />
           <span className="font-semibold text-primary">Tạo bài viết mới</span>

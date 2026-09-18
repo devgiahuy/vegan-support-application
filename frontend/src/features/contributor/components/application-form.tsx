@@ -30,7 +30,7 @@ const TYPE_OPTIONS: Array<{ value: ContributorType; label: string; hint: string 
   {
     value: ContributorType.NUTRITION_EXPERT,
     label: 'Chuyên gia dinh dưỡng',
-    hint: 'Tư vấn, cẩm nang dinh dưỡng chuyên sâu',
+    hint: 'Tư vấn, tin tức dinh dưỡng chuyên sâu',
   },
 ];
 

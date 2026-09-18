@@ -38,7 +38,7 @@ import { NotificationBell } from '@/features/notification/components/notificatio
 const NAV_ITEMS = [
   { label: 'Trang chủ', href: '/' },
   { label: 'Khám phá món', href: '/recipes' },
-  { label: 'Cẩm nang', href: '/articles' },
+  { label: 'Tin tức', href: '/articles' },
   { label: 'Video nấu ăn', href: '/videos' },
   { label: 'Thực đơn tuần', href: '/meal-plans' },
   { label: 'Bản đồ quán', href: '/restaurants' },

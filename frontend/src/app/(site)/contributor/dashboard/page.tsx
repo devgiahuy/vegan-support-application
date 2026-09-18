@@ -98,7 +98,7 @@ function ContributorDashboardContent() {
               </Button>
               <Button asChild variant="outline" className="gap-2 rounded-full">
                 <Link href="/articles/new">
-                  <BookOpen className="h-4 w-4" /> Viết cẩm nang
+                  <BookOpen className="h-4 w-4" /> Viết tin tức
                 </Link>
               </Button>
             </div>
@@ -252,7 +252,7 @@ function ContributorDashboardContent() {
                     <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary/30 text-secondary-foreground mb-2">
                       <BookOpen className="h-6 w-6" />
                     </div>
-                    <CardTitle className="text-lg">Cẩm nang dinh dưỡng</CardTitle>
+                    <CardTitle className="text-lg">Tin tức dinh dưỡng</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <p className="text-sm text-muted-foreground leading-relaxed">
@@ -261,7 +261,7 @@ function ContributorDashboardContent() {
                     </p>
                     <Button asChild variant="outline" className="w-full rounded-full gap-2">
                       <Link href="/articles/new">
-                        <Plus className="h-4 w-4" /> Viết cẩm nang mới
+                        <Plus className="h-4 w-4" /> Viết tin tức mới
                       </Link>
                     </Button>
                   </CardContent>

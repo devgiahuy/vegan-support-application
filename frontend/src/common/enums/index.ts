@@ -245,6 +245,21 @@ export enum RestaurantStatus {
   PUBLISHED = 'PUBLISHED',
 }
 
+/** Loại hình ăn chay của quán (spec 018 — suy đoán mặc định UNKNOWN, xem data-model). */
+export enum PlaceDietType {
+  VEGAN = 'VEGAN',
+  VEGETARIAN = 'VEGETARIAN',
+  VEGAN_FRIENDLY = 'VEGAN_FRIENDLY',
+  UNKNOWN = 'UNKNOWN',
+}
+
+/** Trạng thái mở cửa của quán (thiếu dữ liệu → UNKNOWN, không đoán). */
+export enum PlaceOpeningStatus {
+  OPEN = 'OPEN',
+  CLOSED = 'CLOSED',
+  UNKNOWN = 'UNKNOWN',
+}
+
 /** Mã lý do báo cáo vi phạm (`createModerationReport.reasonCode`). */
 export enum ReportReasonCode {
   SPAM = 'SPAM',

@@ -52,7 +52,7 @@ export default function EditPostPage() {
           <div className="flex items-center justify-center gap-3 pt-2">
             <Button asChild className="rounded-full gap-2">
               <Link href="/articles">
-                <ArrowLeft className="h-4 w-4" /> Quay lại Cẩm nang
+                <ArrowLeft className="h-4 w-4" /> Quay lại Tin tức
               </Link>
             </Button>
             <Button
@@ -76,7 +76,7 @@ export default function EditPostPage() {
             </Link>
             <ChevronRight className="h-3.5 w-3.5" />
             <Link href="/articles" className="hover:text-primary transition-colors">
-              Cẩm nang
+              Tin tức
             </Link>
             <ChevronRight className="h-3.5 w-3.5" />
             <Link

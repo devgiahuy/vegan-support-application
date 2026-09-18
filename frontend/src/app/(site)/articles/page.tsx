@@ -91,7 +91,7 @@ export default function BlogListingPage() {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="max-w-2xl space-y-3">
             <Badge className="bg-primary/20 text-primary border-primary/30 font-semibold gap-1.5 px-3 py-1">
-              <BookOpen className="h-3.5 w-3.5" /> Cẩm Nang Thực Dưỡng Chay
+              <BookOpen className="h-3.5 w-3.5" /> Tin Tức Dinh Dưỡng Chay
             </Badge>
             <h1 className="text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight">
               Kiến Thức &amp; Kinh Nghiệm Ăn Chay Khoa Học

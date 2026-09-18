@@ -424,7 +424,7 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
             </Label>
             <Input
               id="post-title"
-              placeholder="VD: Cẩm nang ăn chay trường không lo thiếu máu và Vitamin B12..."
+              placeholder="VD: Tin tức ăn chay trường không lo thiếu máu và Vitamin B12..."
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="h-12 text-base font-semibold rounded-xl"
@@ -656,7 +656,7 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
             </CardHeader>
             <CardContent className="p-4 space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-xs font-semibold">Chuyên mục cẩm nang</Label>
+                <Label className="text-xs font-semibold">Chuyên mục tin tức</Label>
                 <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger className="rounded-xl text-xs h-10">
                     <SelectValue placeholder="Chọn chuyên mục" />
@@ -764,7 +764,7 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
                 </p>
                 <p className="text-[11px] leading-relaxed">
                   {canPublishDirectly
-                    ? 'Bài viết sẽ xuất hiện ngay trên trang Cẩm nang ở trạng thái công khai.'
+                    ? 'Bài viết sẽ xuất hiện ngay trên trang Tin tức ở trạng thái công khai.'
                     : 'Bài viết sẽ được chuyển vào hàng đợi kiểm duyệt của Chuyên gia Dinh dưỡng trước khi công khai.'}
                 </p>
               </div>

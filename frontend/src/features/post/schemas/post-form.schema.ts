@@ -5,7 +5,7 @@ export const postFormSchema = z.object({
     .string()
     .min(5, 'Tiêu đề bài viết phải có ít nhất 5 ký tự')
     .max(200, 'Tiêu đề không được vượt quá 200 ký tự'),
-  categoryId: z.string().min(1, 'Vui lòng chọn chủ đề cẩm nang'),
+  categoryId: z.string().min(1, 'Vui lòng chọn chủ đề tin tức'),
   coverImageUrl: z.string().url('Đường dẫn ảnh bìa không hợp lệ').or(z.literal('')).optional(),
   excerpt: z
     .string()

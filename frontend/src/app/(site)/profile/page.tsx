@@ -127,7 +127,7 @@ export default function ProfilePage() {
   } | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
 
-  // Bài viết của tôi: kết hợp Công thức + Cẩm nang, lọc theo tác giả đang đăng nhập.
+  // Bài viết của tôi: kết hợp Công thức + Tin tức, lọc theo tác giả đang đăng nhập.
   const myPosts = React.useMemo(() => {
     if (!user) return [];
     const articles = (articlesPagination?.items || []).map((a) => ({
@@ -483,8 +483,8 @@ export default function ProfilePage() {
                 <div>
                   <h2 className="text-lg font-bold text-foreground">Quản lý bài viết cá nhân</h2>
                   <p className="text-xs text-muted-foreground">
-                    Quản lý các bài chia sẻ dinh dưỡng, cẩm nang nấu chay và theo dõi trạng thái
-                    kiểm duyệt từ Chuyên gia (SRS UC-02 &amp; UC-11).
+                    Quản lý các bài chia sẻ dinh dưỡng, tin tức nấu chay và theo dõi trạng thái kiểm
+                    duyệt từ Chuyên gia (SRS UC-02 &amp; UC-11).
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -583,7 +583,7 @@ export default function ProfilePage() {
                                 variant="outline"
                                 className="rounded-full text-[10px] px-2 py-0.5"
                               >
-                                {p.type === 'RECIPE' ? 'Công thức' : 'Cẩm nang'}
+                                {p.type === 'RECIPE' ? 'Công thức' : 'Tin tức'}
                               </Badge>
                               <span className="text-[11px] text-muted-foreground">•</span>
                               <span className="text-xs text-muted-foreground">
@@ -665,7 +665,7 @@ export default function ProfilePage() {
                       </Button>
                       <Button asChild size="sm" variant="outline" className="rounded-full text-xs">
                         <Link href="/articles/new">
-                          <Plus className="h-3.5 w-3.5 mr-1" /> Viết cẩm nang mới
+                          <Plus className="h-3.5 w-3.5 mr-1" /> Viết tin tức mới
                         </Link>
                       </Button>
                     </div>

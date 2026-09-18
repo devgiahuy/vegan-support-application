@@ -46,7 +46,7 @@ export default function PostDetailPage() {
         <div className="pt-2 flex justify-center gap-3">
           <Button asChild variant="outline" className="rounded-xl gap-2">
             <Link href="/articles">
-              <ArrowLeft className="h-4 w-4" /> Quay lại Cẩm nang
+              <ArrowLeft className="h-4 w-4" /> Quay lại Tin tức
             </Link>
           </Button>
           <Button onClick={() => void refetchArticle()} className="rounded-xl">
