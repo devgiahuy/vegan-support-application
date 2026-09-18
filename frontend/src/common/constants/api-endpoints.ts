@@ -115,4 +115,26 @@ export const API_ENDPOINTS = {
     READ: (id: string) => `/notifications/${id}/read`,
     READ_ALL: '/notifications/read-all',
   },
+  // TODO(BE-READY): Restaurants/location còn PLANNED — 3 nhánh dưới CHƯA được import ở đâu.
+  RESTAURANTS: {
+    NEARBY: '/restaurants/nearby',
+    SEARCH: '/restaurants/search',
+    DETAIL: (id: string) => `/restaurants/${id}`,
+    SUBMIT: '/restaurants',
+  },
+  LOCATION: {
+    GEOCODE: '/location/geocode',
+  },
+  ADMIN_RESTAURANTS: {
+    LIST: '/admin/restaurants',
+    REVIEW: (id: string) => `/admin/restaurants/${id}/review`,
+  },
+  // TODO(BE-READY): AI governance còn PLANNED — nhánh dưới CHƯA được import ở đâu.
+  AI_GOVERNANCE: {
+    METRICS: '/admin/ai/metrics',
+    REQUESTS: '/admin/ai/requests',
+    FLAGS: '/admin/ai/flags',
+    FEATURES: '/admin/ai/features',
+    FEATURE_TOGGLE: (feature: string) => `/admin/ai/features/${feature}`,
+  },
 } as const;

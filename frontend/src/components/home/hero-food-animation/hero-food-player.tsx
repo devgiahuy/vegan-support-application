@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Image from 'next/image';
-import { Player } from '@remotion/player';
+import { Player, type PlayerRef } from '@remotion/player';
 import { HeroFoodComposition } from './hero-food-composition';
 import { HERO_ANIMATION_CONFIG } from './hero-food-constants';
 
@@ -10,7 +10,10 @@ export interface HeroFoodPlayerProps {
   className?: string;
 }
 
-export function HeroFoodPlayer({ className = '' }: HeroFoodPlayerProps) {
+export const HeroFoodPlayer = React.memo(function HeroFoodPlayer({
+  className = '',
+}: HeroFoodPlayerProps) {
+  const playerRef = React.useRef<PlayerRef>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = React.useState(false);
 
   React.useEffect(() => {
@@ -23,6 +26,38 @@ export function HeroFoodPlayer({ className = '' }: HeroFoodPlayerProps) {
 
     mediaQuery.addEventListener('change', listener);
     return () => mediaQuery.removeEventListener('change', listener);
+  }, []);
+
+  // Tự động kiểm tra và kích hoạt play mượt mà không bị trình duyệt chặn autoplay
+  React.useEffect(() => {
+    const ensurePlaying = () => {
+      const player = playerRef.current;
+      if (player && !player.isPlaying()) {
+        player.play();
+      }
+    };
+
+    // Gọi play ngay sau khi mount
+    const timeout = setTimeout(ensurePlaying, 50);
+
+    // Kích hoạt ngay khi người dùng có bất kỳ tương tác nào với trang
+    const handleInteraction = () => {
+      ensurePlaying();
+      window.removeEventListener('pointerdown', handleInteraction);
+      window.removeEventListener('scroll', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+    };
+
+    window.addEventListener('pointerdown', handleInteraction, { passive: true, once: true });
+    window.addEventListener('scroll', handleInteraction, { passive: true, once: true });
+    window.addEventListener('keydown', handleInteraction, { passive: true, once: true });
+
+    return () => {
+      clearTimeout(timeout);
+      window.removeEventListener('pointerdown', handleInteraction);
+      window.removeEventListener('scroll', handleInteraction);
+      window.removeEventListener('keydown', handleInteraction);
+    };
   }, []);
 
   // Nếu người dùng bật giảm chuyển động, hiển thị món ăn hoàn chỉnh tĩnh
@@ -50,6 +85,7 @@ export function HeroFoodPlayer({ className = '' }: HeroFoodPlayerProps) {
       aria-hidden="true"
     >
       <Player
+        ref={playerRef}
         component={HeroFoodComposition}
         durationInFrames={HERO_ANIMATION_CONFIG.TOTAL_FRAMES}
         compositionWidth={HERO_ANIMATION_CONFIG.COMPOSITION_WIDTH}
@@ -57,6 +93,9 @@ export function HeroFoodPlayer({ className = '' }: HeroFoodPlayerProps) {
         fps={HERO_ANIMATION_CONFIG.FPS}
         autoPlay
         loop
+        initiallyMuted
+        numberOfSharedAudioTags={0}
+        moveToBeginningWhenEnded
         controls={false}
         clickToPlay={false}
         acknowledgeRemotionLicense
@@ -68,4 +107,4 @@ export function HeroFoodPlayer({ className = '' }: HeroFoodPlayerProps) {
       />
     </div>
   );
-}
+});
