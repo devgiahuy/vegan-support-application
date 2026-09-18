@@ -312,6 +312,11 @@ review proposal vẫn là `PLANNED` cho tới Phase 07; frontend chưa được 
 | GET    | `/admin/restaurants`            | `PLANNED` | —               | No            | Pending queue                       |
 | PATCH  | `/admin/restaurants/:id/review` | `PLANNED` | —               | No            | Approve/reject                      |
 
+> Ghi chú spec 018 (2026-09-17): luồng khám phá quán Google-direct (FE-only qua
+> `PlaceProvider`, key trình duyệt giới hạn referrer) KHÔNG đi qua 7 endpoint
+> trên nên không đòi BE `READY`; các endpoint giữ `PLANNED`, `FE integrated`
+> giữ `No` cho tới khi nối live Backend thật.
+
 ### 6.8 AI Governance và Notifications
 
 | Method | Path                          | Status    | Backend updated | FE integrated | Ghi chú                       |

@@ -16,6 +16,45 @@
 - Còn lại / rủi ro:
 ```
 
+## [2026-09-17] — Bản đồ quán chay Google-direct FE-only (spec 018, T001–T017 + T019–T022 + T024–T025 + T028 + T030–T032)
+
+- Mục tiêu: Thay khung bản đồ CSS bằng Google Maps tương tác thật qua `PlaceProvider` (đổi nguồn không sửa màn hình), giữ toàn bộ đầu tư spec 016.
+- Đã làm:
+  - Setup: cài `@googlemaps/js-api-loader` + `@googlemaps/markerclusterer`; `.env.example` thêm `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` + `PLACE_PROVIDER=mock`; ghi chú luồng Google-direct trong `BACKEND_INTEGRATION.md` (giữ 7 endpoint `PLANNED`).
+  - Foundation: `providers/place-provider.ts` (interface + `PlaceErrorCode` + message Việt + composition), `providers/maps-bootstrap.ts` (setOptions 1 lần), `providers/google-place.provider.ts` (Places New: searchNearby/searchByText/fetchFields/geocode, field mask, map lỗi → mã ứng dụng), `providers/mock-place.provider.ts` (fixture + kho cộng đồng), `providers/place-distance.ts` (haversine dùng chung), `GooglePlaceDto` suy luận, mở rộng `Restaurant` (rating/reviewCount/photos/dietType/dietLabel/openingStatus/providerId/googleMapsUri), `GooglePlaceMapper` + 10 tests (heuristic + qualifier "Có thể..."), facade `restaurantApi` (giữ chữ ký, gom trùng tên+địa chỉ/100m, nhãn "Nội bộ · Google"), zod radius 3000/10000, nhãn diet/GOOGLE.
+  - US1: `restaurant-map.tsx` (loader singleton, cluster, marker↔card 2 chiều, skeleton, reduced-motion, fallback placeholder + caption mới), viết lại `/restaurants` (selectedPlaceId, lọc chung cho map+list, công khai), highlight card + tóm tắt sao/giờ/nhãn chay.
+  - US2: filters loại chay/mở cửa/sao + `applyPlaceFilters` (UNKNOWN bị loại khi lọc), quy tắc món (mock lọc dishes, Google tin server), detail ảnh + attribution + đánh giá + "Chỉ đường"; `next.config.ts` đã có sẵn `lh3.googleusercontent.com`.
+  - US3: giữ kết quả cũ khi lỗi + báo nhẹ (RATE_LIMITED), text 4 trạng thái chuẩn spec.
+  - US4: test swap provider (mock vs fake đảo thứ tự + trùng → cùng tập đã gom/sắp) + hook `__overrideActiveProviderForTests`.
+  - Khắc phục: regex strip dấu verify codepoint U+0300–U+036F; js-api-loader 2.x dùng functional API (không có `Loader.load()`); `SearchNearbyRequest` không có `textQuery` (lọc chay client-side); `OpeningHours` không có `isOpen()` (giữ UNKNOWN trung thực); Marker cổ điển (không cần Map ID); `cn` import từ package `cn`.
+- File tạo/sửa: xem `specs/018-vegetarian-place-map/tasks.md` T001–T032 (28/32 code xong); `docs/PROGRESS.md`, `docs/BACKEND_INTEGRATION.md`, `.env.example`, `package.json`.
+- Verify: `npx tsc --noEmit` 0 lỗi, `npm test` 248/248 pass, `npm run build` pass, eslint scope sạch.
+- PROGRESS: task #8 (UC-12) 70% → 85% (xong code + gates tự động; còn QA tay).
+- Còn lại / rủi ro: T018/T023/T026/T029 (QS-1..QS-6, cần key Google giới hạn referrer + trình duyệt), T027 usability SC-003 (cần 5–6 người thật), T031 Network thủ công; `.env` local chưa có key nên provider đang ở `mock`.
+
+## [2026-09-17] — Refactor giao diện chờ suy nghĩ (Thinking State) của Chatbot AI Trợ lý Dinh dưỡng
+
+- Mục tiêu: Tái thiết kế toàn diện giao diện chờ suy nghĩ của chatbot AI VeggieConnect từ trạng thái thô sơ (icon robot xoay giật cục kèm con trỏ nhảy dòng lỗi) sang giao diện chuẩn AI hiện đại, tinh tế, mượt mà và trực quan.
+- Đã làm:
+  - Tách component chuyên biệt `AssistantThinking` (`src/features/chat/components/assistant-thinking.tsx`):
+    - Badge icon AI phát sáng với quầng sáng thở nhẹ (`animate-ping` mờ kết hợp `Sparkles` icon ngọc lục bảo `animate-pulse`).
+    - Gợi ý trạng thái động (Dynamic Stage Hints): luân phiên chuyển đổi thông minh theo thời gian xử lý ("Đang suy nghĩ..." → "Đang phân tích thông tin dinh dưỡng..." → "Đang tổng hợp câu trả lời cho bạn..."), giúp người dùng có phản hồi liên tục khi chờ backend xử lý.
+    - Sóng chấm động (3 Bouncing Dots Wave) nhịp nhàng thay cho icon quay giật cục.
+    - Sóng phác thảo câu trả lời (Shimmer Skeleton Wave) với dải gradient ngọc bích mô phỏng luồng suy nghĩ đang được chuẩn bị.
+    - Hỗ trợ đầy đủ chuẩn a11y (`role="status"`, `aria-live="polite"`, `sr-only`) và `motion-reduce:animate-none` tuân thủ nghiêm ngặt `fixing-motion-performance`.
+  - Tinh chỉnh `MessageBubble` (`src/features/chat/components/message-bubble.tsx`):
+    - Khắc phục triệt để lỗi con trỏ streaming (`span` cursor) bị hiển thị khi `text.length === 0` gây rớt dòng thành một vạch xanh cô lập.
+    - Đặt con trỏ streaming strictly inline vào khối markdown khi và chỉ khi đang stream có nội dung (`text.length > 0 && isStreaming`).
+    - Nâng cấp style bong bóng tin nhắn ở trạng thái chờ với viền và nền gradient ngọc lục bảo dịu mắt (`border-emerald-500/25 bg-gradient-to-br ...`).
+- File tạo/sửa:
+  - Tạo mới: `src/features/chat/components/assistant-thinking.tsx`.
+  - Sửa đổi: `src/features/chat/components/message-bubble.tsx`, `docs/WORK-LOG.md`.
+- Verify: `npx vitest run src/features/chat` (24/24 tests passed), kiểm tra trực quan trên browser subagent qua route `/assistant` (chụp screenshot xác nhận UI hiển thị chuẩn đẹp, không còn giật cục hay rớt con trỏ).
+- PROGRESS: Hoàn thiện trải nghiệm trò chuyện với Trợ lý AI.
+- Còn lại / rủi ro: Không có.
+
+---
+
 ## [2026-09-17] — Thiết kế mới cho thẻ Dinh dưỡng 385 kcal / 18g Protein & Khắc phục Autoplay Remotion Player
 
 - Mục tiêu: Nâng cấp thiết kế cho thẻ dinh dưỡng thực vật ("385 kcal", "18g Protein thực vật") tại Hoạt cảnh ẩm thực Hero (`HeroFoodAnimation`) với đường sáng neon chuyển động liên tục quanh viền; đồng thời khắc phục triệt để hiện tượng chiếc tô và 5 nguyên liệu bị khựng/không xoay do chính sách Browser Autoplay Policy & Strict Mode delayRender.
@@ -1204,5 +1243,23 @@
 - Verify: `tsc --noEmit` 0 lỗi; `npm test` 25 files, 236/236 pass (không regress).
 - PROGRESS: task #14 giữ 70% (scaffold + converge sạch; test tay NT + BE READY còn lại).
 - Còn lại / rủi ro: header vẫn là file tranh chấp giữa 2 session — phối hợp khi merge/commit.
+
+---
+
+## [2026-09-17] — Đổi nhãn Cẩm nang → Tin tức (spec 019-articles-to-news-labels, T001–T019)
+
+- Mục tiêu: đổi toàn bộ nhãn "Cẩm nang" thành "Tin tức" trong FE; giữ route, redirect, enum, API nguyên vẹn (FE-only).
+- Đã làm:
+  - Spec 019 (3 user story P1–P3, 9 FR, 4 SC) → plan (label map + inventory 13 điểm) → tasks 19 task; checklist requirements 16/16 pass.
+  - Đổi 22 điểm nhãn trong 11 file: nav header, list (badge), detail/new/edit (breadcrumb + nút quay lại), form (placeholder + thông báo + label chuyên mục + message zod), profile (nhãn loại + mô tả tab + nút viết), search (h1 + gợi ý từ khóa + nút xem thêm + tên nhóm), contributor (card + nút viết + hint form), tiêu đề fixture mẫu.
+  - Phát hiện thêm 9 điểm biến thể hoa/thường ngoài kiểm kê ban đầu (nút "Viết cẩm nang", mô tả tab, message zod...) — đã đổi hết.
+  - Baseline T003 đối chiếu T019: `next.config.ts`, `api-endpoints.ts` 0 diff — route/redirect/API bất biến (xác nhận bằng `git diff`).
+- File tạo/sửa:
+  - Tạo: `specs/019-articles-to-news-labels/**`
+  - Sửa nhãn: `components/layout/site-header.tsx`, `app/(site)/articles/{page,[id]/page,[id]/edit/page,new/page}.tsx`, `app/(site)/{profile,search}/page.tsx`, `app/(site)/contributor/dashboard/page.tsx`, `features/post/{components/post-detail-view,components/post-editor-form,__fixtures__/post-fixtures,schemas/post-form.schema}.tsx|.ts`, `features/contributor/components/application-form.tsx`
+  - Sửa docs: `docs/{PROGRESS,WORK-LOG}.md`
+- Verify: grep 0 chuỗi cũ trong `src/` (mọi biến thể hoa/thường); `tsc --noEmit` 0 lỗi; `npm test` 27 files, 248/248 pass (suite tăng từ 236 do session khác thêm test — không regress); `npm run build` pass 30/30 routes.
+- PROGRESS: task #2 giữ % (thuần nhãn, không endpoint mới).
+- Còn lại / rủi ro: (1) T018 test tay trình duyệt theo quickstart mục 3 (nav/list/detail/form/profile/search/contributor + URL cũ/bookmark) — CHƯA làm (không có browser trong phiên này; trang prerender là shell client nên check HTML build không kết luận được); (2) `site-header.tsx`/`profile/page.tsx`/`search/page.tsx` đang có session khác sửa — phối hợp khi merge (diff của tôi thuần nhãn, dễ rebase).
 
 
