@@ -1,6 +1,8 @@
 # Prompt — Phase 07: Contributor Applications
 
-Triển khai Phase 07 trong repository `/Users/thienel/hhnthienn/fptu/sem8/wdp/vegan-support-application`; không dựa vào session trước.
+> Historical completed-phase prompt. The subtype model below is legacy runtime behavior, not the approved target. Phase 14 migrates to one Contributor permission set plus approval basis; do not extend subtype RBAC.
+
+Triển khai Phase 07 từ thư mục gốc của repository hiện tại; không dựa vào session trước.
 
 Đọc `AGENTS.md`, BL-01 và RBAC trong implementation plan, phase map, Auth code/OpenAPI và integration guide. Xác minh Phase 01. Preserve unrelated work.
 

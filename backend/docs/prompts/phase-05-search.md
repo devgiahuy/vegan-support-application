@@ -1,6 +1,6 @@
 # Prompt — Phase 05: Search & Related Content
 
-Triển khai Phase 05 trong repository `/Users/thienel/hhnthienn/fptu/sem8/wdp/vegan-support-application`; không phụ thuộc lịch sử chat.
+Triển khai Phase 05 từ thư mục gốc của repository hiện tại; không phụ thuộc lịch sử chat.
 
 Đọc `AGENTS.md`, BL-02/04 và Slice Search trong implementation plan, phase map, OpenAPI và integration guide. Xác minh Phase 04 đã merge.
 

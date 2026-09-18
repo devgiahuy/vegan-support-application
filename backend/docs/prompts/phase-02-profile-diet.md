@@ -1,6 +1,6 @@
 # Prompt — Phase 02: Profile, Health & Diet Rules
 
-Triển khai Phase 02 trong repository `/Users/thienel/hhnthienn/fptu/sem8/wdp/vegan-support-application`. Không dựa vào hội thoại cũ.
+Triển khai Phase 02 từ thư mục gốc của repository hiện tại. Không dựa vào hội thoại cũ.
 
 Đọc `AGENTS.md`, đặc biệt BL-02/03/07/13 trong `docs/IMPLEMENTATION_PLAN.md`, phase map và frontend integration guide. Xác minh Phase 01 bằng code/OpenAPI. Bảo toàn thay đổi không liên quan.
 

@@ -33,6 +33,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { UserRole } from '@/common/enums';
 import { useLogoutMutation } from '@/features/auth/queries/auth.queries';
 import { ThemeToggle } from './theme-toggle';
+import { NotificationBell } from '@/features/notification/components/notification-bell';
 
 const NAV_ITEMS = [
   { label: 'Trang chủ', href: '/' },
@@ -159,6 +160,8 @@ export function SiteHeader() {
           </Button>
 
           <ThemeToggle />
+
+          <NotificationBell />
 
           {isAuthenticated && user ? (
             <DropdownMenu>

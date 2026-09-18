@@ -239,6 +239,12 @@ export enum ReportTargetKind {
   COMMENT = 'COMMENT',
 }
 
+/** Trạng thái quán chay (hiển thị công khai / chờ duyệt). */
+export enum RestaurantStatus {
+  PENDING = 'PENDING',
+  PUBLISHED = 'PUBLISHED',
+}
+
 /** Mã lý do báo cáo vi phạm (`createModerationReport.reasonCode`). */
 export enum ReportReasonCode {
   SPAM = 'SPAM',

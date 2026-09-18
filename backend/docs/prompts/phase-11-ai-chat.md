@@ -1,6 +1,6 @@
 # Prompt — Phase 11: AI Chat Gateway
 
-Triển khai Phase 11 trong repository `/Users/thienel/hhnthienn/fptu/sem8/wdp/vegan-support-application`; không dựa vào chat session trước.
+Triển khai Phase 11 từ thư mục gốc của repository hiện tại; không dựa vào chat session trước.
 
 Đọc `AGENTS.md`, BL-08/09/15 trong implementation plan, phase map, Auth/Profile code, OpenAPI và integration guide. Xác minh phases 01 và 02.
 
@@ -30,7 +30,7 @@ Triển khai OpenAI-backed nutrition chatbot với quota, SSE, private history, 
 - Integration guide/status/changelog/phase record cập nhật.
 - Lint/typecheck/build pass.
 
-Không triển khai public sharing hoặc expert verification; dành cho Phase 12.
+Không triển khai public sharing hoặc Contributor verification; dành cho Phase 23 theo phase map hiện hành.
 
 Commit duy nhất:
 

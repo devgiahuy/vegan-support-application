@@ -157,4 +157,25 @@ body {
   transition: all 0.2s ease !important;
 }
 
+/* ==========================================================================
+   Border Beam: Ánh sáng chuyển động liên tục quanh khung viền
+   ========================================================================== */
+@keyframes border-beam-spin {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
 
+.animate-border-beam {
+  animation: border-beam-spin 3.5s linear infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-border-beam {
+    animation: none !important;
+  }
+}
