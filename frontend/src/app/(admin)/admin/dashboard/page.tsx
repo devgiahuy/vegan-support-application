@@ -20,6 +20,8 @@ import {
   UserCog,
   MessagesSquare,
   UserCheck,
+  Store,
+  Bot,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -51,6 +53,11 @@ import {
 } from '@/features/moderation/queries/moderation.queries';
 import { useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
 import { ContribQueueTable } from '@/features/contributor/components/contrib-queue-table';
+import { RestaurantQueueTable } from '@/features/restaurant/components/queue-table';
+import { MetricsOverview } from '@/features/ai-governance/components/metrics-overview';
+import { FlagsList } from '@/features/ai-governance/components/flags-list';
+import { FeaturesTable } from '@/features/ai-governance/components/features-table';
+import { RequestsTable } from '@/features/ai-governance/components/requests-table';
 
 type Tab =
   | 'queue'
@@ -61,7 +68,9 @@ type Tab =
   | 'reports'
   | 'mod-users'
   | 'mod-comments'
-  | 'contrib-apps';
+  | 'contrib-apps'
+  | 'restaurants'
+  | 'ai-governance';
 
 export default function AdminDashboardPage() {
   return (
@@ -83,7 +92,9 @@ function parseTabParam(value: string | null): Tab {
     value === 'reports' ||
     value === 'mod-users' ||
     value === 'mod-comments' ||
-    value === 'contrib-apps'
+    value === 'contrib-apps' ||
+    value === 'restaurants' ||
+    value === 'ai-governance'
   ) {
     return value;
   }
@@ -173,6 +184,8 @@ function AdminDashboardContent() {
     { id: 'mod-users', label: 'Kiểm soát TK', icon: UserCog },
     { id: 'mod-comments', label: 'Kiểm duyệt BL', icon: MessagesSquare },
     { id: 'contrib-apps', label: 'Đơn cộng tác', icon: UserCheck },
+    { id: 'ai-governance', label: 'Giám sát AI', icon: Bot },
+    { id: 'restaurants', label: 'Quán chờ duyệt', icon: Store },
     { id: 'categories', label: 'Cây danh mục', icon: FolderTree },
     { id: 'ingredients', label: 'Nguyên liệu', icon: Leaf },
     { id: 'logs', label: 'Audit logs', icon: ScrollText },
@@ -290,6 +303,21 @@ function AdminDashboardContent() {
 
             {/* TAB: CONTRIB-APPS — duyệt đơn cộng tác (features/contributor, fixture) */}
             {tab === 'contrib-apps' && <ContribQueueTable />}
+
+            {/* TAB: RESTAURANTS — duyệt quán mới (features/restaurant, fixture) */}
+            {tab === 'restaurants' && <RestaurantQueueTable />}
+
+            {/* TAB: AI-GOVERNANCE — giám sát AI (features/ai-governance, fixture) */}
+            {tab === 'ai-governance' && (
+              <div className="space-y-4">
+                <MetricsOverview />
+                <div className="grid gap-4 lg:grid-cols-2">
+                  <FlagsList />
+                  <FeaturesTable />
+                </div>
+                <RequestsTable />
+              </div>
+            )}
 
             {/* TAB: CATEGORIES — quản trị thật (CRUD + archive qua replacement) */}
             {tab === 'categories' && (

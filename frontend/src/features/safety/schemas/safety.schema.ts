@@ -10,7 +10,10 @@ export const reportSchema = z.object({
   details: z
     .string()
     .trim()
-    .max(MAX_REPORT_DETAILS_LENGTH, `Chi tiết tối đa ${MAX_REPORT_DETAILS_LENGTH} ký tự.`),
+    .max(MAX_REPORT_DETAILS_LENGTH, `Chi tiết tối đa ${MAX_REPORT_DETAILS_LENGTH} ký tự.`)
+    .refine((val) => val.length === 0 || val.length >= 10, {
+      message: 'Nếu nhập chi tiết, vui lòng nhập tối thiểu 10 ký tự.',
+    }),
   /** UUID mục tiêu — validate ở form, sai thì không gửi. */
   targetId: z.string().regex(UUID_RE, 'Mục tiêu báo cáo không hợp lệ.'),
 });

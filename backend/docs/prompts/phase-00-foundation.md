@@ -1,6 +1,6 @@
 # Prompt — Phase 00: Backend Foundation
 
-Bạn đang triển khai Phase 00 cho repository `/Users/thienel/hhnthienn/fptu/sem8/wdp/vegan-support-application`. Đây là session độc lập; không dựa vào lịch sử chat.
+Bạn đang triển khai Phase 00 từ thư mục gốc của repository hiện tại. Đây là session độc lập; không dựa vào lịch sử chat.
 
 Trước khi sửa file, đọc đầy đủ `AGENTS.md`, `docs/IMPLEMENTATION_PLAN.md`, `backend/docs/IMPLEMENTATION_PHASES.md` và `frontend/docs/BACKEND_INTEGRATION.md`. Kiểm tra `git status`, giữ nguyên mọi thay đổi không liên quan và không stage `.DS_Store`.
 

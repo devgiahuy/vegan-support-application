@@ -1,26 +1,27 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 2.3
+**Version:** 4.0
 
-**Cập nhật:** 16/09/2026
+**Cập nhật:** 18/09/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
 **Contract target:** `/api/v1`
 
-> Tài liệu này là registry sống cho những capability backend đã sẵn sàng để frontend tích hợp. Foundation, Authentication & Sessions, Profile/Health, Diet Rules, Catalog, Content Core, Content Discovery, Community Interactions, Contributor Applications, Moderation & Reports, Behavioral Recommendation, Meal Planner và AI Chat Gateway đã hoàn tất; các feature còn lại giữ `PLANNED` cho tới khi phase tương ứng vượt qua đầy đủ completion gate.
+> Tài liệu này là registry sống cho capability backend thực tế. Phases 00–11 là baseline hiện có; Phases 12–27 chỉ là `PLANNED` cho tới khi từng phase vượt completion gate. Contributor hiện vẫn dùng contract subtype legacy và sẽ có breaking migration ở Phase 14; frontend không được dùng approval/request data để tự cấp quyền.
 
 ---
 
 ## 1. Source of truth và status
 
-Thứ tự ưu tiên khi tài liệu khác nhau:
+Khi xác định yêu cầu nghiệp vụ, ưu tiên `docs/SRS.md` rồi `docs/IMPLEMENTATION_PLAN.md`. Khi xác định contract có thể gọi ngay, dùng thứ tự:
 
 1. OpenAPI được backend phục vụ tại `/api-docs.json` — contract kỹ thuật thực thi được.
 2. File này — trạng thái triển khai, hướng dẫn tích hợp và ngoại lệ frontend.
-3. `/docs/IMPLEMENTATION_PLAN.md` — business rules, scope và sequencing.
-4. `/backend/docs/IMPLEMENTATION_PHASES.md` — phase dependency, completion record và prompt triển khai.
-5. `/docs/SRS.md` — product requirements sau khi được hợp nhất.
+3. `/docs/SRS.md` — canonical product requirement; không đồng nghĩa capability đã READY.
+4. `/docs/IMPLEMENTATION_PLAN.md` — business rules, scope và sequencing.
+5. `/backend/docs/IMPLEMENTATION_PHASES.md` — phase dependency, completion record và prompt triển khai.
+6. `/docs/ROADMAP_PHASE_2.md` — backlog sau MVP, không phải runtime contract.
 
 Nếu OpenAPI và file này lệch nhau, không tự đoán. Backend phải cập nhật cả hai trong cùng change trước khi frontend tích hợp.
 
@@ -175,7 +176,11 @@ Không sử dụng `any`, không trả DTO trực tiếp về component và khô
 | Moderation/Admin Users           | `features/admin`                                               | `/admin`                                                               |
 | Categories                       | `features/category`                                            | `/categories`                                                          |
 | Ingredients                      | `features/ingredient`                                          | `/categories#tra-cuu`                                                  |
+| Food Data/Nutrition              | `features/food-data`, `features/recipe-nutrition`               | `/ingredients`, recipe editor/detail                                   |
 | Meal Plans                       | `features/meal-plan`                                           | `/meal-plans`, `/meal-plans/saved`                                     |
+| Custom Meals/Programs            | `features/custom-meal`, `features/meal-program`                 | `/meals/custom`, `/meal-programs`                                      |
+| Pantry/Vision/Receipts           | `features/pantry`, `features/ingredient-vision`, `features/receipt` | `/pantry`, `/pantry/scan`, `/receipts`                              |
+| Storage                          | `features/storage`                                             | `/profile` (tab dung lượng)                                            |
 | Recommendations/Behavior         | `features/recommendation`                                      | `/` (khối gợi ý trang chủ)                                             |
 | Chat                             | `features/chat`                                                | `/assistant`                                                           |
 | Restaurants/Location             | `features/restaurant`                                          | `/restaurants`, `/restaurants/[id]`                                    |
@@ -210,8 +215,7 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 | PUT    | `/users/me/health-profile`   | `READY`   | 2026-09-15      | Yes (2026-09-15) | Upsert manual inputs; backend tính BMI, Mifflin–St Jeor BMR và activity-factor TDEE                                                                       |
 | POST   | `/diet-rules/preview`        | `READY`   | 2026-09-15      | Yes (2026-09-15) | Auth required; trả rule set v1, source/default/hard flag; tradition rule là configurable                                                                  |
 | PUT    | `/users/me/diet-preferences` | `READY`   | 2026-09-15      | Yes (2026-09-15) | Exclusion nhận optional canonical `ingredientId`; free-text vẫn hỗ trợ; allergy/exclusion luôn hard                                                       |
-| PUT    | `/users/me/diet-schedule`    | `READY`   | 2026-09-15      | Yes (2026-09-15) | Replace lịch PERIODIC bằng `YYYY-MM-DD`, semantic `Asia/Ho_Chi_Minh`, PostgreSQL `DATE`                                                                   |
-| DELETE | `/users/me/behavior-history` | `PLANNED` | —               | No               | Reset personalization                                                                                                                                     |
+| DELETE | `/users/me/behavior-history` | `READY`   | 2026-09-17      | Yes (2026-09-17) | Reset personalization history; FE: `features/safety`                                                                      |
 
 ### 6.3 Content và Community
 
@@ -241,11 +245,11 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 | POST   | `/contributor-applications`                  | `READY`   | 2026-09-17      | Yes (2026-09-17)      | Member upgrade; không có certificate MVP; FE: `features/contributor` |
 | GET    | `/contributor-applications/me`               | `READY`   | 2026-09-17      | Yes (2026-09-17)      | Member xem lịch sử đơn; FE: `features/contributor` |
 | GET    | `/admin/contributor-applications`            | `READY`   | 2026-09-17      | Yes (2026-09-17)      | Admin only; hàng chờ duyệt; FE: `features/contributor` |
-| PATCH  | `/admin/contributor-applications/:id/review` | `READY`   | 2026-09-17      | Yes (2026-09-17)      | Approve/reject + type + basis; FE: `features/contributor` |
+| PATCH  | `/admin/contributor-applications/:id/review` | `READY`   | 2026-09-17      | Yes (2026-09-17)      | Contract hiện tại approve/reject + subtype/basis; Phase 14 sẽ bỏ subtype, khi bắt đầu phải chuyển `CHANGING` |
 | GET    | `/review-queue/posts`                        | `PLANNED` | —               | Yes (2026-09-16, chờ READY chính thức) | Contributor/Admin filtering; FE: `features/review` list + filter + pagination |
 | PATCH  | `/review-queue/posts/:id/approve`            | `PLANNED` | —               | Yes (2026-09-16, chờ READY chính thức) | Cấm self-approve; FE: dialog reason bắt buộc + chặn tự duyệt 2 lớp              |
 | PATCH  | `/review-queue/posts/:id/reject`             | `PLANNED` | —               | Yes (2026-09-16, chờ READY chính thức) | Reason required; FE: chung dialog + toast lý do cho tác giả                     |
-| POST   | `/reports`                                   | `PLANNED` | —               | No                    | One active report/user/target                                                      |
+| POST   | `/reports`                                   | `READY`   | 2026-09-17      | Yes (2026-09-17)      | One active report/user/target; FE: `features/safety`                               |
 | GET    | `/admin/reports`                             | `READY`   | 2026-09-16      | Yes (2026-09-17) | Admin only; filter status/priority/targetType                                      |
 | PATCH  | `/admin/reports/:id/resolve`                 | `READY`   | 2026-09-16      | Yes (2026-09-17) | Audit required; reason min 10 chars; resolve gộp cùng target                       |
 | GET    | `/admin/users`                               | `READY`   | 2026-09-16      | Yes (2026-09-17) | Search/filter/pagination                                                           |
@@ -288,7 +292,7 @@ review proposal vẫn là `PLANNED` cho tới Phase 07; frontend chưa được 
 > Provider decision: live AI dùng OpenAI Responses API; chat mặc định `gpt-5.6-terra`, moderation
 > dùng `omni-moderation-latest`. Frontend chỉ gọi backend SSE contract, không gọi OpenAI trực tiếp và
 > không phụ thuộc provider event shape. Năm endpoint private chat đã `READY`; public sharing và expert
-> verification vẫn `PLANNED` cho Phase 12.
+> verification vẫn `PLANNED` cho Phase 23. Phase 14 sẽ thống nhất Contributor trước khi mở verification.
 
 | Method | Path                              | Status    | Backend updated | FE integrated | Ghi chú                                      |
 | ------ | --------------------------------- | --------- | --------------- | ------------- | -------------------------------------------- |
@@ -299,7 +303,7 @@ review proposal vẫn là `PLANNED` cho tới Phase 07; frontend chưa được 
 | POST   | `/chat/messages/:id/feedback`     | `READY`   | 2026-09-16      | Yes (2026-09-16) | Owned assistant message; upsert up/down      |
 | PATCH  | `/chat/messages/:id/share`        | `PLANNED` | —               | No            | Authenticated only                           |
 | GET    | `/chat/public`                    | `PLANNED` | —               | No            | Public shared answers                        |
-| POST   | `/chat/messages/:id/verification` | `PLANNED` | —               | No            | Approved Nutrition Expert/Admin              |
+| POST   | `/ai-artifacts/:id/verifications` | `PLANNED` | —               | No            | Phase 23; mọi approved Contributor hoặc Admin; không phân subtype |
 
 ### 6.7 Restaurants và Location
 
@@ -326,13 +330,115 @@ review proposal vẫn là `PLANNED` cho tới Phase 07; frontend chưa được 
 | PATCH  | `/notifications/:id/read`     | `PLANNED` | —               | No            | Owner only                    |
 | PATCH  | `/notifications/read-all`     | `PLANNED` | —               | No            | Owner only                    |
 
+### 6.9 Food data và cooking-aware nutrition — Phases 12–13
+
+Các path dưới đây là contract target để định hướng; phase triển khai được quyền tinh chỉnh trước khi đánh `READY`, nhưng phải cập nhật OpenAPI và bảng này cùng lúc.
+
+| Method | Path | Status | Backend updated | FE integrated | Ghi chú |
+|---|---|---|---|---|---|
+| GET | `/food-data/ingredients/:id/nutrients` | `PLANNED` | — | No | Canonical nutrients + provenance/version; missing không phải zero |
+| GET | `/food-data/reference-intakes` | `PLANNED` | — | No | Population/unit/source/version |
+| GET | `/food-data/ingredient-guidelines` | `PLANNED` | — | No | Amount/frequency per period; population/evidence/source/severity |
+| GET | `/food-data/cooking-methods` | `PLANNED` | — | No | Retention/yield factors đã review |
+| GET | `/food-data/interaction-rules` | `PLANNED` | — | No | Evidence-graded; scope dish/meal/day |
+| POST | `/admin/food-data/imports/preview` | `PLANNED` | — | No | Admin, provider-neutral, không ghi dữ liệu |
+| POST | `/admin/food-data/imports` | `PLANNED` | — | No | Admin, idempotent commit + audit |
+| POST | `/recipes/:id/nutrition/preview` | `PLANNED` | — | No | Phase 13; ingredients + structured cooking steps |
+| POST | `/recipes/:id/nutrition/recalculate` | `PLANNED` | — | No | Owner/Admin; versioned result |
+| GET | `/recipes/:id/nutrition` | `PLANNED` | — | No | Origin/confidence/range/assumptions/uncovered ingredients |
+
+### 6.10 Unified Contributor migration — Phase 14
+
+| Contract area | Status | FE action |
+|---|---|---|
+| Registration/application request | `PLANNED` migration | Replace `requestedType` with requested `approvalBasis`; role remains `MEMBER` while pending |
+| Admin review | `PLANNED` migration | Remove subtype selection; choose final basis and enter reason |
+| Contributor profile/session | `PLANNED` migration | Remove `contributorType`; show one Contributor role plus optional approval-basis label |
+| RBAC/UI gates | `PLANNED` migration | Gate only by authoritative approved role/profile, never by basis |
+
+When Phase 14 starts, affected READY endpoints must become `CHANGING`. Do not preemptively change the current consumer until the new OpenAPI contract lands.
+
+### 6.11 Storage quota và video review — Phases 15–16
+
+| Method | Path | Status | Backend updated | FE integrated | Ghi chú |
+|---|---|---|---|---|---|
+| GET | `/storage/me` | `PLANNED` | — | No | used/reserved/limit/remaining bytes |
+| POST | `/uploads/reservations` | `PLANNED` | — | No | Reserve quota before upload |
+| POST | `/uploads/reservations/:id/commit` | `PLANNED` | — | No | Commit actual provider bytes |
+| DELETE | `/uploads/reservations/:id` | `PLANNED` | — | No | Cancel/release owner reservation |
+| GET | `/admin/storage/accounts` | `PLANNED` | — | No | Admin usage/policy inspection |
+| POST | `/posts/:id/submit` | `PLANNED` | — | No | Shared recipe/handbook/video revision submission target |
+| GET | `/admin/content-review` | `PLANNED` | — | No | Review queue includes video |
+| PATCH | `/admin/content-review/:revisionId` | `PLANNED` | — | No | Admin approve/reject with reason |
+
+MVP không có payment/quota purchase, DMCA workflow, audio/frame copyright detection, hoặc video transcription.
+
+### 6.12 Custom meals, analysis, và multi-week programs — Phases 17–19
+
+| Method | Path | Status | Backend updated | FE integrated | Ghi chú |
+|---|---|---|---|---|---|
+| GET/POST | `/custom-meals` | `PLANNED` | — | No | Owner-only list/create; multiple photos and structured ingredients |
+| GET/PATCH/DELETE | `/custom-meals/:id` | `PLANNED` | — | No | Owner-only; safe behavior when used by plan |
+| POST | `/custom-meals/:id/media` | `PLANNED` | — | No | Quota-aware photo attach/reorder |
+| POST | `/meal-plans/:id/analyze` | `PLANNED` | — | No | Portion, daily limit, same-dish/meal/day warnings |
+| GET/POST | `/meal-programs` | `PLANNED` | — | No | Multi-week list/create/generate |
+| GET/PATCH | `/meal-programs/:id` | `PLANNED` | — | No | Versioned owner detail/edit/confirm |
+
+`tags` của custom meal là text do user tạo; `shopee` không phải service/provider ID. Warning DTO phải có code, severity, source/evidence, affected items, explanation, confidence, và suggested adjustment để FE render tooltip/dialog.
+
+### 6.13 Pantry và fridge recognition — Phases 20–21
+
+| Method | Path | Status | Backend updated | FE integrated | Ghi chú |
+|---|---|---|---|---|---|
+| GET/POST | `/pantry/items` | `PLANNED` | — | No | Confirmed owner inventory |
+| PATCH/DELETE | `/pantry/items/:id` | `PLANNED` | — | No | Optimistic version; preserve adjustment history |
+| POST | `/pantry/merge` | `PLANNED` | — | No | Preview/confirm duplicate merge |
+| POST | `/ingredient-recognition/jobs` | `PLANNED` | — | No | Multiple images; asynchronous |
+| GET | `/ingredient-recognition/jobs/:id` | `PLANNED` | — | No | Candidates/confidence/evidence/status |
+| PATCH | `/ingredient-recognition/jobs/:id/candidates/:candidateId` | `PLANNED` | — | No | User correction/rejection |
+| POST | `/ingredient-recognition/jobs/:id/confirm` | `PLANNED` | — | No | Only this boundary updates pantry |
+
+Freshness is an uncertain observation. UI must not say the system has certified food safety.
+
+### 6.14 Receipt analysis và shopping gaps — Phase 22
+
+| Method | Path | Status | Backend updated | FE integrated | Ghi chú |
+|---|---|---|---|---|---|
+| POST | `/receipt-jobs` | `PLANNED` | — | No | Upload/attach image and start extraction |
+| GET | `/receipt-jobs/:id` | `PLANNED` | — | No | Candidate lines, matches, confidence, status |
+| PATCH | `/receipt-jobs/:id/candidates/:candidateId` | `PLANNED` | — | No | Correct/reject candidate |
+| POST | `/receipt-jobs/:id/confirm` | `PLANNED` | — | No | Idempotent confirmed pantry diff |
+| POST | `/shopping-lists/preview` | `PLANNED` | — | No | Required/available/missing + assumptions/source meals |
+
+Receipt extraction never mutates pantry before confirmation. Shopping gap uses confirmed pantry and selected meal servings.
+
+### 6.15 AI artifacts và unified verification — Phase 23
+
+| Method | Path | Status | Backend updated | FE integrated | Ghi chú |
+|---|---|---|---|---|---|
+| POST | `/ai-artifacts` | `PLANNED` | — | No | Save eligible immutable/versioned output |
+| PATCH | `/ai-artifacts/:id/visibility` | `PLANNED` | — | No | Owner share/unshare; strict public allowlist |
+| GET | `/ai-artifacts/public` | `PLANNED` | — | No | Public artifacts only; no private context |
+| POST | `/ai-artifacts/:id/verifications` | `PLANNED` | — | No | Any approved Contributor/Admin; no self-review |
+| PATCH | `/admin/ai-verifications/:id` | `PLANNED` | — | No | Audited override/revoke with reason |
+
+Verification is not canonical food-data promotion. UI badge says “Contributor verified”, never “scientifically certified”.
+
+### 6.16 Phase 26 governance additions
+
+The existing Phase 26 governance paths in section 6.8 will expand to cover cooking-aware nutrition, fridge recognition, receipt extraction, and verification metrics. Required DTOs include provider/model/template version, status, latency, coverage/confidence aggregates, correction rates, redaction state, and feature fallback; raw health/image/receipt/prompt content must not be returned.
+
+### 6.17 Roadmap Phase 2 boundary
+
+Do not add live consumers for wearables/HealthKit/Health Connect, video STT/summarization, storage payments, certificate verification, formal DMCA, marketplace APIs, expanded traditions, or clinical medication interactions. Those capabilities are retained in `/docs/ROADMAP_PHASE_2.md`, not in the current OpenAPI contract.
+
 ---
 
 ## 7. Luồng tích hợp đặc biệt
 
 ### 7.1 Register có Contributor request
 
-Request dự kiến:
+Contract `READY` hiện tại trước Phase 14 vẫn là legacy:
 
 ```json
 {
@@ -361,6 +467,20 @@ Response user luôn có:
 
 Frontend tuyệt đối không mở contributor routes dựa trên `requestedType`. Chỉ dùng `user.role` và approved contributor profile từ `/users/me`.
 
+Target breaking contract của Phase 14, chỉ áp dụng sau khi endpoint chuyển qua `CHANGING` rồi `READY` và frontend đã sync OpenAPI:
+
+```json
+{
+  "contributorRequest": {
+    "claimedApprovalBasis": "ORGANIZATION_AFFILIATION",
+    "experience": "...",
+    "referenceLinks": []
+  }
+}
+```
+
+User form target chỉ cho claim `ORGANIZATION_AFFILIATION` hoặc `PLATFORM_TRACK_RECORD`; `ADMIN_INVITED` chỉ đến từ luồng Admin. Response target bỏ `requestedType`, `approvedContributorType`, và `contributorType`; thay bằng final approval basis phù hợp. Cả ba basis đều có cùng quyền sau khi Admin duyệt thủ công. Không đổi consumer theo target này trước khi Phase 14 hoàn tất.
+
 ### 7.2 Diet rule confirmation
 
 ```text
@@ -388,6 +508,7 @@ FE xin signature từ backend
 - Không gửi API secret xuống frontend.
 - Validate MIME/size ở UI để UX tốt, nhưng backend vẫn phải validate metadata khi lưu Post.
 - Hiển thị progress và retry; không tạo Post record trước khi upload hoàn tất trừ khi backend contract hỗ trợ draft rõ ràng.
+- Sau Phase 15, flow bắt buộc thêm bước reserve quota trước upload và commit/release bằng reservation ID; frontend hiển thị used/reserved/remaining nhưng backend là nơi quyết định quota.
 
 ### 7.4 Chat SSE
 
@@ -438,7 +559,7 @@ error
 - Recommendation UI render tối đa hai `reasonCodes`, hiển thị `scoringVersion` và
   `appliedConstraints`; không tự đọc raw behavior history.
 
-### 7.10 Meal Planner
+### 7.6 Meal Planner
 
 - `POST /meal-plans/generate` yêu cầu `weekStart` là thứ Hai, `goal`, `idempotencyKey`; `seed` và
   `supersedesMealPlanId` là optional. Mỗi lần generate/regenerate tạo record version mới, không
@@ -459,17 +580,64 @@ error
   liệu; backend không suy luận micronutrient từ calories. UI render warning/reason code từ response,
   không tự diễn giải lại hard constraints.
 
-### 7.11 Maps
-- Dedupe rapid repeated views ở client để giảm noise; backend vẫn là nơi quyết định dedupe chính thức.
-- Recommendation UI render `reasonCodes`, không tự đọc raw behavior history.
-
-### 7.6 Maps
+### 7.7 Maps
 
 - Browser lấy geolocation sau thao tác/consent rõ ràng.
 - Từ chối permission phải chuyển sang form địa chỉ.
 - Map và list dùng cùng một result set/backend IDs.
 - Không gọi Places web service bằng backend key từ browser.
 - Khi `externalDataUnavailable=true`, UI vẫn hiển thị list nội bộ và thông báo nhẹ, không block màn hình.
+
+### 7.8 Cooking-aware nutrition — planned Phase 13
+
+```text
+Recipe ingredients + structured cooking steps
+→ preview calculation
+→ render canonical/calculated/AI-estimated origin per value
+→ user reviews uncovered ingredients + assumptions/confidence/range
+→ save/recalculate version
+```
+
+Frontend không cộng nutrient hoặc tự áp retention factor. Missing value hiển thị “chưa có dữ liệu”, không hiển thị `0`. Khi AI provider down, vẫn render deterministic/partial result backend trả về.
+
+### 7.9 Quota-aware upload — planned Phase 15
+
+```text
+GET storage usage
+→ reserve declared bytes
+→ upload trực tiếp provider
+→ commit actual provider bytes
+→ release reservation nếu cancel/fail
+```
+
+Retry cùng thao tác dùng idempotency semantics backend chốt. Không tự tăng usage ở client ngoài optimistic display có rollback.
+
+### 7.10 Custom meal và compatibility — planned Phases 17–19
+
+- Custom meal là private owner resource, có nhiều ảnh và tag text tự do.
+- Plan item picker gửi explicit source type `RECIPE` hoặc `CUSTOM_MEAL`.
+- Render warning do backend trả với severity/evidence/source/confidence; frontend không tự tạo hard prohibition.
+- Edit plan/program phải gửi expected version và refetch khi conflict.
+
+### 7.11 Fridge/receipt confirmation — planned Phases 21–22
+
+```text
+Upload one or more images
+→ poll job status
+→ show editable candidates and confidence
+→ user confirms/rejects
+→ backend returns pantry diff
+→ refetch pantry and shopping gap
+```
+
+Không update pantry từ `PROCESSING` hoặc candidate response. Không dùng copy khẳng định thực phẩm “an toàn để ăn”.
+
+### 7.12 AI artifact verification — planned Phase 23
+
+- Share/unshare chỉ trên artifact allowlist, không đưa chat session/profile/receipt/image raw ra public.
+- Button verify gate bằng approved Contributor/Admin role, không gate bằng approval basis.
+- Hiển thị original output bất biến và correction/evidence riêng; xử lý self-review/version/concurrency conflicts.
+- Badge dùng “Contributor verified”, không dùng “scientifically certified”.
 
 ---
 
@@ -499,7 +667,7 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `CONTRIBUTOR_APPLICATION_PENDING`             | Disable submit, link xem trạng thái                                    |
 | `CONTRIBUTOR_REAPPLY_NOT_ALLOWED`             | Hiển thị ngày được apply lại                                           |
 | `CONTRIBUTOR_APPLICATION_NOT_ALLOWED`         | Ẩn form apply với Admin hoặc role không phù hợp                        |
-| `CONTRIBUTOR_TYPE_UNCHANGED`                  | Yêu cầu chọn subtype khác profile Contributor hiện tại                 |
+| `CONTRIBUTOR_TYPE_UNCHANGED`                  | Legacy pre-Phase-14 only; không tạo consumer mới, xóa khi migration READY |
 | `CONTRIBUTOR_APPLICATION_ALREADY_REVIEWED`    | Refresh Admin queue; application đã có quyết định                      |
 | `CONTRIBUTOR_APPLICATION_NOT_REVIEWABLE`      | Giữ queue và báo applicant không còn đủ điều kiện                      |
 | `SELF_APPROVAL_FORBIDDEN`                     | Giữ queue và báo lỗi rõ                                                |
@@ -571,6 +739,22 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `CHAT_REQUEST_IN_PROGRESS`                    | Giữ stream hiện tại hoặc chờ rồi retry cùng idempotency key            |
 | `EXTERNAL_LOCATION_UNAVAILABLE`               | Dùng internal restaurant results                                       |
 | `RESOURCE_CONFLICT`                           | Refresh entity/version trước khi sửa lại                               |
+| `FOOD_DATA_VERSION_CONFLICT`                  | Refetch source/version trước khi Admin sửa/import lại (planned Phase 12) |
+| `NUTRITION_DATA_INCOMPLETE`                   | Hiển thị partial/unknown và assumptions; không coi missing là zero (planned Phase 13) |
+| `NUTRITION_ESTIMATE_STALE`                    | Refetch/recalculate vì ingredient/step/source version đã đổi (planned Phase 13) |
+| `STORAGE_QUOTA_EXCEEDED`                      | Hiển thị used/limit/remaining; yêu cầu xóa media hoặc giảm upload (planned Phase 15) |
+| `UPLOAD_RESERVATION_EXPIRED`                  | Xin reservation mới trước khi retry upload (planned Phase 15)          |
+| `UPLOAD_PROVIDER_MISMATCH`                    | Không attach asset; thông báo upload thất bại và release quota (planned Phase 15) |
+| `CUSTOM_MEAL_IN_USE`                          | Giải thích plan đang tham chiếu; dùng policy snapshot/block của backend (planned Phase 17) |
+| `MEAL_ANALYSIS_STALE`                         | Refetch analysis sau khi plan/portion/profile/rule đổi (planned Phase 18) |
+| `MEAL_PROGRAM_VERSION_CONFLICT`               | Refetch chương trình nhiều tuần trước khi edit/regenerate (planned Phase 19) |
+| `PANTRY_VERSION_CONFLICT`                     | Refetch inventory và cho user áp dụng lại adjustment (planned Phase 20) |
+| `RECOGNITION_NEEDS_CONFIRMATION`              | Mở candidate editor; không cập nhật pantry tự động (planned Phase 21)   |
+| `RECOGNITION_PROVIDER_UNAVAILABLE`            | Giữ ảnh/job để retry hoặc cho nhập pantry thủ công (planned Phase 21)   |
+| `RECEIPT_NEEDS_CONFIRMATION`                  | Mở receipt candidate editor; không cập nhật pantry tự động (planned Phase 22) |
+| `SHOPPING_UNIT_UNRESOLVED`                    | Hiển thị dòng riêng và conversion assumption/unknown (planned Phase 22) |
+| `AI_ARTIFACT_VERSION_CONFLICT`                | Refetch artifact/version trước khi share/verify (planned Phase 23)      |
+| `SELF_VERIFICATION_FORBIDDEN`                 | Không cho Contributor tự verify artifact của mình (planned Phase 23)   |
 
 ---
 
@@ -580,7 +764,7 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 - Mock payload phải bám draft OpenAPI và đặt trong `features/<domain>/__fixtures__`.
 - Không để mock fallback âm thầm chạy trong production build.
 - Khi endpoint chuyển `READY`, integration task phải xóa hoặc cô lập mock bằng test-only boundary.
-- UI mock của CV/STT không được đánh dấu feature hoàn thành.
+- UI mock của food data, nutrition estimate, quota, custom meal, compatibility, multi-week, pantry, CV, receipt hoặc STT không được đánh dấu feature hoàn thành.
 
 ---
 
@@ -633,6 +817,10 @@ Thêm entry mới nhất ở trên cùng.
 
 | Date       | Version | Module         | Change                                                                                                                                | Breaking | FE action                                                                                            |
 | ---------- | ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- | :------: | ---------------------------------------------------------------------------------------------------- |
+| 2026-09-18 | 4.0     | Product plan   | Đồng bộ canonical SRS và backend Phases 12–27: food data, cooking-aware nutrition, unified Contributor, quota/video review, custom meals/tags, meal analysis/programs, pantry, fridge, receipt, AI artifacts, maps, notifications và governance. Contract runtime hiện tại không đổi; Contributor Phase 14 được ghi là breaking migration tương lai. | Future Phase 14 | Chưa đổi consumer live; chỉ sync/migrate khi từng endpoint chuyển READY/CHANGING theo OpenAPI |
+| 2026-09-17 | 3.8     | AI Governance  | FE scaffold 5 ops AI governance theo spec 017 (DTO suy luận + reconfirm ở task nối live/Mapper/test redaction/fixtures 0 nội dung thô/API fixture 0 request/Query/tab dashboard tổng quan + log che mờ + cờ + công tắc); endpoint giữ `PLANNED`, `FE integrated` giữ `No` |    No    | Test tay AG-1..AG-3 + check Network 0 request + quét DOM 0 nội dung thô theo `specs/017-ai-governance/quickstart.md`; nối live khi BE đánh `READY` |
+| 2026-09-17 | 3.7     | Restaurants    | FE scaffold 7 ops restaurants/location theo spec 016 (DTO suy luận + reconfirm ở task nối live/Mapper/test haversine/fixtures/API fixture 0 request + 0 maps/Query/viết lại 2 routes + tab dashboard, khung bản đồ CSS không SDK); endpoint giữ `PLANNED`, `FE integrated` giữ `No` |    No    | Test tay RT-1..RT-4 + check Network 0 request/maps theo `specs/016-restaurants-location/quickstart.md`; nối live (SDK maps/key) khi BE đánh `READY` |
+| 2026-09-17 | 3.6     | Trust Safety   | FE kết nối live API thực tế cho 2 endpoint (`POST /reports` gửi báo cáo vi phạm, `DELETE /users/me/behavior-history` xóa lịch sử hành vi cá nhân hóa), bỏ mock fixture |    No    | Test tay TS-1..TS-3 với dữ liệu thật và tài khoản Member seed |
 | 2026-09-17 | 3.5     | Notifications  | FE scaffold 3 ops notifications theo spec 015 (DTO suy luận + reconfirm ở task nối live/Mapper/test/fixtures/API fixture 0 request/Query polling 60s + lạc quan rollback/chuông + panel + item ở header); endpoint giữ `PLANNED`, `FE integrated` giữ `No` |    No    | Test tay NT-1..NT-3 + check Network 0 request (member + khách) theo `specs/015-notifications/quickstart.md`; nối live khi BE đánh `READY` |
 | 2026-09-17 | 3.4     | Contributors   | FE kết nối live API thực tế cho 4 endpoints contributor (nộp đơn, xem đơn cá nhân, hàng chờ duyệt admin, review phê duyệt/từ chối), bỏ mock data |    No    | Test tay CA-1..CA-4 với dữ liệu thật và tài khoản Member/Admin seed |
 | 2026-09-17 | 3.3     | Chat Sharing   | FE scaffold 3 ops chat share/public/verify theo spec 014 (DTO suy luận + reconfirm ở task nối live/Mapper/test/fixtures/API fixture 0 request/Query/route `/assistant/public` + huy hiệu theo role thật); endpoint giữ `PLANNED`, `FE integrated` giữ `No` |    No    | Test tay CS-1..CS-4 + check Network 0 request theo `specs/014-chat-sharing-verification/quickstart.md`; nối live khi BE đánh `READY` |
