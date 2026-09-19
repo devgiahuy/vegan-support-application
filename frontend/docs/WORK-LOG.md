@@ -16,6 +16,41 @@
 - Còn lại / rủi ro:
 ```
 
+## [2026-09-17] — Thiết kế mới cho thẻ Dinh dưỡng 385 kcal / 18g Protein & Khắc phục Autoplay Remotion Player
+
+- Mục tiêu: Nâng cấp thiết kế cho thẻ dinh dưỡng thực vật ("385 kcal", "18g Protein thực vật") tại Hoạt cảnh ẩm thực Hero (`HeroFoodAnimation`) với đường sáng neon chuyển động liên tục quanh viền; đồng thời khắc phục triệt để hiện tượng chiếc tô và 5 nguyên liệu bị khựng/không xoay do chính sách Browser Autoplay Policy & Strict Mode delayRender.
+- Đã làm:
+  - Tầng CSS Keyframes & GPU Compositor (`globals.css`): Khai báo animation `@keyframes border-beam-spin` và class `.animate-border-beam` (3.5s linear infinite, xoay qua `transform: translate(-50%, -50%) rotate(360deg)` mượt mà 60 FPS, tuân thủ `fixing-motion-performance`, hỗ trợ `@media (prefers-reduced-motion)`).
+  - Tầng UI (`HeroFoodAnimation`):
+    - Tái cấu trúc khung viền đồng tâm (concentric 2px border) với cấu trúc `overflow-hidden` và conic gradient đa sắc (emerald tail, mint body, gold accent, white core spark).
+    - Thêm quầng sáng ambient neon mềm mại phía sau thẻ (`-inset-1 bg-emerald-500 blur-md`).
+    - Nâng cấp typography và icon badges: Icon Lửa (Flame) đặt trong badge tròn hổ phách (`bg-amber-500/15 text-amber-500`), Icon Lá cây (Leaf) đặt trong badge ngọc bích (`bg-emerald-500/15 text-emerald-500`).
+    - Tách biệt component `NutritionBadge` độc lập quản lý state `pulseActive` để ngăn ngừa việc re-render lại component cha `HeroFoodAnimation` và `HeroFoodPlayer`.
+  - Khắc phục lỗi Animation chiếc tô và nguyên liệu bị dừng (`HeroFoodPlayer` & `HeroFoodComposition`):
+    - Loại bỏ `delayRender()` bên trong `hero-food-composition.tsx` (nguyên nhân gây rò rỉ render handle và đóng băng timeline khi chạy trên React Strict Mode).
+    - Bổ sung các thuộc tính thiết yếu vào Remotion `<Player />`: `initiallyMuted`, `numberOfSharedAudioTags={0}`, `moveToBeginningWhenEnded` để đáp ứng hoàn toàn chính sách Autoplay Policy của trình duyệt hiện đại (Chrome/Edge), kích hoạt phát tự động ngay khi tải trang mà không cần tương tác chuột.
+- File tạo/sửa:
+  - Sửa đổi: `src/app/globals.css`, `src/components/home/hero-food-animation/hero-food-animation.tsx`, `src/components/home/hero-food-animation/hero-food-player.tsx`, `src/components/home/hero-food-animation/hero-food-composition.tsx`, `docs/WORK-LOG.md`.
+- Verify: `npx tsc --noEmit` (0 lỗi), `npm test` (25/25 test files passed, 236/236 tests passed), kiểm tra trực quan trên trình duyệt (xác nhận chu kỳ 8s của chiếc tô xoay 360°, nguyên liệu xoáy tụ thành món và bung tỏa ra lặp lại liên tục tự động).
+- PROGRESS: Hoàn thiện tính năng Hero Animation và thẻ dinh dưỡng cao cấp.
+- Còn lại / rủi ro: Không có.
+
+---
+
+## [2026-09-17] — Tích hợp Live API Trust & Safety Leftovers: Báo cáo vi phạm & Xóa lịch sử hành vi (spec 013)
+
+- Mục tiêu: Kết nối trực tiếp API Backend `:4000` cho tính năng Báo cáo vi phạm (`POST /api/v1/reports`) và Xóa toàn bộ lịch sử hành vi cá nhân hóa (`DELETE /api/v1/users/me/behavior-history`), tắt hoàn toàn fixture mock.
+- Đã làm:
+  - Tầng API Client: Chuyển `USE_FIXTURES = false` trong `src/features/safety/api/safety.api.ts`, gọi live endpoint qua axios client.
+  - Tầng Validation & Schema: Bổ sung validation refine cho trường `details` tối thiểu 10 ký tự nếu người dùng nhập trong `safety.schema.ts`, đồng bộ với ràng buộc Backend.
+  - Tầng UI: Cập nhật `ReportDialog` hiển thị rõ điều kiện chi tiết tối thiểu 10 ký tự; mở comment hiển thị nút `<DeleteHistoryButton />` tại tab Quyền riêng tư (`/profile?tab=privacy`). Sửa lỗi type compatibility `submitRestaurantSchema` cho form thêm quán ăn.
+  - Docs sync: Cập nhật `docs/BACKEND_INTEGRATION.md` (đổi 2 endpoint sang READY + FE integrated: Yes) và `docs/PROGRESS.md`.
+- File tạo/sửa:
+  - Sửa đổi: `src/features/safety/api/safety.api.ts`, `src/features/safety/schemas/safety.schema.ts`, `src/components/shared/report-dialog.tsx`, `src/app/(site)/profile/page.tsx`, `src/features/restaurant/schemas/restaurant.schema.ts`, `docs/BACKEND_INTEGRATION.md`, `docs/PROGRESS.md`, `docs/WORK-LOG.md`.
+- Verify: `npx tsc --noEmit` (0 lỗi), `npm test` (24/24 test files passed, 224/224 unit tests passed), `npm run build` (Next.js 16 build thành công toàn bộ 30 routes).
+- PROGRESS: Task #13 (Trust & Safety Leftovers) 70% → 95%.
+- Còn lại / rủi ro: Không có.
+
 ---
 
 ## [2026-09-17] — Khắc phục ẩn bài khi đăng nhập: Hiển thị bộ lọc an toàn ăn kiêng + Gợi ý nguyên liệu chuẩn hóa
@@ -1118,4 +1153,71 @@
 - PROGRESS: task #14 mới → 70% (scaffold; test tay NT + BE READY còn lại).
 - Còn lại / rủi ro: (1) test tay NT-1..NT-3 + check Network 0 request + 2 vai; (2) reconfirm shape 3 endpoint + nối live khi BE READY; (3) header đang có session khác sửa — phối hợp khi merge.
 
+---
 
+## [2026-09-17] — Scaffold Restaurants location (spec 016-restaurants-location, T001–T030)
+
+- Mục tiêu: đủ 7 tầng restaurants/location theo suy luận contract dù BE còn `PLANNED` (không có schema swagger); API đọc fixture, 0 request live, 0 gọi maps ngoài.
+- Đã làm:
+  - `sync:swagger` thành công (71 endpoints) — xác nhận vẫn chưa có tag restaurants/location.
+  - `api-endpoints.ts` (+3 nhánh `RESTAURANTS`/`LOCATION`/`ADMIN_RESTAURANTS` kèm `TODO(BE-READY)`, chưa import ở đâu), `enums` (+`RestaurantStatus`; 1 lần ghi đè nhầm `ReportTargetKind` — đã khôi phục và kiểm kê đủ 38 enum).
+  - `features/restaurant` mới: DTO suy luận/Model/Mapper/test (format `850 m`/`2,3 km`, nhãn nguồn, `isStale` 30 ngày) + 12 tests; fixtures (3 PUBLISHED + 1 PENDING + geocode 2 địa chỉ mẫu); api fixture 7 hàm (haversine sort ở tầng api, lọc món không dấu, kho submit/queue, delay 300ms, `USE_FIXTURES`, 0 axios/fetch/maps — kiểm tra tĩnh); queries (Key Factory + 7 hooks); zod (tọa độ/bán kính/địa chỉ/submit/review); 10 components (location/address/filters/card/list/map-placeholder/detail/submit/queue/review-dialog).
+  - Viết lại `/restaurants` (vị trí + form fallback + filters + list + khung bản đồ CSS cùng tập kết quả) + `/restaurants/[id]`; tab `restaurants` dashboard (giữ `?tab=`/RBAC, không đụng tab khác).
+  - Fix eslint unused (`LoadingState` ở list); đơn giản hóa submit (bỏ 2-bước giả).
+- File tạo/sửa:
+  - Tạo: `src/features/restaurant/{types,mappers,api,queries,schemas,components,__fixtures__}`, `specs/016-restaurants-location/**`
+  - Sửa: `common/constants/api-endpoints.ts`, `common/enums/index.ts`, `app/(site)/restaurants/{page,[id]/page}.tsx`, `app/(admin)/admin/dashboard/page.tsx` (tab only), `docs/{PROGRESS,WORK-LOG}.md` (+ `BACKEND_INTEGRATION.md` ghi chú scaffold)
+- Verify: `tsc --noEmit` sạch (0 lỗi); `npm test` 224/224 pass (restaurant 12/12, không regress); `eslint` scope 0 errors; `npm run build` pass; kiểm tra tĩnh 0 axios/fetch/maps trong restaurant.
+- PROGRESS: task #8 (UC-12) 30% → 70% (scaffold; test tay RT + BE READY còn lại).
+- Còn lại / rủi ro: (1) test tay RT-1..RT-4 + check Network 0 request/maps + Sensors vị trí; (2) reconfirm shape 7 endpoint + SDK maps/key + nối live khi BE READY; (3) restaurants/dashboard đang có session khác sửa — phối hợp khi merge.
+
+---
+
+## [2026-09-17] — Scaffold AI governance (spec 017-ai-governance, T001–T024)
+
+- Mục tiêu: đủ 7 tầng AI governance theo suy luận contract dù BE còn `PLANNED` (không có schema swagger); tuyệt đối không render nội dung thô/bí mật.
+- Đã làm:
+  - `sync:swagger` thành công (71 endpoints) — xác nhận vẫn chưa có tag ai-governance.
+  - `api-endpoints.ts` (+nhánh `AI_GOVERNANCE` 5 path kèm `TODO(BE-READY)`, chưa import ở đâu); dùng string union + fallback, không tạo enum mới.
+  - `features/ai-governance` mới: DTO suy luận/Model/Mapper/test (CHỈ pick field cho phép — redaction phòng thủ sâu, hash rút gọn 12 ký tự) + 12 tests gồm redaction chuyên biệt; fixtures (metrics/log che mờ/flags/features, 0 nội dung thô); api fixture 5 hàm (lọc khoảng/tính năng/trạng thái, delay 300ms, `USE_FIXTURES`, 0 axios/fetch — kiểm tra tĩnh); queries (Key Factory + 5 hooks); zod (khoảng ngày from ≤ to + lý do toggle); 5 components (metrics-overview, flags-list, features-table, requests-table, feature-toggle-dialog).
+  - Tab `ai-governance` dashboard (tổng quan + log + cờ + công tắc, giữ `?tab=`/RBAC, không đụng tab khác); nút toggle trong bảng (dialog lý do bắt buộc).
+  - Fix eslint `react-hooks/purity` (Date trong render → useState initializer).
+- File tạo/sửa:
+  - Tạo: `src/features/ai-governance/{types,mappers,api,queries,schemas,components,__fixtures__}`, `specs/017-ai-governance/**`
+  - Sửa: `common/constants/api-endpoints.ts`, `app/(admin)/admin/dashboard/page.tsx` (tab only), `docs/{PROGRESS,WORK-LOG}.md` (+ `BACKEND_INTEGRATION.md` ghi chú scaffold)
+- Verify: `tsc --noEmit` sạch (0 lỗi); `npm test` 236/236 pass (ai-governance 12/12, không regress); `eslint` scope 0 errors; `npm run build` pass; kiểm tra tĩnh 0 axios/fetch trong api + quét components 0 nội dung thô.
+- PROGRESS: task #15 mới → 70% (scaffold; test tay AG + BE READY còn lại).
+- Còn lại / rủi ro: (1) test tay AG-1..AG-3 + check Network 0 request + quét DOM + 2 vai; (2) reconfirm shape 5 endpoint + nối live khi BE READY; (3) dashboard đang có session khác sửa — phối hợp khi merge.
+
+---
+
+## [2026-09-17] — Converge 5 đợt scaffold (013→017) + khôi phục chuông thông báo (T023)
+
+- Mục tiêu: kiểm tra lại toàn bộ 5 đợt theo `/speckit-converge`, append task còn thiếu, implement ngay.
+- Đã làm:
+  - Quét 5 `tasks.md` (013/014/015/016/017): 0 task mở — tất cả đã [X].
+  - Đối chiếu wiring thực tế: 013 (report/delete-history) ✓, 014 (share/verify/public) ✓, 016 (routes + dashboard tab) ✓, 017 (dashboard tab + toggle) ✓.
+  - Phát hiện 1 regression: `site-header.tsx` (session khác viết lại khi sửa navbar, 260 dòng) mất wiring `NotificationBell` của 015/T014 — bell/panel/item còn nguyên, chỉ mất import + mount.
+  - Append `Phase 6: Convergence` + T023 vào `specs/015-notifications/tasks.md`; implement ngay: import + mount `<NotificationBell />` sau `ThemeToggle` (bell tự gate member, khách trả null).
+- File tạo/sửa:
+  - Sửa: `src/components/layout/site-header.tsx` (chuông), `specs/015-notifications/tasks.md` (T023 [X]), `docs/WORK-LOG.md`
+- Verify: `tsc --noEmit` 0 lỗi; `npm test` 25 files, 236/236 pass (không regress).
+- PROGRESS: task #14 giữ 70% (scaffold + converge sạch; test tay NT + BE READY còn lại).
+- Còn lại / rủi ro: header vẫn là file tranh chấp giữa 2 session — phối hợp khi merge/commit.
+
+---
+
+## [2026-09-18] — Đồng bộ reviewed MVP, Backend Phases 12–27 và Roadmap Phase 2
+
+- Mục tiêu: hợp nhất quyết định sau review Phase 11 thành một nguồn yêu cầu chuẩn và không làm sai trạng thái runtime hiện tại.
+- Đã làm:
+  - Tạo `/docs/SRS.md` canonical và `/docs/ROADMAP_PHASE_2.md` đầy đủ.
+  - Viết lại `/docs/IMPLEMENTATION_PLAN.md` v4.0 với unified Contributor, canonical food data, cooking-aware nutrition, quota, video review parity, custom meals/tags, meal compatibility, multi-week, pantry, fridge multi-image, receipt và shopping gaps.
+  - Mở rộng backend plan từ Phase 12 tới 27 và thay prompts 12–16 cũ bằng 16 prompt độc lập cho Phases 12–27.
+  - Chuẩn hóa toàn bộ 28 prompt Phase 00–27 dùng “current repository root”/“thư mục gốc của repository hiện tại”; loại bỏ đường dẫn tuyệt đối của máy cá nhân để teammate có thể dùng trên mọi môi trường.
+  - Cập nhật `BACKEND_INTEGRATION.md` bằng target contract `PLANNED`; giữ endpoint runtime hiện tại trung thực và ghi Phase 14 là future breaking migration.
+  - Cập nhật UI plan/design prompt, `frontend/AGENTS.md`, PROGRESS; đánh dấu hai frontend SRS cũ là superseded/deprecated.
+  - Ghi rõ user tag `shopee` chỉ là metadata; certificate/payment/DMCA/STT/wearable/additional traditions và các ý tưởng khác được giữ trong Roadmap Phase 2.
+- Verify: docs-only; kiểm tra link/prompt index, legacy-term audit, `git diff --check`. Không chạy frontend typecheck/test/build vì không sửa source hoặc runtime contract.
+- PROGRESS: không đổi % feature; thêm bảng backlog tích hợp Phases 12–27.
+- Còn lại: mỗi backend phase phải cập nhật OpenAPI/integration registry và frontend chỉ tích hợp khi endpoint thật sự `READY`.

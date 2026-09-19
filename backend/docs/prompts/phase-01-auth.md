@@ -1,6 +1,8 @@
 # Prompt — Phase 01: Authentication & Sessions
 
-Bạn đang triển khai Phase 01 trong repository `/Users/thienel/hhnthienn/fptu/sem8/wdp/vegan-support-application`. Session này không có context từ phase trước; repository là nguồn trạng thái duy nhất.
+> Historical completed-phase prompt. Its Contributor subtype fields describe the current legacy contract only and are scheduled for removal by Phase 14. Do not use this prompt to override `docs/SRS.md`.
+
+Bạn đang triển khai Phase 01 từ thư mục gốc của repository hiện tại. Session này không có context từ phase trước; repository là nguồn trạng thái duy nhất.
 
 Đọc `AGENTS.md`, business rules trong `docs/IMPLEMENTATION_PLAN.md`, phase map trong `backend/docs/IMPLEMENTATION_PHASES.md` và registry `frontend/docs/BACKEND_INTEGRATION.md`. Xác minh Phase 00 đã hoàn tất bằng source/OpenAPI. Kiểm tra git status và bảo toàn thay đổi không liên quan.
 

@@ -116,14 +116,22 @@ export function ReportDialog({
             )}
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="report-details">Chi tiết thêm (tùy chọn)</Label>
+            <Label htmlFor="report-details">
+              Chi tiết thêm{' '}
+              <span className="font-normal text-muted-foreground">
+                (tùy chọn, tối thiểu 10 ký tự nếu nhập)
+              </span>
+            </Label>
             <Textarea
               id="report-details"
               rows={3}
               maxLength={2000}
-              placeholder="Mô tả ngắn gọn vi phạm bạn thấy..."
+              placeholder="Mô tả vi phạm bạn thấy (tối thiểu 10 ký tự nếu nhập)..."
               {...form.register('details')}
             />
+            {form.formState.errors.details && (
+              <p className="text-xs text-destructive">{form.formState.errors.details.message}</p>
+            )}
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>

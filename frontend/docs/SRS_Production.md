@@ -1,13 +1,14 @@
 # SRS — Ứng Dụng Hỗ Trợ Người Ăn Chay (Vegan Support Application)
 
+> **DEPRECATED — historical artifact (2026-09-18).** Do not use this file for product decisions or implementation. Its MongoDB/Gemini/`veganType`/Contributor assumptions are obsolete. Use `/docs/SRS.md` for canonical requirements, `/docs/IMPLEMENTATION_PLAN.md` for business rules, `/docs/ROADMAP_PHASE_2.md` for deferred scope, and `frontend/docs/BACKEND_INTEGRATION.md` for the live API contract. The remaining content is intentionally preserved as history.
+
 **Version:** 1.4 | **Ngày gốc:** 10/09/2026 | **Cập nhật:** 15/09/2026
-**Trạng thái:** ✅ Ready for Dev — Conditional _(chờ sign-off toàn team)_
+**Trạng thái:** `DEPRECATED` — không dùng để phát triển
 **Stack:** Next.js 16 · Node/Express · MongoDB Atlas · Gemini 1.5 Flash · Cloudinary · Google Maps JS
 
 ---
 
-> **📌 Quy tắc vàng:** File này là **nguồn sự thật duy nhất (Single Source of Truth)**.
-> Mọi thay đổi scope → cập nhật version ở đây → thông báo cả team trước khi code.
+> Dòng tuyên bố “nguồn sự thật duy nhất” của bản cũ đã bị thu hồi. `/docs/SRS.md` là nguồn yêu cầu chuẩn.
 
 ---
 

@@ -1,13 +1,5 @@
 import * as React from 'react';
-import {
-  AbsoluteFill,
-  interpolate,
-  useCurrentFrame,
-  Easing,
-  staticFile,
-  delayRender,
-  continueRender,
-} from 'remotion';
+import { AbsoluteFill, interpolate, useCurrentFrame, Easing, staticFile } from 'remotion';
 import { EnergyConnections } from './components/energy-connections';
 import { HERO_ANIMATION_CONFIG, INGREDIENTS_CONFIG, PHASES } from './hero-food-constants';
 
@@ -15,44 +7,20 @@ const BOWL_SRC = 'hero/optimized/bowl.webp';
 const DISH_SRC = 'hero/optimized/completed-dish.webp';
 
 /**
- * Preload toàn bộ ảnh Hero bằng `new Image()` + giữ `delayRender` cho tới khi
- * tải xong. Thay thế Remotion `<Img>`: component đó gọi `img.decode()` rồi
- * `console.warn` mỗi khi decode fail (kể cả khi ảnh vẫn hiện qua fallback
- * onload) — gây spam `EncodingError: The source image cannot be decoded`
- * trong log dev mà không ảnh hưởng gì tới hiển thị.
+ * Preload ảnh ở chế độ nền để tối ưu cache trình duyệt mà không làm treo timeline của Remotion Player.
  */
 function usePreloadHeroImages(): boolean {
-  const [loaded, setLoaded] = React.useState(false);
-  const [handle] = React.useState(() => delayRender('Preloading hero food images'));
+  const [loaded, setLoaded] = React.useState(true);
 
   React.useEffect(() => {
-    let cancelled = false;
     const srcs = [BOWL_SRC, DISH_SRC, ...INGREDIENTS_CONFIG.map((ing) => ing.file)].map((f) =>
       staticFile(f)
     );
-    let pending = srcs.length;
-    const onSettled = () => {
-      pending -= 1;
-      if (pending <= 0 && !cancelled) {
-        setLoaded(true);
-        continueRender(handle);
-      }
-    };
-    const preloaders = srcs.map((src) => {
+    srcs.forEach((src) => {
       const im = new window.Image();
-      im.onload = onSettled;
-      im.onerror = onSettled;
       im.src = src;
-      return im;
     });
-    return () => {
-      cancelled = true;
-      preloaders.forEach((im) => {
-        im.onload = null;
-        im.onerror = null;
-      });
-    };
-  }, [handle]);
+  }, []);
 
   return loaded;
 }

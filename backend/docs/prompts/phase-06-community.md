@@ -1,6 +1,6 @@
 # Prompt — Phase 06: Community Interactions
 
-Triển khai Phase 06 trong repository `/Users/thienel/hhnthienn/fptu/sem8/wdp/vegan-support-application`. Session mới phải đọc repo, không giả định context trước.
+Triển khai Phase 06 từ thư mục gốc của repository hiện tại. Session mới phải đọc repo, không giả định context trước.
 
 Đọc `AGENTS.md`, BL-11 trong implementation plan, phase map, OpenAPI và integration guide. Xác minh Auth và Content Core đã hoàn tất. Kiểm tra git status.
 
