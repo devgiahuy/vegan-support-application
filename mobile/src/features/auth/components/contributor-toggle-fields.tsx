@@ -1,12 +1,12 @@
 import * as React from 'react';
 import { Pressable, Switch, Text, TextInput, View } from 'react-native';
-import type { Control, FieldErrors, UseFormSetValue, UseFormWatch } from 'react-hook-form';
+import { useWatch, type Control, type FieldErrors, type UseFormSetValue } from 'react-hook-form';
 import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
 import { ContributorType } from '@/common/enums';
 import type { RegisterFormValues } from '../schemas/auth.schema';
 
-const REQUESTED_TYPE_OPTIONS: Array<{ value: ContributorType; label: string }> = [
+const REQUESTED_TYPE_OPTIONS: { value: ContributorType; label: string }[] = [
   { value: ContributorType.EXPERIENCED_PRACTITIONER, label: 'Người thực hành có kinh nghiệm' },
   { value: ContributorType.NUTRITION_EXPERT, label: 'Chuyên gia dinh dưỡng' },
 ];
@@ -18,19 +18,18 @@ const REQUESTED_TYPE_OPTIONS: Array<{ value: ContributorType; label: string }> =
  * cho mobile (chip chọn loại thay vì Select, chưa có ô link tham khảo).
  */
 export function ContributorToggleFields({
-  watch,
+  control,
   setValue,
   errors,
 }: {
   control: Control<RegisterFormValues>;
-  watch: UseFormWatch<RegisterFormValues>;
   setValue: UseFormSetValue<RegisterFormValues>;
   errors: FieldErrors<RegisterFormValues>;
 }) {
   const colors = useIconColors();
-  const wantsContributor = watch('wantsContributor');
-  const requestedType = watch('requestedType');
-  const experience = watch('experience') ?? '';
+  const wantsContributor = useWatch({ control, name: 'wantsContributor' });
+  const requestedType = useWatch({ control, name: 'requestedType' });
+  const experience = useWatch({ control, name: 'experience' }) ?? '';
 
   return (
     <View className="gap-3 rounded-xl border border-dashed border-border p-4">

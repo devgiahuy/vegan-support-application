@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Text, View } from 'react-native';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle, ArrowRight, CheckCircle2, Circle, Lock, Mail, User } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
@@ -63,7 +63,6 @@ export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
     control,
     handleSubmit,
     setError,
-    watch,
     setValue,
     formState: { errors },
   } = useForm<RegisterFormValues>({
@@ -77,7 +76,7 @@ export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
     },
   });
 
-  const passwordValue = watch('password');
+  const passwordValue = useWatch({ control, name: 'password' });
 
   const onSubmit = handleSubmit(async (values) => {
     setFormError(null);
@@ -195,7 +194,7 @@ export function RegisterForm({ onSuccess }: { onSuccess?: () => void }) {
         )}
       />
 
-      <ContributorToggleFields control={control} watch={watch} setValue={setValue} errors={errors} />
+      <ContributorToggleFields control={control} setValue={setValue} errors={errors} />
 
       <PrimaryButton
         label={registerMutation.isPending ? 'Đang tạo tài khoản...' : 'Tạo tài khoản VeggieConnect'}
