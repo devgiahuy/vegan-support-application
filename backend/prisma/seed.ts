@@ -13,9 +13,18 @@ import {
   DietPattern,
   DietRuleSource,
   FoodGroup,
+  EvidenceGrade,
+  FoodDataProvider,
+  FoodDataQuality,
+  FoodDataReviewStatus,
+  FoodDataSuggestionType,
+  FoodRuleSeverity,
+  GuidelinePeriod,
   HealthDataSource,
   HealthSex,
   IngredientResolutionStatus,
+  InteractionDirection,
+  InteractionScope,
   MediaKind,
   MediaProvider,
   ModerationPriority,
@@ -25,11 +34,13 @@ import {
   PracticeSchedule,
   PrismaClient,
   RecipeDifficulty,
+  NutrientReferenceType,
   ReportStatus,
   ReportTargetType,
   Role,
   Tradition,
   UserStatus,
+  UnitDimension,
 } from '@prisma/client';
 import { z } from 'zod';
 import { PasswordService } from '../src/modules/auth/password.service.js';
@@ -203,6 +214,417 @@ const ingredientDefinitions = [
     lactoOvo: true,
   },
 ] as const;
+
+async function seedFoodData(adminId: string): Promise<void> {
+  const effectiveFrom = new Date('2026-01-01');
+  const projectSource = await prisma.foodDataSource.upsert({
+    where: { code: 'PROJECT_DEMO_V1' },
+    update: {
+      name: 'Project-authored demo food data',
+      provider: FoodDataProvider.MANUAL,
+      licenseName: 'CC0-1.0',
+      licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+      attribution: 'Vegan Support Application demo fixtures; illustrative, not clinical advice.',
+      defaultLocale: 'vi-VN',
+      active: true,
+    },
+    create: {
+      code: 'PROJECT_DEMO_V1',
+      name: 'Project-authored demo food data',
+      provider: FoodDataProvider.MANUAL,
+      licenseName: 'CC0-1.0',
+      licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+      attribution: 'Vegan Support Application demo fixtures; illustrative, not clinical advice.',
+      defaultLocale: 'vi-VN',
+    },
+  });
+  await prisma.foodDataSource.upsert({
+    where: { code: 'USDA_FDC' },
+    update: { active: true },
+    create: {
+      code: 'USDA_FDC',
+      name: 'USDA FoodData Central',
+      provider: FoodDataProvider.USDA_FDC,
+      sourceUrl: 'https://fdc.nal.usda.gov/',
+      licenseName: 'U.S. public domain / CC0',
+      licenseUrl: 'https://www.usa.gov/government-copyright',
+      attribution: 'U.S. Department of Agriculture, Agricultural Research Service.',
+      defaultLocale: 'en-US',
+    },
+  });
+  await prisma.foodDataSource.upsert({
+    where: { code: 'VIETNAM_FCT_2017_METADATA' },
+    update: { active: false },
+    create: {
+      code: 'VIETNAM_FCT_2017_METADATA',
+      name: 'Vietnamese Food Composition Table 2017 (metadata only)',
+      provider: FoodDataProvider.VIETNAM_CURATED,
+      sourceUrl: 'https://www.fao.org/food-composition/tables-and-databases/',
+      licenseName: 'Digital import rights not confirmed',
+      attribution: 'Metadata reference only; no table values redistributed.',
+      defaultLocale: 'vi-VN',
+      active: false,
+    },
+  });
+
+  const nutrientDefinitions = [
+    {
+      code: 'ENERGY_KCAL',
+      name: 'Năng lượng',
+      defaultUnit: 'kcal',
+      unitDimension: UnitDimension.ENERGY,
+    },
+    { code: 'PROTEIN', name: 'Protein', defaultUnit: 'g', unitDimension: UnitDimension.MASS },
+    { code: 'VITAMIN_C', name: 'Vitamin C', defaultUnit: 'mg', unitDimension: UnitDimension.MASS },
+    { code: 'IRON', name: 'Sắt', defaultUnit: 'mg', unitDimension: UnitDimension.MASS },
+  ] as const;
+  const nutrients = new Map<string, { id: string }>();
+  for (const definition of nutrientDefinitions) {
+    const nutrient = await prisma.nutrient.upsert({
+      where: { code: definition.code },
+      update: { ...definition, active: true },
+      create: definition,
+    });
+    nutrients.set(definition.code, nutrient);
+  }
+
+  const tofu = await prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'dau hu' } });
+  const broccoli = await prisma.ingredient.findUniqueOrThrow({
+    where: { normalizedName: 'bong cai xanh' },
+  });
+  const tofuProfile = await prisma.ingredientFoodProfile.upsert({
+    where: {
+      sourceId_sourceRecordId_sourceVersion: {
+        sourceId: projectSource.id,
+        sourceRecordId: 'demo-tofu-raw',
+        sourceVersion: '1.0',
+      },
+    },
+    update: {
+      ingredientId: tofu.id,
+      ediblePortionPercent: 100,
+      servingGrams: 100,
+      quality: FoodDataQuality.INCOMPLETE,
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+      effectiveFrom,
+    },
+    create: {
+      ingredientId: tofu.id,
+      sourceId: projectSource.id,
+      sourceRecordId: 'demo-tofu-raw',
+      sourceVersion: '1.0',
+      preparation: 'raw',
+      locale: 'vi-VN',
+      ediblePortionPercent: 100,
+      servingGrams: 100,
+      quality: FoodDataQuality.INCOMPLETE,
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+      effectiveFrom,
+    },
+  });
+  await prisma.householdConversion.upsert({
+    where: {
+      profileId_unitName_quantity: { profileId: tofuProfile.id, unitName: 'miếng', quantity: 1 },
+    },
+    update: { grams: 100, quality: FoodDataQuality.ESTIMATED },
+    create: {
+      profileId: tofuProfile.id,
+      unitName: 'miếng',
+      quantity: 1,
+      unitDimension: UnitDimension.COUNT,
+      grams: 100,
+      quality: FoodDataQuality.ESTIMATED,
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+    },
+  });
+  const demoValues = [
+    { code: 'ENERGY_KCAL', value: 76 },
+    { code: 'PROTEIN', value: 8.08 },
+    { code: 'IRON', value: 5.36 },
+  ] as const;
+  for (const value of demoValues) {
+    const nutrient = nutrients.get(value.code);
+    if (!nutrient) continue;
+    const definition = nutrientDefinitions.find((item) => item.code === value.code);
+    if (!definition) continue;
+    await prisma.ingredientNutrientValue.upsert({
+      where: {
+        profileId_nutrientId_effectiveFrom: {
+          profileId: tofuProfile.id,
+          nutrientId: nutrient.id,
+          effectiveFrom,
+        },
+      },
+      update: { valuePer100g: value.value, unit: definition.defaultUnit },
+      create: {
+        profileId: tofuProfile.id,
+        nutrientId: nutrient.id,
+        valuePer100g: value.value,
+        unit: definition.defaultUnit,
+        quality: FoodDataQuality.INCOMPLETE,
+        reviewStatus: FoodDataReviewStatus.APPROVED,
+        reviewedById: adminId,
+        reviewedAt: new Date(),
+        effectiveFrom,
+      },
+    });
+  }
+
+  const broccoliProfile = await prisma.ingredientFoodProfile.upsert({
+    where: {
+      sourceId_sourceRecordId_sourceVersion: {
+        sourceId: projectSource.id,
+        sourceRecordId: 'demo-broccoli-raw',
+        sourceVersion: '1.0',
+      },
+    },
+    update: {
+      ingredientId: broccoli.id,
+      ediblePortionPercent: 100,
+      servingGrams: 90,
+      quality: FoodDataQuality.INCOMPLETE,
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+      effectiveFrom,
+    },
+    create: {
+      ingredientId: broccoli.id,
+      sourceId: projectSource.id,
+      sourceRecordId: 'demo-broccoli-raw',
+      sourceVersion: '1.0',
+      preparation: 'raw',
+      locale: 'vi-VN',
+      ediblePortionPercent: 100,
+      servingGrams: 90,
+      quality: FoodDataQuality.INCOMPLETE,
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+      effectiveFrom,
+    },
+  });
+  const broccoliValues = [
+    { code: 'ENERGY_KCAL', value: 34 },
+    { code: 'PROTEIN', value: 2.82 },
+    { code: 'VITAMIN_C', value: 89.2 },
+    { code: 'IRON', value: 0.73 },
+  ] as const;
+  for (const value of broccoliValues) {
+    const nutrient = nutrients.get(value.code);
+    const definition = nutrientDefinitions.find((item) => item.code === value.code);
+    if (!nutrient || !definition) continue;
+    await prisma.ingredientNutrientValue.upsert({
+      where: {
+        profileId_nutrientId_effectiveFrom: {
+          profileId: broccoliProfile.id,
+          nutrientId: nutrient.id,
+          effectiveFrom,
+        },
+      },
+      update: { valuePer100g: value.value, unit: definition.defaultUnit },
+      create: {
+        profileId: broccoliProfile.id,
+        nutrientId: nutrient.id,
+        valuePer100g: value.value,
+        unit: definition.defaultUnit,
+        quality: FoodDataQuality.INCOMPLETE,
+        reviewStatus: FoodDataReviewStatus.APPROVED,
+        reviewedById: adminId,
+        reviewedAt: new Date(),
+        effectiveFrom,
+      },
+    });
+  }
+
+  const vitaminC = nutrients.get('VITAMIN_C');
+  if (!vitaminC) throw new Error('Seed nutrient VITAMIN_C missing');
+  await prisma.nutrientReferenceIntake.upsert({
+    where: {
+      nutrientId_referenceType_populationCode_sourceId_sourceVersion_effectiveFrom: {
+        nutrientId: vitaminC.id,
+        referenceType: NutrientReferenceType.OTHER,
+        populationCode: 'DEMO_ADULT_DISPLAY_ONLY',
+        sourceId: projectSource.id,
+        sourceVersion: '1.0',
+        effectiveFrom,
+      },
+    },
+    update: { value: 75, unit: 'mg' },
+    create: {
+      nutrientId: vitaminC.id,
+      sourceId: projectSource.id,
+      referenceType: NutrientReferenceType.OTHER,
+      populationCode: 'DEMO_ADULT_DISPLAY_ONLY',
+      applicability: { note: 'Illustrative fixture only' },
+      value: 75,
+      unit: 'mg',
+      warningEligible: false,
+      sourceRecordId: 'demo-vitamin-c-display-reference',
+      sourceVersion: '1.0',
+      locale: 'vi-VN',
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+      effectiveFrom,
+    },
+  });
+  await prisma.ingredientIntakeGuideline.upsert({
+    where: {
+      ingredientId_populationCode_period_sourceId_sourceVersion_effectiveFrom: {
+        ingredientId: tofu.id,
+        populationCode: 'DEMO_GENERAL',
+        period: GuidelinePeriod.DAY,
+        sourceId: projectSource.id,
+        sourceVersion: '1.0',
+        effectiveFrom,
+      },
+    },
+    update: { amount: 100 },
+    create: {
+      ingredientId: tofu.id,
+      sourceId: projectSource.id,
+      populationCode: 'DEMO_GENERAL',
+      applicability: { note: 'Illustrative fixture only' },
+      amount: 100,
+      unit: 'g',
+      frequency: 1,
+      period: GuidelinePeriod.DAY,
+      advisoryOnly: true,
+      evidenceGrade: EvidenceGrade.INSUFFICIENT,
+      severity: FoodRuleSeverity.INFO,
+      explanation: 'Khẩu phần minh họa cho giao diện; không phải giới hạn dinh dưỡng.',
+      sourceRecordId: 'demo-tofu-guideline',
+      sourceVersion: '1.0',
+      locale: 'vi-VN',
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+      effectiveFrom,
+    },
+  });
+
+  const boiling = await prisma.cookingMethod.upsert({
+    where: { code: 'BOILING' },
+    update: { name: 'Luộc', active: true },
+    create: { code: 'BOILING', name: 'Luộc', description: 'Nấu thực phẩm trong nước sôi.' },
+  });
+  await prisma.nutrientRetentionFactor.upsert({
+    where: {
+      cookingMethodId_nutrientId_sourceId_sourceVersion_effectiveFrom: {
+        cookingMethodId: boiling.id,
+        nutrientId: vitaminC.id,
+        sourceId: projectSource.id,
+        sourceVersion: '1.0',
+        effectiveFrom,
+      },
+    },
+    update: { factor: 0.55 },
+    create: {
+      cookingMethodId: boiling.id,
+      nutrientId: vitaminC.id,
+      sourceId: projectSource.id,
+      factor: 0.55,
+      applicability: { note: 'Illustrative fixture; cooking conditions vary' },
+      sourceRecordId: 'demo-boiling-vitamin-c',
+      sourceVersion: '1.0',
+      quality: FoodDataQuality.ESTIMATED,
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+      effectiveFrom,
+    },
+  });
+  const existingYield = await prisma.cookingYieldFactor.findFirst({
+    where: {
+      cookingMethodId: boiling.id,
+      ingredientId: broccoli.id,
+      sourceId: projectSource.id,
+      sourceVersion: '1.0',
+      effectiveFrom,
+    },
+  });
+  if (existingYield) {
+    await prisma.cookingYieldFactor.update({
+      where: { id: existingYield.id },
+      data: { factor: 0.9 },
+    });
+  } else {
+    await prisma.cookingYieldFactor.create({
+      data: {
+        cookingMethodId: boiling.id,
+        ingredientId: broccoli.id,
+        sourceId: projectSource.id,
+        factor: 0.9,
+        applicability: { note: 'Illustrative fixture; water loss varies' },
+        sourceRecordId: 'demo-broccoli-boiling-yield',
+        sourceVersion: '1.0',
+        quality: FoodDataQuality.ESTIMATED,
+        reviewStatus: FoodDataReviewStatus.APPROVED,
+        reviewedById: adminId,
+        reviewedAt: new Date(),
+        effectiveFrom,
+      },
+    });
+  }
+  const ingredientAId = tofu.id < broccoli.id ? tofu.id : broccoli.id;
+  const ingredientBId = tofu.id < broccoli.id ? broccoli.id : tofu.id;
+  await prisma.ingredientInteractionRule.upsert({
+    where: {
+      ingredientAId_ingredientBId_scope_sourceId_sourceVersion_effectiveFrom: {
+        ingredientAId,
+        ingredientBId,
+        scope: InteractionScope.SAME_MEAL,
+        sourceId: projectSource.id,
+        sourceVersion: '1.0',
+        effectiveFrom,
+      },
+    },
+    update: { hardRule: false },
+    create: {
+      ingredientAId,
+      ingredientBId,
+      sourceId: projectSource.id,
+      scope: InteractionScope.SAME_MEAL,
+      direction: InteractionDirection.BENEFICIAL,
+      severity: FoodRuleSeverity.INFO,
+      evidenceGrade: EvidenceGrade.LOW,
+      applicability: { note: 'Educational demo rule' },
+      explanation: 'Ví dụ quy tắc tương tác mang tính giáo dục; không phải khuyến cáo lâm sàng.',
+      hardRule: false,
+      sourceRecordId: 'demo-tofu-broccoli-meal',
+      sourceVersion: '1.0',
+      locale: 'vi-VN',
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+      effectiveFrom,
+    },
+  });
+  const existingSuggestion = await prisma.foodDataSuggestion.findFirst({
+    where: {
+      suggestionType: FoodDataSuggestionType.INGREDIENT_MAPPING,
+      reviewStatus: FoodDataReviewStatus.STAGED,
+    },
+  });
+  if (!existingSuggestion) {
+    await prisma.foodDataSuggestion.create({
+      data: {
+        suggestionType: FoodDataSuggestionType.INGREDIENT_MAPPING,
+        provider: FoodDataProvider.AI_SUGGESTION,
+        payload: { input: 'tofu mềm', candidateIngredientId: tofu.id },
+        rationale: 'Demo staged suggestion; cannot publish canonical facts.',
+        confidence: 0.8,
+      },
+    });
+  }
+}
 
 const dietRuleDefinitions = [
   {
@@ -415,6 +837,7 @@ async function main(): Promise<void> {
   const admin = await prisma.user.findUniqueOrThrow({
     where: { email: seedEnvironment.SEED_ADMIN_EMAIL.toLowerCase() },
   });
+  await seedFoodData(admin.id);
   const contributorSeedDefinitions = [
     {
       applicationId: '70000000-0000-4000-8000-000000000001',
@@ -507,7 +930,8 @@ async function main(): Promise<void> {
       });
     });
   }
-  const [recipeCategory, topicCategory, tofu, broccoli, brownRice, mushroom] = await Promise.all([
+  const [recipeCategory, topicCategory, tofu, broccoli, brownRice, mushroom, boilingMethod] =
+    await Promise.all([
     prisma.category.findFirstOrThrow({
       where: { type: CategoryType.FOOD_TYPE, slug: 'com-va-ngu-coc', status: CatalogStatus.ACTIVE },
     }),
@@ -518,6 +942,7 @@ async function main(): Promise<void> {
     prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'bong cai xanh' } }),
     prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'gao lut' } }),
     prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'nam huong' } }),
+    prisma.cookingMethod.findUniqueOrThrow({ where: { code: 'BOILING' } }),
   ]);
 
   if (!(await prisma.post.findUnique({ where: { slug: 'dau-hu-xao-bong-cai-demo' } }))) {
@@ -584,6 +1009,23 @@ async function main(): Promise<void> {
                 amount: 200,
                 unit: 'g',
                 resolutionStatus: IngredientResolutionStatus.EXACT,
+              },
+            ],
+          },
+          recipeSteps: {
+            create: [
+              {
+                position: 0,
+                instruction: 'Luoc bong cai trong nuoc soi den khi vua mem roi de rao.',
+                cookingMethodId: boilingMethod.id,
+                durationMinutes: 4,
+                affectedIngredientPositions: [1],
+              },
+              {
+                position: 1,
+                instruction: 'Ap chao dau hu va tron nhanh voi bong cai cung sot gia vi.',
+                durationMinutes: 8,
+                affectedIngredientPositions: [0, 1],
               },
             ],
           },

@@ -14,6 +14,8 @@ import { registerModerationOpenApi } from '../modules/moderation/moderation.open
 import { registerRecommendationOpenApi } from '../modules/recommendations/recommendation.openapi.js';
 import { registerMealPlanOpenApi } from '../modules/meal-plans/meal-plan.openapi.js';
 import { registerChatOpenApi } from '../modules/chat/chat.openapi.js';
+import { registerFoodDataOpenApi } from '../modules/food-data/food-data.openapi.js';
+import { registerRecipeNutritionOpenApi } from '../modules/recipe-nutrition/recipe-nutrition.openapi.js';
 
 const registry = new OpenAPIRegistry();
 
@@ -52,6 +54,8 @@ registerModerationOpenApi(registry, registeredErrorResponse);
 registerRecommendationOpenApi(registry, registeredErrorResponse);
 registerMealPlanOpenApi(registry, registeredErrorResponse);
 registerChatOpenApi(registry, registeredErrorResponse);
+registerFoodDataOpenApi(registry, registeredErrorResponse);
+registerRecipeNutritionOpenApi(registry, registeredErrorResponse);
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
@@ -70,6 +74,12 @@ const generatedDocument = generator.generateDocument({
     { name: 'Diet Rules', description: 'Versioned diet and tradition rule confirmation' },
     { name: 'Categories', description: 'Public active category tree' },
     { name: 'Ingredients', description: 'Canonical ingredient discovery and alias resolution' },
+    { name: 'Food Data', description: 'Reviewed nutrient knowledge with provenance and versions' },
+    {
+      name: 'Recipe Nutrition',
+      description: 'Cooking-aware recipe nutrition estimates with provenance',
+    },
+    { name: 'Food Data Admin', description: 'Admin curation and provider-neutral imports' },
     { name: 'Catalog Admin', description: 'Admin-only category and ingredient management' },
     { name: 'Content', description: 'Revisioned Recipe, Blog, and Video content' },
     { name: 'Community', description: 'Comments, votes, ratings, and bookmarks' },

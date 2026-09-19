@@ -67,6 +67,13 @@ const recipeExample = {
         unit: 'g',
       },
     ],
+    steps: [
+      {
+        instruction: 'Luộc bông cải trong nước sôi rồi để ráo.',
+        durationMinutes: 4,
+        affectedIngredientPositions: [0],
+      },
+    ],
   },
 };
 

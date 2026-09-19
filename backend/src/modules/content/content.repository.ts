@@ -22,6 +22,7 @@ import { MODERATION_RULE_VERSION } from '../moderation/rule-moderation.service.j
 const revisionInclude = {
   recipeDetail: true,
   ingredients: { include: { ingredient: true }, orderBy: { position: 'asc' } },
+  recipeSteps: { include: { cookingMethod: true }, orderBy: { position: 'asc' } },
   dietCompatibility: { orderBy: { dietPattern: 'asc' } },
   categories: { include: { category: true }, orderBy: { category: { name: 'asc' } } },
   tags: { orderBy: { normalizedTag: 'asc' } },
@@ -101,6 +102,13 @@ export interface RecipeSnapshot {
   allergenCodes: string[];
   traditionWarnings: Array<{ tradition: string; warningCode: string; label: string }>;
   ingredients: ResolvedRecipeIngredient[];
+  steps: Array<{
+    instruction: string;
+    cookingMethodId?: string;
+    durationMinutes?: number;
+    temperatureCelsius?: number;
+    affectedIngredientPositions: number[];
+  }>;
   dietCompatibilities: Array<{
     dietPattern: 'VEGAN' | 'LACTO_OVO';
     compatible: boolean;
@@ -631,6 +639,14 @@ export class ContentRepository {
     });
   }
 
+  async findActiveCookingMethodIds(ids: string[]): Promise<string[]> {
+    const methods = await this.prisma.cookingMethod.findMany({
+      where: { id: { in: ids }, active: true },
+      select: { id: true },
+    });
+    return methods.map((method) => method.id);
+  }
+
   private async hydratePublished(ids: string[]): Promise<PublishedPostRecord[]> {
     if (!ids.length) return [];
     const records = await this.prisma.post.findMany({
@@ -859,6 +875,22 @@ export class ContentRepository {
                   dietPattern: compatibility.dietPattern,
                   compatible: compatibility.compatible,
                   reasonCodes: compatibility.reasonCodes,
+                })),
+              },
+              recipeSteps: {
+                create: recipe.steps.map((step, position) => ({
+                  position,
+                  instruction: step.instruction,
+                  ...(step.cookingMethodId
+                    ? { cookingMethod: { connect: { id: step.cookingMethodId } } }
+                    : {}),
+                  ...(step.durationMinutes !== undefined
+                    ? { durationMinutes: step.durationMinutes }
+                    : {}),
+                  ...(step.temperatureCelsius !== undefined
+                    ? { temperatureCelsius: step.temperatureCelsius }
+                    : {}),
+                  affectedIngredientPositions: step.affectedIngredientPositions,
                 })),
               },
             }

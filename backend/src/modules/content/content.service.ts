@@ -92,6 +92,12 @@ function traditionWarningList(value: Prisma.JsonValue) {
   });
 }
 
+function stepPositions(value: Prisma.JsonValue): number[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is number => typeof item === 'number' && Number.isInteger(item) && item >= 0)
+    : [];
+}
+
 export class ContentService {
   constructor(
     private readonly repository: ContentRepository,
@@ -292,6 +298,15 @@ export class ContentService {
         message: 'Canonical ingredient được chọn không tồn tại, bị trùng hoặc đã archive',
       });
     }
+    const cookingMethodIds = recipe.steps.flatMap((step) =>
+      step.cookingMethodId ? [step.cookingMethodId] : [],
+    );
+    const activeCookingMethodIds = new Set(
+      await this.repository.findActiveCookingMethodIds([...new Set(cookingMethodIds)]),
+    );
+    if (cookingMethodIds.some((id) => !activeCookingMethodIds.has(id))) {
+      throw this.invalidContentError('Cooking method khong ton tai hoac da bi tat');
+    }
 
     const resolved = recipe.ingredients.map((item, index) => {
       const normalizedName = normalizedNames[index] ?? '';
@@ -380,6 +395,15 @@ export class ContentService {
       allergenCodes,
       traditionWarnings: [...warningMap.values()],
       ingredients: resolved,
+      steps: recipe.steps.map((step) => ({
+        instruction: step.instruction,
+        ...(step.cookingMethodId ? { cookingMethodId: step.cookingMethodId } : {}),
+        ...(step.durationMinutes !== undefined ? { durationMinutes: step.durationMinutes } : {}),
+        ...(step.temperatureCelsius !== undefined
+          ? { temperatureCelsius: step.temperatureCelsius }
+          : {}),
+        affectedIngredientPositions: step.affectedIngredientPositions,
+      })),
       dietCompatibilities,
     };
   }
@@ -483,6 +507,17 @@ export class ContentService {
             unit: ingredient.unit,
             optional: ingredient.optional,
             resolutionStatus: ingredient.resolutionStatus,
+          })),
+          steps: revision.recipeSteps.map((step) => ({
+            id: step.id,
+            position: step.position,
+            instruction: step.instruction,
+            cookingMethodId: step.cookingMethodId,
+            cookingMethodCode: step.cookingMethod?.code ?? null,
+            cookingMethodName: step.cookingMethod?.name ?? null,
+            durationMinutes: step.durationMinutes,
+            temperatureCelsius: step.temperatureCelsius ? Number(step.temperatureCelsius) : null,
+            affectedIngredientPositions: stepPositions(step.affectedIngredientPositions),
           })),
         },
       };

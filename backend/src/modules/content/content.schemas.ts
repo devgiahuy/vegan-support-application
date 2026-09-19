@@ -122,6 +122,21 @@ const recipeIngredientInputSchema = z
   })
   .strict();
 
+const uniqueIngredientPositions = z
+  .array(z.number().int().min(0).max(99))
+  .max(100)
+  .refine((values) => new Set(values).size === values.length, 'Ingredient position khong duoc trung lap');
+
+const recipeStepInputSchema = z
+  .object({
+    instruction: z.string().trim().min(1).max(2000),
+    cookingMethodId: z.string().uuid().optional(),
+    durationMinutes: z.number().int().positive().max(10_080).optional(),
+    temperatureCelsius: z.number().min(0).max(400).optional(),
+    affectedIngredientPositions: uniqueIngredientPositions.default([]),
+  })
+  .strict();
+
 const recipeInputSchema = z
   .object({
     servings: z.number().int().min(1).max(100),
@@ -130,8 +145,22 @@ const recipeInputSchema = z
     difficulty: z.enum(RecipeDifficulty),
     nutrition: nutritionInputSchema,
     ingredients: z.array(recipeIngredientInputSchema).min(1).max(100),
+    steps: z.array(recipeStepInputSchema).max(100).default([]),
   })
-  .strict();
+  .strict()
+  .superRefine((recipe, context) => {
+    for (const [stepIndex, step] of recipe.steps.entries()) {
+      for (const position of step.affectedIngredientPositions) {
+        if (position >= recipe.ingredients.length) {
+          context.addIssue({
+            code: 'custom',
+            path: ['steps', stepIndex, 'affectedIngredientPositions'],
+            message: 'Step tham chieu ingredient position khong ton tai',
+          });
+        }
+      }
+    }
+  });
 
 export const createRecipePostRequestSchema = z
   .object({
@@ -286,6 +315,19 @@ const recipeIngredientSchema = z
     resolutionStatus: z.enum(IngredientResolutionStatus),
   })
   .strict();
+const recipeStepSchema = z
+  .object({
+    id: z.string().uuid(),
+    position: z.number().int().nonnegative(),
+    instruction: z.string(),
+    cookingMethodId: z.string().uuid().nullable(),
+    cookingMethodCode: z.string().nullable(),
+    cookingMethodName: z.string().nullable(),
+    durationMinutes: z.number().int().positive().nullable(),
+    temperatureCelsius: z.number().nonnegative().nullable(),
+    affectedIngredientPositions: z.array(z.number().int().nonnegative()),
+  })
+  .strict();
 const recipeCompatibilitySchema = z
   .object({
     dietPattern: z.enum(DietPattern),
@@ -317,6 +359,7 @@ const recipeOutputSchema = z
     traditionWarnings: z.array(traditionWarningSchema),
     dietCompatibilities: z.array(recipeCompatibilitySchema),
     ingredients: z.array(recipeIngredientSchema),
+    steps: z.array(recipeStepSchema),
   })
   .strict();
 

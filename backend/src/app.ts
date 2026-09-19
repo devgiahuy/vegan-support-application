@@ -81,6 +81,17 @@ import { ChatIdentityService } from './modules/chat/chat.identity.js';
 import { ChatRepository } from './modules/chat/chat.repository.js';
 import { createChatRouter } from './modules/chat/chat.router.js';
 import { ChatService } from './modules/chat/chat.service.js';
+import { FoodDataController } from './modules/food-data/food-data.controller.js';
+import { FoodDataRepository } from './modules/food-data/food-data.repository.js';
+import {
+  createFoodDataAdminRouter,
+  createFoodDataRouter,
+} from './modules/food-data/food-data.router.js';
+import { FoodDataService } from './modules/food-data/food-data.service.js';
+import { RecipeNutritionController } from './modules/recipe-nutrition/recipe-nutrition.controller.js';
+import { RecipeNutritionRepository } from './modules/recipe-nutrition/recipe-nutrition.repository.js';
+import { createRecipeNutritionRouter } from './modules/recipe-nutrition/recipe-nutrition.router.js';
+import { RecipeNutritionService } from './modules/recipe-nutrition/recipe-nutrition.service.js';
 import { openApiDocument } from './openapi/document.js';
 
 export interface AppDependencies {
@@ -136,14 +147,21 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
       config,
     ),
   );
+  const aiProvider = createAiProvider(config);
   const chatController = new ChatController(
     new ChatService(
       new ChatRepository(database.client),
-      createAiProvider(config),
+      aiProvider,
       recommendationService,
       config,
     ),
     new ChatIdentityService(config),
+  );
+  const foodDataController = new FoodDataController(
+    new FoodDataService(new FoodDataRepository(database.client)),
+  );
+  const recipeNutritionController = new RecipeNutritionController(
+    new RecipeNutritionService(new RecipeNutritionRepository(database.client), aiProvider),
   );
 
   app.disable('x-powered-by');
@@ -192,7 +210,9 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/diet-rules', createDietRouter(dietController, authentication));
   app.use('/api/v1/categories', createCategoryRouter(catalogController));
   app.use('/api/v1/ingredients', createIngredientRouter(catalogController));
+  app.use('/api/v1/food-data', createFoodDataRouter(foodDataController));
   app.use('/api/v1/admin', createCatalogAdminRouter(catalogController, authentication));
+  app.use('/api/v1/admin', createFoodDataAdminRouter(foodDataController, authentication));
   app.use('/api/v1/admin', createContributorAdminRouter(contributorController, authentication));
   app.use('/api/v1/admin', createModerationAdminRouter(moderationController, authentication));
   app.use('/api/v1/review-queue', createReviewQueueRouter(moderationController, authentication));
@@ -207,6 +227,7 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   );
   app.use('/api/v1/meal-plans', createMealPlanRouter(mealPlanController, authentication));
   app.use('/api/v1/chat', createChatRouter(chatController, authentication));
+  app.use('/api/v1/posts', createRecipeNutritionRouter(recipeNutritionController, authentication));
   app.use('/api/v1/posts', createPostsRouter(contentController, authentication));
   app.use('/api/v1/posts', createCommunityPostsRouter(communityController, authentication));
   app.use('/api/v1/comments', createCommentsRouter(communityController, authentication));
