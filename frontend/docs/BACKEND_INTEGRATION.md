@@ -1,8 +1,8 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.0
+**Version:** 4.2
 
-**Cập nhật:** 18/09/2026
+**Cập nhật:** 19/09/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
@@ -336,16 +336,20 @@ Các path dưới đây là contract target để định hướng; phase triể
 
 | Method | Path | Status | Backend updated | FE integrated | Ghi chú |
 |---|---|---|---|---|---|
-| GET | `/food-data/ingredients/:id/nutrients` | `PLANNED` | — | No | Canonical nutrients + provenance/version; missing không phải zero |
-| GET | `/food-data/reference-intakes` | `PLANNED` | — | No | Population/unit/source/version |
-| GET | `/food-data/ingredient-guidelines` | `PLANNED` | — | No | Amount/frequency per period; population/evidence/source/severity |
-| GET | `/food-data/cooking-methods` | `PLANNED` | — | No | Retention/yield factors đã review |
-| GET | `/food-data/interaction-rules` | `PLANNED` | — | No | Evidence-graded; scope dish/meal/day |
-| POST | `/admin/food-data/imports/preview` | `PLANNED` | — | No | Admin, provider-neutral, không ghi dữ liệu |
-| POST | `/admin/food-data/imports` | `PLANNED` | — | No | Admin, idempotent commit + audit |
-| POST | `/recipes/:id/nutrition/preview` | `PLANNED` | — | No | Phase 13; ingredients + structured cooking steps |
-| POST | `/recipes/:id/nutrition/recalculate` | `PLANNED` | — | No | Owner/Admin; versioned result |
-| GET | `/recipes/:id/nutrition` | `PLANNED` | — | No | Origin/confidence/range/assumptions/uncovered ingredients |
+| GET | `/food-data/ingredients/:ingredientId/nutrients` | `READY` | 2026-09-19 | No | Approved effective profiles, conversions, nutrients + provenance/version; missing không phải zero |
+| GET | `/food-data/reference-intakes` | `READY` | 2026-09-19 | No | Approved effective population/unit/source/version records |
+| GET | `/food-data/ingredient-guidelines` | `READY` | 2026-09-19 | No | Amount/frequency per period; population/evidence/source/severity |
+| GET | `/food-data/cooking-methods` | `READY` | 2026-09-19 | No | Active methods with approved effective retention/yield factors |
+| GET | `/food-data/interaction-rules` | `READY` | 2026-09-19 | No | Reviewed evidence-graded rules; scope dish/meal/day |
+| GET/POST | `/admin/food-data/records` | `READY` | 2026-09-19 | No | Admin list/create by typed `kind`; AI suggestions remain `STAGED` |
+| PUT/DELETE | `/admin/food-data/records/:id` | `READY` | 2026-09-19 | No | Full replace or archive/supersede; no hard-delete of reviewed records |
+| POST | `/admin/food-data/imports/preview` | `READY` | 2026-09-19 | No | Admin, provider adapter validation; writes staging/audit only, not canonical data |
+| POST | `/admin/food-data/imports` | `READY` | 2026-09-19 | No | Admin, commits a preview by `importId`; idempotent replay + audit |
+| POST | `/posts/:id/nutrition/preview` | `IN_PROGRESS` | 2026-09-19 | No | Implemented in source/OpenAPI; public for published recipe, owner/Admin for draft/latest; unsaved deterministic/partial estimate; pending final `npm run build` gate |
+| POST | `/posts/:id/nutrition/recalculate` | `IN_PROGRESS` | 2026-09-19 | No | Implemented in source/OpenAPI; Auth owner/Admin; saves new estimate version, histories previous current estimate; pending final `npm run build` gate |
+| GET | `/posts/:id/nutrition/current` | `IN_PROGRESS` | 2026-09-19 | No | Implemented in source/OpenAPI; current saved estimate; stale/incomplete errors documented; pending final `npm run build` gate |
+| GET | `/posts/:id/nutrition/history` | `IN_PROGRESS` | 2026-09-19 | No | Implemented in source/OpenAPI; paginated saved estimate versions with `CURRENT/HISTORICAL/STALE` status; pending final `npm run build` gate |
+| GET | `/posts/:id/nutrition/status` | `IN_PROGRESS` | 2026-09-19 | No | Implemented in source/OpenAPI; estimate freshness and latest nutrition AI fallback job status; pending final `npm run build` gate |
 
 ### 6.10 Unified Contributor migration — Phase 14
 
@@ -739,9 +743,21 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `CHAT_REQUEST_IN_PROGRESS`                    | Giữ stream hiện tại hoặc chờ rồi retry cùng idempotency key            |
 | `EXTERNAL_LOCATION_UNAVAILABLE`               | Dùng internal restaurant results                                       |
 | `RESOURCE_CONFLICT`                           | Refresh entity/version trước khi sửa lại                               |
-| `FOOD_DATA_VERSION_CONFLICT`                  | Refetch source/version trước khi Admin sửa/import lại (planned Phase 12) |
-| `NUTRITION_DATA_INCOMPLETE`                   | Hiển thị partial/unknown và assumptions; không coi missing là zero (planned Phase 13) |
-| `NUTRITION_ESTIMATE_STALE`                    | Refetch/recalculate vì ingredient/step/source version đã đổi (planned Phase 13) |
+| `FOOD_DATA_SOURCE_UNAVAILABLE`                | Chọn nguồn active đã được Admin cấu hình trước khi preview import       |
+| `DUPLICATE_SOURCE_RECORD`                     | Loại source record ID trùng trong cùng payload import                   |
+| `UNKNOWN_NUTRIENT_CODE`                       | Tạo/activate nutrient definition rồi preview lại                        |
+| `NUTRIENT_UNIT_MISMATCH`                      | Đổi về default unit của nutrient; backend không tự đổi dimension        |
+| `FOOD_DATA_REFERENCE_INVALID`                 | Refetch source/nutrient/ingredient/method ID trước khi lưu              |
+| `FOOD_DATA_DUPLICATE`                         | Refetch code/source identity/effective version; không retry mù          |
+| `FOOD_DATA_NOT_FOUND`                         | Hiển thị record không tồn tại hoặc ingredient không active              |
+| `FOOD_DATA_VERSION_CONFLICT`                  | Refetch source/version trước khi Admin sửa/import lại                    |
+| `IMPORT_IDEMPOTENCY_CONFLICT`                 | Giữ key cho cùng payload; tạo key mới chỉ cho import action mới         |
+| `IMPORT_NOT_COMMITTABLE`                      | Tạo preview mới thay vì commit batch FAILED                             |
+| `IMPORT_STAGING_INVALID`                      | Preview lại theo contract hiện tại                                      |
+| `IMPORT_REFERENCE_CHANGED`                    | Nutrient definition đổi sau preview; preview lại trước khi commit       |
+| `INVALID_SERVINGS`                            | Chặn lưu/tính với servings không hợp lệ; yêu cầu sửa recipe trước khi thử lại |
+| `NUTRITION_DATA_INCOMPLETE`                   | Hiển thị trạng thái chưa có estimate đã lưu hoặc partial/unknown; không coi missing là zero |
+| `NUTRITION_ESTIMATE_STALE`                    | Refetch/recalculate vì ingredient/step/source/factor fingerprint đã đổi |
 | `STORAGE_QUOTA_EXCEEDED`                      | Hiển thị used/limit/remaining; yêu cầu xóa media hoặc giảm upload (planned Phase 15) |
 | `UPLOAD_RESERVATION_EXPIRED`                  | Xin reservation mới trước khi retry upload (planned Phase 15)          |
 | `UPLOAD_PROVIDER_MISMATCH`                    | Không attach asset; thông báo upload thất bại và release quota (planned Phase 15) |
@@ -817,6 +833,8 @@ Thêm entry mới nhất ở trên cùng.
 
 | Date       | Version | Module         | Change                                                                                                                                | Breaking | FE action                                                                                            |
 | ---------- | ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- | :------: | ---------------------------------------------------------------------------------------------------- |
+| 2026-09-19 | 4.2     | Recipe Nutrition | Phase 13 implemented in source/OpenAPI: structured recipe steps on recipe revisions plus cooking-aware preview/recalculate/current/history/status endpoints; deterministic calculation uses unit conversion, edible portion, reviewed yield/retention factors, provenance, confidence, uncertainty and uncovered ingredients; AI fallback is provider-adapter only and labeled. Runtime status remains `IN_PROGRESS` until the blocked `npm run build` gate completes. | No | Do not integrate until status returns to `READY`; then sync OpenAPI and add `features/recipe-nutrition` DTO/Model/Mapper/query with partial coverage/stale/provider fallback handling. |
+| 2026-09-19 | 4.1     | Food Data      | Phase 12 READY: canonical profiles/nutrients/conversions, intake/guidelines, cooking factors, interaction rules, typed Admin CRUD, staged AI suggestions và provider-neutral idempotent imports. | No | Sync OpenAPI; thêm DTO/Model/Mapper/query cho các read endpoint và màn quản trị khi được ưu tiên. Missing nutrient không render thành 0. |
 | 2026-09-18 | 4.0     | Product plan   | Đồng bộ canonical SRS và backend Phases 12–27: food data, cooking-aware nutrition, unified Contributor, quota/video review, custom meals/tags, meal analysis/programs, pantry, fridge, receipt, AI artifacts, maps, notifications và governance. Contract runtime hiện tại không đổi; Contributor Phase 14 được ghi là breaking migration tương lai. | Future Phase 14 | Chưa đổi consumer live; chỉ sync/migrate khi từng endpoint chuyển READY/CHANGING theo OpenAPI |
 | 2026-09-17 | 3.8     | AI Governance  | FE scaffold 5 ops AI governance theo spec 017 (DTO suy luận + reconfirm ở task nối live/Mapper/test redaction/fixtures 0 nội dung thô/API fixture 0 request/Query/tab dashboard tổng quan + log che mờ + cờ + công tắc); endpoint giữ `PLANNED`, `FE integrated` giữ `No` |    No    | Test tay AG-1..AG-3 + check Network 0 request + quét DOM 0 nội dung thô theo `specs/017-ai-governance/quickstart.md`; nối live khi BE đánh `READY` |
 | 2026-09-17 | 3.7     | Restaurants    | FE scaffold 7 ops restaurants/location theo spec 016 (DTO suy luận + reconfirm ở task nối live/Mapper/test haversine/fixtures/API fixture 0 request + 0 maps/Query/viết lại 2 routes + tab dashboard, khung bản đồ CSS không SDK); endpoint giữ `PLANNED`, `FE integrated` giữ `No` |    No    | Test tay RT-1..RT-4 + check Network 0 request/maps theo `specs/016-restaurants-location/quickstart.md`; nối live (SDK maps/key) khi BE đánh `READY` |
