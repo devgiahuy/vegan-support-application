@@ -62,6 +62,8 @@ export interface Recipe {
   mealPlannerEligible: boolean;
   nutrition: NutritionFact;
   ingredients: RecipeIngredient[];
+  /** Hướng dẫn nấu dạng văn bản — backend chưa trả steps có cấu trúc, chỉ có `revision.body`. */
+  body: string;
   publishedAt: Date | null;
   formattedPublishedAt: string;
   description: string;

@@ -1,4 +1,3 @@
-import * as React from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, usePathname } from 'expo-router';
@@ -7,10 +6,11 @@ import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
 import { useAuthStore } from '@/store/useAuthStore';
 import { ThemeToggle } from './theme-toggle';
+import { BrandLogo } from './brand-logo';
 
 interface NavItem {
   label: string;
-  href: '/' | '/recipes' | '/articles' | null;
+  href: '/' | '/recipes' | '/articles' | '/restaurants' | null;
 }
 
 /** Các mục chưa có màn hình thật (`href: null`) hiện thông báo thay vì điều hướng vỡ route. */
@@ -20,7 +20,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Cẩm nang', href: '/articles' },
   { label: 'Video nấu ăn', href: null },
   { label: 'Thực đơn tuần', href: null },
-  { label: 'Bản đồ quán', href: null },
+  { label: 'Bản đồ quán', href: '/restaurants' },
 ];
 
 function notifyComingSoon(feature: string) {
@@ -44,8 +44,8 @@ export function SiteHeader() {
     <SafeAreaView edges={['top']} className="border-b border-border bg-background">
       <View className="flex-row items-center gap-2 px-4 py-2.5">
         <Link href="/" asChild>
-          <Pressable>
-            <Text className="text-base font-bold text-primary">VeggieConnect</Text>
+          <Pressable accessibilityLabel="VeggieConnect Trang chủ">
+            <BrandLogo variant="horizontal" height={24} />
           </Pressable>
         </Link>
 

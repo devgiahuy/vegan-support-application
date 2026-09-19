@@ -146,3 +146,9 @@ export enum VideoSource {
   CLOUDINARY = 'CLOUDINARY',
   YOUTUBE = 'YOUTUBE',
 }
+
+/** Trạng thái quán chay (hiển thị công khai / chờ duyệt). */
+export enum RestaurantStatus {
+  PENDING = 'PENDING',
+  PUBLISHED = 'PUBLISHED',
+}
