@@ -24,11 +24,12 @@ enum UserStatus {
   @@map("user_status")
 }
 
-enum ContributorType {
-  EXPERIENCED_PRACTITIONER
-  NUTRITION_EXPERT
+enum ContributorApprovalBasis {
+  ORGANIZATION_AFFILIATION
+  PLATFORM_TRACK_RECORD
+  ADMIN_INVITED
 
-  @@map("contributor_type")
+  @@map("contributor_approval_basis")
 }
 
 enum ContributorApplicationStatus {
@@ -42,8 +43,17 @@ enum ContributorApplicationStatus {
 enum ContributorApplicationSource {
   REGISTRATION
   PROFILE
+  ADMIN_INVITATION
 
   @@map("contributor_application_source")
+}
+
+enum ContributorDecisionType {
+  APPROVED
+  REJECTED
+  REVOKED
+
+  @@map("contributor_decision_type")
 }
 
 enum HealthSex {
@@ -495,54 +505,58 @@ enum RecipeNutritionEstimateStatus {
 }
 
 model User {
-  id                          String                     @id @default(uuid()) @db.Uuid
-  email                       String                     @unique @db.VarChar(320)
-  passwordHash                String                     @map("password_hash")
-  displayName                 String                     @map("display_name") @db.VarChar(100)
-  avatarUrl                   String?                    @map("avatar_url") @db.VarChar(2048)
-  role                        Role                       @default(MEMBER)
-  status                      UserStatus                 @default(ACTIVE)
-  failedLoginAttempts         Int                        @default(0) @map("failed_login_attempts")
-  lockedUntil                 DateTime?                  @map("locked_until") @db.Timestamptz(3)
-  lastLoginAt                 DateTime?                  @map("last_login_at") @db.Timestamptz(3)
-  createdAt                   DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt                   DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt                   DateTime?                  @map("deleted_at") @db.Timestamptz(3)
-  privateDataPurgeAt          DateTime?                  @map("private_data_purge_at") @db.Timestamptz(3)
-  refreshSessions             RefreshSession[]
-  applications                ContributorApplication[]
-  reviewedApplications        ContributorApplication[]   @relation("ContributorApplicationReviewer")
-  contributorProfile          ContributorProfile?        @relation("ContributorProfileUser")
-  approvedContributorProfiles ContributorProfile[]       @relation("ContributorProfileApprover")
-  healthProfile               HealthProfile?
-  dietPreference              DietPreference?
-  dietPreferenceRules         DietPreferenceRule[]
-  dietScheduleDates           DietScheduleDate[]
-  allergies                   UserAllergy[]
-  ingredientExclusions        UserIngredientExclusion[]
-  categoryProposals           CategoryProposal[]         @relation("CategoryProposalAuthor")
-  reviewedCategoryProposals   CategoryProposal[]         @relation("CategoryProposalReviewer")
-  posts                       Post[]                     @relation("PostAuthor")
-  deletedPosts                Post[]                     @relation("PostDeletedBy")
-  postRevisions               PostRevision[]             @relation("PostRevisionAuthor")
-  comments                    Comment[]                  @relation("CommentAuthor")
-  hiddenComments              Comment[]                  @relation("CommentHiddenBy")
-  postVotes                   PostVote[]
-  postRatings                 PostRating[]
-  postBookmarks               PostBookmark[]
-  communityRateLimits         CommunityRateLimitBucket[]
-  reports                     Report[]                   @relation("ReportReporter")
-  resolvedReports             Report[]                   @relation("ReportResolver")
-  reviewedAiFlags             AiFlag[]                   @relation("AiFlagReviewer")
-  moderationActions           ModerationAction[]         @relation("ModerationActor")
-  reviewedPostRevisions       PostRevision[]             @relation("PostRevisionReviewer")
-  hiddenPosts                 Post[]                     @relation("PostHiddenBy")
-  personalizationPreference   PersonalizationPreference?
-  behaviorEvents              BehaviorEvent[]
-  mealPlans                   MealPlan[]
-  mealPlanMutations           MealPlanMutation[]
-  chatSessions                ChatSession[]
-  aiRequestLogs               AiRequestLog[]
+  id                             String                     @id @default(uuid()) @db.Uuid
+  email                          String                     @unique @db.VarChar(320)
+  passwordHash                   String                     @map("password_hash")
+  displayName                    String                     @map("display_name") @db.VarChar(100)
+  avatarUrl                      String?                    @map("avatar_url") @db.VarChar(2048)
+  role                           Role                       @default(MEMBER)
+  status                         UserStatus                 @default(ACTIVE)
+  failedLoginAttempts            Int                        @default(0) @map("failed_login_attempts")
+  lockedUntil                    DateTime?                  @map("locked_until") @db.Timestamptz(3)
+  lastLoginAt                    DateTime?                  @map("last_login_at") @db.Timestamptz(3)
+  createdAt                      DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                      DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt                      DateTime?                  @map("deleted_at") @db.Timestamptz(3)
+  privateDataPurgeAt             DateTime?                  @map("private_data_purge_at") @db.Timestamptz(3)
+  refreshSessions                RefreshSession[]
+  applications                   ContributorApplication[]
+  reviewedApplications           ContributorApplication[]   @relation("ContributorApplicationReviewer")
+  invitedContributorApplications ContributorApplication[]   @relation("ContributorApplicationInviter")
+  contributorProfile             ContributorProfile?        @relation("ContributorProfileUser")
+  approvedContributorProfiles    ContributorProfile[]       @relation("ContributorProfileApprover")
+  revokedContributorProfiles     ContributorProfile[]       @relation("ContributorProfileRevoker")
+  contributorDecisions           ContributorDecision[]      @relation("ContributorDecisionSubject")
+  madeContributorDecisions       ContributorDecision[]      @relation("ContributorDecisionActor")
+  healthProfile                  HealthProfile?
+  dietPreference                 DietPreference?
+  dietPreferenceRules            DietPreferenceRule[]
+  dietScheduleDates              DietScheduleDate[]
+  allergies                      UserAllergy[]
+  ingredientExclusions           UserIngredientExclusion[]
+  categoryProposals              CategoryProposal[]         @relation("CategoryProposalAuthor")
+  reviewedCategoryProposals      CategoryProposal[]         @relation("CategoryProposalReviewer")
+  posts                          Post[]                     @relation("PostAuthor")
+  deletedPosts                   Post[]                     @relation("PostDeletedBy")
+  postRevisions                  PostRevision[]             @relation("PostRevisionAuthor")
+  comments                       Comment[]                  @relation("CommentAuthor")
+  hiddenComments                 Comment[]                  @relation("CommentHiddenBy")
+  postVotes                      PostVote[]
+  postRatings                    PostRating[]
+  postBookmarks                  PostBookmark[]
+  communityRateLimits            CommunityRateLimitBucket[]
+  reports                        Report[]                   @relation("ReportReporter")
+  resolvedReports                Report[]                   @relation("ReportResolver")
+  reviewedAiFlags                AiFlag[]                   @relation("AiFlagReviewer")
+  moderationActions              ModerationAction[]         @relation("ModerationActor")
+  reviewedPostRevisions          PostRevision[]             @relation("PostRevisionReviewer")
+  hiddenPosts                    Post[]                     @relation("PostHiddenBy")
+  personalizationPreference      PersonalizationPreference?
+  behaviorEvents                 BehaviorEvent[]
+  mealPlans                      MealPlan[]
+  mealPlanMutations              MealPlanMutation[]
+  chatSessions                   ChatSession[]
+  aiRequestLogs                  AiRequestLog[]
 
   @@map("users")
 }
@@ -1700,48 +1714,80 @@ model RefreshSession {
 }
 
 model ContributorApplication {
-  id                 String                       @id @default(uuid()) @db.Uuid
-  userId             String                       @map("user_id") @db.Uuid
-  requestedType      ContributorType              @map("requested_type")
-  experience         String
-  referenceLinks     Json                         @default("[]") @map("reference_links")
-  source             ContributorApplicationSource @default(REGISTRATION)
-  status             ContributorApplicationStatus @default(PENDING)
-  approvedType       ContributorType?             @map("approved_type")
-  approvalBasis      String?                      @map("approval_basis") @db.VarChar(2000)
-  reviewNote         String?                      @map("review_note") @db.VarChar(2000)
-  reviewedById       String?                      @map("reviewed_by_id") @db.Uuid
-  reviewedAt         DateTime?                    @map("reviewed_at") @db.Timestamptz(3)
-  reapplyEligibleAt  DateTime?                    @map("reapply_eligible_at") @db.Timestamptz(3)
-  createdAt          DateTime                     @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt          DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(3)
-  user               User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reviewedBy         User?                        @relation("ContributorApplicationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
-  contributorProfile ContributorProfile?
+  id                   String                       @id @default(uuid()) @db.Uuid
+  userId               String                       @map("user_id") @db.Uuid
+  claimedApprovalBasis ContributorApprovalBasis     @map("claimed_approval_basis")
+  organizationClaim    String?                      @map("organization_claim") @db.VarChar(500)
+  experience           String
+  referenceLinks       Json                         @default("[]") @map("reference_links")
+  source               ContributorApplicationSource @default(REGISTRATION)
+  invitedById          String?                      @map("invited_by_id") @db.Uuid
+  invitationReason     String?                      @map("invitation_reason") @db.VarChar(2000)
+  status               ContributorApplicationStatus @default(PENDING)
+  approvalBasis        ContributorApprovalBasis?    @map("approval_basis")
+  reviewEvidence       Json?                        @map("review_evidence")
+  reviewNote           String?                      @map("review_note") @db.VarChar(2000)
+  reviewedById         String?                      @map("reviewed_by_id") @db.Uuid
+  reviewedAt           DateTime?                    @map("reviewed_at") @db.Timestamptz(3)
+  reapplyEligibleAt    DateTime?                    @map("reapply_eligible_at") @db.Timestamptz(3)
+  createdAt            DateTime                     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user                 User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy            User?                        @relation("ContributorApplicationInviter", fields: [invitedById], references: [id], onDelete: Restrict)
+  reviewedBy           User?                        @relation("ContributorApplicationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  contributorProfile   ContributorProfile?
+  decisions            ContributorDecision[]
 
   @@index([status, createdAt, id])
-  @@index([requestedType, status, createdAt])
+  @@index([claimedApprovalBasis, status, createdAt])
   @@index([userId, createdAt])
+  @@index([invitedById, createdAt])
   @@index([reviewedById, reviewedAt])
   @@map("contributor_applications")
 }
 
 model ContributorProfile {
-  userId              String                 @id @map("user_id") @db.Uuid
-  contributorType     ContributorType        @map("contributor_type")
-  approvalBasis       String                 @map("approval_basis") @db.VarChar(2000)
-  approvedAt          DateTime               @map("approved_at") @db.Timestamptz(3)
-  approvedById        String                 @map("approved_by_id") @db.Uuid
-  sourceApplicationId String                 @unique @map("source_application_id") @db.Uuid
-  createdAt           DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt           DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
-  user                User                   @relation("ContributorProfileUser", fields: [userId], references: [id], onDelete: Cascade)
-  approvedBy          User                   @relation("ContributorProfileApprover", fields: [approvedById], references: [id], onDelete: Restrict)
-  sourceApplication   ContributorApplication @relation(fields: [sourceApplicationId], references: [id], onDelete: Restrict)
+  userId              String                   @id @map("user_id") @db.Uuid
+  approvalBasis       ContributorApprovalBasis @map("approval_basis")
+  approvalEvidence    Json                     @map("approval_evidence")
+  approvedAt          DateTime                 @map("approved_at") @db.Timestamptz(3)
+  approvedById        String                   @map("approved_by_id") @db.Uuid
+  sourceApplicationId String                   @unique @map("source_application_id") @db.Uuid
+  revokedAt           DateTime?                @map("revoked_at") @db.Timestamptz(3)
+  revokedById         String?                  @map("revoked_by_id") @db.Uuid
+  revocationReason    String?                  @map("revocation_reason") @db.VarChar(2000)
+  createdAt           DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user                User                     @relation("ContributorProfileUser", fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy          User                     @relation("ContributorProfileApprover", fields: [approvedById], references: [id], onDelete: Restrict)
+  revokedBy           User?                    @relation("ContributorProfileRevoker", fields: [revokedById], references: [id], onDelete: Restrict)
+  sourceApplication   ContributorApplication   @relation(fields: [sourceApplicationId], references: [id], onDelete: Restrict)
 
-  @@index([contributorType, approvedAt])
+  @@index([approvalBasis, approvedAt])
   @@index([approvedById, approvedAt])
+  @@index([revokedById, revokedAt])
   @@map("contributor_profiles")
+}
+
+model ContributorDecision {
+  id            String                    @id @default(uuid()) @db.Uuid
+  userId        String                    @map("user_id") @db.Uuid
+  applicationId String?                   @map("application_id") @db.Uuid
+  actorId       String                    @map("actor_id") @db.Uuid
+  decision      ContributorDecisionType
+  approvalBasis ContributorApprovalBasis? @map("approval_basis")
+  evidence      Json?
+  reason        String                    @db.VarChar(2000)
+  createdAt     DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
+  user          User                      @relation("ContributorDecisionSubject", fields: [userId], references: [id], onDelete: Restrict)
+  application   ContributorApplication?   @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  actor         User                      @relation("ContributorDecisionActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@index([applicationId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([decision, createdAt])
+  @@map("contributor_decisions")
 }
 
 model HealthProfile {

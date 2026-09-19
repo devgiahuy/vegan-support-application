@@ -11,7 +11,10 @@ import type { ContributorController } from './contributor.controller.js';
 import {
   adminContributorApplicationsQuerySchema,
   contributorApplicationParamsSchema,
+  contributorUserParamsSchema,
+  inviteContributorRequestSchema,
   ownContributorApplicationsQuerySchema,
+  revokeContributorRequestSchema,
   reviewContributorApplicationRequestSchema,
   submitContributorApplicationRequestSchema,
 } from './contributor.schemas.js';
@@ -38,11 +41,22 @@ export function createContributorAdminRouter(
     validateQuery(adminContributorApplicationsQuerySchema),
     controller.listAdmin,
   );
+  router.post(
+    '/contributor-invitations',
+    validateBody(inviteContributorRequestSchema),
+    controller.invite,
+  );
   router.patch(
     '/contributor-applications/:id/review',
     validateParams(contributorApplicationParamsSchema),
     validateBody(reviewContributorApplicationRequestSchema),
     controller.review,
+  );
+  router.patch(
+    '/contributors/:userId/revoke',
+    validateParams(contributorUserParamsSchema),
+    validateBody(revokeContributorRequestSchema),
+    controller.revoke,
   );
   return router;
 }

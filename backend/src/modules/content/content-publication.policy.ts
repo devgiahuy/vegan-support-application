@@ -28,7 +28,10 @@ export class ModeratedPublicationPolicy implements ContentPublicationPolicy {
         moderationFlag,
       };
     }
-    if (actor.role === Role.MEMBER || (actor.role === Role.CONTRIBUTOR && !actor.contributorType)) {
+    if (
+      actor.role === Role.MEMBER ||
+      (actor.role === Role.CONTRIBUTOR && !actor.hasActiveContributorProfile)
+    ) {
       return {
         postStatus: PostStatus.PENDING_REVIEW,
         revisionStatus: PostRevisionStatus.PENDING_REVIEW,

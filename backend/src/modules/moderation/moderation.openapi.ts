@@ -89,7 +89,7 @@ export function registerModerationOpenApi(registry: OpenAPIRegistry, errorSchema
       200: { description: 'Review queue', content: { 'application/json': { schema: reviewList } } },
       400: errors(errorSchema, 'Filter không hợp lệ', ['VALIDATION_ERROR']),
       401: errors(errorSchema, 'Yêu cầu access token hợp lệ', authErrors),
-      403: errors(errorSchema, 'Contributor subtype/Admin permission required', [
+      403: errors(errorSchema, 'Approved Contributor/Admin permission required', [
         'FORBIDDEN',
         'ACCOUNT_BANNED',
       ]),

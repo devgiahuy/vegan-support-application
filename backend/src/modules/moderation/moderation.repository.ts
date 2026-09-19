@@ -1,6 +1,7 @@
 import {
   AiFlagStatus,
   CommentStatus,
+  ContributorDecisionType,
   ModerationDecision,
   ModerationPriority,
   ModerationTargetType,
@@ -11,7 +12,6 @@ import {
   ReportTargetType,
   Role,
   UserStatus,
-  type ContributorType,
   type PrismaClient,
 } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
@@ -32,7 +32,7 @@ const reviewerUserSelect = {
   displayName: true,
   role: true,
   status: true,
-  contributorProfile: { select: { contributorType: true } },
+  contributorProfile: { select: { approvalBasis: true, revokedAt: true } },
 } satisfies Prisma.UserSelect;
 const reviewRevisionInclude = {
   post: { include: { author: { select: reviewerUserSelect } } },
@@ -43,7 +43,7 @@ const reportInclude = {
   resolvedBy: { select: { id: true, displayName: true } },
 } satisfies Prisma.ReportInclude;
 const adminUserInclude = {
-  contributorProfile: { select: { contributorType: true } },
+  contributorProfile: true,
 } satisfies Prisma.UserInclude;
 const adminCommentInclude = {
   author: { select: reviewerUserSelect },
@@ -59,7 +59,7 @@ export type AdminCommentRecord = Prisma.CommentGetPayload<{ include: typeof admi
 export interface ModerationActor {
   userId: string;
   role: Role;
-  contributorType: ContributorType | null;
+  hasActiveContributorProfile: boolean;
 }
 
 interface IdRow {
@@ -272,7 +272,7 @@ export class ModerationRepository {
             revisionId: revision.id,
             revisionVersion: revision.version,
             reviewerRole: actor.role,
-            contributorType: actor.contributorType,
+            unifiedContributor: actor.role === Role.CONTRIBUTOR,
             previousPostStatus: revision.post.status,
             previousRevisionStatus: revision.status,
             reviewRouteDecision: decision,
@@ -640,12 +640,32 @@ export class ModerationRepository {
         });
       await this.banUser(transaction, actorId, ownerId);
     } else if (input.decision === ModerationDecision.DEMOTE) {
-      const user = await transaction.user.findUniqueOrThrow({ where: { id: ownerId } });
-      if (user.role !== Role.CONTRIBUTOR) {
+      const user = await transaction.user.findUniqueOrThrow({
+        where: { id: ownerId },
+        include: { contributorProfile: true },
+      });
+      const profile = user.contributorProfile;
+      if (user.role !== Role.CONTRIBUTOR || !profile || profile.revokedAt) {
         throw this.conflict('DEMOTION_NOT_APPLICABLE', 'Target author không phải Contributor');
       }
-      await transaction.contributorProfile.deleteMany({ where: { userId: ownerId } });
+      const now = new Date();
+      await transaction.contributorProfile.update({
+        where: { userId: ownerId },
+        data: { revokedAt: now, revokedById: actorId, revocationReason: input.reason },
+      });
       await transaction.user.update({ where: { id: ownerId }, data: { role: Role.MEMBER } });
+      await transaction.contributorDecision.create({
+        data: {
+          userId: ownerId,
+          applicationId: profile.sourceApplicationId,
+          actorId,
+          decision: ContributorDecisionType.REVOKED,
+          approvalBasis: profile.approvalBasis,
+          evidence: profile.approvalEvidence as Prisma.InputJsonValue,
+          reason: input.reason,
+          createdAt: now,
+        },
+      });
       await this.revokeSessions(transaction, ownerId, 'ROLE_DEMOTED');
     }
   }
@@ -803,7 +823,25 @@ export class ModerationRepository {
       return ModerationDecision.LOCK;
     }
     const now = new Date();
-    await transaction.contributorProfile.deleteMany({ where: { userId: user.id } });
+    if (user.role === Role.CONTRIBUTOR && user.contributorProfile?.revokedAt === null) {
+      const profile = user.contributorProfile;
+      await transaction.contributorProfile.update({
+        where: { userId: user.id },
+        data: { revokedAt: now, revokedById: actorId, revocationReason: input.reason },
+      });
+      await transaction.contributorDecision.create({
+        data: {
+          userId: user.id,
+          applicationId: profile.sourceApplicationId,
+          actorId,
+          decision: ContributorDecisionType.REVOKED,
+          approvalBasis: profile.approvalBasis,
+          evidence: profile.approvalEvidence as Prisma.InputJsonValue,
+          reason: input.reason,
+          createdAt: now,
+        },
+      });
+    }
     await transaction.user.update({
       where: { id: user.id },
       data: {

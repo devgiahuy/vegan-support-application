@@ -91,9 +91,12 @@ const generatedDocument = generator.generateDocument({
     },
     {
       name: 'Contributors',
-      description: 'Contributor applications and approved subtype status',
+      description: 'Unified Contributor applications and approval-basis evidence',
     },
-    { name: 'Contributor Admin', description: 'Admin-only Contributor application review' },
+    {
+      name: 'Contributor Admin',
+      description: 'Admin-only Contributor invitations, decisions, and revocation',
+    },
     { name: 'Moderation', description: 'Content review queue and user reports' },
     { name: 'Moderation Admin', description: 'Admin decisions, user and comment moderation' },
     { name: 'Uploads', description: 'Safe Cloudinary signed-upload configuration' },

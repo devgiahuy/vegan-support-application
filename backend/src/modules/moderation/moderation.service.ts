@@ -169,7 +169,11 @@ export class ModerationService {
         id: record.post.author.id,
         displayName: record.post.author.displayName,
         role: record.post.author.role,
-        contributorType: record.post.author.contributorProfile?.contributorType ?? null,
+        contributorApprovalBasis:
+          record.post.author.role === Role.CONTRIBUTOR &&
+          record.post.author.contributorProfile?.revokedAt === null
+            ? record.post.author.contributorProfile.approvalBasis
+            : null,
       },
       aiFlags,
       priority:
@@ -212,7 +216,10 @@ export class ModerationService {
       displayName: record.displayName,
       role: record.role,
       status: record.status,
-      contributorType: record.contributorProfile?.contributorType ?? null,
+      contributorApprovalBasis:
+        record.role === Role.CONTRIBUTOR && record.contributorProfile?.revokedAt === null
+          ? record.contributorProfile.approvalBasis
+          : null,
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
       deletedAt: record.deletedAt?.toISOString() ?? null,
@@ -231,7 +238,11 @@ export class ModerationService {
         id: record.author.id,
         displayName: record.author.displayName,
         role: record.author.role,
-        contributorType: record.author.contributorProfile?.contributorType ?? null,
+        contributorApprovalBasis:
+          record.author.role === Role.CONTRIBUTOR &&
+          record.author.contributorProfile?.revokedAt === null
+            ? record.author.contributorProfile.approvalBasis
+            : null,
       },
       hiddenReason: record.hiddenReason,
       hiddenById: record.hiddenById,

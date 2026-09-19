@@ -1,6 +1,5 @@
 import {
   DietPattern,
-  type ContributorType,
   IngredientResolutionStatus,
   PostStatus,
   PostType,
@@ -41,7 +40,7 @@ import {
 export interface ContentActor {
   userId: string;
   role: Role;
-  contributorType: ContributorType | null;
+  hasActiveContributorProfile: boolean;
 }
 
 const SEARCH_RANKING_VERSION = 'v1' as const;

@@ -28,7 +28,7 @@ function actorFromRequest(request: Request): ContentActor {
     return {
       userId: request.auth.userId,
       role: request.auth.role,
-      contributorType: request.auth.contributorType,
+      hasActiveContributorProfile: request.auth.hasActiveContributorProfile,
     };
   }
   throw new AppError({ statusCode: 401, code: 'AUTH_REQUIRED', message: 'Vui lòng đăng nhập' });
@@ -47,7 +47,7 @@ export class ContentController {
         ? {
             userId: request.auth.userId,
             role: request.auth.role,
-            contributorType: request.auth.contributorType,
+            hasActiveContributorProfile: request.auth.hasActiveContributorProfile,
           }
         : undefined,
     );
@@ -69,7 +69,7 @@ export class ContentController {
         ? {
             userId: request.auth.userId,
             role: request.auth.role,
-            contributorType: request.auth.contributorType,
+            hasActiveContributorProfile: request.auth.hasActiveContributorProfile,
           }
         : undefined,
     );
@@ -90,7 +90,7 @@ export class ContentController {
         ? {
             userId: request.auth.userId,
             role: request.auth.role,
-            contributorType: request.auth.contributorType,
+            hasActiveContributorProfile: request.auth.hasActiveContributorProfile,
           }
         : undefined,
     );

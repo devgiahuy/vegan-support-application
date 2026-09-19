@@ -74,11 +74,11 @@
     },
     {
       "name": "Contributors",
-      "description": "Contributor applications and approved subtype status"
+      "description": "Unified Contributor applications and approval-basis evidence"
     },
     {
       "name": "Contributor Admin",
-      "description": "Admin-only Contributor application review"
+      "description": "Admin-only Contributor invitations, decisions, and revocation"
     },
     {
       "name": "Moderation",
@@ -319,12 +319,17 @@
           "contributorRequest": {
             "type": "object",
             "properties": {
-              "requestedType": {
+              "claimedApprovalBasis": {
                 "type": "string",
                 "enum": [
-                  "EXPERIENCED_PRACTITIONER",
-                  "NUTRITION_EXPERT"
+                  "ORGANIZATION_AFFILIATION",
+                  "PLATFORM_TRACK_RECORD"
                 ]
+              },
+              "organizationClaim": {
+                "type": "string",
+                "minLength": 2,
+                "maxLength": 500
               },
               "experience": {
                 "type": "string",
@@ -342,7 +347,7 @@
               }
             },
             "required": [
-              "requestedType",
+              "claimedApprovalBasis",
               "experience"
             ],
             "additionalProperties": false
@@ -456,17 +461,18 @@
                           "REJECTED"
                         ]
                       },
-                      "requestedType": {
+                      "claimedApprovalBasis": {
                         "type": "string",
                         "enum": [
-                          "EXPERIENCED_PRACTITIONER",
-                          "NUTRITION_EXPERT"
+                          "ORGANIZATION_AFFILIATION",
+                          "PLATFORM_TRACK_RECORD",
+                          "ADMIN_INVITED"
                         ]
                       }
                     },
                     "required": [
                       "status",
-                      "requestedType"
+                      "claimedApprovalBasis"
                     ],
                     "additionalProperties": false
                   },
@@ -476,17 +482,15 @@
                       "null"
                     ],
                     "properties": {
-                      "contributorType": {
+                      "approvalBasis": {
                         "type": "string",
                         "enum": [
-                          "EXPERIENCED_PRACTITIONER",
-                          "NUTRITION_EXPERT"
+                          "ORGANIZATION_AFFILIATION",
+                          "PLATFORM_TRACK_RECORD",
+                          "ADMIN_INVITED"
                         ]
                       },
-                      "label": {
-                        "type": "string"
-                      },
-                      "approvalBasis": {
+                      "approvalBasisLabel": {
                         "type": "string"
                       },
                       "approvedAt": {
@@ -495,9 +499,8 @@
                       }
                     },
                     "required": [
-                      "contributorType",
-                      "label",
                       "approvalBasis",
+                      "approvalBasisLabel",
                       "approvedAt"
                     ],
                     "additionalProperties": false
@@ -708,17 +711,18 @@
                       "REJECTED"
                     ]
                   },
-                  "requestedType": {
+                  "claimedApprovalBasis": {
                     "type": "string",
                     "enum": [
-                      "EXPERIENCED_PRACTITIONER",
-                      "NUTRITION_EXPERT"
+                      "ORGANIZATION_AFFILIATION",
+                      "PLATFORM_TRACK_RECORD",
+                      "ADMIN_INVITED"
                     ]
                   }
                 },
                 "required": [
                   "status",
-                  "requestedType"
+                  "claimedApprovalBasis"
                 ],
                 "additionalProperties": false
               },
@@ -728,17 +732,15 @@
                   "null"
                 ],
                 "properties": {
-                  "contributorType": {
+                  "approvalBasis": {
                     "type": "string",
                     "enum": [
-                      "EXPERIENCED_PRACTITIONER",
-                      "NUTRITION_EXPERT"
+                      "ORGANIZATION_AFFILIATION",
+                      "PLATFORM_TRACK_RECORD",
+                      "ADMIN_INVITED"
                     ]
                   },
-                  "label": {
-                    "type": "string"
-                  },
-                  "approvalBasis": {
+                  "approvalBasisLabel": {
                     "type": "string"
                   },
                   "approvedAt": {
@@ -747,9 +749,8 @@
                   }
                 },
                 "required": [
-                  "contributorType",
-                  "label",
                   "approvalBasis",
+                  "approvalBasisLabel",
                   "approvedAt"
                 ],
                 "additionalProperties": false
@@ -8738,14 +8739,15 @@
                       "ADMIN"
                     ]
                   },
-                  "currentContributorType": {
+                  "currentApprovalBasis": {
                     "type": [
                       "string",
                       "null"
                     ],
                     "enum": [
-                      "EXPERIENCED_PRACTITIONER",
-                      "NUTRITION_EXPERT",
+                      "ORGANIZATION_AFFILIATION",
+                      "PLATFORM_TRACK_RECORD",
+                      "ADMIN_INVITED",
                       null
                     ]
                   }
@@ -8755,19 +8757,26 @@
                   "email",
                   "displayName",
                   "role",
-                  "currentContributorType"
+                  "currentApprovalBasis"
                 ],
                 "additionalProperties": false
               },
-              "requestedType": {
+              "claimedApprovalBasis": {
                 "type": "string",
                 "enum": [
-                  "EXPERIENCED_PRACTITIONER",
-                  "NUTRITION_EXPERT"
+                  "ORGANIZATION_AFFILIATION",
+                  "PLATFORM_TRACK_RECORD",
+                  "ADMIN_INVITED"
                 ]
               },
-              "requestedTypeLabel": {
+              "claimedApprovalBasisLabel": {
                 "type": "string"
+              },
+              "organizationClaim": {
+                "type": [
+                  "string",
+                  "null"
+                ]
               },
               "experience": {
                 "type": "string"
@@ -8783,7 +8792,34 @@
                 "type": "string",
                 "enum": [
                   "REGISTRATION",
-                  "PROFILE"
+                  "PROFILE",
+                  "ADMIN_INVITATION"
+                ]
+              },
+              "invitedBy": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "displayName": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "displayName"
+                ],
+                "additionalProperties": false
+              },
+              "invitationReason": {
+                "type": [
+                  "string",
+                  "null"
                 ]
               },
               "status": {
@@ -8794,27 +8830,212 @@
                   "REJECTED"
                 ]
               },
-              "approvedType": {
+              "approvalBasis": {
                 "type": [
                   "string",
                   "null"
                 ],
                 "enum": [
-                  "EXPERIENCED_PRACTITIONER",
-                  "NUTRITION_EXPERT",
+                  "ORGANIZATION_AFFILIATION",
+                  "PLATFORM_TRACK_RECORD",
+                  "ADMIN_INVITED",
                   null
                 ]
               },
-              "approvedTypeLabel": {
+              "approvalBasisLabel": {
                 "type": [
                   "string",
                   "null"
                 ]
               },
-              "approvalBasis": {
-                "type": [
-                  "string",
-                  "null"
+              "reviewEvidence": {
+                "oneOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "ORGANIZATION_AFFILIATION"
+                        ]
+                      },
+                      "capturedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "snapshotVersion": {
+                        "type": "string"
+                      },
+                      "organizationClaim": {
+                        "type": "string"
+                      },
+                      "referenceLinks": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "format": "uri"
+                        }
+                      },
+                      "verificationStatus": {
+                        "type": "string",
+                        "enum": [
+                          "CLAIM_RETAINED_NOT_VERIFIED"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "capturedAt",
+                      "snapshotVersion",
+                      "organizationClaim",
+                      "referenceLinks",
+                      "verificationStatus"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "PLATFORM_TRACK_RECORD"
+                        ]
+                      },
+                      "capturedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "snapshotVersion": {
+                        "type": "string"
+                      },
+                      "posts": {
+                        "type": "object",
+                        "properties": {
+                          "total": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "published": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "pendingReview": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "rejected": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "total",
+                          "published",
+                          "pendingReview",
+                          "rejected"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "interactions": {
+                        "type": "object",
+                        "properties": {
+                          "commentsReceived": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "votesReceived": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "ratingsReceived": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "bookmarksReceived": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "averageTasteRating": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 1,
+                            "maximum": 5
+                          }
+                        },
+                        "required": [
+                          "commentsReceived",
+                          "votesReceived",
+                          "ratingsReceived",
+                          "bookmarksReceived"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "capturedAt",
+                      "snapshotVersion"
+                    ]
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "ADMIN_INVITED"
+                        ]
+                      },
+                      "capturedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "snapshotVersion": {
+                        "type": "string"
+                      },
+                      "inviter": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "displayName": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "displayName"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "invitationReason": {
+                        "type": "string"
+                      },
+                      "verificationStatus": {
+                        "type": "string",
+                        "enum": [
+                          "ADMIN_INVITATION_RECORDED"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "capturedAt",
+                      "snapshotVersion",
+                      "inviter",
+                      "invitationReason",
+                      "verificationStatus"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "null"
+                  }
                 ]
               },
               "reviewNote": {
@@ -8869,15 +9090,18 @@
             "required": [
               "id",
               "user",
-              "requestedType",
-              "requestedTypeLabel",
+              "claimedApprovalBasis",
+              "claimedApprovalBasisLabel",
+              "organizationClaim",
               "experience",
               "referenceLinks",
               "source",
+              "invitedBy",
+              "invitationReason",
               "status",
-              "approvedType",
-              "approvedTypeLabel",
               "approvalBasis",
+              "approvalBasisLabel",
+              "reviewEvidence",
               "reviewNote",
               "reviewedBy",
               "reviewedAt",
@@ -8938,14 +9162,15 @@
                         "ADMIN"
                       ]
                     },
-                    "currentContributorType": {
+                    "currentApprovalBasis": {
                       "type": [
                         "string",
                         "null"
                       ],
                       "enum": [
-                        "EXPERIENCED_PRACTITIONER",
-                        "NUTRITION_EXPERT",
+                        "ORGANIZATION_AFFILIATION",
+                        "PLATFORM_TRACK_RECORD",
+                        "ADMIN_INVITED",
                         null
                       ]
                     }
@@ -8955,19 +9180,26 @@
                     "email",
                     "displayName",
                     "role",
-                    "currentContributorType"
+                    "currentApprovalBasis"
                   ],
                   "additionalProperties": false
                 },
-                "requestedType": {
+                "claimedApprovalBasis": {
                   "type": "string",
                   "enum": [
-                    "EXPERIENCED_PRACTITIONER",
-                    "NUTRITION_EXPERT"
+                    "ORGANIZATION_AFFILIATION",
+                    "PLATFORM_TRACK_RECORD",
+                    "ADMIN_INVITED"
                   ]
                 },
-                "requestedTypeLabel": {
+                "claimedApprovalBasisLabel": {
                   "type": "string"
+                },
+                "organizationClaim": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
                 },
                 "experience": {
                   "type": "string"
@@ -8983,7 +9215,34 @@
                   "type": "string",
                   "enum": [
                     "REGISTRATION",
-                    "PROFILE"
+                    "PROFILE",
+                    "ADMIN_INVITATION"
+                  ]
+                },
+                "invitedBy": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "displayName"
+                  ],
+                  "additionalProperties": false
+                },
+                "invitationReason": {
+                  "type": [
+                    "string",
+                    "null"
                   ]
                 },
                 "status": {
@@ -8994,27 +9253,212 @@
                     "REJECTED"
                   ]
                 },
-                "approvedType": {
+                "approvalBasis": {
                   "type": [
                     "string",
                     "null"
                   ],
                   "enum": [
-                    "EXPERIENCED_PRACTITIONER",
-                    "NUTRITION_EXPERT",
+                    "ORGANIZATION_AFFILIATION",
+                    "PLATFORM_TRACK_RECORD",
+                    "ADMIN_INVITED",
                     null
                   ]
                 },
-                "approvedTypeLabel": {
+                "approvalBasisLabel": {
                   "type": [
                     "string",
                     "null"
                   ]
                 },
-                "approvalBasis": {
-                  "type": [
-                    "string",
-                    "null"
+                "reviewEvidence": {
+                  "oneOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "ORGANIZATION_AFFILIATION"
+                          ]
+                        },
+                        "capturedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "snapshotVersion": {
+                          "type": "string"
+                        },
+                        "organizationClaim": {
+                          "type": "string"
+                        },
+                        "referenceLinks": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "format": "uri"
+                          }
+                        },
+                        "verificationStatus": {
+                          "type": "string",
+                          "enum": [
+                            "CLAIM_RETAINED_NOT_VERIFIED"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "capturedAt",
+                        "snapshotVersion",
+                        "organizationClaim",
+                        "referenceLinks",
+                        "verificationStatus"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "PLATFORM_TRACK_RECORD"
+                          ]
+                        },
+                        "capturedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "snapshotVersion": {
+                          "type": "string"
+                        },
+                        "posts": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "published": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "pendingReview": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "rejected": {
+                              "type": "integer",
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "total",
+                            "published",
+                            "pendingReview",
+                            "rejected"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "interactions": {
+                          "type": "object",
+                          "properties": {
+                            "commentsReceived": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "votesReceived": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "ratingsReceived": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "bookmarksReceived": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "averageTasteRating": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 1,
+                              "maximum": 5
+                            }
+                          },
+                          "required": [
+                            "commentsReceived",
+                            "votesReceived",
+                            "ratingsReceived",
+                            "bookmarksReceived"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "capturedAt",
+                        "snapshotVersion"
+                      ]
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "kind": {
+                          "type": "string",
+                          "enum": [
+                            "ADMIN_INVITED"
+                          ]
+                        },
+                        "capturedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "snapshotVersion": {
+                          "type": "string"
+                        },
+                        "inviter": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "displayName"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "invitationReason": {
+                          "type": "string"
+                        },
+                        "verificationStatus": {
+                          "type": "string",
+                          "enum": [
+                            "ADMIN_INVITATION_RECORDED"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "kind",
+                        "capturedAt",
+                        "snapshotVersion",
+                        "inviter",
+                        "invitationReason",
+                        "verificationStatus"
+                      ],
+                      "additionalProperties": false
+                    },
+                    {
+                      "type": "null"
+                    }
                   ]
                 },
                 "reviewNote": {
@@ -9069,15 +9513,18 @@
               "required": [
                 "id",
                 "user",
-                "requestedType",
-                "requestedTypeLabel",
+                "claimedApprovalBasis",
+                "claimedApprovalBasisLabel",
+                "organizationClaim",
                 "experience",
                 "referenceLinks",
                 "source",
+                "invitedBy",
+                "invitationReason",
                 "status",
-                "approvedType",
-                "approvedTypeLabel",
                 "approvalBasis",
+                "approvalBasisLabel",
+                "reviewEvidence",
                 "reviewNote",
                 "reviewedBy",
                 "reviewedAt",
@@ -9115,6 +9562,73 @@
               "totalPages"
             ],
             "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "ContributorRevocationResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "userId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "MEMBER"
+                ]
+              },
+              "revokedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "revokedBy": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "displayName": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "displayName"
+                ],
+                "additionalProperties": false
+              },
+              "reason": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "userId",
+              "role",
+              "revokedAt",
+              "revokedBy",
+              "reason"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
           }
         },
         "required": [
@@ -9212,14 +9726,15 @@
                         "ADMIN"
                       ]
                     },
-                    "contributorType": {
+                    "contributorApprovalBasis": {
                       "type": [
                         "string",
                         "null"
                       ],
                       "enum": [
-                        "EXPERIENCED_PRACTITIONER",
-                        "NUTRITION_EXPERT",
+                        "ORGANIZATION_AFFILIATION",
+                        "PLATFORM_TRACK_RECORD",
+                        "ADMIN_INVITED",
                         null
                       ]
                     }
@@ -9228,7 +9743,7 @@
                     "id",
                     "displayName",
                     "role",
-                    "contributorType"
+                    "contributorApprovalBasis"
                   ],
                   "additionalProperties": false
                 },
@@ -9456,14 +9971,15 @@
                       "ADMIN"
                     ]
                   },
-                  "contributorType": {
+                  "contributorApprovalBasis": {
                     "type": [
                       "string",
                       "null"
                     ],
                     "enum": [
-                      "EXPERIENCED_PRACTITIONER",
-                      "NUTRITION_EXPERT",
+                      "ORGANIZATION_AFFILIATION",
+                      "PLATFORM_TRACK_RECORD",
+                      "ADMIN_INVITED",
                       null
                     ]
                   }
@@ -9472,7 +9988,7 @@
                   "id",
                   "displayName",
                   "role",
-                  "contributorType"
+                  "contributorApprovalBasis"
                 ],
                 "additionalProperties": false
               },
@@ -9932,14 +10448,15 @@
                   "DELETED"
                 ]
               },
-              "contributorType": {
+              "contributorApprovalBasis": {
                 "type": [
                   "string",
                   "null"
                 ],
                 "enum": [
-                  "EXPERIENCED_PRACTITIONER",
-                  "NUTRITION_EXPERT",
+                  "ORGANIZATION_AFFILIATION",
+                  "PLATFORM_TRACK_RECORD",
+                  "ADMIN_INVITED",
                   null
                 ]
               },
@@ -9972,7 +10489,7 @@
               "displayName",
               "role",
               "status",
-              "contributorType",
+              "contributorApprovalBasis",
               "createdAt",
               "updatedAt",
               "deletedAt",
@@ -10033,14 +10550,15 @@
                     "DELETED"
                   ]
                 },
-                "contributorType": {
+                "contributorApprovalBasis": {
                   "type": [
                     "string",
                     "null"
                   ],
                   "enum": [
-                    "EXPERIENCED_PRACTITIONER",
-                    "NUTRITION_EXPERT",
+                    "ORGANIZATION_AFFILIATION",
+                    "PLATFORM_TRACK_RECORD",
+                    "ADMIN_INVITED",
                     null
                   ]
                 },
@@ -10073,7 +10591,7 @@
                 "displayName",
                 "role",
                 "status",
-                "contributorType",
+                "contributorApprovalBasis",
                 "createdAt",
                 "updatedAt",
                 "deletedAt",
@@ -10174,14 +10692,15 @@
                       "ADMIN"
                     ]
                   },
-                  "contributorType": {
+                  "contributorApprovalBasis": {
                     "type": [
                       "string",
                       "null"
                     ],
                     "enum": [
-                      "EXPERIENCED_PRACTITIONER",
-                      "NUTRITION_EXPERT",
+                      "ORGANIZATION_AFFILIATION",
+                      "PLATFORM_TRACK_RECORD",
+                      "ADMIN_INVITED",
                       null
                     ]
                   }
@@ -10190,7 +10709,7 @@
                   "id",
                   "displayName",
                   "role",
-                  "contributorType"
+                  "contributorApprovalBasis"
                 ],
                 "additionalProperties": false
               },
@@ -10315,14 +10834,15 @@
                         "ADMIN"
                       ]
                     },
-                    "contributorType": {
+                    "contributorApprovalBasis": {
                       "type": [
                         "string",
                         "null"
                       ],
                       "enum": [
-                        "EXPERIENCED_PRACTITIONER",
-                        "NUTRITION_EXPERT",
+                        "ORGANIZATION_AFFILIATION",
+                        "PLATFORM_TRACK_RECORD",
+                        "ADMIN_INVITED",
                         null
                       ]
                     }
@@ -10331,7 +10851,7 @@
                     "id",
                     "displayName",
                     "role",
-                    "contributorType"
+                    "contributorApprovalBasis"
                   ],
                   "additionalProperties": false
                 },
@@ -13744,8 +14264,9 @@
                 "password": "StrongPassword123!",
                 "displayName": "Nguyễn An",
                 "contributorRequest": {
-                  "requestedType": "NUTRITION_EXPERT",
-                  "experience": "Tôi có kinh nghiệm tư vấn dinh dưỡng thực vật.",
+                  "claimedApprovalBasis": "ORGANIZATION_AFFILIATION",
+                  "organizationClaim": "Cộng đồng Dinh dưỡng Thực vật",
+                  "experience": "Tôi muốn đóng góp nội dung dinh dưỡng thực vật cho cộng đồng.",
                   "referenceLinks": [
                     "https://example.com/profile"
                   ]
@@ -21588,8 +22109,8 @@
         "tags": [
           "Contributors"
         ],
-        "summary": "Gửi Contributor application hoặc yêu cầu đổi subtype",
-        "description": "Member và Contributor dùng cùng state machine với registration request. Requested type không cấp quyền; một user chỉ có một PENDING và application bị reject chỉ được gửi lại sau 30 ngày. MVP không thu thập hoặc xác minh certificate.",
+        "summary": "Gửi Contributor application",
+        "description": "Chỉ Member được apply. User có thể khai báo ORGANIZATION_AFFILIATION hoặc PLATFORM_TRACK_RECORD; application PENDING không cấp quyền. ADMIN_INVITED bị cấm trên public/profile path. Certificate không được thu thập hoặc xác minh trong MVP.",
         "operationId": "submitContributorApplication",
         "security": [
           {
@@ -21606,12 +22127,17 @@
               "schema": {
                 "type": "object",
                 "properties": {
-                  "requestedType": {
+                  "claimedApprovalBasis": {
                     "type": "string",
                     "enum": [
-                      "EXPERIENCED_PRACTITIONER",
-                      "NUTRITION_EXPERT"
+                      "ORGANIZATION_AFFILIATION",
+                      "PLATFORM_TRACK_RECORD"
                     ]
+                  },
+                  "organizationClaim": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 500
                   },
                   "experience": {
                     "type": "string",
@@ -21629,7 +22155,7 @@
                   }
                 },
                 "required": [
-                  "requestedType",
+                  "claimedApprovalBasis",
                   "experience"
                 ],
                 "additionalProperties": false
@@ -21639,7 +22165,7 @@
         },
         "responses": {
           "201": {
-            "description": "Application PENDING đã tạo; role/profile hiện tại chưa thay đổi",
+            "description": "Application PENDING đã tạo; role vẫn là MEMBER",
             "content": {
               "application/json": {
                 "schema": {
@@ -21723,7 +22249,7 @@
             }
           },
           "403": {
-            "description": "Tài khoản bị cấm hoặc không được apply",
+            "description": "Chỉ Member ACTIVE được apply",
             "content": {
               "application/json": {
                 "examples": {
@@ -21732,7 +22258,7 @@
                       "success": false,
                       "error": {
                         "code": "ACCOUNT_BANNED",
-                        "message": "Tài khoản bị cấm hoặc không được apply",
+                        "message": "Chỉ Member ACTIVE được apply",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -21742,7 +22268,7 @@
                       "success": false,
                       "error": {
                         "code": "CONTRIBUTOR_APPLICATION_NOT_ALLOWED",
-                        "message": "Tài khoản bị cấm hoặc không được apply",
+                        "message": "Chỉ Member ACTIVE được apply",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -21774,16 +22300,6 @@
                       "success": false,
                       "error": {
                         "code": "CONTRIBUTOR_REAPPLY_NOT_ALLOWED",
-                        "message": "Application xung đột state/cooldown",
-                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
-                      }
-                    }
-                  },
-                  "CONTRIBUTOR_TYPE_UNCHANGED": {
-                    "value": {
-                      "success": false,
-                      "error": {
-                        "code": "CONTRIBUTOR_TYPE_UNCHANGED",
                         "message": "Application xung đột state/cooldown",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
@@ -21857,7 +22373,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Application mới nhất trước, gồm review/cooldown status",
+            "description": "Application mới nhất trước, gồm approval basis/evidence và cooldown",
             "content": {
               "application/json": {
                 "schema": {
@@ -22019,12 +22535,13 @@
             "schema": {
               "type": "string",
               "enum": [
-                "EXPERIENCED_PRACTITIONER",
-                "NUTRITION_EXPERT"
+                "ORGANIZATION_AFFILIATION",
+                "PLATFORM_TRACK_RECORD",
+                "ADMIN_INVITED"
               ]
             },
             "required": false,
-            "name": "requestedType",
+            "name": "claimedApprovalBasis",
             "in": "query"
           },
           {
@@ -22032,7 +22549,8 @@
               "type": "string",
               "enum": [
                 "REGISTRATION",
-                "PROFILE"
+                "PROFILE",
+                "ADMIN_INVITATION"
               ]
             },
             "required": false,
@@ -22052,7 +22570,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Application queue/history theo status, type, source hoặc applicant query",
+            "description": "Application queue/history theo status, claimed basis, source hoặc applicant",
             "content": {
               "application/json": {
                 "schema": {
@@ -22170,13 +22688,225 @@
         }
       }
     },
+    "/api/v1/admin/contributor-invitations": {
+      "post": {
+        "tags": [
+          "Contributor Admin"
+        ],
+        "summary": "Admin tạo Contributor invitation PENDING",
+        "description": "Tạo application nguồn ADMIN_INVITATION và lưu inviter/reason. User vẫn là MEMBER cho tới một quyết định APPROVE thủ công với basis ADMIN_INVITED.",
+        "operationId": "inviteContributorAdmin",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "userId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "reason": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "userId",
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Invitation application PENDING đã tạo",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContributorApplicationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invitation input không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Invitation input không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin authorization hoặc self-invite không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Admin authorization hoặc self-invite không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "SELF_APPROVAL_FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "SELF_APPROVAL_FORBIDDEN",
+                        "message": "Admin authorization hoặc self-invite không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Target không thể được mời",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CONTRIBUTOR_APPLICATION_PENDING": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTRIBUTOR_APPLICATION_PENDING",
+                        "message": "Target không thể được mời",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CONTRIBUTOR_INVITATION_NOT_ALLOWED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTRIBUTOR_INVITATION_NOT_ALLOWED",
+                        "message": "Target không thể được mời",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/admin/contributor-applications/{id}/review": {
       "patch": {
         "tags": [
           "Contributor Admin"
         ],
         "summary": "Admin approve/reject Contributor application",
-        "description": "APPROVE bắt buộc final contributorType, approvalBasis và reviewNote; cập nhật role/profile atomically và revoke mọi refresh session của applicant. REJECT bắt buộc reviewNote và đặt cooldown 30 ngày. Không có certificate verification trong MVP.",
+        "description": "APPROVE bắt buộc final approvalBasis và reason; role/profile/evidence/decision/session revocation được cập nhật transactionally. PLATFORM_TRACK_RECORD chụp immutable post/interaction snapshot. ORGANIZATION_AFFILIATION giữ claim/reference nhưng không xác minh certificate. ADMIN_INVITED chỉ hợp lệ cho invitation path. REJECT giữ role MEMBER và đặt cooldown 30 ngày.",
         "operationId": "reviewContributorApplicationAdmin",
         "security": [
           {
@@ -22212,17 +22942,13 @@
                           "APPROVE"
                         ]
                       },
-                      "contributorType": {
-                        "type": "string",
-                        "enum": [
-                          "EXPERIENCED_PRACTITIONER",
-                          "NUTRITION_EXPERT"
-                        ]
-                      },
                       "approvalBasis": {
                         "type": "string",
-                        "minLength": 20,
-                        "maxLength": 2000
+                        "enum": [
+                          "ORGANIZATION_AFFILIATION",
+                          "PLATFORM_TRACK_RECORD",
+                          "ADMIN_INVITED"
+                        ]
                       },
                       "reviewNote": {
                         "type": "string",
@@ -22232,7 +22958,6 @@
                     },
                     "required": [
                       "decision",
-                      "contributorType",
                       "approvalBasis",
                       "reviewNote"
                     ],
@@ -22266,7 +22991,7 @@
         },
         "responses": {
           "200": {
-            "description": "Application đã review",
+            "description": "Application đã review và decision audit đã ghi",
             "content": {
               "application/json": {
                 "schema": {
@@ -22414,7 +23139,7 @@
             }
           },
           "409": {
-            "description": "Application không còn reviewable",
+            "description": "Application/basis không còn reviewable",
             "content": {
               "application/json": {
                 "examples": {
@@ -22423,7 +23148,7 @@
                       "success": false,
                       "error": {
                         "code": "CONTRIBUTOR_APPLICATION_ALREADY_REVIEWED",
-                        "message": "Application không còn reviewable",
+                        "message": "Application/basis không còn reviewable",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -22433,7 +23158,235 @@
                       "success": false,
                       "error": {
                         "code": "CONTRIBUTOR_APPLICATION_NOT_REVIEWABLE",
-                        "message": "Application không còn reviewable",
+                        "message": "Application/basis không còn reviewable",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CONTRIBUTOR_APPROVAL_BASIS_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTRIBUTOR_APPROVAL_BASIS_INVALID",
+                        "message": "Application/basis không còn reviewable",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/contributors/{userId}/revoke": {
+      "patch": {
+        "tags": [
+          "Contributor Admin"
+        ],
+        "summary": "Admin thu hồi Contributor status",
+        "description": "Thu hồi yêu cầu reason, giữ nguyên approval profile/evidence, ghi immutable REVOKED decision, đổi role về MEMBER và revoke mọi refresh session trong cùng transaction.",
+        "operationId": "revokeContributorAdmin",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "userId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string",
+                    "minLength": 10,
+                    "maxLength": 2000
+                  }
+                },
+                "required": [
+                  "reason"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Contributor status đã được thu hồi và audit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContributorRevocationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "User ID hoặc reason không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "User ID hoặc reason không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu access token hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu access token hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin authorization/self action không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Admin authorization/self action không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Admin authorization/self action không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "SELF_APPROVAL_FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "SELF_APPROVAL_FORBIDDEN",
+                        "message": "Admin authorization/self action không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Contributor không còn active",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CONTRIBUTOR_REVOCATION_NOT_APPLICABLE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTRIBUTOR_REVOCATION_NOT_APPLICABLE",
+                        "message": "Contributor không còn active",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -22629,7 +23582,7 @@
             }
           },
           "403": {
-            "description": "Contributor subtype/Admin permission required",
+            "description": "Approved Contributor/Admin permission required",
             "content": {
               "application/json": {
                 "examples": {
@@ -22638,7 +23591,7 @@
                       "success": false,
                       "error": {
                         "code": "FORBIDDEN",
-                        "message": "Contributor subtype/Admin permission required",
+                        "message": "Approved Contributor/Admin permission required",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -22648,7 +23601,7 @@
                       "success": false,
                       "error": {
                         "code": "ACCOUNT_BANNED",
-                        "message": "Contributor subtype/Admin permission required",
+                        "message": "Approved Contributor/Admin permission required",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }

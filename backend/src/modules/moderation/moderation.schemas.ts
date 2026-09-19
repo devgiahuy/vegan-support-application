@@ -2,7 +2,7 @@ import {
   AiFlagRiskLevel,
   AiFlagStatus,
   CommentStatus,
-  ContributorType,
+  ContributorApprovalBasis,
   ModerationDecision,
   ModerationPriority,
   PostRevisionStatus,
@@ -120,7 +120,7 @@ const userSummarySchema = z
     id: z.string().uuid(),
     displayName: z.string(),
     role: z.enum(Role),
-    contributorType: z.enum(ContributorType).nullable(),
+    contributorApprovalBasis: z.enum(ContributorApprovalBasis).nullable(),
   })
   .strict();
 const aiFlagSchema = z
@@ -181,7 +181,7 @@ const adminUserSchema = z
     displayName: z.string(),
     role: z.enum(Role),
     status: z.enum(UserStatus),
-    contributorType: z.enum(ContributorType).nullable(),
+    contributorApprovalBasis: z.enum(ContributorApprovalBasis).nullable(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime(),
     deletedAt: z.string().datetime().nullable(),

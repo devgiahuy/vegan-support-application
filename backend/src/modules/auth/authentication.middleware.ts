@@ -93,7 +93,8 @@ export class AuthenticationMiddleware {
       userId: user.id,
       email: user.email,
       role: user.role,
-      contributorType: user.contributorProfile?.contributorType ?? null,
+      hasActiveContributorProfile:
+        user.role === 'CONTRIBUTOR' && user.contributorProfile?.revokedAt === null,
       status: user.status,
     };
   }

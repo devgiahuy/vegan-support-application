@@ -9,7 +9,8 @@ import {
   CommentStatus,
   ContributorApplicationSource,
   ContributorApplicationStatus,
-  ContributorType,
+  ContributorApprovalBasis,
+  ContributorDecisionType,
   DietPattern,
   DietRuleSource,
   FoodGroup,
@@ -671,8 +672,8 @@ const seedEnvironment = z
   .object({
     SEED_MEMBER_EMAIL: z.string().email().default('member@example.com'),
     SEED_MEMBER_PASSWORD: z.string().min(8),
-    SEED_EXPERIENCED_CONTRIBUTOR_EMAIL: z.string().email().default('contributor@example.com'),
-    SEED_NUTRITION_EXPERT_EMAIL: z.string().email().default('expert@example.com'),
+    SEED_PLATFORM_CONTRIBUTOR_EMAIL: z.string().email().default('contributor@example.com'),
+    SEED_ORGANIZATION_CONTRIBUTOR_EMAIL: z.string().email().default('expert@example.com'),
     SEED_ADMIN_EMAIL: z.string().email().default('admin@example.com'),
     SEED_ADMIN_PASSWORD: z.string().min(8),
   })
@@ -841,23 +842,46 @@ async function main(): Promise<void> {
   const contributorSeedDefinitions = [
     {
       applicationId: '70000000-0000-4000-8000-000000000001',
-      email: seedEnvironment.SEED_EXPERIENCED_CONTRIBUTOR_EMAIL.toLowerCase(),
-      displayName: 'Demo Experienced Contributor',
-      contributorType: ContributorType.EXPERIENCED_PRACTITIONER,
+      email: seedEnvironment.SEED_PLATFORM_CONTRIBUTOR_EMAIL.toLowerCase(),
+      displayName: 'Demo Platform Contributor',
+      claimedApprovalBasis: ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
+      approvalBasis: ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
+      organizationClaim: null,
+      referenceLinks: [] as string[],
       experience:
         'Có kinh nghiệm thực hành chế độ ăn thực vật và chia sẻ công thức trong cộng đồng.',
-      approvalBasis:
-        'Admin duyệt thủ công dựa trên mô tả kinh nghiệm và lịch sử đóng góp demo trong hệ thống.',
+      approvalEvidence: {
+        kind: ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
+        capturedAt: '2026-09-15T00:00:00.000Z',
+        snapshotVersion: 'seed-platform-track-record-v1',
+        posts: { total: 0, published: 0, pendingReview: 0, rejected: 0 },
+        interactions: {
+          commentsReceived: 0,
+          votesReceived: 0,
+          ratingsReceived: 0,
+          bookmarksReceived: 0,
+          averageTasteRating: null,
+        },
+      },
     },
     {
       applicationId: '70000000-0000-4000-8000-000000000002',
-      email: seedEnvironment.SEED_NUTRITION_EXPERT_EMAIL.toLowerCase(),
-      displayName: 'Demo Nutrition Expert',
-      contributorType: ContributorType.NUTRITION_EXPERT,
+      email: seedEnvironment.SEED_ORGANIZATION_CONTRIBUTOR_EMAIL.toLowerCase(),
+      displayName: 'Demo Organization Contributor',
+      claimedApprovalBasis: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
+      approvalBasis: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
+      organizationClaim: 'Demo Plant Nutrition Community',
+      referenceLinks: ['https://example.com/demo-organization'],
       experience:
-        'Có kinh nghiệm chuyên môn dinh dưỡng thực vật và đánh giá nội dung giáo dục dinh dưỡng.',
-      approvalBasis:
-        'Admin duyệt thủ công dựa trên thông tin chuyên môn demo; không phải xác minh chứng chỉ.',
+        'Đại diện cộng đồng demo chia sẻ kiến thức dinh dưỡng thực vật; không có xác minh chứng chỉ.',
+      approvalEvidence: {
+        kind: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
+        capturedAt: '2026-09-15T00:00:00.000Z',
+        snapshotVersion: 'seed-organization-claim-v1',
+        organizationClaim: 'Demo Plant Nutrition Community',
+        referenceLinks: ['https://example.com/demo-organization'],
+        verificationStatus: 'CLAIM_RETAINED_NOT_VERIFIED',
+      },
     },
   ] as const;
   const seededApprovalAt = new Date('2026-09-15T00:00:00.000Z');
@@ -883,13 +907,14 @@ async function main(): Promise<void> {
         where: { id: definition.applicationId },
         update: {
           userId: user.id,
-          requestedType: definition.contributorType,
+          claimedApprovalBasis: definition.claimedApprovalBasis,
+          organizationClaim: definition.organizationClaim,
           experience: definition.experience,
-          referenceLinks: [],
+          referenceLinks: definition.referenceLinks,
           source: ContributorApplicationSource.REGISTRATION,
           status: ContributorApplicationStatus.APPROVED,
-          approvedType: definition.contributorType,
           approvalBasis: definition.approvalBasis,
+          reviewEvidence: definition.approvalEvidence,
           reviewNote: 'Approved seed profile for local role and permission validation.',
           reviewedById: admin.id,
           reviewedAt: seededApprovalAt,
@@ -898,13 +923,14 @@ async function main(): Promise<void> {
         create: {
           id: definition.applicationId,
           userId: user.id,
-          requestedType: definition.contributorType,
+          claimedApprovalBasis: definition.claimedApprovalBasis,
+          organizationClaim: definition.organizationClaim,
           experience: definition.experience,
-          referenceLinks: [],
+          referenceLinks: definition.referenceLinks,
           source: ContributorApplicationSource.REGISTRATION,
           status: ContributorApplicationStatus.APPROVED,
-          approvedType: definition.contributorType,
           approvalBasis: definition.approvalBasis,
+          reviewEvidence: definition.approvalEvidence,
           reviewNote: 'Approved seed profile for local role and permission validation.',
           reviewedById: admin.id,
           reviewedAt: seededApprovalAt,
@@ -913,19 +939,37 @@ async function main(): Promise<void> {
       await transaction.contributorProfile.upsert({
         where: { userId: user.id },
         update: {
-          contributorType: definition.contributorType,
           approvalBasis: definition.approvalBasis,
+          approvalEvidence: definition.approvalEvidence,
+          approvedAt: seededApprovalAt,
+          approvedById: admin.id,
+          sourceApplicationId: application.id,
+          revokedAt: null,
+          revokedById: null,
+          revocationReason: null,
+        },
+        create: {
+          userId: user.id,
+          approvalBasis: definition.approvalBasis,
+          approvalEvidence: definition.approvalEvidence,
           approvedAt: seededApprovalAt,
           approvedById: admin.id,
           sourceApplicationId: application.id,
         },
-        create: {
+      });
+      await transaction.contributorDecision.deleteMany({
+        where: { applicationId: application.id, decision: ContributorDecisionType.APPROVED },
+      });
+      await transaction.contributorDecision.create({
+        data: {
           userId: user.id,
-          contributorType: definition.contributorType,
+          applicationId: application.id,
+          actorId: admin.id,
+          decision: ContributorDecisionType.APPROVED,
           approvalBasis: definition.approvalBasis,
-          approvedAt: seededApprovalAt,
-          approvedById: admin.id,
-          sourceApplicationId: application.id,
+          evidence: definition.approvalEvidence,
+          reason: 'Approved seed profile for unified Contributor permission validation.',
+          createdAt: seededApprovalAt,
         },
       });
     });
@@ -1448,10 +1492,10 @@ async function main(): Promise<void> {
 
   const [constraintsMember, periodicMember] = await Promise.all([
     prisma.user.findUniqueOrThrow({
-      where: { email: seedEnvironment.SEED_EXPERIENCED_CONTRIBUTOR_EMAIL.toLowerCase() },
+      where: { email: seedEnvironment.SEED_PLATFORM_CONTRIBUTOR_EMAIL.toLowerCase() },
     }),
     prisma.user.findUniqueOrThrow({
-      where: { email: seedEnvironment.SEED_NUTRITION_EXPERT_EMAIL.toLowerCase() },
+      where: { email: seedEnvironment.SEED_ORGANIZATION_CONTRIBUTOR_EMAIL.toLowerCase() },
     }),
   ]);
   const scenarioHealthProfile = {
@@ -1643,15 +1687,15 @@ async function main(): Promise<void> {
     }
   });
 
-  const experiencedContributor = await prisma.user.findUniqueOrThrow({
-    where: { email: seedEnvironment.SEED_EXPERIENCED_CONTRIBUTOR_EMAIL.toLowerCase() },
+  const platformContributor = await prisma.user.findUniqueOrThrow({
+    where: { email: seedEnvironment.SEED_PLATFORM_CONTRIBUTOR_EMAIL.toLowerCase() },
   });
   const mushroomRecipe = await prisma.post.findUniqueOrThrow({
     where: { slug: 'chao-nam-gao-lut-demo' },
   });
   const behaviorSeededAt = new Date(Date.now() - 30 * 60 * 1_000);
   await prisma.$transaction(async (transaction) => {
-    for (const user of [member, experiencedContributor]) {
+    for (const user of [member, platformContributor]) {
       await transaction.personalizationPreference.upsert({
         where: { userId: user.id },
         update: {
@@ -1703,7 +1747,7 @@ async function main(): Promise<void> {
       },
       {
         id: '90000000-0000-4000-8000-000000000004',
-        userId: experiencedContributor.id,
+        userId: platformContributor.id,
         type: BehaviorEventType.CHAT_TOPIC,
         idempotencyKey: 'seed-contributor-topic-mushroom',
         dedupeKey: 'seed-contributor-topic-mushroom-bucket',
@@ -1713,7 +1757,7 @@ async function main(): Promise<void> {
       },
       {
         id: '90000000-0000-4000-8000-000000000005',
-        userId: experiencedContributor.id,
+        userId: platformContributor.id,
         type: BehaviorEventType.VIEW_RECIPE,
         entityId: mushroomRecipe.id,
         idempotencyKey: 'seed-contributor-view-mushroom-1',
@@ -1724,7 +1768,7 @@ async function main(): Promise<void> {
       },
       {
         id: '90000000-0000-4000-8000-000000000006',
-        userId: experiencedContributor.id,
+        userId: platformContributor.id,
         type: BehaviorEventType.VIEW_RECIPE,
         entityId: mushroomRecipe.id,
         idempotencyKey: 'seed-contributor-view-mushroom-2',
@@ -1749,7 +1793,7 @@ async function main(): Promise<void> {
     await transaction.post.upsert({
       where: { id: quarantinePostId },
       update: {
-        authorId: experiencedContributor.id,
+        authorId: platformContributor.id,
         type: PostType.BLOG,
         slug: 'moderation-quarantine-demo',
         status: PostStatus.QUARANTINED,
@@ -1759,7 +1803,7 @@ async function main(): Promise<void> {
       },
       create: {
         id: quarantinePostId,
-        authorId: experiencedContributor.id,
+        authorId: platformContributor.id,
         type: PostType.BLOG,
         slug: 'moderation-quarantine-demo',
         status: PostStatus.QUARANTINED,
@@ -1770,7 +1814,7 @@ async function main(): Promise<void> {
       where: { id: quarantineRevisionId },
       update: {
         postId: quarantinePostId,
-        createdById: experiencedContributor.id,
+        createdById: platformContributor.id,
         version: 1,
         status: PostRevisionStatus.QUARANTINED,
         title: 'Demo nội dung health claim rủi ro cao',
@@ -1783,7 +1827,7 @@ async function main(): Promise<void> {
       create: {
         id: quarantineRevisionId,
         postId: quarantinePostId,
-        createdById: experiencedContributor.id,
+        createdById: platformContributor.id,
         version: 1,
         status: PostRevisionStatus.QUARANTINED,
         title: 'Demo nội dung health claim rủi ro cao',
@@ -1857,12 +1901,12 @@ async function main(): Promise<void> {
     memberEmail: seedEnvironment.SEED_MEMBER_EMAIL.toLowerCase(),
     memberPasswordHash,
     adminEmail: seedEnvironment.SEED_ADMIN_EMAIL.toLowerCase(),
-    experiencedContributorEmail: seedEnvironment.SEED_EXPERIENCED_CONTRIBUTOR_EMAIL.toLowerCase(),
-    nutritionExpertEmail: seedEnvironment.SEED_NUTRITION_EXPERT_EMAIL.toLowerCase(),
+    platformContributorEmail: seedEnvironment.SEED_PLATFORM_CONTRIBUTOR_EMAIL.toLowerCase(),
+    organizationContributorEmail: seedEnvironment.SEED_ORGANIZATION_CONTRIBUTOR_EMAIL.toLowerCase(),
     nextMonday,
   });
   console.info(
-    `Seeded local Member, two approved Contributor subtypes, Admin, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
+    `Seeded local Member, unified Contributors with two approval bases, Admin, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
   );
 }
 

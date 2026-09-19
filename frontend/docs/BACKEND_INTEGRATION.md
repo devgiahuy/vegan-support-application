@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.2
+**Version:** 4.3
 
 **Cập nhật:** 19/09/2026
 
@@ -8,7 +8,7 @@
 
 **Contract target:** `/api/v1`
 
-> Tài liệu này là registry sống cho capability backend thực tế. Phases 00–11 là baseline hiện có; Phases 12–27 chỉ là `PLANNED` cho tới khi từng phase vượt completion gate. Contributor hiện vẫn dùng contract subtype legacy và sẽ có breaking migration ở Phase 14; frontend không được dùng approval/request data để tự cấp quyền.
+> Tài liệu này là registry sống cho capability backend thực tế. Phases 00–11 là baseline hiện có; Phases 12–27 chỉ được nâng trạng thái sau khi từng phase vượt completion gate. Backend Phase 14 đã thay subtype bằng một Contributor role với approval basis chỉ dùng cho audit/presentation. Các consumer frontend legacy phải migrate trước khi các endpoint breaking trở lại `READY`.
 
 ---
 
@@ -206,11 +206,11 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 
 | Method | Path                         | Status    | Backend updated | FE integrated    | Ghi chú                                                                                                                                                   |
 | ------ | ---------------------------- | --------- | --------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/auth/register`             | `READY`   | 2026-09-15      | Yes (2026-09-15) | Optional `contributorRequest` chỉ tạo application `PENDING`; account/JWT vẫn là `MEMBER`; FE: `features/auth` register + session + contributor form       |
-| POST   | `/auth/login`                | `READY`   | 2026-09-15      | Yes (2026-09-15) | Trả access token và đặt access/refresh HttpOnly cookies; generic invalid-credential response; FE: login form xử lý theo `error.code`                      |
+| POST   | `/auth/register`             | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Breaking Phase 14: `contributorRequest.claimedApprovalBasis`, optional `organizationClaim`, `experience`, `referenceLinks`; pending account/JWT vẫn `MEMBER` |
+| POST   | `/auth/login`                | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Session user bỏ subtype fields; Contributor profile trả `approvalBasis`/label chỉ để hiển thị; authorization vẫn theo role/profile |
 | POST   | `/auth/refresh`              | `READY`   | 2026-09-15      | Yes (2026-09-15) | Đọc refresh cookie, rotation mỗi lần dùng; reuse revoke toàn token family; FE: Next proxy `/api/auth/refresh-token` + refresh-queue                       |
 | POST   | `/auth/logout`               | `READY`   | 2026-09-15      | Yes (2026-09-15) | Idempotent; body `{ allDevices?: boolean }`; revoke phiên hiện tại hoặc toàn bộ phiên của user; FE: Next proxy + xóa 4 cookie                             |
-| GET    | `/users/me`                  | `READY`   | 2026-09-15      | Yes (2026-09-15) | Trả profile, health `MANUAL`, diet snapshot/effective constraints; không lộ hash/session; FE auth chỉ map 8 field user, health/diet để `features/profile` |
+| GET    | `/users/me`                  | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Breaking Phase 14 user shape: bỏ subtype; pending application dùng `claimedApprovalBasis`; active profile dùng `approvalBasis`/label |
 | PATCH  | `/users/me`                  | `READY`   | 2026-09-15      | Yes (2026-09-15) | Cập nhật `displayName`/HTTP(S) `avatarUrl`; cần ít nhất một field                                                                                         |
 | PUT    | `/users/me/health-profile`   | `READY`   | 2026-09-15      | Yes (2026-09-15) | Upsert manual inputs; backend tính BMI, Mifflin–St Jeor BMR và activity-factor TDEE                                                                       |
 | POST   | `/diet-rules/preview`        | `READY`   | 2026-09-15      | Yes (2026-09-15) | Auth required; trả rule set v1, source/default/hard flag; tradition rule là configurable                                                                  |
@@ -242,20 +242,22 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 
 | Method | Path                                         | Status    | Backend updated | FE integrated         | Ghi chú                                                                            |
 | ------ | -------------------------------------------- | --------- | --------------- | --------------------- | ---------------------------------------------------------------------------------- |
-| POST   | `/contributor-applications`                  | `READY`   | 2026-09-17      | Yes (2026-09-17)      | Member upgrade; không có certificate MVP; FE: `features/contributor` |
-| GET    | `/contributor-applications/me`               | `READY`   | 2026-09-17      | Yes (2026-09-17)      | Member xem lịch sử đơn; FE: `features/contributor` |
-| GET    | `/admin/contributor-applications`            | `READY`   | 2026-09-17      | Yes (2026-09-17)      | Admin only; hàng chờ duyệt; FE: `features/contributor` |
-| PATCH  | `/admin/contributor-applications/:id/review` | `READY`   | 2026-09-17      | Yes (2026-09-17)      | Contract hiện tại approve/reject + subtype/basis; Phase 14 sẽ bỏ subtype, khi bắt đầu phải chuyển `CHANGING` |
-| GET    | `/review-queue/posts`                        | `PLANNED` | —               | Yes (2026-09-16, chờ READY chính thức) | Contributor/Admin filtering; FE: `features/review` list + filter + pagination |
-| PATCH  | `/review-queue/posts/:id/approve`            | `PLANNED` | —               | Yes (2026-09-16, chờ READY chính thức) | Cấm self-approve; FE: dialog reason bắt buộc + chặn tự duyệt 2 lớp              |
-| PATCH  | `/review-queue/posts/:id/reject`             | `PLANNED` | —               | Yes (2026-09-16, chờ READY chính thức) | Reason required; FE: chung dialog + toast lý do cho tác giả                     |
+| POST   | `/contributor-applications`                  | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Member-only unified application; public claim chỉ organization/platform; pending không cấp quyền |
+| GET    | `/contributor-applications/me`               | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Breaking response bỏ requested/approved subtype; trả claimed/final basis và evidence audit |
+| GET    | `/admin/contributor-applications`            | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Filter `claimedApprovalBasis`; response unified basis/evidence/inviter |
+| POST   | `/admin/contributor-invitations`             | `IN_PROGRESS` | 2026-09-19  | No                   | Source/OpenAPI complete; final READY blocked by Windows Prisma query-engine DLL `EPERM` during build |
+| PATCH  | `/admin/contributor-applications/:id/review` | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | APPROVE chọn final basis + reason; transactional role/profile/evidence/decision/session revoke; REJECT giữ Member + cooldown |
+| PATCH  | `/admin/contributors/:userId/revoke`         | `IN_PROGRESS` | 2026-09-19  | No                   | Audited revoke implemented; final READY blocked by Windows Prisma query-engine DLL `EPERM` during build |
+| GET    | `/review-queue/posts`                        | `PLANNED` | —               | Yes (legacy scaffold; migrate) | Unified Contributor/Admin filtering; author summary uses optional `contributorApprovalBasis` |
+| PATCH  | `/review-queue/posts/:id/approve`            | `PLANNED` | —               | Yes (legacy scaffold; migrate) | Cấm self-approve; all active Contributors have identical review permission; response summary migrated |
+| PATCH  | `/review-queue/posts/:id/reject`             | `PLANNED` | —               | Yes (legacy scaffold; migrate) | Reason required; all active Contributors have identical review permission; response summary migrated |
 | POST   | `/reports`                                   | `READY`   | 2026-09-17      | Yes (2026-09-17)      | One active report/user/target; FE: `features/safety`                               |
 | GET    | `/admin/reports`                             | `READY`   | 2026-09-16      | Yes (2026-09-17) | Admin only; filter status/priority/targetType                                      |
-| PATCH  | `/admin/reports/:id/resolve`                 | `READY`   | 2026-09-16      | Yes (2026-09-17) | Audit required; reason min 10 chars; resolve gộp cùng target                       |
-| GET    | `/admin/users`                               | `READY`   | 2026-09-16      | Yes (2026-09-17) | Search/filter/pagination                                                           |
+| PATCH  | `/admin/reports/:id/resolve`                 | `IN_PROGRESS` | 2026-09-19  | Yes (2026-09-17) | DEMOTE preservation/audit change implemented; final gate blocked by Windows Prisma query-engine DLL `EPERM` |
+| GET    | `/admin/users`                               | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Breaking response đổi `contributorType` thành optional `contributorApprovalBasis` |
 | PATCH  | `/admin/users/:id/status`                    | `READY`   | 2026-09-16      | Yes (2026-09-17) | Lock/ban/unban/delete rules; chặn self & protected admin                           |
-| GET    | `/admin/comments`                            | `READY`   | 2026-09-16      | Yes (2026-09-17) | Moderation list; filter status/post/author                                         |
-| PATCH  | `/admin/comments/:id/status`                 | `READY`   | 2026-09-16      | Yes (2026-09-17) | Hide/restore; chặn comment đã bị tác giả xóa                                       |
+| GET    | `/admin/comments`                            | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Author summary đổi subtype thành optional approval basis; basis không cấp quyền |
+| PATCH  | `/admin/comments/:id/status`                 | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Response author summary dùng unified Contributor contract |
 | GET    | `/categories`                                | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Public active tree tối đa hai tầng; filter `type`                                  |
 | GET    | `/admin/categories`                          | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Admin only; pagination; xem cả archived                                            |
 | POST   | `/admin/categories`                          | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Admin only; parent/child cùng type                                                 |
@@ -355,12 +357,15 @@ Các path dưới đây là contract target để định hướng; phase triể
 
 | Contract area | Status | FE action |
 |---|---|---|
-| Registration/application request | `PLANNED` migration | Replace `requestedType` with requested `approvalBasis`; role remains `MEMBER` while pending |
-| Admin review | `PLANNED` migration | Remove subtype selection; choose final basis and enter reason |
-| Contributor profile/session | `PLANNED` migration | Remove `contributorType`; show one Contributor role plus optional approval-basis label |
-| RBAC/UI gates | `PLANNED` migration | Gate only by authoritative approved role/profile, never by basis |
+| Registration/application request | `CHANGING` | Replace `requestedType` with `claimedApprovalBasis`; add conditional `organizationClaim`; role remains `MEMBER` while pending |
+| Admin review | `CHANGING` | Remove subtype selection; choose final `approvalBasis` and enter reason; handle basis/source conflict |
+| Contributor profile/session | `CHANGING` | Remove `contributorType`; show one Contributor role plus optional approval-basis label |
+| Admin invitation/revocation | `IN_PROGRESS`, FE not integrated | Source/OpenAPI complete; wait for backend build gate, then add DTOs/hooks when scheduled |
+| RBAC/UI gates | `CHANGING` | Gate only by authoritative `role === CONTRIBUTOR` plus active profile returned by backend, never by basis |
 
-When Phase 14 starts, affected READY endpoints must become `CHANGING`. Do not preemptively change the current consumer until the new OpenAPI contract lands.
+Phase 14 source/migration/OpenAPI is implemented. Existing frontend consumers still use the removed subtype fields, so affected endpoints remain `CHANGING` until frontend runs `npm run sync:swagger` and migrates DTO/Model/Mapper/forms/tests. New invitation/revocation endpoints remain `IN_PROGRESS` until the backend build gate passes; `FE integrated = No`.
+
+Legacy data mapping is intentionally conservative: both `EXPERIENCED_PRACTITIONER` and `NUTRITION_EXPERT` rows become `PLATFORM_TRACK_RECORD`. The migration snapshots platform post/interaction counts and retains old values/free-text basis inside database audit evidence; it does not infer organization affiliation, certificate verification, or professional status.
 
 ### 6.11 Storage quota và video review — Phases 15–16
 
@@ -440,9 +445,9 @@ Do not add live consumers for wearables/HealthKit/Health Connect, video STT/summ
 
 ## 7. Luồng tích hợp đặc biệt
 
-### 7.1 Register có Contributor request
+### 7.1 Register có Contributor request — Phase 14 breaking contract
 
-Contract `READY` hiện tại trước Phase 14 vẫn là legacy:
+Current backend target:
 
 ```json
 {
@@ -450,9 +455,10 @@ Contract `READY` hiện tại trước Phase 14 vẫn là legacy:
   "password": "...",
   "displayName": "...",
   "contributorRequest": {
-    "requestedType": "NUTRITION_EXPERT",
-    "experience": "...",
-    "referenceLinks": []
+    "claimedApprovalBasis": "ORGANIZATION_AFFILIATION",
+    "organizationClaim": "Tên tổ chức do applicant khai báo",
+    "experience": "Động lực và kinh nghiệm đóng góp...",
+    "referenceLinks": ["https://example.com/reference"]
   }
 }
 ```
@@ -464,26 +470,14 @@ Response user luôn có:
   "role": "MEMBER",
   "contributorApplication": {
     "status": "PENDING",
-    "requestedType": "NUTRITION_EXPERT"
+    "claimedApprovalBasis": "ORGANIZATION_AFFILIATION"
   }
 }
 ```
 
-Frontend tuyệt đối không mở contributor routes dựa trên `requestedType`. Chỉ dùng `user.role` và approved contributor profile từ `/users/me`.
+User form chỉ cho claim `ORGANIZATION_AFFILIATION` hoặc `PLATFORM_TRACK_RECORD`; `organizationClaim` bắt buộc cho organization và không gửi cho platform. `ADMIN_INVITED` chỉ do `POST /admin/contributor-invitations` tạo, vẫn `PENDING` và cần manual review. Response bỏ `requestedType`, `approvedType`, và `contributorType`; approval trả `approvalBasis`, `approvalBasisLabel`, và evidence theo kind. Cả ba basis có quyền giống hệt nhau.
 
-Target breaking contract của Phase 14, chỉ áp dụng sau khi endpoint chuyển qua `CHANGING` rồi `READY` và frontend đã sync OpenAPI:
-
-```json
-{
-  "contributorRequest": {
-    "claimedApprovalBasis": "ORGANIZATION_AFFILIATION",
-    "experience": "...",
-    "referenceLinks": []
-  }
-}
-```
-
-User form target chỉ cho claim `ORGANIZATION_AFFILIATION` hoặc `PLATFORM_TRACK_RECORD`; `ADMIN_INVITED` chỉ đến từ luồng Admin. Response target bỏ `requestedType`, `approvedContributorType`, và `contributorType`; thay bằng final approval basis phù hợp. Cả ba basis đều có cùng quyền sau khi Admin duyệt thủ công. Không đổi consumer theo target này trước khi Phase 14 hoàn tất.
+Frontend migration bắt buộc: sync OpenAPI; xóa `ContributorType` và mọi subtype label/branch; đổi register/application/admin review DTO + Zod form + mapper/tests; đổi filter `requestedType` thành `claimedApprovalBasis`; đổi author/admin summaries sang `contributorApprovalBasis`; xử lý `CONTRIBUTOR_APPROVAL_BASIS_INVALID`, invitation/revoke conflicts và `STALE_ACCESS_TOKEN` sau approve/revoke.
 
 ### 7.2 Diet rule confirmation
 
@@ -671,7 +665,9 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `CONTRIBUTOR_APPLICATION_PENDING`             | Disable submit, link xem trạng thái                                    |
 | `CONTRIBUTOR_REAPPLY_NOT_ALLOWED`             | Hiển thị ngày được apply lại                                           |
 | `CONTRIBUTOR_APPLICATION_NOT_ALLOWED`         | Ẩn form apply với Admin hoặc role không phù hợp                        |
-| `CONTRIBUTOR_TYPE_UNCHANGED`                  | Legacy pre-Phase-14 only; không tạo consumer mới, xóa khi migration READY |
+| `CONTRIBUTOR_APPROVAL_BASIS_INVALID`          | Refresh application; chỉ chọn basis hợp lệ cho source/evidence đã lưu |
+| `CONTRIBUTOR_INVITATION_NOT_ALLOWED`          | Refresh target; chỉ mời Member ACTIVE chưa có application pending |
+| `CONTRIBUTOR_REVOCATION_NOT_APPLICABLE`       | Refresh user; Contributor đã bị revoke hoặc không còn active |
 | `CONTRIBUTOR_APPLICATION_ALREADY_REVIEWED`    | Refresh Admin queue; application đã có quyết định                      |
 | `CONTRIBUTOR_APPLICATION_NOT_REVIEWABLE`      | Giữ queue và báo applicant không còn đủ điều kiện                      |
 | `SELF_APPROVAL_FORBIDDEN`                     | Giữ queue và báo lỗi rõ                                                |
@@ -833,6 +829,7 @@ Thêm entry mới nhất ở trên cùng.
 
 | Date       | Version | Module         | Change                                                                                                                                | Breaking | FE action                                                                                            |
 | ---------- | ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- | :------: | ---------------------------------------------------------------------------------------------------- |
+| 2026-09-19 | 4.3     | Contributors   | Phase 14 source/migration/OpenAPI implemented: removed subtype fields/RBAC, added typed approval basis, immutable organization/platform/invitation evidence, Admin invitation, manual approve/reject, audited revoke, conservative legacy migration, stale-session revocation. Existing consumed endpoints remain `CHANGING`; new endpoints remain `IN_PROGRESS` because `npm run build` is blocked by Windows Prisma DLL `EPERM`. | Yes | Run `npm run sync:swagger`; replace subtype DTO/model/forms/mappers/tests and UI/RBAC branches with unified role/profile contract after backend build gate passes; integrate invitation/revoke when scheduled. |
 | 2026-09-19 | 4.2     | Recipe Nutrition | Phase 13 implemented in source/OpenAPI: structured recipe steps on recipe revisions plus cooking-aware preview/recalculate/current/history/status endpoints; deterministic calculation uses unit conversion, edible portion, reviewed yield/retention factors, provenance, confidence, uncertainty and uncovered ingredients; AI fallback is provider-adapter only and labeled. Runtime status remains `IN_PROGRESS` until the blocked `npm run build` gate completes. | No | Do not integrate until status returns to `READY`; then sync OpenAPI and add `features/recipe-nutrition` DTO/Model/Mapper/query with partial coverage/stale/provider fallback handling. |
 | 2026-09-19 | 4.1     | Food Data      | Phase 12 READY: canonical profiles/nutrients/conversions, intake/guidelines, cooking factors, interaction rules, typed Admin CRUD, staged AI suggestions và provider-neutral idempotent imports. | No | Sync OpenAPI; thêm DTO/Model/Mapper/query cho các read endpoint và màn quản trị khi được ưu tiên. Missing nutrient không render thành 0. |
 | 2026-09-18 | 4.0     | Product plan   | Đồng bộ canonical SRS và backend Phases 12–27: food data, cooking-aware nutrition, unified Contributor, quota/video review, custom meals/tags, meal analysis/programs, pantry, fridge, receipt, AI artifacts, maps, notifications và governance. Contract runtime hiện tại không đổi; Contributor Phase 14 được ghi là breaking migration tương lai. | Future Phase 14 | Chưa đổi consumer live; chỉ sync/migrate khi từng endpoint chuyển READY/CHANGING theo OpenAPI |
