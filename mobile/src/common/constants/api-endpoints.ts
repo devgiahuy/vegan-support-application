@@ -7,6 +7,7 @@ export const API_ENDPOINTS = {
   },
   USERS: {
     ME: '/users/me',
+    HEALTH_PROFILE: '/users/me/health-profile',
   },
   CATEGORIES: {
     TREE: '/categories',

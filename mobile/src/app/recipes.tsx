@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
-import { Link } from 'expo-router';
 import { PlusCircle, Search, Sparkles } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
