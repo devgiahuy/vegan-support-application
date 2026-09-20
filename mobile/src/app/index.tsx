@@ -72,7 +72,7 @@ export default function HomeScreen() {
         </Text>
 
         <View className="mt-5 gap-2.5">
-          <Link href="/recipes" asChild>
+          <Link href={'/recipes' as Href} asChild>
             <PrimaryButton
               label="Tìm công thức ngay"
               icon={<UtensilsCrossed size={16} color={colors.primaryForeground} />}

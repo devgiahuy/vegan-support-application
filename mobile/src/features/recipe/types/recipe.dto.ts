@@ -70,3 +70,10 @@ export interface RecipeListResponseDto {
     appliedConstraints?: AppliedConstraintsDto;
   };
 }
+
+/** `GET /posts/:idOrSlug` → 1 công thức. */
+export interface RecipeDetailResponseDto {
+  success: boolean;
+  data: RecipeDetailDto;
+  meta?: null;
+}

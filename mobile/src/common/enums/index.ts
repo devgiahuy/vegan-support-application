@@ -192,3 +192,9 @@ export enum FeedbackValue {
   UP = 'UP',
   DOWN = 'DOWN',
 }
+
+/** Trạng thái quán chay (hiển thị công khai / chờ duyệt). */
+export enum RestaurantStatus {
+  PENDING = 'PENDING',
+  PUBLISHED = 'PUBLISHED',
+}
