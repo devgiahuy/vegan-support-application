@@ -43,12 +43,12 @@ export default function HomeScreen() {
   return (
     <SiteScreen
       fab={
-        <Pressable
-          onPress={() => notifyComingSoon('Trợ lý AI dinh dưỡng')}
-          className="absolute bottom-5 right-5 flex-row items-center gap-2 rounded-full bg-primary px-4 py-3 shadow-lg">
-          <Sparkles size={16} color={colors.primaryForeground} />
-          <Text className="text-sm font-semibold text-primary-foreground">Hỏi AI nhanh</Text>
-        </Pressable>
+        <Link href={'/assistant' as Href} asChild>
+          <Pressable className="absolute bottom-5 right-5 flex-row items-center gap-2 rounded-full bg-primary px-4 py-3 shadow-lg">
+            <Sparkles size={16} color={colors.primaryForeground} />
+            <Text className="text-sm font-semibold text-primary-foreground">Hỏi AI nhanh</Text>
+          </Pressable>
+        </Link>
       }>
       {/* Hero */}
       <View className="px-5 pt-4">
@@ -78,12 +78,13 @@ export default function HomeScreen() {
               icon={<UtensilsCrossed size={16} color={colors.primaryForeground} />}
             />
           </Link>
-          <PrimaryButton
-            label="Hỏi AI Dinh dưỡng"
-            variant="outline"
-            icon={<Sparkles size={16} color={colors.cta} />}
-            onPress={() => notifyComingSoon('Trợ lý AI dinh dưỡng')}
-          />
+          <Link href={'/assistant' as Href} asChild>
+            <PrimaryButton
+              label="Hỏi AI Dinh dưỡng"
+              variant="outline"
+              icon={<Sparkles size={16} color={colors.cta} />}
+            />
+          </Link>
         </View>
 
         <View className="mt-4 flex-row flex-wrap items-center gap-x-3 gap-y-1">
@@ -168,12 +169,13 @@ export default function HomeScreen() {
           </View>
 
           <View className="mt-3.5">
-            <PrimaryButton
-              label="Hỏi bất kỳ nguyên liệu hoặc mục tiêu..."
-              variant="outline"
-              icon={<ArrowRight size={15} color={colors.foreground} />}
-              onPress={() => notifyComingSoon('Trợ lý AI dinh dưỡng')}
-            />
+            <Link href={'/assistant' as Href} asChild>
+              <PrimaryButton
+                label="Hỏi bất kỳ nguyên liệu hoặc mục tiêu..."
+                variant="outline"
+                icon={<ArrowRight size={15} color={colors.foreground} />}
+              />
+            </Link>
           </View>
         </View>
       </View>

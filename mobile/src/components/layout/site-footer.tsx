@@ -6,7 +6,7 @@ import { useIconColors } from '@/lib/theme-colors';
 
 interface FooterLink {
   label: string;
-  href: '/' | '/recipes' | '/articles' | '/meal-plans' | null;
+  href: '/' | '/recipes' | '/articles' | '/assistant' | '/meal-plans' | null;
 }
 
 const COLUMNS: { title: string; links: FooterLink[] }[] = [
@@ -17,8 +17,8 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
       { label: 'Cẩm nang dinh dưỡng', href: '/articles' },
       { label: 'Video hướng dẫn nấu', href: null },
       { label: 'Thực đơn 7 ngày', href: '/meal-plans' },
+      { label: 'Trợ lý AI dinh dưỡng', href: '/assistant' },
       { label: 'Bản đồ quán chay', href: null },
-      { label: 'Trợ lý AI dinh dưỡng', href: null },
     ],
   },
   {

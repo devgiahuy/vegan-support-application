@@ -24,4 +24,9 @@ export const API_ENDPOINTS = {
     SWAP: (planId: string, itemId: string) => `/meal-plans/${planId}/items/${itemId}/swap`,
     DELETE: (id: string) => `/meal-plans/${id}`,
   },
+  CHAT: {
+    SESSIONS: '/chat/sessions',
+    SESSION_MESSAGES: (id: string) => `/chat/sessions/${id}/messages`,
+    MESSAGE_FEEDBACK: (id: string) => `/chat/messages/${id}/feedback`,
+  },
 } as const;

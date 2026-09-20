@@ -10,13 +10,14 @@ import { ThemeToggle } from './theme-toggle';
 
 interface NavItem {
   label: string;
-  href: '/' | '/recipes' | '/articles' | '/meal-plans' | '/profile' | null;
+  href: '/' | '/recipes' | '/articles' | '/assistant' | '/meal-plans' | '/profile' | null;
 }
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Trang chủ', href: '/' },
   { label: 'Khám phá món', href: '/recipes' },
   { label: 'Cẩm nang', href: '/articles' },
+  { label: 'AI Chat', href: '/assistant' },
   { label: 'Hồ sơ', href: '/profile' },
   { label: 'Video nấu ăn', href: null },
   { label: 'Thực đơn tuần', href: '/meal-plans' },
@@ -49,11 +50,11 @@ export function SiteHeader() {
             className="h-9 w-9 items-center justify-center rounded-full bg-muted">
             <Search size={15} color={colors.foreground} />
           </Pressable>
-          <Pressable
-            onPress={() => notifyComingSoon('Trợ lý AI dinh dưỡng')}
-            className="h-9 w-9 items-center justify-center rounded-full bg-cta/15">
-            <Sparkles size={15} color={colors.cta} />
-          </Pressable>
+          <Link href={'/assistant' as Href} asChild>
+            <Pressable className="h-9 w-9 items-center justify-center rounded-full bg-cta/15">
+              <Sparkles size={15} color={colors.cta} />
+            </Pressable>
+          </Link>
           <ThemeToggle />
           {isAuthenticated && user ? (
             <Link href="/profile" asChild>

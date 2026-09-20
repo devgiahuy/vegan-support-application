@@ -167,3 +167,28 @@ export enum NutritionDataQuality {
   PARTIAL = 'PARTIAL',
   UNAVAILABLE = 'UNAVAILABLE',
 }
+
+/** Chủ sở hữu phiên chat AI. */
+export enum ChatOwnerType {
+  AUTHENTICATED = 'AUTHENTICATED',
+  GUEST = 'GUEST',
+}
+
+/** Vai trò tin nhắn trong phiên chat. */
+export enum ChatRole {
+  USER = 'USER',
+  ASSISTANT = 'ASSISTANT',
+}
+
+/** Trạng thái tin nhắn theo OpenAPI AI Chat. */
+export enum ChatMessageStatus {
+  PENDING = 'PENDING',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
+}
+
+/** Feedback cho câu trả lời assistant. */
+export enum FeedbackValue {
+  UP = 'UP',
+  DOWN = 'DOWN',
+}
