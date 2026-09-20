@@ -17,4 +17,11 @@ export const API_ENDPOINTS = {
     DETAIL: (idOrSlug: string) => `/posts/${idOrSlug}`,
     RELATED: (id: string) => `/posts/${id}/related`,
   },
+  MEAL_PLANS: {
+    GENERATE: '/meal-plans/generate',
+    LIST: '/meal-plans',
+    DETAIL: (id: string) => `/meal-plans/${id}`,
+    SWAP: (planId: string, itemId: string) => `/meal-plans/${planId}/items/${itemId}/swap`,
+    DELETE: (id: string) => `/meal-plans/${id}`,
+  },
 } as const;

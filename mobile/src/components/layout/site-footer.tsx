@@ -1,12 +1,12 @@
 import * as React from 'react';
 import { Alert, Pressable, Text, View } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, type Href } from 'expo-router';
 import { Lock, ShieldCheck, Sprout } from 'lucide-react-native';
 import { useIconColors } from '@/lib/theme-colors';
 
 interface FooterLink {
   label: string;
-  href: '/' | '/recipes' | '/articles' | null;
+  href: '/' | '/recipes' | '/articles' | '/meal-plans' | null;
 }
 
 const COLUMNS: { title: string; links: FooterLink[] }[] = [
@@ -16,7 +16,7 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
       { label: 'Món chay theo mùa', href: '/recipes' },
       { label: 'Cẩm nang dinh dưỡng', href: '/articles' },
       { label: 'Video hướng dẫn nấu', href: null },
-      { label: 'Thực đơn 7 ngày', href: null },
+      { label: 'Thực đơn 7 ngày', href: '/meal-plans' },
       { label: 'Bản đồ quán chay', href: null },
       { label: 'Trợ lý AI dinh dưỡng', href: null },
     ],
@@ -43,7 +43,6 @@ function notifyComingSoon(feature: string) {
   Alert.alert('Sắp ra mắt', `${feature} đang được VeggieConnect hoàn thiện, quay lại sau nhé!`);
 }
 
-/** Footer dùng chung cho mọi trang chính, đồng bộ `frontend/.../site-footer.tsx`. */
 export function SiteFooter() {
   const colors = useIconColors();
 
@@ -60,7 +59,7 @@ export function SiteFooter() {
         </View>
         <View className="flex-row items-center gap-1">
           <Lock size={13} color={colors.primary} />
-          <Text className="text-xs text-muted-foreground">Mã hoá SSL/TLS</Text>
+          <Text className="text-xs text-muted-foreground">Mã hóa SSL/TLS</Text>
         </View>
         <View className="flex-row items-center gap-1">
           <Sprout size={13} color={colors.primary} />
@@ -78,7 +77,7 @@ export function SiteFooter() {
                   <Text className="text-sm text-muted-foreground">{link.label}</Text>
                 </Pressable>
               ) : (
-                <Link key={link.label} href={link.href} asChild>
+                <Link key={link.label} href={link.href as Href} asChild>
                   <Pressable>
                     <Text className="text-sm text-muted-foreground">{link.label}</Text>
                   </Pressable>
@@ -91,7 +90,7 @@ export function SiteFooter() {
 
       <View className="mt-8 border-t border-border pt-4">
         <Text className="text-xs text-muted-foreground">
-          © 2026 VeggieConnect. Lan toả lối sống thuần thực vật an vui.
+          © 2026 VeggieConnect. Lan tỏa lối sống thuần thực vật an vui.
         </Text>
       </View>
     </View>

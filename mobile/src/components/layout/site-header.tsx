@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link, usePathname } from 'expo-router';
+import { Link, type Href, usePathname } from 'expo-router';
 import { LogIn, Search, Sparkles, UserRound } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
@@ -10,7 +10,7 @@ import { ThemeToggle } from './theme-toggle';
 
 interface NavItem {
   label: string;
-  href: '/' | '/recipes' | '/articles' | '/profile' | null;
+  href: '/' | '/recipes' | '/articles' | '/meal-plans' | '/profile' | null;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -19,7 +19,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Cẩm nang', href: '/articles' },
   { label: 'Hồ sơ', href: '/profile' },
   { label: 'Video nấu ăn', href: null },
-  { label: 'Thực đơn tuần', href: null },
+  { label: 'Thực đơn tuần', href: '/meal-plans' },
   { label: 'Bản đồ quán', href: null },
 ];
 
@@ -63,26 +63,23 @@ export function SiteHeader() {
             </Link>
           ) : (
             <>
-            <Link href="/profile" asChild>
-              <Pressable className="h-9 w-9 items-center justify-center rounded-full bg-primary/10">
-                <UserRound size={15} color={colors.primary} />
-              </Pressable>
-            </Link>
-            <Link href="/(auth)/login" asChild>
-              <Pressable className="flex-row items-center gap-1.5 rounded-full bg-primary px-3 py-1.5">
-                <LogIn size={13} color={colors.primaryForeground} />
-                <Text className="text-xs font-semibold text-primary-foreground">Đăng nhập</Text>
-              </Pressable>
-            </Link>
+              <Link href="/profile" asChild>
+                <Pressable className="h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+                  <UserRound size={15} color={colors.primary} />
+                </Pressable>
+              </Link>
+              <Link href="/(auth)/login" asChild>
+                <Pressable className="flex-row items-center gap-1.5 rounded-full bg-primary px-3 py-1.5">
+                  <LogIn size={13} color={colors.primaryForeground} />
+                  <Text className="text-xs font-semibold text-primary-foreground">Đăng nhập</Text>
+                </Pressable>
+              </Link>
             </>
           )}
         </View>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerClassName="gap-1.5 px-4 pb-2.5">
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-1.5 px-4 pb-2.5">
         {NAV_ITEMS.map((item) => {
           const active = item.href !== null && isActive(item.href);
           const pill = (
@@ -106,7 +103,7 @@ export function SiteHeader() {
           }
 
           return (
-            <Link key={item.label} href={item.href} asChild>
+            <Link key={item.label} href={item.href as Href} asChild>
               <Pressable>{pill}</Pressable>
             </Link>
           );

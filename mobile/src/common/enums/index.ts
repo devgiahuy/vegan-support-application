@@ -146,3 +146,24 @@ export enum VideoSource {
   CLOUDINARY = 'CLOUDINARY',
   YOUTUBE = 'YOUTUBE',
 }
+
+/** Mục tiêu tạo thực đơn tuần. */
+export enum MealPlanGoal {
+  MAINTAIN = 'MAINTAIN',
+  LOSE = 'LOSE',
+  GAIN = 'GAIN',
+}
+
+/** Bữa trong ngày của meal planner. */
+export enum MealType {
+  BREAKFAST = 'BREAKFAST',
+  LUNCH = 'LUNCH',
+  DINNER = 'DINNER',
+}
+
+/** Chất lượng dữ liệu dinh dưỡng backend trả về cho thực đơn. */
+export enum NutritionDataQuality {
+  COMPLETE = 'COMPLETE',
+  PARTIAL = 'PARTIAL',
+  UNAVAILABLE = 'UNAVAILABLE',
+}

@@ -1,5 +1,5 @@
 import { Alert, Pressable, Text, View } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, type Href } from 'expo-router';
 import {
   ArrowRight,
   CalendarDays,
@@ -208,11 +208,12 @@ export default function HomeScreen() {
           </View>
 
           <View className="mt-3.5">
-            <PrimaryButton
+            <Link href={'/meal-plans' as Href} asChild>
+              <PrimaryButton
               label="Tạo thực đơn 7 ngày của riêng bạn"
               icon={<CalendarDays size={16} color={colors.primaryForeground} />}
-              onPress={() => notifyComingSoon('Thực đơn tuần')}
-            />
+              />
+            </Link>
           </View>
         </View>
       </View>
