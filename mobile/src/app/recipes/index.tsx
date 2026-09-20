@@ -216,7 +216,7 @@ export default function RecipesScreen() {
               label="Hỏi AI thay thế nguyên liệu"
               icon={<Sparkles size={16} color={colors.primaryForeground} />}
               onPress={() => notifyComingSoon('Trợ lý AI dinh dưỡng')}
-            />
+              />
           </View>
         </View>
 

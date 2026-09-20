@@ -8,14 +8,7 @@ import { SiteFooter } from './site-footer';
  * đồng bộ `frontend/src/app/(site)/layout.tsx`. Dùng cho mọi trang chính
  * (Trang chủ, Khám phá món, Cẩm nang...).
  */
-export function SiteScreen({
-  children,
-  fab,
-}: {
-  children: React.ReactNode;
-  /** Nút nổi (vd "Hỏi AI nhanh") — định vị tuyệt đối, nằm ngoài vùng cuộn. */
-  fab?: React.ReactNode;
-}) {
+export function SiteScreen({ children }: { children: React.ReactNode }) {
   return (
     <View className="flex-1 bg-background">
       <SiteHeader />
@@ -23,7 +16,6 @@ export function SiteScreen({
         {children}
         <SiteFooter />
       </ScrollView>
-      {fab}
     </View>
   );
 }

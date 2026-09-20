@@ -33,7 +33,13 @@
           "imageWidth": 76
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Cho phép VeggieConnect truy cập vị trí để tìm quán chay gần bạn."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

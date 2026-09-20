@@ -1,4 +1,4 @@
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 import { Link, type Href } from 'expo-router';
 import {
   ArrowRight,
@@ -41,15 +41,7 @@ export default function HomeScreen() {
   const recipes = recipesPagination?.items ?? [];
 
   return (
-    <SiteScreen
-      fab={
-        <Pressable
-          onPress={() => notifyComingSoon('Trợ lý AI dinh dưỡng')}
-          className="absolute bottom-5 right-5 flex-row items-center gap-2 rounded-full bg-primary px-4 py-3 shadow-lg">
-          <Sparkles size={16} color={colors.primaryForeground} />
-          <Text className="text-sm font-semibold text-primary-foreground">Hỏi AI nhanh</Text>
-        </Pressable>
-      }>
+    <SiteScreen>
       {/* Hero */}
       <View className="px-5 pt-4">
         <View className="flex-row items-center gap-1.5 self-start rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5">
@@ -72,7 +64,7 @@ export default function HomeScreen() {
         </Text>
 
         <View className="mt-5 gap-2.5">
-          <Link href="/recipes" asChild>
+          <Link href={'/recipes' as Href} asChild>
             <PrimaryButton
               label="Tìm công thức ngay"
               icon={<UtensilsCrossed size={16} color={colors.primaryForeground} />}
@@ -83,7 +75,7 @@ export default function HomeScreen() {
             variant="outline"
             icon={<Sparkles size={16} color={colors.cta} />}
             onPress={() => notifyComingSoon('Trợ lý AI dinh dưỡng')}
-          />
+            />
         </View>
 
         <View className="mt-4 flex-row flex-wrap items-center gap-x-3 gap-y-1">
@@ -172,7 +164,7 @@ export default function HomeScreen() {
               label="Hỏi bất kỳ nguyên liệu hoặc mục tiêu..."
               variant="outline"
               icon={<ArrowRight size={15} color={colors.foreground} />}
-              onPress={() => notifyComingSoon('Trợ lý AI dinh dưỡng')}
+            onPress={() => notifyComingSoon('Trợ lý AI dinh dưỡng')}
             />
           </View>
         </View>

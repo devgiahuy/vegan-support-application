@@ -167,3 +167,10 @@ export enum NutritionDataQuality {
   PARTIAL = 'PARTIAL',
   UNAVAILABLE = 'UNAVAILABLE',
 }
+
+
+/** Trạng thái quán chay (hiển thị công khai / chờ duyệt). */
+export enum RestaurantStatus {
+  PENDING = 'PENDING',
+  PUBLISHED = 'PUBLISHED',
+}
