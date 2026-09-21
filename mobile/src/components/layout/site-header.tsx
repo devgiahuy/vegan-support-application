@@ -1,25 +1,26 @@
-import * as React from 'react';
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link, usePathname } from 'expo-router';
+import { Link, type Href, usePathname } from 'expo-router';
 import { LogIn, Search, Sparkles } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
 import { useAuthStore } from '@/store/useAuthStore';
 import { ThemeToggle } from './theme-toggle';
+import { BrandLogo } from './brand-logo';
 
 interface NavItem {
   label: string;
-  href: '/' | '/recipes' | '/articles' | null;
+  href: '/' | '/recipes' | '/articles' | '/assistant' | '/meal-plans' | '/restaurants' | null;
 }
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Trang chủ', href: '/' },
   { label: 'Khám phá món', href: '/recipes' },
   { label: 'Cẩm nang', href: '/articles' },
+  { label: 'AI Chat', href: '/assistant' },
   { label: 'Video nấu ăn', href: null },
-  { label: 'Thực đơn tuần', href: null },
-  { label: 'Bản đồ quán', href: null },
+  { label: 'Thực đơn tuần', href: '/meal-plans' },
+  { label: 'Bản đồ quán', href: '/restaurants' },
 ];
 
 function notifyComingSoon(feature: string) {
@@ -37,8 +38,8 @@ export function SiteHeader() {
     <SafeAreaView edges={['top']} className="border-b border-border bg-background">
       <View className="flex-row items-center gap-2 px-4 py-2.5">
         <Link href="/" asChild>
-          <Pressable>
-            <Text className="text-base font-bold text-primary">VeggieConnect</Text>
+          <Pressable accessibilityLabel="VeggieConnect Trang chủ">
+            <BrandLogo variant="horizontal" height={24} />
           </Pressable>
         </Link>
 
@@ -48,11 +49,11 @@ export function SiteHeader() {
             className="h-9 w-9 items-center justify-center rounded-full bg-muted">
             <Search size={15} color={colors.foreground} />
           </Pressable>
-          <Pressable
-            onPress={() => notifyComingSoon('Trợ lý AI dinh dưỡng')}
-            className="h-9 w-9 items-center justify-center rounded-full bg-cta/15">
-            <Sparkles size={15} color={colors.cta} />
-          </Pressable>
+          <Link href={'/assistant' as Href} asChild>
+            <Pressable className="h-9 w-9 items-center justify-center rounded-full bg-cta/15">
+              <Sparkles size={15} color={colors.cta} />
+            </Pressable>
+          </Link>
           <ThemeToggle />
           {isAuthenticated && user ? (
             <Link href="/profile" asChild>
@@ -71,10 +72,7 @@ export function SiteHeader() {
         </View>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerClassName="gap-1.5 px-4 pb-2.5">
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-1.5 px-4 pb-2.5">
         {NAV_ITEMS.map((item) => {
           const active = item.href !== null && isActive(item.href);
           const pill = (
@@ -98,7 +96,7 @@ export function SiteHeader() {
           }
 
           return (
-            <Link key={item.label} href={item.href} asChild>
+            <Link key={item.label} href={item.href as Href} asChild>
               <Pressable>{pill}</Pressable>
             </Link>
           );

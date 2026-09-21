@@ -146,3 +146,55 @@ export enum VideoSource {
   CLOUDINARY = 'CLOUDINARY',
   YOUTUBE = 'YOUTUBE',
 }
+
+/** Mục tiêu tạo thực đơn tuần. */
+export enum MealPlanGoal {
+  MAINTAIN = 'MAINTAIN',
+  LOSE = 'LOSE',
+  GAIN = 'GAIN',
+}
+
+/** Bữa trong ngày của meal planner. */
+export enum MealType {
+  BREAKFAST = 'BREAKFAST',
+  LUNCH = 'LUNCH',
+  DINNER = 'DINNER',
+}
+
+/** Chất lượng dữ liệu dinh dưỡng backend trả về cho thực đơn. */
+export enum NutritionDataQuality {
+  COMPLETE = 'COMPLETE',
+  PARTIAL = 'PARTIAL',
+  UNAVAILABLE = 'UNAVAILABLE',
+}
+
+/** Chủ sở hữu phiên chat AI. */
+export enum ChatOwnerType {
+  AUTHENTICATED = 'AUTHENTICATED',
+  GUEST = 'GUEST',
+}
+
+/** Vai trò tin nhắn trong phiên chat. */
+export enum ChatRole {
+  USER = 'USER',
+  ASSISTANT = 'ASSISTANT',
+}
+
+/** Trạng thái tin nhắn theo OpenAPI AI Chat. */
+export enum ChatMessageStatus {
+  PENDING = 'PENDING',
+  COMPLETED = 'COMPLETED',
+  FAILED = 'FAILED',
+}
+
+/** Feedback cho câu trả lời assistant. */
+export enum FeedbackValue {
+  UP = 'UP',
+  DOWN = 'DOWN',
+}
+
+/** Trạng thái quán chay (hiển thị công khai / chờ duyệt). */
+export enum RestaurantStatus {
+  PENDING = 'PENDING',
+  PUBLISHED = 'PUBLISHED',
+}

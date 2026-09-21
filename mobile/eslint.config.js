@@ -5,4 +5,9 @@ module.exports = [
   {
     ignores: ['dist/*'],
   },
+  {
+    rules: {
+      'import/no-unresolved': ['error', { ignore: ['^expo-location$'] }],
+    },
+  },
 ];

@@ -48,6 +48,7 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
   toModel(dto: RecipeDetailDto | null | undefined): Recipe {
     const status = parsePostStatus(safeString(pickField(dto, ['status'], 'DRAFT')));
     const revision = pickField<PostRevisionDto | null>(dto, ['revision'], null);
+    const body = safeString(revision?.body);
     const detail = pickField<RecipeDetailDto['recipe']>(dto, ['recipe'], null);
 
     const rawDiff = safeString(detail?.difficulty, 'EASY');
@@ -127,6 +128,7 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       mealPlannerEligible: safeBoolean(detail?.mealPlannerEligible, false),
       nutrition,
       ingredients,
+      body,
       publishedAt,
       formattedPublishedAt: formatDate(publishedAt),
       description: safeString(revision?.excerpt, ''),
