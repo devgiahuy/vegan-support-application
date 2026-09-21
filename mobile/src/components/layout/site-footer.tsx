@@ -6,7 +6,7 @@ import { BrandLogo } from './brand-logo';
 
 interface FooterLink {
   label: string;
-  href: '/' | '/recipes' | '/articles' | '/meal-plans' | '/restaurants' | null;
+  href: '/' | '/recipes' | '/articles' | '/assistant' | '/meal-plans' | '/restaurants' | null;
 }
 
 const COLUMNS: { title: string; links: FooterLink[] }[] = [
@@ -18,7 +18,7 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
       { label: 'Bản đồ quán chay', href: '/restaurants' },
       { label: 'Video hướng dẫn nấu', href: null },
       { label: 'Thực đơn 7 ngày', href: '/meal-plans' },
-      { label: 'Trợ lý AI dinh dưỡng', href: null },
+      { label: 'Trợ lý AI dinh dưỡng', href: '/assistant' },
     ],
   },
   {
