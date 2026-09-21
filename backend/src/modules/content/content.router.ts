@@ -14,7 +14,6 @@ import {
   postListQuerySchema,
   relatedPostsQuerySchema,
   updatePostRequestSchema,
-  uploadSignatureRequestSchema,
 } from './content.schemas.js';
 
 export function createPostsRouter(
@@ -60,20 +59,6 @@ export function createPostsRouter(
     validateParams(postIdParamsSchema),
     validateQuery(deletePostQuerySchema),
     controller.deletePost,
-  );
-  return router;
-}
-
-export function createUploadsRouter(
-  controller: ContentController,
-  authentication: AuthenticationMiddleware,
-): Router {
-  const router = Router();
-  router.post(
-    '/signature',
-    authentication.authenticate,
-    validateBody(uploadSignatureRequestSchema),
-    controller.createUploadSignature,
   );
   return router;
 }

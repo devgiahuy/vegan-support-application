@@ -10,7 +10,6 @@ import {
   postListResponseSchema,
   postResponseSchema,
   relatedPostsResponseSchema,
-  uploadSignatureResponseSchema,
   type CreatePostInput,
   type DeletePostQuery,
   type PostIdentifierParams,
@@ -18,10 +17,8 @@ import {
   type PostListQuery,
   type RelatedPostsQuery,
   type UpdatePostInput,
-  type UploadSignatureInput,
 } from './content.schemas.js';
 import type { ContentActor, ContentService } from './content.service.js';
-import type { MediaService } from './media.service.js';
 
 function actorFromRequest(request: Request): ContentActor {
   if (request.auth) {
@@ -37,7 +34,6 @@ function actorFromRequest(request: Request): ContentActor {
 export class ContentController {
   constructor(
     private readonly contentService: ContentService,
-    private readonly mediaService: MediaService,
   ) {}
 
   listPosts = async (request: Request, response: Response): Promise<void> => {
@@ -125,12 +121,4 @@ export class ContentController {
     response.status(200).json(deletePostResponseSchema.parse({ success: true, data, meta: null }));
   };
 
-  createUploadSignature = (request: Request, response: Response): void => {
-    const data = this.mediaService.createUploadSignature(
-      getValidatedBody<UploadSignatureInput>(request),
-    );
-    response
-      .status(200)
-      .json(uploadSignatureResponseSchema.parse({ success: true, data, meta: null }));
-  };
 }

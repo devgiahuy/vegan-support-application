@@ -41,13 +41,7 @@ const cloudinaryMediaInputSchema = z
   .object({
     provider: z.literal(MediaProvider.CLOUDINARY),
     kind: z.enum(MediaKind),
-    publicId: z.string().trim().min(1).max(255),
-    secureUrl: z.string().trim().url().max(2_048),
-    mimeType: z.string().trim().min(1).max(100),
-    bytes: z.number().int().positive(),
-    width: z.number().int().positive().optional(),
-    height: z.number().int().positive().optional(),
-    durationSeconds: z.number().positive().max(86_400).optional(),
+    assetId: z.string().uuid(),
   })
   .strict();
 
@@ -265,10 +259,6 @@ export const deletePostQuerySchema = z
   .object({ expectedVersion: z.coerce.number().int().positive() })
   .strict();
 
-export const uploadSignatureRequestSchema = z
-  .object({ resourceType: z.enum(['image', 'video']) })
-  .strict();
-
 const authorSchema = z
   .object({ id: z.string().uuid(), displayName: z.string(), avatarUrl: z.string().nullable() })
   .strict();
@@ -448,27 +438,6 @@ export const deletePostResponseSchema = z
     meta: z.null(),
   })
   .strict();
-export const uploadSignatureResponseSchema = z
-  .object({
-    success: z.literal(true),
-    data: z
-      .object({
-        cloudName: z.string(),
-        apiKey: z.string(),
-        resourceType: z.enum(['image', 'video']),
-        uploadUrl: z.string().url(),
-        timestamp: z.number().int().positive(),
-        signature: z.string(),
-        folder: z.string(),
-        maxBytes: z.number().int().positive(),
-        allowedMimeTypes: z.array(z.string()),
-        expiresAt: z.string().datetime(),
-      })
-      .strict(),
-    meta: z.null(),
-  })
-  .strict();
-
 export type CreatePostInput = z.infer<typeof createPostRequestSchema>;
 export type UpdatePostInput = z.infer<typeof updatePostRequestSchema>;
 export type PostListQuery = z.infer<typeof postListQuerySchema>;
@@ -476,7 +445,6 @@ export type PostIdentifierParams = z.infer<typeof postIdentifierParamsSchema>;
 export type PostIdParams = z.infer<typeof postIdParamsSchema>;
 export type RelatedPostsQuery = z.infer<typeof relatedPostsQuerySchema>;
 export type DeletePostQuery = z.infer<typeof deletePostQuerySchema>;
-export type UploadSignatureInput = z.infer<typeof uploadSignatureRequestSchema>;
 export type MediaInput = z.infer<typeof mediaInputSchema>;
 export type PostOutput = z.infer<typeof postSchema>;
 export type AppliedSearchConstraintsOutput = z.infer<

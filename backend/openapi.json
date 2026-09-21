@@ -90,7 +90,15 @@
     },
     {
       "name": "Uploads",
-      "description": "Safe Cloudinary signed-upload configuration"
+      "description": "Quota-reserved and provider-verified uploads"
+    },
+    {
+      "name": "Storage",
+      "description": "Owned storage usage and durable media deletion"
+    },
+    {
+      "name": "Storage Admin",
+      "description": "Storage policy, account usage, and adjustment audit"
     }
   ],
   "components": {
@@ -3040,46 +3048,15 @@
                             "VIDEO"
                           ]
                         },
-                        "publicId": {
+                        "assetId": {
                           "type": "string",
-                          "minLength": 1,
-                          "maxLength": 255
-                        },
-                        "secureUrl": {
-                          "type": "string",
-                          "maxLength": 2048,
-                          "format": "uri"
-                        },
-                        "mimeType": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 100
-                        },
-                        "bytes": {
-                          "type": "integer",
-                          "exclusiveMinimum": 0
-                        },
-                        "width": {
-                          "type": "integer",
-                          "exclusiveMinimum": 0
-                        },
-                        "height": {
-                          "type": "integer",
-                          "exclusiveMinimum": 0
-                        },
-                        "durationSeconds": {
-                          "type": "number",
-                          "exclusiveMinimum": 0,
-                          "maximum": 86400
+                          "format": "uuid"
                         }
                       },
                       "required": [
                         "provider",
                         "kind",
-                        "publicId",
-                        "secureUrl",
-                        "mimeType",
-                        "bytes"
+                        "assetId"
                       ],
                       "additionalProperties": false
                     },
@@ -3346,46 +3323,15 @@
                             "VIDEO"
                           ]
                         },
-                        "publicId": {
+                        "assetId": {
                           "type": "string",
-                          "minLength": 1,
-                          "maxLength": 255
-                        },
-                        "secureUrl": {
-                          "type": "string",
-                          "maxLength": 2048,
-                          "format": "uri"
-                        },
-                        "mimeType": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 100
-                        },
-                        "bytes": {
-                          "type": "integer",
-                          "exclusiveMinimum": 0
-                        },
-                        "width": {
-                          "type": "integer",
-                          "exclusiveMinimum": 0
-                        },
-                        "height": {
-                          "type": "integer",
-                          "exclusiveMinimum": 0
-                        },
-                        "durationSeconds": {
-                          "type": "number",
-                          "exclusiveMinimum": 0,
-                          "maximum": 86400
+                          "format": "uuid"
                         }
                       },
                       "required": [
                         "provider",
                         "kind",
-                        "publicId",
-                        "secureUrl",
-                        "mimeType",
-                        "bytes"
+                        "assetId"
                       ],
                       "additionalProperties": false
                     },
@@ -3499,46 +3445,15 @@
                             "VIDEO"
                           ]
                         },
-                        "publicId": {
+                        "assetId": {
                           "type": "string",
-                          "minLength": 1,
-                          "maxLength": 255
-                        },
-                        "secureUrl": {
-                          "type": "string",
-                          "maxLength": 2048,
-                          "format": "uri"
-                        },
-                        "mimeType": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 100
-                        },
-                        "bytes": {
-                          "type": "integer",
-                          "exclusiveMinimum": 0
-                        },
-                        "width": {
-                          "type": "integer",
-                          "exclusiveMinimum": 0
-                        },
-                        "height": {
-                          "type": "integer",
-                          "exclusiveMinimum": 0
-                        },
-                        "durationSeconds": {
-                          "type": "number",
-                          "exclusiveMinimum": 0,
-                          "maximum": 86400
+                          "format": "uuid"
                         }
                       },
                       "required": [
                         "provider",
                         "kind",
-                        "publicId",
-                        "secureUrl",
-                        "mimeType",
-                        "bytes"
+                        "assetId"
                       ],
                       "additionalProperties": false
                     },
@@ -3656,46 +3571,15 @@
                             "VIDEO"
                           ]
                         },
-                        "publicId": {
+                        "assetId": {
                           "type": "string",
-                          "minLength": 1,
-                          "maxLength": 255
-                        },
-                        "secureUrl": {
-                          "type": "string",
-                          "maxLength": 2048,
-                          "format": "uri"
-                        },
-                        "mimeType": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 100
-                        },
-                        "bytes": {
-                          "type": "integer",
-                          "exclusiveMinimum": 0
-                        },
-                        "width": {
-                          "type": "integer",
-                          "exclusiveMinimum": 0
-                        },
-                        "height": {
-                          "type": "integer",
-                          "exclusiveMinimum": 0
-                        },
-                        "durationSeconds": {
-                          "type": "number",
-                          "exclusiveMinimum": 0,
-                          "maximum": 86400
+                          "format": "uuid"
                         }
                       },
                       "required": [
                         "provider",
                         "kind",
-                        "publicId",
-                        "secureUrl",
-                        "mimeType",
-                        "bytes"
+                        "assetId"
                       ],
                       "additionalProperties": false
                     },
@@ -3967,46 +3851,15 @@
                             "VIDEO"
                           ]
                         },
-                        "publicId": {
+                        "assetId": {
                           "type": "string",
-                          "minLength": 1,
-                          "maxLength": 255
-                        },
-                        "secureUrl": {
-                          "type": "string",
-                          "maxLength": 2048,
-                          "format": "uri"
-                        },
-                        "mimeType": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 100
-                        },
-                        "bytes": {
-                          "type": "integer",
-                          "exclusiveMinimum": 0
-                        },
-                        "width": {
-                          "type": "integer",
-                          "exclusiveMinimum": 0
-                        },
-                        "height": {
-                          "type": "integer",
-                          "exclusiveMinimum": 0
-                        },
-                        "durationSeconds": {
-                          "type": "number",
-                          "exclusiveMinimum": 0,
-                          "maximum": 86400
+                          "format": "uuid"
                         }
                       },
                       "required": [
                         "provider",
                         "kind",
-                        "publicId",
-                        "secureUrl",
-                        "mimeType",
-                        "bytes"
+                        "assetId"
                       ],
                       "additionalProperties": false
                     },
@@ -4125,46 +3978,15 @@
                             "VIDEO"
                           ]
                         },
-                        "publicId": {
+                        "assetId": {
                           "type": "string",
-                          "minLength": 1,
-                          "maxLength": 255
-                        },
-                        "secureUrl": {
-                          "type": "string",
-                          "maxLength": 2048,
-                          "format": "uri"
-                        },
-                        "mimeType": {
-                          "type": "string",
-                          "minLength": 1,
-                          "maxLength": 100
-                        },
-                        "bytes": {
-                          "type": "integer",
-                          "exclusiveMinimum": 0
-                        },
-                        "width": {
-                          "type": "integer",
-                          "exclusiveMinimum": 0
-                        },
-                        "height": {
-                          "type": "integer",
-                          "exclusiveMinimum": 0
-                        },
-                        "durationSeconds": {
-                          "type": "number",
-                          "exclusiveMinimum": 0,
-                          "maximum": 86400
+                          "format": "uuid"
                         }
                       },
                       "required": [
                         "provider",
                         "kind",
-                        "publicId",
-                        "secureUrl",
-                        "mimeType",
-                        "bytes"
+                        "assetId"
                       ],
                       "additionalProperties": false
                     },
@@ -7801,101 +7623,6 @@
             "required": [
               "id",
               "status"
-            ],
-            "additionalProperties": false
-          },
-          "meta": {
-            "type": "null"
-          }
-        },
-        "required": [
-          "success",
-          "data",
-          "meta"
-        ],
-        "additionalProperties": false
-      },
-      "UploadSignatureRequest": {
-        "type": "object",
-        "properties": {
-          "resourceType": {
-            "type": "string",
-            "enum": [
-              "image",
-              "video"
-            ]
-          }
-        },
-        "required": [
-          "resourceType"
-        ],
-        "additionalProperties": false
-      },
-      "UploadSignatureResponse": {
-        "type": "object",
-        "properties": {
-          "success": {
-            "type": "boolean",
-            "enum": [
-              true
-            ]
-          },
-          "data": {
-            "type": "object",
-            "properties": {
-              "cloudName": {
-                "type": "string"
-              },
-              "apiKey": {
-                "type": "string"
-              },
-              "resourceType": {
-                "type": "string",
-                "enum": [
-                  "image",
-                  "video"
-                ]
-              },
-              "uploadUrl": {
-                "type": "string",
-                "format": "uri"
-              },
-              "timestamp": {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              },
-              "signature": {
-                "type": "string"
-              },
-              "folder": {
-                "type": "string"
-              },
-              "maxBytes": {
-                "type": "integer",
-                "exclusiveMinimum": 0
-              },
-              "allowedMimeTypes": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "expiresAt": {
-                "type": "string",
-                "format": "date-time"
-              }
-            },
-            "required": [
-              "cloudName",
-              "apiKey",
-              "resourceType",
-              "uploadUrl",
-              "timestamp",
-              "signature",
-              "folder",
-              "maxBytes",
-              "allowedMimeTypes",
-              "expiresAt"
             ],
             "additionalProperties": false
           },
@@ -14211,6 +13938,1669 @@
           "meta"
         ],
         "additionalProperties": false
+      },
+      "StorageUsageResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "usage": {
+                "type": "object",
+                "properties": {
+                  "usedBytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "reservedBytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "limitBytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "remainingBytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "overQuota": {
+                    "type": "boolean"
+                  },
+                  "warningPercent": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  }
+                },
+                "required": [
+                  "usedBytes",
+                  "reservedBytes",
+                  "limitBytes",
+                  "remainingBytes",
+                  "overQuota",
+                  "warningPercent"
+                ],
+                "additionalProperties": false
+              },
+              "policy": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "code": {
+                    "type": "string"
+                  },
+                  "name": {
+                    "type": "string"
+                  },
+                  "quotaBytes": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "reservationTtlSeconds": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "warningPercent": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  },
+                  "active": {
+                    "type": "boolean"
+                  },
+                  "isDefault": {
+                    "type": "boolean"
+                  },
+                  "version": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "id",
+                  "code",
+                  "name",
+                  "quotaBytes",
+                  "reservationTtlSeconds",
+                  "warningPercent",
+                  "active",
+                  "isDefault",
+                  "version",
+                  "updatedAt"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "usage",
+              "policy"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "CreateUploadReservationRequest": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "COVER_IMAGE",
+              "VIDEO"
+            ]
+          },
+          "mimeType": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+          },
+          "extension": {
+            "type": "string",
+            "pattern": "^\\.[a-z0-9]{2,10}$"
+          },
+          "bytes": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 250000000
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "kind",
+          "mimeType",
+          "extension",
+          "bytes",
+          "idempotencyKey"
+        ],
+        "additionalProperties": false
+      },
+      "CreateUploadReservationResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "reservation": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "RESERVED",
+                      "COMMITTED",
+                      "RELEASED",
+                      "EXPIRED"
+                    ]
+                  },
+                  "resourceType": {
+                    "type": "string",
+                    "enum": [
+                      "IMAGE",
+                      "VIDEO"
+                    ]
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "COVER_IMAGE",
+                      "VIDEO"
+                    ]
+                  },
+                  "declaredMimeType": {
+                    "type": "string"
+                  },
+                  "declaredExtension": {
+                    "type": "string"
+                  },
+                  "declaredBytes": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "actualBytes": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "exclusiveMinimum": 0
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "committedAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "releasedAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "asset": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "provider": {
+                        "type": "string",
+                        "enum": [
+                          "CLOUDINARY"
+                        ]
+                      },
+                      "resourceType": {
+                        "type": "string",
+                        "enum": [
+                          "IMAGE",
+                          "VIDEO"
+                        ]
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "COVER_IMAGE",
+                          "VIDEO"
+                        ]
+                      },
+                      "publicId": {
+                        "type": "string"
+                      },
+                      "secureUrl": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "mimeType": {
+                        "type": "string"
+                      },
+                      "extension": {
+                        "type": "string"
+                      },
+                      "bytes": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "width": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "exclusiveMinimum": 0
+                      },
+                      "height": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "exclusiveMinimum": 0
+                      },
+                      "durationSeconds": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "exclusiveMinimum": 0
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "ACTIVE",
+                          "DELETING",
+                          "DELETED",
+                          "PROVIDER_MISSING"
+                        ]
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "deletedAt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "provider",
+                      "resourceType",
+                      "kind",
+                      "publicId",
+                      "secureUrl",
+                      "mimeType",
+                      "extension",
+                      "bytes",
+                      "width",
+                      "height",
+                      "durationSeconds",
+                      "status",
+                      "createdAt",
+                      "deletedAt"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "id",
+                  "status",
+                  "resourceType",
+                  "kind",
+                  "declaredMimeType",
+                  "declaredExtension",
+                  "declaredBytes",
+                  "actualBytes",
+                  "expiresAt",
+                  "committedAt",
+                  "releasedAt",
+                  "asset"
+                ],
+                "additionalProperties": false
+              },
+              "usage": {
+                "type": "object",
+                "properties": {
+                  "usedBytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "reservedBytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "limitBytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "remainingBytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "overQuota": {
+                    "type": "boolean"
+                  },
+                  "warningPercent": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  }
+                },
+                "required": [
+                  "usedBytes",
+                  "reservedBytes",
+                  "limitBytes",
+                  "remainingBytes",
+                  "overQuota",
+                  "warningPercent"
+                ],
+                "additionalProperties": false
+              },
+              "upload": {
+                "type": "object",
+                "properties": {
+                  "cloudName": {
+                    "type": "string"
+                  },
+                  "apiKey": {
+                    "type": "string"
+                  },
+                  "resourceType": {
+                    "type": "string",
+                    "enum": [
+                      "image",
+                      "video"
+                    ]
+                  },
+                  "uploadUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "timestamp": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "signature": {
+                    "type": "string"
+                  },
+                  "folder": {
+                    "type": "string"
+                  },
+                  "maxBytes": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "allowedMimeTypes": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "cloudName",
+                  "apiKey",
+                  "resourceType",
+                  "uploadUrl",
+                  "timestamp",
+                  "signature",
+                  "folder",
+                  "maxBytes",
+                  "allowedMimeTypes",
+                  "expiresAt"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "reservation",
+              "usage",
+              "upload"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "CommitUploadReservationRequest": {
+        "type": "object",
+        "properties": {
+          "publicId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "version": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "signature": {
+            "type": "string",
+            "pattern": "^[a-f0-9]{40}$/i"
+          }
+        },
+        "required": [
+          "publicId",
+          "version",
+          "signature"
+        ],
+        "additionalProperties": false
+      },
+      "UploadReservationResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "reservation": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "RESERVED",
+                      "COMMITTED",
+                      "RELEASED",
+                      "EXPIRED"
+                    ]
+                  },
+                  "resourceType": {
+                    "type": "string",
+                    "enum": [
+                      "IMAGE",
+                      "VIDEO"
+                    ]
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "COVER_IMAGE",
+                      "VIDEO"
+                    ]
+                  },
+                  "declaredMimeType": {
+                    "type": "string"
+                  },
+                  "declaredExtension": {
+                    "type": "string"
+                  },
+                  "declaredBytes": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "actualBytes": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "exclusiveMinimum": 0
+                  },
+                  "expiresAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "committedAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "releasedAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "asset": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "provider": {
+                        "type": "string",
+                        "enum": [
+                          "CLOUDINARY"
+                        ]
+                      },
+                      "resourceType": {
+                        "type": "string",
+                        "enum": [
+                          "IMAGE",
+                          "VIDEO"
+                        ]
+                      },
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "COVER_IMAGE",
+                          "VIDEO"
+                        ]
+                      },
+                      "publicId": {
+                        "type": "string"
+                      },
+                      "secureUrl": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "mimeType": {
+                        "type": "string"
+                      },
+                      "extension": {
+                        "type": "string"
+                      },
+                      "bytes": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "width": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "exclusiveMinimum": 0
+                      },
+                      "height": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "exclusiveMinimum": 0
+                      },
+                      "durationSeconds": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "exclusiveMinimum": 0
+                      },
+                      "status": {
+                        "type": "string",
+                        "enum": [
+                          "ACTIVE",
+                          "DELETING",
+                          "DELETED",
+                          "PROVIDER_MISSING"
+                        ]
+                      },
+                      "createdAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      },
+                      "deletedAt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "provider",
+                      "resourceType",
+                      "kind",
+                      "publicId",
+                      "secureUrl",
+                      "mimeType",
+                      "extension",
+                      "bytes",
+                      "width",
+                      "height",
+                      "durationSeconds",
+                      "status",
+                      "createdAt",
+                      "deletedAt"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "id",
+                  "status",
+                  "resourceType",
+                  "kind",
+                  "declaredMimeType",
+                  "declaredExtension",
+                  "declaredBytes",
+                  "actualBytes",
+                  "expiresAt",
+                  "committedAt",
+                  "releasedAt",
+                  "asset"
+                ],
+                "additionalProperties": false
+              },
+              "usage": {
+                "type": "object",
+                "properties": {
+                  "usedBytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "reservedBytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "limitBytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "remainingBytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "overQuota": {
+                    "type": "boolean"
+                  },
+                  "warningPercent": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  }
+                },
+                "required": [
+                  "usedBytes",
+                  "reservedBytes",
+                  "limitBytes",
+                  "remainingBytes",
+                  "overQuota",
+                  "warningPercent"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "reservation",
+              "usage"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "DeleteMediaAssetRequest": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "idempotencyKey"
+        ],
+        "additionalProperties": false
+      },
+      "StorageAssetResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "asset": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "provider": {
+                    "type": "string",
+                    "enum": [
+                      "CLOUDINARY"
+                    ]
+                  },
+                  "resourceType": {
+                    "type": "string",
+                    "enum": [
+                      "IMAGE",
+                      "VIDEO"
+                    ]
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "COVER_IMAGE",
+                      "VIDEO"
+                    ]
+                  },
+                  "publicId": {
+                    "type": "string"
+                  },
+                  "secureUrl": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "mimeType": {
+                    "type": "string"
+                  },
+                  "extension": {
+                    "type": "string"
+                  },
+                  "bytes": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "width": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "exclusiveMinimum": 0
+                  },
+                  "height": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "exclusiveMinimum": 0
+                  },
+                  "durationSeconds": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "exclusiveMinimum": 0
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "ACTIVE",
+                      "DELETING",
+                      "DELETED",
+                      "PROVIDER_MISSING"
+                    ]
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "deletedAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "id",
+                  "provider",
+                  "resourceType",
+                  "kind",
+                  "publicId",
+                  "secureUrl",
+                  "mimeType",
+                  "extension",
+                  "bytes",
+                  "width",
+                  "height",
+                  "durationSeconds",
+                  "status",
+                  "createdAt",
+                  "deletedAt"
+                ],
+                "additionalProperties": false
+              },
+              "usage": {
+                "type": "object",
+                "properties": {
+                  "usedBytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "reservedBytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "limitBytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "remainingBytes": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "overQuota": {
+                    "type": "boolean"
+                  },
+                  "warningPercent": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100
+                  }
+                },
+                "required": [
+                  "usedBytes",
+                  "reservedBytes",
+                  "limitBytes",
+                  "remainingBytes",
+                  "overQuota",
+                  "warningPercent"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "asset",
+              "usage"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "StorageAccountListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "user": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "email": {
+                      "type": "string",
+                      "format": "email"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "email",
+                    "displayName"
+                  ]
+                },
+                "policy": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "code": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "quotaBytes": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "reservationTtlSeconds": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "warningPercent": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    },
+                    "active": {
+                      "type": "boolean"
+                    },
+                    "isDefault": {
+                      "type": "boolean"
+                    },
+                    "version": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "updatedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "code",
+                    "name",
+                    "quotaBytes",
+                    "reservationTtlSeconds",
+                    "warningPercent",
+                    "active",
+                    "isDefault",
+                    "version",
+                    "updatedAt"
+                  ],
+                  "additionalProperties": false
+                },
+                "usage": {
+                  "type": "object",
+                  "properties": {
+                    "usedBytes": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "reservedBytes": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "limitBytes": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "remainingBytes": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "overQuota": {
+                      "type": "boolean"
+                    },
+                    "warningPercent": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 100
+                    }
+                  },
+                  "required": [
+                    "usedBytes",
+                    "reservedBytes",
+                    "limitBytes",
+                    "remainingBytes",
+                    "overQuota",
+                    "warningPercent"
+                  ],
+                  "additionalProperties": false
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "user",
+                "policy",
+                "usage",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "StoragePolicyListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "code": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "quotaBytes": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "reservationTtlSeconds": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "warningPercent": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100
+                },
+                "active": {
+                  "type": "boolean"
+                },
+                "isDefault": {
+                  "type": "boolean"
+                },
+                "version": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "code",
+                "name",
+                "quotaBytes",
+                "reservationTtlSeconds",
+                "warningPercent",
+                "active",
+                "isDefault",
+                "version",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateStoragePolicyRequest": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "quotaBytes": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 10000000000000
+          },
+          "reservationTtlSeconds": {
+            "type": "integer",
+            "minimum": 60,
+            "maximum": 86400
+          },
+          "warningPercent": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "active": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ],
+        "additionalProperties": false
+      },
+      "StoragePolicyResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "code": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "quotaBytes": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "reservationTtlSeconds": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "warningPercent": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              },
+              "active": {
+                "type": "boolean"
+              },
+              "isDefault": {
+                "type": "boolean"
+              },
+              "version": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "code",
+              "name",
+              "quotaBytes",
+              "reservationTtlSeconds",
+              "warningPercent",
+              "active",
+              "isDefault",
+              "version",
+              "updatedAt"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "CreateStorageAdjustmentRequest": {
+        "type": "object",
+        "properties": {
+          "deltaBytes": {
+            "type": "integer",
+            "minimum": -10000000000000,
+            "maximum": 10000000000000
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 1000
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "deltaBytes",
+          "reason",
+          "idempotencyKey"
+        ],
+        "additionalProperties": false
+      },
+      "StorageAdjustmentResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "adjustment": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "userId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "actorId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "deltaBytes": {
+                    "type": "integer"
+                  },
+                  "beforeBytes": {
+                    "type": "integer"
+                  },
+                  "afterBytes": {
+                    "type": "integer"
+                  },
+                  "reason": {
+                    "type": "string"
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "id",
+                  "userId",
+                  "actorId",
+                  "deltaBytes",
+                  "beforeBytes",
+                  "afterBytes",
+                  "reason",
+                  "createdAt"
+                ],
+                "additionalProperties": false
+              },
+              "account": {
+                "type": "object",
+                "properties": {
+                  "user": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "email": {
+                        "type": "string",
+                        "format": "email"
+                      },
+                      "displayName": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "email",
+                      "displayName"
+                    ]
+                  },
+                  "policy": {
+                    "type": "object",
+                    "properties": {
+                      "id": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "code": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "quotaBytes": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "reservationTtlSeconds": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "warningPercent": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100
+                      },
+                      "active": {
+                        "type": "boolean"
+                      },
+                      "isDefault": {
+                        "type": "boolean"
+                      },
+                      "version": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "updatedAt": {
+                        "type": "string",
+                        "format": "date-time"
+                      }
+                    },
+                    "required": [
+                      "id",
+                      "code",
+                      "name",
+                      "quotaBytes",
+                      "reservationTtlSeconds",
+                      "warningPercent",
+                      "active",
+                      "isDefault",
+                      "version",
+                      "updatedAt"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "usage": {
+                    "type": "object",
+                    "properties": {
+                      "usedBytes": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "reservedBytes": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "limitBytes": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "remainingBytes": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "overQuota": {
+                        "type": "boolean"
+                      },
+                      "warningPercent": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 100
+                      }
+                    },
+                    "required": [
+                      "usedBytes",
+                      "reservedBytes",
+                      "limitBytes",
+                      "remainingBytes",
+                      "overQuota",
+                      "warningPercent"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "user",
+                  "policy",
+                  "usage",
+                  "updatedAt"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "adjustment",
+              "account"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "StorageAdjustmentListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "userId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "actorId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "deltaBytes": {
+                  "type": "integer"
+                },
+                "beforeBytes": {
+                  "type": "integer"
+                },
+                "afterBytes": {
+                  "type": "integer"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "userId",
+                "actorId",
+                "deltaBytes",
+                "beforeBytes",
+                "afterBytes",
+                "reason",
+                "createdAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
       }
     },
     "parameters": {}
@@ -19868,133 +21258,6 @@
                       "error": {
                         "code": "CONTENT_VERSION_CONFLICT",
                         "message": "Optimistic version conflict",
-                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
-                      }
-                    }
-                  }
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "423": {
-            "description": "Tài khoản LOCKED không được thực hiện mutation",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                },
-                "example": {
-                  "success": false,
-                  "error": {
-                    "code": "ACCOUNT_LOCKED",
-                    "message": "Tài khoản đang bị khóa",
-                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/uploads/signature": {
-      "post": {
-        "tags": [
-          "Uploads"
-        ],
-        "summary": "Tạo Cloudinary signed-upload parameters",
-        "description": "Trả cloud name, API key, folder, timestamp và SHA-1 signature có thời hạn; không bao giờ trả API secret. Client phải gửi đúng folder/timestamp đã được ký.",
-        "operationId": "createUploadSignature",
-        "security": [
-          {
-            "BearerAuth": []
-          },
-          {
-            "AccessTokenCookie": []
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "example": {
-                "resourceType": "image"
-              },
-              "schema": {
-                "$ref": "#/components/schemas/UploadSignatureRequest"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Signed upload configuration và MIME/size limits",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UploadSignatureResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Resource type không hợp lệ",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "VALIDATION_ERROR": {
-                    "value": {
-                      "success": false,
-                      "error": {
-                        "code": "VALIDATION_ERROR",
-                        "message": "Resource type không hợp lệ",
-                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
-                      }
-                    }
-                  }
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Yêu cầu đăng nhập",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "AUTH_REQUIRED": {
-                    "value": {
-                      "success": false,
-                      "error": {
-                        "code": "AUTH_REQUIRED",
-                        "message": "Yêu cầu đăng nhập",
-                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
-                      }
-                    }
-                  }
-                },
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Tài khoản bị cấm",
-            "content": {
-              "application/json": {
-                "examples": {
-                  "ACCOUNT_BANNED": {
-                    "value": {
-                      "success": false,
-                      "error": {
-                        "code": "ACCOUNT_BANNED",
-                        "message": "Tài khoản bị cấm",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -33921,6 +35184,2042 @@
                       "error": {
                         "code": "NOT_FOUND",
                         "message": "Khong tim thay recipe co the truy cap",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/storage/me": {
+      "get": {
+        "tags": [
+          "Storage"
+        ],
+        "summary": "Đọc usage và quota của current user",
+        "operationId": "getMyStorageUsage",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Used, reserved, limit và remaining bytes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageUsageResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản không có quyền hoặc đã bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Tài khoản không có quyền hoặc đã bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản không có quyền hoặc đã bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/uploads/reservations": {
+      "post": {
+        "tags": [
+          "Uploads"
+        ],
+        "summary": "Reserve quota và cấp cấu hình signed upload",
+        "description": "Atomically reserves declared bytes before Cloudinary upload. Reusing the same idempotencyKey and payload replays the reservation; a different payload conflicts.",
+        "operationId": "createUploadReservation",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUploadReservationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Reserved quota and signed Cloudinary upload configuration",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateUploadReservationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Upload declaration không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Upload declaration không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_UPLOAD": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_UPLOAD",
+                        "message": "Upload declaration không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản không có quyền hoặc đã bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Tài khoản không có quyền hoặc đã bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản không có quyền hoặc đã bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Quota hoặc idempotency conflict",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "STORAGE_QUOTA_EXCEEDED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STORAGE_QUOTA_EXCEEDED",
+                        "message": "Quota hoặc idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "UPLOAD_IDEMPOTENCY_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "UPLOAD_IDEMPOTENCY_CONFLICT",
+                        "message": "Quota hoặc idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "UPLOAD_RESERVATION_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "UPLOAD_RESERVATION_CONFLICT",
+                        "message": "Quota hoặc idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Reservation retry đã hết hạn",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "UPLOAD_RESERVATION_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "UPLOAD_RESERVATION_EXPIRED",
+                        "message": "Reservation retry đã hết hạn",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/uploads/reservations/{id}/commit": {
+      "post": {
+        "tags": [
+          "Uploads"
+        ],
+        "summary": "Verify provider và commit actual bytes",
+        "description": "Validates Cloudinary response signature, fetches authoritative provider metadata, checks declared MIME/extension/per-file limit, then atomically moves reserved bytes to committed usage.",
+        "operationId": "commitUploadReservation",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommitUploadReservationRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Committed asset or idempotent replay",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadReservationResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Commit payload không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Commit payload không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_UPLOAD": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_UPLOAD",
+                        "message": "Commit payload không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản không có quyền hoặc đã bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Tài khoản không có quyền hoặc đã bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản không có quyền hoặc đã bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Reservation không thuộc current user",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Reservation không thuộc current user",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Quota hoặc reservation conflict",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "STORAGE_QUOTA_EXCEEDED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STORAGE_QUOTA_EXCEEDED",
+                        "message": "Quota hoặc reservation conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "UPLOAD_IDEMPOTENCY_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "UPLOAD_IDEMPOTENCY_CONFLICT",
+                        "message": "Quota hoặc reservation conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "UPLOAD_RESERVATION_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "UPLOAD_RESERVATION_CONFLICT",
+                        "message": "Quota hoặc reservation conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Reservation hết hạn",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "UPLOAD_RESERVATION_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "UPLOAD_RESERVATION_EXPIRED",
+                        "message": "Reservation hết hạn",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Provider metadata không khớp declaration",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "UPLOAD_PROVIDER_MISMATCH": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "UPLOAD_PROVIDER_MISMATCH",
+                        "message": "Provider metadata không khớp declaration",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Không thể xác minh với provider",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "UPLOAD_PROVIDER_UNAVAILABLE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "UPLOAD_PROVIDER_UNAVAILABLE",
+                        "message": "Không thể xác minh với provider",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/uploads/reservations/{id}": {
+      "delete": {
+        "tags": [
+          "Uploads"
+        ],
+        "summary": "Release reservation chưa commit",
+        "operationId": "releaseUploadReservation",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Released, expired, or idempotent terminal reservation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadReservationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản không có quyền hoặc đã bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Tài khoản không có quyền hoặc đã bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản không có quyền hoặc đã bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Reservation không thuộc current user",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Reservation không thuộc current user",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Committed reservation cannot be released",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "UPLOAD_RESERVATION_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "UPLOAD_RESERVATION_CONFLICT",
+                        "message": "Committed reservation cannot be released",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/storage/assets/{id}": {
+      "delete": {
+        "tags": [
+          "Storage"
+        ],
+        "summary": "Durably delete owned provider asset",
+        "description": "Usage is decremented only after Cloudinary confirms ok or not found. Assets referenced by non-deleted content are blocked.",
+        "operationId": "deleteStorageAsset",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteMediaAssetRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Provider deletion confirmed and usage decremented once",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageAssetResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Delete payload không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Delete payload không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản không có quyền hoặc đã bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Tài khoản không có quyền hoặc đã bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản không có quyền hoặc đã bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Asset không thuộc current user",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Asset không thuộc current user",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Asset is in use or idempotency conflict",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "MEDIA_ASSET_IN_USE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEDIA_ASSET_IN_USE",
+                        "message": "Asset is in use or idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "MEDIA_DELETE_IDEMPOTENCY_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEDIA_DELETE_IDEMPOTENCY_CONFLICT",
+                        "message": "Asset is in use or idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Provider did not confirm deletion",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "MEDIA_DELETE_FAILED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEDIA_DELETE_FAILED",
+                        "message": "Provider did not confirm deletion",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/storage/accounts": {
+      "get": {
+        "tags": [
+          "Storage Admin"
+        ],
+        "summary": "List account usage and effective limits",
+        "operationId": "listStorageAccounts",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+            },
+            "required": false,
+            "name": "q",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "overQuota",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated storage accounts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageAccountListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Query không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Query không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản không có quyền hoặc đã bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Tài khoản không có quyền hoặc đã bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản không có quyền hoặc đã bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/storage/policies": {
+      "get": {
+        "tags": [
+          "Storage Admin"
+        ],
+        "summary": "List configurable storage policies",
+        "operationId": "listStoragePolicies",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "required": false,
+            "name": "active",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated policies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoragePolicyListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Query không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Query không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản không có quyền hoặc đã bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Tài khoản không có quyền hoặc đã bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản không có quyền hoặc đã bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/storage/policies/{id}": {
+      "patch": {
+        "tags": [
+          "Storage Admin"
+        ],
+        "summary": "Update policy with optimistic version",
+        "operationId": "updateStoragePolicy",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateStoragePolicyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated policy",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StoragePolicyResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Policy payload không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Policy payload không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản không có quyền hoặc đã bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Tài khoản không có quyền hoặc đã bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản không có quyền hoặc đã bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Policy not found",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Policy not found",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Policy version/default conflict",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "STORAGE_POLICY_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STORAGE_POLICY_CONFLICT",
+                        "message": "Policy version/default conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/storage/accounts/{userId}/adjustments": {
+      "post": {
+        "tags": [
+          "Storage Admin"
+        ],
+        "summary": "Grant or remove audited account quota bytes",
+        "operationId": "createStorageAdjustment",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "userId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateStorageAdjustmentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Audited idempotent adjustment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageAdjustmentResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Adjustment payload không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Adjustment payload không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản không có quyền hoặc đã bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Tài khoản không có quyền hoặc đã bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản không có quyền hoặc đã bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Adjustment invalid or idempotency conflict",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "STORAGE_ADJUSTMENT_INVALID": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STORAGE_ADJUSTMENT_INVALID",
+                        "message": "Adjustment invalid or idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STORAGE_ADJUSTMENT_IDEMPOTENCY_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STORAGE_ADJUSTMENT_IDEMPOTENCY_CONFLICT",
+                        "message": "Adjustment invalid or idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/storage/adjustments": {
+      "get": {
+        "tags": [
+          "Storage Admin"
+        ],
+        "summary": "List immutable Admin quota adjustments",
+        "operationId": "listStorageAdjustments",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "name": "userId",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated adjustment audit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageAdjustmentListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Query không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Query không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Yêu cầu đăng nhập hoặc access token không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Tài khoản không có quyền hoặc đã bị cấm",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Tài khoản không có quyền hoặc đã bị cấm",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Tài khoản không có quyền hoặc đã bị cấm",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }

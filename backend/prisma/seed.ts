@@ -27,7 +27,9 @@ import {
   InteractionDirection,
   InteractionScope,
   MediaKind,
+  MediaAssetStatus,
   MediaProvider,
+  MediaResourceType,
   ModerationPriority,
   PostRevisionStatus,
   PostStatus,
@@ -676,6 +678,8 @@ const seedEnvironment = z
     SEED_ORGANIZATION_CONTRIBUTOR_EMAIL: z.string().email().default('expert@example.com'),
     SEED_ADMIN_EMAIL: z.string().email().default('admin@example.com'),
     SEED_ADMIN_PASSWORD: z.string().min(8),
+    STORAGE_DEFAULT_QUOTA_BYTES: z.coerce.number().int().positive().default(1_073_741_824),
+    UPLOAD_RESERVATION_TTL_SECONDS: z.coerce.number().int().min(60).max(86_400).default(900),
   })
   .parse(process.env);
 
@@ -1905,8 +1909,89 @@ async function main(): Promise<void> {
     organizationContributorEmail: seedEnvironment.SEED_ORGANIZATION_CONTRIBUTOR_EMAIL.toLowerCase(),
     nextMonday,
   });
+  const storagePolicy = await prisma.storagePolicy.upsert({
+    where: { code: 'MVP_DEFAULT' },
+    update: {
+      name: 'MVP default storage',
+      quotaBytes: seedEnvironment.STORAGE_DEFAULT_QUOTA_BYTES,
+      reservationTtlSeconds: seedEnvironment.UPLOAD_RESERVATION_TTL_SECONDS,
+      warningPercent: 80,
+      active: true,
+      isDefault: true,
+    },
+    create: {
+      id: '15000000-0000-4000-8000-000000000001',
+      code: 'MVP_DEFAULT',
+      name: 'MVP default storage',
+      quotaBytes: seedEnvironment.STORAGE_DEFAULT_QUOTA_BYTES,
+      reservationTtlSeconds: seedEnvironment.UPLOAD_RESERVATION_TTL_SECONDS,
+      warningPercent: 80,
+      active: true,
+      isDefault: true,
+    },
+  });
+  const seededUsers = await prisma.user.findMany({ select: { id: true } });
+  for (const user of seededUsers) {
+    await prisma.storageAccount.upsert({
+      where: { userId: user.id },
+      update: { policyId: storagePolicy.id },
+      create: { userId: user.id, policyId: storagePolicy.id },
+    });
+  }
+  const seededCoverReference = await prisma.postMedia.findFirst({
+    where: { provider: MediaProvider.CLOUDINARY, publicId: 'seed/frontend-food-cover' },
+    include: { revision: { include: { post: true } } },
+    orderBy: { id: 'asc' },
+  });
+  if (seededCoverReference) {
+    const asset = await prisma.mediaAsset.upsert({
+      where: { publicId: 'seed/frontend-food-cover' },
+      update: {
+        ownerId: seededCoverReference.revision.post.authorId,
+        resourceType: MediaResourceType.IMAGE,
+        kind: MediaKind.COVER_IMAGE,
+        secureUrl: seededCoverReference.secureUrl,
+        mimeType: 'image/jpeg',
+        extension: '.jpg',
+        bytes: 120_253,
+        status: MediaAssetStatus.ACTIVE,
+        backfilled: true,
+        deletedAt: null,
+        deletedById: null,
+      },
+      create: {
+        ownerId: seededCoverReference.revision.post.authorId,
+        resourceType: MediaResourceType.IMAGE,
+        kind: MediaKind.COVER_IMAGE,
+        publicId: 'seed/frontend-food-cover',
+        secureUrl: seededCoverReference.secureUrl,
+        mimeType: 'image/jpeg',
+        extension: '.jpg',
+        bytes: 120_253,
+        status: MediaAssetStatus.ACTIVE,
+        backfilled: true,
+      },
+    });
+    await prisma.postMedia.updateMany({
+      where: { provider: MediaProvider.CLOUDINARY, publicId: asset.publicId },
+      data: { assetId: asset.id },
+    });
+  }
+  for (const user of seededUsers) {
+    const aggregate = await prisma.mediaAsset.aggregate({
+      where: {
+        ownerId: user.id,
+        status: { in: [MediaAssetStatus.ACTIVE, MediaAssetStatus.DELETING] },
+      },
+      _sum: { bytes: true },
+    });
+    await prisma.storageAccount.update({
+      where: { userId: user.id },
+      data: { usedBytes: aggregate._sum.bytes ?? 0 },
+    });
+  }
   console.info(
-    `Seeded local Member, unified Contributors with two approval bases, Admin, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
+    `Seeded local Member, unified Contributors with two approval bases, Admin, storage policy/accounting, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
   );
 }
 

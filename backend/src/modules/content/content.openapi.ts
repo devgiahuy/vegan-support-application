@@ -12,8 +12,6 @@ import {
   relatedPostsQuerySchema,
   relatedPostsResponseSchema,
   updatePostRequestSchema,
-  uploadSignatureRequestSchema,
-  uploadSignatureResponseSchema,
 } from './content.schemas.js';
 
 const authenticated = [{ BearerAuth: [] }, { AccessTokenCookie: [] }];
@@ -87,14 +85,6 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     relatedPostsResponseSchema,
   );
   const deleteResponse = registry.register('DeletePostResponse', deletePostResponseSchema);
-  const signatureRequest = registry.register(
-    'UploadSignatureRequest',
-    uploadSignatureRequestSchema,
-  );
-  const signatureResponse = registry.register(
-    'UploadSignatureResponse',
-    uploadSignatureResponseSchema,
-  );
 
   registry.registerPath({
     method: 'get',
@@ -301,31 +291,4 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     },
   });
 
-  registry.registerPath({
-    method: 'post',
-    path: '/api/v1/uploads/signature',
-    tags: ['Uploads'],
-    summary: 'Tạo Cloudinary signed-upload parameters',
-    description:
-      'Trả cloud name, API key, folder, timestamp và SHA-1 signature có thời hạn; không bao giờ trả API secret. Client phải gửi đúng folder/timestamp đã được ký.',
-    operationId: 'createUploadSignature',
-    security: authenticated,
-    request: {
-      body: {
-        required: true,
-        content: {
-          'application/json': { schema: signatureRequest, example: { resourceType: 'image' } },
-        },
-      },
-    },
-    responses: {
-      200: {
-        description: 'Signed upload configuration và MIME/size limits',
-        content: { 'application/json': { schema: signatureResponse } },
-      },
-      400: errorResponse(errorSchema, 'Resource type không hợp lệ', ['VALIDATION_ERROR']),
-      401: errorResponse(errorSchema, 'Yêu cầu đăng nhập', ['AUTH_REQUIRED']),
-      403: errorResponse(errorSchema, 'Tài khoản bị cấm', ['ACCOUNT_BANNED']),
-    },
-  });
 }

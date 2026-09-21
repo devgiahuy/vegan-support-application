@@ -15,6 +15,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "openapi:generate": "tsx src/openapi/write-openapi.ts",
+    "storage:cleanup": "tsx src/modules/storage/storage-maintenance.ts cleanup",
+    "storage:reconcile": "tsx src/modules/storage/storage-maintenance.ts reconcile",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",

@@ -14,7 +14,8 @@ import {
   type Tradition,
   UserStatus,
 } from '@prisma/client';
-import type { MediaInput, PostListQuery } from './content.schemas.js';
+import type { PostListQuery } from './content.schemas.js';
+import type { ResolvedMediaInput } from './media.service.js';
 import type { SubmissionDecision } from './content-publication.policy.js';
 import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 import { MODERATION_RULE_VERSION } from '../moderation/rule-moderation.service.js';
@@ -122,7 +123,7 @@ export interface RevisionSnapshot {
   body: string;
   categoryIds: string[];
   tags: Array<{ tag: string; normalizedTag: string }>;
-  media: MediaInput[];
+  media: ResolvedMediaInput[];
   recipe?: RecipeSnapshot;
 }
 
@@ -912,7 +913,7 @@ export class ContentRepository {
       throw new ContentActorInactiveError(status ?? UserStatus.DELETED);
   }
 
-  private mediaData(item: MediaInput, position: number) {
+  private mediaData(item: ResolvedMediaInput, position: number) {
     return {
       kind: item.kind,
       provider: item.provider,
@@ -921,6 +922,7 @@ export class ContentRepository {
       ...(item.provider === 'CLOUDINARY'
         ? {
             publicId: item.publicId,
+            assetId: item.assetId,
             mimeType: item.mimeType,
             bytes: item.bytes,
             ...(item.width !== undefined ? { width: item.width } : {}),

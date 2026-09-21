@@ -182,7 +182,7 @@ export class ContentService {
   async createPost(actor: ContentActor, input: CreatePostInput): Promise<PostOutput> {
     const slug = input.slug ?? catalogSlug(input.title);
     if (!slug) throw this.invalidContentError('Tiêu đề không tạo được slug hợp lệ');
-    const snapshot = await this.buildSnapshot(input);
+    const snapshot = await this.buildSnapshot(actor.userId, input);
     try {
       const decision = this.publicationPolicy.decideSubmission(actor, input);
       const created = await this.repository.createPost(
@@ -214,7 +214,7 @@ export class ContentService {
     if (post.version !== input.expectedVersion) throw this.versionConflictError(post.version);
     const slug = input.slug ?? catalogSlug(input.title);
     if (!slug) throw this.invalidContentError('Tiêu đề không tạo được slug hợp lệ');
-    const snapshot = await this.buildSnapshot(input);
+    const snapshot = await this.buildSnapshot(actor.userId, input);
     try {
       const updated = await this.repository.createUpdatedRevision(
         post,
@@ -241,12 +241,15 @@ export class ContentService {
     return { id: post.id, status: PostStatus.DELETED };
   }
 
-  private async buildSnapshot(input: CreatePostInput | UpdatePostInput): Promise<RevisionSnapshot> {
+  private async buildSnapshot(
+    ownerId: string,
+    input: CreatePostInput | UpdatePostInput,
+  ): Promise<RevisionSnapshot> {
     const activeCategoryIds = await this.repository.findActiveCategoryIds(input.categoryIds);
     if (activeCategoryIds.length !== input.categoryIds.length) {
       throw this.invalidContentError('Có category không tồn tại hoặc đã archive');
     }
-    const media = this.mediaService.validateAndNormalize(input.media);
+    const media = await this.mediaService.validateAndNormalize(ownerId, input.media);
     const common = {
       title: input.title,
       ...(input.excerpt ? { excerpt: input.excerpt } : {}),

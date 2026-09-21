@@ -16,6 +16,7 @@ import { registerMealPlanOpenApi } from '../modules/meal-plans/meal-plan.openapi
 import { registerChatOpenApi } from '../modules/chat/chat.openapi.js';
 import { registerFoodDataOpenApi } from '../modules/food-data/food-data.openapi.js';
 import { registerRecipeNutritionOpenApi } from '../modules/recipe-nutrition/recipe-nutrition.openapi.js';
+import { registerStorageOpenApi } from '../modules/storage/storage.openapi.js';
 
 const registry = new OpenAPIRegistry();
 
@@ -56,6 +57,7 @@ registerMealPlanOpenApi(registry, registeredErrorResponse);
 registerChatOpenApi(registry, registeredErrorResponse);
 registerFoodDataOpenApi(registry, registeredErrorResponse);
 registerRecipeNutritionOpenApi(registry, registeredErrorResponse);
+registerStorageOpenApi(registry, registeredErrorResponse);
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
@@ -99,7 +101,9 @@ const generatedDocument = generator.generateDocument({
     },
     { name: 'Moderation', description: 'Content review queue and user reports' },
     { name: 'Moderation Admin', description: 'Admin decisions, user and comment moderation' },
-    { name: 'Uploads', description: 'Safe Cloudinary signed-upload configuration' },
+    { name: 'Uploads', description: 'Quota-reserved and provider-verified uploads' },
+    { name: 'Storage', description: 'Owned storage usage and durable media deletion' },
+    { name: 'Storage Admin', description: 'Storage policy, account usage, and adjustment audit' },
   ],
 });
 

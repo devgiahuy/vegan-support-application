@@ -215,6 +215,31 @@ enum MediaProvider {
   @@map("media_provider")
 }
 
+enum StorageReservationStatus {
+  RESERVED
+  COMMITTED
+  RELEASED
+  EXPIRED
+
+  @@map("storage_reservation_status")
+}
+
+enum MediaAssetStatus {
+  ACTIVE
+  DELETING
+  DELETED
+  PROVIDER_MISSING
+
+  @@map("media_asset_status")
+}
+
+enum MediaResourceType {
+  IMAGE
+  VIDEO
+
+  @@map("media_resource_type")
+}
+
 enum CommentStatus {
   VISIBLE
   HIDDEN
@@ -557,6 +582,12 @@ model User {
   mealPlanMutations              MealPlanMutation[]
   chatSessions                   ChatSession[]
   aiRequestLogs                  AiRequestLog[]
+  storageAccount                 StorageAccount?
+  mediaAssets                    MediaAsset[]                 @relation("MediaAssetOwner")
+  deletedMediaAssets             MediaAsset[]                 @relation("MediaAssetDeletedBy")
+  storageAdjustments             StorageAdjustment[]          @relation("StorageAdjustmentSubject")
+  madeStorageAdjustments         StorageAdjustment[]          @relation("StorageAdjustmentActor")
+  updatedStoragePolicies         StoragePolicy[]               @relation("StoragePolicyUpdater")
 
   @@map("users")
 }
@@ -1278,6 +1309,7 @@ model PostTag {
 model PostMedia {
   id              String        @id @default(uuid()) @db.Uuid
   revisionId      String        @map("revision_id") @db.Uuid
+  assetId         String?       @map("asset_id") @db.Uuid
   kind            MediaKind
   provider        MediaProvider
   publicId        String?       @map("public_id") @db.VarChar(255)
@@ -1289,10 +1321,135 @@ model PostMedia {
   durationSeconds Decimal?      @map("duration_seconds") @db.Decimal(10, 2)
   position        Int           @default(0)
   revision        PostRevision  @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  asset           MediaAsset?   @relation(fields: [assetId], references: [id], onDelete: Restrict)
 
   @@unique([revisionId, kind])
   @@index([publicId])
+  @@index([assetId])
   @@map("post_media")
+}
+
+model StoragePolicy {
+  id                    String           @id @default(uuid()) @db.Uuid
+  code                  String           @unique @db.VarChar(80)
+  name                  String           @db.VarChar(160)
+  quotaBytes            BigInt           @map("quota_bytes")
+  reservationTtlSeconds Int              @map("reservation_ttl_seconds")
+  warningPercent        Int              @default(80) @map("warning_percent")
+  active                Boolean          @default(true)
+  isDefault             Boolean          @default(false) @map("is_default")
+  version               Int              @default(1)
+  updatedById           String?          @map("updated_by_id") @db.Uuid
+  createdAt             DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedBy             User?            @relation("StoragePolicyUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+  accounts              StorageAccount[]
+
+  @@index([active, isDefault, code])
+  @@map("storage_policies")
+}
+
+model StorageAccount {
+  userId               String               @id @map("user_id") @db.Uuid
+  policyId             String               @map("policy_id") @db.Uuid
+  usedBytes            BigInt               @default(0) @map("used_bytes")
+  reservedBytes        BigInt               @default(0) @map("reserved_bytes")
+  quotaAdjustmentBytes BigInt               @default(0) @map("quota_adjustment_bytes")
+  createdAt            DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  policy               StoragePolicy        @relation(fields: [policyId], references: [id], onDelete: Restrict)
+  reservations         StorageReservation[]
+  assets               MediaAsset[]
+  adjustments          StorageAdjustment[]
+
+  @@index([policyId, usedBytes])
+  @@map("storage_accounts")
+}
+
+model StorageReservation {
+  id               String                   @id @default(uuid()) @db.Uuid
+  userId           String                   @map("user_id") @db.Uuid
+  idempotencyKey   String                   @map("idempotency_key") @db.VarChar(120)
+  requestHash      String                   @map("request_hash") @db.Char(64)
+  commitHash       String?                  @map("commit_hash") @db.Char(64)
+  resourceType     MediaResourceType        @map("resource_type")
+  kind             MediaKind
+  declaredMimeType String                   @map("declared_mime_type") @db.VarChar(100)
+  declaredExtension String                  @map("declared_extension") @db.VarChar(16)
+  declaredBytes    BigInt                   @map("declared_bytes")
+  actualBytes      BigInt?                  @map("actual_bytes")
+  status           StorageReservationStatus @default(RESERVED)
+  expiresAt        DateTime                 @map("expires_at") @db.Timestamptz(3)
+  committedAt      DateTime?                @map("committed_at") @db.Timestamptz(3)
+  releasedAt       DateTime?                @map("released_at") @db.Timestamptz(3)
+  releaseReason    String?                  @map("release_reason") @db.VarChar(120)
+  createdAt        DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
+  account          StorageAccount           @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  asset            MediaAsset?
+
+  @@unique([userId, idempotencyKey])
+  @@index([status, expiresAt])
+  @@index([userId, status, createdAt])
+  @@map("storage_reservations")
+}
+
+model MediaAsset {
+  id                  String            @id @default(uuid()) @db.Uuid
+  ownerId             String            @map("owner_id") @db.Uuid
+  reservationId       String?           @unique @map("reservation_id") @db.Uuid
+  provider            MediaProvider     @default(CLOUDINARY)
+  resourceType        MediaResourceType @map("resource_type")
+  kind                MediaKind
+  publicId            String            @unique @map("public_id") @db.VarChar(255)
+  secureUrl           String            @map("secure_url") @db.VarChar(2048)
+  mimeType            String?           @map("mime_type") @db.VarChar(100)
+  extension           String?           @db.VarChar(16)
+  bytes               BigInt
+  width               Int?
+  height              Int?
+  durationSeconds     Decimal?          @map("duration_seconds") @db.Decimal(10, 2)
+  providerVersion     BigInt?           @map("provider_version")
+  providerEtag        String?           @map("provider_etag") @db.VarChar(128)
+  status              MediaAssetStatus  @default(ACTIVE)
+  backfilled          Boolean           @default(false)
+  reconciledAt        DateTime?         @map("reconciled_at") @db.Timestamptz(3)
+  deletedAt           DateTime?         @map("deleted_at") @db.Timestamptz(3)
+  deletedById         String?           @map("deleted_by_id") @db.Uuid
+  deletionIdempotencyKey String?        @map("deletion_idempotency_key") @db.VarChar(120)
+  createdAt           DateTime          @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime          @updatedAt @map("updated_at") @db.Timestamptz(3)
+  owner               User              @relation("MediaAssetOwner", fields: [ownerId], references: [id], onDelete: Restrict, map: "media_assets_owner_id_user_fkey")
+  deletedBy           User?             @relation("MediaAssetDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+  account             StorageAccount    @relation(fields: [ownerId], references: [userId], onDelete: Restrict, map: "media_assets_owner_id_account_fkey")
+  reservation         StorageReservation? @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+  postMedia           PostMedia[]
+
+  @@index([ownerId, status, createdAt])
+  @@index([status, reconciledAt])
+  @@map("media_assets")
+}
+
+model StorageAdjustment {
+  id              String         @id @default(uuid()) @db.Uuid
+  userId          String         @map("user_id") @db.Uuid
+  actorId         String         @map("actor_id") @db.Uuid
+  idempotencyKey  String         @map("idempotency_key") @db.VarChar(120)
+  requestHash     String         @map("request_hash") @db.Char(64)
+  deltaBytes      BigInt         @map("delta_bytes")
+  beforeBytes     BigInt         @map("before_bytes")
+  afterBytes      BigInt         @map("after_bytes")
+  reason          String         @db.VarChar(1000)
+  createdAt       DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  account         StorageAccount @relation(fields: [userId], references: [userId], onDelete: Restrict, map: "storage_adjustments_user_id_account_fkey")
+  user            User           @relation("StorageAdjustmentSubject", fields: [userId], references: [id], onDelete: Restrict, map: "storage_adjustments_user_id_user_fkey")
+  actor           User           @relation("StorageAdjustmentActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([actorId, idempotencyKey])
+  @@index([userId, createdAt, id])
+  @@index([actorId, createdAt])
+  @@map("storage_adjustments")
 }
 
 model IngredientAlias {
