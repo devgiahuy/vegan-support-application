@@ -2,6 +2,7 @@ import type { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import type { ZodType } from 'zod';
 import {
   createPostRequestSchema,
+  contentReviewHistoryResponseSchema,
   deletePostQuerySchema,
   deletePostResponseSchema,
   postIdentifierParamsSchema,
@@ -11,6 +12,8 @@ import {
   postResponseSchema,
   relatedPostsQuerySchema,
   relatedPostsResponseSchema,
+  reviewHistoryQuerySchema,
+  submitPostRequestSchema,
   updatePostRequestSchema,
 } from './content.schemas.js';
 
@@ -85,6 +88,11 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     relatedPostsResponseSchema,
   );
   const deleteResponse = registry.register('DeletePostResponse', deletePostResponseSchema);
+  const submitRequest = registry.register('SubmitPostRequest', submitPostRequestSchema);
+  const reviewHistoryResponse = registry.register(
+    'ContentReviewHistoryResponse',
+    contentReviewHistoryResponseSchema,
+  );
 
   registry.registerPath({
     method: 'get',
@@ -144,7 +152,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     tags: ['Content'],
     summary: 'Tạo Recipe, Blog hoặc Video',
     description:
-      'Không nhận author/status/publishedAt từ client. Member đi PENDING_REVIEW. Approved Contributor/Admin được auto-publish khi rule moderation v1 không flag; low/medium flag vào FLAGGED và high spam/harmful-health vào QUARANTINED. Requested Contributor type không cấp quyền.',
+      'Không nhận author/status/publishedAt từ client. Mọi content type tạo immutable DRAFT; publication chỉ xảy ra sau explicit submit và Admin approval. Video upload chỉ nhận committed Phase 15 asset thuộc author; YouTube URL được allowlist và không tính quota.',
     operationId: 'createPost',
     security: authenticated,
     request: {
@@ -232,7 +240,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     tags: ['Content'],
     summary: 'Tạo revision mới cho content thuộc quyền sở hữu',
     description:
-      'Request là full revision snapshot và bắt buộc expectedVersion. Member edit published post tạo PENDING_REVIEW revision; approved Contributor/Admin được moderation lại và auto-publish nếu sạch. Revision cũ vẫn phục vụ public khi revision mới pending/flagged/quarantined.',
+      'Request là full revision snapshot và bắt buộc expectedVersion. Author-only mutation luôn tạo DRAFT. Khi sửa content đã approved, published revision cũ tiếp tục phục vụ public cho tới khi revision mới được submit và Admin approve.',
     operationId: 'updatePost',
     security: authenticated,
     request: {
@@ -259,7 +267,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
         'INVALID_INGREDIENT_REFERENCE',
       ]),
       401: errorResponse(errorSchema, 'Yêu cầu đăng nhập', ['AUTH_REQUIRED']),
-      403: errorResponse(errorSchema, 'Không phải owner/Admin', ['FORBIDDEN', 'ACCOUNT_BANNED']),
+      403: errorResponse(errorSchema, 'Author ownership required', ['FORBIDDEN', 'ACCOUNT_BANNED']),
       404: errorResponse(errorSchema, 'Không tìm thấy content', ['NOT_FOUND']),
       409: errorResponse(errorSchema, 'Version/state/slug conflict', [
         'CONTENT_VERSION_CONFLICT',
@@ -267,6 +275,65 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
         'CONTENT_SLUG_CONFLICT',
       ]),
       410: errorResponse(errorSchema, 'Content đã soft-delete', ['CONTENT_DELETED']),
+    },
+  });
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/posts/{id}/submit',
+    tags: ['Content Review'],
+    summary: 'Submit một immutable draft revision để Admin review',
+    description:
+      'Author-only. Revalidates latest version and video media ownership/committed state. Text/metadata moderation may attach a signal and priority, but never approves, rejects, hides, or deletes automatically.',
+    operationId: 'submitPostRevision',
+    security: authenticated,
+    request: {
+      params: postIdParamsSchema,
+      body: { required: true, content: { 'application/json': { schema: submitRequest } } },
+    },
+    responses: {
+      200: { description: 'Revision submitted as PENDING_REVIEW', content: { 'application/json': { schema: postResponse } } },
+      400: errorResponse(errorSchema, 'Invalid or uncommitted video media', [
+        'VALIDATION_ERROR',
+        'INVALID_MEDIA_REFERENCE',
+      ]),
+      401: errorResponse(errorSchema, 'Authentication required', [
+        'AUTH_REQUIRED',
+        'INVALID_ACCESS_TOKEN',
+        'TOKEN_EXPIRED',
+        'STALE_ACCESS_TOKEN',
+      ]),
+      403: errorResponse(errorSchema, 'Author ownership required', ['FORBIDDEN', 'ACCOUNT_BANNED']),
+      404: errorResponse(errorSchema, 'Post not found', ['NOT_FOUND']),
+      409: errorResponse(errorSchema, 'Draft/version/state conflict', [
+        'CONTENT_VERSION_CONFLICT',
+        'CONTENT_STATE_CONFLICT',
+      ]),
+      410: errorResponse(errorSchema, 'Content deleted', ['CONTENT_DELETED']),
+    },
+  });
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/posts/{id}/review-history',
+    tags: ['Content Review'],
+    summary: 'Author/Admin xem status và review history',
+    description:
+      'Returns immutable revisions, submission/review timestamps, reasons, media source/reference, and moderation signals. Hidden/deleted records remain available to the owner/Admin for audit.',
+    operationId: 'getPostReviewHistory',
+    security: authenticated,
+    request: { params: postIdParamsSchema, query: reviewHistoryQuerySchema },
+    responses: {
+      200: { description: 'Paginated review history', content: { 'application/json': { schema: reviewHistoryResponse } } },
+      400: errorResponse(errorSchema, 'Invalid pagination', ['VALIDATION_ERROR']),
+      401: errorResponse(errorSchema, 'Authentication required', [
+        'AUTH_REQUIRED',
+        'INVALID_ACCESS_TOKEN',
+        'TOKEN_EXPIRED',
+        'STALE_ACCESS_TOKEN',
+      ]),
+      403: errorResponse(errorSchema, 'Author or Admin required', ['FORBIDDEN', 'ACCOUNT_BANNED']),
+      404: errorResponse(errorSchema, 'Post not found', ['NOT_FOUND']),
     },
   });
 
@@ -285,7 +352,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
       },
       400: errorResponse(errorSchema, 'expectedVersion không hợp lệ', ['VALIDATION_ERROR']),
       401: errorResponse(errorSchema, 'Yêu cầu đăng nhập', ['AUTH_REQUIRED']),
-      403: errorResponse(errorSchema, 'Không phải owner/Admin', ['FORBIDDEN', 'ACCOUNT_BANNED']),
+      403: errorResponse(errorSchema, 'Author ownership required', ['FORBIDDEN', 'ACCOUNT_BANNED']),
       404: errorResponse(errorSchema, 'Không tìm thấy content', ['NOT_FOUND']),
       409: errorResponse(errorSchema, 'Optimistic version conflict', ['CONTENT_VERSION_CONFLICT']),
     },

@@ -38,6 +38,7 @@ export class MediaService {
     return {
       provider: MediaProvider.YOUTUBE,
       kind: MediaKind.VIDEO,
+      publicId: id,
       secureUrl: `https://www.youtube.com/watch?v=${id}`,
     };
   }
@@ -80,4 +81,4 @@ export type ResolvedMediaInput =
       height?: number;
       durationSeconds?: number;
     }
-  | { provider: 'YOUTUBE'; kind: MediaKind; secureUrl: string };
+  | { provider: 'YOUTUBE'; kind: MediaKind; publicId: string; secureUrl: string };

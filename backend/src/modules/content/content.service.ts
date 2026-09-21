@@ -1,6 +1,7 @@
 import {
   DietPattern,
   IngredientResolutionStatus,
+  PostRevisionStatus,
   PostStatus,
   PostType,
   Prisma,
@@ -27,6 +28,8 @@ import type {
   PostListQuery,
   PostOutput,
   RelatedPostsQuery,
+  ReviewHistoryQuery,
+  SubmitPostInput,
   UpdatePostInput,
 } from './content.schemas.js';
 import type { MediaService } from './media.service.js';
@@ -89,6 +92,10 @@ function traditionWarningList(value: Prisma.JsonValue) {
     }
     return [];
   });
+}
+
+function paginationWithoutConstraints(page: number, limit: number, total: number) {
+  return { page, limit, total, totalPages: total === 0 ? 0 : Math.ceil(total / limit) };
 }
 
 function stepPositions(value: Prisma.JsonValue): number[] {
@@ -184,13 +191,12 @@ export class ContentService {
     if (!slug) throw this.invalidContentError('Tiêu đề không tạo được slug hợp lệ');
     const snapshot = await this.buildSnapshot(actor.userId, input);
     try {
-      const decision = this.publicationPolicy.decideSubmission(actor, input);
       const created = await this.repository.createPost(
         actor.userId,
         input.type,
         slug,
         snapshot,
-        decision,
+        this.publicationPolicy.draft(),
       );
       return this.postOutput(created.post, created.revision);
     } catch (error) {
@@ -212,6 +218,19 @@ export class ContentService {
       throw this.invalidContentError('Không thể thay đổi post type sau khi tạo');
     }
     if (post.version !== input.expectedVersion) throw this.versionConflictError(post.version);
+    const latestRevision = await this.repository.findLatestRevision(post.id);
+    const reviewLockedStatuses: PostRevisionStatus[] = [
+      PostRevisionStatus.PENDING_REVIEW,
+      PostRevisionStatus.FLAGGED,
+      PostRevisionStatus.QUARANTINED,
+    ];
+    if (latestRevision && reviewLockedStatuses.includes(latestRevision.status)) {
+      throw new AppError({
+        statusCode: 409,
+        code: 'CONTENT_STATE_CONFLICT',
+        message: 'Revision mới nhất đang chờ Admin review và chưa thể chỉnh sửa',
+      });
+    }
     const slug = input.slug ?? catalogSlug(input.title);
     if (!slug) throw this.invalidContentError('Tiêu đề không tạo được slug hợp lệ');
     const snapshot = await this.buildSnapshot(actor.userId, input);
@@ -222,7 +241,7 @@ export class ContentService {
         input.expectedVersion,
         slug,
         snapshot,
-        this.publicationPolicy.decideSubmission(actor, input),
+        this.publicationPolicy.draft(),
       );
       return this.postOutput(updated.post, updated.revision);
     } catch (error) {
@@ -239,6 +258,108 @@ export class ContentService {
       throw this.versionConflictError(current?.version ?? post.version);
     }
     return { id: post.id, status: PostStatus.DELETED };
+  }
+
+  async submitPost(
+    actor: ContentActor,
+    id: string,
+    input: SubmitPostInput,
+  ): Promise<PostOutput> {
+    const post = await this.requireOwnedPost(actor, id);
+    if (post.status === PostStatus.DELETED) throw this.deletedError();
+    if (post.status === PostStatus.HIDDEN) {
+      throw new AppError({
+        statusCode: 409,
+        code: 'CONTENT_STATE_CONFLICT',
+        message: 'Nội dung đang bị ẩn và không thể submit revision mới',
+      });
+    }
+    if (post.version !== input.expectedVersion) throw this.versionConflictError(post.version);
+    const revision = await this.repository.findLatestRevision(post.id);
+    if (!revision || revision.id !== input.revisionId || revision.version !== post.version) {
+      throw this.versionConflictError(post.version);
+    }
+    if (revision.status !== PostRevisionStatus.DRAFT) {
+      throw new AppError({
+        statusCode: 409,
+        code: 'CONTENT_STATE_CONFLICT',
+        message: 'Chỉ revision DRAFT mới có thể submit để review',
+      });
+    }
+    if (
+      post.type === PostType.VIDEO &&
+      !(await this.repository.hasValidVideoMediaForSubmission(post.id, revision.id, post.authorId))
+    ) {
+      throw new AppError({
+        statusCode: 400,
+        code: 'INVALID_MEDIA_REFERENCE',
+        message: 'Video upload phải là asset đã commit thuộc author; external URL phải thuộc allowlist',
+      });
+    }
+    const decision = this.publicationPolicy.decideSubmission(actor, {
+      title: revision.title,
+      ...(revision.excerpt ? { excerpt: revision.excerpt } : {}),
+      body: revision.body,
+      tags: revision.tags.map((item) => item.tag),
+    });
+    try {
+      const submitted = await this.repository.submitRevision(
+        post.id,
+        revision.id,
+        actor.userId,
+        input.expectedVersion,
+        decision,
+      );
+      return this.postOutput(submitted.post, submitted.revision);
+    } catch (error) {
+      throw this.mapPersistenceError(error);
+    }
+  }
+
+  async getReviewHistory(actor: ContentActor, id: string, query: ReviewHistoryQuery) {
+    const post = await this.repository.findPost(id);
+    if (!post) throw this.notFoundError();
+    if (post.authorId !== actor.userId && actor.role !== Role.ADMIN) {
+      throw new AppError({
+        statusCode: 403,
+        code: 'FORBIDDEN',
+        message: 'Chỉ author hoặc Admin được xem review history',
+      });
+    }
+    const result = await this.repository.listReviewHistory(post.id, query.page, query.limit);
+    return {
+      data: {
+        postId: post.id,
+        type: post.type,
+        postStatus: post.status,
+        version: post.version,
+        publishedRevisionId: post.publishedRevisionId,
+        revisions: result.records.map((revision) => ({
+          revision: this.revisionOutput(revision),
+          reviewedBy: revision.reviewedBy
+            ? {
+                id: revision.reviewedBy.id,
+                displayName: revision.reviewedBy.displayName,
+                avatarUrl: revision.reviewedBy.avatarUrl,
+              }
+            : null,
+          media: revision.media.map((item) => this.mediaOutput(item)),
+          moderationSignals: revision.aiFlags.map((flag) => ({
+            id: flag.id,
+            provider: flag.provider,
+            model: flag.model,
+            ruleVersion: flag.ruleVersion,
+            reasonCodes: stringList(flag.reasonCodes),
+            riskScore: Number(flag.riskScore),
+            riskLevel: flag.riskLevel,
+            status: flag.status,
+            createdAt: flag.createdAt.toISOString(),
+          })),
+          isPublishedRevision: revision.id === post.publishedRevisionId,
+        })),
+      },
+      meta: paginationWithoutConstraints(query.page, query.limit, result.total),
+    };
   }
 
   private async buildSnapshot(
@@ -439,34 +560,14 @@ export class ContentService {
       publishedAt: post.publishedAt?.toISOString() ?? null,
       createdAt: post.createdAt.toISOString(),
       updatedAt: post.updatedAt.toISOString(),
-      revision: {
-        id: revision.id,
-        version: revision.version,
-        status: revision.status,
-        title: revision.title,
-        excerpt: revision.excerpt,
-        body: revision.body,
-        tags: revision.tags.map((item) => item.tag),
-        createdAt: revision.createdAt.toISOString(),
-      },
+      revision: this.revisionOutput(revision),
       categories: revision.categories.map(({ category }) => ({
         id: category.id,
         name: category.name,
         slug: category.slug,
         type: category.type,
       })),
-      media: revision.media.map((media) => ({
-        id: media.id,
-        kind: media.kind,
-        provider: media.provider,
-        publicId: media.publicId,
-        secureUrl: media.secureUrl,
-        mimeType: media.mimeType,
-        bytes: media.bytes,
-        width: media.width,
-        height: media.height,
-        durationSeconds: media.durationSeconds ? Number(media.durationSeconds) : null,
-      })),
+      media: revision.media.map((media) => this.mediaOutput(media)),
     };
     if (post.type === PostType.RECIPE) {
       const detail = revision.recipeDetail;
@@ -540,10 +641,41 @@ export class ContentService {
     return this.postOutput(post, post.publishedRevision);
   }
 
+  private revisionOutput(revision: RevisionRecord) {
+    return {
+      id: revision.id,
+      version: revision.version,
+      status: revision.status,
+      title: revision.title,
+      excerpt: revision.excerpt,
+      body: revision.body,
+      tags: revision.tags.map((item) => item.tag),
+      submittedAt: revision.submittedAt?.toISOString() ?? null,
+      reviewNote: revision.reviewNote,
+      reviewedAt: revision.reviewedAt?.toISOString() ?? null,
+      createdAt: revision.createdAt.toISOString(),
+    };
+  }
+
+  private mediaOutput(media: RevisionRecord['media'][number]) {
+    return {
+      id: media.id,
+      kind: media.kind,
+      provider: media.provider,
+      publicId: media.publicId,
+      secureUrl: media.secureUrl,
+      mimeType: media.mimeType,
+      bytes: media.bytes,
+      width: media.width,
+      height: media.height,
+      durationSeconds: media.durationSeconds ? Number(media.durationSeconds) : null,
+    };
+  }
+
   private async requireOwnedPost(actor: ContentActor, id: string): Promise<PostIdentityRecord> {
     const post = await this.repository.findPost(id);
     if (!post) throw this.notFoundError();
-    if (post.authorId !== actor.userId && actor.role !== Role.ADMIN) {
+    if (post.authorId !== actor.userId) {
       throw new AppError({
         statusCode: 403,
         code: 'FORBIDDEN',

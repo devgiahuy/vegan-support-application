@@ -50,6 +50,12 @@ export const reviewQueueQuerySchema = paginationQuery
 export const reviewDecisionRequestSchema = z
   .object({ reason: z.string().trim().min(10).max(2_000) })
   .strict();
+export const adminContentReviewDecisionRequestSchema = z
+  .object({
+    decision: z.enum([ModerationDecision.APPROVE, ModerationDecision.REJECT]),
+    reason: z.string().trim().min(10).max(2_000),
+  })
+  .strict();
 
 export const createReportRequestSchema = z
   .object({
@@ -152,7 +158,34 @@ const reviewQueueItemSchema = z
     priority: z.enum(ModerationPriority),
     activeReporterCount: z.number().int().nonnegative(),
     canDecide: z.boolean(),
+    submittedAt: z.string().datetime().nullable(),
     createdAt: z.string().datetime(),
+  })
+  .strict();
+const reviewMediaSchema = z
+  .object({
+    id: z.string().uuid(),
+    kind: z.enum(['COVER_IMAGE', 'VIDEO']),
+    provider: z.enum(['CLOUDINARY', 'YOUTUBE']),
+    publicId: z.string().nullable(),
+    secureUrl: z.string().url(),
+    mimeType: z.string().nullable(),
+    bytes: z.number().int().positive().nullable(),
+    durationSeconds: z.number().positive().nullable(),
+  })
+  .strict();
+const contentReviewDetailSchema = reviewQueueItemSchema
+  .extend({
+    body: z.string(),
+    tags: z.array(z.string()),
+    categories: z.array(
+      z.object({ id: z.string().uuid(), name: z.string(), slug: z.string() }).strict(),
+    ),
+    media: z.array(reviewMediaSchema),
+    reviewNote: z.string().nullable(),
+    reviewedBy: userSummarySchema.nullable(),
+    reviewedAt: z.string().datetime().nullable(),
+    isPublishedRevision: z.boolean(),
   })
   .strict();
 const reportSchema = z
@@ -216,6 +249,7 @@ function listResponse<T extends z.ZodType>(itemSchema: T) {
 
 export const reviewQueueItemResponseSchema = itemResponse(reviewQueueItemSchema);
 export const reviewQueueListResponseSchema = listResponse(reviewQueueItemSchema);
+export const contentReviewDetailResponseSchema = itemResponse(contentReviewDetailSchema);
 export const reportResponseSchema = itemResponse(reportSchema);
 export const reportListResponseSchema = listResponse(reportSchema);
 export const adminUserResponseSchema = itemResponse(adminUserSchema);
@@ -226,6 +260,9 @@ export const adminCommentListResponseSchema = listResponse(adminCommentSchema);
 export type ModerationIdParams = z.infer<typeof moderationIdParamsSchema>;
 export type ReviewQueueQuery = z.infer<typeof reviewQueueQuerySchema>;
 export type ReviewDecisionInput = z.infer<typeof reviewDecisionRequestSchema>;
+export type AdminContentReviewDecisionInput = z.infer<
+  typeof adminContentReviewDecisionRequestSchema
+>;
 export type CreateReportInput = z.infer<typeof createReportRequestSchema>;
 export type AdminReportsQuery = z.infer<typeof adminReportsQuerySchema>;
 export type ResolveReportInput = z.infer<typeof resolveReportRequestSchema>;

@@ -4,11 +4,13 @@ import {
   adminCommentListResponseSchema,
   adminCommentResponseSchema,
   adminCommentsQuerySchema,
+  adminContentReviewDecisionRequestSchema,
   adminReportsQuerySchema,
   adminUserListResponseSchema,
   adminUserResponseSchema,
   adminUsersQuerySchema,
   createReportRequestSchema,
+  contentReviewDetailResponseSchema,
   moderationIdParamsSchema,
   reportListResponseSchema,
   reportResponseSchema,
@@ -56,6 +58,14 @@ function errors(errorSchema: ZodType, description: string, codes: string[]) {
 export function registerModerationOpenApi(registry: OpenAPIRegistry, errorSchema: ZodType): void {
   const reviewList = registry.register('ReviewQueueListResponse', reviewQueueListResponseSchema);
   const reviewItem = registry.register('ReviewQueueItemResponse', reviewQueueItemResponseSchema);
+  const contentReviewDetail = registry.register(
+    'AdminContentReviewDetailResponse',
+    contentReviewDetailResponseSchema,
+  );
+  const contentReviewDecision = registry.register(
+    'AdminContentReviewDecisionRequest',
+    adminContentReviewDecisionRequestSchema,
+  );
   const report = registry.register('ModerationReportResponse', reportResponseSchema);
   const reportList = registry.register('ModerationReportListResponse', reportListResponseSchema);
   const user = registry.register('AdminModerationUserResponse', adminUserResponseSchema);
@@ -81,7 +91,8 @@ export function registerModerationOpenApi(registry: OpenAPIRegistry, errorSchema
     tags: ['Moderation'],
     summary: 'List post revisions awaiting editorial or Admin moderation review',
     description:
-      'Approved Contributors see clean Member PENDING_REVIEW revisions. Admin also sees FLAGGED and QUARANTINED revisions with rule reason codes, score, version, report count and priority.',
+      'Legacy route retained for compatibility but now Admin-only. Use /api/v1/admin/content-review for the Phase 16 contract.',
+    deprecated: true,
     operationId: 'listPostReviewQueue',
     security: authenticated,
     request: { query: reviewQueueQuerySchema },
@@ -89,10 +100,7 @@ export function registerModerationOpenApi(registry: OpenAPIRegistry, errorSchema
       200: { description: 'Review queue', content: { 'application/json': { schema: reviewList } } },
       400: errors(errorSchema, 'Filter không hợp lệ', ['VALIDATION_ERROR']),
       401: errors(errorSchema, 'Yêu cầu access token hợp lệ', authErrors),
-      403: errors(errorSchema, 'Approved Contributor/Admin permission required', [
-        'FORBIDDEN',
-        'ACCOUNT_BANNED',
-      ]),
+      403: errors(errorSchema, 'Admin permission required', ['FORBIDDEN', 'ACCOUNT_BANNED']),
     },
   });
 
@@ -103,7 +111,8 @@ export function registerModerationOpenApi(registry: OpenAPIRegistry, errorSchema
       tags: ['Moderation'],
       summary: `${action === 'approve' ? 'Approve' : 'Reject'} latest post revision`,
       description:
-        'Reason is mandatory. Self-review is forbidden. The latest revision and post are locked transactionally; flagged/quarantined decisions require Admin. A prior published revision remains public while a newer revision is pending or rejected.',
+        'Legacy Admin-only route retained for compatibility. Use PATCH /api/v1/admin/content-review/{revisionId}.',
+      deprecated: true,
       operationId: `${action}PostReview`,
       security: authenticated,
       request: { params: moderationIdParamsSchema, body: jsonBody(reviewDecisionRequestSchema) },
@@ -128,6 +137,71 @@ export function registerModerationOpenApi(registry: OpenAPIRegistry, errorSchema
       },
     });
   }
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/admin/content-review',
+    tags: ['Content Review Admin'],
+    summary: 'Admin list submitted content revisions',
+    description:
+      'Admin-only paginated queue. Supports type=VIDEO and status/priority filters. Moderation signals affect priority only and never make a publication decision.',
+    operationId: 'listContentReviewAdmin',
+    security: authenticated,
+    request: { query: reviewQueueQuerySchema },
+    responses: {
+      200: { description: 'Paginated content review queue', content: { 'application/json': { schema: reviewList } } },
+      400: errors(errorSchema, 'Invalid review filters', ['VALIDATION_ERROR']),
+      401: errors(errorSchema, 'Authentication required', authErrors),
+      403: errors(errorSchema, 'Admin only', ['FORBIDDEN', 'ACCOUNT_BANNED']),
+    },
+  });
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/admin/content-review/{id}',
+    tags: ['Content Review Admin'],
+    summary: 'Admin inspect one immutable revision and its evidence',
+    description:
+      'Returns full text, media source/reference, moderation signals, author, submission state, and any existing decision. Hidden/deleted evidence is retained and remains inspectable.',
+    operationId: 'getContentReviewAdmin',
+    security: authenticated,
+    request: { params: moderationIdParamsSchema },
+    responses: {
+      200: { description: 'Content review detail', content: { 'application/json': { schema: contentReviewDetail } } },
+      401: errors(errorSchema, 'Authentication required', authErrors),
+      403: errors(errorSchema, 'Admin only', ['FORBIDDEN', 'ACCOUNT_BANNED']),
+      404: errors(errorSchema, 'Revision not found', ['NOT_FOUND']),
+    },
+  });
+
+  registry.registerPath({
+    method: 'patch',
+    path: '/api/v1/admin/content-review/{id}',
+    tags: ['Content Review Admin'],
+    summary: 'Admin approve or reject a submitted revision',
+    description:
+      'Reason is mandatory. The exact latest revision is locked transactionally. Approve replaces the public pointer; reject keeps any prior approved revision public. Signals are recorded evidence only.',
+    operationId: 'reviewContentAdmin',
+    security: authenticated,
+    request: { params: moderationIdParamsSchema, body: jsonBody(contentReviewDecision) },
+    responses: {
+      200: { description: 'Decision and audit recorded', content: { 'application/json': { schema: contentReviewDetail } } },
+      400: errors(errorSchema, 'Invalid decision/reason', ['VALIDATION_ERROR']),
+      401: errors(errorSchema, 'Authentication required', authErrors),
+      403: errors(errorSchema, 'Admin only or self-review forbidden', [
+        'FORBIDDEN',
+        'SELF_APPROVAL_FORBIDDEN',
+        'ACCOUNT_BANNED',
+      ]),
+      404: errors(errorSchema, 'Revision not found', ['NOT_FOUND']),
+      409: errors(errorSchema, 'Review state or concurrency conflict', [
+        'REVIEW_ALREADY_DECIDED',
+        'REVIEW_CONFLICT',
+        'CONTENT_STATE_CONFLICT',
+        'CONTENT_AUTHOR_INACTIVE',
+      ]),
+    },
+  });
 
   registry.registerPath({
     method: 'post',

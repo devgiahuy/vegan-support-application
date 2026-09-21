@@ -1,12 +1,12 @@
 # Backend Implementation Phases
 
-**Version:** 3.1
+**Version:** 3.2
 
-**Updated:** 2026-09-19
+**Updated:** 2026-09-21
 
 **Stack:** Node.js · Express · TypeScript · PostgreSQL · Prisma · Zod · OpenAPI
 
-**Current baseline:** Phases 00–12 completed; Phases 13–15 are in progress
+**Current baseline:** Phases 00–12 and 15–16 completed; Phases 13–14 are in progress
 
 This document splits the backend into independently implementable, verifiable, and committable phases. Every new session uses the matching prompt under `backend/docs/prompts/` and derives current state from the repository, not from previous chat history.
 
@@ -133,8 +133,8 @@ Regenerate/validate OpenAPI using the repository workflow. Live external-provide
 | 12 | `COMPLETED` | 2026-09-19 | Not committed (review tree) | Food/nutrient knowledge base, reviewed rules and idempotent imports ready; commit intentionally deferred by user |
 | 13 | `IN_PROGRESS` | — | Not committed (review tree) | Source/OpenAPI/docs implemented; final READY gate blocked by Windows Prisma query-engine DLL `EPERM` during `npm run build` |
 | 14 | `IN_PROGRESS` | — | Not committed (review tree) | Source/migration/OpenAPI/docs implemented; breaking consumers remain `CHANGING` and final READY gate is blocked by Windows Prisma query-engine DLL `EPERM` during `npm run build` |
-| 15 | `IN_PROGRESS` | — | Not committed (review tree) | Schema/migration/seed/source/OpenAPI fully implemented; lint+typecheck+build pass; migration not yet deployed to live DB; reconciliation dry-run blocked until migration applied |
-| 16 | `NOT_STARTED` | — | — | — |
+| 15 | `COMPLETED` | 2026-09-21 | `252b792` | Storage migration deployed locally; seed and reconciliation dry-run pass; source/OpenAPI gates pass |
+| 16 | `COMPLETED` | 2026-09-21 | Not committed (user review tree) | Shared draft/submit/Admin review lifecycle, video storage validation, moderation signals, history/audit, OpenAPI and runtime acceptance checks pass; commit intentionally deferred by user |
 | 17 | `NOT_STARTED` | — | — | — |
 | 18 | `NOT_STARTED` | — | — | — |
 | 19 | `NOT_STARTED` | — | — | — |

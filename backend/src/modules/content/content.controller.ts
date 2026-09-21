@@ -7,9 +7,12 @@ import {
 } from '../../common/validation/validate-request.js';
 import {
   deletePostResponseSchema,
+  contentReviewHistoryResponseSchema,
   postListResponseSchema,
   postResponseSchema,
   relatedPostsResponseSchema,
+  type ReviewHistoryQuery,
+  type SubmitPostInput,
   type CreatePostInput,
   type DeletePostQuery,
   type PostIdentifierParams,
@@ -109,6 +112,32 @@ export class ContentController {
       getValidatedBody<UpdatePostInput>(request),
     );
     response.status(200).json(postResponseSchema.parse({ success: true, data, meta: null }));
+  };
+
+  submitPost = async (request: Request, response: Response): Promise<void> => {
+    const { id } = getValidatedParams<PostIdParams>(request);
+    const data = await this.contentService.submitPost(
+      actorFromRequest(request),
+      id,
+      getValidatedBody<SubmitPostInput>(request),
+    );
+    response.status(200).json(postResponseSchema.parse({ success: true, data, meta: null }));
+  };
+
+  getReviewHistory = async (request: Request, response: Response): Promise<void> => {
+    const { id } = getValidatedParams<PostIdParams>(request);
+    const result = await this.contentService.getReviewHistory(
+      actorFromRequest(request),
+      id,
+      getValidatedQuery<ReviewHistoryQuery>(request),
+    );
+    response.status(200).json(
+      contentReviewHistoryResponseSchema.parse({
+        success: true,
+        data: result.data,
+        meta: result.meta,
+      }),
+    );
   };
 
   deletePost = async (request: Request, response: Response): Promise<void> => {

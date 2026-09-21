@@ -37,6 +37,10 @@ const reviewerUserSelect = {
 const reviewRevisionInclude = {
   post: { include: { author: { select: reviewerUserSelect } } },
   aiFlags: { orderBy: { createdAt: 'asc' } },
+  reviewedBy: { select: reviewerUserSelect },
+  categories: { include: { category: true }, orderBy: { category: { name: 'asc' } } },
+  tags: { orderBy: { normalizedTag: 'asc' } },
+  media: { orderBy: { position: 'asc' } },
 } satisfies Prisma.PostRevisionInclude;
 const reportInclude = {
   reporter: { select: { id: true, displayName: true } },
@@ -118,7 +122,7 @@ export class ModerationRepository {
       INNER JOIN "posts" p ON p."id" = pr."post_id" AND p."version" = pr."version"
       INNER JOIN "users" u ON u."id" = p."author_id"
       WHERE pr."status" = ANY(${statuses})
-        AND p."status" <> 'DELETED'::"post_status"
+        AND p."status" NOT IN ('HIDDEN'::"post_status", 'DELETED'::"post_status")
         ${typeFilter}
         ${contributorFilter}
         ${priorityFilter}
@@ -276,6 +280,139 @@ export class ModerationRepository {
             previousPostStatus: revision.post.status,
             previousRevisionStatus: revision.status,
             reviewRouteDecision: decision,
+          },
+        },
+      });
+      return transaction.postRevision.findUniqueOrThrow({
+        where: { id: revision.id },
+        include: reviewRevisionInclude,
+      });
+    });
+  }
+
+  findReviewRevision(revisionId: string): Promise<ReviewRevisionRecord | null> {
+    return this.prisma.postRevision.findUnique({
+      where: { id: revisionId },
+      include: reviewRevisionInclude,
+    });
+  }
+
+  async reviewRevisionAdmin(
+    actor: ModerationActor,
+    revisionId: string,
+    decision: 'APPROVE' | 'REJECT',
+    input: ReviewDecisionInput,
+  ): Promise<ReviewRevisionRecord> {
+    return this.prisma.$transaction(async (transaction) => {
+      const locked = await transaction.$queryRaw<IdRow[]>(Prisma.sql`
+        SELECT pr."id"
+        FROM "post_revisions" pr
+        INNER JOIN "posts" p ON p."id" = pr."post_id"
+        WHERE pr."id" = ${revisionId}::uuid
+          AND p."version" = pr."version"
+        FOR UPDATE OF p, pr
+      `);
+      if (!locked[0]) throw this.notFound('Không tìm thấy revision review target');
+      const revision = await transaction.postRevision.findUniqueOrThrow({
+        where: { id: revisionId },
+        include: reviewRevisionInclude,
+      });
+      if (actor.role !== Role.ADMIN) {
+        throw new AppError({
+          statusCode: 403,
+          code: 'FORBIDDEN',
+          message: 'Chỉ Admin được đưa ra quyết định publication cuối cùng',
+        });
+      }
+      const reviewableStatuses: PostRevisionStatus[] = [
+        PostRevisionStatus.PENDING_REVIEW,
+        PostRevisionStatus.FLAGGED,
+        PostRevisionStatus.QUARANTINED,
+      ];
+      if (!reviewableStatuses.includes(revision.status)) {
+        throw this.conflict('REVIEW_ALREADY_DECIDED', 'Revision không còn ở trạng thái chờ review');
+      }
+      if (revision.createdById === actor.userId || revision.post.authorId === actor.userId) {
+        throw new AppError({
+          statusCode: 403,
+          code: 'SELF_APPROVAL_FORBIDDEN',
+          message: 'Admin không được review nội dung do chính mình tạo',
+        });
+      }
+      const inactiveAuthorStatuses: UserStatus[] = [UserStatus.BANNED, UserStatus.DELETED];
+      if (
+        decision === ModerationDecision.APPROVE &&
+        inactiveAuthorStatuses.includes(revision.post.author.status)
+      ) {
+        throw this.conflict(
+          'CONTENT_AUTHOR_INACTIVE',
+          'Không thể publish nội dung của user đã bị ban hoặc xóa',
+        );
+      }
+      const unavailablePostStatuses: PostStatus[] = [PostStatus.HIDDEN, PostStatus.DELETED];
+      if (unavailablePostStatuses.includes(revision.post.status)) {
+        throw this.conflict(
+          'CONTENT_STATE_CONFLICT',
+          'Nội dung đang bị ẩn hoặc đã xóa; review evidence được giữ nhưng không thể quyết định publication',
+        );
+      }
+      const now = new Date();
+      const updated = await transaction.postRevision.updateMany({
+        where: { id: revision.id, status: revision.status },
+        data: {
+          status:
+            decision === ModerationDecision.APPROVE
+              ? PostRevisionStatus.PUBLISHED
+              : PostRevisionStatus.REJECTED,
+          reviewNote: input.reason,
+          reviewedById: actor.userId,
+          reviewedAt: now,
+        },
+      });
+      if (updated.count !== 1) {
+        throw this.conflict('REVIEW_CONFLICT', 'Revision đã được Admin khác xử lý');
+      }
+      if (decision === ModerationDecision.APPROVE) {
+        await transaction.post.update({
+          where: { id: revision.postId },
+          data: {
+            status: PostStatus.PUBLISHED,
+            publishedRevisionId: revision.id,
+            publishedAt: now,
+            hiddenAt: null,
+            hiddenById: null,
+            hiddenReason: null,
+          },
+        });
+      } else if (!revision.post.publishedRevisionId) {
+        await transaction.post.update({
+          where: { id: revision.postId },
+          data: { status: PostStatus.REJECTED },
+        });
+      }
+      const openFlags = revision.aiFlags.filter((flag) => flag.status === AiFlagStatus.OPEN);
+      if (openFlags.length) {
+        await transaction.aiFlag.updateMany({
+          where: { id: { in: openFlags.map((flag) => flag.id) }, status: AiFlagStatus.OPEN },
+          data: { status: AiFlagStatus.REVIEWED, reviewedById: actor.userId, reviewedAt: now },
+        });
+      }
+      await transaction.moderationAction.create({
+        data: {
+          actorId: actor.userId,
+          decision,
+          targetType: ModerationTargetType.POST,
+          targetId: revision.postId,
+          reason: input.reason,
+          relatedAiFlagIds: openFlags.map((flag) => flag.id),
+          metadata: {
+            revisionId: revision.id,
+            revisionVersion: revision.version,
+            reviewerRole: actor.role,
+            previousPostStatus: revision.post.status,
+            previousRevisionStatus: revision.status,
+            reviewRouteDecision: decision,
+            automatedDecision: false,
           },
         },
       });

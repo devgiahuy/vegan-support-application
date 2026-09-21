@@ -10,6 +10,7 @@ import type { ModerationActor } from './moderation.repository.js';
 import {
   adminCommentListResponseSchema,
   adminCommentResponseSchema,
+  contentReviewDetailResponseSchema,
   adminUserListResponseSchema,
   adminUserResponseSchema,
   reportListResponseSchema,
@@ -17,6 +18,7 @@ import {
   reviewQueueItemResponseSchema,
   reviewQueueListResponseSchema,
   type AdminCommentsQuery,
+  type AdminContentReviewDecisionInput,
   type AdminReportsQuery,
   type AdminUsersQuery,
   type CreateReportInput,
@@ -77,6 +79,27 @@ export class ModerationController {
     response
       .status(200)
       .json(reviewQueueItemResponseSchema.parse({ success: true, data, meta: null }));
+  };
+
+  getContentReviewDetail = async (request: Request, response: Response): Promise<void> => {
+    const data = await this.service.getContentReviewDetail(
+      actor(request),
+      getValidatedParams<ModerationIdParams>(request).id,
+    );
+    response
+      .status(200)
+      .json(contentReviewDetailResponseSchema.parse({ success: true, data, meta: null }));
+  };
+
+  reviewContent = async (request: Request, response: Response): Promise<void> => {
+    const data = await this.service.reviewContent(
+      actor(request),
+      getValidatedParams<ModerationIdParams>(request).id,
+      getValidatedBody<AdminContentReviewDecisionInput>(request),
+    );
+    response
+      .status(200)
+      .json(contentReviewDetailResponseSchema.parse({ success: true, data, meta: null }));
   };
 
   createReport = async (request: Request, response: Response): Promise<void> => {

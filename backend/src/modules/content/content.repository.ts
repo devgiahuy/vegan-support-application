@@ -1,5 +1,8 @@
 import {
   CatalogStatus,
+  MediaAssetStatus,
+  MediaKind,
+  MediaProvider,
   ModerationDecision,
   ModerationTargetType,
   Prisma,
@@ -13,6 +16,7 @@ import {
   type RecipeDifficulty,
   type Tradition,
   UserStatus,
+  StorageReservationStatus,
 } from '@prisma/client';
 import type { PostListQuery } from './content.schemas.js';
 import type { ResolvedMediaInput } from './media.service.js';
@@ -28,6 +32,8 @@ const revisionInclude = {
   categories: { include: { category: true }, orderBy: { category: { name: 'asc' } } },
   tags: { orderBy: { normalizedTag: 'asc' } },
   media: { orderBy: { position: 'asc' } },
+  aiFlags: { orderBy: { createdAt: 'asc' } },
+  reviewedBy: { select: { id: true, displayName: true, avatarUrl: true } },
 } satisfies Prisma.PostRevisionInclude;
 
 const postIdentityInclude = {
@@ -640,6 +646,74 @@ export class ContentRepository {
     });
   }
 
+  async listReviewHistory(postId: string, page: number, limit: number) {
+    const where: Prisma.PostRevisionWhereInput = { postId };
+    const [records, total] = await this.prisma.$transaction([
+      this.prisma.postRevision.findMany({
+        where,
+        include: revisionInclude,
+        orderBy: [{ version: 'desc' }, { id: 'desc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.postRevision.count({ where }),
+    ]);
+    return { records, total };
+  }
+
+  async hasValidVideoMediaForSubmission(
+    postId: string,
+    revisionId: string,
+    ownerId: string,
+  ): Promise<boolean> {
+    const revision = await this.prisma.postRevision.findFirst({
+      where: { id: revisionId, postId, post: { authorId: ownerId, type: 'VIDEO' } },
+      select: {
+        media: {
+          where: { kind: MediaKind.VIDEO },
+          select: {
+            provider: true,
+            publicId: true,
+            secureUrl: true,
+            asset: {
+              select: {
+                ownerId: true,
+                publicId: true,
+                kind: true,
+                resourceType: true,
+                status: true,
+                bytes: true,
+                backfilled: true,
+                reservation: { select: { status: true } },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!revision || revision.media.length !== 1) return false;
+    const media = revision.media[0];
+    if (!media) return false;
+    if (media.provider === MediaProvider.YOUTUBE) {
+      return Boolean(
+        media.publicId &&
+          /^[A-Za-z0-9_-]{11}$/.test(media.publicId) &&
+          media.secureUrl === `https://www.youtube.com/watch?v=${media.publicId}`,
+      );
+    }
+    const asset = media.asset;
+    return Boolean(
+      asset &&
+        asset.ownerId === ownerId &&
+        asset.publicId === media.publicId &&
+        asset.kind === MediaKind.VIDEO &&
+        asset.resourceType === 'VIDEO' &&
+        asset.status === MediaAssetStatus.ACTIVE &&
+        asset.bytes > 0n &&
+        (asset.backfilled || asset.reservation?.status === StorageReservationStatus.COMMITTED),
+    );
+  }
+
   async findActiveCookingMethodIds(ids: string[]): Promise<string[]> {
     const methods = await this.prisma.cookingMethod.findMany({
       where: { id: { in: ids }, active: true },
@@ -791,6 +865,63 @@ export class ContentRepository {
     });
   }
 
+  async submitRevision(
+    postId: string,
+    revisionId: string,
+    actorId: string,
+    expectedVersion: number,
+    decision: SubmissionDecision,
+  ): Promise<{ post: PostIdentityRecord; revision: RevisionRecord }> {
+    return this.prisma.$transaction(async (transaction) => {
+      await this.lockActiveActor(transaction, actorId);
+      const locked = await transaction.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+        SELECT pr."id"
+        FROM "post_revisions" pr
+        INNER JOIN "posts" p ON p."id" = pr."post_id"
+        WHERE p."id" = ${postId}::uuid
+          AND p."author_id" = ${actorId}::uuid
+          AND p."version" = ${expectedVersion}
+          AND pr."id" = ${revisionId}::uuid
+          AND pr."version" = p."version"
+          AND pr."status" = 'DRAFT'::"post_revision_status"
+          AND p."status" NOT IN ('HIDDEN', 'DELETED')
+        FOR UPDATE OF p, pr
+      `);
+      if (!locked[0]) throw new ContentVersionConflictError();
+      const now = new Date();
+      await transaction.postRevision.update({
+        where: { id: revisionId },
+        data: {
+          status: decision.revisionStatus,
+          submittedAt: now,
+          reviewNote: null,
+          reviewedById: null,
+          reviewedAt: null,
+        },
+      });
+      if (decision.moderationFlag) {
+        await transaction.aiFlag.create({
+          data: { postRevisionId: revisionId, ...decision.moderationFlag },
+        });
+      }
+      const current = await transaction.post.findUniqueOrThrow({ where: { id: postId } });
+      await transaction.post.update({
+        where: { id: postId },
+        data: { status: current.publishedRevisionId ? PostStatus.PUBLISHED : decision.postStatus },
+      });
+      return {
+        post: await transaction.post.findUniqueOrThrow({
+          where: { id: postId },
+          include: postIdentityInclude,
+        }),
+        revision: await transaction.postRevision.findUniqueOrThrow({
+          where: { id: revisionId },
+          include: revisionInclude,
+        }),
+      };
+    });
+  }
+
   async softDelete(postId: string, actorId: string, expectedVersion: number): Promise<boolean> {
     const result = await this.prisma.post.updateMany({
       where: { id: postId, version: expectedVersion, status: { not: PostStatus.DELETED } },
@@ -917,11 +1048,11 @@ export class ContentRepository {
     return {
       kind: item.kind,
       provider: item.provider,
+      publicId: item.publicId,
       secureUrl: item.secureUrl,
       position,
       ...(item.provider === 'CLOUDINARY'
         ? {
-            publicId: item.publicId,
             assetId: item.assetId,
             mimeType: item.mimeType,
             bytes: item.bytes,

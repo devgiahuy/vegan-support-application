@@ -4167,6 +4167,26 @@
                           "type": "string"
                         }
                       },
+                      "submittedAt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "date-time"
+                      },
+                      "reviewNote": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "reviewedAt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "date-time"
+                      },
                       "createdAt": {
                         "type": "string",
                         "format": "date-time"
@@ -4180,6 +4200,9 @@
                       "excerpt",
                       "body",
                       "tags",
+                      "submittedAt",
+                      "reviewNote",
+                      "reviewedAt",
                       "createdAt"
                     ],
                     "additionalProperties": false
@@ -4732,6 +4755,26 @@
                           "type": "string"
                         }
                       },
+                      "submittedAt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "date-time"
+                      },
+                      "reviewNote": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "reviewedAt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "date-time"
+                      },
                       "createdAt": {
                         "type": "string",
                         "format": "date-time"
@@ -4745,6 +4788,9 @@
                       "excerpt",
                       "body",
                       "tags",
+                      "submittedAt",
+                      "reviewNote",
+                      "reviewedAt",
                       "createdAt"
                     ],
                     "additionalProperties": false
@@ -5001,6 +5047,26 @@
                           "type": "string"
                         }
                       },
+                      "submittedAt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "date-time"
+                      },
+                      "reviewNote": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "reviewedAt": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "format": "date-time"
+                      },
                       "createdAt": {
                         "type": "string",
                         "format": "date-time"
@@ -5014,6 +5080,9 @@
                       "excerpt",
                       "body",
                       "tags",
+                      "submittedAt",
+                      "reviewNote",
+                      "reviewedAt",
                       "createdAt"
                     ],
                     "additionalProperties": false
@@ -5296,6 +5365,26 @@
                             "type": "string"
                           }
                         },
+                        "submittedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "reviewNote": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "reviewedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time"
@@ -5309,6 +5398,9 @@
                         "excerpt",
                         "body",
                         "tags",
+                        "submittedAt",
+                        "reviewNote",
+                        "reviewedAt",
                         "createdAt"
                       ],
                       "additionalProperties": false
@@ -5861,6 +5953,26 @@
                             "type": "string"
                           }
                         },
+                        "submittedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "reviewNote": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "reviewedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time"
@@ -5874,6 +5986,9 @@
                         "excerpt",
                         "body",
                         "tags",
+                        "submittedAt",
+                        "reviewNote",
+                        "reviewedAt",
                         "createdAt"
                       ],
                       "additionalProperties": false
@@ -6130,6 +6245,26 @@
                             "type": "string"
                           }
                         },
+                        "submittedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "reviewNote": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "reviewedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time"
@@ -6143,6 +6278,9 @@
                         "excerpt",
                         "body",
                         "tags",
+                        "submittedAt",
+                        "reviewNote",
+                        "reviewedAt",
                         "createdAt"
                       ],
                       "additionalProperties": false
@@ -6511,6 +6649,26 @@
                             "type": "string"
                           }
                         },
+                        "submittedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "reviewNote": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "reviewedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time"
@@ -6524,6 +6682,9 @@
                         "excerpt",
                         "body",
                         "tags",
+                        "submittedAt",
+                        "reviewNote",
+                        "reviewedAt",
                         "createdAt"
                       ],
                       "additionalProperties": false
@@ -7079,6 +7240,26 @@
                             "type": "string"
                           }
                         },
+                        "submittedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "reviewNote": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "reviewedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time"
@@ -7092,6 +7273,9 @@
                         "excerpt",
                         "body",
                         "tags",
+                        "submittedAt",
+                        "reviewNote",
+                        "reviewedAt",
                         "createdAt"
                       ],
                       "additionalProperties": false
@@ -7351,6 +7535,26 @@
                             "type": "string"
                           }
                         },
+                        "submittedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "reviewNote": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "reviewedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
                         "createdAt": {
                           "type": "string",
                           "format": "date-time"
@@ -7364,6 +7568,9 @@
                         "excerpt",
                         "body",
                         "tags",
+                        "submittedAt",
+                        "reviewNote",
+                        "reviewedAt",
                         "createdAt"
                       ],
                       "additionalProperties": false
@@ -7628,6 +7835,391 @@
           },
           "meta": {
             "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "SubmitPostRequest": {
+        "type": "object",
+        "properties": {
+          "revisionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedVersion": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          }
+        },
+        "required": [
+          "revisionId",
+          "expectedVersion"
+        ],
+        "additionalProperties": false
+      },
+      "ContentReviewHistoryResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "postId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "RECIPE",
+                  "BLOG",
+                  "VIDEO"
+                ]
+              },
+              "postStatus": {
+                "type": "string",
+                "enum": [
+                  "DRAFT",
+                  "PENDING_REVIEW",
+                  "PUBLISHED",
+                  "FLAGGED",
+                  "QUARANTINED",
+                  "REJECTED",
+                  "HIDDEN",
+                  "DELETED"
+                ]
+              },
+              "version": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "publishedRevisionId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uuid"
+              },
+              "revisions": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "revision": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "version": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "DRAFT",
+                            "PENDING_REVIEW",
+                            "PUBLISHED",
+                            "FLAGGED",
+                            "QUARANTINED",
+                            "REJECTED"
+                          ]
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "excerpt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "body": {
+                          "type": "string"
+                        },
+                        "tags": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "submittedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "reviewNote": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "reviewedAt": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "format": "date-time"
+                        },
+                        "createdAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "version",
+                        "status",
+                        "title",
+                        "excerpt",
+                        "body",
+                        "tags",
+                        "submittedAt",
+                        "reviewNote",
+                        "reviewedAt",
+                        "createdAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "reviewedBy": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "displayName": {
+                          "type": "string"
+                        },
+                        "avatarUrl": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "displayName",
+                        "avatarUrl"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "media": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "kind": {
+                            "type": "string",
+                            "enum": [
+                              "COVER_IMAGE",
+                              "VIDEO"
+                            ]
+                          },
+                          "provider": {
+                            "type": "string",
+                            "enum": [
+                              "CLOUDINARY",
+                              "YOUTUBE"
+                            ]
+                          },
+                          "publicId": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "secureUrl": {
+                            "type": "string",
+                            "format": "uri"
+                          },
+                          "mimeType": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
+                          "bytes": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "exclusiveMinimum": 0
+                          },
+                          "width": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "exclusiveMinimum": 0
+                          },
+                          "height": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "exclusiveMinimum": 0
+                          },
+                          "durationSeconds": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "exclusiveMinimum": 0
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "kind",
+                          "provider",
+                          "publicId",
+                          "secureUrl",
+                          "mimeType",
+                          "bytes",
+                          "width",
+                          "height",
+                          "durationSeconds"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "moderationSignals": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "provider": {
+                            "type": "string"
+                          },
+                          "model": {
+                            "type": "string"
+                          },
+                          "ruleVersion": {
+                            "type": "string"
+                          },
+                          "reasonCodes": {
+                            "type": "array",
+                            "items": {
+                              "type": "string"
+                            }
+                          },
+                          "riskScore": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 1
+                          },
+                          "riskLevel": {
+                            "type": "string",
+                            "enum": [
+                              "LOW",
+                              "MEDIUM",
+                              "HIGH"
+                            ]
+                          },
+                          "status": {
+                            "type": "string",
+                            "enum": [
+                              "OPEN",
+                              "REVIEWED"
+                            ]
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "provider",
+                          "model",
+                          "ruleVersion",
+                          "reasonCodes",
+                          "riskScore",
+                          "riskLevel",
+                          "status",
+                          "createdAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    },
+                    "isPublishedRevision": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "revision",
+                    "reviewedBy",
+                    "media",
+                    "moderationSignals",
+                    "isPublishedRevision"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "postId",
+              "type",
+              "postStatus",
+              "version",
+              "publishedRevisionId",
+              "revisions"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -9551,6 +10143,13 @@
                 "canDecide": {
                   "type": "boolean"
                 },
+                "submittedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
                 "createdAt": {
                   "type": "string",
                   "format": "date-time"
@@ -9571,6 +10170,7 @@
                 "priority",
                 "activeReporterCount",
                 "canDecide",
+                "submittedAt",
                 "createdAt"
               ],
               "additionalProperties": false
@@ -9796,6 +10396,13 @@
               "canDecide": {
                 "type": "boolean"
               },
+              "submittedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
               "createdAt": {
                 "type": "string",
                 "format": "date-time"
@@ -9816,6 +10423,7 @@
               "priority",
               "activeReporterCount",
               "canDecide",
+              "submittedAt",
               "createdAt"
             ],
             "additionalProperties": false
@@ -9828,6 +10436,421 @@
           "success",
           "data",
           "meta"
+        ],
+        "additionalProperties": false
+      },
+      "AdminContentReviewDetailResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "postId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "type": {
+                "type": "string",
+                "enum": [
+                  "RECIPE",
+                  "BLOG",
+                  "VIDEO"
+                ]
+              },
+              "slug": {
+                "type": "string"
+              },
+              "postStatus": {
+                "type": "string",
+                "enum": [
+                  "DRAFT",
+                  "PENDING_REVIEW",
+                  "PUBLISHED",
+                  "FLAGGED",
+                  "QUARANTINED",
+                  "REJECTED",
+                  "HIDDEN",
+                  "DELETED"
+                ]
+              },
+              "revisionId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "revisionVersion": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "revisionStatus": {
+                "type": "string",
+                "enum": [
+                  "DRAFT",
+                  "PENDING_REVIEW",
+                  "PUBLISHED",
+                  "FLAGGED",
+                  "QUARANTINED",
+                  "REJECTED"
+                ]
+              },
+              "title": {
+                "type": "string"
+              },
+              "excerpt": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "author": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "displayName": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "MEMBER",
+                      "CONTRIBUTOR",
+                      "ADMIN"
+                    ]
+                  },
+                  "contributorApprovalBasis": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "ORGANIZATION_AFFILIATION",
+                      "PLATFORM_TRACK_RECORD",
+                      "ADMIN_INVITED",
+                      null
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "displayName",
+                  "role",
+                  "contributorApprovalBasis"
+                ],
+                "additionalProperties": false
+              },
+              "aiFlags": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "provider": {
+                      "type": "string"
+                    },
+                    "model": {
+                      "type": "string"
+                    },
+                    "ruleVersion": {
+                      "type": "string"
+                    },
+                    "reasonCodes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "riskScore": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "riskLevel": {
+                      "type": "string",
+                      "enum": [
+                        "LOW",
+                        "MEDIUM",
+                        "HIGH"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "OPEN",
+                        "REVIEWED"
+                      ]
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "provider",
+                    "model",
+                    "ruleVersion",
+                    "reasonCodes",
+                    "riskScore",
+                    "riskLevel",
+                    "status",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "priority": {
+                "type": "string",
+                "enum": [
+                  "NORMAL",
+                  "HIGH"
+                ]
+              },
+              "activeReporterCount": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "canDecide": {
+                "type": "boolean"
+              },
+              "submittedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "body": {
+                "type": "string"
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "categories": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "slug": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "slug"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "media": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "kind": {
+                      "type": "string",
+                      "enum": [
+                        "COVER_IMAGE",
+                        "VIDEO"
+                      ]
+                    },
+                    "provider": {
+                      "type": "string",
+                      "enum": [
+                        "CLOUDINARY",
+                        "YOUTUBE"
+                      ]
+                    },
+                    "publicId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "secureUrl": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "mimeType": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "bytes": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "exclusiveMinimum": 0
+                    },
+                    "durationSeconds": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "exclusiveMinimum": 0
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "provider",
+                    "publicId",
+                    "secureUrl",
+                    "mimeType",
+                    "bytes",
+                    "durationSeconds"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "reviewNote": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "reviewedBy": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "displayName": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string",
+                    "enum": [
+                      "MEMBER",
+                      "CONTRIBUTOR",
+                      "ADMIN"
+                    ]
+                  },
+                  "contributorApprovalBasis": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "ORGANIZATION_AFFILIATION",
+                      "PLATFORM_TRACK_RECORD",
+                      "ADMIN_INVITED",
+                      null
+                    ]
+                  }
+                },
+                "required": [
+                  "id",
+                  "displayName",
+                  "role",
+                  "contributorApprovalBasis"
+                ],
+                "additionalProperties": false
+              },
+              "reviewedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "isPublishedRevision": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "postId",
+              "type",
+              "slug",
+              "postStatus",
+              "revisionId",
+              "revisionVersion",
+              "revisionStatus",
+              "title",
+              "excerpt",
+              "author",
+              "aiFlags",
+              "priority",
+              "activeReporterCount",
+              "canDecide",
+              "submittedAt",
+              "createdAt",
+              "body",
+              "tags",
+              "categories",
+              "media",
+              "reviewNote",
+              "reviewedBy",
+              "reviewedAt",
+              "isPublishedRevision"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "AdminContentReviewDecisionRequest": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "APPROVE",
+              "REJECT"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 10,
+            "maxLength": 2000
+          }
+        },
+        "required": [
+          "decision",
+          "reason"
         ],
         "additionalProperties": false
       },
@@ -20287,7 +21310,7 @@
           "Content"
         ],
         "summary": "Tạo Recipe, Blog hoặc Video",
-        "description": "Không nhận author/status/publishedAt từ client. Member đi PENDING_REVIEW. Approved Contributor/Admin được auto-publish khi rule moderation v1 không flag; low/medium flag vào FLAGGED và high spam/harmful-health vào QUARANTINED. Requested Contributor type không cấp quyền.",
+        "description": "Không nhận author/status/publishedAt từ client. Mọi content type tạo immutable DRAFT; publication chỉ xảy ra sau explicit submit và Admin approval. Video upload chỉ nhận committed Phase 15 asset thuộc author; YouTube URL được allowlist và không tính quota.",
         "operationId": "createPost",
         "security": [
           {
@@ -20806,7 +21829,7 @@
           "Content"
         ],
         "summary": "Tạo revision mới cho content thuộc quyền sở hữu",
-        "description": "Request là full revision snapshot và bắt buộc expectedVersion. Member edit published post tạo PENDING_REVIEW revision; approved Contributor/Admin được moderation lại và auto-publish nếu sạch. Revision cũ vẫn phục vụ public khi revision mới pending/flagged/quarantined.",
+        "description": "Request là full revision snapshot và bắt buộc expectedVersion. Author-only mutation luôn tạo DRAFT. Khi sửa content đã approved, published revision cũ tiếp tục phục vụ public cho tới khi revision mới được submit và Admin approve.",
         "operationId": "updatePost",
         "security": [
           {
@@ -20967,7 +21990,7 @@
             }
           },
           "403": {
-            "description": "Không phải owner/Admin",
+            "description": "Author ownership required",
             "content": {
               "application/json": {
                 "examples": {
@@ -20976,7 +21999,7 @@
                       "success": false,
                       "error": {
                         "code": "FORBIDDEN",
-                        "message": "Không phải owner/Admin",
+                        "message": "Author ownership required",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -20986,7 +22009,7 @@
                       "success": false,
                       "error": {
                         "code": "ACCOUNT_BANNED",
-                        "message": "Không phải owner/Admin",
+                        "message": "Author ownership required",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -21194,7 +22217,7 @@
             }
           },
           "403": {
-            "description": "Không phải owner/Admin",
+            "description": "Author ownership required",
             "content": {
               "application/json": {
                 "examples": {
@@ -21203,7 +22226,7 @@
                       "success": false,
                       "error": {
                         "code": "FORBIDDEN",
-                        "message": "Không phải owner/Admin",
+                        "message": "Author ownership required",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -21213,7 +22236,7 @@
                       "success": false,
                       "error": {
                         "code": "ACCOUNT_BANNED",
-                        "message": "Không phải owner/Admin",
+                        "message": "Author ownership required",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -21283,6 +22306,457 @@
                     "message": "Tài khoản đang bị khóa",
                     "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/posts/{id}/submit": {
+      "post": {
+        "tags": [
+          "Content Review"
+        ],
+        "summary": "Submit một immutable draft revision để Admin review",
+        "description": "Author-only. Revalidates latest version and video media ownership/committed state. Text/metadata moderation may attach a signal and priority, but never approves, rejects, hides, or deletes automatically.",
+        "operationId": "submitPostRevision",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubmitPostRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Revision submitted as PENDING_REVIEW",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PostResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or uncommitted video media",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Invalid or uncommitted video media",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_MEDIA_REFERENCE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_MEDIA_REFERENCE",
+                        "message": "Invalid or uncommitted video media",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Author ownership required",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Author ownership required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Author ownership required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Post not found",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Draft/version/state conflict",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CONTENT_VERSION_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTENT_VERSION_CONFLICT",
+                        "message": "Draft/version/state conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CONTENT_STATE_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTENT_STATE_CONFLICT",
+                        "message": "Draft/version/state conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Content deleted",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "CONTENT_DELETED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTENT_DELETED",
+                        "message": "Content deleted",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/posts/{id}/review-history": {
+      "get": {
+        "tags": [
+          "Content Review"
+        ],
+        "summary": "Author/Admin xem status và review history",
+        "description": "Returns immutable revisions, submission/review timestamps, reasons, media source/reference, and moderation signals. Hidden/deleted records remain available to the owner/Admin for audit.",
+        "operationId": "getPostReviewHistory",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated review history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContentReviewHistoryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Invalid pagination",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Author or Admin required",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Author or Admin required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Author or Admin required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Post not found",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Post not found",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }
@@ -24688,7 +26162,8 @@
           "Moderation"
         ],
         "summary": "List post revisions awaiting editorial or Admin moderation review",
-        "description": "Approved Contributors see clean Member PENDING_REVIEW revisions. Admin also sees FLAGGED and QUARANTINED revisions with rule reason codes, score, version, report count and priority.",
+        "description": "Legacy route retained for compatibility but now Admin-only. Use /api/v1/admin/content-review for the Phase 16 contract.",
+        "deprecated": true,
         "operationId": "listPostReviewQueue",
         "security": [
           {
@@ -24845,7 +26320,7 @@
             }
           },
           "403": {
-            "description": "Approved Contributor/Admin permission required",
+            "description": "Admin permission required",
             "content": {
               "application/json": {
                 "examples": {
@@ -24854,7 +26329,7 @@
                       "success": false,
                       "error": {
                         "code": "FORBIDDEN",
-                        "message": "Approved Contributor/Admin permission required",
+                        "message": "Admin permission required",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -24864,7 +26339,7 @@
                       "success": false,
                       "error": {
                         "code": "ACCOUNT_BANNED",
-                        "message": "Approved Contributor/Admin permission required",
+                        "message": "Admin permission required",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -24885,7 +26360,8 @@
           "Moderation"
         ],
         "summary": "Approve latest post revision",
-        "description": "Reason is mandatory. Self-review is forbidden. The latest revision and post are locked transactionally; flagged/quarantined decisions require Admin. A prior published revision remains public while a newer revision is pending or rejected.",
+        "description": "Legacy Admin-only route retained for compatibility. Use PATCH /api/v1/admin/content-review/{revisionId}.",
+        "deprecated": true,
         "operationId": "approvePostReview",
         "security": [
           {
@@ -25145,7 +26621,8 @@
           "Moderation"
         ],
         "summary": "Reject latest post revision",
-        "description": "Reason is mandatory. Self-review is forbidden. The latest revision and post are locked transactionally; flagged/quarantined decisions require Admin. A prior published revision remains public while a newer revision is pending or rejected.",
+        "description": "Legacy Admin-only route retained for compatibility. Use PATCH /api/v1/admin/content-review/{revisionId}.",
+        "deprecated": true,
         "operationId": "rejectPostReview",
         "security": [
           {
@@ -25367,6 +26844,607 @@
                       "error": {
                         "code": "CONTENT_AUTHOR_INACTIVE",
                         "message": "Concurrent/already decided review",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/content-review": {
+      "get": {
+        "tags": [
+          "Content Review Admin"
+        ],
+        "summary": "Admin list submitted content revisions",
+        "description": "Admin-only paginated queue. Supports type=VIDEO and status/priority filters. Moderation signals affect priority only and never make a publication decision.",
+        "operationId": "listContentReviewAdmin",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING_REVIEW",
+                "FLAGGED",
+                "QUARANTINED"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "RECIPE",
+                "BLOG",
+                "VIDEO"
+              ]
+            },
+            "required": false,
+            "name": "type",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "NORMAL",
+                "HIGH"
+              ]
+            },
+            "required": false,
+            "name": "priority",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated content review queue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewQueueListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid review filters",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Invalid review filters",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin only",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Admin only",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Admin only",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/content-review/{id}": {
+      "get": {
+        "tags": [
+          "Content Review Admin"
+        ],
+        "summary": "Admin inspect one immutable revision and its evidence",
+        "description": "Returns full text, media source/reference, moderation signals, author, submission state, and any existing decision. Hidden/deleted evidence is retained and remains inspectable.",
+        "operationId": "getContentReviewAdmin",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Content review detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminContentReviewDetailResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin only",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Admin only",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Admin only",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Revision not found",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Revision not found",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Content Review Admin"
+        ],
+        "summary": "Admin approve or reject a submitted revision",
+        "description": "Reason is mandatory. The exact latest revision is locked transactionally. Approve replaces the public pointer; reject keeps any prior approved revision public. Signals are recorded evidence only.",
+        "operationId": "reviewContentAdmin",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminContentReviewDecisionRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Decision and audit recorded",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminContentReviewDetailResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid decision/reason",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Invalid decision/reason",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Admin only or self-review forbidden",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Admin only or self-review forbidden",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "SELF_APPROVAL_FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "SELF_APPROVAL_FORBIDDEN",
+                        "message": "Admin only or self-review forbidden",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Admin only or self-review forbidden",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Revision not found",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Revision not found",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Review state or concurrency conflict",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "REVIEW_ALREADY_DECIDED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "REVIEW_ALREADY_DECIDED",
+                        "message": "Review state or concurrency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "REVIEW_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "REVIEW_CONFLICT",
+                        "message": "Review state or concurrency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CONTENT_STATE_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTENT_STATE_CONFLICT",
+                        "message": "Review state or concurrency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CONTENT_AUTHOR_INACTIVE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTENT_AUTHOR_INACTIVE",
+                        "message": "Review state or concurrency conflict",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }

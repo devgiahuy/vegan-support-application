@@ -13,6 +13,8 @@ import {
   postIdParamsSchema,
   postListQuerySchema,
   relatedPostsQuerySchema,
+  reviewHistoryQuerySchema,
+  submitPostRequestSchema,
   updatePostRequestSchema,
 } from './content.schemas.js';
 
@@ -39,6 +41,20 @@ export function createPostsRouter(
     validateParams(postIdParamsSchema),
     validateQuery(relatedPostsQuerySchema),
     controller.getRelatedPosts,
+  );
+  router.post(
+    '/:id/submit',
+    authentication.authenticate,
+    validateParams(postIdParamsSchema),
+    validateBody(submitPostRequestSchema),
+    controller.submitPost,
+  );
+  router.get(
+    '/:id/review-history',
+    authentication.authenticate,
+    validateParams(postIdParamsSchema),
+    validateQuery(reviewHistoryQuerySchema),
+    controller.getReviewHistory,
   );
   router.get(
     '/:idOrSlug',

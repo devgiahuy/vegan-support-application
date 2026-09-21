@@ -1,4 +1,6 @@
 import {
+  AiFlagRiskLevel,
+  AiFlagStatus,
   DietPattern,
   IngredientResolutionStatus,
   MediaKind,
@@ -258,6 +260,18 @@ export const relatedPostsQuerySchema = z
 export const deletePostQuerySchema = z
   .object({ expectedVersion: z.coerce.number().int().positive() })
   .strict();
+export const submitPostRequestSchema = z
+  .object({
+    revisionId: z.string().uuid(),
+    expectedVersion: z.number().int().positive(),
+  })
+  .strict();
+export const reviewHistoryQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+  })
+  .strict();
 
 const authorSchema = z
   .object({ id: z.string().uuid(), displayName: z.string(), avatarUrl: z.string().nullable() })
@@ -288,6 +302,9 @@ const revisionSchema = z
     excerpt: z.string().nullable(),
     body: z.string(),
     tags: z.array(z.string()),
+    submittedAt: z.string().datetime().nullable(),
+    reviewNote: z.string().nullable(),
+    reviewedAt: z.string().datetime().nullable(),
     createdAt: z.string().datetime(),
   })
   .strict();
@@ -438,8 +455,55 @@ export const deletePostResponseSchema = z
     meta: z.null(),
   })
   .strict();
+const contentModerationSignalSchema = z
+  .object({
+    id: z.string().uuid(),
+    provider: z.string(),
+    model: z.string(),
+    ruleVersion: z.string(),
+    reasonCodes: z.array(z.string()),
+    riskScore: z.number().min(0).max(1),
+    riskLevel: z.enum(AiFlagRiskLevel),
+    status: z.enum(AiFlagStatus),
+    createdAt: z.string().datetime(),
+  })
+  .strict();
+const contentReviewHistoryItemSchema = z
+  .object({
+    revision: revisionSchema,
+    reviewedBy: authorSchema.nullable(),
+    media: z.array(mediaSchema),
+    moderationSignals: z.array(contentModerationSignalSchema),
+    isPublishedRevision: z.boolean(),
+  })
+  .strict();
+export const contentReviewHistoryResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z
+      .object({
+        postId: z.string().uuid(),
+        type: z.enum(PostType),
+        postStatus: z.enum(PostStatus),
+        version: z.number().int().positive(),
+        publishedRevisionId: z.string().uuid().nullable(),
+        revisions: z.array(contentReviewHistoryItemSchema),
+      })
+      .strict(),
+    meta: z
+      .object({
+        page: z.number().int().positive(),
+        limit: z.number().int().positive(),
+        total: z.number().int().nonnegative(),
+        totalPages: z.number().int().nonnegative(),
+      })
+      .strict(),
+  })
+  .strict();
 export type CreatePostInput = z.infer<typeof createPostRequestSchema>;
 export type UpdatePostInput = z.infer<typeof updatePostRequestSchema>;
+export type SubmitPostInput = z.infer<typeof submitPostRequestSchema>;
+export type ReviewHistoryQuery = z.infer<typeof reviewHistoryQuerySchema>;
 export type PostListQuery = z.infer<typeof postListQuerySchema>;
 export type PostIdentifierParams = z.infer<typeof postIdentifierParamsSchema>;
 export type PostIdParams = z.infer<typeof postIdParamsSchema>;
