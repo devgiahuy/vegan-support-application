@@ -1,4 +1,4 @@
-import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
+import { create, AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { ErrorResponse } from '@/types/api';
 import { getAccessToken, setAccessToken } from './auth-token';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -12,7 +12,7 @@ declare module 'axios' {
   }
 }
 
-const api = axios.create({
+const api = create({
   baseURL: API_BASE_URL,
   timeout: 15000,
   withCredentials: true,
@@ -38,10 +38,10 @@ api.interceptors.request.use(
 );
 
 // Response Interceptor: refresh token queue (dedup nhiều request 401 cùng lúc)
-const failedQueue: Array<{
+const failedQueue: {
   resolve: (token: string | null) => void;
   reject: (reason: unknown) => void;
-}> = [];
+}[] = [];
 let queueProcessing = false;
 
 const processQueue = (error: unknown, token: string | null = null) => {

@@ -1,5 +1,5 @@
 import { Alert, Text, View } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, type Href } from 'expo-router';
 import {
   ArrowRight,
   CalendarDays,
@@ -64,7 +64,7 @@ export default function HomeScreen() {
         </Text>
 
         <View className="mt-5 gap-2.5">
-          <Link href="/recipes" asChild>
+          <Link href={'/recipes' as Href} asChild>
             <PrimaryButton
               label="Tìm công thức ngay"
               icon={<UtensilsCrossed size={16} color={colors.primaryForeground} />}
@@ -75,7 +75,7 @@ export default function HomeScreen() {
             variant="outline"
             icon={<Sparkles size={16} color={colors.cta} />}
             onPress={() => notifyComingSoon('Trợ lý AI dinh dưỡng')}
-          />
+            />
         </View>
 
         <View className="mt-4 flex-row flex-wrap items-center gap-x-3 gap-y-1">
@@ -164,7 +164,7 @@ export default function HomeScreen() {
               label="Hỏi bất kỳ nguyên liệu hoặc mục tiêu..."
               variant="outline"
               icon={<ArrowRight size={15} color={colors.foreground} />}
-              onPress={() => notifyComingSoon('Trợ lý AI dinh dưỡng')}
+            onPress={() => notifyComingSoon('Trợ lý AI dinh dưỡng')}
             />
           </View>
         </View>
@@ -200,11 +200,12 @@ export default function HomeScreen() {
           </View>
 
           <View className="mt-3.5">
-            <PrimaryButton
+            <Link href={'/meal-plans' as Href} asChild>
+              <PrimaryButton
               label="Tạo thực đơn 7 ngày của riêng bạn"
               icon={<CalendarDays size={16} color={colors.primaryForeground} />}
-              onPress={() => notifyComingSoon('Thực đơn tuần')}
-            />
+              />
+            </Link>
           </View>
         </View>
       </View>

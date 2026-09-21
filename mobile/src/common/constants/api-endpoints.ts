@@ -7,6 +7,7 @@ export const API_ENDPOINTS = {
   },
   USERS: {
     ME: '/users/me',
+    HEALTH_PROFILE: '/users/me/health-profile',
   },
   CATEGORIES: {
     TREE: '/categories',
@@ -15,5 +16,12 @@ export const API_ENDPOINTS = {
     LIST: '/posts',
     DETAIL: (idOrSlug: string) => `/posts/${idOrSlug}`,
     RELATED: (id: string) => `/posts/${id}/related`,
+  },
+  MEAL_PLANS: {
+    GENERATE: '/meal-plans/generate',
+    LIST: '/meal-plans',
+    DETAIL: (id: string) => `/meal-plans/${id}`,
+    SWAP: (planId: string, itemId: string) => `/meal-plans/${planId}/items/${itemId}/swap`,
+    DELETE: (id: string) => `/meal-plans/${id}`,
   },
 } as const;

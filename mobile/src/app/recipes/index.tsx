@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
-import { Link } from 'expo-router';
 import { PlusCircle, Search, Sparkles } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
@@ -217,7 +216,7 @@ export default function RecipesScreen() {
               label="Hỏi AI thay thế nguyên liệu"
               icon={<Sparkles size={16} color={colors.primaryForeground} />}
               onPress={() => notifyComingSoon('Trợ lý AI dinh dưỡng')}
-            />
+              />
           </View>
         </View>
 
