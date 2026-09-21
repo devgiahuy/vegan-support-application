@@ -15,21 +15,21 @@ import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
 
 const DIFFICULTIES = [
-  { label: 'Táº¥t cáº£ Ä‘á»™ khÃ³', value: '' },
-  { label: 'Dá»…', value: 'EASY' },
-  { label: 'Trung bÃ¬nh', value: 'MEDIUM' },
-  { label: 'NÃ¢ng cao', value: 'HARD' },
+  { label: 'Tất cả độ khó', value: '' },
+  { label: 'Dễ', value: 'EASY' },
+  { label: 'Trung bình', value: 'MEDIUM' },
+  { label: 'Nâng cao', value: 'HARD' },
 ];
 
 function notifyComingSoon(feature: string) {
-  Alert.alert('Sáº¯p ra máº¯t', `${feature} Ä‘ang Ä‘Æ°á»£c VeggieConnect hoÃ n thiá»‡n, quay láº¡i sau nhÃ©!`);
+  Alert.alert('Sắp ra mắt', `${feature} đang được VeggieConnect hoàn thiện, quay lại sau nhé!`);
 }
 
 /**
- * "KhÃ¡m phÃ¡ mÃ³n" â€” Ä‘á»“ng bá»™ bá»‘ cá»¥c/ná»™i dung `frontend/src/app/(site)/recipes/page.tsx`.
- * Sidebar bá»™ lá»c cá»§a web (danh má»¥c checkbox 2 táº§ng + Ä‘á»™ khÃ³ + thá»i gian) Ä‘Æ°á»£c chuyá»ƒn
- * thÃ nh pill ngang xáº¿p theo chiá»u dá»c cho phÃ¹ há»£p mÃ n hÃ¬nh háº¹p; danh má»¥c dÃ¹ng chá»n Ä‘Æ¡n
- * vÃ¬ trÃªn web chá»‰ `checkedIds[0]` thá»±c sá»± Ä‘Æ°á»£c gá»­i lÃªn API dÃ¹ UI cho chá»n nhiá»u.
+ * "Khám phá món" — đồng bộ bố cục/nội dung `frontend/src/app/(site)/recipes/page.tsx`.
+ * Sidebar bộ lọc của web (danh mục checkbox 2 tầng + độ khó + thời gian) được chuyển
+ * thành pill ngang xếp theo chiều dọc cho phù hợp màn hình hẹp; danh mục dùng chọn đơn
+ * vì trên web chỉ `checkedIds[0]` thực sự được gửi lên API dù UI cho chọn nhiều.
  */
 export default function RecipesScreen() {
   const colors = useIconColors();
@@ -71,7 +71,7 @@ export default function RecipesScreen() {
       <View className="px-5 pt-4">
         <View className="flex-row items-center justify-between">
           <Text className="text-xl font-bold text-foreground">
-            KhÃ¡m phÃ¡ cÃ´ng thá»©c <Text className="text-sm font-normal text-muted-foreground">({totalItems})</Text>
+            Khám phá công thức <Text className="text-sm font-normal text-muted-foreground">({totalItems})</Text>
           </Text>
         </View>
 
@@ -81,17 +81,17 @@ export default function RecipesScreen() {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="TÃ¬m theo mÃ³n Äƒn, nguyÃªn liá»‡u..."
+            placeholder="Tìm theo món ăn, nguyên liệu..."
             placeholderTextColor={colors.mutedForeground}
             className="h-12 flex-1 text-sm text-foreground"
           />
         </View>
 
-        {/* Äang lá»c */}
+        {/* Đang lọc */}
         <View className="mt-3 flex-row flex-wrap items-center gap-2">
-          <Text className="text-xs text-muted-foreground">Äang lá»c:</Text>
+          <Text className="text-xs text-muted-foreground">Đang lọc:</Text>
           {!selectedCategoryName && !difficulty ? (
-            <Text className="text-xs text-muted-foreground">Táº¥t cáº£ danh má»¥c & Ä‘á»™ khÃ³</Text>
+            <Text className="text-xs text-muted-foreground">Tất cả danh mục & độ khó</Text>
           ) : (
             <>
               {selectedCategoryName ? (
@@ -102,7 +102,7 @@ export default function RecipesScreen() {
               {difficulty ? (
                 <View className="rounded-full bg-cta/10 px-2.5 py-1">
                   <Text className="text-xs font-medium text-cta">
-                    Äá»™ khÃ³: {DIFFICULTIES.find((d) => d.value === difficulty)?.label}
+                    Độ khó: {DIFFICULTIES.find((d) => d.value === difficulty)?.label}
                   </Text>
                 </View>
               ) : null}
@@ -110,34 +110,34 @@ export default function RecipesScreen() {
           )}
           {hasFilters ? (
             <Pressable onPress={resetFilters}>
-              <Text className="text-xs text-muted-foreground underline">XoÃ¡ táº¥t cáº£ bá»™ lá»c</Text>
+              <Text className="text-xs text-muted-foreground underline">Xoá tất cả bộ lọc</Text>
             </Pressable>
           ) : null}
         </View>
 
-        {/* Danh má»¥c mÃ³n */}
+        {/* Danh mục món */}
         <View className="mt-5">
-          <Text className="text-sm font-semibold text-foreground">Danh má»¥c mÃ³n</Text>
+          <Text className="text-sm font-semibold text-foreground">Danh mục món</Text>
           <View className="mt-2.5">
             {isCategoryLoading ? (
               <View className="h-8 rounded-lg bg-muted" />
             ) : isCategoryError ? (
               <Pressable onPress={() => void refetchCategories()}>
                 <Text className="text-sm text-primary underline">
-                  KhÃ´ng táº£i Ä‘Æ°á»£c danh má»¥c. Thá»­ láº¡i.
+                  Không tải được danh mục. Thử lại.
                 </Text>
               </Pressable>
             ) : categoryTree.length === 0 ? (
-              <Text className="text-sm text-muted-foreground">ChÆ°a cÃ³ danh má»¥c nhÃ³m cÃ´ng thá»©c.</Text>
+              <Text className="text-sm text-muted-foreground">Chưa có danh mục nhóm công thức.</Text>
             ) : (
               <CategoryFilterPills items={categoryTree} selectedId={categoryId} onSelect={setCategoryId} />
             )}
           </View>
         </View>
 
-        {/* Äá»™ khÃ³ */}
+        {/* Độ khó */}
         <View className="mt-4">
-          <Text className="text-sm font-semibold text-foreground">Äá»™ khÃ³</Text>
+          <Text className="text-sm font-semibold text-foreground">Độ khó</Text>
           <View className="mt-2.5 flex-row flex-wrap gap-1.5">
             {DIFFICULTIES.map((d) => {
               const selected = difficulty === d.value;
@@ -159,7 +159,7 @@ export default function RecipesScreen() {
           </View>
         </View>
 
-        {/* Danh sÃ¡ch cÃ´ng thá»©c â€” 4 tráº¡ng thÃ¡i */}
+        {/* Danh sách công thức — 4 trạng thái */}
         <View className="mt-6">
           {isRecipesLoading ? (
             <View className="flex-row flex-wrap gap-3">
@@ -169,25 +169,25 @@ export default function RecipesScreen() {
             </View>
           ) : isRecipesError ? (
             <View className="items-center rounded-2xl border border-destructive/30 bg-destructive/5 p-6">
-              <Text className="font-semibold text-destructive">KhÃ´ng thá»ƒ táº£i danh sÃ¡ch cÃ´ng thá»©c.</Text>
+              <Text className="font-semibold text-destructive">Không thể tải danh sách công thức.</Text>
               <Text className="mt-1 text-center text-sm text-muted-foreground">
-                ÄÃ£ cÃ³ lá»—i xáº£y ra khi káº¿t ná»‘i tá»›i mÃ¡y chá»§. Vui lÃ²ng thá»­ láº¡i.
+                Đã có lỗi xảy ra khi kết nối tới máy chủ. Vui lòng thử lại.
               </Text>
               <View className="mt-4">
-                <PrimaryButton label="Thá»­ láº¡i" variant="outline" onPress={() => void refetchRecipes()} />
+                <PrimaryButton label="Thử lại" variant="outline" onPress={() => void refetchRecipes()} />
               </View>
             </View>
           ) : recipes.length === 0 ? (
             <View className="items-center rounded-2xl border border-dashed border-border p-8">
-              <Text className="text-center font-semibold text-foreground">ChÆ°a cÃ³ cÃ´ng thá»©c nÃ o</Text>
+              <Text className="text-center font-semibold text-foreground">Chưa có công thức nào</Text>
               <Text className="mt-1 text-center text-sm text-muted-foreground">
                 {query.trim()
-                  ? `KhÃ´ng tÃ¬m tháº¥y cÃ´ng thá»©c phÃ¹ há»£p vá»›i tá»« khÃ³a "${query.trim()}".`
-                  : 'Kho cÃ´ng thá»©c hiá»‡n chÆ°a cÃ³ bÃ i viáº¿t phÃ¹ há»£p vá»›i bá»™ lá»c hiá»‡n táº¡i.'}
+                  ? `Không tìm thấy công thức phù hợp với từ khóa "${query.trim()}".`
+                  : 'Kho công thức hiện chưa có bài viết phù hợp với bộ lọc hiện tại.'}
               </Text>
               {hasFilters ? (
                 <View className="mt-4">
-                  <PrimaryButton label="XoÃ¡ táº¥t cáº£ bá»™ lá»c" variant="outline" onPress={resetFilters} />
+                  <PrimaryButton label="Xoá tất cả bộ lọc" variant="outline" onPress={resetFilters} />
                 </View>
               ) : null}
             </View>
@@ -204,13 +204,13 @@ export default function RecipesScreen() {
         <View className="mt-6 rounded-2xl border border-primary/20 bg-primary/5 p-5">
           <View className="flex-row items-center gap-1.5 self-start rounded-full bg-cta/15 px-2.5 py-1">
             <Sparkles size={13} color={colors.cta} />
-            <Text className="text-xs font-semibold text-cta">Trá»£ lÃ½ AI Dinh dÆ°á»¡ng</Text>
+            <Text className="text-xs font-semibold text-cta">Trợ lý AI Dinh dưỡng</Text>
           </View>
           <Text className="mt-3 text-lg font-bold text-foreground">
-            KhÃ´ng tÃ¬m tháº¥y cÃ´ng thá»©c vá»›i nguyÃªn liá»‡u báº¡n Ä‘ang cÃ³?
+            Không tìm thấy công thức với nguyên liệu bạn đang có?
           </Text>
           <Text className="mt-2 text-sm text-muted-foreground">
-            Há»i AI ChayXanh Ä‘á»ƒ nháº­n cÃ´ng thá»©c náº¥u theo nguyÃªn liá»‡u tá»§ láº¡nh cá»§a riÃªng báº¡n!
+            Hỏi AI ChayXanh để nhận công thức nấu theo nguyên liệu tủ lạnh của riêng bạn!
           </Text>
           <View className="mt-4">
             <Link href={'/assistant' as Href} asChild>
@@ -224,10 +224,10 @@ export default function RecipesScreen() {
 
         <View className="mt-4">
           <PrimaryButton
-            label="ÄÄƒng cÃ´ng thá»©c má»›i"
+            label="Đăng công thức mới"
             variant="outline"
             icon={<PlusCircle size={16} color={colors.foreground} />}
-            onPress={() => notifyComingSoon('ÄÄƒng cÃ´ng thá»©c')}
+            onPress={() => notifyComingSoon('Đăng công thức')}
           />
         </View>
       </View>
