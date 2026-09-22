@@ -97,9 +97,18 @@ export async function streamChatMessage(
         return true;
       }
       case 'message_complete': {
-        const codes = event.payload.topicCodes;
+        const message = event.payload.message;
+        const messagePayload =
+          message && typeof message === 'object' && !Array.isArray(message)
+            ? (message as Record<string, unknown>)
+            : {};
+        const codes = messagePayload.topicCodes ?? messagePayload.topic_codes ?? event.payload.topicCodes;
         if (Array.isArray(codes)) {
           topicCodes = codes.filter((code): code is string => typeof code === 'string' && code.length > 0);
+        }
+        const completedContent = messagePayload.content;
+        if (fullContent.length === 0 && typeof completedContent === 'string') {
+          fullContent = completedContent;
         }
         const quota = event.payload.quota;
         if (quota && typeof quota === 'object' && !Array.isArray(quota)) {
