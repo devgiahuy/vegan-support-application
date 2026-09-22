@@ -16,12 +16,6 @@ import {
 import {
   ActivityLevel,
   BiologicalSex,
-  DietPattern,
-  HealthDataSource,
-  MemberStatus,
-  PracticeSchedule,
-  Tradition,
-  UserRole,
 } from '@/common/enums';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -29,7 +23,6 @@ import { TextField } from '@/components/ui/text-field';
 import { useDetailedProfileQuery, useUpdateBasicProfileMutation } from '@/features/profile/queries/profile.queries';
 import { useSaveHealthProfileMutation } from '@/features/profile/queries/health.queries';
 import type { HealthProfile } from '@/features/profile/types/health.model';
-import type { DetailedProfile } from '@/features/profile/types/profile.model';
 import { useAuthStore } from '@/store/useAuthStore';
 import { formatDate } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
@@ -41,54 +34,6 @@ const ACTIVITY_OPTIONS = [
   { value: ActivityLevel.VERY_ACTIVE, label: 'Nhiều', note: '6-7 buổi/tuần' },
   { value: ActivityLevel.EXTRA_ACTIVE, label: 'Rất nhiều', note: 'Cường độ cao' },
 ] as const;
-
-const MOCK_PROFILE: DetailedProfile = {
-  user: {
-    id: 'mock-member-001',
-    email: 'demo.member@veggieconnect.vn',
-    displayName: 'Nguyễn Minh An',
-    avatarUrl: '',
-    role: UserRole.MEMBER,
-    status: MemberStatus.ACTIVE,
-    createdAt: new Date('2026-08-12T08:00:00.000Z'),
-    contributorApplication: null,
-    initials: 'NA',
-  },
-  memberSince: '12/08/2026',
-  health: {
-    heightCm: 165,
-    weightKg: 54,
-    age: 22,
-    sex: BiologicalSex.FEMALE,
-    sexLabel: 'Nữ',
-    activityLevel: ActivityLevel.MODERATELY_ACTIVE,
-    activityLevelLabel: 'Vận động vừa',
-    bmi: 19.8,
-    bmiCategory: 'Cân đối',
-    hasAbnormalBmi: false,
-    needsDisclaimer: false,
-    bmr: 1308,
-    tdee: 2027,
-    dataSource: HealthDataSource.MANUAL,
-    updatedAt: new Date('2026-09-18T09:30:00.000Z'),
-  },
-  diet: {
-    dietPattern: DietPattern.VEGAN,
-    dietPatternLabel: 'Thuần chay',
-    practiceSchedule: PracticeSchedule.PERMANENT,
-    practiceScheduleLabel: 'An chay truong',
-    tradition: Tradition.NONE,
-    traditionLabel: 'Không theo truyền thống riêng',
-    requiresRuleReview: false,
-    confirmedAt: new Date('2026-09-10T10:15:00.000Z'),
-    scheduleDates: ['Thứ 2', 'Thứ 4', 'Thứ 6'],
-    scheduleTimezone: 'Asia/Ho_Chi_Minh',
-    allergies: [
-      { allergenCode: 'PEANUT', label: 'Đậu phộng', severity: 'MEDIUM' },
-      { allergenCode: 'SOY', label: 'Đậu nành', severity: 'LOW' },
-    ],
-  },
-};
 
 function toNumber(value: string): number {
   return Number(value.replace(',', '.').trim());
@@ -137,7 +82,7 @@ export default function ProfileScreen() {
   const [age, setAge] = React.useState('');
   const [sex, setSex] = React.useState<BiologicalSex>(BiologicalSex.MALE);
   const [activityLevel, setActivityLevel] = React.useState<ActivityLevel>(ActivityLevel.SEDENTARY);
-  const profile = isAuthenticated ? apiProfile : MOCK_PROFILE;
+  const profile = isAuthenticated ? apiProfile : undefined;
 
   React.useEffect(() => {
     if (!profile) return;
@@ -148,11 +93,6 @@ export default function ProfileScreen() {
   }, [profile]);
 
   const handleSaveBasicProfile = async () => {
-    if (!isAuthenticated) {
-      Alert.alert('Đang xem bản demo', 'Đăng nhập để cập nhật hồ sơ thật của bạn.');
-      return;
-    }
-
     const nextName = displayName.trim();
     if (nextName.length < 2) {
       Alert.alert('Thông tin chưa hợp lệ', 'Tên hiển thị cần có ít nhất 2 ký tự.');
@@ -168,11 +108,6 @@ export default function ProfileScreen() {
   };
 
   const handleSaveHealth = async () => {
-    if (!isAuthenticated) {
-      Alert.alert('Đang xem bản demo', 'Đăng nhập để lưu chỉ số sức khỏe thật của bạn.');
-      return;
-    }
-
     const heightCm = toNumber(height);
     const weightKg = toNumber(weight);
     const parsedAge = Math.trunc(toNumber(age));
@@ -201,7 +136,7 @@ export default function ProfileScreen() {
     }
   };
 
-  if (false && !isAuthenticated) {
+  if (!isAuthenticated) {
     return (
       <SiteScreen>
         <View className="px-5 pt-8">
@@ -224,7 +159,7 @@ export default function ProfileScreen() {
     );
   }
 
-  if (isAuthenticated && isLoading) {
+  if (isLoading) {
     return (
       <SiteScreen>
         <View className="flex-1 items-center justify-center px-5 py-16">
@@ -235,7 +170,7 @@ export default function ProfileScreen() {
     );
   }
 
-  if (isAuthenticated && (isError || !profile)) {
+  if (isError || !profile) {
     return (
       <SiteScreen>
         <View className="px-5 pt-8">
@@ -260,7 +195,7 @@ export default function ProfileScreen() {
     );
   }
 
-  const displayProfile = profile ?? MOCK_PROFILE;
+  const displayProfile = profile;
   const health = displayProfile.health;
   const diet = displayProfile.diet;
 
