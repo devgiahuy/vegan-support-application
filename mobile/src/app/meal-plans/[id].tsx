@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, Text, View } from 'react-native';
 import { Link, type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, RefreshCw, ShoppingCart, Shuffle, Trash2, TriangleAlert } from 'lucide-react-native';
 
@@ -108,7 +108,7 @@ export default function MealPlanDetailScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const id = typeof params.id === 'string' ? params.id : '';
 
-  const { data: plan, error, isLoading, isError, refetch } = useMealPlanDetailQuery(id, isAuthenticated);
+  const { data: plan, error, isLoading, isError, refetch, isRefetching } = useMealPlanDetailQuery(id, isAuthenticated);
   const swapMutation = useSwapMealItemMutation();
   const deleteMutation = useDeleteMealPlanMutation();
 
@@ -126,19 +126,45 @@ export default function MealPlanDetailScreen() {
     }
   };
 
+  const refreshPlan = async () => {
+    try {
+      const result = await refetch();
+      if (result.error) {
+        Alert.alert('KhÃ´ng táº£i láº¡i Ä‘Æ°á»£c thá»±c Ä‘Æ¡n', getMealPlanErrorMessage(result.error));
+      }
+    } catch (refreshError) {
+      Alert.alert('KhÃ´ng táº£i láº¡i Ä‘Æ°á»£c thá»±c Ä‘Æ¡n', getMealPlanErrorMessage(refreshError));
+    }
+  };
+
+  const deletePlan = async () => {
+    if (!plan) return;
+    try {
+      await deleteMutation.mutateAsync({ id: plan.id, expectedVersion: plan.lockVersion });
+      router.replace('/meal-plans' as Href);
+    } catch (mutationError) {
+      Alert.alert('KhÃ´ng xÃ³a Ä‘Æ°á»£c thá»±c Ä‘Æ¡n', getMealPlanErrorMessage(mutationError));
+    }
+  };
+
   const confirmDelete = () => {
     if (!plan) return;
-    Alert.alert('Xóa thực đơn?', `Tuần ${plan.formattedWeekRange} sẽ được xóa khỏi danh sách đã lưu.`, [
-      { text: 'Hủy', style: 'cancel' },
+    const deleteMessage = `Tuan ${plan.formattedWeekRange} se duoc xoa khoi danh sach da luu.`;
+
+    if (Platform.OS === 'web') {
+      const confirm = (globalThis as unknown as { confirm?: (message?: string) => boolean }).confirm;
+      if (!confirm || confirm(deleteMessage)) {
+        void deletePlan();
+      }
+      return;
+    }
+
+    Alert.alert('Xoa thuc don?', deleteMessage, [
+      { text: 'Huy', style: 'cancel' },
       {
-        text: 'Xóa',
+        text: 'Xoa',
         style: 'destructive',
-        onPress: () => {
-          void deleteMutation
-            .mutateAsync({ id: plan.id, expectedVersion: plan.lockVersion })
-            .then(() => router.replace('/meal-plans' as Href))
-            .catch((mutationError) => Alert.alert('Không xóa được thực đơn', getMealPlanErrorMessage(mutationError)));
-        },
+        onPress: () => void deletePlan(),
       },
     ]);
   };
@@ -215,8 +241,18 @@ export default function MealPlanDetailScreen() {
             </Pressable>
           </Link>
           <View className="flex-row gap-2">
-            <Pressable onPress={() => void refetch()} className="h-10 w-10 items-center justify-center rounded-full bg-muted">
-              <RefreshCw size={16} color={colors.foreground} />
+            <Pressable
+              disabled={busy || isRefetching}
+              onPress={() => void refreshPlan()}
+              className={cn(
+                'h-10 w-10 items-center justify-center rounded-full bg-muted',
+                busy || isRefetching ? 'opacity-60' : ''
+              )}>
+              {isRefetching ? (
+                <ActivityIndicator size="small" color={colors.foreground} />
+              ) : (
+                <RefreshCw size={16} color={colors.foreground} />
+              )}
             </Pressable>
             <Pressable
               disabled={busy}
