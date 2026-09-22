@@ -17,6 +17,14 @@ export const API_ENDPOINTS = {
     DETAIL: (idOrSlug: string) => `/posts/${idOrSlug}`,
     RELATED: (id: string) => `/posts/${id}/related`,
   },
+  COMMUNITY: {
+    COMMENTS: (postId: string) => `/posts/${postId}/comments`,
+    COMMENT: (id: string) => `/comments/${id}`,
+    SUMMARY: (postId: string) => `/posts/${postId}/community-summary`,
+    VOTE: (postId: string) => `/posts/${postId}/vote`,
+    BOOKMARK: (postId: string) => `/posts/${postId}/bookmark`,
+    MY_BOOKMARKS: '/users/me/bookmarks',
+  },
   MEAL_PLANS: {
     GENERATE: '/meal-plans/generate',
     LIST: '/meal-plans',

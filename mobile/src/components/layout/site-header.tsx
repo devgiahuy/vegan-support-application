@@ -10,7 +10,16 @@ import { BrandLogo } from './brand-logo';
 
 interface NavItem {
   label: string;
-  href: '/' | '/recipes' | '/articles' | '/assistant' | '/meal-plans' | '/profile' | '/restaurants' | null;
+  href:
+    | '/'
+    | '/recipes'
+    | '/articles'
+    | '/videos'
+    | '/assistant'
+    | '/meal-plans'
+    | '/profile'
+    | '/restaurants'
+    | null;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -19,7 +28,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Cẩm nang', href: '/articles' },
   { label: 'AI Chat', href: '/assistant' },
   { label: 'Hồ sơ', href: '/profile' },
-  { label: 'Video nấu ăn', href: null },
+  { label: 'Video nấu ăn', href: '/videos' },
   { label: 'Thực đơn tuần', href: '/meal-plans' },
   { label: 'Bản đồ quán', href: '/restaurants' },
 ];

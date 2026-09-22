@@ -56,7 +56,7 @@ function MessageBubble({
   };
 
   const sendFeedback = (value: FeedbackValue) => {
-    const reason = value === FeedbackValue.DOWN ? promptDownReason() : undefined;
+    const reason = value === FeedbackValue.DOWN ? (promptDownReason() ?? undefined) : undefined;
     if (value === FeedbackValue.DOWN && !reason) return;
 
     feedbackMutation.mutate(
