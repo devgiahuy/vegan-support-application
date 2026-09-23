@@ -147,6 +147,13 @@ export enum VideoSource {
   YOUTUBE = 'YOUTUBE',
 }
 
+/** Trạng thái bình luận cộng đồng. */
+export enum CommentStatus {
+  VISIBLE = 'VISIBLE',
+  HIDDEN = 'HIDDEN',
+  DELETED = 'DELETED',
+}
+
 /** Mục tiêu tạo thực đơn tuần. */
 export enum MealPlanGoal {
   MAINTAIN = 'MAINTAIN',
