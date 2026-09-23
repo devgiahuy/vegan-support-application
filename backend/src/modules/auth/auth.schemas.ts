@@ -1,13 +1,44 @@
-import { ContributorApplicationStatus, ContributorType, Role, UserStatus } from '@prisma/client';
+import {
+  ContributorApplicationStatus,
+  ContributorApprovalBasis,
+  Role,
+  UserStatus,
+} from '@prisma/client';
 import { z } from '../../common/validation/zod.js';
 
 export const contributorRequestSchema = z
   .object({
-    requestedType: z.enum(ContributorType),
+    claimedApprovalBasis: z.enum([
+      ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
+      ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
+    ]),
+    organizationClaim: z.string().trim().min(2).max(500).optional(),
     experience: z.string().trim().min(20).max(2_000),
     referenceLinks: z.array(z.string().url()).max(5).default([]),
   })
-  .strict();
+  .strict()
+  .superRefine((input, context) => {
+    if (
+      input.claimedApprovalBasis === ContributorApprovalBasis.ORGANIZATION_AFFILIATION &&
+      !input.organizationClaim
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['organizationClaim'],
+        message: 'Cần ghi tên hoặc mô tả tổ chức được khai báo',
+      });
+    }
+    if (
+      input.claimedApprovalBasis === ContributorApprovalBasis.PLATFORM_TRACK_RECORD &&
+      input.organizationClaim
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['organizationClaim'],
+        message: 'Không gửi khai báo tổ chức cho basis PLATFORM_TRACK_RECORD',
+      });
+    }
+  });
 
 export const registerRequestSchema = z
   .object({
@@ -33,15 +64,14 @@ export const logoutRequestSchema = z
 export const contributorApplicationSummarySchema = z
   .object({
     status: z.enum(ContributorApplicationStatus),
-    requestedType: z.enum(ContributorType),
+    claimedApprovalBasis: z.enum(ContributorApprovalBasis),
   })
   .strict();
 
 export const contributorProfileSummarySchema = z
   .object({
-    contributorType: z.enum(ContributorType),
-    label: z.string(),
-    approvalBasis: z.string(),
+    approvalBasis: z.enum(ContributorApprovalBasis),
+    approvalBasisLabel: z.string(),
     approvedAt: z.string().datetime(),
   })
   .strict();

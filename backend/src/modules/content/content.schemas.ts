@@ -1,4 +1,6 @@
 import {
+  AiFlagRiskLevel,
+  AiFlagStatus,
   DietPattern,
   IngredientResolutionStatus,
   MediaKind,
@@ -41,13 +43,7 @@ const cloudinaryMediaInputSchema = z
   .object({
     provider: z.literal(MediaProvider.CLOUDINARY),
     kind: z.enum(MediaKind),
-    publicId: z.string().trim().min(1).max(255),
-    secureUrl: z.string().trim().url().max(2_048),
-    mimeType: z.string().trim().min(1).max(100),
-    bytes: z.number().int().positive(),
-    width: z.number().int().positive().optional(),
-    height: z.number().int().positive().optional(),
-    durationSeconds: z.number().positive().max(86_400).optional(),
+    assetId: z.string().uuid(),
   })
   .strict();
 
@@ -122,6 +118,21 @@ const recipeIngredientInputSchema = z
   })
   .strict();
 
+const uniqueIngredientPositions = z
+  .array(z.number().int().min(0).max(99))
+  .max(100)
+  .refine((values) => new Set(values).size === values.length, 'Ingredient position khong duoc trung lap');
+
+const recipeStepInputSchema = z
+  .object({
+    instruction: z.string().trim().min(1).max(2000),
+    cookingMethodId: z.string().uuid().optional(),
+    durationMinutes: z.number().int().positive().max(10_080).optional(),
+    temperatureCelsius: z.number().min(0).max(400).optional(),
+    affectedIngredientPositions: uniqueIngredientPositions.default([]),
+  })
+  .strict();
+
 const recipeInputSchema = z
   .object({
     servings: z.number().int().min(1).max(100),
@@ -130,8 +141,22 @@ const recipeInputSchema = z
     difficulty: z.enum(RecipeDifficulty),
     nutrition: nutritionInputSchema,
     ingredients: z.array(recipeIngredientInputSchema).min(1).max(100),
+    steps: z.array(recipeStepInputSchema).max(100).default([]),
   })
-  .strict();
+  .strict()
+  .superRefine((recipe, context) => {
+    for (const [stepIndex, step] of recipe.steps.entries()) {
+      for (const position of step.affectedIngredientPositions) {
+        if (position >= recipe.ingredients.length) {
+          context.addIssue({
+            code: 'custom',
+            path: ['steps', stepIndex, 'affectedIngredientPositions'],
+            message: 'Step tham chieu ingredient position khong ton tai',
+          });
+        }
+      }
+    }
+  });
 
 export const createRecipePostRequestSchema = z
   .object({
@@ -235,9 +260,17 @@ export const relatedPostsQuerySchema = z
 export const deletePostQuerySchema = z
   .object({ expectedVersion: z.coerce.number().int().positive() })
   .strict();
-
-export const uploadSignatureRequestSchema = z
-  .object({ resourceType: z.enum(['image', 'video']) })
+export const submitPostRequestSchema = z
+  .object({
+    revisionId: z.string().uuid(),
+    expectedVersion: z.number().int().positive(),
+  })
+  .strict();
+export const reviewHistoryQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+  })
   .strict();
 
 const authorSchema = z
@@ -269,6 +302,9 @@ const revisionSchema = z
     excerpt: z.string().nullable(),
     body: z.string(),
     tags: z.array(z.string()),
+    submittedAt: z.string().datetime().nullable(),
+    reviewNote: z.string().nullable(),
+    reviewedAt: z.string().datetime().nullable(),
     createdAt: z.string().datetime(),
   })
   .strict();
@@ -284,6 +320,19 @@ const recipeIngredientSchema = z
     unit: z.string(),
     optional: z.boolean(),
     resolutionStatus: z.enum(IngredientResolutionStatus),
+  })
+  .strict();
+const recipeStepSchema = z
+  .object({
+    id: z.string().uuid(),
+    position: z.number().int().nonnegative(),
+    instruction: z.string(),
+    cookingMethodId: z.string().uuid().nullable(),
+    cookingMethodCode: z.string().nullable(),
+    cookingMethodName: z.string().nullable(),
+    durationMinutes: z.number().int().positive().nullable(),
+    temperatureCelsius: z.number().nonnegative().nullable(),
+    affectedIngredientPositions: z.array(z.number().int().nonnegative()),
   })
   .strict();
 const recipeCompatibilitySchema = z
@@ -317,6 +366,7 @@ const recipeOutputSchema = z
     traditionWarnings: z.array(traditionWarningSchema),
     dietCompatibilities: z.array(recipeCompatibilitySchema),
     ingredients: z.array(recipeIngredientSchema),
+    steps: z.array(recipeStepSchema),
   })
   .strict();
 
@@ -405,35 +455,60 @@ export const deletePostResponseSchema = z
     meta: z.null(),
   })
   .strict();
-export const uploadSignatureResponseSchema = z
+const contentModerationSignalSchema = z
+  .object({
+    id: z.string().uuid(),
+    provider: z.string(),
+    model: z.string(),
+    ruleVersion: z.string(),
+    reasonCodes: z.array(z.string()),
+    riskScore: z.number().min(0).max(1),
+    riskLevel: z.enum(AiFlagRiskLevel),
+    status: z.enum(AiFlagStatus),
+    createdAt: z.string().datetime(),
+  })
+  .strict();
+const contentReviewHistoryItemSchema = z
+  .object({
+    revision: revisionSchema,
+    reviewedBy: authorSchema.nullable(),
+    media: z.array(mediaSchema),
+    moderationSignals: z.array(contentModerationSignalSchema),
+    isPublishedRevision: z.boolean(),
+  })
+  .strict();
+export const contentReviewHistoryResponseSchema = z
   .object({
     success: z.literal(true),
     data: z
       .object({
-        cloudName: z.string(),
-        apiKey: z.string(),
-        resourceType: z.enum(['image', 'video']),
-        uploadUrl: z.string().url(),
-        timestamp: z.number().int().positive(),
-        signature: z.string(),
-        folder: z.string(),
-        maxBytes: z.number().int().positive(),
-        allowedMimeTypes: z.array(z.string()),
-        expiresAt: z.string().datetime(),
+        postId: z.string().uuid(),
+        type: z.enum(PostType),
+        postStatus: z.enum(PostStatus),
+        version: z.number().int().positive(),
+        publishedRevisionId: z.string().uuid().nullable(),
+        revisions: z.array(contentReviewHistoryItemSchema),
       })
       .strict(),
-    meta: z.null(),
+    meta: z
+      .object({
+        page: z.number().int().positive(),
+        limit: z.number().int().positive(),
+        total: z.number().int().nonnegative(),
+        totalPages: z.number().int().nonnegative(),
+      })
+      .strict(),
   })
   .strict();
-
 export type CreatePostInput = z.infer<typeof createPostRequestSchema>;
 export type UpdatePostInput = z.infer<typeof updatePostRequestSchema>;
+export type SubmitPostInput = z.infer<typeof submitPostRequestSchema>;
+export type ReviewHistoryQuery = z.infer<typeof reviewHistoryQuerySchema>;
 export type PostListQuery = z.infer<typeof postListQuerySchema>;
 export type PostIdentifierParams = z.infer<typeof postIdentifierParamsSchema>;
 export type PostIdParams = z.infer<typeof postIdParamsSchema>;
 export type RelatedPostsQuery = z.infer<typeof relatedPostsQuerySchema>;
 export type DeletePostQuery = z.infer<typeof deletePostQuerySchema>;
-export type UploadSignatureInput = z.infer<typeof uploadSignatureRequestSchema>;
 export type MediaInput = z.infer<typeof mediaInputSchema>;
 export type PostOutput = z.infer<typeof postSchema>;
 export type AppliedSearchConstraintsOutput = z.infer<

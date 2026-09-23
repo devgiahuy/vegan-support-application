@@ -14,6 +14,9 @@ import { registerModerationOpenApi } from '../modules/moderation/moderation.open
 import { registerRecommendationOpenApi } from '../modules/recommendations/recommendation.openapi.js';
 import { registerMealPlanOpenApi } from '../modules/meal-plans/meal-plan.openapi.js';
 import { registerChatOpenApi } from '../modules/chat/chat.openapi.js';
+import { registerFoodDataOpenApi } from '../modules/food-data/food-data.openapi.js';
+import { registerRecipeNutritionOpenApi } from '../modules/recipe-nutrition/recipe-nutrition.openapi.js';
+import { registerStorageOpenApi } from '../modules/storage/storage.openapi.js';
 
 const registry = new OpenAPIRegistry();
 
@@ -52,6 +55,9 @@ registerModerationOpenApi(registry, registeredErrorResponse);
 registerRecommendationOpenApi(registry, registeredErrorResponse);
 registerMealPlanOpenApi(registry, registeredErrorResponse);
 registerChatOpenApi(registry, registeredErrorResponse);
+registerFoodDataOpenApi(registry, registeredErrorResponse);
+registerRecipeNutritionOpenApi(registry, registeredErrorResponse);
+registerStorageOpenApi(registry, registeredErrorResponse);
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
@@ -70,6 +76,12 @@ const generatedDocument = generator.generateDocument({
     { name: 'Diet Rules', description: 'Versioned diet and tradition rule confirmation' },
     { name: 'Categories', description: 'Public active category tree' },
     { name: 'Ingredients', description: 'Canonical ingredient discovery and alias resolution' },
+    { name: 'Food Data', description: 'Reviewed nutrient knowledge with provenance and versions' },
+    {
+      name: 'Recipe Nutrition',
+      description: 'Cooking-aware recipe nutrition estimates with provenance',
+    },
+    { name: 'Food Data Admin', description: 'Admin curation and provider-neutral imports' },
     { name: 'Catalog Admin', description: 'Admin-only category and ingredient management' },
     { name: 'Content', description: 'Revisioned Recipe, Blog, and Video content' },
     { name: 'Community', description: 'Comments, votes, ratings, and bookmarks' },
@@ -81,12 +93,17 @@ const generatedDocument = generator.generateDocument({
     },
     {
       name: 'Contributors',
-      description: 'Contributor applications and approved subtype status',
+      description: 'Unified Contributor applications and approval-basis evidence',
     },
-    { name: 'Contributor Admin', description: 'Admin-only Contributor application review' },
+    {
+      name: 'Contributor Admin',
+      description: 'Admin-only Contributor invitations, decisions, and revocation',
+    },
     { name: 'Moderation', description: 'Content review queue and user reports' },
     { name: 'Moderation Admin', description: 'Admin decisions, user and comment moderation' },
-    { name: 'Uploads', description: 'Safe Cloudinary signed-upload configuration' },
+    { name: 'Uploads', description: 'Quota-reserved and provider-verified uploads' },
+    { name: 'Storage', description: 'Owned storage usage and durable media deletion' },
+    { name: 'Storage Admin', description: 'Storage policy, account usage, and adjustment audit' },
   ],
 });
 

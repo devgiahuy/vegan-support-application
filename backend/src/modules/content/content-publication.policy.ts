@@ -1,4 +1,4 @@
-import { AiFlagRiskLevel, PostRevisionStatus, PostStatus, Role } from '@prisma/client';
+import { PostRevisionStatus, PostStatus } from '@prisma/client';
 import type { ContentActor } from './content.service.js';
 import type {
   RuleModerationFlag,
@@ -13,39 +13,27 @@ export interface SubmissionDecision {
 }
 
 export interface ContentPublicationPolicy {
+  draft(): SubmissionDecision;
   decideSubmission(actor: ContentActor, input: RuleModerationInput): SubmissionDecision;
 }
 
 export class ModeratedPublicationPolicy implements ContentPublicationPolicy {
   constructor(private readonly moderation: RuleModerationService) {}
 
-  decideSubmission(actor: ContentActor, input: RuleModerationInput): SubmissionDecision {
-    const moderationFlag = this.moderation.moderate(input);
-    if (moderationFlag?.riskLevel === AiFlagRiskLevel.HIGH) {
-      return {
-        postStatus: PostStatus.QUARANTINED,
-        revisionStatus: PostRevisionStatus.QUARANTINED,
-        moderationFlag,
-      };
-    }
-    if (actor.role === Role.MEMBER || (actor.role === Role.CONTRIBUTOR && !actor.contributorType)) {
-      return {
-        postStatus: PostStatus.PENDING_REVIEW,
-        revisionStatus: PostRevisionStatus.PENDING_REVIEW,
-        moderationFlag,
-      };
-    }
-    if (moderationFlag) {
-      return {
-        postStatus: PostStatus.FLAGGED,
-        revisionStatus: PostRevisionStatus.FLAGGED,
-        moderationFlag,
-      };
-    }
+  draft(): SubmissionDecision {
     return {
-      postStatus: PostStatus.PUBLISHED,
-      revisionStatus: PostRevisionStatus.PUBLISHED,
+      postStatus: PostStatus.DRAFT,
+      revisionStatus: PostRevisionStatus.DRAFT,
       moderationFlag: null,
+    };
+  }
+
+  decideSubmission(_actor: ContentActor, input: RuleModerationInput): SubmissionDecision {
+    const moderationFlag = this.moderation.moderate(input);
+    return {
+      postStatus: PostStatus.PENDING_REVIEW,
+      revisionStatus: PostRevisionStatus.PENDING_REVIEW,
+      moderationFlag,
     };
   }
 }

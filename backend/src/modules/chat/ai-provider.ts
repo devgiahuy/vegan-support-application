@@ -13,6 +13,46 @@ export interface AiChatInput {
   signal: AbortSignal;
 }
 
+export interface RecipeNutritionFallbackInput {
+  recipeTitle: string;
+  ingredients: Array<{
+    position: number;
+    displayName: string;
+    canonicalName: string | null;
+    unit: string;
+  }>;
+  steps: Array<{
+    position: number;
+    instruction: string;
+    cookingMethodCode: string | null;
+    affectedIngredientPositions: number[];
+  }>;
+  availableCookingMethodCodes: string[];
+  signal: AbortSignal;
+}
+
+export interface RecipeNutritionFallbackSuggestion {
+  stepMethods: Array<{
+    stepPosition: number;
+    cookingMethodCode: string;
+    confidence: number;
+    assumption: string;
+  }>;
+  yieldFactors: Array<{
+    ingredientPosition: number;
+    factor: number;
+    confidence: number;
+    assumption: string;
+  }>;
+  retentionFactors: Array<{
+    nutrientCode: string;
+    cookingMethodCode: string;
+    factor: number;
+    confidence: number;
+    assumption: string;
+  }>;
+}
+
 export type AiChatChunk =
   | { type: 'delta'; delta: string }
   | {
@@ -27,6 +67,9 @@ export interface AiProvider {
   readonly chatModel: string;
   streamChat(input: AiChatInput): AsyncIterable<AiChatChunk>;
   moderate(input: string, signal: AbortSignal): Promise<{ flagged: boolean }>;
+  suggestRecipeNutritionFallback(
+    input: RecipeNutritionFallbackInput,
+  ): Promise<RecipeNutritionFallbackSuggestion>;
 }
 
 export class AiProviderUnavailableError extends Error {
@@ -106,6 +149,39 @@ export class OpenAiProvider implements AiProvider {
     );
     return { flagged: response.results.some((result) => result.flagged) };
   }
+
+  async suggestRecipeNutritionFallback(
+    input: RecipeNutritionFallbackInput,
+  ): Promise<RecipeNutritionFallbackSuggestion> {
+    let content = '';
+    for await (const chunk of this.streamChat({
+      instructions: [
+        'Return only compact JSON for vegetarian recipe nutrition estimation hints.',
+        'Do not invent canonical nutrient facts. Suggest only missing cooking methods, yield factors, or retention factors.',
+        'Use this exact shape: {"stepMethods":[],"yieldFactors":[],"retentionFactors":[]}.',
+        'Confidence and factors must be numbers from 0 to 1 except yield factor, which must be positive.',
+      ].join('\n'),
+      messages: [
+        {
+          role: 'user',
+          content: JSON.stringify({
+            recipeTitle: input.recipeTitle,
+            ingredients: input.ingredients,
+            steps: input.steps,
+            availableCookingMethodCodes: input.availableCookingMethodCodes,
+          }),
+        },
+      ],
+      signal: input.signal,
+    })) {
+      if (chunk.type === 'delta') content += chunk.delta;
+    }
+    try {
+      return JSON.parse(content) as RecipeNutritionFallbackSuggestion;
+    } catch {
+      throw new AiProviderResponseError('AI nutrition fallback returned invalid JSON');
+    }
+  }
 }
 
 export class FakeAiProvider implements AiProvider {
@@ -142,6 +218,37 @@ export class FakeAiProvider implements AiProvider {
       ),
     });
   }
+
+  suggestRecipeNutritionFallback(
+    input: RecipeNutritionFallbackInput,
+  ): Promise<RecipeNutritionFallbackSuggestion> {
+    if (input.signal.aborted) {
+      return Promise.reject(new Error('Request aborted', { cause: input.signal.reason }));
+    }
+    const hasBoiling = input.availableCookingMethodCodes.includes('BOILING');
+    return Promise.resolve({
+      stepMethods: hasBoiling
+        ? input.steps.flatMap((step) => {
+            const normalized = step.instruction.toLocaleLowerCase('vi');
+            return !step.cookingMethodCode &&
+              ['luộc', 'luoc', 'nấu', 'nau', 'sôi', 'soi'].some((term) =>
+                normalized.includes(term),
+              )
+              ? [
+                  {
+                    stepPosition: step.position,
+                    cookingMethodCode: 'BOILING',
+                    confidence: 0.72,
+                    assumption: 'Local fixture inferred boiling-like method from step text.',
+                  },
+                ]
+              : [];
+          })
+        : [],
+      yieldFactors: [],
+      retentionFactors: [],
+    });
+  }
 }
 
 export class UnavailableAiProvider implements AiProvider {
@@ -163,6 +270,10 @@ export class UnavailableAiProvider implements AiProvider {
   }
 
   moderate(): Promise<{ flagged: boolean }> {
+    return Promise.reject(new AiProviderUnavailableError());
+  }
+
+  suggestRecipeNutritionFallback(): Promise<RecipeNutritionFallbackSuggestion> {
     return Promise.reject(new AiProviderUnavailableError());
   }
 }

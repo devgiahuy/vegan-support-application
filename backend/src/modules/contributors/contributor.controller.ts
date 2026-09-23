@@ -9,9 +9,13 @@ import type { ContributorService } from './contributor.service.js';
 import {
   contributorApplicationListResponseSchema,
   contributorApplicationResponseSchema,
+  contributorRevocationResponseSchema,
   type AdminContributorApplicationsQuery,
   type ContributorApplicationParams,
+  type ContributorUserParams,
+  type InviteContributorInput,
   type OwnContributorApplicationsQuery,
+  type RevokeContributorInput,
   type ReviewContributorApplicationInput,
   type SubmitContributorApplicationInput,
 } from './contributor.schemas.js';
@@ -61,6 +65,16 @@ export class ContributorController {
     );
   };
 
+  invite = async (request: Request, response: Response): Promise<void> => {
+    const data = await this.service.invite(
+      authenticatedUserId(request),
+      getValidatedBody<InviteContributorInput>(request),
+    );
+    response
+      .status(201)
+      .json(contributorApplicationResponseSchema.parse({ success: true, data, meta: null }));
+  };
+
   review = async (request: Request, response: Response): Promise<void> => {
     const { id } = getValidatedParams<ContributorApplicationParams>(request);
     const data = await this.service.review(
@@ -71,5 +85,14 @@ export class ContributorController {
     response
       .status(200)
       .json(contributorApplicationResponseSchema.parse({ success: true, data, meta: null }));
+  };
+
+  revoke = async (request: Request, response: Response): Promise<void> => {
+    const { userId } = getValidatedParams<ContributorUserParams>(request);
+    const { reason } = getValidatedBody<RevokeContributorInput>(request);
+    const data = await this.service.revoke(authenticatedUserId(request), userId, reason);
+    response
+      .status(200)
+      .json(contributorRevocationResponseSchema.parse({ success: true, data, meta: null }));
   };
 }
