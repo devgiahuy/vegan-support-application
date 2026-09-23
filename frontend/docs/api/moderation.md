@@ -261,6 +261,7 @@ Report a visible post or comment
         "priority",
         "activeReporterCount",
         "canDecide",
+        "submittedAt",
         "createdAt"
       ],
       "properties": {
@@ -325,7 +326,7 @@ Report a visible post or comment
             "id",
             "displayName",
             "role",
-            "contributorType"
+            "contributorApprovalBasis"
           ],
           "properties": {
             "id": {
@@ -340,7 +341,7 @@ Report a visible post or comment
               "type": "string",
               "_truncated": true
             },
-            "contributorType": {
+            "contributorApprovalBasis": {
               "type": [
                 "string",
                 "null"
@@ -370,10 +371,8 @@ Report a visible post or comment
         "canDecide": {
           "type": "boolean"
         },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        }
+        "submittedAt": {
+          "type": [
   …(truncated — xem api-catalog.json)
 ```
 
@@ -412,6 +411,7 @@ Report a visible post or comment
           "priority",
           "activeReporterCount",
           "canDecide",
+          "submittedAt",
           "createdAt"
         ],
         "properties": {
@@ -472,6 +472,13 @@ Report a visible post or comment
           },
           "canDecide": {
             "type": "boolean",
+            "_truncated": true
+          },
+          "submittedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
             "_truncated": true
           },
           "createdAt": {

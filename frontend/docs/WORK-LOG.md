@@ -16,6 +16,66 @@
 - Còn lại / rủi ro:
 ```
 
+## [2026-09-23] — Triển khai hoàn tất Phase 14: Hợp nhất Quyền hạn & Căn cứ Xác minh Contributor (Unified Contributor Trust & Verification Parity)
+
+- Mục tiêu: Thực hiện breaking migration toàn diện phân hệ Contributor theo SRS §3.3 và IMPLEMENTATION_PLAN BL-01. Loại bỏ toàn bộ phân tầng subtype RBAC (ContributorType: EXPERIENCED_PRACTITIONER, NUTRITION_EXPERT). Thống nhất một vai trò CONTRIBUTOR duy nhất với 3 căn cứ phê duyệt chuẩn (ContributorApprovalBasis: ORGANIZATION_AFFILIATION, PLATFORM_TRACK_RECORD, ADMIN_INVITED). Căn cứ phê duyệt chỉ mang tính giải trình kiểm toán, không tạo ra nhánh phân quyền. Triển khai API và UI cho Admin mời trực tiếp (POST /api/v1/admin/contributor-invitations) và thu hồi tư cách Contributor kèm lý do kiểm toán bắt buộc (PATCH /api/v1/admin/contributors/:userId/revoke). Biểu mẫu nộp đơn công khai chỉ cho phép chọn ORGANIZATION_AFFILIATION hoặc PLATFORM_TRACK_RECORD (cấm tự chọn ADMIN_INVITED). Ngăn chặn tự duyệt đơn trong Review dialog. Tuân thủ 100% quy chuẩn kiến trúc 7 tầng scaffold, DTO/Model/BaseMapper, không sử dụng `any`, giao diện 100% tiếng Việt.
+- Đã làm:
+  - **Tầng Enums & Constants** (`src/common/enums/index.ts`, `src/common/constants/api-endpoints.ts`):
+    - Khai báo enum `ContributorApprovalBasis` (`ORGANIZATION_AFFILIATION`, `PLATFORM_TRACK_RECORD`, `ADMIN_INVITED`).
+    - Bổ sung `WITHDRAWN` vào `ContributorApplicationStatus`.
+    - Đánh dấu `@deprecated` enum `ContributorType`.
+    - Bổ sung endpoints `ADMIN_CONTRIBUTOR.INVITE` (`POST /admin/contributor-invitations`) và `ADMIN_CONTRIBUTOR.REVOKE(userId)` (`PATCH /admin/contributors/:userId/revoke`).
+  - **Tầng DTO & UI Model** (`src/features/contributor/types/contributor.dto.ts`, `src/features/contributor/types/contributor.model.ts`):
+    - Raw DTOs phản chiếu API backend: `claimedApprovalBasis`, `organizationClaim`, `reviewEvidence`, `invitedBy`, `invitationReason`, `InviteContributorRequestDto`, `RevokeContributorRequestDto`, `ContributorRevocationResponseDto`.
+    - Clean UI Models: `ContributorApplicationModel` (với `claimedApprovalBasis`, `organizationClaim`, `reviewEvidence`, `approvalBasis`, `isReapplyBlocked`), `ContributorRevocationResult`.
+    - Cập nhật `src/features/auth/types/auth.model.ts` và `src/features/auth/mappers/auth.mapper.ts` hỗ trợ trường `claimedApprovalBasis`.
+  - **Tầng Schema & Mapper & Unit Tests** (`contributor.schema.ts`, `contributor.mapper.ts`, `contributor.mapper.test.ts`):
+    - Zod schemas: `submitApplicationSchema` (superRefine bắt buộc `organizationClaim` khi chọn `ORGANIZATION_AFFILIATION`), `reviewApplicationSchema` (discriminatedUnion bắt buộc `approvalBasis` khi duyệt, bắt buộc `reviewNotes` >= 10 ký tự khi từ chối), `inviteContributorSchema`, `revokeContributorSchema` (lý do >= 10 ký tự).
+    - `ContributorMapper` kế thừa `BaseMapper`: mapping an toàn, format ngày tháng tiếng Việt, cắt ngắn snippet 160 ký tự, `APPROVAL_BASIS_LABELS`, phương thức chuyển đổi `toRevocationResult`, `toInviteDto`, `toRevokeDto`.
+    - 12/12 Vitest unit tests pass 100% (`contributor.mapper.test.ts`).
+  - **Tầng API Client & TanStack Queries** (`contributor.api.ts`, `contributor.queries.ts`):
+    - Centralized API methods: `submitApplication`, `getMyApplications`, `getQueue`, `reviewApplication`, `inviteContributorAdmin`, `revokeContributorAdmin`.
+    - Query Key Factory `CONTRIBUTOR_KEYS` và 6 hooks: `useMyApplicationsQuery`, `useSubmitApplicationMutation`, `useContributorQueueQuery`, `useReviewApplicationMutation`, `useInviteContributorAdminMutation`, `useRevokeContributorAdminMutation` với query invalidation tự động.
+  - **Tầng UI Components & Dialogs** (`src/features/contributor/components/`, `src/features/moderation/components/`):
+    - `application-form.tsx`: Cập nhật form nộp đơn theo 2 căn cứ hợp lệ (`ORGANIZATION_AFFILIATION`, `PLATFORM_TRACK_RECORD`), conditional input cho tổ chức/chứng nhận, cảnh báo thời gian cooldown khi bị từ chối.
+    - `review-application-dialog.tsx`: Hộp thoại thẩm định đơn cho Admin, chọn căn cứ phê duyệt cuối cùng, nhập ghi chú giải trình, kiểm tra bằng chứng / liên kết, chống tự duyệt đơn của chính mình.
+    - `contrib-queue-table.tsx`: Hàng đợi xét duyệt đơn có bộ lọc theo căn cứ và trạng thái, hiển thị tổ chức/bằng chứng, nút mở hộp thoại "Mời Contributor".
+    - `invite-contributor-dialog.tsx`: Hộp thoại Admin mời trực tiếp người dùng làm Contributor với lý do mời rõ ràng.
+    - `revoke-contributor-dialog.tsx`: Hộp thoại xác nhận thu hồi tư cách Contributor kèm cảnh báo hạ cấp về vai trò MEMBER và ô nhập lý do kiểm toán bắt buộc.
+    - `mod-users-table.tsx`: Tích hợp nút "Thu hồi quyền" cho Contributor và "Mời Contributor" cho Member trong bảng quản trị người dùng.
+    - `my-applications.tsx`: Hiển thị lịch sử nộp đơn của cá nhân với nhãn căn cứ tiếng Việt, thông tin tổ chức, lý do mời và mốc thời gian được nộp lại.
+    - `application-fixtures.ts`: Cập nhật fixtures chuẩn theo schema mới.
+- File tạo/sửa:
+  - `src/common/enums/index.ts`
+  - `src/common/constants/api-endpoints.ts`
+  - `src/features/contributor/types/contributor.dto.ts`
+  - `src/features/contributor/types/contributor.model.ts`
+  - `src/features/contributor/schemas/contributor.schema.ts`
+  - `src/features/auth/types/auth.model.ts`
+  - `src/features/auth/mappers/auth.mapper.ts`
+  - `src/features/contributor/mappers/contributor.mapper.ts`
+  - `src/features/contributor/mappers/contributor.mapper.test.ts`
+  - `src/features/contributor/api/contributor.api.ts`
+  - `src/features/contributor/queries/contributor.queries.ts`
+  - `src/features/contributor/components/application-form.tsx`
+  - `src/features/contributor/components/review-application-dialog.tsx`
+  - `src/features/contributor/components/contrib-queue-table.tsx`
+  - `src/features/contributor/components/invite-contributor-dialog.tsx`
+  - `src/features/contributor/components/revoke-contributor-dialog.tsx`
+  - `src/features/moderation/components/mod-users-table.tsx`
+  - `src/features/contributor/components/my-applications.tsx`
+  - `src/features/contributor/__fixtures__/application-fixtures.ts`
+  - `src/app/(site)/profile/page.tsx`
+  - `docs/PROGRESS.md`
+  - `docs/WORK-LOG.md`
+  - `specs/013-unified-contributors/tasks.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type trên toàn dự án.
+  - `npm test`: 319/319 tests pass (32 test files bao gồm 12/12 mapper tests mới).
+  - `npm run build`: Next.js 16 build thành công 35/35 routes tĩnh & động.
+- PROGRESS: Phase 14 Contributor Parity hoàn thành 100% (Row 10 trong bảng tổng đạt 95%, chờ verification live BE khi backend deploy).
+- Còn lại / rủi ro: Không có.
+
 ## [2026-09-23] — Triển khai hoàn tất Phase 13: Cooking-aware Recipe Nutrition (Đặc tả specs/012-recipe-nutrition)
 
 - Mục tiêu: Triển khai trọn vẹn mô hình 7 tầng scaffold cho tính năng Phân tích Dinh dưỡng Công thức Nấu nướng có tính đến hao hụt nhiệt và phương pháp chế biến (Cooking-aware), phân định rạch ròi giữa số liệu tính toán khoa học chuẩn và số liệu ước lượng bổ trợ từ AI; cảnh báo nguyên liệu chưa có dữ liệu thành phần; nhận diện dữ liệu cũ (STALE) và cung cấp tính năng xem trước (Preview) trong trình soạn thảo công thức.

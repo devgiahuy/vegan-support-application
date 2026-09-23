@@ -72,9 +72,12 @@ function ContributorTab() {
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       <div className="rounded-2xl border bg-card p-4">
-        <h3 className="text-base font-bold text-foreground">Đăng ký người đóng góp</h3>
+        <h3 className="text-base font-bold text-foreground">
+          Đăng ký Người đóng góp (Contributor)
+        </h3>
         <p className="mt-0.5 text-xs text-muted-foreground">
-          Đơn được duyệt không tự nâng quyền — hãy đăng nhập lại sau khi có kết quả.
+          Hồ sơ sẽ được Quản trị viên thẩm định thủ công. Mọi Contributor được phê duyệt đều có
+          quyền hạn đóng góp ngang nhau.
         </p>
         <div className="mt-3">
           <ApplicationForm existing={apps} />
