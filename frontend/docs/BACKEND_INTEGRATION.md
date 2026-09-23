@@ -1,4 +1,4 @@
-﻿# Frontend ↔ Backend Integration Guide
+# Frontend ↔ Backend Integration Guide
 
 **Version:** 4.4
 
@@ -894,3 +894,32 @@ Một frontend/backend capability chỉ được xem là tích hợp xong khi:
 - Backend gates và frontend checks liên quan pass.
 - Ma trận mục 6 ghi `FE integrated = Yes` kèm ngày hoặc PR/commit reference.
 - Changelog được cập nhật nếu behavior hoặc contract thay đổi.
+
+### 6.12 Custom Meals — Phase 17
+
+| Method | Endpoint | Status | FE integrated | FE integrated date | Notes |
+|--------|----------|--------|---------------|--------------------|-------|
+| GET | /api/v1/custom-meals | READY | No | — | Owner-scoped paginated list; optional ?tag= filter |
+| POST | /api/v1/custom-meals | READY | No | — | Create private custom meal with ingredients and tags |
+| GET | /api/v1/custom-meals/{id} | READY | No | — | Detail with ingredients, photos, tags |
+| PATCH | /api/v1/custom-meals/{id} | READY | No | — | Partial update; replaces entire ingredients/tags lists if provided |
+| DELETE | /api/v1/custom-meals/{id} | READY | No | — | Soft-delete; 409 CUSTOM_MEAL_IN_USE if BLOCK policy and plan references exist |
+| POST | /api/v1/custom-meals/{id}/photos | READY | No | — | Attach existing MediaAsset (COVER_IMAGE); max 10 per meal |
+| DELETE | /api/v1/custom-meals/{id}/photos/{assetId} | READY | No | — | Detach photo; asset deletion handled via storage module |
+| PUT | /api/v1/custom-meals/{id}/photos/order | READY | No | — | Reorder photos by orderedAssetIds array |
+
+**Business rules (backend-enforced):**
+- All endpoints require authentication; owner-scoped (no cross-user access).
+- deletePolicy=BLOCK (default): DELETE returns 409 if meal is referenced by any MealPlanItem with RETAIN_SNAPSHOT not set.
+- deletePolicy=RETAIN_SNAPSHOT: allows delete; plan items retain the snapshot on customMealSnapshot JSON field.
+- Asset attached as photo must be owned by the same user and of COVER_IMAGE kind.
+- Deleting a MediaAsset used as a custom meal photo is blocked (409 ASSET_IN_USE) by storage module.
+- MealPlanItem now has sourceType (RECIPE|CUSTOM_MEAL) and customMealId; existing rows default to RECIPE.
+
+**Error codes:**
+| Code | HTTP | Description |
+|------|------|-------------|
+| CUSTOM_MEAL_NOT_FOUND | 404 | Meal does not exist or is not owned by the requester |
+| CUSTOM_MEAL_IN_USE | 409 | BLOCK policy delete rejected because meal is referenced by a plan item |
+| CUSTOM_MEAL_PHOTO_LIMIT | 422 | Meal already has 10 photos |
+| ASSET_NOT_FOUND_OR_INELIGIBLE | 422 | Asset is not COVER_IMAGE, not owned by user, or not ACTIVE |

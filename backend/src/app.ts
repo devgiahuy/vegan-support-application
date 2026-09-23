@@ -101,6 +101,10 @@ import {
   createStorageUploadsRouter,
 } from './modules/storage/storage.router.js';
 import { StorageService } from './modules/storage/storage.service.js';
+import { CustomMealController } from './modules/custom-meals/custom-meal.controller.js';
+import { CustomMealRepository } from './modules/custom-meals/custom-meal.repository.js';
+import { createCustomMealRouter } from './modules/custom-meals/custom-meal.router.js';
+import { CustomMealService } from './modules/custom-meals/custom-meal.service.js';
 import { openApiDocument } from './openapi/document.js';
 
 export interface AppDependencies {
@@ -170,6 +174,12 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   );
   const recipeNutritionController = new RecipeNutritionController(
     new RecipeNutritionService(new RecipeNutritionRepository(database.client), aiProvider),
+  );
+  const customMealController = new CustomMealController(
+    new CustomMealService(
+      new CustomMealRepository(database.client),
+      storageRepository,
+    ),
   );
 
   app.disable('x-powered-by');
@@ -242,6 +252,7 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/comments', createCommentsRouter(communityController, authentication));
   app.use('/api/v1/storage', createStorageRouter(storageController, authentication));
   app.use('/api/v1/uploads', createStorageUploadsRouter(storageController, authentication));
+  app.use('/api/v1/custom-meals', createCustomMealRouter(customMealController, authentication));
 
   app.use(notFoundHandler);
   app.use(createErrorHandler(logger));

@@ -17,6 +17,7 @@ import { registerChatOpenApi } from '../modules/chat/chat.openapi.js';
 import { registerFoodDataOpenApi } from '../modules/food-data/food-data.openapi.js';
 import { registerRecipeNutritionOpenApi } from '../modules/recipe-nutrition/recipe-nutrition.openapi.js';
 import { registerStorageOpenApi } from '../modules/storage/storage.openapi.js';
+import { registerCustomMealOpenApi } from '../modules/custom-meals/custom-meal.openapi.js';
 
 const registry = new OpenAPIRegistry();
 
@@ -58,6 +59,7 @@ registerChatOpenApi(registry, registeredErrorResponse);
 registerFoodDataOpenApi(registry, registeredErrorResponse);
 registerRecipeNutritionOpenApi(registry, registeredErrorResponse);
 registerStorageOpenApi(registry, registeredErrorResponse);
+registerCustomMealOpenApi(registry, registeredErrorResponse);
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
@@ -104,6 +106,7 @@ const generatedDocument = generator.generateDocument({
     { name: 'Uploads', description: 'Quota-reserved and provider-verified uploads' },
     { name: 'Storage', description: 'Owned storage usage and durable media deletion' },
     { name: 'Storage Admin', description: 'Storage policy, account usage, and adjustment audit' },
+    { name: 'Custom Meals', description: 'Private owner-scoped custom meals usable in meal planning' },
   ],
 });
 

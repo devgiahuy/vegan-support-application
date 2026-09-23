@@ -262,6 +262,10 @@ export class StorageRepository {
         where: { assetId, revision: { post: { status: { not: PostStatus.DELETED } } } },
       });
       if (activeReferences > 0) return { kind: 'in-use' as const, asset };
+      const customMealPhotoReferences = await transaction.customMealPhoto.count({
+        where: { assetId, customMeal: { deletedAt: null } },
+      });
+      if (customMealPhotoReferences > 0) return { kind: 'in-use' as const, asset };
       const prepared = await transaction.mediaAsset.update({
         where: { id: asset.id },
         data: { status: MediaAssetStatus.DELETING, deletionIdempotencyKey: idempotencyKey },

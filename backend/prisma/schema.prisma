@@ -529,6 +529,28 @@ enum RecipeNutritionEstimateStatus {
   @@map("recipe_nutrition_estimate_status")
 }
 
+enum MealPlanItemSourceType {
+  RECIPE
+  CUSTOM_MEAL
+
+  @@map("meal_plan_item_source_type")
+}
+
+enum CustomMealDeletePolicy {
+  BLOCK
+  RETAIN_SNAPSHOT
+
+  @@map("custom_meal_delete_policy")
+}
+
+enum NutritionCoverage {
+  COMPLETE
+  PARTIAL
+  UNAVAILABLE
+
+  @@map("nutrition_coverage")
+}
+
 model User {
   id                             String                     @id @default(uuid()) @db.Uuid
   email                          String                     @unique @db.VarChar(320)
@@ -588,6 +610,7 @@ model User {
   storageAdjustments             StorageAdjustment[]          @relation("StorageAdjustmentSubject")
   madeStorageAdjustments         StorageAdjustment[]          @relation("StorageAdjustmentActor")
   updatedStoragePolicies         StoragePolicy[]               @relation("StoragePolicyUpdater")
+  customMeals                    CustomMeal[]
 
   @@map("users")
 }
@@ -656,6 +679,7 @@ model Ingredient {
   interactionRulesA     IngredientInteractionRule[]   @relation("InteractionIngredientA")
   interactionRulesB     IngredientInteractionRule[]   @relation("InteractionIngredientB")
   nutritionLines        RecipeNutritionEstimateLine[]
+  customMealIngredients CustomMealIngredient[]
 
   @@index([status, foodGroup, canonicalName])
   @@map("ingredients")
@@ -949,29 +973,34 @@ model MealPlan {
 }
 
 model MealPlanItem {
-  id               String             @id @default(uuid()) @db.Uuid
-  mealPlanId       String             @map("meal_plan_id") @db.Uuid
-  date             DateTime           @db.Date
-  mealType         MealType           @map("meal_type")
-  position         Int
-  status           MealSlotStatus
-  recipeId         String?            @map("recipe_id") @db.Uuid
-  recipeRevisionId String?            @map("recipe_revision_id") @db.Uuid
-  targetCalories   Int                @map("target_calories")
-  calories         Int?
-  tolerancePercent Decimal?           @map("tolerance_percent") @db.Decimal(5, 2)
-  reasonCodes      Json               @default("[]") @map("reason_codes")
-  warningCodes     Json               @default("[]") @map("warning_codes")
-  createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
-  mealPlan         MealPlan           @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
-  recipe           Post?              @relation(fields: [recipeId], references: [id], onDelete: Restrict)
-  recipeRevision   PostRevision?      @relation(fields: [recipeRevisionId], references: [id], onDelete: Restrict)
-  mutations        MealPlanMutation[]
+  id                   String                  @id @default(uuid()) @db.Uuid
+  mealPlanId           String                  @map("meal_plan_id") @db.Uuid
+  date                 DateTime                @db.Date
+  mealType             MealType                @map("meal_type")
+  position             Int
+  status               MealSlotStatus
+  sourceType           MealPlanItemSourceType  @default(RECIPE) @map("source_type")
+  recipeId             String?                 @map("recipe_id") @db.Uuid
+  recipeRevisionId     String?                 @map("recipe_revision_id") @db.Uuid
+  customMealId         String?                 @map("custom_meal_id") @db.Uuid
+  customMealSnapshot   Json?                   @map("custom_meal_snapshot")
+  targetCalories       Int                     @map("target_calories")
+  calories             Int?
+  tolerancePercent     Decimal?                @map("tolerance_percent") @db.Decimal(5, 2)
+  reasonCodes          Json                    @default("[]") @map("reason_codes")
+  warningCodes         Json                    @default("[]") @map("warning_codes")
+  createdAt            DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime                @updatedAt @map("updated_at") @db.Timestamptz(3)
+  mealPlan             MealPlan                @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  recipe               Post?                   @relation(fields: [recipeId], references: [id], onDelete: Restrict)
+  recipeRevision       PostRevision?           @relation(fields: [recipeRevisionId], references: [id], onDelete: Restrict)
+  customMeal           CustomMeal?             @relation(fields: [customMealId], references: [id], onDelete: Restrict)
+  mutations            MealPlanMutation[]
 
   @@unique([mealPlanId, date, mealType])
   @@index([mealPlanId, position])
   @@index([recipeId, date])
+  @@index([customMealId])
   @@map("meal_plan_items")
 }
 
@@ -1426,6 +1455,7 @@ model MediaAsset {
   account             StorageAccount    @relation(fields: [ownerId], references: [userId], onDelete: Restrict, map: "media_assets_owner_id_account_fkey")
   reservation         StorageReservation? @relation(fields: [reservationId], references: [id], onDelete: SetNull)
   postMedia           PostMedia[]
+  customMealPhotos    CustomMealPhoto[]
 
   @@index([ownerId, status, createdAt])
   @@index([status, reconciledAt])
@@ -2062,4 +2092,73 @@ model UserIngredientExclusion {
   @@index([userId, active])
   @@index([ingredientId])
   @@map("user_ingredient_exclusions")
+}
+
+model CustomMeal {
+  id               String                  @id @default(uuid()) @db.Uuid
+  ownerId          String                  @map("owner_id") @db.Uuid
+  name             String                  @db.VarChar(200)
+  notes            String?
+  servings         Int                     @default(1)
+  sourceNote       String?                 @map("source_note") @db.VarChar(500)
+  userCalories     Int?                    @map("user_calories")
+  userProteinGrams Decimal?                @map("user_protein_grams") @db.Decimal(8, 2)
+  userCarbsGrams   Decimal?                @map("user_carbs_grams") @db.Decimal(8, 2)
+  userFatGrams     Decimal?                @map("user_fat_grams") @db.Decimal(8, 2)
+  nutritionCoverage NutritionCoverage      @default(UNAVAILABLE) @map("nutrition_coverage")
+  deletePolicy     CustomMealDeletePolicy  @default(BLOCK) @map("delete_policy")
+  deletedAt        DateTime?               @map("deleted_at") @db.Timestamptz(3)
+  createdAt        DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime                @updatedAt @map("updated_at") @db.Timestamptz(3)
+  owner            User                    @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ingredients      CustomMealIngredient[]
+  photos           CustomMealPhoto[]
+  tags             CustomMealTag[]
+  mealPlanItems    MealPlanItem[]
+
+  @@index([ownerId, deletedAt, createdAt])
+  @@map("custom_meals")
+}
+
+model CustomMealIngredient {
+  id               String                     @id @default(uuid()) @db.Uuid
+  customMealId     String                     @map("custom_meal_id") @db.Uuid
+  ingredientId     String?                    @map("ingredient_id") @db.Uuid
+  position         Int
+  displayName      String                     @map("display_name") @db.VarChar(160)
+  normalizedName   String                     @map("normalized_name") @db.VarChar(160)
+  amount           Decimal                    @db.Decimal(10, 2)
+  unit             String                     @db.VarChar(40)
+  resolutionStatus IngredientResolutionStatus @map("resolution_status")
+  customMeal       CustomMeal                 @relation(fields: [customMealId], references: [id], onDelete: Cascade)
+  ingredient       Ingredient?                @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@unique([customMealId, position])
+  @@index([customMealId, resolutionStatus])
+  @@map("custom_meal_ingredients")
+}
+
+model CustomMealPhoto {
+  id           String     @id @default(uuid()) @db.Uuid
+  customMealId String     @map("custom_meal_id") @db.Uuid
+  assetId      String     @map("asset_id") @db.Uuid
+  position     Int        @default(0)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  customMeal   CustomMeal @relation(fields: [customMealId], references: [id], onDelete: Cascade)
+  asset        MediaAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@unique([customMealId, assetId])
+  @@index([customMealId, position])
+  @@map("custom_meal_photos")
+}
+
+model CustomMealTag {
+  customMealId  String     @map("custom_meal_id") @db.Uuid
+  tag           String     @db.VarChar(80)
+  normalizedTag String     @map("normalized_tag") @db.VarChar(80)
+  customMeal    CustomMeal @relation(fields: [customMealId], references: [id], onDelete: Cascade)
+
+  @@id([customMealId, normalizedTag])
+  @@index([normalizedTag])
+  @@map("custom_meal_tags")
 }
