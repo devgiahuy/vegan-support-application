@@ -136,6 +136,8 @@ export const API_ENDPOINTS = {
   ADMIN_CONTRIBUTOR: {
     LIST: '/admin/contributor-applications',
     REVIEW: (id: string) => `/admin/contributor-applications/${id}/review`,
+    INVITE: '/admin/contributor-invitations',
+    REVOKE: (userId: string) => `/admin/contributors/${userId}/revoke`,
   },
   // BE Phase 08 COMPLETED — Trust-safety live (reports, behavior history)
   SAFETY: {
@@ -197,5 +199,13 @@ export const API_ENDPOINTS = {
     REANALYZE: (id: string) => `/meal-programs/${id}/reanalyze`,
     UPDATE_PROGRESS: (id: string, weekNumber: number) =>
       `/meal-programs/${id}/weeks/${weekNumber}/progress`,
+  },
+  // Phase 13: Cooking-aware Recipe Nutrition
+  RECIPE_NUTRITION: {
+    PREVIEW: (id: string) => `/posts/${id}/nutrition/preview`,
+    RECALCULATE: (id: string) => `/posts/${id}/nutrition/recalculate`,
+    CURRENT: (id: string) => `/posts/${id}/nutrition/current`,
+    HISTORY: (id: string) => `/posts/${id}/nutrition/history`,
+    STATUS: (id: string) => `/posts/${id}/nutrition/status`,
   },
 } as const;
