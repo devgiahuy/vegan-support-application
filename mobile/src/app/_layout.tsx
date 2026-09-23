@@ -26,6 +26,9 @@ export default function RootLayout() {
           <Stack.Screen name="recipes" />
           <Stack.Screen name="recipes/[id]" />
           <Stack.Screen name="articles" />
+          <Stack.Screen name="videos" />
+          <Stack.Screen name="videos/new" />
+          <Stack.Screen name="videos/[id]" />
           <Stack.Screen name="assistant" />
           <Stack.Screen name="meal-plans" />
           <Stack.Screen name="meal-plans/[id]" />

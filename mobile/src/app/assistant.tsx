@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ActivityIndicator, Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Platform, Pressable, Text, TextInput, View } from 'react-native';
 import { Bot, MessageCirclePlus, Send, Sparkles, Square, ThumbsDown, ThumbsUp } from 'lucide-react-native';
 
 import { FeedbackValue, ChatRole } from '@/common/enums';
@@ -47,9 +47,20 @@ function MessageBubble({
   const feedbackMutation = useChatFeedbackMutation();
   const fromUser = message.role === ChatRole.USER;
 
+  const promptDownReason = (): string | null => {
+    if (Platform.OS === 'web') {
+      const prompt = (globalThis as unknown as { prompt?: (message?: string) => string | null }).prompt;
+      return prompt?.('Vui long cho biet ly do ban danh gia cau tra loi nay chua tot.')?.trim() || null;
+    }
+    return 'Cau tra loi chua huu ich';
+  };
+
   const sendFeedback = (value: FeedbackValue) => {
+    const reason = value === FeedbackValue.DOWN ? (promptDownReason() ?? undefined) : undefined;
+    if (value === FeedbackValue.DOWN && !reason) return;
+
     feedbackMutation.mutate(
-      { messageId: message.id, sessionId, value },
+      { messageId: message.id, sessionId, value, reason },
       {
         onError: () => Alert.alert('Không gửi được đánh giá', 'Vui lòng thử lại sau.'),
       }

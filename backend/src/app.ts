@@ -44,7 +44,7 @@ import { ContributorService } from './modules/contributors/contributor.service.j
 import { ContentController } from './modules/content/content.controller.js';
 import { ModeratedPublicationPolicy } from './modules/content/content-publication.policy.js';
 import { ContentRepository } from './modules/content/content.repository.js';
-import { createPostsRouter, createUploadsRouter } from './modules/content/content.router.js';
+import { createPostsRouter } from './modules/content/content.router.js';
 import { ContentService } from './modules/content/content.service.js';
 import { MediaService } from './modules/content/media.service.js';
 import { ModerationController } from './modules/moderation/moderation.controller.js';
@@ -81,6 +81,26 @@ import { ChatIdentityService } from './modules/chat/chat.identity.js';
 import { ChatRepository } from './modules/chat/chat.repository.js';
 import { createChatRouter } from './modules/chat/chat.router.js';
 import { ChatService } from './modules/chat/chat.service.js';
+import { FoodDataController } from './modules/food-data/food-data.controller.js';
+import { FoodDataRepository } from './modules/food-data/food-data.repository.js';
+import {
+  createFoodDataAdminRouter,
+  createFoodDataRouter,
+} from './modules/food-data/food-data.router.js';
+import { FoodDataService } from './modules/food-data/food-data.service.js';
+import { RecipeNutritionController } from './modules/recipe-nutrition/recipe-nutrition.controller.js';
+import { RecipeNutritionRepository } from './modules/recipe-nutrition/recipe-nutrition.repository.js';
+import { createRecipeNutritionRouter } from './modules/recipe-nutrition/recipe-nutrition.router.js';
+import { RecipeNutritionService } from './modules/recipe-nutrition/recipe-nutrition.service.js';
+import { CloudinaryMediaProvider } from './modules/storage/cloudinary.provider.js';
+import { StorageController } from './modules/storage/storage.controller.js';
+import { StorageRepository } from './modules/storage/storage.repository.js';
+import {
+  createStorageAdminRouter,
+  createStorageRouter,
+  createStorageUploadsRouter,
+} from './modules/storage/storage.router.js';
+import { StorageService } from './modules/storage/storage.service.js';
 import { openApiDocument } from './openapi/document.js';
 
 export interface AppDependencies {
@@ -103,16 +123,15 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   const catalogController = new CatalogController(
     new CatalogService(new CatalogRepository(database.client)),
   );
-  const mediaService = new MediaService(config);
+  const storageRepository = new StorageRepository(database.client);
+  const cloudinaryProvider = new CloudinaryMediaProvider(config);
+  const storageService = new StorageService(storageRepository, cloudinaryProvider, config);
+  const storageController = new StorageController(storageService);
+  const mediaService = new MediaService(storageRepository);
   const ruleModerationService = new RuleModerationService();
   const contentRepository = new ContentRepository(database.client);
   const contentController = new ContentController(
-    new ContentService(
-      contentRepository,
-      mediaService,
-      new ModeratedPublicationPolicy(ruleModerationService),
-    ),
-    mediaService,
+    new ContentService(contentRepository, mediaService, new ModeratedPublicationPolicy(ruleModerationService)),
   );
   const communityController = new CommunityController(
     new CommunityService(new CommunityRepository(database.client)),
@@ -136,14 +155,21 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
       config,
     ),
   );
+  const aiProvider = createAiProvider(config);
   const chatController = new ChatController(
     new ChatService(
       new ChatRepository(database.client),
-      createAiProvider(config),
+      aiProvider,
       recommendationService,
       config,
     ),
     new ChatIdentityService(config),
+  );
+  const foodDataController = new FoodDataController(
+    new FoodDataService(new FoodDataRepository(database.client)),
+  );
+  const recipeNutritionController = new RecipeNutritionController(
+    new RecipeNutritionService(new RecipeNutritionRepository(database.client), aiProvider),
   );
 
   app.disable('x-powered-by');
@@ -192,9 +218,12 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/diet-rules', createDietRouter(dietController, authentication));
   app.use('/api/v1/categories', createCategoryRouter(catalogController));
   app.use('/api/v1/ingredients', createIngredientRouter(catalogController));
+  app.use('/api/v1/food-data', createFoodDataRouter(foodDataController));
   app.use('/api/v1/admin', createCatalogAdminRouter(catalogController, authentication));
+  app.use('/api/v1/admin', createFoodDataAdminRouter(foodDataController, authentication));
   app.use('/api/v1/admin', createContributorAdminRouter(contributorController, authentication));
   app.use('/api/v1/admin', createModerationAdminRouter(moderationController, authentication));
+  app.use('/api/v1/admin', createStorageAdminRouter(storageController, authentication));
   app.use('/api/v1/review-queue', createReviewQueueRouter(moderationController, authentication));
   app.use('/api/v1/reports', createReportsRouter(moderationController, authentication));
   app.use(
@@ -207,10 +236,12 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   );
   app.use('/api/v1/meal-plans', createMealPlanRouter(mealPlanController, authentication));
   app.use('/api/v1/chat', createChatRouter(chatController, authentication));
+  app.use('/api/v1/posts', createRecipeNutritionRouter(recipeNutritionController, authentication));
   app.use('/api/v1/posts', createPostsRouter(contentController, authentication));
   app.use('/api/v1/posts', createCommunityPostsRouter(communityController, authentication));
   app.use('/api/v1/comments', createCommentsRouter(communityController, authentication));
-  app.use('/api/v1/uploads', createUploadsRouter(contentController, authentication));
+  app.use('/api/v1/storage', createStorageRouter(storageController, authentication));
+  app.use('/api/v1/uploads', createStorageUploadsRouter(storageController, authentication));
 
   app.use(notFoundHandler);
   app.use(createErrorHandler(logger));

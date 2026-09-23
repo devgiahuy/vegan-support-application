@@ -1,14 +1,14 @@
-# Frontend ↔ Backend Integration Guide
+﻿# Frontend ↔ Backend Integration Guide
 
-**Version:** 4.0
+**Version:** 4.4
 
-**Cập nhật:** 18/09/2026
+**Cập nhật:** 21/09/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
 **Contract target:** `/api/v1`
 
-> Tài liệu này là registry sống cho capability backend thực tế. Phases 00–11 là baseline hiện có; Phases 12–27 chỉ là `PLANNED` cho tới khi từng phase vượt completion gate. Contributor hiện vẫn dùng contract subtype legacy và sẽ có breaking migration ở Phase 14; frontend không được dùng approval/request data để tự cấp quyền.
+> Tài liệu này là registry sống cho capability backend thực tế. Phases 00–11 là baseline hiện có; Phases 12–27 chỉ được nâng trạng thái sau khi từng phase vượt completion gate. Backend Phase 14 đã thay subtype bằng một Contributor role với approval basis chỉ dùng cho audit/presentation. Các consumer frontend legacy phải migrate trước khi các endpoint breaking trở lại `READY`.
 
 ---
 
@@ -206,11 +206,11 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 
 | Method | Path                         | Status    | Backend updated | FE integrated    | Ghi chú                                                                                                                                                   |
 | ------ | ---------------------------- | --------- | --------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/auth/register`             | `READY`   | 2026-09-15      | Yes (2026-09-15) | Optional `contributorRequest` chỉ tạo application `PENDING`; account/JWT vẫn là `MEMBER`; FE: `features/auth` register + session + contributor form       |
-| POST   | `/auth/login`                | `READY`   | 2026-09-15      | Yes (2026-09-15) | Trả access token và đặt access/refresh HttpOnly cookies; generic invalid-credential response; FE: login form xử lý theo `error.code`                      |
+| POST   | `/auth/register`             | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Breaking Phase 14: `contributorRequest.claimedApprovalBasis`, optional `organizationClaim`, `experience`, `referenceLinks`; pending account/JWT vẫn `MEMBER` |
+| POST   | `/auth/login`                | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Session user bỏ subtype fields; Contributor profile trả `approvalBasis`/label chỉ để hiển thị; authorization vẫn theo role/profile |
 | POST   | `/auth/refresh`              | `READY`   | 2026-09-15      | Yes (2026-09-15) | Đọc refresh cookie, rotation mỗi lần dùng; reuse revoke toàn token family; FE: Next proxy `/api/auth/refresh-token` + refresh-queue                       |
 | POST   | `/auth/logout`               | `READY`   | 2026-09-15      | Yes (2026-09-15) | Idempotent; body `{ allDevices?: boolean }`; revoke phiên hiện tại hoặc toàn bộ phiên của user; FE: Next proxy + xóa 4 cookie                             |
-| GET    | `/users/me`                  | `READY`   | 2026-09-15      | Yes (2026-09-15) | Trả profile, health `MANUAL`, diet snapshot/effective constraints; không lộ hash/session; FE auth chỉ map 8 field user, health/diet để `features/profile` |
+| GET    | `/users/me`                  | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Breaking Phase 14 user shape: bỏ subtype; pending application dùng `claimedApprovalBasis`; active profile dùng `approvalBasis`/label |
 | PATCH  | `/users/me`                  | `READY`   | 2026-09-15      | Yes (2026-09-15) | Cập nhật `displayName`/HTTP(S) `avatarUrl`; cần ít nhất một field                                                                                         |
 | PUT    | `/users/me/health-profile`   | `READY`   | 2026-09-15      | Yes (2026-09-15) | Upsert manual inputs; backend tính BMI, Mifflin–St Jeor BMR và activity-factor TDEE                                                                       |
 | POST   | `/diet-rules/preview`        | `READY`   | 2026-09-15      | Yes (2026-09-15) | Auth required; trả rule set v1, source/default/hard flag; tradition rule là configurable                                                                  |
@@ -221,13 +221,15 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 
 | Method | Path                  | Status    | Backend updated | FE integrated | Ghi chú                        |
 | ------ | --------------------- | --------- | --------------- | ------------- | ------------------------------ |
-| GET    | `/posts`              | `PLANNED` | —               | No            | Search/filter/pagination       |
-| POST   | `/posts`              | `PLANNED` | —               | No            | Role-based publish state       |
-| GET    | `/posts/:idOrSlug`    | `PLANNED` | —               | No            | Published revision cho public  |
-| PATCH  | `/posts/:id`          | `PLANNED` | —               | No            | Tạo revision theo role         |
-| DELETE | `/posts/:id`          | `PLANNED` | —               | No            | Soft-delete owner/admin rules  |
+| GET    | `/posts`              | `READY`   | 2026-09-21      | No            | Public chỉ thấy approved revision; filter/type/pagination |
+| POST   | `/posts`              | `READY`   | 2026-09-21      | No            | Auth; luôn tạo draft revision, không auto-publish |
+| GET    | `/posts/:idOrSlug`    | `READY`   | 2026-09-21      | No            | Public thấy approved revision gần nhất trong lúc edit pending |
+| PATCH  | `/posts/:id`          | `READY`   | 2026-09-21      | No            | Author-only; tạo draft revision mới với expectedVersion |
+| DELETE | `/posts/:id`          | `READY`   | 2026-09-21      | No            | Author-only soft-delete; giữ review/audit evidence |
+| POST   | `/posts/:id/submit`   | `READY`   | 2026-09-21      | No            | Author-only; latest draft + expectedVersion; video asset phải committed/owned |
+| GET    | `/posts/:id/review-history` | `READY` | 2026-09-21 | No | Author/Admin; revisions, media source, signals, reviewer/reason, pagination |
 | GET    | `/posts/:id/related`  | `PLANNED` | —               | No            | Trả recipes/blogs/videos riêng |
-| POST   | `/uploads/signature`  | `PLANNED` | —               | No            | Cloudinary signed upload       |
+| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead|| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadP| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadO| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadS| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadT| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead|| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead`| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead/| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadu| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadp| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadl| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteado| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteada| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadd| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteads| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead/| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteads| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadi| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadg| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadn| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteada| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadt| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadu| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadr| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteade| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead`| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead|| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead`| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadR| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadE| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadM| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadO| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadV| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadE| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadD| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead`| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead|| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead—| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead|| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadN| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteado| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead|| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadC| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadl| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteado| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadu| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadd| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadi| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadn| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteada| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadr| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteady| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteads| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadi| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadg| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadn| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteade| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadd| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadu| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadp| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadl| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteado| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteada| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` insteadd| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead | 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead|| 2026-09-19 | No | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead
 | GET    | `/posts/:id/comments` | `PLANNED` | —               | No            | Reply tối đa một tầng          |
 | POST   | `/posts/:id/comments` | `PLANNED` | —               | No            | Member+                        |
 | PATCH  | `/comments/:id`       | `PLANNED` | —               | No            | Owner only, editedAt           |
@@ -242,20 +244,22 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 
 | Method | Path                                         | Status    | Backend updated | FE integrated         | Ghi chú                                                                            |
 | ------ | -------------------------------------------- | --------- | --------------- | --------------------- | ---------------------------------------------------------------------------------- |
-| POST   | `/contributor-applications`                  | `READY`   | 2026-09-17      | Yes (2026-09-17)      | Member upgrade; không có certificate MVP; FE: `features/contributor` |
-| GET    | `/contributor-applications/me`               | `READY`   | 2026-09-17      | Yes (2026-09-17)      | Member xem lịch sử đơn; FE: `features/contributor` |
-| GET    | `/admin/contributor-applications`            | `READY`   | 2026-09-17      | Yes (2026-09-17)      | Admin only; hàng chờ duyệt; FE: `features/contributor` |
-| PATCH  | `/admin/contributor-applications/:id/review` | `READY`   | 2026-09-17      | Yes (2026-09-17)      | Contract hiện tại approve/reject + subtype/basis; Phase 14 sẽ bỏ subtype, khi bắt đầu phải chuyển `CHANGING` |
-| GET    | `/review-queue/posts`                        | `PLANNED` | —               | Yes (2026-09-16, chờ READY chính thức) | Contributor/Admin filtering; FE: `features/review` list + filter + pagination |
-| PATCH  | `/review-queue/posts/:id/approve`            | `PLANNED` | —               | Yes (2026-09-16, chờ READY chính thức) | Cấm self-approve; FE: dialog reason bắt buộc + chặn tự duyệt 2 lớp              |
-| PATCH  | `/review-queue/posts/:id/reject`             | `PLANNED` | —               | Yes (2026-09-16, chờ READY chính thức) | Reason required; FE: chung dialog + toast lý do cho tác giả                     |
+| POST   | `/contributor-applications`                  | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Member-only unified application; public claim chỉ organization/platform; pending không cấp quyền |
+| GET    | `/contributor-applications/me`               | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Breaking response bỏ requested/approved subtype; trả claimed/final basis và evidence audit |
+| GET    | `/admin/contributor-applications`            | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Filter `claimedApprovalBasis`; response unified basis/evidence/inviter |
+| POST   | `/admin/contributor-invitations`             | `IN_PROGRESS` | 2026-09-19  | No                   | Source/OpenAPI complete; final READY blocked by Windows Prisma query-engine DLL `EPERM` during build |
+| PATCH  | `/admin/contributor-applications/:id/review` | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | APPROVE chọn final basis + reason; transactional role/profile/evidence/decision/session revoke; REJECT giữ Member + cooldown |
+| PATCH  | `/admin/contributors/:userId/revoke`         | `IN_PROGRESS` | 2026-09-19  | No                   | Audited revoke implemented; final READY blocked by Windows Prisma query-engine DLL `EPERM` during build |
+| GET    | `/review-queue/posts`                        | `PLANNED` | —               | Yes (legacy scaffold; migrate) | Unified Contributor/Admin filtering; author summary uses optional `contributorApprovalBasis` |
+| PATCH  | `/review-queue/posts/:id/approve`            | `PLANNED` | —               | Yes (legacy scaffold; migrate) | Cấm self-approve; all active Contributors have identical review permission; response summary migrated |
+| PATCH  | `/review-queue/posts/:id/reject`             | `PLANNED` | —               | Yes (legacy scaffold; migrate) | Reason required; all active Contributors have identical review permission; response summary migrated |
 | POST   | `/reports`                                   | `READY`   | 2026-09-17      | Yes (2026-09-17)      | One active report/user/target; FE: `features/safety`                               |
 | GET    | `/admin/reports`                             | `READY`   | 2026-09-16      | Yes (2026-09-17) | Admin only; filter status/priority/targetType                                      |
-| PATCH  | `/admin/reports/:id/resolve`                 | `READY`   | 2026-09-16      | Yes (2026-09-17) | Audit required; reason min 10 chars; resolve gộp cùng target                       |
-| GET    | `/admin/users`                               | `READY`   | 2026-09-16      | Yes (2026-09-17) | Search/filter/pagination                                                           |
+| PATCH  | `/admin/reports/:id/resolve`                 | `IN_PROGRESS` | 2026-09-19  | Yes (2026-09-17) | DEMOTE preservation/audit change implemented; final gate blocked by Windows Prisma query-engine DLL `EPERM` |
+| GET    | `/admin/users`                               | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Breaking response đổi `contributorType` thành optional `contributorApprovalBasis` |
 | PATCH  | `/admin/users/:id/status`                    | `READY`   | 2026-09-16      | Yes (2026-09-17) | Lock/ban/unban/delete rules; chặn self & protected admin                           |
-| GET    | `/admin/comments`                            | `READY`   | 2026-09-16      | Yes (2026-09-17) | Moderation list; filter status/post/author                                         |
-| PATCH  | `/admin/comments/:id/status`                 | `READY`   | 2026-09-16      | Yes (2026-09-17) | Hide/restore; chặn comment đã bị tác giả xóa                                       |
+| GET    | `/admin/comments`                            | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Author summary đổi subtype thành optional approval basis; basis không cấp quyền |
+| PATCH  | `/admin/comments/:id/status`                 | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Response author summary dùng unified Contributor contract |
 | GET    | `/categories`                                | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Public active tree tối đa hai tầng; filter `type`                                  |
 | GET    | `/admin/categories`                          | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Admin only; pagination; xem cả archived                                            |
 | POST   | `/admin/categories`                          | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Admin only; parent/child cùng type                                                 |
@@ -336,40 +340,55 @@ Các path dưới đây là contract target để định hướng; phase triể
 
 | Method | Path | Status | Backend updated | FE integrated | Ghi chú |
 |---|---|---|---|---|---|
-| GET | `/food-data/ingredients/:id/nutrients` | `PLANNED` | — | No | Canonical nutrients + provenance/version; missing không phải zero |
-| GET | `/food-data/reference-intakes` | `PLANNED` | — | No | Population/unit/source/version |
-| GET | `/food-data/ingredient-guidelines` | `PLANNED` | — | No | Amount/frequency per period; population/evidence/source/severity |
-| GET | `/food-data/cooking-methods` | `PLANNED` | — | No | Retention/yield factors đã review |
-| GET | `/food-data/interaction-rules` | `PLANNED` | — | No | Evidence-graded; scope dish/meal/day |
-| POST | `/admin/food-data/imports/preview` | `PLANNED` | — | No | Admin, provider-neutral, không ghi dữ liệu |
-| POST | `/admin/food-data/imports` | `PLANNED` | — | No | Admin, idempotent commit + audit |
-| POST | `/recipes/:id/nutrition/preview` | `PLANNED` | — | No | Phase 13; ingredients + structured cooking steps |
-| POST | `/recipes/:id/nutrition/recalculate` | `PLANNED` | — | No | Owner/Admin; versioned result |
-| GET | `/recipes/:id/nutrition` | `PLANNED` | — | No | Origin/confidence/range/assumptions/uncovered ingredients |
+| GET | `/food-data/ingredients/:ingredientId/nutrients` | `READY` | 2026-09-19 | No | Approved effective profiles, conversions, nutrients + provenance/version; missing không phải zero |
+| GET | `/food-data/reference-intakes` | `READY` | 2026-09-19 | No | Approved effective population/unit/source/version records |
+| GET | `/food-data/ingredient-guidelines` | `READY` | 2026-09-19 | No | Amount/frequency per period; population/evidence/source/severity |
+| GET | `/food-data/cooking-methods` | `READY` | 2026-09-19 | No | Active methods with approved effective retention/yield factors |
+| GET | `/food-data/interaction-rules` | `READY` | 2026-09-19 | No | Reviewed evidence-graded rules; scope dish/meal/day |
+| GET/POST | `/admin/food-data/records` | `READY` | 2026-09-19 | No | Admin list/create by typed `kind`; AI suggestions remain `STAGED` |
+| PUT/DELETE | `/admin/food-data/records/:id` | `READY` | 2026-09-19 | No | Full replace or archive/supersede; no hard-delete of reviewed records |
+| POST | `/admin/food-data/imports/preview` | `READY` | 2026-09-19 | No | Admin, provider adapter validation; writes staging/audit only, not canonical data |
+| POST | `/admin/food-data/imports` | `READY` | 2026-09-19 | No | Admin, commits a preview by `importId`; idempotent replay + audit |
+| POST | `/posts/:id/nutrition/preview` | `IN_PROGRESS` | 2026-09-19 | No | Implemented in source/OpenAPI; public for published recipe, owner/Admin for draft/latest; unsaved deterministic/partial estimate; pending final `npm run build` gate |
+| POST | `/posts/:id/nutrition/recalculate` | `IN_PROGRESS` | 2026-09-19 | No | Implemented in source/OpenAPI; Auth owner/Admin; saves new estimate version, histories previous current estimate; pending final `npm run build` gate |
+| GET | `/posts/:id/nutrition/current` | `IN_PROGRESS` | 2026-09-19 | No | Implemented in source/OpenAPI; current saved estimate; stale/incomplete errors documented; pending final `npm run build` gate |
+| GET | `/posts/:id/nutrition/history` | `IN_PROGRESS` | 2026-09-19 | No | Implemented in source/OpenAPI; paginated saved estimate versions with `CURRENT/HISTORICAL/STALE` status; pending final `npm run build` gate |
+| GET | `/posts/:id/nutrition/status` | `IN_PROGRESS` | 2026-09-19 | No | Implemented in source/OpenAPI; estimate freshness and latest nutrition AI fallback job status; pending final `npm run build` gate |
 
 ### 6.10 Unified Contributor migration — Phase 14
 
 | Contract area | Status | FE action |
 |---|---|---|
-| Registration/application request | `PLANNED` migration | Replace `requestedType` with requested `approvalBasis`; role remains `MEMBER` while pending |
-| Admin review | `PLANNED` migration | Remove subtype selection; choose final basis and enter reason |
-| Contributor profile/session | `PLANNED` migration | Remove `contributorType`; show one Contributor role plus optional approval-basis label |
-| RBAC/UI gates | `PLANNED` migration | Gate only by authoritative approved role/profile, never by basis |
+| Registration/application request | `CHANGING` | Replace `requestedType` with `claimedApprovalBasis`; add conditional `organizationClaim`; role remains `MEMBER` while pending |
+| Admin review | `CHANGING` | Remove subtype selection; choose final `approvalBasis` and enter reason; handle basis/source conflict |
+| Contributor profile/session | `CHANGING` | Remove `contributorType`; show one Contributor role plus optional approval-basis label |
+| Admin invitation/revocation | `IN_PROGRESS`, FE not integrated | Source/OpenAPI complete; wait for backend build gate, then add DTOs/hooks when scheduled |
+| RBAC/UI gates | `CHANGING` | Gate only by authoritative `role === CONTRIBUTOR` plus active profile returned by backend, never by basis |
 
-When Phase 14 starts, affected READY endpoints must become `CHANGING`. Do not preemptively change the current consumer until the new OpenAPI contract lands.
+Phase 14 source/migration/OpenAPI is implemented. Existing frontend consumers still use the removed subtype fields, so affected endpoints remain `CHANGING` until frontend runs `npm run sync:swagger` and migrates DTO/Model/Mapper/forms/tests. New invitation/revocation endpoints remain `IN_PROGRESS` until the backend build gate passes; `FE integrated = No`.
+
+Legacy data mapping is intentionally conservative: both `EXPERIENCED_PRACTITIONER` and `NUTRITION_EXPERT` rows become `PLATFORM_TRACK_RECORD`. The migration snapshots platform post/interaction counts and retains old values/free-text basis inside database audit evidence; it does not infer organization affiliation, certificate verification, or professional status.
 
 ### 6.11 Storage quota và video review — Phases 15–16
 
 | Method | Path | Status | Backend updated | FE integrated | Ghi chú |
 |---|---|---|---|---|---|
-| GET | `/storage/me` | `PLANNED` | — | No | used/reserved/limit/remaining bytes |
-| POST | `/uploads/reservations` | `PLANNED` | — | No | Reserve quota before upload |
-| POST | `/uploads/reservations/:id/commit` | `PLANNED` | — | No | Commit actual provider bytes |
-| DELETE | `/uploads/reservations/:id` | `PLANNED` | — | No | Cancel/release owner reservation |
-| GET | `/admin/storage/accounts` | `PLANNED` | — | No | Admin usage/policy inspection |
-| POST | `/posts/:id/submit` | `PLANNED` | — | No | Shared recipe/handbook/video revision submission target |
-| GET | `/admin/content-review` | `PLANNED` | — | No | Review queue includes video |
-| PATCH | `/admin/content-review/:revisionId` | `PLANNED` | — | No | Admin approve/reject with reason |
+| GET | `/storage/me` | `READY` | — | No | used/reserved/limit/remaining bytes |
+| POST | `/uploads/reservations` | `READY` | — | No | Reserve quota before upload |
+| POST | `/uploads/reservations/:id/commit` | `READY` | — | No | Commit actual provider bytes |
+| DELETE | `/uploads/reservations/:id` | `READY` | — | No | Cancel/release owner reservation |
+| GET | `/admin/storage/accounts` | `READY` | — | No | Admin usage/policy inspection |
+| DELETE | `/storage/assets/:id` | `READY` | 2026-09-19 | No | Idempotent durable provider delete; usage decrements after Cloudinary confirms |
+| GET | `/admin/storage/policies` | `READY` | 2026-09-19 | No | List configurable quota policies |
+| PATCH | `/admin/storage/policies/:id` | `READY` | 2026-09-19 | No | Update policy fields with optimistic version |
+| POST | `/admin/storage/accounts/:userId/adjustments` | `READY` | 2026-09-19 | No | Idempotent audited byte-level quota adjustment |
+| GET | `/admin/storage/adjustments` | `READY` | 2026-09-19 | No | Paginated immutable adjustment audit log |
+| POST | `/posts/:id/submit` | `READY` | 2026-09-21 | No | Shared recipe/handbook/video submission; moderation signal only |
+| GET | `/posts/:id/review-history` | `READY` | 2026-09-21 | No | Author/Admin paginated immutable revision/review/media/signal history |
+| GET | `/admin/content-review` | `READY` | 2026-09-21 | No | Admin-only; filter `type=VIDEO`, status/priority và pagination |
+| GET | `/admin/content-review/:revisionId` | `READY` | 2026-09-21 | No | Admin-only detail; retained for hidden/deleted audit evidence |
+| PATCH | `/admin/content-review/:revisionId` | `READY` | 2026-09-21 | No | Admin-only `APPROVE`/`REJECT`; reason bắt buộc; cấm self-review |
+| GET/PATCH | `/review-queue/posts*` | `DEPRECATED` | 2026-09-21 | Yes (legacy; migrate) | Admin-only legacy aliases; migrate sang `/admin/content-review*` |
 
 MVP không có payment/quota purchase, DMCA workflow, audio/frame copyright detection, hoặc video transcription.
 
@@ -436,9 +455,9 @@ Do not add live consumers for wearables/HealthKit/Health Connect, video STT/summ
 
 ## 7. Luồng tích hợp đặc biệt
 
-### 7.1 Register có Contributor request
+### 7.1 Register có Contributor request — Phase 14 breaking contract
 
-Contract `READY` hiện tại trước Phase 14 vẫn là legacy:
+Current backend target:
 
 ```json
 {
@@ -446,9 +465,10 @@ Contract `READY` hiện tại trước Phase 14 vẫn là legacy:
   "password": "...",
   "displayName": "...",
   "contributorRequest": {
-    "requestedType": "NUTRITION_EXPERT",
-    "experience": "...",
-    "referenceLinks": []
+    "claimedApprovalBasis": "ORGANIZATION_AFFILIATION",
+    "organizationClaim": "Tên tổ chức do applicant khai báo",
+    "experience": "Động lực và kinh nghiệm đóng góp...",
+    "referenceLinks": ["https://example.com/reference"]
   }
 }
 ```
@@ -460,26 +480,14 @@ Response user luôn có:
   "role": "MEMBER",
   "contributorApplication": {
     "status": "PENDING",
-    "requestedType": "NUTRITION_EXPERT"
+    "claimedApprovalBasis": "ORGANIZATION_AFFILIATION"
   }
 }
 ```
 
-Frontend tuyệt đối không mở contributor routes dựa trên `requestedType`. Chỉ dùng `user.role` và approved contributor profile từ `/users/me`.
+User form chỉ cho claim `ORGANIZATION_AFFILIATION` hoặc `PLATFORM_TRACK_RECORD`; `organizationClaim` bắt buộc cho organization và không gửi cho platform. `ADMIN_INVITED` chỉ do `POST /admin/contributor-invitations` tạo, vẫn `PENDING` và cần manual review. Response bỏ `requestedType`, `approvedType`, và `contributorType`; approval trả `approvalBasis`, `approvalBasisLabel`, và evidence theo kind. Cả ba basis có quyền giống hệt nhau.
 
-Target breaking contract của Phase 14, chỉ áp dụng sau khi endpoint chuyển qua `CHANGING` rồi `READY` và frontend đã sync OpenAPI:
-
-```json
-{
-  "contributorRequest": {
-    "claimedApprovalBasis": "ORGANIZATION_AFFILIATION",
-    "experience": "...",
-    "referenceLinks": []
-  }
-}
-```
-
-User form target chỉ cho claim `ORGANIZATION_AFFILIATION` hoặc `PLATFORM_TRACK_RECORD`; `ADMIN_INVITED` chỉ đến từ luồng Admin. Response target bỏ `requestedType`, `approvedContributorType`, và `contributorType`; thay bằng final approval basis phù hợp. Cả ba basis đều có cùng quyền sau khi Admin duyệt thủ công. Không đổi consumer theo target này trước khi Phase 14 hoàn tất.
+Frontend migration bắt buộc: sync OpenAPI; xóa `ContributorType` và mọi subtype label/branch; đổi register/application/admin review DTO + Zod form + mapper/tests; đổi filter `requestedType` thành `claimedApprovalBasis`; đổi author/admin summaries sang `contributorApprovalBasis`; xử lý `CONTRIBUTOR_APPROVAL_BASIS_INVALID`, invitation/revoke conflicts và `STALE_ACCESS_TOKEN` sau approve/revoke.
 
 ### 7.2 Diet rule confirmation
 
@@ -667,7 +675,9 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `CONTRIBUTOR_APPLICATION_PENDING`             | Disable submit, link xem trạng thái                                    |
 | `CONTRIBUTOR_REAPPLY_NOT_ALLOWED`             | Hiển thị ngày được apply lại                                           |
 | `CONTRIBUTOR_APPLICATION_NOT_ALLOWED`         | Ẩn form apply với Admin hoặc role không phù hợp                        |
-| `CONTRIBUTOR_TYPE_UNCHANGED`                  | Legacy pre-Phase-14 only; không tạo consumer mới, xóa khi migration READY |
+| `CONTRIBUTOR_APPROVAL_BASIS_INVALID`          | Refresh application; chỉ chọn basis hợp lệ cho source/evidence đã lưu |
+| `CONTRIBUTOR_INVITATION_NOT_ALLOWED`          | Refresh target; chỉ mời Member ACTIVE chưa có application pending |
+| `CONTRIBUTOR_REVOCATION_NOT_APPLICABLE`       | Refresh user; Contributor đã bị revoke hoặc không còn active |
 | `CONTRIBUTOR_APPLICATION_ALREADY_REVIEWED`    | Refresh Admin queue; application đã có quyết định                      |
 | `CONTRIBUTOR_APPLICATION_NOT_REVIEWABLE`      | Giữ queue và báo applicant không còn đủ điều kiện                      |
 | `SELF_APPROVAL_FORBIDDEN`                     | Giữ queue và báo lỗi rõ                                                |
@@ -739,12 +749,24 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `CHAT_REQUEST_IN_PROGRESS`                    | Giữ stream hiện tại hoặc chờ rồi retry cùng idempotency key            |
 | `EXTERNAL_LOCATION_UNAVAILABLE`               | Dùng internal restaurant results                                       |
 | `RESOURCE_CONFLICT`                           | Refresh entity/version trước khi sửa lại                               |
-| `FOOD_DATA_VERSION_CONFLICT`                  | Refetch source/version trước khi Admin sửa/import lại (planned Phase 12) |
-| `NUTRITION_DATA_INCOMPLETE`                   | Hiển thị partial/unknown và assumptions; không coi missing là zero (planned Phase 13) |
-| `NUTRITION_ESTIMATE_STALE`                    | Refetch/recalculate vì ingredient/step/source version đã đổi (planned Phase 13) |
-| `STORAGE_QUOTA_EXCEEDED`                      | Hiển thị used/limit/remaining; yêu cầu xóa media hoặc giảm upload (planned Phase 15) |
-| `UPLOAD_RESERVATION_EXPIRED`                  | Xin reservation mới trước khi retry upload (planned Phase 15)          |
-| `UPLOAD_PROVIDER_MISMATCH`                    | Không attach asset; thông báo upload thất bại và release quota (planned Phase 15) |
+| `FOOD_DATA_SOURCE_UNAVAILABLE`                | Chọn nguồn active đã được Admin cấu hình trước khi preview import       |
+| `DUPLICATE_SOURCE_RECORD`                     | Loại source record ID trùng trong cùng payload import                   |
+| `UNKNOWN_NUTRIENT_CODE`                       | Tạo/activate nutrient definition rồi preview lại                        |
+| `NUTRIENT_UNIT_MISMATCH`                      | Đổi về default unit của nutrient; backend không tự đổi dimension        |
+| `FOOD_DATA_REFERENCE_INVALID`                 | Refetch source/nutrient/ingredient/method ID trước khi lưu              |
+| `FOOD_DATA_DUPLICATE`                         | Refetch code/source identity/effective version; không retry mù          |
+| `FOOD_DATA_NOT_FOUND`                         | Hiển thị record không tồn tại hoặc ingredient không active              |
+| `FOOD_DATA_VERSION_CONFLICT`                  | Refetch source/version trước khi Admin sửa/import lại                    |
+| `IMPORT_IDEMPOTENCY_CONFLICT`                 | Giữ key cho cùng payload; tạo key mới chỉ cho import action mới         |
+| `IMPORT_NOT_COMMITTABLE`                      | Tạo preview mới thay vì commit batch FAILED                             |
+| `IMPORT_STAGING_INVALID`                      | Preview lại theo contract hiện tại                                      |
+| `IMPORT_REFERENCE_CHANGED`                    | Nutrient definition đổi sau preview; preview lại trước khi commit       |
+| `INVALID_SERVINGS`                            | Chặn lưu/tính với servings không hợp lệ; yêu cầu sửa recipe trước khi thử lại |
+| `NUTRITION_DATA_INCOMPLETE`                   | Hiển thị trạng thái chưa có estimate đã lưu hoặc partial/unknown; không coi missing là zero |
+| `NUTRITION_ESTIMATE_STALE`                    | Refetch/recalculate vì ingredient/step/source/factor fingerprint đã đổi |
+| `STORAGE_QUOTA_EXCEEDED`                      | Hiển thị used/limit/remaining; yêu cầu xóa media hoặc giảm upload (READY Phase 15) |
+| `UPLOAD_RESERVATION_EXPIRED`                  | Xin reservation mới trước khi retry upload (READY Phase 15)          |
+| `UPLOAD_PROVIDER_MISMATCH`                    | Không attach asset; thông báo upload thất bại và release quota (READY Phase 15) |
 | `CUSTOM_MEAL_IN_USE`                          | Giải thích plan đang tham chiếu; dùng policy snapshot/block của backend (planned Phase 17) |
 | `MEAL_ANALYSIS_STALE`                         | Refetch analysis sau khi plan/portion/profile/rule đổi (planned Phase 18) |
 | `MEAL_PROGRAM_VERSION_CONFLICT`               | Refetch chương trình nhiều tuần trước khi edit/regenerate (planned Phase 19) |
@@ -817,6 +839,11 @@ Thêm entry mới nhất ở trên cùng.
 
 | Date       | Version | Module         | Change                                                                                                                                | Breaking | FE action                                                                                            |
 | ---------- | ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- | :------: | ---------------------------------------------------------------------------------------------------- |
+| 2026-09-21 | 4.4     | Video Review   | Phase 16 READY: mọi content dùng draft → explicit submit → Admin approve/reject-with-reason; approved edit giữ revision cũ public; uploaded video bắt buộc Phase 15 committed owned asset, external YouTube không tính quota; moderation chỉ ghi signal; thêm author history và Admin queue/detail/decision. Legacy `/review-queue/posts*` chuyển `DEPRECATED` và Admin-only. | Yes | Run `npm run sync:swagger`; migrate create/edit UI khỏi role-based auto-publish, thêm submit/status/history và dùng `/admin/content-review*`. |
+| 2026-09-19 | 4.3     | Contributors   | Phase 14 source/migration/OpenAPI implemented: removed subtype fields/RBAC, added typed approval basis, immutable organization/platform/invitation evidence, Admin invitation, manual approve/reject, audited revoke, conservative legacy migration, stale-session revocation. Existing consumed endpoints remain `CHANGING`; new endpoints remain `IN_PROGRESS` because `npm run build` is blocked by Windows Prisma DLL `EPERM`. | Yes | Run `npm run sync:swagger`; replace subtype DTO/model/forms/mappers/tests and UI/RBAC branches with unified role/profile contract after backend build gate passes; integrate invitation/revoke when scheduled. |
+| 2026-09-19 | 4.2     | Recipe Nutrition | Phase 13 implemented in source/OpenAPI: structured recipe steps on recipe revisions plus cooking-aware preview/recalculate/current/history/status endpoints; deterministic calculation uses unit conversion, edible portion, reviewed yield/retention factors, provenance, confidence, uncertainty and uncovered ingredients; AI fallback is provider-adapter only and labeled. Runtime status remains `IN_PROGRESS` until the blocked `npm run build` gate completes. | No | Do not integrate until status returns to `READY`; then sync OpenAPI and add `features/recipe-nutrition` DTO/Model/Mapper/query with partial coverage/stale/provider fallback handling. |
+| 2026-09-19 | 4.1     | Food Data      | Phase 12 READY: canonical profiles/nutrients/conversions, intake/guidelines, cooking factors, interaction rules, typed Admin CRUD, staged AI suggestions và provider-neutral idempotent imports. | No | Sync OpenAPI; thêm DTO/Model/Mapper/query cho các read endpoint và màn quản trị khi được ưu tiên. Missing nutrient không render thành 0. |
+| 2026-09-19 | 4.1 | Storage Phase 15 | Schema+migration (`20260919170000_storage_quota_accounting`), StoragePolicy/Account/Reservation/MediaAsset/StorageAdjustment models; reservation->commit->release flow; expiry cleanup; reconciliation; existing-media backfill; `/uploads/signature` REMOVED and replaced by reservation flow; 9 new READY endpoints (`GET /storage/me`, `POST /uploads/reservations`, `POST /uploads/reservations/:id/commit`, `DELETE /uploads/reservations/:id`, `DELETE /storage/assets/:id`, `GET /admin/storage/accounts`, `GET /admin/storage/policies`, `PATCH /admin/storage/policies/:id`, `POST /admin/storage/accounts/:userId/adjustments`, `GET /admin/storage/adjustments`); error codes `STORAGE_QUOTA_EXCEEDED`, `UPLOAD_RESERVATION_EXPIRED`, `UPLOAD_IDEMPOTENCY_CONFLICT`, `UPLOAD_RESERVATION_CONFLICT`, `UPLOAD_PROVIDER_MISMATCH`, `MEDIA_ASSET_IN_USE`, `MEDIA_DELETE_IDEMPOTENCY_CONFLICT`, `STORAGE_POLICY_CONFLICT`, `STORAGE_ADJUSTMENT_IDEMPOTENCY_CONFLICT`, `STORAGE_ADJUSTMENT_INVALID` now READY. Default quota: 1 GiB per user. Reservation TTL: 900 s. | No | Run `npm run sync:swagger`; integrate reservation->commit flow for Cloudinary uploads; add `GET /storage/me` usage widget |
 | 2026-09-18 | 4.0     | Product plan   | Đồng bộ canonical SRS và backend Phases 12–27: food data, cooking-aware nutrition, unified Contributor, quota/video review, custom meals/tags, meal analysis/programs, pantry, fridge, receipt, AI artifacts, maps, notifications và governance. Contract runtime hiện tại không đổi; Contributor Phase 14 được ghi là breaking migration tương lai. | Future Phase 14 | Chưa đổi consumer live; chỉ sync/migrate khi từng endpoint chuyển READY/CHANGING theo OpenAPI |
 | 2026-09-17 | 3.8     | AI Governance  | FE scaffold 5 ops AI governance theo spec 017 (DTO suy luận + reconfirm ở task nối live/Mapper/test redaction/fixtures 0 nội dung thô/API fixture 0 request/Query/tab dashboard tổng quan + log che mờ + cờ + công tắc); endpoint giữ `PLANNED`, `FE integrated` giữ `No` |    No    | Test tay AG-1..AG-3 + check Network 0 request + quét DOM 0 nội dung thô theo `specs/017-ai-governance/quickstart.md`; nối live khi BE đánh `READY` |
 | 2026-09-17 | 3.7     | Restaurants    | FE scaffold 7 ops restaurants/location theo spec 016 (DTO suy luận + reconfirm ở task nối live/Mapper/test haversine/fixtures/API fixture 0 request + 0 maps/Query/viết lại 2 routes + tab dashboard, khung bản đồ CSS không SDK); endpoint giữ `PLANNED`, `FE integrated` giữ `No` |    No    | Test tay RT-1..RT-4 + check Network 0 request/maps theo `specs/016-restaurants-location/quickstart.md`; nối live (SDK maps/key) khi BE đánh `READY` |

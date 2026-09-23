@@ -62,9 +62,9 @@ degrades to a static safe response without consuming daily quota.
 ## Seed data for local API and frontend development
 
 `npm run seed` is idempotent and uses only the existing `SEED_*` credentials. The two approved
-Contributor subtype fixtures reflect the current legacy Phase 07 schema only. Phase 14 will migrate
-them to one Contributor permission set with an approval basis; new code must not extend subtype-based
-RBAC. In addition to the configured Member, legacy Contributor fixtures, and Admin, the seed derives
+Contributor fixtures use the same permission set with organization-affiliation and platform-track-record
+approval bases. Basis/evidence is audit and presentation data only; it never participates in RBAC. In
+addition to the configured Member, unified Contributor fixtures, and Admin, the seed derives
 scenario accounts from `SEED_MEMBER_EMAIL` by adding the following suffixes before `@`; every
 scenario account uses `SEED_MEMBER_PASSWORD`:
 
