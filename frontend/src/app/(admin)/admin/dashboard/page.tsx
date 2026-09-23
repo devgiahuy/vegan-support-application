@@ -22,6 +22,7 @@ import {
   UserCheck,
   Store,
   Bot,
+  Database,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -42,8 +43,9 @@ import { EmptyState } from '@/components/shared/empty-state';
 import { UserRole } from '@/common/enums';
 import { CategoryManager } from '@/features/admin-catalog/components/category-manager';
 import { IngredientManager } from '@/features/admin-catalog/components/ingredient-manager';
+import { AdminRecordsManager } from '@/features/food-data/components/admin-records-manager';
 import { ReviewQueueTable } from '@/features/review/components/review-queue-table';
-import { useReviewQueueQuery } from '@/features/review/queries/review.queries';
+import { useAdminContentReviewQueueQuery } from '@/features/review/queries/review.queries';
 import { ReportsTable } from '@/features/moderation/components/reports-table';
 import { ModUsersTable } from '@/features/moderation/components/mod-users-table';
 import { ModCommentsTable } from '@/features/moderation/components/mod-comments-table';
@@ -64,6 +66,7 @@ type Tab =
   | 'users'
   | 'categories'
   | 'ingredients'
+  | 'food-data'
   | 'logs'
   | 'reports'
   | 'mod-users'
@@ -88,6 +91,7 @@ function parseTabParam(value: string | null): Tab {
     value === 'users' ||
     value === 'categories' ||
     value === 'ingredients' ||
+    value === 'food-data' ||
     value === 'logs' ||
     value === 'reports' ||
     value === 'mod-users' ||
@@ -112,7 +116,7 @@ function AdminDashboardContent() {
     data: queueData,
     refetch: refetchQueue,
     isLoading: loadingQueue,
-  } = useReviewQueueQuery({ limit: 1 });
+  } = useAdminContentReviewQueueQuery({ limit: 1 });
   const {
     data: usersData,
     refetch: refetchUsers,
@@ -188,6 +192,7 @@ function AdminDashboardContent() {
     { id: 'restaurants', label: 'Quán chờ duyệt', icon: Store },
     { id: 'categories', label: 'Cây danh mục', icon: FolderTree },
     { id: 'ingredients', label: 'Nguyên liệu', icon: Leaf },
+    { id: 'food-data', label: 'Dữ liệu dinh dưỡng', icon: Database },
     { id: 'logs', label: 'Audit logs', icon: ScrollText },
   ];
 
@@ -330,6 +335,13 @@ function AdminDashboardContent() {
             {tab === 'ingredients' && (
               <div>
                 <IngredientManager />
+              </div>
+            )}
+
+            {/* TAB: FOOD-DATA — quản trị dữ liệu dinh dưỡng chuẩn & nạp lô (features/food-data) */}
+            {tab === 'food-data' && (
+              <div>
+                <AdminRecordsManager />
               </div>
             )}
 

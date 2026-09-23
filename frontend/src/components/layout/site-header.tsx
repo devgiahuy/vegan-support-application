@@ -14,6 +14,9 @@ import {
   ClipboardCheck,
   CalendarDays,
   BookmarkCheck,
+  Utensils,
+  Target,
+  Leaf,
 } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { cn } from '@/lib/utils';
@@ -38,6 +41,7 @@ import { NotificationBell } from '@/features/notification/components/notificatio
 const NAV_ITEMS = [
   { label: 'Trang chủ', href: '/' },
   { label: 'Khám phá món', href: '/recipes' },
+  { label: 'Tra cứu dinh dưỡng', href: '/categories#tra-cuu' },
   { label: 'Cẩm nang', href: '/articles' },
   { label: 'Video nấu ăn', href: '/videos' },
   { label: 'Thực đơn tuần', href: '/meal-plans' },
@@ -57,7 +61,10 @@ export function SiteHeader() {
     void logoutMutation.mutateAsync().finally(() => router.push('/'));
   };
 
-  const isActive = (href: string) => (href === '/' ? pathname === '/' : pathname.startsWith(href));
+  const isActive = (href: string) => {
+    const baseHref = href.split('#')[0];
+    return baseHref === '/' ? pathname === '/' : pathname.startsWith(baseHref);
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/70 bg-background/85 backdrop-blur-xl">
@@ -194,6 +201,21 @@ export function SiteHeader() {
                 <DropdownMenuItem asChild>
                   <Link href="/meal-plans/saved">
                     <BookmarkCheck className="h-4 w-4" /> Thực đơn đã lưu
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/custom-meals">
+                    <Utensils className="h-4 w-4" /> Món ăn của tôi
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/categories#tra-cuu">
+                    <Leaf className="h-4 w-4" /> Tra cứu dinh dưỡng 100g
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/meal-programs">
+                    <Target className="h-4 w-4" /> Lộ trình nhiều tuần
                   </Link>
                 </DropdownMenuItem>
                 {user.role === UserRole.ADMIN && (

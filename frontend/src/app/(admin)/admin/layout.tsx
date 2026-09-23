@@ -13,6 +13,8 @@ import {
   ScrollText,
   Bell,
   ShieldCheck,
+  HardDrive,
+  Database,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
@@ -28,11 +30,13 @@ const NAV_MAIN = [
   { label: 'Duyệt bài', href: '/admin/dashboard?tab=queue', icon: ClipboardCheck, badge: '12' },
   { label: 'Người dùng', href: '/admin/dashboard?tab=users', icon: Users },
   { label: 'Chuyên mục', href: '/admin/dashboard?tab=categories', icon: FolderTree },
+  { label: 'Dữ liệu dinh dưỡng', href: '/admin/dashboard?tab=food-data', icon: Database },
 ];
 
 const NAV_MONITOR = [
   { label: 'Báo cáo vi phạm', href: '/admin/dashboard?tab=reports', icon: Flag, badge: '5' },
   { label: 'Nhật ký hệ thống', href: '/admin/dashboard?tab=logs', icon: ScrollText },
+  { label: 'Lưu trữ & Quota', href: '/admin/storage', icon: HardDrive },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -51,6 +55,9 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const currentTab = searchParams.get('tab');
 
   const isItemActive = (href: string) => {
+    if (href.startsWith('/admin/storage')) {
+      return pathname.startsWith('/admin/storage');
+    }
     if (href.includes('tab=')) {
       const tabName = href.split('tab=')[1];
       return currentTab === tabName;
@@ -141,7 +148,11 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           </button>
           <p className="text-sm text-muted-foreground">
             Admin Portal <span className="mx-1">›</span>{' '}
-            <span className="font-semibold text-foreground">Duyệt bài &amp; Tổng quan</span>
+            <span className="font-semibold text-foreground">
+              {pathname.startsWith('/admin/storage')
+                ? 'Lưu trữ & Dung lượng'
+                : 'Duyệt bài & Tổng quan'}
+            </span>
           </p>
           <div className="ml-auto flex items-center gap-1">
             <Badge variant="outline" className="hidden gap-1.5 rounded-full md:inline-flex">

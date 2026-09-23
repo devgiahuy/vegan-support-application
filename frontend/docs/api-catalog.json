@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
-  "source": "http://localhost:4000/api-docs.json",
-  "generatedAt": "2026-09-17T05:00:58.983Z",
+  "source": "..\\backend\\openapi.json",
+  "generatedAt": "2026-09-23T03:51:21.535Z",
   "stats": {
-    "operations": 71,
-    "groups": 17,
-    "schemas": 70
+    "operations": 103,
+    "groups": 24,
+    "schemas": 95
   },
   "operations": [
     {
@@ -1051,23 +1051,68 @@
     },
     {
       "method": "POST",
-      "path": "/api/v1/uploads/signature",
-      "group": "Uploads",
-      "summary": "Tạo Cloudinary signed-upload parameters",
-      "operationId": "createUploadSignature",
-      "params": [],
+      "path": "/api/v1/posts/{id}/submit",
+      "group": "Content Review",
+      "summary": "Submit một immutable draft revision để Admin review",
+      "operationId": "submitPostRevision",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
       "request": {
         "schema": {
-          "$ref": "UploadSignatureRequest"
+          "$ref": "SubmitPostRequest"
         },
         "required": true
       },
       "responses": {
-        "200": "UploadSignatureResponse",
+        "200": "PostResponse",
         "400": "ErrorResponse",
         "401": "ErrorResponse",
         "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "410": "ErrorResponse",
         "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/{id}/review-history",
+      "group": "Content Review",
+      "summary": "Author/Admin xem status và review history",
+      "operationId": "getPostReviewHistory",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "ContentReviewHistoryResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse"
       }
     },
     {
@@ -1422,23 +1467,26 @@
       "method": "POST",
       "path": "/api/v1/contributor-applications",
       "group": "Contributors",
-      "summary": "Gửi Contributor application hoặc yêu cầu đổi subtype",
+      "summary": "Gửi Contributor application",
       "operationId": "submitContributorApplication",
       "params": [],
       "request": {
         "schema": {
           "type": "object",
           "required": [
-            "requestedType",
+            "claimedApprovalBasis",
             "experience"
           ],
           "properties": {
-            "requestedType": {
+            "claimedApprovalBasis": {
               "type": "string",
               "enum": [
-                "EXPERIENCED_PRACTITIONER",
-                "NUTRITION_EXPERT"
+                "ORGANIZATION_AFFILIATION",
+                "PLATFORM_TRACK_RECORD"
               ]
+            },
+            "organizationClaim": {
+              "type": "string"
             },
             "experience": {
               "type": "string"
@@ -1519,7 +1567,7 @@
         },
         {
           "in": "query",
-          "name": "requestedType",
+          "name": "claimedApprovalBasis",
           "required": false,
           "type": "string"
         },
@@ -1545,6 +1593,42 @@
       }
     },
     {
+      "method": "POST",
+      "path": "/api/v1/admin/contributor-invitations",
+      "group": "Contributor Admin",
+      "summary": "Admin tạo Contributor invitation PENDING",
+      "operationId": "inviteContributorAdmin",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "userId",
+            "reason"
+          ],
+          "properties": {
+            "userId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "ContributorApplicationResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
       "method": "PATCH",
       "path": "/api/v1/admin/contributor-applications/{id}/review",
       "group": "Contributor Admin",
@@ -1565,7 +1649,6 @@
               "type": "object",
               "required": [
                 "decision",
-                "contributorType",
                 "approvalBasis",
                 "reviewNote"
               ],
@@ -1576,15 +1659,13 @@
                     "APPROVE"
                   ]
                 },
-                "contributorType": {
+                "approvalBasis": {
                   "type": "string",
                   "enum": [
-                    "EXPERIENCED_PRACTITIONER",
-                    "NUTRITION_EXPERT"
+                    "ORGANIZATION_AFFILIATION",
+                    "PLATFORM_TRACK_RECORD",
+                    "ADMIN_INVITED"
                   ]
-                },
-                "approvalBasis": {
-                  "type": "string"
                 },
                 "reviewNote": {
                   "type": "string"
@@ -1621,6 +1702,44 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/contributors/{userId}/revoke",
+      "group": "Contributor Admin",
+      "summary": "Admin thu hồi Contributor status",
+      "operationId": "revokeContributorAdmin",
+      "params": [
+        {
+          "in": "path",
+          "name": "userId",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "reason"
+          ],
+          "properties": {
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "ContributorRevocationResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
         "409": "ErrorResponse",
         "423": "ErrorResponse"
       }
@@ -1741,6 +1860,104 @@
       },
       "responses": {
         "200": "ReviewQueueItemResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/content-review",
+      "group": "Content Review Admin",
+      "summary": "Admin list submitted content revisions",
+      "operationId": "listContentReviewAdmin",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "type",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "priority",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "ReviewQueueListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/content-review/{id}",
+      "group": "Content Review Admin",
+      "summary": "Admin inspect one immutable revision and its evidence",
+      "operationId": "getContentReviewAdmin",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "AdminContentReviewDetailResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/content-review/{id}",
+      "group": "Content Review Admin",
+      "summary": "Admin approve or reject a submitted revision",
+      "operationId": "reviewContentAdmin",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "AdminContentReviewDecisionRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "AdminContentReviewDetailResponse",
         "400": "ErrorResponse",
         "401": "ErrorResponse",
         "403": "ErrorResponse",
@@ -2488,6 +2705,2810 @@
         "403": "ErrorResponse",
         "404": "ErrorResponse",
         "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/food-data/ingredients/{ingredientId}/nutrients",
+      "group": "Food Data",
+      "summary": "Lấy nutrient values theo 100 g và provenance của ingredient",
+      "operationId": "getIngredientNutrients",
+      "params": [
+        {
+          "in": "path",
+          "name": "ingredientId",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "preparation",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "locale",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "FoodDataRecordResponse",
+        "400": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/food-data/reference-intakes",
+      "group": "Food Data",
+      "summary": "Reference intakes và upper limits theo population",
+      "operationId": "listNutrientReferenceIntakes",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "locale",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "populationCode",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "nutrientCode",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "ingredientId",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "scope",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "FoodDataListResponse",
+        "400": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/food-data/ingredient-guidelines",
+      "group": "Food Data",
+      "summary": "Ingredient amount/frequency guidelines",
+      "operationId": "listIngredientGuidelines",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "locale",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "populationCode",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "nutrientCode",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "ingredientId",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "scope",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "FoodDataListResponse",
+        "400": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/food-data/cooking-methods",
+      "group": "Food Data",
+      "summary": "Cooking methods cùng retention/yield factors",
+      "operationId": "listCookingMethods",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "locale",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "populationCode",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "nutrientCode",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "ingredientId",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "scope",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "FoodDataListResponse",
+        "400": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/food-data/interaction-rules",
+      "group": "Food Data",
+      "summary": "Interaction rules theo dish/meal/day",
+      "operationId": "listIngredientInteractionRules",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "locale",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "populationCode",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "nutrientCode",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "ingredientId",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "scope",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "FoodDataListResponse",
+        "400": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/food-data/records",
+      "group": "Food Data Admin",
+      "summary": "List food-data record theo kind, gồm cả staged/superseded",
+      "operationId": "listAdminFoodDataRecords",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "kind",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "FoodDataListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/food-data/records",
+      "group": "Food Data Admin",
+      "summary": "Tạo source, nutrient, profile, factor, rule hoặc AI suggestion",
+      "operationId": "createAdminFoodDataRecord",
+      "params": [],
+      "request": {
+        "schema": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "SOURCE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "name",
+                    "provider",
+                    "licenseName",
+                    "attribution"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "name": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "provider": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "licenseName": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "licenseUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "attribution": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "defaultLocale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "active": {
+                      "type": "boolean",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "NUTRIENT"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "name",
+                    "defaultUnit",
+                    "unitDimension"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "name": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "defaultUnit": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "unitDimension": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "active": {
+                      "type": "boolean",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "INGREDIENT_PROFILE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "ingredientId",
+                    "ediblePortionPercent",
+                    "quality",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "ingredientId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "importBatchId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "preparation": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "ediblePortionPercent": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "servingGrams": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "quality": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "HOUSEHOLD_CONVERSION"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "profileId",
+                    "unitName",
+                    "quantity",
+                    "unitDimension",
+                    "grams",
+                    "quality"
+                  ],
+                  "properties": {
+                    "profileId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "unitName": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "unitSymbol": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "quantity": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "unitDimension": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "grams": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "quality": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "NUTRIENT_VALUE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "profileId",
+                    "nutrientId",
+                    "valuePer100g",
+                    "unit",
+                    "quality",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "profileId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "nutrientId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "valuePer100g": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "unit": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "minValue": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "maxValue": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "quality": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "REFERENCE_INTAKE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "nutrientId",
+                    "referenceType",
+                    "populationCode",
+                    "value",
+                    "unit",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "nutrientId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "referenceType": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "populationCode": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "applicability": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "value": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "unit": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "warningEligible": {
+                      "type": "boolean",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "INGREDIENT_GUIDELINE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "ingredientId",
+                    "populationCode",
+                    "amount",
+                    "unit",
+                    "period",
+                    "evidenceGrade",
+                    "severity",
+                    "explanation",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "ingredientId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "populationCode": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "applicability": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "amount": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "unit": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "frequency": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "period": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "advisoryOnly": {
+                      "type": "boolean",
+                      "_truncated": true
+                    },
+                    "evidenceGrade": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "severity": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "explanation": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "COOKING_METHOD"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "name"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "name": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "active": {
+                      "type": "boolean",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "RETENTION_FACTOR"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "cookingMethodId",
+                    "nutrientId",
+                    "factor",
+                    "quality",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "cookingMethodId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "nutrientId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "factor": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "applicability": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "quality": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "YIELD_FACTOR"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "cookingMethodId",
+                    "factor",
+                    "quality",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "cookingMethodId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "ingredientId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "factor": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "applicability": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "quality": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "INTERACTION_RULE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "ingredientAId",
+                    "ingredientBId",
+                    "scope",
+                    "direction",
+                    "severity",
+                    "evidenceGrade",
+                    "explanation",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "ingredientAId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "ingredientBId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "scope": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "direction": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "severity": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "evidenceGrade": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "applicability": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "explanation": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "suggestedAction": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "hardRule": {
+                      "type": "boolean",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "AI_SUGGESTION"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "suggestionType",
+                    "payload"
+                  ],
+                  "properties": {
+                    "suggestionType": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "provider": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "payload": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "rationale": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "confidence": {
+                      "type": "object",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "FoodDataRecordResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/food-data/records/{id}",
+      "group": "Food Data Admin",
+      "summary": "Thay thế đầy đủ một food-data record",
+      "operationId": "replaceAdminFoodDataRecord",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "SOURCE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "name",
+                    "provider",
+                    "licenseName",
+                    "attribution"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "name": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "provider": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "licenseName": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "licenseUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "attribution": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "defaultLocale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "active": {
+                      "type": "boolean",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "NUTRIENT"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "name",
+                    "defaultUnit",
+                    "unitDimension"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "name": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "defaultUnit": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "unitDimension": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "active": {
+                      "type": "boolean",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "INGREDIENT_PROFILE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "ingredientId",
+                    "ediblePortionPercent",
+                    "quality",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "ingredientId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "importBatchId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "preparation": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "ediblePortionPercent": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "servingGrams": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "quality": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "HOUSEHOLD_CONVERSION"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "profileId",
+                    "unitName",
+                    "quantity",
+                    "unitDimension",
+                    "grams",
+                    "quality"
+                  ],
+                  "properties": {
+                    "profileId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "unitName": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "unitSymbol": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "quantity": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "unitDimension": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "grams": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "quality": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "NUTRIENT_VALUE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "profileId",
+                    "nutrientId",
+                    "valuePer100g",
+                    "unit",
+                    "quality",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "profileId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "nutrientId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "valuePer100g": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "unit": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "minValue": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "maxValue": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "quality": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "REFERENCE_INTAKE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "nutrientId",
+                    "referenceType",
+                    "populationCode",
+                    "value",
+                    "unit",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "nutrientId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "referenceType": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "populationCode": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "applicability": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "value": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "unit": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "warningEligible": {
+                      "type": "boolean",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "INGREDIENT_GUIDELINE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "ingredientId",
+                    "populationCode",
+                    "amount",
+                    "unit",
+                    "period",
+                    "evidenceGrade",
+                    "severity",
+                    "explanation",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "ingredientId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "populationCode": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "applicability": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "amount": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "unit": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "frequency": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "period": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "advisoryOnly": {
+                      "type": "boolean",
+                      "_truncated": true
+                    },
+                    "evidenceGrade": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "severity": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "explanation": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "COOKING_METHOD"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "name"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "name": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "active": {
+                      "type": "boolean",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "RETENTION_FACTOR"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "cookingMethodId",
+                    "nutrientId",
+                    "factor",
+                    "quality",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "cookingMethodId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "nutrientId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "factor": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "applicability": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "quality": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "YIELD_FACTOR"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "cookingMethodId",
+                    "factor",
+                    "quality",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "cookingMethodId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "ingredientId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "factor": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "applicability": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "quality": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "INTERACTION_RULE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "ingredientAId",
+                    "ingredientBId",
+                    "scope",
+                    "direction",
+                    "severity",
+                    "evidenceGrade",
+                    "explanation",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "ingredientAId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "ingredientBId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "scope": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "direction": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "severity": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "evidenceGrade": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "applicability": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "explanation": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "suggestedAction": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "hardRule": {
+                      "type": "boolean",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "AI_SUGGESTION"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "suggestionType",
+                    "payload"
+                  ],
+                  "properties": {
+                    "suggestionType": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "provider": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "payload": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "rationale": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "confidence": {
+                      "type": "object",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "FoodDataRecordResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/food-data/records/{id}",
+      "group": "Food Data Admin",
+      "summary": "Archive/supersede food-data record",
+      "operationId": "archiveAdminFoodDataRecord",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "kind",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "FoodDataRecordResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/food-data/imports/preview",
+      "group": "Food Data Admin",
+      "summary": "Validate và stage import qua provider adapter",
+      "operationId": "previewFoodDataImport",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "sourceCode",
+            "idempotencyKey",
+            "sourceVersion",
+            "effectiveFrom",
+            "records"
+          ],
+          "properties": {
+            "sourceCode": {
+              "type": "string"
+            },
+            "idempotencyKey": {
+              "type": "string"
+            },
+            "sourceVersion": {
+              "type": "string"
+            },
+            "sourceDate": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date"
+            },
+            "effectiveFrom": {
+              "type": "string",
+              "format": "date"
+            },
+            "records": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "sourceRecordId",
+                  "canonicalName",
+                  "foodGroup",
+                  "ediblePortionPercent"
+                ],
+                "properties": {
+                  "sourceRecordId": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "canonicalName": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "foodGroup": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "preparation": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "locale": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "ediblePortionPercent": {
+                    "type": "object",
+                    "_truncated": true
+                  },
+                  "servingGrams": {
+                    "type": "object",
+                    "_truncated": true
+                  },
+                  "quality": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "aliases": {
+                    "type": "array",
+                    "_truncated": true
+                  },
+                  "householdConversions": {
+                    "type": "array",
+                    "_truncated": true
+                  },
+                  "nutrients": {
+                    "type": "array",
+                    "_truncated": true
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "FoodDataImportResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/food-data/imports",
+      "group": "Food Data Admin",
+      "summary": "Commit import preview idempotently",
+      "operationId": "commitFoodDataImport",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "importId"
+          ],
+          "properties": {
+            "importId": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "FoodDataImportResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/{id}/nutrition/preview",
+      "group": "Recipe Nutrition",
+      "summary": "Preview cooking-aware nutrition estimate without saving",
+      "operationId": "previewRecipeNutrition",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "RecipeNutritionPreviewRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "RecipeNutritionEstimateResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/{id}/nutrition/recalculate",
+      "group": "Recipe Nutrition",
+      "summary": "Save a new current cooking-aware nutrition estimate",
+      "operationId": "recalculateRecipeNutrition",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "RecipeNutritionRecalculateRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "RecipeNutritionEstimateResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/{id}/nutrition/current",
+      "group": "Recipe Nutrition",
+      "summary": "Get current saved nutrition estimate",
+      "operationId": "getCurrentRecipeNutrition",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "RecipeNutritionEstimateResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/{id}/nutrition/history",
+      "group": "Recipe Nutrition",
+      "summary": "List saved nutrition estimate history",
+      "operationId": "listRecipeNutritionHistory",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "RecipeNutritionHistoryResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/{id}/nutrition/status",
+      "group": "Recipe Nutrition",
+      "summary": "Get nutrition estimate freshness and latest AI job status",
+      "operationId": "getRecipeNutritionStatus",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "RecipeNutritionStatusResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/storage/me",
+      "group": "Storage",
+      "summary": "Đọc usage và quota của current user",
+      "operationId": "getMyStorageUsage",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "StorageUsageResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/uploads/reservations",
+      "group": "Uploads",
+      "summary": "Reserve quota và cấp cấu hình signed upload",
+      "operationId": "createUploadReservation",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "CreateUploadReservationRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "CreateUploadReservationResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "409": "ErrorResponse",
+        "410": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/uploads/reservations/{id}/commit",
+      "group": "Uploads",
+      "summary": "Verify provider và commit actual bytes",
+      "operationId": "commitUploadReservation",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "CommitUploadReservationRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "UploadReservationResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "410": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse",
+        "502": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/uploads/reservations/{id}",
+      "group": "Uploads",
+      "summary": "Release reservation chưa commit",
+      "operationId": "releaseUploadReservation",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "UploadReservationResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/storage/assets/{id}",
+      "group": "Storage",
+      "summary": "Durably delete owned provider asset",
+      "operationId": "deleteStorageAsset",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "DeleteMediaAssetRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "StorageAssetResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse",
+        "502": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/storage/accounts",
+      "group": "Storage Admin",
+      "summary": "List account usage and effective limits",
+      "operationId": "listStorageAccounts",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "overQuota",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "StorageAccountListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/storage/policies",
+      "group": "Storage Admin",
+      "summary": "List configurable storage policies",
+      "operationId": "listStoragePolicies",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "active",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "StoragePolicyListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/storage/policies/{id}",
+      "group": "Storage Admin",
+      "summary": "Update policy with optimistic version",
+      "operationId": "updateStoragePolicy",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "UpdateStoragePolicyRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "StoragePolicyResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/storage/accounts/{userId}/adjustments",
+      "group": "Storage Admin",
+      "summary": "Grant or remove audited account quota bytes",
+      "operationId": "createStorageAdjustment",
+      "params": [
+        {
+          "in": "path",
+          "name": "userId",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "CreateStorageAdjustmentRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "StorageAdjustmentResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/storage/adjustments",
+      "group": "Storage Admin",
+      "summary": "List immutable Admin quota adjustments",
+      "operationId": "listStorageAdjustments",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "userId",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "StorageAdjustmentListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
       }
     }
   ]
