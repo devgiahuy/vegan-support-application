@@ -1,5 +1,9 @@
 import { ModerationPriority, PostType, ReviewItemStatus } from '@/common/enums';
 
+// Re-export toàn bộ types của Phase 16
+export * from './content-review.model';
+
+// Types tương thích cho các component legacy và unit test hiện tại
 export interface AiFlag {
   id: string;
   reasonCodes: string[];
@@ -27,12 +31,4 @@ export interface ReviewQueueItem {
   canDecide: boolean;
   createdAt: Date | null;
   formattedCreatedAt: string;
-}
-
-export interface ReviewQueueQueryParams {
-  page?: number;
-  limit?: number;
-  status?: ReviewItemStatus;
-  type?: PostType;
-  priority?: ModerationPriority;
 }

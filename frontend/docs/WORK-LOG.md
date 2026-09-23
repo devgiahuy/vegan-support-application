@@ -16,6 +16,61 @@
 - Còn lại / rủi ro:
 ```
 
+## [2026-09-23] — Triển khai hoàn tất Phase 13: Cooking-aware Recipe Nutrition (Đặc tả specs/012-recipe-nutrition)
+
+- Mục tiêu: Triển khai trọn vẹn mô hình 7 tầng scaffold cho tính năng Phân tích Dinh dưỡng Công thức Nấu nướng có tính đến hao hụt nhiệt và phương pháp chế biến (Cooking-aware), phân định rạch ròi giữa số liệu tính toán khoa học chuẩn và số liệu ước lượng bổ trợ từ AI; cảnh báo nguyên liệu chưa có dữ liệu thành phần; nhận diện dữ liệu cũ (STALE) và cung cấp tính năng xem trước (Preview) trong trình soạn thảo công thức.
+- Đã làm:
+  - **Tầng Constants & API Client** (`api-endpoints.ts`, `recipe-nutrition.api.ts`): Bổ sung nhánh `RECIPE_NUTRITION` gồm 5 endpoints (`PREVIEW`, `RECALCULATE`, `CURRENT`, `HISTORY`, `STATUS`).
+  - **Tầng DTO & UI Model** (`recipe-nutrition.dto.ts`, `recipe-nutrition.model.ts`):
+    - Đầy đủ DTOs từ OpenAPI: `RecipeNutritionEstimateDto`, `NutrientAmountDto`, `EstimateLineDto`, `UncoveredIngredientDto`, `RecipeNutritionStatusDto`, `RecipeNutritionPreviewRequestDto`, `RecipeNutritionRecalculateRequestDto`, `NutritionValueOriginDto`.
+    - Clean UI Models: `RecipeNutritionEstimateModel`, `NutrientItemModel`, `MacroDistributionModel`, `UncoveredIngredientModel`, `RecipeNutritionStatusModel`, `RecipeNutritionHistoryItemModel`.
+  - **Tầng Mapper & Unit Tests** (`recipe-nutrition.mapper.ts`, `recipe-nutrition.mapper.test.ts`):
+    - Kế thừa `BaseMapper`, bảo vệ null-safety 100% bằng `safeNumber`, `safeString`, `safeBoolean`, `safeArray`.
+    - Tính toán tỷ lệ % năng lượng calo đa lượng chất (Carb, Protein, Fat) chống chia cho 0.
+    - 12/12 Vitest unit tests pass 100%.
+  - **Tầng TanStack Queries** (`recipe-nutrition.queries.ts`):
+    - Query Key Factory `RECIPE_NUTRITION_KEYS`.
+    - 5 custom hooks: `useRecipeNutritionQuery`, `useRecipeNutritionStatusQuery`, `useRecipeNutritionHistoryQuery`, `usePreviewNutritionMutation`, `useRecalculateNutritionMutation` với tự động invalidate queries liên quan.
+  - **Tầng UI Components** (`components/*`):
+    - `NutritionOriginBadge`: Huy hiệu minh bạch nguồn gốc (Xanh ngọc: Tính toán khoa học, Tím: AI ước lượng, Xanh dương: Kiểm duyệt viên) kèm tooltip giải thích.
+    - `MacroDistributionBar`: Biểu đồ thanh tỷ lệ phân bổ năng lượng Macro (Protein, Carb, Fat) và calo per-serving tăng tốc GPU 60fps.
+    - `UncoveredIngredientsAlert`: Cảnh báo nguyên liệu chưa có dữ liệu trong cơ sở dữ liệu kèm tỷ lệ bao phủ dinh dưỡng.
+    - `NutrientListTable`: Bảng chi tiết vi chất trên mỗi khẩu phần với chế độ xem thu gọn / mở rộng.
+    - `RecipeNutritionCard`: Thẻ dinh dưỡng trung tâm xử lý 4 trạng thái Loading Skeleton, Empty State, Stale State (với nút tính toán lại ngay) và Success State.
+    - `RecipeNutritionPreviewDrawer`: Drawer xem trước dinh dưỡng khi tạo/sửa công thức.
+    - `RecipeNutritionHistoryDialog`: Hộp thoại phân trang tra cứu lịch sử các lần tính toán.
+  - **Tích hợp UI (No Orphan Pages)**:
+    - Nhúng `RecipeNutritionCard` vào trang chi tiết công thức `src/features/recipe/components/recipe-detail-view.tsx` (`/recipes/[id]`).
+    - Nhúng nút "Xem trước tính toán chi tiết" và Drawer vào Section 4 của `src/features/recipe/components/recipe-editor-form.tsx` (dùng chung cho `/recipes/new` và `/recipes/[id]/edit`).
+    - Truyền `postId={id}` từ `src/app/(site)/recipes/[id]/edit/page.tsx` vào editor form.
+- File tạo/sửa:
+  - `src/common/constants/api-endpoints.ts`
+  - `src/features/recipe-nutrition/types/recipe-nutrition.dto.ts`
+  - `src/features/recipe-nutrition/types/recipe-nutrition.model.ts`
+  - `src/features/recipe-nutrition/mappers/recipe-nutrition.mapper.ts`
+  - `src/features/recipe-nutrition/mappers/recipe-nutrition.mapper.test.ts`
+  - `src/features/recipe-nutrition/api/recipe-nutrition.api.ts`
+  - `src/features/recipe-nutrition/queries/recipe-nutrition.queries.ts`
+  - `src/features/recipe-nutrition/components/nutrition-origin-badge.tsx`
+  - `src/features/recipe-nutrition/components/macro-distribution-bar.tsx`
+  - `src/features/recipe-nutrition/components/uncovered-ingredients-alert.tsx`
+  - `src/features/recipe-nutrition/components/nutrient-list-table.tsx`
+  - `src/features/recipe-nutrition/components/recipe-nutrition-card.tsx`
+  - `src/features/recipe-nutrition/components/recipe-nutrition-preview-drawer.tsx`
+  - `src/features/recipe-nutrition/components/recipe-nutrition-history-dialog.tsx`
+  - `src/features/recipe/components/recipe-detail-view.tsx`
+  - `src/features/recipe/components/recipe-editor-form.tsx`
+  - `src/app/(site)/recipes/[id]/edit/page.tsx`
+  - `docs/PROGRESS.md`
+  - `docs/WORK-LOG.md`
+  - `specs/012-recipe-nutrition/tasks.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type trên toàn dự án.
+  - `npm test`: 319/319 tests pass (32 test files).
+  - `npm run build`: 35/35 routes compile & optimize thành công 100%.
+- PROGRESS: Phase 13 hoàn thành 100% FE Scaffold & Integration, sẵn sàng kết nối live backend khi backend hoàn tất build gate.
+- Còn lại / rủi ro: Không có.
+
 ## [2026-09-23] — Tự động Gửi Duyệt Video sau khi Tạo & Đồng bộ Hàng đợi Kiểm duyệt Admin
 
 - Mục tiêu: Khắc phục trường hợp người dùng tạo video thành công nhưng không thấy xuất hiện trong bảng điều khiển Admin (`/admin/dashboard?tab=queue`).
