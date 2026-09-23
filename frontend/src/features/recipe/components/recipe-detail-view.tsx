@@ -39,6 +39,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { NutritionFactsPanel } from '@/features/food-data/components/nutrition-facts-panel';
+import { RecipeNutritionCard } from '@/features/recipe-nutrition/components/recipe-nutrition-card';
 import { RecipeCard } from './recipe-card';
 import type { Recipe } from '../types/recipe.model';
 import { VoteControl } from '@/components/shared/vote-control';
@@ -454,6 +455,12 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
               )}
             </DialogContent>
           </Dialog>
+
+          {/* COOKING-AWARE RECIPE NUTRITION (PHASE 13) */}
+          <RecipeNutritionCard
+            postId={recipe.id}
+            isAuthorOrAdmin={isAuthor || user?.role === UserRole.ADMIN}
+          />
 
           {/* STEP-BY-STEP INSTRUCTIONS */}
           <div className="space-y-4">
