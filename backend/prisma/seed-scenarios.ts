@@ -13,6 +13,10 @@ import {
   FoodGroup,
   IngredientResolutionStatus,
   MealGoal,
+  MealProgramAnalysisStatus,
+  MealProgramProjectionStatus,
+  MealProgramStatus,
+  MealProgramWeekStatus,
   MealSlotStatus,
   MealType,
   MediaKind,
@@ -1352,6 +1356,109 @@ export async function seedScenarioData(
         unit: item.unit,
         sourceItemCount: item.count,
       })),
+    });
+  });
+
+  const mealProgramId = 'a8000000-0000-4000-8000-000000000001';
+  await prisma.$transaction(async (transaction) => {
+    await transaction.mealProgram.deleteMany({ where: { id: mealProgramId } });
+    const totalCalories = slots.reduce((sum, slot) => sum + slot.calories, 0);
+    const totalB12 = b12Values.length
+      ? Number(b12Values.reduce((sum, value) => sum + value, 0).toFixed(2))
+      : null;
+    await transaction.mealProgram.create({
+      data: {
+        id: mealProgramId,
+        userId: member.id,
+        title: 'Chương trình thuần chay 2 tuần mẫu',
+        goal: MealGoal.MAINTAIN,
+        startDate: input.nextMonday,
+        timezone: 'Asia/Ho_Chi_Minh',
+        horizonWeeks: 2,
+        status: MealProgramStatus.PARTIAL,
+        idempotencyKey: 'seed-frontend-meal-program-v1',
+        payloadHash: '8'.repeat(64),
+        generationParameters: {
+          fixture: true,
+          algorithmVersion: 'multi-week-program-v1',
+          alternativesPerWeek: 1,
+          limits: {
+            minWeeks: 2,
+            maxWeeks: 12,
+            maxAlternativesPerWeek: 3,
+            maxRegenerationsPerWeek: 2,
+          },
+        },
+        failureSummary: [
+          { weekIndex: 1, failure: { code: 'SEED_PARTIAL_WEEK', message: 'Fixture for retry UI' } },
+        ],
+        weeks: {
+          create: [
+            {
+              id: 'a8100000-0000-4000-8000-000000000001',
+              weekIndex: 0,
+              weekStart: input.nextMonday,
+              status: MealProgramWeekStatus.READY,
+              selectedAlternativeRank: 0,
+              projectionStatus: MealProgramProjectionStatus.CURRENT,
+              alternatives: {
+                create: {
+                  id: 'a8200000-0000-4000-8000-000000000001',
+                  mealPlanId,
+                  rank: 0,
+                  seed: 'seed-meal-program-week-0',
+                  snapshot: {
+                    id: mealPlanId,
+                    weekStart: input.nextMonday.toISOString().slice(0, 10),
+                    goal: MealGoal.MAINTAIN,
+                    items: slots.map((slot) => ({
+                      id: slot.id,
+                      calories: slot.calories,
+                      recipe: { id: slot.recipe.id, title: slot.revision.title },
+                    })),
+                    micronutrientSummary: { vitaminB12Mcg: totalB12 },
+                    analysis: null,
+                  },
+                },
+              },
+            },
+            {
+              weekIndex: 1,
+              weekStart: addDays(input.nextMonday, 7),
+              status: MealProgramWeekStatus.FAILED,
+              projectionStatus: MealProgramProjectionStatus.CURRENT,
+              failure: { code: 'SEED_PARTIAL_WEEK', message: 'Fixture for retry UI' },
+            },
+          ],
+        },
+        analyses: {
+          create: {
+            version: 1,
+            status: MealProgramAnalysisStatus.CURRENT,
+            inputFingerprint: '9'.repeat(64),
+            warnings: [{ code: 'PARTIAL_HORIZON', severity: 'INFO', incompleteWeekIndexes: [1] }],
+            nutritionSummary: {
+              horizonWeeks: 2,
+              analyzedWeeks: 1,
+              totalCalories,
+              averageDailyCalories: Number((totalCalories / 7).toFixed(2)),
+              totalVitaminB12Mcg: totalB12,
+              averageWeeklyVitaminB12Mcg: totalB12,
+              incompleteWeekIndexes: [1],
+            },
+            weeklyAnalyses: [
+              {
+                weekIndex: 0,
+                mealPlanId,
+                mealAnalysisId: null,
+                version: null,
+                status: null,
+                warningCount: 0,
+              },
+            ],
+          },
+        },
+      },
     });
   });
 }

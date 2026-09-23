@@ -75,6 +75,14 @@ import { MealPlanController } from './modules/meal-plans/meal-plan.controller.js
 import { MealPlanRepository } from './modules/meal-plans/meal-plan.repository.js';
 import { createMealPlanRouter } from './modules/meal-plans/meal-plan.router.js';
 import { MealPlanService } from './modules/meal-plans/meal-plan.service.js';
+import { MealProgramController } from './modules/meal-programs/meal-program.controller.js';
+import { MealProgramRepository } from './modules/meal-programs/meal-program.repository.js';
+import { createMealProgramRouter } from './modules/meal-programs/meal-program.router.js';
+import { MealProgramService } from './modules/meal-programs/meal-program.service.js';
+import { MealAnalysisController } from './modules/meal-analysis/meal-analysis.controller.js';
+import { MealAnalysisRepository } from './modules/meal-analysis/meal-analysis.repository.js';
+import { createMealAnalysisRouter } from './modules/meal-analysis/meal-analysis.router.js';
+import { MealAnalysisService } from './modules/meal-analysis/meal-analysis.service.js';
 import { createAiProvider } from './modules/chat/ai-provider.js';
 import { ChatController } from './modules/chat/chat.controller.js';
 import { ChatIdentityService } from './modules/chat/chat.identity.js';
@@ -101,6 +109,10 @@ import {
   createStorageUploadsRouter,
 } from './modules/storage/storage.router.js';
 import { StorageService } from './modules/storage/storage.service.js';
+import { CustomMealController } from './modules/custom-meals/custom-meal.controller.js';
+import { CustomMealRepository } from './modules/custom-meals/custom-meal.repository.js';
+import { createCustomMealRouter } from './modules/custom-meals/custom-meal.router.js';
+import { CustomMealService } from './modules/custom-meals/custom-meal.service.js';
 import { openApiDocument } from './openapi/document.js';
 
 export interface AppDependencies {
@@ -131,7 +143,11 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   const ruleModerationService = new RuleModerationService();
   const contentRepository = new ContentRepository(database.client);
   const contentController = new ContentController(
-    new ContentService(contentRepository, mediaService, new ModeratedPublicationPolicy(ruleModerationService)),
+    new ContentService(
+      contentRepository,
+      mediaService,
+      new ModeratedPublicationPolicy(ruleModerationService),
+    ),
   );
   const communityController = new CommunityController(
     new CommunityService(new CommunityRepository(database.client)),
@@ -147,22 +163,22 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
     contentRepository,
   );
   const recommendationController = new RecommendationController(recommendationService);
-  const mealPlanController = new MealPlanController(
-    new MealPlanService(
-      new MealPlanRepository(database.client),
-      contentRepository,
-      recommendationService,
-      config,
-    ),
+  const mealAnalysisService = new MealAnalysisService(new MealAnalysisRepository(database.client));
+  const mealAnalysisController = new MealAnalysisController(mealAnalysisService);
+  const mealPlanService = new MealPlanService(
+    new MealPlanRepository(database.client),
+    contentRepository,
+    recommendationService,
+    config,
+    mealAnalysisService,
+  );
+  const mealPlanController = new MealPlanController(mealPlanService);
+  const mealProgramController = new MealProgramController(
+    new MealProgramService(new MealProgramRepository(database.client), mealPlanService, config),
   );
   const aiProvider = createAiProvider(config);
   const chatController = new ChatController(
-    new ChatService(
-      new ChatRepository(database.client),
-      aiProvider,
-      recommendationService,
-      config,
-    ),
+    new ChatService(new ChatRepository(database.client), aiProvider, recommendationService, config),
     new ChatIdentityService(config),
   );
   const foodDataController = new FoodDataController(
@@ -170,6 +186,9 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   );
   const recipeNutritionController = new RecipeNutritionController(
     new RecipeNutritionService(new RecipeNutritionRepository(database.client), aiProvider),
+  );
+  const customMealController = new CustomMealController(
+    new CustomMealService(new CustomMealRepository(database.client), storageRepository),
   );
 
   app.disable('x-powered-by');
@@ -235,6 +254,8 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
     createRecommendationRouter(recommendationController, authentication),
   );
   app.use('/api/v1/meal-plans', createMealPlanRouter(mealPlanController, authentication));
+  app.use('/api/v1/meal-plans', createMealAnalysisRouter(mealAnalysisController, authentication));
+  app.use('/api/v1/meal-programs', createMealProgramRouter(mealProgramController, authentication));
   app.use('/api/v1/chat', createChatRouter(chatController, authentication));
   app.use('/api/v1/posts', createRecipeNutritionRouter(recipeNutritionController, authentication));
   app.use('/api/v1/posts', createPostsRouter(contentController, authentication));
@@ -242,6 +263,7 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/comments', createCommentsRouter(communityController, authentication));
   app.use('/api/v1/storage', createStorageRouter(storageController, authentication));
   app.use('/api/v1/uploads', createStorageUploadsRouter(storageController, authentication));
+  app.use('/api/v1/custom-meals', createCustomMealRouter(customMealController, authentication));
 
   app.use(notFoundHandler);
   app.use(createErrorHandler(logger));
