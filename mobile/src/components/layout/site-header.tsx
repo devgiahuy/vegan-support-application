@@ -1,7 +1,7 @@
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, type Href, usePathname } from 'expo-router';
-import { LogIn, Search, Sparkles, UserRound } from 'lucide-react-native';
+import { LogIn, Search, Sparkles } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -17,7 +17,6 @@ interface NavItem {
     | '/videos'
     | '/assistant'
     | '/meal-plans'
-    | '/profile'
     | '/restaurants'
     | null;
 }
@@ -27,7 +26,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Khám phá món', href: '/recipes' },
   { label: 'Cẩm nang', href: '/articles' },
   { label: 'AI Chat', href: '/assistant' },
-  { label: 'Hồ sơ', href: '/profile' },
   { label: 'Video nấu ăn', href: '/videos' },
   { label: 'Thực đơn tuần', href: '/meal-plans' },
   { label: 'Bản đồ quán', href: '/restaurants' },
@@ -72,19 +70,12 @@ export function SiteHeader() {
               </Pressable>
             </Link>
           ) : (
-            <>
-              <Link href="/profile" asChild>
-                <Pressable className="h-9 w-9 items-center justify-center rounded-full bg-primary/10">
-                  <UserRound size={15} color={colors.primary} />
-                </Pressable>
-              </Link>
-              <Link href="/(auth)/login" asChild>
-                <Pressable className="flex-row items-center gap-1.5 rounded-full bg-primary px-3 py-1.5">
-                  <LogIn size={13} color={colors.primaryForeground} />
-                  <Text className="text-xs font-semibold text-primary-foreground">Đăng nhập</Text>
-                </Pressable>
-              </Link>
-            </>
+            <Link href="/(auth)/login" asChild>
+              <Pressable className="flex-row items-center gap-1.5 rounded-full bg-primary px-3 py-1.5">
+                <LogIn size={13} color={colors.primaryForeground} />
+                <Text className="text-xs font-semibold text-primary-foreground">Đăng nhập</Text>
+              </Pressable>
+            </Link>
           )}
         </View>
       </View>
