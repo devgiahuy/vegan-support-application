@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { getApiErrorCode, toastApiError } from '@/lib/api-error';
 import { mealPlanApi } from '../api/meal-plan.api';
 import type { GenerateMealPlanInput, MealPlanListQueryParams } from '../types/meal-plan.model';
+import { MEAL_ANALYSIS_KEYS } from '@/features/meal-analysis/queries/meal-analysis.queries';
 
 export const MEAL_PLAN_QUERY_KEYS = {
   all: ['meal-plans'] as const,
@@ -75,8 +76,9 @@ export function useSwapMealItemMutation() {
       expectedVersion: number;
       idempotencyKey: string;
     }) => mealPlanApi.swapItem(vars.planId, vars.itemId, vars.expectedVersion, vars.idempotencyKey),
-    onSuccess: (plan) => {
+    onSuccess: (plan, vars) => {
       queryClient.invalidateQueries({ queryKey: MEAL_PLAN_QUERY_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: MEAL_ANALYSIS_KEYS.detail(vars.planId) });
       toast.success('Đã đổi món!', {
         description: `Thực đơn đã lên phiên bản ${plan.version}.`,
       });
@@ -102,8 +104,9 @@ export function useDeleteMealPlanMutation() {
   return useMutation({
     mutationFn: (vars: { id: string; expectedVersion: number }) =>
       mealPlanApi.deletePlan(vars.id, vars.expectedVersion),
-    onSuccess: () => {
+    onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: MEAL_PLAN_QUERY_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: MEAL_ANALYSIS_KEYS.detail(vars.id) });
       toast.success('Đã xóa thực đơn.');
       router.push('/meal-plans/saved');
     },
