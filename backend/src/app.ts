@@ -75,6 +75,10 @@ import { MealPlanController } from './modules/meal-plans/meal-plan.controller.js
 import { MealPlanRepository } from './modules/meal-plans/meal-plan.repository.js';
 import { createMealPlanRouter } from './modules/meal-plans/meal-plan.router.js';
 import { MealPlanService } from './modules/meal-plans/meal-plan.service.js';
+import { MealProgramController } from './modules/meal-programs/meal-program.controller.js';
+import { MealProgramRepository } from './modules/meal-programs/meal-program.repository.js';
+import { createMealProgramRouter } from './modules/meal-programs/meal-program.router.js';
+import { MealProgramService } from './modules/meal-programs/meal-program.service.js';
 import { MealAnalysisController } from './modules/meal-analysis/meal-analysis.controller.js';
 import { MealAnalysisRepository } from './modules/meal-analysis/meal-analysis.repository.js';
 import { createMealAnalysisRouter } from './modules/meal-analysis/meal-analysis.router.js';
@@ -161,14 +165,16 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   const recommendationController = new RecommendationController(recommendationService);
   const mealAnalysisService = new MealAnalysisService(new MealAnalysisRepository(database.client));
   const mealAnalysisController = new MealAnalysisController(mealAnalysisService);
-  const mealPlanController = new MealPlanController(
-    new MealPlanService(
-      new MealPlanRepository(database.client),
-      contentRepository,
-      recommendationService,
-      config,
-      mealAnalysisService,
-    ),
+  const mealPlanService = new MealPlanService(
+    new MealPlanRepository(database.client),
+    contentRepository,
+    recommendationService,
+    config,
+    mealAnalysisService,
+  );
+  const mealPlanController = new MealPlanController(mealPlanService);
+  const mealProgramController = new MealProgramController(
+    new MealProgramService(new MealProgramRepository(database.client), mealPlanService, config),
   );
   const aiProvider = createAiProvider(config);
   const chatController = new ChatController(
@@ -249,6 +255,7 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   );
   app.use('/api/v1/meal-plans', createMealPlanRouter(mealPlanController, authentication));
   app.use('/api/v1/meal-plans', createMealAnalysisRouter(mealAnalysisController, authentication));
+  app.use('/api/v1/meal-programs', createMealProgramRouter(mealProgramController, authentication));
   app.use('/api/v1/chat', createChatRouter(chatController, authentication));
   app.use('/api/v1/posts', createRecipeNutritionRouter(recipeNutritionController, authentication));
   app.use('/api/v1/posts', createPostsRouter(contentController, authentication));

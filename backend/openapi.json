@@ -69,6 +69,10 @@
       "description": "Deterministic weekly plans, swaps and shopping lists"
     },
     {
+      "name": "Meal Programs",
+      "description": "Versioned multi-week meal programs and analysis"
+    },
+    {
       "name": "AI Chat",
       "description": "OpenAI-backed private nutrition chat, quota, SSE and feedback"
     },
@@ -13819,6 +13823,700 @@
           },
           "meta": {
             "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "CreateMealProgramRequest": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "goal": {
+            "type": "string",
+            "enum": [
+              "MAINTAIN",
+              "LOSE",
+              "GAIN"
+            ]
+          },
+          "startDate": {
+            "type": "string",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+          },
+          "timezone": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "horizonWeeks": {
+            "type": "integer",
+            "minimum": 2,
+            "maximum": 12
+          },
+          "alternativesPerWeek": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 3,
+            "default": 2
+          },
+          "seed": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 120
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 120
+          }
+        },
+        "required": [
+          "title",
+          "goal",
+          "startDate",
+          "timezone",
+          "horizonWeeks",
+          "idempotencyKey"
+        ],
+        "additionalProperties": false
+      },
+      "PatchMealProgramRequest": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "UPDATE_METADATA"
+                ]
+              },
+              "expectedVersion": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "idempotencyKey": {
+                "type": "string",
+                "minLength": 8,
+                "maxLength": 120
+              },
+              "title": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              }
+            },
+            "required": [
+              "action",
+              "expectedVersion",
+              "idempotencyKey",
+              "title"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "SELECT_ALTERNATIVE"
+                ]
+              },
+              "expectedVersion": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "idempotencyKey": {
+                "type": "string",
+                "minLength": 8,
+                "maxLength": 120
+              },
+              "weekIndex": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "alternativeRank": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 4
+              }
+            },
+            "required": [
+              "action",
+              "expectedVersion",
+              "idempotencyKey",
+              "weekIndex",
+              "alternativeRank"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "REGENERATE_WEEK"
+                ]
+              },
+              "expectedVersion": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "idempotencyKey": {
+                "type": "string",
+                "minLength": 8,
+                "maxLength": 120
+              },
+              "weekIndex": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "seed": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 120
+              },
+              "selectGenerated": {
+                "type": "boolean",
+                "default": true
+              }
+            },
+            "required": [
+              "action",
+              "expectedVersion",
+              "idempotencyKey",
+              "weekIndex"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "REANALYZE"
+                ]
+              },
+              "expectedVersion": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "idempotencyKey": {
+                "type": "string",
+                "minLength": 8,
+                "maxLength": 120
+              }
+            },
+            "required": [
+              "action",
+              "expectedVersion",
+              "idempotencyKey"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "action": {
+                "type": "string",
+                "enum": [
+                  "CONFIRM"
+                ]
+              },
+              "expectedVersion": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "idempotencyKey": {
+                "type": "string",
+                "minLength": 8,
+                "maxLength": 120
+              }
+            },
+            "required": [
+              "action",
+              "expectedVersion",
+              "idempotencyKey"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "MealProgramResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "title": {
+                "type": "string"
+              },
+              "goal": {
+                "type": "string",
+                "enum": [
+                  "MAINTAIN",
+                  "LOSE",
+                  "GAIN"
+                ]
+              },
+              "startDate": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "endDate": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+              },
+              "timezone": {
+                "type": "string"
+              },
+              "horizonWeeks": {
+                "type": "integer",
+                "minimum": 2
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "GENERATING",
+                  "DRAFT",
+                  "PARTIAL",
+                  "FAILED",
+                  "CONFIRMED"
+                ]
+              },
+              "version": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "readyWeeks": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "failedWeeks": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "confirmedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "generationParameters": {
+                "type": "object",
+                "additionalProperties": {}
+              },
+              "failureSummary": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": {}
+              },
+              "weeks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "weekIndex": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "weekStart": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "READY",
+                        "FAILED"
+                      ]
+                    },
+                    "selectedAlternativeRank": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "projectionStatus": {
+                      "type": "string",
+                      "enum": [
+                        "CURRENT",
+                        "STALE"
+                      ]
+                    },
+                    "failure": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "additionalProperties": {}
+                    },
+                    "alternatives": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "rank": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "mealPlanId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "selected": {
+                            "type": "boolean"
+                          },
+                          "snapshot": {
+                            "type": "object",
+                            "additionalProperties": {}
+                          },
+                          "createdAt": {
+                            "type": "string",
+                            "format": "date-time"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "rank",
+                          "mealPlanId",
+                          "selected",
+                          "snapshot",
+                          "createdAt"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "weekIndex",
+                    "weekStart",
+                    "status",
+                    "selectedAlternativeRank",
+                    "projectionStatus",
+                    "failure",
+                    "alternatives"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "analysis": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "version": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "CURRENT",
+                      "STALE"
+                    ]
+                  },
+                  "invalidatedFromWeekIndex": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0
+                  },
+                  "warnings": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "nutritionSummary": {
+                    "type": "object",
+                    "properties": {
+                      "horizonWeeks": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0
+                      },
+                      "analyzedWeeks": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "totalCalories": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "averageDailyCalories": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "totalVitaminB12Mcg": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "minimum": 0
+                      },
+                      "averageWeeklyVitaminB12Mcg": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "minimum": 0
+                      },
+                      "incompleteWeekIndexes": {
+                        "type": "array",
+                        "items": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      }
+                    },
+                    "required": [
+                      "horizonWeeks",
+                      "analyzedWeeks",
+                      "totalCalories",
+                      "averageDailyCalories",
+                      "totalVitaminB12Mcg",
+                      "averageWeeklyVitaminB12Mcg",
+                      "incompleteWeekIndexes"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "weeklyAnalyses": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    }
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "id",
+                  "version",
+                  "status",
+                  "invalidatedFromWeekIndex",
+                  "warnings",
+                  "nutritionSummary",
+                  "weeklyAnalyses",
+                  "createdAt"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "goal",
+              "startDate",
+              "endDate",
+              "timezone",
+              "horizonWeeks",
+              "status",
+              "version",
+              "readyWeeks",
+              "failedWeeks",
+              "confirmedAt",
+              "createdAt",
+              "updatedAt",
+              "generationParameters",
+              "failureSummary",
+              "weeks",
+              "analysis"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "MealProgramListResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "goal": {
+                  "type": "string",
+                  "enum": [
+                    "MAINTAIN",
+                    "LOSE",
+                    "GAIN"
+                  ]
+                },
+                "startDate": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "endDate": {
+                  "type": "string",
+                  "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                },
+                "timezone": {
+                  "type": "string"
+                },
+                "horizonWeeks": {
+                  "type": "integer",
+                  "minimum": 2
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "GENERATING",
+                    "DRAFT",
+                    "PARTIAL",
+                    "FAILED",
+                    "CONFIRMED"
+                  ]
+                },
+                "version": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                },
+                "readyWeeks": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "failedWeeks": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "confirmedAt": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "date-time"
+                },
+                "createdAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "updatedAt": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              },
+              "required": [
+                "id",
+                "title",
+                "goal",
+                "startDate",
+                "endDate",
+                "timezone",
+                "horizonWeeks",
+                "status",
+                "version",
+                "readyWeeks",
+                "failedWeeks",
+                "confirmedAt",
+                "createdAt",
+                "updatedAt"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "limit": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "total": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "totalPages": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ],
+            "additionalProperties": false
           }
         },
         "required": [
@@ -32703,6 +33401,748 @@
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meal-programs": {
+      "post": {
+        "tags": [
+          "Meal Programs"
+        ],
+        "operationId": "createMealProgram",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "summary": "Generate a bounded multi-week meal program",
+        "description": "Creates 2-12 ordered weekly plans in the requested IANA timezone. Generation is resumable by idempotency key; week failures are retained as PARTIAL/FAILED state and successful alternatives remain drafts until confirmation.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMealProgramRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Program snapshots and cross-week analysis",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealProgramResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request or configured limit exceeded",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Invalid request or configured limit exceeded",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "MEAL_PROGRAM_LIMIT_EXCEEDED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEAL_PROGRAM_LIMIT_EXCEEDED",
+                        "message": "Invalid request or configured limit exceeded",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Valid access token required",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Valid access token required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Valid access token required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Valid access token required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Account is banned",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Account is banned",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Profile, schedule, or idempotency conflict",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "HEALTH_PROFILE_INCOMPLETE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "HEALTH_PROFILE_INCOMPLETE",
+                        "message": "Profile, schedule, or idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "DIET_SCHEDULE_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DIET_SCHEDULE_REQUIRED",
+                        "message": "Profile, schedule, or idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "MEAL_PROGRAM_IDEMPOTENCY_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEAL_PROGRAM_IDEMPOTENCY_CONFLICT",
+                        "message": "Profile, schedule, or idempotency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Meal Programs"
+        ],
+        "operationId": "listMealPrograms",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "summary": "List owned meal programs",
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 50,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "GENERATING",
+                "DRAFT",
+                "PARTIAL",
+                "FAILED",
+                "CONFIRMED"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paginated program summaries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealProgramListResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid query",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Invalid query",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Valid access token required",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Valid access token required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Valid access token required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Valid access token required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Account is banned",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Account is banned",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/meal-programs/{id}": {
+      "get": {
+        "tags": [
+          "Meal Programs"
+        ],
+        "operationId": "getMealProgram",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "summary": "Read an owned program and weekly snapshots",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Program detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealProgramResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid ID",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Invalid ID",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Valid access token required",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Valid access token required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Valid access token required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Valid access token required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Account is banned",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Account is banned",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Owned program not found",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Owned program not found",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Meal Programs"
+        ],
+        "operationId": "mutateMealProgram",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "summary": "Edit, regenerate, reanalyze, or confirm a program",
+        "description": "Actions are UPDATE_METADATA, SELECT_ALTERNATIVE, REGENERATE_WEEK, REANALYZE, and CONFIRM. Every mutation is idempotent and version checked. Week edits invalidate later projections. Confirmed program content is immutable.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchMealProgramRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated program",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealProgramResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid mutation",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Invalid mutation",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Valid access token required",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Valid access token required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Valid access token required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Valid access token required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Account is banned",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Account is banned",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Program or alternative not found",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Program or alternative not found",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "MEAL_PROGRAM_ALTERNATIVE_NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEAL_PROGRAM_ALTERNATIVE_NOT_FOUND",
+                        "message": "Program or alternative not found",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Mutation conflict",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "MEAL_PROGRAM_VERSION_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEAL_PROGRAM_VERSION_CONFLICT",
+                        "message": "Mutation conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "MEAL_PROGRAM_IDEMPOTENCY_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEAL_PROGRAM_IDEMPOTENCY_CONFLICT",
+                        "message": "Mutation conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "MEAL_PROGRAM_CONFIRMED_IMMUTABLE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEAL_PROGRAM_CONFIRMED_IMMUTABLE",
+                        "message": "Mutation conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "MEAL_PROGRAM_NOT_CONFIRMABLE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEAL_PROGRAM_NOT_CONFIRMABLE",
+                        "message": "Mutation conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "MEAL_PROGRAM_REGENERATION_LIMIT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEAL_PROGRAM_REGENERATION_LIMIT",
+                        "message": "Mutation conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
                 }
               }
             }

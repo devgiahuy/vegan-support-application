@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.5
+**Version:** 4.6
 
 **Cập nhật:** 23/09/2026
 
@@ -402,8 +402,8 @@ MVP không có payment/quota purchase, DMCA workflow, audio/frame copyright dete
 | PATCH | `/meal-plans/:id/items/:itemId/manual-add` | `READY` | 2026-09-23 | No | Recipe/private custom meal; hard diet/allergy/exclusion/tradition precedence; returns refreshed analysis |
 | POST | `/meal-plans/:id/analyze` | `READY` | 2026-09-23 | No | Versioned portion, nutrient limit, ingredient guideline, same-dish/meal/day warnings with UI dialog fields |
 | GET | `/meal-plans/:id/analysis` | `READY` | 2026-09-23 | No | Current fingerprint-validated result; returns `MEAL_ANALYSIS_STALE` after relevant input changes |
-| GET/POST | `/meal-programs` | `PLANNED` | — | No | Multi-week list/create/generate |
-| GET/PATCH | `/meal-programs/:id` | `PLANNED` | — | No | Versioned owner detail/edit/confirm |
+| GET/POST | `/meal-programs` | `READY` | 2026-09-23 | No | Owner list/create; 2–12 ordered weeks, bounded alternatives, resumable partial generation |
+| GET/PATCH | `/meal-programs/:id` | `READY` | 2026-09-23 | No | Snapshot detail; versioned metadata/select/regenerate/reanalyze/confirm actions |
 
 `tags` của custom meal là text do user tạo; `shopee` không phải service/provider ID. Warning DTO phải có code, severity, source/evidence, affected items, explanation, confidence, và suggested adjustment để FE render tooltip/dialog.
 
@@ -774,7 +774,13 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `MEAL_ANALYSIS_ITEM_UNFILLED`                 | Exclude unfilled slots or add a meal first (READY Phase 18) |
 | `MEAL_ANALYSIS_SOURCE_MISSING`                | Refetch the plan; the selected item no longer has a usable source (READY Phase 18) |
 | `MEAL_PLAN_HARD_CONSTRAINT_VIOLATION`         | Do not confirm manual-add; show backend hard diet/allergy/exclusion/tradition reasons (READY Phase 18) |
-| `MEAL_PROGRAM_VERSION_CONFLICT`               | Refetch chương trình nhiều tuần trước khi edit/regenerate (planned Phase 19) |
+| `MEAL_PROGRAM_VERSION_CONFLICT`               | Refetch the READY Phase 19 program before retrying a mutation |
+| `MEAL_PROGRAM_IDEMPOTENCY_CONFLICT`           | Reuse a key only with the identical create/mutation payload |
+| `MEAL_PROGRAM_LIMIT_EXCEEDED`                 | Reduce horizon or alternatives to the advertised configuration limits |
+| `MEAL_PROGRAM_ALTERNATIVE_NOT_FOUND`          | Refetch program alternatives before selecting |
+| `MEAL_PROGRAM_REGENERATION_LIMIT`             | Stop regenerating that week or select an existing alternative |
+| `MEAL_PROGRAM_NOT_CONFIRMABLE`                | Resolve failed/missing weeks and select every week before confirmation |
+| `MEAL_PROGRAM_CONFIRMED_IMMUTABLE`            | Keep confirmed snapshots; create a new draft program for content changes |
 | `PANTRY_VERSION_CONFLICT`                     | Refetch inventory và cho user áp dụng lại adjustment (planned Phase 20) |
 | `RECOGNITION_NEEDS_CONFIRMATION`              | Mở candidate editor; không cập nhật pantry tự động (planned Phase 21)   |
 | `RECOGNITION_PROVIDER_UNAVAILABLE`            | Giữ ảnh/job để retry hoặc cho nhập pantry thủ công (planned Phase 21)   |
@@ -844,6 +850,7 @@ Thêm entry mới nhất ở trên cùng.
 
 | Date       | Version | Module         | Change                                                                                                                                | Breaking | FE action                                                                                            |
 | ---------- | ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- | :------: | ---------------------------------------------------------------------------------------------------- |
+| 2026-09-23 | 4.6     | Meal Programs  | Phase 19 READY: owner-scoped 2–12 week programs, bounded draft alternatives, stable weekly snapshots, partial/retry generation, repeated-pattern and cumulative/average nutrition analysis, version/idempotency checks, later-week invalidation, reanalysis, and immutable confirmed content. | No | Run `npm run sync:swagger`; add DTO/Model/Mapper/query for program list/detail/actions and render partial, stale, warning, and confirmation states. |
 | 2026-09-23 | 4.5     | Meal Analysis  | Phase 18 READY: versioned analysis for recipe/custom-meal portions, cooking-aware daily nutrients, ingredient guidelines and SAME_DISH/SAME_MEAL/SAME_DAY interactions; duplicate suppression, provenance/applicability/confidence/incomplete notes, stale fingerprints, plus hard-safe manual-add and refreshed generate/swap responses. | No | Run `npm run sync:swagger`; add DTO/Model/Mapper/query for analysis and render backend warning fields without promoting advisory evidence to a frontend prohibition. |
 | 2026-09-21 | 4.4     | Video Review   | Phase 16 READY: mọi content dùng draft → explicit submit → Admin approve/reject-with-reason; approved edit giữ revision cũ public; uploaded video bắt buộc Phase 15 committed owned asset, external YouTube không tính quota; moderation chỉ ghi signal; thêm author history và Admin queue/detail/decision. Legacy `/review-queue/posts*` chuyển `DEPRECATED` và Admin-only. | Yes | Run `npm run sync:swagger`; migrate create/edit UI khỏi role-based auto-publish, thêm submit/status/history và dùng `/admin/content-review*`. |
 | 2026-09-19 | 4.3     | Contributors   | Phase 14 source/migration/OpenAPI implemented: removed subtype fields/RBAC, added typed approval basis, immutable organization/platform/invitation evidence, Admin invitation, manual approve/reject, audited revoke, conservative legacy migration, stale-session revocation. Existing consumed endpoints remain `CHANGING`; new endpoints remain `IN_PROGRESS` because `npm run build` is blocked by Windows Prisma DLL `EPERM`. | Yes | Run `npm run sync:swagger`; replace subtype DTO/model/forms/mappers/tests and UI/RBAC branches with unified role/profile contract after backend build gate passes; integrate invitation/revoke when scheduled. |

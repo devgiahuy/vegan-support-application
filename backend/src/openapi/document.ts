@@ -14,6 +14,7 @@ import { registerModerationOpenApi } from '../modules/moderation/moderation.open
 import { registerRecommendationOpenApi } from '../modules/recommendations/recommendation.openapi.js';
 import { registerMealPlanOpenApi } from '../modules/meal-plans/meal-plan.openapi.js';
 import { registerMealAnalysisOpenApi } from '../modules/meal-analysis/meal-analysis.openapi.js';
+import { registerMealProgramOpenApi } from '../modules/meal-programs/meal-program.openapi.js';
 import { registerChatOpenApi } from '../modules/chat/chat.openapi.js';
 import { registerFoodDataOpenApi } from '../modules/food-data/food-data.openapi.js';
 import { registerRecipeNutritionOpenApi } from '../modules/recipe-nutrition/recipe-nutrition.openapi.js';
@@ -57,6 +58,7 @@ registerModerationOpenApi(registry, registeredErrorResponse);
 registerRecommendationOpenApi(registry, registeredErrorResponse);
 registerMealPlanOpenApi(registry, registeredErrorResponse);
 registerMealAnalysisOpenApi(registry, registeredErrorResponse);
+registerMealProgramOpenApi(registry, registeredErrorResponse);
 registerChatOpenApi(registry, registeredErrorResponse);
 registerFoodDataOpenApi(registry, registeredErrorResponse);
 registerRecipeNutritionOpenApi(registry, registeredErrorResponse);
@@ -91,6 +93,7 @@ const generatedDocument = generator.generateDocument({
     { name: 'Community', description: 'Comments, votes, ratings, and bookmarks' },
     { name: 'Recommendations', description: 'Consent-aware behavior events and recipe ranking' },
     { name: 'Meal Plans', description: 'Deterministic weekly plans, swaps and shopping lists' },
+    { name: 'Meal Programs', description: 'Versioned multi-week meal programs and analysis' },
     {
       name: 'AI Chat',
       description: 'OpenAI-backed private nutrition chat, quota, SSE and feedback',

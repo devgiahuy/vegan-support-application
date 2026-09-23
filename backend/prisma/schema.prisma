@@ -379,6 +379,48 @@ enum MealAnalysisStatus {
   @@map("meal_analysis_status")
 }
 
+enum MealProgramStatus {
+  GENERATING
+  DRAFT
+  PARTIAL
+  FAILED
+  CONFIRMED
+
+  @@map("meal_program_status")
+}
+
+enum MealProgramWeekStatus {
+  PENDING
+  READY
+  FAILED
+
+  @@map("meal_program_week_status")
+}
+
+enum MealProgramProjectionStatus {
+  CURRENT
+  STALE
+
+  @@map("meal_program_projection_status")
+}
+
+enum MealProgramAnalysisStatus {
+  CURRENT
+  STALE
+
+  @@map("meal_program_analysis_status")
+}
+
+enum MealProgramMutationType {
+  UPDATE_METADATA
+  SELECT_ALTERNATIVE
+  REGENERATE_WEEK
+  REANALYZE
+  CONFIRM
+
+  @@map("meal_program_mutation_type")
+}
+
 enum ChatMessageRole {
   USER
   ASSISTANT
@@ -619,6 +661,8 @@ model User {
   madeStorageAdjustments         StorageAdjustment[]        @relation("StorageAdjustmentActor")
   updatedStoragePolicies         StoragePolicy[]            @relation("StoragePolicyUpdater")
   customMeals                    CustomMeal[]
+  mealPrograms                   MealProgram[]
+  mealProgramMutations           MealProgramMutation[]
 
   @@map("users")
 }
@@ -945,34 +989,35 @@ model BehaviorEvent {
 }
 
 model MealPlan {
-  id                    String                 @id @default(uuid()) @db.Uuid
-  userId                String                 @map("user_id") @db.Uuid
-  weekStart             DateTime               @map("week_start") @db.Date
+  id                    String                       @id @default(uuid()) @db.Uuid
+  userId                String                       @map("user_id") @db.Uuid
+  weekStart             DateTime                     @map("week_start") @db.Date
   goal                  MealGoal
-  targetCalories        Int                    @map("target_calories")
+  targetCalories        Int                          @map("target_calories")
   version               Int
-  lockVersion           Int                    @default(1) @map("lock_version")
-  supersedesMealPlanId  String?                @map("supersedes_meal_plan_id") @db.Uuid
-  idempotencyKey        String                 @map("idempotency_key") @db.VarChar(120)
-  payloadHash           String                 @map("payload_hash") @db.Char(64)
-  seedHash              String                 @map("seed_hash") @db.Char(64)
-  algorithmVersion      String                 @map("algorithm_version") @db.VarChar(80)
-  recommendationVersion String                 @map("recommendation_version") @db.VarChar(80)
-  constraintSnapshot    Json                   @map("constraint_snapshot")
-  warnings              Json                   @default("[]")
-  nutritionDataQuality  NutritionDataQuality   @map("nutrition_data_quality")
-  micronutrientSummary  Json                   @map("micronutrient_summary")
+  lockVersion           Int                          @default(1) @map("lock_version")
+  supersedesMealPlanId  String?                      @map("supersedes_meal_plan_id") @db.Uuid
+  idempotencyKey        String                       @map("idempotency_key") @db.VarChar(120)
+  payloadHash           String                       @map("payload_hash") @db.Char(64)
+  seedHash              String                       @map("seed_hash") @db.Char(64)
+  algorithmVersion      String                       @map("algorithm_version") @db.VarChar(80)
+  recommendationVersion String                       @map("recommendation_version") @db.VarChar(80)
+  constraintSnapshot    Json                         @map("constraint_snapshot")
+  warnings              Json                         @default("[]")
+  nutritionDataQuality  NutritionDataQuality         @map("nutrition_data_quality")
+  micronutrientSummary  Json                         @map("micronutrient_summary")
   explanation           String?
-  deletedAt             DateTime?              @map("deleted_at") @db.Timestamptz(3)
-  createdAt             DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt             DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
-  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  supersedes            MealPlan?              @relation("MealPlanVersions", fields: [supersedesMealPlanId], references: [id], onDelete: SetNull)
-  supersededBy          MealPlan[]             @relation("MealPlanVersions")
+  deletedAt             DateTime?                    @map("deleted_at") @db.Timestamptz(3)
+  createdAt             DateTime                     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user                  User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supersedes            MealPlan?                    @relation("MealPlanVersions", fields: [supersedesMealPlanId], references: [id], onDelete: SetNull)
+  supersededBy          MealPlan[]                   @relation("MealPlanVersions")
   items                 MealPlanItem[]
   shoppingItems         MealPlanShoppingItem[]
   mutations             MealPlanMutation[]
   analyses              MealAnalysis[]
+  programAlternatives   MealProgramWeekAlternative[]
 
   @@unique([userId, idempotencyKey])
   @@unique([userId, weekStart, version])
@@ -1004,6 +1049,107 @@ model MealAnalysis {
   @@index([mealPlanId, status, createdAt])
   @@index([inputFingerprint])
   @@map("meal_analyses")
+}
+
+model MealProgram {
+  id                   String                @id @default(uuid()) @db.Uuid
+  userId               String                @map("user_id") @db.Uuid
+  title                String                @db.VarChar(200)
+  goal                 MealGoal
+  startDate            DateTime              @map("start_date") @db.Date
+  timezone             String                @db.VarChar(64)
+  horizonWeeks         Int                   @map("horizon_weeks")
+  status               MealProgramStatus     @default(GENERATING)
+  version              Int                   @default(1)
+  idempotencyKey       String                @map("idempotency_key") @db.VarChar(120)
+  payloadHash          String                @map("payload_hash") @db.Char(64)
+  generationParameters Json                  @map("generation_parameters")
+  failureSummary       Json?                 @map("failure_summary")
+  confirmedAt          DateTime?             @map("confirmed_at") @db.Timestamptz(3)
+  createdAt            DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weeks                MealProgramWeek[]
+  analyses             MealProgramAnalysis[]
+  mutations            MealProgramMutation[]
+
+  @@unique([userId, idempotencyKey])
+  @@index([userId, status, startDate, createdAt])
+  @@map("meal_programs")
+}
+
+model MealProgramWeek {
+  id                      String                       @id @default(uuid()) @db.Uuid
+  mealProgramId           String                       @map("meal_program_id") @db.Uuid
+  weekIndex               Int                          @map("week_index")
+  weekStart               DateTime                     @map("week_start") @db.Date
+  status                  MealProgramWeekStatus        @default(PENDING)
+  selectedAlternativeRank Int?                         @map("selected_alternative_rank")
+  projectionStatus        MealProgramProjectionStatus  @default(CURRENT) @map("projection_status")
+  failure                 Json?
+  createdAt               DateTime                     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  mealProgram             MealProgram                  @relation(fields: [mealProgramId], references: [id], onDelete: Cascade)
+  alternatives            MealProgramWeekAlternative[]
+
+  @@unique([mealProgramId, weekIndex])
+  @@unique([mealProgramId, weekStart])
+  @@index([mealProgramId, status, weekIndex])
+  @@map("meal_program_weeks")
+}
+
+model MealProgramWeekAlternative {
+  id         String          @id @default(uuid()) @db.Uuid
+  weekId     String          @map("week_id") @db.Uuid
+  mealPlanId String          @map("meal_plan_id") @db.Uuid
+  rank       Int
+  seed       String          @db.VarChar(120)
+  snapshot   Json
+  createdAt  DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  week       MealProgramWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  mealPlan   MealPlan        @relation(fields: [mealPlanId], references: [id], onDelete: Restrict)
+
+  @@unique([weekId, rank])
+  @@unique([weekId, mealPlanId])
+  @@index([mealPlanId])
+  @@map("meal_program_week_alternatives")
+}
+
+model MealProgramAnalysis {
+  id                       String                    @id @default(uuid()) @db.Uuid
+  mealProgramId            String                    @map("meal_program_id") @db.Uuid
+  version                  Int
+  status                   MealProgramAnalysisStatus @default(CURRENT)
+  inputFingerprint         String                    @map("input_fingerprint") @db.Char(64)
+  invalidatedFromWeekIndex Int?                      @map("invalidated_from_week_index")
+  warnings                 Json                      @default("[]")
+  nutritionSummary         Json                      @map("nutrition_summary")
+  weeklyAnalyses           Json                      @map("weekly_analyses")
+  createdAt                DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  mealProgram              MealProgram               @relation(fields: [mealProgramId], references: [id], onDelete: Cascade)
+
+  @@unique([mealProgramId, version])
+  @@index([mealProgramId, status, createdAt])
+  @@index([inputFingerprint])
+  @@map("meal_program_analyses")
+}
+
+model MealProgramMutation {
+  id               String                  @id @default(uuid()) @db.Uuid
+  userId           String                  @map("user_id") @db.Uuid
+  mealProgramId    String                  @map("meal_program_id") @db.Uuid
+  type             MealProgramMutationType
+  idempotencyKey   String                  @map("idempotency_key") @db.VarChar(120)
+  payloadHash      String                  @map("payload_hash") @db.Char(64)
+  resultingVersion Int                     @map("resulting_version")
+  createdAt        DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mealProgram      MealProgram             @relation(fields: [mealProgramId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, idempotencyKey])
+  @@index([mealProgramId, createdAt])
+  @@map("meal_program_mutations")
 }
 
 model MealPlanItem {
