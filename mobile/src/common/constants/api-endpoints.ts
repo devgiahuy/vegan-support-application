@@ -7,6 +7,7 @@ export const API_ENDPOINTS = {
   },
   USERS: {
     ME: '/users/me',
+    HEALTH_PROFILE: '/users/me/health-profile',
   },
   CATEGORIES: {
     TREE: '/categories',
@@ -15,5 +16,25 @@ export const API_ENDPOINTS = {
     LIST: '/posts',
     DETAIL: (idOrSlug: string) => `/posts/${idOrSlug}`,
     RELATED: (id: string) => `/posts/${id}/related`,
+  },
+  COMMUNITY: {
+    COMMENTS: (postId: string) => `/posts/${postId}/comments`,
+    COMMENT: (id: string) => `/comments/${id}`,
+    SUMMARY: (postId: string) => `/posts/${postId}/community-summary`,
+    VOTE: (postId: string) => `/posts/${postId}/vote`,
+    BOOKMARK: (postId: string) => `/posts/${postId}/bookmark`,
+    MY_BOOKMARKS: '/users/me/bookmarks',
+  },
+  MEAL_PLANS: {
+    GENERATE: '/meal-plans/generate',
+    LIST: '/meal-plans',
+    DETAIL: (id: string) => `/meal-plans/${id}`,
+    SWAP: (planId: string, itemId: string) => `/meal-plans/${planId}/items/${itemId}/swap`,
+    DELETE: (id: string) => `/meal-plans/${id}`,
+  },
+  CHAT: {
+    SESSIONS: '/chat/sessions',
+    SESSION_MESSAGES: (id: string) => `/chat/sessions/${id}/messages`,
+    MESSAGE_FEEDBACK: (id: string) => `/chat/messages/${id}/feedback`,
   },
 } as const;

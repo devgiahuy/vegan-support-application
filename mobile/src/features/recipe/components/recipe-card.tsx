@@ -1,6 +1,6 @@
 import { Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Link } from 'expo-router';
+import { Link, type Href } from 'expo-router';
 import { ArrowRight, Clock, Flame } from 'lucide-react-native';
 import { useIconColors } from '@/lib/theme-colors';
 import type { Recipe } from '../types/recipe.model';
@@ -17,7 +17,7 @@ export function RecipeCard({ recipe, className }: { recipe: Recipe; className?: 
   const protein = recipe.nutrition.protein;
 
   return (
-    <Link href={`/recipes/${recipe.id}`} asChild>
+    <Link href={`/recipes/${recipe.id}` as Href} asChild>
       <Pressable
         className={`overflow-hidden rounded-2xl border border-border bg-card ${className ?? ''}`}>
         <View className="relative aspect-[4/3]">

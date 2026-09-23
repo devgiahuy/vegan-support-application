@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Alert, Pressable, Share, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Link, router, useLocalSearchParams } from 'expo-router';
+import { Link, type Href, useLocalSearchParams } from 'expo-router';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -45,13 +45,9 @@ export default function RecipeDetailScreen() {
   const { data: recipesPagination } = useRecipesQuery({ limit: 6 });
   const relatedRecipes = (recipesPagination?.items ?? []).filter((r) => r.id !== id).slice(0, 3);
 
-  const [servings, setServings] = React.useState(2);
+  const [servings, setServings] = React.useState<number | null>(null);
   const [isSaved, setIsSaved] = React.useState(false);
   const [checked, setChecked] = React.useState<string[]>([]);
-
-  React.useEffect(() => {
-    if (recipe) setServings(recipe.servings || 2);
-  }, [recipe]);
 
   const toggleIngredient = (name: string) => {
     setChecked((prev) => (prev.includes(name) ? prev.filter((i) => i !== name) : [...prev, name]));
@@ -82,7 +78,7 @@ export default function RecipeDetailScreen() {
             Công thức bạn đang tìm kiếm có thể đã bị xóa hoặc không tồn tại.
           </Text>
           <View className="mt-6 flex-row gap-3">
-            <Link href="/recipes" asChild>
+            <Link href={'/recipes' as Href} asChild>
               <PrimaryButton
                 label="Quay lại danh sách"
                 variant="outline"
@@ -97,6 +93,7 @@ export default function RecipeDetailScreen() {
   }
 
   const incompatibilities = recipe.dietCompatibilities.filter((c) => !c.compatible);
+  const servingCount = (servings ?? recipe.servings) || 2;
   const hasCompatibilityInfo =
     recipe.allergenCodes.length > 0 || recipe.traditionWarnings.length > 0 || incompatibilities.length > 0;
 
@@ -222,11 +219,15 @@ export default function RecipeDetailScreen() {
             </View>
             <View className="flex-row items-center gap-1.5 rounded-lg border border-border bg-background p-1">
               <Users size={13} color={colors.mutedForeground} />
-              <Pressable onPress={() => setServings((s) => Math.max(1, s - 1))} className="h-6 w-6 items-center justify-center">
+              <Pressable
+                onPress={() => setServings(Math.max(1, servingCount - 1))}
+                className="h-6 w-6 items-center justify-center">
                 <Minus size={12} color={colors.foreground} />
               </Pressable>
-              <Text className="w-4 text-center text-xs font-bold text-foreground">{servings}</Text>
-              <Pressable onPress={() => setServings((s) => s + 1)} className="h-6 w-6 items-center justify-center">
+              <Text className="w-4 text-center text-xs font-bold text-foreground">{servingCount}</Text>
+              <Pressable
+                onPress={() => setServings(servingCount + 1)}
+                className="h-6 w-6 items-center justify-center">
                 <Plus size={12} color={colors.foreground} />
               </Pressable>
             </View>

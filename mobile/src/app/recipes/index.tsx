@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, type Href } from 'expo-router';
 import { PlusCircle, Search, Sparkles } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
@@ -213,11 +213,12 @@ export default function RecipesScreen() {
             Hỏi AI ChayXanh để nhận công thức nấu theo nguyên liệu tủ lạnh của riêng bạn!
           </Text>
           <View className="mt-4">
-            <PrimaryButton
-              label="Hỏi AI thay thế nguyên liệu"
-              icon={<Sparkles size={16} color={colors.primaryForeground} />}
-              onPress={() => notifyComingSoon('Trợ lý AI dinh dưỡng')}
-            />
+            <Link href={'/assistant' as Href} asChild>
+              <PrimaryButton
+                label="Hỏi AI thay thế nguyên liệu"
+                icon={<Sparkles size={16} color={colors.primaryForeground} />}
+              />
+            </Link>
           </View>
         </View>
 

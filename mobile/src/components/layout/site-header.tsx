@@ -1,6 +1,6 @@
 import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link, usePathname } from 'expo-router';
+import { Link, type Href, usePathname } from 'expo-router';
 import { LogIn, Search, Sparkles } from 'lucide-react-native';
 import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
@@ -10,16 +10,24 @@ import { BrandLogo } from './brand-logo';
 
 interface NavItem {
   label: string;
-  href: '/' | '/recipes' | '/articles' | '/restaurants' | null;
+  href:
+    | '/'
+    | '/recipes'
+    | '/articles'
+    | '/videos'
+    | '/assistant'
+    | '/meal-plans'
+    | '/restaurants'
+    | null;
 }
 
-/** Các mục chưa có màn hình thật (`href: null`) hiện thông báo thay vì điều hướng vỡ route. */
 const NAV_ITEMS: NavItem[] = [
   { label: 'Trang chủ', href: '/' },
   { label: 'Khám phá món', href: '/recipes' },
   { label: 'Cẩm nang', href: '/articles' },
-  { label: 'Video nấu ăn', href: null },
-  { label: 'Thực đơn tuần', href: null },
+  { label: 'AI Chat', href: '/assistant' },
+  { label: 'Video nấu ăn', href: '/videos' },
+  { label: 'Thực đơn tuần', href: '/meal-plans' },
   { label: 'Bản đồ quán', href: '/restaurants' },
 ];
 
@@ -27,12 +35,6 @@ function notifyComingSoon(feature: string) {
   Alert.alert('Sắp ra mắt', `${feature} đang được VeggieConnect hoàn thiện, quay lại sau nhé!`);
 }
 
-/**
- * Header điều hướng dùng chung cho mọi trang chính, đồng bộ
- * `frontend/src/components/layout/site-header.tsx` (logo, nav, tìm kiếm,
- * AI Trợ lý, đổi giao diện, đăng nhập). Thay nav ngang cố định của web bằng
- * hàng pill cuộn ngang phù hợp mobile.
- */
 export function SiteHeader() {
   const pathname = usePathname();
   const colors = useIconColors();
@@ -55,16 +57,18 @@ export function SiteHeader() {
             className="h-9 w-9 items-center justify-center rounded-full bg-muted">
             <Search size={15} color={colors.foreground} />
           </Pressable>
-          <Pressable
-            onPress={() => notifyComingSoon('Trợ lý AI dinh dưỡng')}
-            className="h-9 w-9 items-center justify-center rounded-full bg-cta/15">
-            <Sparkles size={15} color={colors.cta} />
-          </Pressable>
+          <Link href={'/assistant' as Href} asChild>
+            <Pressable className="h-9 w-9 items-center justify-center rounded-full bg-cta/15">
+              <Sparkles size={15} color={colors.cta} />
+            </Pressable>
+          </Link>
           <ThemeToggle />
           {isAuthenticated && user ? (
-            <View className="h-9 w-9 items-center justify-center rounded-full bg-primary/10">
-              <Text className="text-xs font-bold text-primary">{user.initials}</Text>
-            </View>
+            <Link href="/profile" asChild>
+              <Pressable className="h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+                <Text className="text-xs font-bold text-primary">{user.initials}</Text>
+              </Pressable>
+            </Link>
           ) : (
             <Link href="/(auth)/login" asChild>
               <Pressable className="flex-row items-center gap-1.5 rounded-full bg-primary px-3 py-1.5">
@@ -76,10 +80,7 @@ export function SiteHeader() {
         </View>
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerClassName="gap-1.5 px-4 pb-2.5">
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerClassName="gap-1.5 px-4 pb-2.5">
         {NAV_ITEMS.map((item) => {
           const active = item.href !== null && isActive(item.href);
           const pill = (
@@ -93,6 +94,7 @@ export function SiteHeader() {
               </Text>
             </View>
           );
+
           if (item.href === null) {
             return (
               <Pressable key={item.label} onPress={() => notifyComingSoon(item.label)}>
@@ -100,8 +102,9 @@ export function SiteHeader() {
               </Pressable>
             );
           }
+
           return (
-            <Link key={item.label} href={item.href} asChild>
+            <Link key={item.label} href={item.href as Href} asChild>
               <Pressable>{pill}</Pressable>
             </Link>
           );

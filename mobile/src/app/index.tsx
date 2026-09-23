@@ -1,5 +1,5 @@
-import { Alert, Text, View } from 'react-native';
-import { Link } from 'expo-router';
+import { Alert, Pressable, Text, View } from 'react-native';
+import { Link, type Href } from 'expo-router';
 import {
   ArrowRight,
   CalendarDays,
@@ -41,7 +41,15 @@ export default function HomeScreen() {
   const recipes = recipesPagination?.items ?? [];
 
   return (
-    <SiteScreen>
+    <SiteScreen
+      fab={
+        <Link href={'/assistant' as Href} asChild>
+          <Pressable className="absolute bottom-5 right-5 flex-row items-center gap-2 rounded-full bg-primary px-4 py-3 shadow-lg">
+            <Sparkles size={16} color={colors.primaryForeground} />
+            <Text className="text-sm font-semibold text-primary-foreground">Hỏi AI nhanh</Text>
+          </Pressable>
+        </Link>
+      }>
       {/* Hero */}
       <View className="px-5 pt-4">
         <View className="flex-row items-center gap-1.5 self-start rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5">
@@ -64,18 +72,19 @@ export default function HomeScreen() {
         </Text>
 
         <View className="mt-5 gap-2.5">
-          <Link href="/recipes" asChild>
+          <Link href={'/recipes' as Href} asChild>
             <PrimaryButton
               label="Tìm công thức ngay"
               icon={<UtensilsCrossed size={16} color={colors.primaryForeground} />}
             />
           </Link>
-          <PrimaryButton
-            label="Hỏi AI Dinh dưỡng"
-            variant="outline"
-            icon={<Sparkles size={16} color={colors.cta} />}
-            onPress={() => notifyComingSoon('Trợ lý AI dinh dưỡng')}
-          />
+          <Link href={'/assistant' as Href} asChild>
+            <PrimaryButton
+              label="Hỏi AI Dinh dưỡng"
+              variant="outline"
+              icon={<Sparkles size={16} color={colors.cta} />}
+            />
+          </Link>
         </View>
 
         <View className="mt-4 flex-row flex-wrap items-center gap-x-3 gap-y-1">
@@ -160,12 +169,13 @@ export default function HomeScreen() {
           </View>
 
           <View className="mt-3.5">
-            <PrimaryButton
-              label="Hỏi bất kỳ nguyên liệu hoặc mục tiêu..."
-              variant="outline"
-              icon={<ArrowRight size={15} color={colors.foreground} />}
-              onPress={() => notifyComingSoon('Trợ lý AI dinh dưỡng')}
-            />
+            <Link href={'/assistant' as Href} asChild>
+              <PrimaryButton
+                label="Hỏi bất kỳ nguyên liệu hoặc mục tiêu..."
+                variant="outline"
+                icon={<ArrowRight size={15} color={colors.foreground} />}
+              />
+            </Link>
           </View>
         </View>
       </View>
@@ -200,11 +210,12 @@ export default function HomeScreen() {
           </View>
 
           <View className="mt-3.5">
-            <PrimaryButton
+            <Link href={'/meal-plans' as Href} asChild>
+              <PrimaryButton
               label="Tạo thực đơn 7 ngày của riêng bạn"
               icon={<CalendarDays size={16} color={colors.primaryForeground} />}
-              onPress={() => notifyComingSoon('Thực đơn tuần')}
-            />
+              />
+            </Link>
           </View>
         </View>
       </View>

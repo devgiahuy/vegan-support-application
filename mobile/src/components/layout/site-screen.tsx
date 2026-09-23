@@ -8,7 +8,7 @@ import { SiteFooter } from './site-footer';
  * đồng bộ `frontend/src/app/(site)/layout.tsx`. Dùng cho mọi trang chính
  * (Trang chủ, Khám phá món, Cẩm nang...).
  */
-export function SiteScreen({ children }: { children: React.ReactNode }) {
+export function SiteScreen({ children, fab }: { children: React.ReactNode; fab?: React.ReactNode }) {
   return (
     <View className="flex-1 bg-background">
       <SiteHeader />
@@ -16,6 +16,7 @@ export function SiteScreen({ children }: { children: React.ReactNode }) {
         {children}
         <SiteFooter />
       </ScrollView>
+      {fab}
     </View>
   );
 }

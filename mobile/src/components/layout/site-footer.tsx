@@ -1,12 +1,12 @@
 import { Alert, Pressable, Text, View } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, type Href } from 'expo-router';
 import { Lock, ShieldCheck, Sprout } from 'lucide-react-native';
 import { useIconColors } from '@/lib/theme-colors';
 import { BrandLogo } from './brand-logo';
 
 interface FooterLink {
   label: string;
-  href: '/' | '/recipes' | '/articles' | '/restaurants' | null;
+  href: '/' | '/recipes' | '/articles' | '/videos' | '/assistant' | '/meal-plans' | '/restaurants' | null;
 }
 
 const COLUMNS: { title: string; links: FooterLink[] }[] = [
@@ -16,8 +16,9 @@ const COLUMNS: { title: string; links: FooterLink[] }[] = [
       { label: 'Món chay theo mùa', href: '/recipes' },
       { label: 'Cẩm nang dinh dưỡng', href: '/articles' },
       { label: 'Bản đồ quán chay', href: '/restaurants' },
-      { label: 'Video hướng dẫn nấu', href: null },
-      { label: 'Thực đơn 7 ngày', href: null },
+      { label: 'Video hướng dẫn nấu', href: '/videos' },
+      { label: 'Thực đơn 7 ngày', href: '/meal-plans' },
+      { label: 'Trợ lý AI dinh dưỡng', href: '/assistant' },
     ],
   },
   {
@@ -42,7 +43,6 @@ function notifyComingSoon(feature: string) {
   Alert.alert('Sắp ra mắt', `${feature} đang được VeggieConnect hoàn thiện, quay lại sau nhé!`);
 }
 
-/** Footer dùng chung cho mọi trang chính, đồng bộ `frontend/.../site-footer.tsx`. */
 export function SiteFooter() {
   const colors = useIconColors();
 
@@ -60,7 +60,7 @@ export function SiteFooter() {
         </View>
         <View className="flex-row items-center gap-1.5">
           <Lock size={13} color={colors.primary} />
-          <Text className="text-xs text-muted-foreground">Mã hoá SSL/TLS</Text>
+          <Text className="text-xs text-muted-foreground">Mã hóa SSL/TLS</Text>
         </View>
         <View className="flex-row items-center gap-1.5">
           <Sprout size={13} color={colors.primary} />
@@ -81,7 +81,7 @@ export function SiteFooter() {
                     <Text className="text-sm text-muted-foreground">{link.label}</Text>
                   </Pressable>
                 ) : (
-                  <Link key={link.label} href={link.href} asChild>
+                  <Link key={link.label} href={link.href as Href} asChild>
                     <Pressable>
                       <Text className="text-sm text-muted-foreground">{link.label}</Text>
                     </Pressable>
