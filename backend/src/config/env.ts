@@ -64,6 +64,9 @@ const environmentSchema = z
     MEAL_PLAN_MAINTAIN_FACTOR: z.coerce.number().min(0.8).max(1.2).default(1),
     MEAL_PLAN_LOSE_FACTOR: z.coerce.number().min(0.8).max(1).default(0.9),
     MEAL_PLAN_GAIN_FACTOR: z.coerce.number().min(1).max(1.2).default(1.1),
+    MEAL_PROGRAM_MAX_WEEKS: z.coerce.number().int().min(2).max(12).default(12),
+    MEAL_PROGRAM_MAX_ALTERNATIVES_PER_WEEK: z.coerce.number().int().min(1).max(3).default(3),
+    MEAL_PROGRAM_MAX_REGENERATIONS_PER_WEEK: z.coerce.number().int().min(1).max(4).default(2),
     AI_CHAT_ENABLED: z.stringbool().default(true),
     AI_PROVIDER: z.enum(['openai', 'fake']).default('openai'),
     OPENAI_API_KEY: z.preprocess(
@@ -112,6 +115,12 @@ const environmentSchema = z
       MAINTAIN: environment.MEAL_PLAN_MAINTAIN_FACTOR,
       LOSE: environment.MEAL_PLAN_LOSE_FACTOR,
       GAIN: environment.MEAL_PLAN_GAIN_FACTOR,
+    },
+    mealProgramLimits: {
+      minWeeks: 2,
+      maxWeeks: environment.MEAL_PROGRAM_MAX_WEEKS,
+      maxAlternativesPerWeek: environment.MEAL_PROGRAM_MAX_ALTERNATIVES_PER_WEEK,
+      maxRegenerationsPerWeek: environment.MEAL_PROGRAM_MAX_REGENERATIONS_PER_WEEK,
     },
     ai: {
       chatEnabled: environment.AI_CHAT_ENABLED,

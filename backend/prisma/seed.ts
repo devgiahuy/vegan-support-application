@@ -38,6 +38,7 @@ import {
   PrismaClient,
   RecipeDifficulty,
   NutrientReferenceType,
+  NutritionCoverage,
   ReportStatus,
   ReportTargetType,
   Role,
@@ -478,6 +479,39 @@ async function seedFoodData(adminId: string): Promise<void> {
       effectiveFrom,
     },
   });
+  await prisma.nutrientReferenceIntake.upsert({
+    where: {
+      nutrientId_referenceType_populationCode_sourceId_sourceVersion_effectiveFrom: {
+        nutrientId: vitaminC.id,
+        referenceType: NutrientReferenceType.OTHER,
+        populationCode: 'DEMO_ADULT_EDUCATIONAL_WARNING',
+        sourceId: projectSource.id,
+        sourceVersion: '1.0',
+        effectiveFrom,
+      },
+    },
+    update: { value: 120, unit: 'mg', warningEligible: true },
+    create: {
+      nutrientId: vitaminC.id,
+      sourceId: projectSource.id,
+      referenceType: NutrientReferenceType.OTHER,
+      populationCode: 'DEMO_ADULT_EDUCATIONAL_WARNING',
+      applicability: {
+        minAge: 18,
+        note: 'Illustrative Phase 18 fixture only; not a clinical limit',
+      },
+      value: 120,
+      unit: 'mg',
+      warningEligible: true,
+      sourceRecordId: 'demo-vitamin-c-educational-warning',
+      sourceVersion: '1.0',
+      locale: 'vi-VN',
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+      effectiveFrom,
+    },
+  });
   await prisma.ingredientIntakeGuideline.upsert({
     where: {
       ingredientId_populationCode_period_sourceId_sourceVersion_effectiveFrom: {
@@ -610,6 +644,42 @@ async function seedFoodData(adminId: string): Promise<void> {
       effectiveFrom,
     },
   });
+  for (const scope of [InteractionScope.SAME_DISH, InteractionScope.SAME_DAY]) {
+    const scopeCode = scope.toLowerCase().replace('_', '-');
+    await prisma.ingredientInteractionRule.upsert({
+      where: {
+        ingredientAId_ingredientBId_scope_sourceId_sourceVersion_effectiveFrom: {
+          ingredientAId,
+          ingredientBId,
+          scope,
+          sourceId: projectSource.id,
+          sourceVersion: '1.0',
+          effectiveFrom,
+        },
+      },
+      update: { hardRule: false },
+      create: {
+        ingredientAId,
+        ingredientBId,
+        sourceId: projectSource.id,
+        scope,
+        direction: InteractionDirection.ADVERSE,
+        severity: FoodRuleSeverity.CAUTION,
+        evidenceGrade: EvidenceGrade.INSUFFICIENT,
+        applicability: { note: 'Illustrative Phase 18 fixture only' },
+        explanation: `Ví dụ cảnh báo ${scope}; chỉ dùng kiểm tra giao diện và không phải khuyến cáo lâm sàng.`,
+        suggestedAction: 'Điều chỉnh cách kết hợp nếu phù hợp và phân tích lại.',
+        hardRule: false,
+        sourceRecordId: `demo-tofu-broccoli-${scopeCode}`,
+        sourceVersion: '1.0',
+        locale: 'vi-VN',
+        reviewStatus: FoodDataReviewStatus.APPROVED,
+        reviewedById: adminId,
+        reviewedAt: new Date(),
+        effectiveFrom,
+      },
+    });
+  }
   const existingSuggestion = await prisma.foodDataSuggestion.findFirst({
     where: {
       suggestionType: FoodDataSuggestionType.INGREDIENT_MAPPING,
@@ -980,18 +1050,26 @@ async function main(): Promise<void> {
   }
   const [recipeCategory, topicCategory, tofu, broccoli, brownRice, mushroom, boilingMethod] =
     await Promise.all([
-    prisma.category.findFirstOrThrow({
-      where: { type: CategoryType.FOOD_TYPE, slug: 'com-va-ngu-coc', status: CatalogStatus.ACTIVE },
-    }),
-    prisma.category.findFirstOrThrow({
-      where: { type: CategoryType.CONTENT_TOPIC, slug: 'dinh-duong', status: CatalogStatus.ACTIVE },
-    }),
-    prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'dau hu' } }),
-    prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'bong cai xanh' } }),
-    prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'gao lut' } }),
-    prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'nam huong' } }),
-    prisma.cookingMethod.findUniqueOrThrow({ where: { code: 'BOILING' } }),
-  ]);
+      prisma.category.findFirstOrThrow({
+        where: {
+          type: CategoryType.FOOD_TYPE,
+          slug: 'com-va-ngu-coc',
+          status: CatalogStatus.ACTIVE,
+        },
+      }),
+      prisma.category.findFirstOrThrow({
+        where: {
+          type: CategoryType.CONTENT_TOPIC,
+          slug: 'dinh-duong',
+          status: CatalogStatus.ACTIVE,
+        },
+      }),
+      prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'dau hu' } }),
+      prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'bong cai xanh' } }),
+      prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'gao lut' } }),
+      prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'nam huong' } }),
+      prisma.cookingMethod.findUniqueOrThrow({ where: { code: 'BOILING' } }),
+    ]);
 
   if (!(await prisma.post.findUnique({ where: { slug: 'dau-hu-xao-bong-cai-demo' } }))) {
     await prisma.$transaction(async (transaction) => {
@@ -1467,6 +1545,71 @@ async function main(): Promise<void> {
     prisma.post.findUniqueOrThrow({ where: { slug: 'dau-hu-xao-bong-cai-demo' } }),
     prisma.post.findUniqueOrThrow({ where: { slug: 'video-bua-an-xanh-demo' } }),
   ]);
+  const [customTofu, customBroccoli] = await Promise.all([
+    prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'dau hu' } }),
+    prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'bong cai xanh' } }),
+  ]);
+  await prisma.$transaction(async (transaction) => {
+    const customMeal = await transaction.customMeal.upsert({
+      where: { id: '18000000-0000-4000-8000-000000000001' },
+      update: {
+        ownerId: member.id,
+        name: 'Bữa đậu hũ và bông cải tùy chỉnh',
+        servings: 2,
+        userCalories: 320,
+        userProteinGrams: 20,
+        userCarbsGrams: 24,
+        userFatGrams: 14,
+        nutritionCoverage: NutritionCoverage.PARTIAL,
+        deletedAt: null,
+      },
+      create: {
+        id: '18000000-0000-4000-8000-000000000001',
+        ownerId: member.id,
+        name: 'Bữa đậu hũ và bông cải tùy chỉnh',
+        notes: 'Fixture Phase 18 cho custom-meal analysis.',
+        servings: 2,
+        sourceNote: 'Project demo fixture',
+        userCalories: 320,
+        userProteinGrams: 20,
+        userCarbsGrams: 24,
+        userFatGrams: 14,
+        nutritionCoverage: NutritionCoverage.PARTIAL,
+      },
+    });
+    await transaction.customMealIngredient.deleteMany({ where: { customMealId: customMeal.id } });
+    await transaction.customMealIngredient.createMany({
+      data: [
+        {
+          customMealId: customMeal.id,
+          ingredientId: customTofu.id,
+          position: 0,
+          displayName: customTofu.canonicalName,
+          normalizedName: customTofu.normalizedName,
+          amount: 200,
+          unit: 'g',
+          resolutionStatus: IngredientResolutionStatus.EXACT,
+        },
+        {
+          customMealId: customMeal.id,
+          ingredientId: customBroccoli.id,
+          position: 1,
+          displayName: customBroccoli.canonicalName,
+          normalizedName: customBroccoli.normalizedName,
+          amount: 180,
+          unit: 'g',
+          resolutionStatus: IngredientResolutionStatus.EXACT,
+        },
+      ],
+    });
+    await transaction.customMealTag.upsert({
+      where: {
+        customMealId_normalizedTag: { customMealId: customMeal.id, normalizedTag: 'phase-18-demo' },
+      },
+      update: { tag: 'phase-18-demo' },
+      create: { customMealId: customMeal.id, tag: 'phase-18-demo', normalizedTag: 'phase-18-demo' },
+    });
+  });
   await prisma.healthProfile.upsert({
     where: { userId: member.id },
     update: {

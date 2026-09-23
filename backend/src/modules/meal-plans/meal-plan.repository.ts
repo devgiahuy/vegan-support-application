@@ -1,10 +1,11 @@
 import {
   MealPlanMutationType,
+  Prisma,
   type MealGoal,
   type MealSlotStatus,
+  type MealPlanItemSourceType,
   type MealType,
   type NutritionDataQuality,
-  type Prisma,
   type PrismaClient,
 } from '@prisma/client';
 
@@ -17,6 +18,18 @@ const mealPlanInclude = {
           recipeDetail: true,
           ingredients: { include: { ingredient: true }, orderBy: { position: 'asc' } },
           media: { orderBy: { position: 'asc' } },
+        },
+      },
+      customMeal: {
+        include: {
+          ingredients: {
+            include: {
+              ingredient: {
+                include: { allergens: true, dietCompatibilities: true, traditionWarnings: true },
+              },
+            },
+            orderBy: { position: 'asc' },
+          },
         },
       },
     },
@@ -32,8 +45,12 @@ export interface MealPlanItemData {
   mealType: MealType;
   position: number;
   status: MealSlotStatus;
+  sourceType?: MealPlanItemSourceType;
   recipeId?: string;
   recipeRevisionId?: string;
+  customMealId?: string;
+  customMealSnapshot?: Prisma.InputJsonValue;
+  servings?: number;
   targetCalories: number;
   calories?: number;
   tolerancePercent?: number;
@@ -103,6 +120,22 @@ export class MealPlanRepository {
 
   findHealthProfile(userId: string) {
     return this.prisma.healthProfile.findUnique({ where: { userId } });
+  }
+
+  findOwnedCustomMeal(userId: string, id: string) {
+    return this.prisma.customMeal.findFirst({
+      where: { id, ownerId: userId, deletedAt: null },
+      include: {
+        ingredients: {
+          include: {
+            ingredient: {
+              include: { allergens: true, dietCompatibilities: true, traditionWarnings: true },
+            },
+          },
+          orderBy: { position: 'asc' },
+        },
+      },
+    });
   }
 
   findByIdempotency(userId: string, idempotencyKey: string): Promise<MealPlanRecord | null> {
@@ -249,7 +282,13 @@ export class MealPlanRepository {
       if (!updated.count) throw new MealPlanVersionConflictError();
       await transaction.mealPlanItem.update({
         where: { id: data.itemId, mealPlanId: data.planId },
-        data: data.item,
+        data: {
+          customMealId: null,
+          customMealSnapshot: Prisma.DbNull,
+          sourceType: 'RECIPE',
+          servings: 1,
+          ...data.item,
+        },
       });
       await transaction.mealPlanShoppingItem.deleteMany({ where: { mealPlanId: data.planId } });
       if (data.shoppingItems.length) {
@@ -263,6 +302,74 @@ export class MealPlanRepository {
           mealPlanId: data.planId,
           mealPlanItemId: data.itemId,
           type: MealPlanMutationType.SWAP,
+          idempotencyKey: data.idempotencyKey,
+          payloadHash: data.payloadHash,
+          resultingLockVersion: data.expectedVersion + 1,
+        },
+      });
+      return transaction.mealPlan.findUniqueOrThrow({
+        where: { id: data.planId },
+        include: mealPlanInclude,
+      });
+    });
+  }
+
+  async manualAddItem(data: SwapMealPlanData): Promise<MealPlanRecord> {
+    return this.prisma.$transaction(async (transaction) => {
+      await transaction.$queryRaw<Array<{ id: string }>>`
+        SELECT "id" FROM "users" WHERE "id" = ${data.userId}::uuid FOR UPDATE
+      `;
+      const existingMutation = await transaction.mealPlanMutation.findUnique({
+        where: {
+          userId_idempotencyKey: { userId: data.userId, idempotencyKey: data.idempotencyKey },
+        },
+      });
+      if (existingMutation) {
+        if (existingMutation.payloadHash !== data.payloadHash)
+          throw new MealPlanIdempotencyConflictError();
+        return transaction.mealPlan.findFirstOrThrow({
+          where: { id: existingMutation.mealPlanId, userId: data.userId, deletedAt: null },
+          include: mealPlanInclude,
+        });
+      }
+      const updated = await transaction.mealPlan.updateMany({
+        where: {
+          id: data.planId,
+          userId: data.userId,
+          deletedAt: null,
+          lockVersion: data.expectedVersion,
+        },
+        data: {
+          lockVersion: { increment: 1 },
+          warnings: data.warnings,
+          nutritionDataQuality: data.nutritionDataQuality,
+          micronutrientSummary: data.micronutrientSummary,
+          explanation: data.explanation,
+        },
+      });
+      if (!updated.count) throw new MealPlanVersionConflictError();
+      await transaction.mealPlanItem.update({
+        where: { id: data.itemId, mealPlanId: data.planId },
+        data: {
+          recipeId: null,
+          recipeRevisionId: null,
+          customMealId: null,
+          customMealSnapshot: Prisma.DbNull,
+          ...data.item,
+        },
+      });
+      await transaction.mealPlanShoppingItem.deleteMany({ where: { mealPlanId: data.planId } });
+      if (data.shoppingItems.length) {
+        await transaction.mealPlanShoppingItem.createMany({
+          data: data.shoppingItems.map((item) => ({ mealPlanId: data.planId, ...item })),
+        });
+      }
+      await transaction.mealPlanMutation.create({
+        data: {
+          userId: data.userId,
+          mealPlanId: data.planId,
+          mealPlanItemId: data.itemId,
+          type: MealPlanMutationType.MANUAL_ADD,
           idempotencyKey: data.idempotencyKey,
           payloadHash: data.payloadHash,
           resultingLockVersion: data.expectedVersion + 1,
