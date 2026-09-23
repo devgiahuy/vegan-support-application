@@ -13,6 +13,7 @@ import { registerContributorOpenApi } from '../modules/contributors/contributor.
 import { registerModerationOpenApi } from '../modules/moderation/moderation.openapi.js';
 import { registerRecommendationOpenApi } from '../modules/recommendations/recommendation.openapi.js';
 import { registerMealPlanOpenApi } from '../modules/meal-plans/meal-plan.openapi.js';
+import { registerMealAnalysisOpenApi } from '../modules/meal-analysis/meal-analysis.openapi.js';
 import { registerChatOpenApi } from '../modules/chat/chat.openapi.js';
 import { registerFoodDataOpenApi } from '../modules/food-data/food-data.openapi.js';
 import { registerRecipeNutritionOpenApi } from '../modules/recipe-nutrition/recipe-nutrition.openapi.js';
@@ -55,6 +56,7 @@ registerContributorOpenApi(registry, registeredErrorResponse);
 registerModerationOpenApi(registry, registeredErrorResponse);
 registerRecommendationOpenApi(registry, registeredErrorResponse);
 registerMealPlanOpenApi(registry, registeredErrorResponse);
+registerMealAnalysisOpenApi(registry, registeredErrorResponse);
 registerChatOpenApi(registry, registeredErrorResponse);
 registerFoodDataOpenApi(registry, registeredErrorResponse);
 registerRecipeNutritionOpenApi(registry, registeredErrorResponse);
@@ -106,7 +108,10 @@ const generatedDocument = generator.generateDocument({
     { name: 'Uploads', description: 'Quota-reserved and provider-verified uploads' },
     { name: 'Storage', description: 'Owned storage usage and durable media deletion' },
     { name: 'Storage Admin', description: 'Storage policy, account usage, and adjustment audit' },
-    { name: 'Custom Meals', description: 'Private owner-scoped custom meals usable in meal planning' },
+    {
+      name: 'Custom Meals',
+      description: 'Private owner-scoped custom meals usable in meal planning',
+    },
   ],
 });
 

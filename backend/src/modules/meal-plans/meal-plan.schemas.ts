@@ -7,6 +7,7 @@ import {
 } from '@prisma/client';
 import { z } from '../../common/validation/zod.js';
 import { dateOnlySchema } from '../profile/profile.schemas.js';
+import { mealAnalysisDataSchema } from '../meal-analysis/meal-analysis.schemas.js';
 
 export const MEAL_PLAN_ALGORITHM_VERSION = 'weekly-deterministic-v1' as const;
 
@@ -53,6 +54,33 @@ export const swapMealPlanItemRequestSchema = z
   })
   .strict();
 
+export const manualAddMealPlanItemRequestSchema = z
+  .object({
+    expectedVersion: z.number().int().positive(),
+    idempotencyKey: z.string().trim().min(8).max(120),
+    sourceType: z.enum(['RECIPE', 'CUSTOM_MEAL']),
+    recipeId: z.string().uuid().optional(),
+    customMealId: z.string().uuid().optional(),
+    servings: z.number().positive().max(20).default(1),
+  })
+  .strict()
+  .superRefine((value, context) => {
+    if (value.sourceType === 'RECIPE' && (!value.recipeId || value.customMealId)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['recipeId'],
+        message: 'RECIPE cần duy nhất recipeId',
+      });
+    }
+    if (value.sourceType === 'CUSTOM_MEAL' && (!value.customMealId || value.recipeId)) {
+      context.addIssue({
+        code: 'custom',
+        path: ['customMealId'],
+        message: 'CUSTOM_MEAL cần duy nhất customMealId',
+      });
+    }
+  });
+
 export const deleteMealPlanQuerySchema = z
   .object({ expectedVersion: z.coerce.number().int().positive() })
   .strict();
@@ -68,6 +96,10 @@ const recipeSummarySchema = z
   })
   .strict();
 
+const customMealSummarySchema = z
+  .object({ id: z.string().uuid(), name: z.string(), nutritionCoverage: z.string() })
+  .strict();
+
 const mealPlanItemSchema = z
   .object({
     id: z.string().uuid(),
@@ -75,10 +107,13 @@ const mealPlanItemSchema = z
     mealType: z.enum(MealType),
     position: z.number().int().nonnegative(),
     status: z.enum(MealSlotStatus),
+    sourceType: z.enum(['RECIPE', 'CUSTOM_MEAL']),
     targetCalories: z.number().int().positive(),
+    servings: z.number().positive(),
     calories: z.number().int().positive().nullable(),
     tolerancePercent: z.number().min(0).max(100).nullable(),
     recipe: recipeSummarySchema.nullable(),
+    customMeal: customMealSummarySchema.nullable(),
     reasonCodes: z.array(z.string()).max(3),
     warningCodes: z.array(mealPlanWarningCodeSchema),
   })
@@ -129,6 +164,7 @@ const mealPlanDetailSchema = mealPlanSummarySchema
     constraintSnapshot: z.record(z.string(), z.unknown()),
     items: z.array(mealPlanItemSchema).length(21),
     shoppingList: z.array(shoppingItemSchema),
+    analysis: mealAnalysisDataSchema,
   })
   .strict();
 
@@ -164,5 +200,6 @@ export type MealPlanListQuery = z.infer<typeof mealPlanListQuerySchema>;
 export type MealPlanParams = z.infer<typeof mealPlanParamsSchema>;
 export type MealPlanItemParams = z.infer<typeof mealPlanItemParamsSchema>;
 export type SwapMealPlanItemInput = z.infer<typeof swapMealPlanItemRequestSchema>;
+export type ManualAddMealPlanItemInput = z.infer<typeof manualAddMealPlanItemRequestSchema>;
 export type DeleteMealPlanQuery = z.infer<typeof deleteMealPlanQuerySchema>;
 export type MealPlanWarningCode = z.infer<typeof mealPlanWarningCodeSchema>;

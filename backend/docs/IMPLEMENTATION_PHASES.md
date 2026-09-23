@@ -136,7 +136,7 @@ Regenerate/validate OpenAPI using the repository workflow. Live external-provide
 | 15 | `COMPLETED` | 2026-09-21 | `252b792` | Storage migration deployed locally; seed and reconciliation dry-run pass; source/OpenAPI gates pass |
 | 16 | `COMPLETED` | 2026-09-21 | Not committed (user review tree) | Shared draft/submit/Admin review lifecycle, video storage validation, moderation signals, history/audit, OpenAPI and runtime acceptance checks pass; commit intentionally deferred by user |
 | 17 | `COMPLETED` | 2026-09-21 | Not committed (user review tree) | Custom meals, photos (quota-checked MediaAsset ref), user tags, MealPlanItem sourceType/customMealId, delete-in-use guard, OpenAPI, lint/typecheck/build gates pass |
-| 18 | `NOT_STARTED` | — | — | — |
+| 18 | `COMPLETED` | 2026-09-23 | Not committed (user instruction) | Versioned portion/nutrient/guideline/interaction analysis, stale fingerprints, custom-meal manual-add, OpenAPI/docs, migrations/seed, and all quality gates pass |
 | 19 | `NOT_STARTED` | — | — | — |
 | 20 | `NOT_STARTED` | — | — | — |
 | 21 | `NOT_STARTED` | — | — | — |
