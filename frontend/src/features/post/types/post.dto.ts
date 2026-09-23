@@ -104,17 +104,12 @@ export interface UploadSignatureResponseDto {
   expiresAt: string;
 }
 
-/** Media input khi tạo/sửa post (`mediaInputSchema` backend). */
+/** Media input khi tạo/sửa post (`mediaInputSchema` backend Phase 15). */
 export interface MediaInputDto {
-  provider: string;
-  kind: string;
-  publicId?: string;
-  secureUrl: string;
-  mimeType?: string;
-  bytes?: number;
-  width?: number;
-  height?: number;
-  durationSeconds?: number;
+  provider: 'CLOUDINARY' | 'YOUTUBE' | string;
+  kind: 'COVER_IMAGE' | 'VIDEO' | string;
+  assetId?: string;
+  secureUrl?: string;
 }
 
 export interface CreatePostRequestDto {

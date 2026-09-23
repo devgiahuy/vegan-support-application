@@ -22,6 +22,8 @@ import {
   CalendarDays,
   FileDown,
   ChevronRight,
+  HardDrive,
+  Target,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -34,6 +36,7 @@ import { Switch } from '@/components/ui/switch';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { WhyRecommendedDialog } from '@/components/shared/why-recommended-dialog';
 import { calGoalTargets } from '@/features/health/lib/bmi';
+import { ProfileStorageTab } from '@/features/profile/components/profile-storage-tab';
 
 import { LoadingState } from '@/components/shared/loading-state';
 import { ErrorState } from '@/components/shared/error-state';
@@ -57,7 +60,7 @@ import { DeleteHistoryButton } from '@/features/safety/components/delete-history
 import { useMyApplicationsQuery } from '@/features/contributor/queries/contributor.queries';
 import { ScheduleEditor } from '@/features/diet-preferences/components/schedule-editor';
 
-type Tab = 'info' | 'health' | 'diet' | 'posts' | 'privacy' | 'contributor';
+type Tab = 'info' | 'health' | 'diet' | 'posts' | 'storage' | 'privacy' | 'contributor';
 
 const DIET_MODES = ['Thuần chay (Vegan)', 'Chay bán phần', 'Ăn chay rằm/mùng 1'];
 
@@ -94,7 +97,8 @@ export default function ProfilePage() {
   const [tab, setTab] = React.useState<Tab>(() => {
     if (typeof window === 'undefined') return 'health';
     const urlTab = new URLSearchParams(window.location.search).get('tab');
-    return urlTab && ['info', 'health', 'diet', 'posts', 'privacy', 'contributor'].includes(urlTab)
+    return urlTab &&
+      ['info', 'health', 'diet', 'posts', 'storage', 'privacy', 'contributor'].includes(urlTab)
       ? (urlTab as Tab)
       : 'health';
   });
@@ -118,7 +122,7 @@ export default function ProfilePage() {
 
   const [postSearch, setPostSearch] = React.useState('');
   const [postStatusFilter, setPostStatusFilter] = React.useState<
-    'ALL' | 'PUBLISHED' | 'PENDING_REVIEW' | 'FLAGGED' | 'DRAFT'
+    'ALL' | 'PUBLISHED' | 'PENDING_REVIEW' | 'REJECTED' | 'FLAGGED' | 'DRAFT'
   >('ALL');
   const [postToDelete, setPostToDelete] = React.useState<{
     id: string;
@@ -181,6 +185,7 @@ export default function ProfilePage() {
 
   const publishedCount = myPosts.filter((p) => p.status === 'PUBLISHED').length;
   const pendingCount = myPosts.filter((p) => p.status === 'PENDING_REVIEW').length;
+  const rejectedCount = myPosts.filter((p) => p.status === 'REJECTED').length;
   const flaggedCount = myPosts.filter((p) => p.status === 'FLAGGED').length;
   const draftCount = myPosts.filter((p) => p.status === 'DRAFT').length;
 
@@ -189,6 +194,7 @@ export default function ProfilePage() {
     { id: 'health', label: 'Sức khỏe & BMI', icon: HeartPulse, badge: 'AI Phân tích' },
     { id: 'diet', label: 'Chế độ ăn', icon: UtensilsCrossed },
     { id: 'posts', label: 'Bài viết của tôi', icon: BookOpen, badge: `${myPosts.length}` },
+    { id: 'storage', label: 'Lưu trữ', icon: HardDrive },
     { id: 'privacy', label: 'Cá nhân hoá & Dữ liệu', icon: ShieldCheck, badge: 'NĐ 13/2023' },
     { id: 'contributor', label: 'Đóng góp', icon: BadgeCheck },
   ];
@@ -256,17 +262,24 @@ export default function ProfilePage() {
                 </div>
               </div>
             </div>
-            {/* <Button asChild className="gap-1.5 rounded-full">
-              <Link href="/recipes/new">
-                <Plus className="h-4 w-4" /> Tạo công thức mới
-              </Link>
-            </Button> */}
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button asChild variant="outline" className="gap-1.5 rounded-full text-xs">
+                <Link href="/custom-meals">
+                  <UtensilsCrossed className="h-4 w-4 text-primary" /> Món ăn của tôi
+                </Link>
+              </Button>
+              <Button asChild variant="outline" className="gap-1.5 rounded-full text-xs">
+                <Link href="/meal-programs">
+                  <Target className="h-4 w-4 text-primary" /> Lộ trình dinh dưỡng
+                </Link>
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
 
       {/* Tabs Bar với Motion Animation */}
-      <div className="relative mt-6 grid grid-cols-2 gap-1 rounded-2xl border border-border/80 bg-muted/80 p-1.5 shadow-sm backdrop-blur-sm sm:grid-cols-3 lg:grid-cols-6 lg:rounded-full">
+      <div className="relative mt-6 grid grid-cols-2 gap-1 rounded-2xl border border-border/80 bg-muted/80 p-1.5 shadow-sm backdrop-blur-sm sm:grid-cols-3 lg:grid-cols-7 lg:rounded-full">
         {tabs.map((t) => {
           const Icon = t.icon;
           const isActive = tab === t.id;
@@ -508,6 +521,7 @@ export default function ProfilePage() {
                       { id: 'ALL', label: `Tất cả (${myPosts.length})` },
                       { id: 'PUBLISHED', label: `Đã duyệt (${publishedCount})` },
                       { id: 'PENDING_REVIEW', label: `Chờ duyệt (${pendingCount})` },
+                      { id: 'REJECTED', label: `Bị từ chối (${rejectedCount})` },
                       { id: 'FLAGGED', label: `Cần sửa (${flaggedCount})` },
                       { id: 'DRAFT', label: `Bản nháp (${draftCount})` },
                     ] as const
@@ -572,12 +586,15 @@ export default function ProfilePage() {
                                     'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
                                   isPending &&
                                     'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
-                                  isFlagged &&
+                                  p.status === 'REJECTED' &&
                                     'bg-destructive/15 text-destructive border-destructive/30',
+                                  isFlagged &&
+                                    'bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30',
                                   p.status === 'DRAFT' && 'bg-muted text-muted-foreground'
                                 )}
                               >
-                                {p.statusLabel || p.status}
+                                {p.statusLabel ||
+                                  (p.status === 'REJECTED' ? 'Bị từ chối' : p.status)}
                               </Badge>
                               <Badge
                                 variant="outline"
@@ -622,19 +639,23 @@ export default function ProfilePage() {
                                 <Eye className="h-4 w-4" />
                               </Link>
                             </Button>
-                            {p.type === 'BLOG' && (
-                              <Button
-                                asChild
-                                variant="ghost"
-                                size="icon"
-                                aria-label="Sửa bài viết"
-                                className="rounded-xl"
+                            <Button
+                              asChild
+                              variant="ghost"
+                              size="icon"
+                              aria-label={p.type === 'RECIPE' ? 'Sửa công thức' : 'Sửa bài viết'}
+                              className="rounded-xl"
+                            >
+                              <Link
+                                href={
+                                  p.type === 'RECIPE'
+                                    ? `/recipes/${p.id}/edit`
+                                    : `/articles/${p.id}/edit`
+                                }
                               >
-                                <Link href={`/articles/${p.id}/edit`}>
-                                  <Pencil className="h-4 w-4" />
-                                </Link>
-                              </Button>
-                            )}
+                                <Pencil className="h-4 w-4" />
+                              </Link>
+                            </Button>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -799,6 +820,9 @@ export default function ProfilePage() {
               </Card>
             </div>
           )}
+
+          {/* TAB: STORAGE — hạn ngạch lưu trữ & dung lượng tệp tin (Phase 15) */}
+          {tab === 'storage' && <ProfileStorageTab />}
 
           {/* TAB: CONTRIBUTOR — nộp đơn + lịch sử đơn (features/contributor, fixture) */}
           {tab === 'contributor' && <ContributorTab />}

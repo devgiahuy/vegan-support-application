@@ -148,6 +148,7 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
     return COVER_PRESETS[0].url;
   });
   const [coverMedia, setCoverMedia] = React.useState<{
+    assetId?: string;
     publicId?: string;
     mimeType?: string;
     bytes?: number;
@@ -614,8 +615,13 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
                 onChange={(url, meta) => {
                   setCoverImage(url);
                   setCoverMedia(
-                    meta?.publicId && meta?.mimeType && meta?.bytes
-                      ? { publicId: meta.publicId, mimeType: meta.mimeType, bytes: meta.bytes }
+                    meta?.assetId || (meta?.publicId && meta?.mimeType && meta?.bytes)
+                      ? {
+                          assetId: meta?.assetId,
+                          publicId: meta?.publicId,
+                          mimeType: meta?.mimeType,
+                          bytes: meta?.bytes,
+                        }
                       : null
                   );
                 }}

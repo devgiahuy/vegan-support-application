@@ -93,11 +93,18 @@ export interface Recipe {
   statusLabel?: string;
   /** Version optimistic-concurrency của backend (dùng cho update/delete). */
   version?: number;
+  /** ID của bản revision đang được biên tập hoặc gửi duyệt */
+  revisionId?: string;
+  /** Số thứ tự phiên bản của revision (v1, v2,...) */
+  revisionVersion?: number;
+  /** Phiên bản revision đã xuất bản công khai (nếu có, dùng cho luồng song song dual-revision) */
+  publishedRevisionVersion?: number | null;
   author: RecipeAuthor;
   category: string | RecipeCategoryObject;
   coverImageUrl?: string;
   /** Metadata ảnh bìa để ráp `media[]` khi tạo/sửa (backend yêu cầu publicId/bytes/mime). */
   coverMedia?: {
+    assetId?: string;
     publicId?: string;
     mimeType?: string;
     bytes?: number;

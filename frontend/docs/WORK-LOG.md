@@ -16,6 +16,56 @@
 - Còn lại / rủi ro:
 ```
 
+## [2026-09-23] — Tự động Gửi Duyệt Video sau khi Tạo & Đồng bộ Hàng đợi Kiểm duyệt Admin
+
+- Mục tiêu: Khắc phục trường hợp người dùng tạo video thành công nhưng không thấy xuất hiện trong bảng điều khiển Admin (`/admin/dashboard?tab=queue`).
+- Nguyên nhân:
+  - Khi gọi `POST /api/v1/posts`, backend lưu video ở trạng thái `DRAFT` (Bản nháp riêng tư của tác giả).
+  - Hàng đợi kiểm duyệt Admin (`/admin/dashboard?tab=queue`) theo đặc tả Phase 16 chỉ truy vấn các bản ghi có trạng thái `PENDING_REVIEW` (Chờ duyệt), `FLAGGED`, hoặc `QUARANTINED`. Bản nháp `DRAFT` không thuộc hàng đợi duyệt.
+  - Form tạo video trước đó chỉ dừng lại ở bước tạo post mà chưa kích hoạt `reviewApi.submitPost()` (`POST /api/v1/posts/:id/submit`).
+- Đã làm:
+  - Cập nhật hàm `onSubmit` trong `src/app/(site)/videos/new/page.tsx`: Sau khi tạo video thành công qua `createVideoMutation`, hệ thống tự động gọi `reviewApi.submitPost(created.id, { revisionId, expectedVersion })` để chuyển video sang `PENDING_REVIEW` và đưa thẳng vào hàng đợi duyệt của Admin.
+  - Tự động hủy cache query (`CONTENT_REVIEW_KEYS.all`) để Bảng điều khiển Admin tự cập nhật ngay lập tức.
+  - Bổ sung thông báo toast rõ ràng: báo thành công khi video đã gửi duyệt, hoặc hướng dẫn gửi duyệt từ trang chi tiết nếu có lỗi mạng.
+- File tạo/sửa:
+  - `src/app/(site)/videos/new/page.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 307/307 tests pass.
+- PROGRESS: Trải nghiệm đăng video liền mạch, tự động kết nối luồng tạo video với hàng đợi kiểm duyệt Phase 16.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-23] — Sửa lỗi Validation Error khi Tạo Video / Bài viết với Media Payload Phase 15
+
+- Mục tiêu: Khắc phục lỗi `400 Bad Request` (`VALIDATION_ERROR: media.0.assetId is required, Unrecognized keys: "publicId", "secureUrl", "mimeType", "bytes"`) khi người dùng tạo video (nhúng link YouTube hoặc tải tệp) hoặc tạo bài viết / công thức có ảnh bìa.
+- Nguyên nhân:
+  - Backend Phase 15 áp dụng `mediaInputSchema` với `.strict()`. Đối với Cloudinary media, backend yêu cầu định dạng `{ provider: 'CLOUDINARY', kind: 'COVER_IMAGE' | 'VIDEO', assetId: string }`.
+  - Frontend trước đó gửi định dạng legacy `{ provider: 'CLOUDINARY', kind: 'COVER_IMAGE', publicId, secureUrl, mimeType, bytes }` gây lỗi `Unrecognized keys` và thiếu `assetId`.
+- Đã làm:
+  - Cập nhật hàm `coverMediaInput()` trong `src/features/post/mappers/post.mapper.ts`: chỉ trả về `{ provider: 'CLOUDINARY', kind: 'COVER_IMAGE', assetId: meta.assetId }` khi có `assetId` hợp lệ, loại bỏ hoàn toàn các key dư thừa.
+  - Cập nhật hàm `toCreateDto()` trong `src/features/video/mappers/video.mapper.ts`: mapping Cloudinary video chuẩn `{ provider: 'CLOUDINARY', kind: 'VIDEO', assetId: domain.videoMedia.assetId }`.
+  - Cập nhật Zod schemas `videoFormSchema` (`video-form.schema.ts`) và `recipeFormSchema` (`recipe-form.schema.ts`) để hỗ trợ trường `assetId: z.string().optional()`.
+  - Cập nhật form state tại `src/app/(site)/videos/new/page.tsx`, `src/features/recipe/components/recipe-editor-form.tsx`, `src/features/post/components/post-editor-form.tsx`: bảo toàn `assetId: meta.assetId` từ `ImageUploader` / `VideoUploader` (lấy từ commit reservation của Phase 15).
+  - Bổ sung unit tests trong `post.mapper.test.ts` và `video.mapper.test.ts` kiểm thử 100% các case video YouTube + ảnh bìa reservation, video Cloudinary upload, và drop legacy mock data.
+- File tạo/sửa:
+  - `src/features/post/mappers/post.mapper.ts`
+  - `src/features/video/mappers/video.mapper.ts`
+  - `src/features/video/schemas/video-form.schema.ts`
+  - `src/features/recipe/schemas/recipe-form.schema.ts`
+  - `src/app/(site)/videos/new/page.tsx`
+  - `src/features/recipe/components/recipe-editor-form.tsx`
+  - `src/features/post/components/post-editor-form.tsx`
+  - `src/features/post/mappers/post.mapper.test.ts`
+  - `src/features/video/mappers/video.mapper.test.ts`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 307/307 tests pass (31 files).
+  - `npm run build`: 35/35 routes compile & optimize thành công 100%.
+- PROGRESS: Luồng tạo nội dung (Video, Bài viết, Công thức) hoàn toàn tương thích với Storage Quota & Media Asset Schema của Backend Phase 15.
+- Còn lại / rủi ro: Không có.
+
 ## [2026-09-23] — Bổ sung Lối vào Điều hướng Tra cứu Dinh dưỡng (No Orphan Navigation Entry Points)
 
 - Mục tiêu: Khắc phục triệt để tình trạng thiếu lối vào tự nhiên (No Orphan Pages / No Orphan Sections) dẫn đến trang Tra cứu Dinh dưỡng & Nguyên liệu chuẩn (`/categories#tra-cuu`), giúp người dùng dễ dàng phát hiện và truy cập từ mọi màn hình chính.

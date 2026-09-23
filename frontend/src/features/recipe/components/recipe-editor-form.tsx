@@ -236,8 +236,13 @@ export function RecipeEditorForm({
                 form.setValue('coverImageUrl', url, { shouldValidate: true });
                 form.setValue(
                   'coverMedia',
-                  meta?.publicId && meta?.mimeType && meta?.bytes
-                    ? { publicId: meta.publicId, mimeType: meta.mimeType, bytes: meta.bytes }
+                  meta?.assetId || (meta?.publicId && meta?.mimeType && meta?.bytes)
+                    ? {
+                        assetId: meta?.assetId,
+                        publicId: meta?.publicId,
+                        mimeType: meta?.mimeType,
+                        bytes: meta?.bytes,
+                      }
                     : null,
                   { shouldValidate: true }
                 );

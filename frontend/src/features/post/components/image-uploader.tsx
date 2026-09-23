@@ -8,7 +8,9 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
 import { validateImageFile } from '../utils/media-validator';
-import { uploadApi, toUploadedMeta, type UploadedMediaMeta } from '../api/upload.api';
+import type { UploadedMediaMeta } from '../api/upload.api';
+import { uploadWithReservation } from '@/features/storage/api/storage-upload';
+import { StorageQuotaWidget } from '@/features/storage/components/storage-quota-widget';
 
 interface ImageUploaderProps {
   value?: string | null;
@@ -41,25 +43,22 @@ export function ImageUploader({
       setIsUploading(true);
       setUploadPercent(0);
 
-      const signatureData = await uploadApi.getUploadSignature({
-        resourceType: 'image',
+      const asset = await uploadWithReservation(file, {
+        kind: 'COVER_IMAGE',
+        onProgress: (p) => setUploadPercent(p.percent),
       });
 
-      const res = await uploadApi.uploadToCloudinary(file, signatureData, (pct) => {
-        setUploadPercent(pct);
-      });
+      const uploadedMeta: UploadedMediaMeta = {
+        assetId: asset.id,
+        publicId: asset.publicId,
+        mimeType: asset.mimeType,
+        bytes: asset.bytes,
+        width: asset.width || undefined,
+        height: asset.height || undefined,
+      };
 
-      onChange(res.secure_url || res.url, toUploadedMeta(res, file.type));
-      if (signatureData.apiKey === 'mock_api_key') {
-        // Backend chưa phục vụ chữ ký: URL chỉ là preview tạm (blob:), tạo bài
-        // sẽ bị backend từ chối. Báo rõ để user không submit trong im lặng.
-        toast.warning('Máy chủ upload chưa phản hồi — ảnh chỉ xem trước tạm thời.', {
-          description:
-            'Bài viết dùng ảnh này sẽ bị từ chối khi gửi. Hãy thử lại khi backend sẵn sàng.',
-        });
-      } else {
-        toast.success('Đã tải ảnh lên thành công!');
-      }
+      onChange(asset.secureUrl, uploadedMeta);
+      toast.success('Đã tải ảnh lên thành công!');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Không thể tải ảnh lên';
       toast.error('Lỗi khi tải ảnh', {
@@ -182,6 +181,9 @@ export function ImageUploader({
           )}
         </div>
       )}
+
+      {/* Thông tin hạn ngạch lưu trữ rút gọn */}
+      <StorageQuotaWidget variant="compact" className="pt-2" />
     </div>
   );
 }
