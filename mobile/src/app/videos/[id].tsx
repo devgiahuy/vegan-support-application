@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Alert, Linking, Pressable, Share, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Link, type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Bookmark, ExternalLink, MessageCircle, Play, Share2, Sparkles, ThumbsUp } from 'lucide-react-native';
+import { Bookmark, ExternalLink, MessageCircle, Play, Share2, Sparkles, ThumbsUp } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -127,12 +127,6 @@ export default function VideoDetailScreen() {
   return (
     <SiteScreen>
       <View className="gap-5 px-5 pt-4">
-        <Link href={'/videos' as Href} asChild>
-          <Pressable className="h-10 w-10 items-center justify-center rounded-full bg-muted">
-            <ArrowLeft size={18} color={colors.foreground} />
-          </Pressable>
-        </Link>
-
         <View className="overflow-hidden rounded-3xl border border-border bg-card">
           <Pressable onPress={openVideo} className="relative aspect-video w-full">
             <Image source={{ uri: video.thumbnailUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />

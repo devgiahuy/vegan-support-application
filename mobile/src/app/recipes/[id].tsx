@@ -5,7 +5,6 @@ import { Link, type Href, useLocalSearchParams } from 'expo-router';
 import {
   AlertTriangle,
   ArrowLeft,
-  Bookmark,
   CalendarPlus,
   Clock,
   Dumbbell,
@@ -24,6 +23,7 @@ import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { RecipeCard } from '@/features/recipe/components/recipe-card';
 import { useRecipeDetailQuery, useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
+import { CommunityPanel } from '@/features/community/components/community-panel';
 import { PostStatus } from '@/common/enums';
 import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
@@ -35,8 +35,8 @@ function notifyComingSoon(feature: string) {
 /**
  * Chi tiết công thức — đồng bộ `frontend/src/app/(site)/recipes/[id]/page.tsx` +
  * `recipe-detail-view.tsx`: ảnh bìa, chỉ số dinh dưỡng, nguyên liệu tick-chọn,
- * hướng dẫn nấu, tương thích/dị ứng, món liên quan. Khối cộng đồng (vote/bình
- * luận/đánh giá) chưa dựng ở mobile — cần nguyên `features/community` (task riêng).
+ * hướng dẫn nấu, tương thích/dị ứng, món liên quan, khối cộng đồng (upvote/lưu/
+ * đánh giá khẩu vị-độ khó/bình luận — `CommunityPanel`, gọi API thật).
  */
 export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -46,7 +46,6 @@ export default function RecipeDetailScreen() {
   const relatedRecipes = (recipesPagination?.items ?? []).filter((r) => r.id !== id).slice(0, 3);
 
   const [servings, setServings] = React.useState<number | null>(null);
-  const [isSaved, setIsSaved] = React.useState(false);
   const [checked, setChecked] = React.useState<string[]>([]);
 
   const toggleIngredient = (name: string) => {
@@ -156,17 +155,6 @@ export default function RecipeDetailScreen() {
         </View>
 
         <View className="flex-row flex-wrap gap-2">
-          <Pressable
-            onPress={() => setIsSaved((v) => !v)}
-            className={cn(
-              'flex-row items-center gap-1.5 rounded-full border px-3 py-1.5',
-              isSaved ? 'border-destructive/40 bg-destructive/10' : 'border-input'
-            )}>
-            <Bookmark size={14} color={isSaved ? colors.destructive : colors.foreground} />
-            <Text className={cn('text-xs font-medium', isSaved ? 'text-destructive' : 'text-foreground')}>
-              {isSaved ? 'Đã lưu' : 'Lưu món'}
-            </Text>
-          </Pressable>
           <Pressable onPress={handleShare} className="flex-row items-center gap-1.5 rounded-full border border-input px-3 py-1.5">
             <Share2 size={14} color={colors.foreground} />
             <Text className="text-xs font-medium text-foreground">Chia sẻ</Text>
@@ -332,6 +320,13 @@ export default function RecipeDetailScreen() {
             ))}
           </View>
         </View>
+
+        {/* Cộng đồng: upvote, lưu món, đánh giá khẩu vị/độ khó, bình luận */}
+        <CommunityPanel
+          postId={recipe.id}
+          showRating
+          commentPlaceholder="Chia sẻ cảm nhận hoặc mẹo nấu món này..."
+        />
 
         {/* Related */}
         {relatedRecipes.length > 0 ? (

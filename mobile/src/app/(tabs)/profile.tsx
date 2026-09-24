@@ -4,10 +4,15 @@ import { Link } from 'expo-router';
 import {
   Activity,
   AlertTriangle,
+  BadgeCheck,
+  Bookmark,
   CalendarDays,
   CheckCircle2,
+  ChevronRight,
+  FolderTree,
   HeartPulse,
   Leaf,
+  LogOut,
   RefreshCw,
   ShieldCheck,
   UserRound,
@@ -23,6 +28,7 @@ import { TextField } from '@/components/ui/text-field';
 import { useDetailedProfileQuery, useUpdateBasicProfileMutation } from '@/features/profile/queries/profile.queries';
 import { useSaveHealthProfileMutation } from '@/features/profile/queries/health.queries';
 import type { HealthProfile } from '@/features/profile/types/health.model';
+import { useLogoutMutation } from '@/features/auth/queries/auth.queries';
 import { useAuthStore } from '@/store/useAuthStore';
 import { formatDate } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
@@ -75,6 +81,7 @@ export default function ProfileScreen() {
   const { data: apiProfile, isLoading, isError, refetch, isRefetching } = useDetailedProfileQuery();
   const updateProfile = useUpdateBasicProfileMutation();
   const saveHealth = useSaveHealthProfileMutation();
+  const logoutMutation = useLogoutMutation();
 
   const [displayName, setDisplayName] = React.useState('');
   const [height, setHeight] = React.useState('');
@@ -134,6 +141,17 @@ export default function ProfileScreen() {
     } catch {
       Alert.alert('Không thể lưu chỉ số', 'Vui lòng kiểm tra kết nối và thử lại.');
     }
+  };
+
+  const handleLogout = () => {
+    Alert.alert('Đăng xuất', 'Bạn có chắc muốn đăng xuất khỏi VeggieConnect?', [
+      { text: 'Hủy', style: 'cancel' },
+      {
+        text: 'Đăng xuất',
+        style: 'destructive',
+        onPress: () => logoutMutation.mutate(undefined),
+      },
+    ]);
   };
 
   if (!isAuthenticated) {
@@ -368,16 +386,92 @@ export default function ProfileScreen() {
                   <Text className="text-sm text-muted-foreground">Chưa khai báo dị ứng.</Text>
                 )}
               </View>
+              <Link href="/diet-preferences" asChild>
+                <Pressable className="mt-4 flex-row items-center justify-center gap-1.5 rounded-xl border border-input py-2.5">
+                  <Text className="text-sm font-semibold text-foreground">Chỉnh sửa chế độ ăn</Text>
+                </Pressable>
+              </Link>
             </>
           ) : (
             <View className="items-center rounded-2xl border border-dashed border-border p-5">
               <Activity size={22} color={colors.primary} />
               <Text className="mt-2 text-center font-semibold text-foreground">Chưa thiết lập chế độ ăn</Text>
               <Text className="mt-1 text-center text-sm text-muted-foreground">
-                Phần này sẽ hiển thị khi bạn lưu diet preferences từ luồng Meal Plan.
+                Thiết lập kiểu ăn, dị ứng và nguyên liệu loại trừ để lọc công thức phù hợp hơn.
               </Text>
+              <Link href="/diet-preferences" asChild>
+                <PrimaryButton label="Thiết lập ngay" className="mt-4 w-full" />
+              </Link>
             </View>
           )}
+        </View>
+
+        <SectionTitle title="Nội dung của bạn" subtitle="Nội dung và nguyện vọng bạn đã lưu/gửi trên VeggieConnect." />
+        <View className="overflow-hidden rounded-2xl border border-border bg-card">
+          <Link href="/bookmarks" asChild>
+            <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <Bookmark size={18} color={colors.primary} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-semibold text-foreground">Đã lưu</Text>
+                <Text className="mt-0.5 text-xs text-muted-foreground">Công thức và video bạn đã lưu lại.</Text>
+              </View>
+              <ChevronRight size={16} color={colors.mutedForeground} />
+            </Pressable>
+          </Link>
+          <Link href="/categories" asChild>
+            <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <FolderTree size={18} color={colors.primary} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-semibold text-foreground">Danh mục</Text>
+                <Text className="mt-0.5 text-xs text-muted-foreground">Duyệt món chay và bài viết theo nhóm.</Text>
+              </View>
+              <ChevronRight size={16} color={colors.mutedForeground} />
+            </Pressable>
+          </Link>
+          <Link href="/contributor-status" asChild>
+            <Pressable className="flex-row items-center gap-3 p-4 active:bg-muted">
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <BadgeCheck size={18} color={colors.primary} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-semibold text-foreground">Nguyện vọng Contributor</Text>
+                <Text className="mt-0.5 text-xs text-muted-foreground">
+                  {displayProfile.user.contributorProfile
+                    ? `Đã duyệt • ${displayProfile.user.contributorProfile.approvalBasisLabel}`
+                    : displayProfile.user.contributorApplication
+                      ? `Trạng thái: ${displayProfile.user.contributorApplication.rawStatus}`
+                      : 'Chưa gửi nguyện vọng nào.'}
+                </Text>
+              </View>
+              <ChevronRight size={16} color={colors.mutedForeground} />
+            </Pressable>
+          </Link>
+        </View>
+
+        <SectionTitle title="Tài khoản & hệ thống" subtitle="Quản lý phiên đăng nhập trên thiết bị này." />
+        <View className="overflow-hidden rounded-2xl border border-border bg-card">
+          <Pressable
+            onPress={handleLogout}
+            disabled={logoutMutation.isPending}
+            className="flex-row items-center gap-3 p-4 active:bg-muted"
+          >
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+              <LogOut size={18} color={colors.destructive} />
+            </View>
+            <View className="flex-1">
+              <Text className="text-sm font-semibold text-destructive">
+                {logoutMutation.isPending ? 'Đang đăng xuất...' : 'Đăng xuất'}
+              </Text>
+              <Text className="mt-0.5 text-xs text-muted-foreground">
+                Thoát khỏi tài khoản trên thiết bị này.
+              </Text>
+            </View>
+            <ChevronRight size={16} color={colors.mutedForeground} />
+          </Pressable>
         </View>
 
         <View className="h-6" />

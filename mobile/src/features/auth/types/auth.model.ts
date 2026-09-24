@@ -1,6 +1,6 @@
 import {
   ContributorApplicationStatus,
-  ContributorType,
+  ContributorApprovalBasis,
   LogoutScope,
   MemberStatus,
   UserRole,
@@ -15,8 +15,16 @@ export interface ContributorApplication {
   status: ContributorApplicationStatus;
   /** Chuỗi gốc từ backend để hiển thị an toàn khi status lạ. */
   rawStatus: string;
-  requestedType: ContributorType | null;
-  requestedTypeLabel: string;
+  claimedApprovalBasis: ContributorApprovalBasis | null;
+  claimedApprovalBasisLabel: string;
+}
+
+/** Hồ sơ Contributor đã duyệt — mọi basis có CÙNG quyền hạn, chỉ khác nhãn hiển thị (BL-01). */
+export interface ContributorProfile {
+  approvalBasis: ContributorApprovalBasis;
+  /** Nhãn hiển thị backend trả sẵn; fallback dùng nhãn tiếng Việt tự map nếu backend không gửi. */
+  approvalBasisLabel: string;
+  approvedAt: Date | null;
 }
 
 /** Người dùng hiện tại. */
@@ -30,6 +38,7 @@ export interface User {
   status: MemberStatus;
   createdAt: Date | null;
   contributorApplication: ContributorApplication | null;
+  contributorProfile: ContributorProfile | null;
   /** 1–2 ký tự đầu của displayName, dùng cho avatar fallback. */
   initials: string;
 }

@@ -67,3 +67,17 @@ export interface PostListResponseDto {
     totalPages: number;
   };
 }
+
+/** `GET /posts/:idOrSlug` → 1 bài viết. */
+export interface PostDetailResponseDto {
+  success?: boolean;
+  data?: BasePostDto | null;
+  meta?: null;
+}
+
+/** `GET /posts/:id/related` → gộp theo loại; Cẩm nang chỉ dùng `blogs`. */
+export interface RelatedPostsResponseDto {
+  success?: boolean;
+  data?: { recipes?: BasePostDto[]; blogs?: BasePostDto[]; videos?: BasePostDto[] } | null;
+  meta?: { rankingVersion?: string; limitPerType?: number } | null;
+}

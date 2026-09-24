@@ -7,6 +7,8 @@ export const COMMUNITY_QUERY_KEYS = {
   thread: (postId: string, params?: CommunityQueryParams) =>
     [...COMMUNITY_QUERY_KEYS.all, 'thread', postId, params ?? {}] as const,
   summary: (postId: string) => [...COMMUNITY_QUERY_KEYS.all, 'summary', postId] as const,
+  bookmarks: (params?: { page?: number; limit?: number; type?: 'RECIPE' | 'VIDEO' }) =>
+    [...COMMUNITY_QUERY_KEYS.all, 'bookmarks', params ?? {}] as const,
 };
 
 function invalidatePost(queryClient: ReturnType<typeof useQueryClient>, postId: string) {
@@ -55,6 +57,28 @@ export function useBookmarkMutation() {
   return useMutation({
     mutationFn: (vars: { postId: string; bookmarked: boolean }) =>
       vars.bookmarked ? communityApi.putBookmark(vars.postId) : communityApi.deleteBookmark(vars.postId),
+    onSuccess: (_, vars) => {
+      invalidatePost(queryClient, vars.postId);
+      void queryClient.invalidateQueries({ queryKey: [...COMMUNITY_QUERY_KEYS.all, 'bookmarks'] });
+    },
+  });
+}
+
+/** Đánh giá khẩu vị/độ khó — chỉ Recipe. */
+export function useRatingMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { postId: string; taste: number; difficulty: number }) =>
+      communityApi.putRating(vars.postId, vars.taste, vars.difficulty),
     onSuccess: (_, vars) => invalidatePost(queryClient, vars.postId),
+  });
+}
+
+/** `GET /users/me/bookmarks` — màn "Đã lưu" ở Hồ sơ. */
+export function useMyBookmarksQuery(params?: { page?: number; limit?: number; type?: 'RECIPE' | 'VIDEO' }) {
+  return useQuery({
+    queryKey: COMMUNITY_QUERY_KEYS.bookmarks(params),
+    queryFn: () => communityApi.getMyBookmarks(params),
+    staleTime: 30 * 1000,
   });
 }

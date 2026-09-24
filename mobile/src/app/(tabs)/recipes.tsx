@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
-import { Link, type Href } from 'expo-router';
+import { Link, type Href, useLocalSearchParams } from 'expo-router';
 import { PlusCircle, Search, Sparkles } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
@@ -33,9 +33,10 @@ function notifyComingSoon(feature: string) {
  */
 export default function RecipesScreen() {
   const colors = useIconColors();
+  const params = useLocalSearchParams<{ category?: string }>();
   const [query, setQuery] = React.useState('');
   const [difficulty, setDifficulty] = React.useState('');
-  const [categoryId, setCategoryId] = React.useState<string | null>(null);
+  const [categoryId, setCategoryId] = React.useState<string | null>(params.category ?? null);
 
   const {
     data: categoryTree = [],
@@ -73,6 +74,11 @@ export default function RecipesScreen() {
           <Text className="text-xl font-bold text-foreground">
             Khám phá công thức <Text className="text-sm font-normal text-muted-foreground">({totalItems})</Text>
           </Text>
+          <Link href={'/categories' as Href} asChild>
+            <Pressable className="rounded-full bg-muted px-3 py-1.5">
+              <Text className="text-xs font-semibold text-foreground">Danh mục</Text>
+            </Pressable>
+          </Link>
         </View>
 
         {/* Search */}
@@ -223,12 +229,13 @@ export default function RecipesScreen() {
         </View>
 
         <View className="mt-4">
-          <PrimaryButton
-            label="Đăng công thức mới"
-            variant="outline"
-            icon={<PlusCircle size={16} color={colors.foreground} />}
-            onPress={() => notifyComingSoon('Đăng công thức')}
-          />
+          <Link href={'/recipes/new' as Href} asChild>
+            <PrimaryButton
+              label="Đăng công thức mới"
+              variant="outline"
+              icon={<PlusCircle size={16} color={colors.foreground} />}
+            />
+          </Link>
         </View>
       </View>
     </SiteScreen>

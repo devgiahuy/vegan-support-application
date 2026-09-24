@@ -1,4 +1,4 @@
-import { Alert, Pressable, Text, View } from 'react-native';
+import { Alert, Text, View } from 'react-native';
 import { Link, type Href } from 'expo-router';
 import {
   ArrowRight,
@@ -41,15 +41,7 @@ export default function HomeScreen() {
   const recipes = recipesPagination?.items ?? [];
 
   return (
-    <SiteScreen
-      fab={
-        <Link href={'/assistant' as Href} asChild>
-          <Pressable className="absolute bottom-5 right-5 flex-row items-center gap-2 rounded-full bg-primary px-4 py-3 shadow-lg">
-            <Sparkles size={16} color={colors.primaryForeground} />
-            <Text className="text-sm font-semibold text-primary-foreground">Hỏi AI nhanh</Text>
-          </Pressable>
-        </Link>
-      }>
+    <SiteScreen showFooter>
       {/* Hero */}
       <View className="px-5 pt-4">
         <View className="flex-row items-center gap-1.5 self-start rounded-full border border-primary/25 bg-primary/10 px-3 py-1.5">
@@ -98,8 +90,10 @@ export default function HomeScreen() {
         <View className="mt-6 flex-row gap-2.5 border-t border-border pt-5">
           {STATS.map((s) => (
             <View key={s.label} className="flex-1 gap-1.5 rounded-2xl border border-border bg-card p-3">
-              <s.icon size={16} color={colors.primary} />
-              <Text className="text-lg font-bold text-primary">{s.value}</Text>
+              <View className="flex-row items-center gap-1.5">
+                <s.icon size={16} color={colors.primary} />
+                <Text className="text-lg font-bold text-primary">{s.value}</Text>
+              </View>
               <Text className="text-[11px] text-foreground">{s.label}</Text>
             </View>
           ))}

@@ -2,13 +2,20 @@ import api from '@/lib/axios';
 import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
 import { communityMapper } from '../mappers/community.mapper';
 import type {
+  BookmarkListResponseDto,
   CommunityBookmarkResponseDto,
   CommunityCommentListResponseDto,
   CommunityCommentResponseDto,
+  CommunityRatingResponseDto,
   CommunitySummaryResponseDto,
   CommunityVoteResponseDto,
 } from '../types/community.dto';
-import type { CommunityComment, CommunityQueryParams, CommunitySummary } from '../types/community.model';
+import type {
+  BookmarkedItem,
+  CommunityComment,
+  CommunityQueryParams,
+  CommunitySummary,
+} from '../types/community.model';
 import type { PaginationResult } from '@/types/api';
 
 export const communityApi = {
@@ -64,5 +71,27 @@ export const communityApi = {
       silent: true,
     });
     return communityMapper.toBookmarkModel(res.data);
+  },
+
+  /** `PUT /posts/:id/rating` — chỉ Recipe (taste/difficulty 1-5). */
+  putRating: async (postId: string, taste: number, difficulty: number) => {
+    const res = await api.put<CommunityRatingResponseDto>(
+      API_ENDPOINTS.COMMUNITY.RATING(postId),
+      { taste, difficulty },
+      { silent: true }
+    );
+    return communityMapper.toRatingResultModel(res.data);
+  },
+
+  /** `GET /users/me/bookmarks` — danh sách Recipe/Video đã lưu của user hiện tại. */
+  getMyBookmarks: async (params?: {
+    page?: number;
+    limit?: number;
+    type?: 'RECIPE' | 'VIDEO';
+  }): Promise<PaginationResult<BookmarkedItem>> => {
+    const res = await api.get<BookmarkListResponseDto>(API_ENDPOINTS.COMMUNITY.MY_BOOKMARKS, {
+      params: { page: params?.page ?? 1, limit: params?.limit ?? 20, type: params?.type },
+    });
+    return communityMapper.toBookmarkListModel(res.data);
   },
 };

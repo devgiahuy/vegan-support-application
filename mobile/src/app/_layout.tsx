@@ -22,18 +22,24 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="index" />
-          <Stack.Screen name="recipes" />
+          {/* Nhóm tab chính có thanh điều hướng dưới đáy: Trang chủ, Món chay, Bản đồ quán,
+              menu quạt (Video/Cẩm nang/Thực đơn), Hồ sơ. Trợ lý AI, Thực đơn, Cẩm nang,
+              danh sách Video vẫn là màn trong nhóm tab (giữ thanh dưới đáy) dù không có
+              nút riêng trên thanh — tới qua nút quạt hoặc từ Trang chủ. */}
+          <Stack.Screen name="(tabs)" />
+          {/* Màn phụ và màn chi tiết: mở chồng lên tab, có nút quay lại trên header */}
           <Stack.Screen name="recipes/[id]" />
-          <Stack.Screen name="articles" />
-          <Stack.Screen name="videos" />
+          <Stack.Screen name="recipes/new" />
+          <Stack.Screen name="articles/[id]" />
+          <Stack.Screen name="articles/new" />
           <Stack.Screen name="videos/new" />
           <Stack.Screen name="videos/[id]" />
-          <Stack.Screen name="assistant" />
-          <Stack.Screen name="meal-plans" />
           <Stack.Screen name="meal-plans/[id]" />
-          <Stack.Screen name="restaurants" />
-          <Stack.Screen name="profile" />
+          <Stack.Screen name="categories" />
+          <Stack.Screen name="search" />
+          <Stack.Screen name="bookmarks" />
+          <Stack.Screen name="contributor-status" />
+          <Stack.Screen name="diet-preferences" />
           <Stack.Screen name="(auth)/login" options={{ presentation: 'modal' }} />
           <Stack.Screen name="(auth)/register" options={{ presentation: 'modal' }} />
         </Stack>

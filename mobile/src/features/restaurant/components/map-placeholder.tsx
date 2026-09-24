@@ -35,8 +35,10 @@ export function MapPlaceholder({ items }: { items: Restaurant[] }) {
           </View>
         );
       })}
-      <View className="absolute bottom-2 left-2 rounded-full bg-background/90 px-2.5 py-1">
-        <Text className="text-[11px] text-muted-foreground">
+      {/* Màu cố định (không theo theme) — nền pill có thể đè lên pin/màu nền thay đổi,
+          không thể dựa vào token sáng/tối để đảm bảo tương phản. */}
+      <View className="absolute bottom-2 left-2 rounded-full bg-black/70 px-2.5 py-1">
+        <Text className="text-[11px] text-white">
           Bản đồ minh họa — bản đồ tương tác có khi backend sẵn sàng
         </Text>
       </View>

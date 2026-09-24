@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
-import { Link, type Href, useRouter } from 'expo-router';
-import { ArrowLeft, Link as LinkIcon, Send, Tags } from 'lucide-react-native';
+import { type Href, useRouter } from 'expo-router';
+import { Link as LinkIcon, Send, Tags } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -95,12 +95,6 @@ export default function CreateVideoScreen() {
   return (
     <SiteScreen>
       <View className="gap-5 px-5 pt-4">
-        <Link href={'/videos' as Href} asChild>
-          <Pressable className="h-10 w-10 items-center justify-center rounded-full bg-muted">
-            <ArrowLeft size={18} color={colors.foreground} />
-          </Pressable>
-        </Link>
-
         <View>
           <Text className="text-2xl font-extrabold tracking-tight text-foreground">Đăng video nấu ăn</Text>
         </View>
