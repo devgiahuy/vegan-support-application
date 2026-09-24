@@ -100,12 +100,17 @@ describe('VideoMapper', () => {
     expect(model.formattedDuration).toBe('00:00');
   });
 
-  it('builds backend live-shape CreateVideoRequestDto', () => {
+  it('builds backend live-shape CreateVideoRequestDto for YouTube video with cover asset', () => {
     const createDto = videoMapper.toCreateDto({
       title: 'Lẩu nấm',
       category: { id: 'cat-lau', name: 'Lẩu' },
       coverImageUrl: 'https://example.com/cover.jpg',
-      coverMedia: { publicId: 'vegan-app/videos/cover', mimeType: 'image/jpeg', bytes: 50000 },
+      coverMedia: {
+        assetId: 'b7adb7b9-6f49-424a-a9d5-64fbea6e887a',
+        publicId: 'vegan-app/videos/cover',
+        mimeType: 'image/jpeg',
+        bytes: 50000,
+      },
       videoUrl: 'https://www.youtube.com/watch?v=abc12345678',
       videoSource: VideoSource.YOUTUBE,
       description: 'Mô tả video hướng dẫn nấu lẩu nấm thơm ngon đủ 20 ký tự.',
@@ -114,7 +119,39 @@ describe('VideoMapper', () => {
     expect(createDto.type).toBe('VIDEO');
     expect(createDto.categoryIds).toEqual(['cat-lau']);
     expect(createDto.body).toContain('lẩu nấm');
-    const videoMedia = createDto.media.find((m) => m.kind === 'VIDEO');
-    expect(videoMedia?.provider).toBe('YOUTUBE');
+    expect(createDto.media).toHaveLength(2);
+    expect(createDto.media[0]).toEqual({
+      provider: 'CLOUDINARY',
+      kind: 'COVER_IMAGE',
+      assetId: 'b7adb7b9-6f49-424a-a9d5-64fbea6e887a',
+    });
+    expect(createDto.media[1]).toEqual({
+      provider: 'YOUTUBE',
+      kind: 'VIDEO',
+      secureUrl: 'https://www.youtube.com/watch?v=abc12345678',
+    });
+  });
+
+  it('builds backend live-shape CreateVideoRequestDto for uploaded Cloudinary video', () => {
+    const createDto = videoMapper.toCreateDto({
+      title: 'Kho quẹt chay',
+      category: { id: 'cat-kho', name: 'Món kho' },
+      videoUrl: 'https://res.cloudinary.com/sample/video/upload/v1/kho.mp4',
+      videoSource: VideoSource.CLOUDINARY,
+      videoMedia: {
+        assetId: 'a1b2c3d4-0000-0000-0000-000000000000',
+        publicId: 'vegan-app/videos/kho',
+        mimeType: 'video/mp4',
+        bytes: 1000000,
+      },
+      description: 'Mô tả video hướng dẫn làm kho quẹt chay đủ 20 ký tự.',
+    });
+
+    expect(createDto.media).toHaveLength(1);
+    expect(createDto.media[0]).toEqual({
+      provider: 'CLOUDINARY',
+      kind: 'VIDEO',
+      assetId: 'a1b2c3d4-0000-0000-0000-000000000000',
+    });
   });
 });

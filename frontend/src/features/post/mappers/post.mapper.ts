@@ -105,22 +105,18 @@ function estimateReadingMinutes(body: string): number {
   return Math.max(1, Math.round(words / 200));
 }
 
-/** Ráp `media[]` cho ảnh bìa khi tạo/sửa. Thiếu metadata Cloudinary → bỏ qua để backend khỏi 400. */
+/** Ráp `media[]` cho ảnh bìa khi tạo/sửa. Chỉ hợp lệ khi có `assetId` từ reservation backend Phase 15. */
 export function coverMediaInput(
   coverImageUrl: string | undefined,
-  meta?: { publicId?: string; mimeType?: string; bytes?: number } | null
+  meta?: { assetId?: string; publicId?: string; mimeType?: string; bytes?: number } | null
 ): MediaInputDto[] {
   if (!coverImageUrl || coverImageUrl.startsWith('blob:')) return [];
-  if (!meta?.publicId || !meta?.mimeType || !meta?.bytes) return [];
-  if (meta.publicId.startsWith('mock_')) return [];
+  if (!meta?.assetId) return [];
   return [
     {
       provider: 'CLOUDINARY',
       kind: 'COVER_IMAGE',
-      publicId: meta.publicId,
-      secureUrl: coverImageUrl,
-      mimeType: meta.mimeType,
-      bytes: meta.bytes,
+      assetId: meta.assetId,
     },
   ];
 }
@@ -135,6 +131,14 @@ export class PostMapper extends BaseMapper<BlogDetailDto, Article> {
     const status = parsePostStatus(safeString(pickField(dto, ['status'], 'DRAFT')));
     const revision = pickField<PostRevisionDto | null>(dto, ['revision'], null);
     const body = safeString(revision?.body);
+    const revisionId = safeString(revision?.id);
+    const version = safeNumber(pickField(dto, ['version'], 1));
+    const revisionVersion = safeNumber(revision?.version, version);
+    const publishedRevisionVersion = pickField<number | null>(
+      dto,
+      ['publishedRevisionVersion'],
+      null
+    );
     const publishedAt = safeDate(pickField(dto, ['publishedAt', 'published_at'], null));
 
     return {
@@ -143,7 +147,10 @@ export class PostMapper extends BaseMapper<BlogDetailDto, Article> {
       slug: safeString(pickField(dto, ['slug'], '')),
       status,
       statusLabel: getPostStatusLabel(status),
-      version: safeNumber(pickField(dto, ['version'], 1)),
+      version,
+      revisionId: revisionId || undefined,
+      revisionVersion,
+      publishedRevisionVersion,
       author: authorFromDto(dto, 'Tác giả VeggieConnect'),
       category: firstCategory(dto),
       coverImageUrl: coverUrlFromMedia(

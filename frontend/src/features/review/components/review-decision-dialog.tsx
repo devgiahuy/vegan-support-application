@@ -24,24 +24,27 @@ interface ReviewDecisionDialogProps {
   onOpenChange: (open: boolean) => void;
   decision: ReviewDecision;
   postId: string;
+  revisionId?: string;
   postTitle: string;
   /** false khi bài do chính user tạo hoặc backend báo không quyền quyết. */
   canDecide: boolean;
   onSuccess?: () => void;
 }
 
-const MAX_REASON_LENGTH = 2000;
+const MAX_REASON_LENGTH = 1000;
 
 export function ReviewDecisionDialog({
   open,
   onOpenChange,
   decision,
   postId,
+  revisionId,
   postTitle,
   canDecide,
   onSuccess,
 }: ReviewDecisionDialogProps) {
   const isApprove = decision === ReviewDecision.APPROVE;
+  const targetId = revisionId || postId;
   const approveMutation = useApprovePostMutation();
   const rejectMutation = useRejectPostMutation();
   const isPending = approveMutation.isPending || rejectMutation.isPending;
@@ -66,9 +69,9 @@ export function ReviewDecisionDialog({
   const onSubmit = async (values: ReviewDecisionValues) => {
     try {
       if (isApprove) {
-        await approveMutation.mutateAsync({ postId, reason: values.reason });
+        await approveMutation.mutateAsync({ postId: targetId, reason: values.reason });
       } else {
-        await rejectMutation.mutateAsync({ postId, reason: values.reason });
+        await rejectMutation.mutateAsync({ postId: targetId, reason: values.reason });
       }
       onOpenChange(false);
       onSuccess?.();

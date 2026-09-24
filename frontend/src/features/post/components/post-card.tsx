@@ -131,6 +131,29 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
               <Badge className="bg-background/90 text-foreground backdrop-blur text-[11px] font-medium shadow-sm">
                 {categoryName}
               </Badge>
+              {post.status && post.status !== 'PUBLISHED' && (
+                <Badge
+                  className={cn(
+                    'text-[10px] font-semibold backdrop-blur shadow-sm',
+                    post.status === 'PENDING_REVIEW' || post.status === 'PENDING'
+                      ? 'bg-amber-500/90 text-white'
+                      : post.status === 'REJECTED'
+                      ? 'bg-destructive/90 text-destructive-foreground'
+                      : post.status === 'DRAFT'
+                      ? 'bg-slate-700/90 text-white'
+                      : 'bg-muted text-muted-foreground'
+                  )}
+                >
+                  {post.statusLabel ||
+                    (post.status === 'PENDING_REVIEW' || post.status === 'PENDING'
+                      ? 'Chờ duyệt'
+                      : post.status === 'REJECTED'
+                      ? 'Từ chối'
+                      : post.status === 'DRAFT'
+                      ? 'Bản nháp'
+                      : post.status)}
+                </Badge>
+              )}
             </div>
           </div>
 
@@ -233,6 +256,29 @@ export function PostCard({ post, className, horizontal = false }: PostCardProps)
           >
             {dietSchoolLabel}
           </Badge>
+          {post.status && post.status !== 'PUBLISHED' && (
+            <Badge
+              className={cn(
+                'text-[10px] font-semibold backdrop-blur shadow-sm',
+                post.status === 'PENDING_REVIEW' || post.status === 'PENDING'
+                  ? 'bg-amber-500/90 text-white'
+                  : post.status === 'REJECTED'
+                  ? 'bg-destructive/90 text-destructive-foreground'
+                  : post.status === 'DRAFT'
+                  ? 'bg-slate-700/90 text-white'
+                  : 'bg-muted text-muted-foreground'
+              )}
+            >
+              {post.statusLabel ||
+                (post.status === 'PENDING_REVIEW' || post.status === 'PENDING'
+                  ? 'Chờ duyệt'
+                  : post.status === 'REJECTED'
+                  ? 'Từ chối'
+                  : post.status === 'DRAFT'
+                  ? 'Bản nháp'
+                  : post.status)}
+            </Badge>
+          )}
         </div>
 
         <div className="absolute top-3 right-3 flex items-center gap-1">

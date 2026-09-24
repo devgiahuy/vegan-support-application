@@ -23,7 +23,20 @@ export enum MemberStatus {
   DELETED = 'DELETED',
 }
 
-/** Loại nguyện vọng contributor khi đăng ký (BL-01). Chỉ mô tả nguyện vọng, không cấp quyền. */
+/**
+ * Căn cứ xét duyệt Contributor (BL-01, SRS §3.3).
+ * Chỉ là thông tin mô tả và kiểm toán (audit trail), không dùng phân quyền (RBAC).
+ */
+export enum ContributorApprovalBasis {
+  ORGANIZATION_AFFILIATION = 'ORGANIZATION_AFFILIATION',
+  PLATFORM_TRACK_RECORD = 'PLATFORM_TRACK_RECORD',
+  ADMIN_INVITED = 'ADMIN_INVITED',
+}
+
+/**
+ * @deprecated Đã bị thay thế bởi `ContributorApprovalBasis` từ Phase 14 (Unified Contributor).
+ * Giữ lại tạm thời để tương thích ngược cho tới khi dọn sạch toàn bộ tham chiếu cũ.
+ */
 export enum ContributorType {
   EXPERIENCED_PRACTITIONER = 'EXPERIENCED_PRACTITIONER',
   NUTRITION_EXPERT = 'NUTRITION_EXPERT',
@@ -34,6 +47,7 @@ export enum ContributorApplicationStatus {
   PENDING = 'PENDING',
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
+  WITHDRAWN = 'WITHDRAWN',
 }
 
 /** Phạm vi đăng xuất (OpenAPI `LogoutResponse.data.scope`). */

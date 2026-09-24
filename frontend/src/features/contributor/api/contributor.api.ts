@@ -4,25 +4,30 @@ import type { PaginationResult } from '@/types/api';
 import type {
   ContributorApplicationListResponseDto,
   ContributorApplicationResponseDto,
+  ContributorRevocationResponseDto,
 } from '../types/contributor.dto';
 import type {
   ContributorApplication,
   ContributorQueueParams,
+  ContributorRevocationResult,
   ReviewApplicationInput,
 } from '../types/contributor.model';
-import type { ContributorType } from '@/common/enums';
 import { contributorMapper } from '../mappers/contributor.mapper';
 
-export const USE_FIXTURES = false;
-
 export const contributorApi = {
-  /** `POST /contributor-applications` */
+  /** `POST /api/v1/contributor-applications` */
   submitApplication: async (
-    requestedType: ContributorType,
+    claimedApprovalBasis: 'ORGANIZATION_AFFILIATION' | 'PLATFORM_TRACK_RECORD',
     experience: string,
-    referenceLinks: string[]
+    organizationClaim?: string,
+    referenceLinks?: string[]
   ): Promise<ContributorApplication> => {
-    const payload = contributorMapper.toSubmitDto(requestedType, experience, referenceLinks);
+    const payload = contributorMapper.toSubmitDto(
+      claimedApprovalBasis,
+      experience,
+      organizationClaim,
+      referenceLinks
+    );
     const res = await api.post<ContributorApplicationResponseDto>(
       API_ENDPOINTS.CONTRIBUTOR.APPLY,
       payload
@@ -30,7 +35,7 @@ export const contributorApi = {
     return contributorMapper.toSingleApplication(res.data);
   },
 
-  /** `GET /contributor-applications/me` */
+  /** `GET /api/v1/contributor-applications/me` */
   getMyApplications: async (
     page = 1,
     limit = 20
@@ -45,7 +50,7 @@ export const contributorApi = {
     return contributorMapper.toApplicationList(res.data);
   },
 
-  /** `GET /admin/contributor-applications` */
+  /** `GET /api/v1/admin/contributor-applications` */
   getQueue: async (
     params?: ContributorQueueParams
   ): Promise<PaginationResult<ContributorApplication>> => {
@@ -56,7 +61,7 @@ export const contributorApi = {
           page: params?.page,
           limit: params?.limit,
           status: params?.status || undefined,
-          requestedType: params?.requestedType || undefined,
+          claimedApprovalBasis: params?.claimedApprovalBasis || undefined,
           source: params?.source || undefined,
           q: params?.q || undefined,
         },
@@ -66,7 +71,7 @@ export const contributorApi = {
     return contributorMapper.toApplicationList(res.data);
   },
 
-  /** `PATCH /admin/contributor-applications/:id/review` */
+  /** `PATCH /api/v1/admin/contributor-applications/:id/review` */
   reviewApplication: async (
     id: string,
     input: ReviewApplicationInput
@@ -77,5 +82,28 @@ export const contributorApi = {
       payload
     );
     return contributorMapper.toSingleApplication(res.data);
+  },
+
+  /** `POST /api/v1/admin/contributor-invitations` */
+  inviteContributor: async (userId: string, reason: string): Promise<ContributorApplication> => {
+    const payload = contributorMapper.toInviteDto(userId, reason);
+    const res = await api.post<ContributorApplicationResponseDto>(
+      API_ENDPOINTS.ADMIN_CONTRIBUTOR.INVITE,
+      payload
+    );
+    return contributorMapper.toSingleApplication(res.data);
+  },
+
+  /** `PATCH /api/v1/admin/contributors/:userId/revoke` */
+  revokeContributor: async (
+    userId: string,
+    reason: string
+  ): Promise<ContributorRevocationResult> => {
+    const payload = contributorMapper.toRevokeDto(reason);
+    const res = await api.patch<ContributorRevocationResponseDto>(
+      API_ENDPOINTS.ADMIN_CONTRIBUTOR.REVOKE(userId),
+      payload
+    );
+    return contributorMapper.toRevocationResult(res.data);
   },
 };

@@ -21,14 +21,19 @@ function formatDayLabel(dateStr: string): string {
 function SlotCard({
   slot,
   actions,
+  badge,
 }: {
   slot: MealSlot;
   actions?: (slot: MealSlot) => React.ReactNode;
+  badge?: (slot: MealSlot) => React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1.5 rounded-xl border p-3">
       <div className="flex items-center justify-between gap-2">
-        <Badge variant="outline">{slot.mealTypeLabel}</Badge>
+        <div className="flex items-center gap-1.5">
+          <Badge variant="outline">{slot.mealTypeLabel}</Badge>
+          {badge?.(slot)}
+        </div>
         {slot.filled && <span className="text-xs font-medium">{slot.formattedCalories}</span>}
       </div>
       {slot.filled ? (
@@ -53,9 +58,11 @@ function SlotCard({
 export function DayGrid({
   items,
   actions,
+  slotBadge,
 }: {
   items: MealSlot[];
   actions?: (slot: MealSlot) => React.ReactNode;
+  slotBadge?: (slot: MealSlot) => React.ReactNode;
 }) {
   const dates = React.useMemo(() => {
     const seen = new Map<string, MealSlot[]>();
@@ -92,7 +99,7 @@ export function DayGrid({
           </CardHeader>
           <CardContent className="grid gap-3 sm:grid-cols-3">
             {slots.map((slot) => (
-              <SlotCard key={slot.id} slot={slot} actions={actions} />
+              <SlotCard key={slot.id} slot={slot} actions={actions} badge={slotBadge} />
             ))}
           </CardContent>
         </Card>

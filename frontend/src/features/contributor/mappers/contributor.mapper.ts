@@ -12,26 +12,36 @@ import type {
   ContributorApplicationDto,
   ContributorApplicationListResponseDto,
   ContributorApplicationResponseDto,
+  ContributorRevocationResponseDto,
+  InviteContributorRequestDto,
   ReviewApplicationRequestDto,
+  RevokeContributorRequestDto,
   SubmitApplicationRequestDto,
 } from '../types/contributor.dto';
-import type { ContributorApplication, ReviewApplicationInput } from '../types/contributor.model';
-import { ContributorApplicationStatus, ContributorType } from '@/common/enums';
+import type {
+  ContributorApplication,
+  ContributorRevocationResult,
+  ReviewApplicationInput,
+} from '../types/contributor.model';
+import { ContributorApplicationStatus, ContributorApprovalBasis } from '@/common/enums';
 
-const TYPE_LABELS: Record<ContributorType, string> = {
-  [ContributorType.EXPERIENCED_PRACTITIONER]: 'Người ăn chay kinh nghiệm',
-  [ContributorType.NUTRITION_EXPERT]: 'Chuyên gia dinh dưỡng',
+export const APPROVAL_BASIS_LABELS: Record<ContributorApprovalBasis, string> = {
+  [ContributorApprovalBasis.ORGANIZATION_AFFILIATION]: 'Tổ chức đối tác / Viện ẩm thực',
+  [ContributorApprovalBasis.PLATFORM_TRACK_RECORD]: 'Thành viên uy tín trên nền tảng',
+  [ContributorApprovalBasis.ADMIN_INVITED]: 'Được Quản trị viên mời',
 };
 
-const STATUS_LABELS: Record<ContributorApplicationStatus, string> = {
+export const STATUS_LABELS: Record<ContributorApplicationStatus, string> = {
   [ContributorApplicationStatus.PENDING]: 'Chờ duyệt',
   [ContributorApplicationStatus.APPROVED]: 'Đã duyệt',
   [ContributorApplicationStatus.REJECTED]: 'Bị từ chối',
+  [ContributorApplicationStatus.WITHDRAWN]: 'Đã rút đơn',
 };
 
-const SOURCE_LABELS: Record<string, string> = {
+export const SOURCE_LABELS: Record<string, string> = {
   REGISTRATION: 'Lúc đăng ký',
   PROFILE: 'Từ hồ sơ',
+  ADMIN_INVITATION: 'Quản trị viên mời',
 };
 
 function emptyPageMeta() {
@@ -60,73 +70,122 @@ function toPageMeta(
 }
 
 /**
- * ContributorMapper: đơn (own + admin), review oneOf.
- * Envelope `{success, data, meta}` đọc trực tiếp — cấm bọc `APIResponse<>` 2 tầng.
+ * ContributorMapper: chuyển đổi DTO đơn xét duyệt, lịch sử và kết quả kiểm toán.
+ * Tuân thủ chuẩn 7 tầng Scaffold, đọc trực tiếp envelope `{success, data, meta}`.
  */
 export class ContributorMapper extends BaseMapper<
   ContributorApplicationDto,
   ContributorApplication
 > {
   toModel(dto: ContributorApplicationDto | null | undefined): ContributorApplication {
-    const requestedType = safeEnum(
-      pickField(dto, ['requestedType', 'requested_type'], 'EXPERIENCED_PRACTITIONER'),
-      ContributorType,
-      ContributorType.EXPERIENCED_PRACTITIONER
+    const rawClaimedBasis = pickField(
+      dto,
+      ['claimedApprovalBasis', 'claimed_approval_basis'],
+      'PLATFORM_TRACK_RECORD'
     );
+    const claimedApprovalBasis = safeEnum(
+      rawClaimedBasis,
+      ContributorApprovalBasis,
+      ContributorApprovalBasis.PLATFORM_TRACK_RECORD
+    );
+
     const status = safeEnum(
       pickField(dto, ['status'], 'PENDING'),
       ContributorApplicationStatus,
       ContributorApplicationStatus.PENDING
     );
-    const approvedRaw = pickField(dto, ['approvedType', 'approved_type'], null) as string | null;
-    const approvedType =
-      approvedRaw === null || approvedRaw === undefined
+
+    const rawApprovalBasis = pickField(dto, ['approvalBasis', 'approval_basis'], null);
+    const approvalBasis =
+      rawApprovalBasis === null || rawApprovalBasis === undefined
         ? null
-        : safeEnum(approvedRaw, ContributorType, null as unknown as ContributorType);
+        : safeEnum(
+            rawApprovalBasis,
+            ContributorApprovalBasis,
+            null as unknown as ContributorApprovalBasis
+          );
+
     const experience = safeString(pickField(dto, ['experience'], ''));
     const user = pickField(dto, ['user'], null) as ContributorApplicationDto['user'];
+    const invitedBy = pickField(dto, ['invitedBy', 'invited_by'], null) as
+      ContributorApplicationDto['invitedBy'] | null;
+
+    const source = safeString(pickField(dto, ['source'], 'PROFILE'));
+    const reapplyEligibleAt = safeDate(
+      pickField(dto, ['reapplyEligibleAt', 'reapply_eligible_at'], null)
+    );
+
+    const isReapplyBlocked =
+      status === ContributorApplicationStatus.REJECTED &&
+      Boolean(reapplyEligibleAt && reapplyEligibleAt.getTime() > Date.now());
+
     return {
       id: safeString(pickField(dto, ['id'], '')),
-      requestedType,
-      requestedTypeLabel:
-        safeString(pickField(dto, ['requestedTypeLabel'], '')) || TYPE_LABELS[requestedType],
+      applicantId: safeString(pickField(user, ['id'], '')),
+      applicantName: safeString(pickField(user, ['displayName', 'display_name'], '')),
+      applicantEmail: safeString(pickField(user, ['email'], '')),
+      currentRole: safeString(pickField(user, ['role'], 'MEMBER')),
+      currentApprovalBasis: (() => {
+        const raw = pickField(user, ['currentApprovalBasis', 'current_approval_basis'], null);
+        return raw
+          ? safeEnum(raw, ContributorApprovalBasis, null as unknown as ContributorApprovalBasis)
+          : null;
+      })(),
+
+      claimedApprovalBasis,
+      claimedApprovalBasisLabel:
+        safeString(
+          pickField(dto, ['claimedApprovalBasisLabel', 'claimed_approval_basis_label'], '')
+        ) || APPROVAL_BASIS_LABELS[claimedApprovalBasis],
+      organizationClaim:
+        safeString(pickField(dto, ['organizationClaim', 'organization_claim'], '')) || null,
       experience,
       experienceShort: experience.length > 160 ? `${experience.slice(0, 160)}…` : experience,
       referenceLinks: safeArray<string | null, string>(
         pickField(dto, ['referenceLinks', 'reference_links'], null),
         (link) => safeString(link)
       ).filter((link) => link.length > 0),
-      source: safeString(pickField(dto, ['source'], '')),
-      sourceLabel:
-        SOURCE_LABELS[safeString(pickField(dto, ['source'], '')).toUpperCase()] ??
-        safeString(pickField(dto, ['source'], '')),
+      source,
+      sourceLabel: SOURCE_LABELS[source.toUpperCase()] ?? source,
+
+      invitedBy:
+        invitedBy && typeof invitedBy === 'object' && safeString(invitedBy.id).length > 0
+          ? {
+              id: safeString(invitedBy.id),
+              displayName: safeString(pickField(invitedBy, ['displayName', 'display_name'], '')),
+            }
+          : null,
+      invitationReason:
+        safeString(pickField(dto, ['invitationReason', 'invitation_reason'], '')) || null,
+
       status,
-      statusLabel: STATUS_LABELS[status],
-      approvedType: approvedType ?? null,
-      approvedTypeLabel:
-        safeString(pickField(dto, ['approvedTypeLabel'], '')) ||
-        (approvedType ? TYPE_LABELS[approvedType] : null),
-      approvalBasis: safeString(pickField(dto, ['approvalBasis', 'approval_basis'], '')) || null,
+      statusLabel: STATUS_LABELS[status] ?? 'Chờ duyệt',
+      approvalBasis: approvalBasis ?? null,
+      approvalBasisLabel:
+        safeString(pickField(dto, ['approvalBasisLabel', 'approval_basis_label'], '')) ||
+        (approvalBasis ? APPROVAL_BASIS_LABELS[approvalBasis] : null),
+      reviewEvidence:
+        (pickField(dto, ['reviewEvidence', 'review_evidence'], null) as Record<
+          string,
+          unknown
+        > | null) ?? null,
       reviewNote: safeString(pickField(dto, ['reviewNote', 'review_note'], '')) || null,
       reviewedBy: (() => {
         const reviewer = pickField(dto, ['reviewedBy', 'reviewed_by'], null) as
           ContributorApplicationDto['reviewedBy'] | null;
         if (!reviewer || typeof reviewer !== 'object') return null;
-        return safeString(reviewer.displayName) || null;
+        return safeString(pickField(reviewer, ['displayName', 'display_name'], '')) || null;
       })(),
       reviewedAt: safeDate(pickField(dto, ['reviewedAt', 'reviewed_at'], null)),
-      reapplyEligibleAt: safeDate(
-        pickField(dto, ['reapplyEligibleAt', 'reapply_eligible_at'], null)
-      ),
-      applicantId: safeString(pickField(user, ['id'], '')),
-      applicantName: safeString(pickField(user, ['displayName', 'display_name'], '')),
-      applicantEmail: safeString(pickField(user, ['email'], '')),
+      reapplyEligibleAt,
+      isReapplyBlocked,
+
       createdAt: safeDate(pickField(dto, ['createdAt', 'created_at'], null)),
       updatedAt: safeDate(pickField(dto, ['updatedAt', 'updated_at'], null)),
     };
   }
 
-  /** `POST /contributor-applications` → đơn PENDING. */
+  /** `POST /api/v1/contributor-applications` → đơn PENDING. */
   toSingleApplication(
     dto: ContributorApplicationResponseDto | null | undefined
   ): ContributorApplication {
@@ -134,7 +193,7 @@ export class ContributorMapper extends BaseMapper<
     return this.toModel(data);
   }
 
-  /** Own list + admin list (kèm applicant) + meta. */
+  /** Own list + admin list kèm phân trang. */
   toApplicationList(
     dto: ContributorApplicationListResponseDto | null | undefined
   ): PaginationResult<ContributorApplication> {
@@ -154,29 +213,67 @@ export class ContributorMapper extends BaseMapper<
     };
   }
 
+  /** Chuyển đổi dữ liệu form nộp đơn sang DTO. */
   toSubmitDto(
-    requestedType: ContributorType,
+    claimedApprovalBasis: 'ORGANIZATION_AFFILIATION' | 'PLATFORM_TRACK_RECORD',
     experience: string,
-    referenceLinks: string[]
+    organizationClaim?: string,
+    referenceLinks?: string[]
   ): SubmitApplicationRequestDto {
     return {
-      requestedType,
+      claimedApprovalBasis,
       experience,
-      ...(referenceLinks.length > 0 ? { referenceLinks } : {}),
+      ...(organizationClaim?.trim() ? { organizationClaim: organizationClaim.trim() } : {}),
+      ...(referenceLinks && referenceLinks.length > 0 ? { referenceLinks } : {}),
     };
   }
 
-  /** Review oneOf: APPROVE đủ 4 / REJECT note. */
+  /** Review oneOf: APPROVE kèm căn cứ + ghi chú / REJECT kèm ghi chú. */
   toReviewDto(input: ReviewApplicationInput): ReviewApplicationRequestDto {
     if (input.decision === 'APPROVE') {
       return {
         decision: 'APPROVE',
-        contributorType: input.contributorType,
         approvalBasis: input.approvalBasis,
         reviewNote: input.reviewNote,
       };
     }
     return { decision: 'REJECT', reviewNote: input.reviewNote };
+  }
+
+  /** DTO gửi lời mời Contributor. */
+  toInviteDto(userId: string, reason: string): InviteContributorRequestDto {
+    return {
+      userId,
+      reason,
+    };
+  }
+
+  /** DTO thu hồi tư cách Contributor. */
+  toRevokeDto(reason: string): RevokeContributorRequestDto {
+    return {
+      reason,
+    };
+  }
+
+  /** Chuyển đổi phản hồi thu hồi quyền sang UI Model. */
+  toRevocationResult(
+    dto: ContributorRevocationResponseDto | null | undefined
+  ): ContributorRevocationResult {
+    const data = pickField(dto, ['data'], null) as ContributorRevocationResponseDto['data'];
+    const revokedBy = pickField(data, ['revokedBy', 'revoked_by'], null) as {
+      displayName?: string;
+      display_name?: string;
+    } | null;
+
+    return {
+      userId: safeString(pickField(data, ['userId', 'user_id'], '')),
+      role: safeString(pickField(data, ['role'], 'MEMBER')),
+      revokedAt: safeDate(pickField(data, ['revokedAt', 'revoked_at'], null)),
+      revokedByName: safeString(
+        pickField(revokedBy, ['displayName', 'display_name'], 'Quản trị viên')
+      ),
+      reason: safeString(pickField(data, ['reason'], '')),
+    };
   }
 }
 

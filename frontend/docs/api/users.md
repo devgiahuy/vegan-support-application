@@ -477,14 +477,14 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
           ],
           "required": [
             "status",
-            "requestedType"
+            "claimedApprovalBasis"
           ],
           "properties": {
             "status": {
               "type": "string",
               "_truncated": true
             },
-            "requestedType": {
+            "claimedApprovalBasis": {
               "type": "string",
               "_truncated": true
             }
@@ -497,21 +497,16 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
             "null"
           ],
           "required": [
-            "contributorType",
-            "label",
             "approvalBasis",
+            "approvalBasisLabel",
             "approvedAt"
           ],
           "properties": {
-            "contributorType": {
-              "type": "string",
-              "_truncated": true
-            },
-            "label": {
-              "type": "string",
-              "_truncated": true
-            },
             "approvalBasis": {
+              "type": "string",
+              "_truncated": true
+            },
+            "approvalBasisLabel": {
               "type": "string",
               "_truncated": true
             },
@@ -541,6 +536,10 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
           ],
           "properties": {
             "heightCm": {
+              "type": "number",
+              "_truncated": true
+            },
+            "weightKg":
   …(truncated — xem api-catalog.json)
 ```
 

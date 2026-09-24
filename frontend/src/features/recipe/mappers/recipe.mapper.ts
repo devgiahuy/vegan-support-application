@@ -130,13 +130,25 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       reasonCodes: safeArray<string>(c?.reasonCodes),
     }));
 
+    const revisionId = safeString(revision?.id);
+    const version = safeNumber(pickField(dto, ['version'], 1));
+    const revisionVersion = safeNumber(revision?.version, version);
+    const publishedRevisionVersion = pickField<number | null>(
+      dto,
+      ['publishedRevisionVersion'],
+      null
+    );
+
     return {
       id: safeString(pickField(dto, ['id'], '')),
       title: safeString(revision?.title, 'Công thức chưa có tên'),
       slug: safeString(pickField(dto, ['slug'], '')),
       status,
       statusLabel: getPostStatusLabel(status),
-      version: safeNumber(pickField(dto, ['version'], 1)),
+      version,
+      revisionId: revisionId || undefined,
+      revisionVersion,
+      publishedRevisionVersion,
       author: {
         id: author.id,
         name: author.name,

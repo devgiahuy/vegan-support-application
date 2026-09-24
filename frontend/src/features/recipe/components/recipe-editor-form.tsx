@@ -14,6 +14,7 @@ import {
   Sparkles,
   HelpCircle,
   Lightbulb,
+  Eye,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,8 +34,10 @@ import { flattenCategories } from '@/features/category/utils/flatten-categories'
 import { ImageUploader } from '@/features/post/components/image-uploader';
 import { recipeFormSchema, RecipeFormValues } from '../schemas/recipe-form.schema';
 import { RecipeIngredientRow } from './recipe-ingredient-row';
+import { RecipeNutritionPreviewDrawer } from '@/features/recipe-nutrition/components/recipe-nutrition-preview-drawer';
 
 interface RecipeEditorFormProps {
+  postId?: string;
   initialValues?: Partial<RecipeFormValues>;
   onSubmit: (values: RecipeFormValues) => Promise<void> | void;
   isSubmitting?: boolean;
@@ -42,11 +45,13 @@ interface RecipeEditorFormProps {
 }
 
 export function RecipeEditorForm({
+  postId,
   initialValues,
   onSubmit,
   isSubmitting = false,
   formTitle = 'Đăng công thức món chay mới',
 }: RecipeEditorFormProps) {
+  const [previewDrawerOpen, setPreviewDrawerOpen] = React.useState(false);
   const { data: categoryTree = [] } = useCategoryTreeQuery(CategoryType.RECIPE_GROUP);
   const flatCategories = React.useMemo(() => flattenCategories(categoryTree), [categoryTree]);
 
@@ -236,8 +241,13 @@ export function RecipeEditorForm({
                 form.setValue('coverImageUrl', url, { shouldValidate: true });
                 form.setValue(
                   'coverMedia',
-                  meta?.publicId && meta?.mimeType && meta?.bytes
-                    ? { publicId: meta.publicId, mimeType: meta.mimeType, bytes: meta.bytes }
+                  meta?.assetId || (meta?.publicId && meta?.mimeType && meta?.bytes)
+                    ? {
+                        assetId: meta?.assetId,
+                        publicId: meta?.publicId,
+                        mimeType: meta?.mimeType,
+                        bytes: meta?.bytes,
+                      }
                     : null,
                   { shouldValidate: true }
                 );
@@ -394,10 +404,22 @@ export function RecipeEditorForm({
 
       {/* 4. PHÂN TÍCH DINH DƯỠNG ƯỚC TÍNH */}
       <Card className="rounded-2xl border-border/80 shadow-sm">
-        <CardHeader className="border-b bg-muted/20 pb-4">
+        <CardHeader className="border-b bg-muted/20 pb-4 flex flex-row items-center justify-between">
           <CardTitle className="text-lg font-bold flex items-center gap-2">
             <Flame className="h-5 w-5 text-primary" /> 4. Dinh dưỡng ước tính (cho 1 khẩu phần)
           </CardTitle>
+          {postId && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setPreviewDrawerOpen(true)}
+              className="text-xs inline-flex items-center gap-1.5 border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>Xem trước tính toán chi tiết</span>
+            </Button>
+          )}
         </CardHeader>
         <CardContent className="p-6">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
@@ -457,6 +479,15 @@ export function RecipeEditorForm({
           </div>
         </CardContent>
       </Card>
+
+      {/* Drawer xem trước dinh dưỡng nấu nướng */}
+      {postId && (
+        <RecipeNutritionPreviewDrawer
+          postId={postId}
+          isOpen={previewDrawerOpen}
+          onClose={() => setPreviewDrawerOpen(false)}
+        />
+      )}
 
       {/* Nút gửi */}
       <div className="flex items-center justify-end gap-3 pt-4">

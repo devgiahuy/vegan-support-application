@@ -254,7 +254,7 @@ Admin hide or restore a comment
             "id",
             "displayName",
             "role",
-            "contributorType"
+            "contributorApprovalBasis"
           ],
           "properties": {
             "id": {
@@ -269,7 +269,7 @@ Admin hide or restore a comment
               "type": "string",
               "_truncated": true
             },
-            "contributorType": {
+            "contributorApprovalBasis": {
               "type": [
                 "string",
                 "null"
@@ -351,7 +351,7 @@ Admin hide or restore a comment
           "displayName",
           "role",
           "status",
-          "contributorType",
+          "contributorApprovalBasis",
           "createdAt",
           "updatedAt",
           "deletedAt",
@@ -378,7 +378,7 @@ Admin hide or restore a comment
             "type": "string",
             "_truncated": true
           },
-          "contributorType": {
+          "contributorApprovalBasis": {
             "type": [
               "string",
               "null"
@@ -464,7 +464,7 @@ Admin hide or restore a comment
         "displayName",
         "role",
         "status",
-        "contributorType",
+        "contributorApprovalBasis",
         "createdAt",
         "updatedAt",
         "deletedAt",
@@ -499,14 +499,15 @@ Admin hide or restore a comment
             "DELETED"
           ]
         },
-        "contributorType": {
+        "contributorApprovalBasis": {
           "type": [
             "string",
             "null"
           ],
           "enum": [
-            "EXPERIENCED_PRACTITIONER",
-            "NUTRITION_EXPERT",
+            "ORGANIZATION_AFFILIATION",
+            "PLATFORM_TRACK_RECORD",
+            "ADMIN_INVITED",
             null
           ]
         },
