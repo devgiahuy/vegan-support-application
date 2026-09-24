@@ -1,12 +1,12 @@
 # Backend Implementation Phases
 
-**Version:** 3.2
+**Version:** 3.5
 
-**Updated:** 2026-09-21
+**Updated:** 2026-09-24
 
 **Stack:** Node.js · Express · TypeScript · PostgreSQL · Prisma · Zod · OpenAPI
 
-**Current baseline:** Phases 00–12 and 15–17 completed; Phases 13–14 are in progress
+**Current baseline:** Phases 00–12 and 15–22 completed; Phases 13–14 are in progress
 
 This document splits the backend into independently implementable, verifiable, and committable phases. Every new session uses the matching prompt under `backend/docs/prompts/` and derives current state from the repository, not from previous chat history.
 
@@ -23,36 +23,36 @@ This document splits the backend into independently implementable, verifiable, a
 
 ## 2. Phase map
 
-| Phase | Name | Dependencies | Main outcome | Required commit message |
-|---:|---|---|---|---|
-| 00 | Backend Foundation | — | Express/TS/config/Prisma/OpenAPI/health | `chore(backend): bootstrap service foundation` |
-| 01 | Authentication & Sessions | 00 | Auth/session/RBAC primitives | `feat(auth): implement authentication and sessions` |
-| 02 | Profile, Health & Diet Rules | 01 | BMI-related metrics and confirmable dietary rules | `feat(profile): add health and diet preferences` |
-| 03 | Category & Ingredient Catalog | 01 | Category tree and initial canonical ingredients | `feat(catalog): add categories and ingredients` |
-| 04 | Content Core & Media | 01, 03 | Recipe/handbook/video CRUD and revisions | `feat(content): implement posts recipes and media` |
-| 05 | Search & Related Content | 04 | Search/filter/related content | `feat(search): add content discovery and related results` |
-| 06 | Community Interactions | 01, 04 | Comments/votes/ratings/bookmarks | `feat(community): add comments votes ratings and bookmarks` |
-| 07 | Contributor Applications (legacy subtype baseline) | 01 | Existing application/approval flow | `feat(contributors): implement application and approval flow` |
-| 08 | Moderation & Reports | 04, 06, 07 | Review/report/audit workflow | `feat(moderation): add review reports and audit workflow` |
-| 09 | Behavior & Recommendation v1 | 02, 04, 06 | Consent-aware explainable ranking | `feat(recommendations): add behavioral ranking v1` |
-| 10 | Weekly Meal Planner | 02, 03, 04, 09 | Versioned plan/swap/basic shopping list | `feat(meal-plans): implement weekly planner` |
-| 11 | AI Chat Gateway | 01, 02 | Provider adapter/quota/SSE/history/feedback | `feat(chat): implement nutrition ai gateway` |
-| 12 | Food & Nutrient Knowledge Base | 03 | Nutrients, measures, intake limits, cooking factors, interaction rules | `feat(food-data): add nutrient knowledge base` |
-| 13 | Cooking-aware Recipe Nutrition | 04, 11, 12 | Structured steps and calculation/AI fallback with provenance | `feat(recipe-nutrition): estimate cooking-aware nutrition` |
-| 14 | Unified Contributor Trust | 01, 06, 07, 08 | Remove subtype RBAC; one role plus approval basis | `refactor(contributors): unify contributor permissions` |
-| 15 | Storage Quota & Upload Accounting | 01, 04 | Account quota reservations, usage, cleanup | `feat(storage): enforce user media quotas` |
-| 16 | Video Review Parity | 04, 08, 15 | Video submission/review/moderation parity | `feat(video): align review and moderation lifecycle` |
-| 17 | Custom Meals, Photos & User Tags | 04, 12, 15 | Private custom meals usable in plans | `feat(custom-meals): add private meals photos and tags` |
-| 18 | Meal Portion & Compatibility Analysis | 02, 10, 12, 13, 17 | Daily limits and within/cross-dish warnings | `feat(meal-analysis): add portion and compatibility rules` |
-| 19 | Multi-week Meal Programs | 10, 17, 18 | Long-horizon plans and cumulative analysis | `feat(meal-programs): support multi-week planning` |
-| 20 | Pantry Inventory | 03, 12, 15 | Confirmed user ingredient inventory | `feat(pantry): add user ingredient inventory` |
-| 21 | Multi-image Fridge Recognition | 11, 15, 20 | Candidate recognition/quantity/freshness with confirmation | `feat(vision): recognize fridge ingredients` |
-| 22 | Receipt Analysis & Shopping Gaps | 10, 12, 15, 20 | Confirmed receipt intake and pantry-aware shopping | `feat(receipts): analyze purchases and shopping gaps` |
-| 23 | AI Sharing & Contributor Verification | 11, 13, 14, 21, 22 | Versioned shareable artifacts and unified verification | `feat(ai-review): add sharing and contributor verification` |
-| 24 | Restaurants & Google Maps | 01, 02 | Internal/provider hybrid nearby discovery | `feat(restaurants): add location and maps integration` |
-| 25 | In-app Notifications | 01, 08, 14, 16, 23, 24 | Idempotent event notifications | `feat(notifications): add in-app event notifications` |
-| 26 | Admin AI Governance | 08, 11, 13, 16, 21, 22, 23 | Redacted logs, metrics, flags, provider toggles | `feat(ai-admin): add governance metrics and controls` |
-| 27 | Hardening & MVP Release Gate | 00–26 | Security, docs, seed/demo, operational release checks | `test(backend): harden reviewed mvp release flows` |
+| Phase | Name                                               | Dependencies               | Main outcome                                                           | Required commit message                                       |
+| ----: | -------------------------------------------------- | -------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------- |
+|    00 | Backend Foundation                                 | —                          | Express/TS/config/Prisma/OpenAPI/health                                | `chore(backend): bootstrap service foundation`                |
+|    01 | Authentication & Sessions                          | 00                         | Auth/session/RBAC primitives                                           | `feat(auth): implement authentication and sessions`           |
+|    02 | Profile, Health & Diet Rules                       | 01                         | BMI-related metrics and confirmable dietary rules                      | `feat(profile): add health and diet preferences`              |
+|    03 | Category & Ingredient Catalog                      | 01                         | Category tree and initial canonical ingredients                        | `feat(catalog): add categories and ingredients`               |
+|    04 | Content Core & Media                               | 01, 03                     | Recipe/handbook/video CRUD and revisions                               | `feat(content): implement posts recipes and media`            |
+|    05 | Search & Related Content                           | 04                         | Search/filter/related content                                          | `feat(search): add content discovery and related results`     |
+|    06 | Community Interactions                             | 01, 04                     | Comments/votes/ratings/bookmarks                                       | `feat(community): add comments votes ratings and bookmarks`   |
+|    07 | Contributor Applications (legacy subtype baseline) | 01                         | Existing application/approval flow                                     | `feat(contributors): implement application and approval flow` |
+|    08 | Moderation & Reports                               | 04, 06, 07                 | Review/report/audit workflow                                           | `feat(moderation): add review reports and audit workflow`     |
+|    09 | Behavior & Recommendation v1                       | 02, 04, 06                 | Consent-aware explainable ranking                                      | `feat(recommendations): add behavioral ranking v1`            |
+|    10 | Weekly Meal Planner                                | 02, 03, 04, 09             | Versioned plan/swap/basic shopping list                                | `feat(meal-plans): implement weekly planner`                  |
+|    11 | AI Chat Gateway                                    | 01, 02                     | Provider adapter/quota/SSE/history/feedback                            | `feat(chat): implement nutrition ai gateway`                  |
+|    12 | Food & Nutrient Knowledge Base                     | 03                         | Nutrients, measures, intake limits, cooking factors, interaction rules | `feat(food-data): add nutrient knowledge base`                |
+|    13 | Cooking-aware Recipe Nutrition                     | 04, 11, 12                 | Structured steps and calculation/AI fallback with provenance           | `feat(recipe-nutrition): estimate cooking-aware nutrition`    |
+|    14 | Unified Contributor Trust                          | 01, 06, 07, 08             | Remove subtype RBAC; one role plus approval basis                      | `refactor(contributors): unify contributor permissions`       |
+|    15 | Storage Quota & Upload Accounting                  | 01, 04                     | Account quota reservations, usage, cleanup                             | `feat(storage): enforce user media quotas`                    |
+|    16 | Video Review Parity                                | 04, 08, 15                 | Video submission/review/moderation parity                              | `feat(video): align review and moderation lifecycle`          |
+|    17 | Custom Meals, Photos & User Tags                   | 04, 12, 15                 | Private custom meals usable in plans                                   | `feat(custom-meals): add private meals photos and tags`       |
+|    18 | Meal Portion & Compatibility Analysis              | 02, 10, 12, 13, 17         | Daily limits and within/cross-dish warnings                            | `feat(meal-analysis): add portion and compatibility rules`    |
+|    19 | Multi-week Meal Programs                           | 10, 17, 18                 | Long-horizon plans and cumulative analysis                             | `feat(meal-programs): support multi-week planning`            |
+|    20 | Pantry Inventory                                   | 03, 12, 15                 | Confirmed user ingredient inventory                                    | `feat(pantry): add user ingredient inventory`                 |
+|    21 | Multi-image Fridge Recognition                     | 11, 15, 20                 | Candidate recognition/quantity/freshness with confirmation             | `feat(vision): recognize fridge ingredients`                  |
+|    22 | Receipt Analysis & Shopping Gaps                   | 10, 12, 15, 20             | Confirmed receipt intake and pantry-aware shopping                     | `feat(receipts): analyze purchases and shopping gaps`         |
+|    23 | AI Sharing & Contributor Verification              | 11, 13, 14, 21, 22         | Versioned shareable artifacts and unified verification                 | `feat(ai-review): add sharing and contributor verification`   |
+|    24 | Restaurants & Google Maps                          | 01, 02                     | Internal/provider hybrid nearby discovery                              | `feat(restaurants): add location and maps integration`        |
+|    25 | In-app Notifications                               | 01, 08, 14, 16, 23, 24     | Idempotent event notifications                                         | `feat(notifications): add in-app event notifications`         |
+|    26 | Admin AI Governance                                | 08, 11, 13, 16, 21, 22, 23 | Redacted logs, metrics, flags, provider toggles                        | `feat(ai-admin): add governance metrics and controls`         |
+|    27 | Hardening & MVP Release Gate                       | 00–26                      | Security, docs, seed/demo, operational release checks                  | `test(backend): harden reviewed mvp release flows`            |
 
 ## 3. Dependency graph
 
@@ -116,69 +116,69 @@ Regenerate/validate OpenAPI using the repository workflow. Live external-provide
 
 ## 6. Completion record
 
-| Phase | Status | Completed | Commit | Notes |
-|---:|---|---|---|---|
-| 00 | `COMPLETED` | 2026-09-15 | This phase commit | Foundation gate passed |
-| 01 | `COMPLETED` | 2026-09-15 | This phase commit | Auth/session gate passed |
-| 02 | `COMPLETED` | 2026-09-15 | This phase commit | Profile/health/diet rules seeded |
-| 03 | `COMPLETED` | 2026-09-15 | This phase commit | Catalog and ingredient baseline ready |
-| 04 | `COMPLETED` | 2026-09-15 | This phase commit | Content/media baseline ready |
-| 05 | `COMPLETED` | 2026-09-15 | This phase commit | Search/related ready |
-| 06 | `COMPLETED` | 2026-09-15 | This phase commit | Community interactions ready |
-| 07 | `COMPLETED` | 2026-09-15 | This phase commit | Legacy subtype model; scheduled for Phase 14 migration |
-| 08 | `COMPLETED` | 2026-09-16 | This phase commit | Review/report/audit ready |
-| 09 | `COMPLETED` | 2026-09-16 | This phase commit | Explainable ranking v1 ready |
-| 10 | `COMPLETED` | 2026-09-16 | This phase commit | Weekly planner/basic shopping ready |
-| 11 | `COMPLETED` | 2026-09-16 | This phase commit | AI chat gateway ready |
-| 12 | `COMPLETED` | 2026-09-19 | Not committed (review tree) | Food/nutrient knowledge base, reviewed rules and idempotent imports ready; commit intentionally deferred by user |
-| 13 | `IN_PROGRESS` | — | Not committed (review tree) | Source/OpenAPI/docs implemented; final READY gate blocked by Windows Prisma query-engine DLL `EPERM` during `npm run build` |
-| 14 | `IN_PROGRESS` | — | Not committed (review tree) | Source/migration/OpenAPI/docs implemented; breaking consumers remain `CHANGING` and final READY gate is blocked by Windows Prisma query-engine DLL `EPERM` during `npm run build` |
-| 15 | `COMPLETED` | 2026-09-21 | `252b792` | Storage migration deployed locally; seed and reconciliation dry-run pass; source/OpenAPI gates pass |
-| 16 | `COMPLETED` | 2026-09-21 | Not committed (user review tree) | Shared draft/submit/Admin review lifecycle, video storage validation, moderation signals, history/audit, OpenAPI and runtime acceptance checks pass; commit intentionally deferred by user |
-| 17 | `COMPLETED` | 2026-09-21 | Not committed (user review tree) | Custom meals, photos (quota-checked MediaAsset ref), user tags, MealPlanItem sourceType/customMealId, delete-in-use guard, OpenAPI, lint/typecheck/build gates pass |
-| 18 | `COMPLETED` | 2026-09-23 | Not committed (user instruction) | Versioned portion/nutrient/guideline/interaction analysis, stale fingerprints, custom-meal manual-add, OpenAPI/docs, migrations/seed, and all quality gates pass |
-| 19 | `COMPLETED` | 2026-09-23 | Not committed (user instruction) | Bounded versioned multi-week programs, weekly alternatives/snapshots, partial retry, cross-week analysis/invalidation, confirmation, OpenAPI/docs, migration/seed, and quality gates pass |
-| 20 | `NOT_STARTED` | — | — | — |
-| 21 | `NOT_STARTED` | — | — | — |
-| 22 | `NOT_STARTED` | — | — | — |
-| 23 | `NOT_STARTED` | — | — | — |
-| 24 | `NOT_STARTED` | — | — | — |
-| 25 | `NOT_STARTED` | — | — | — |
-| 26 | `NOT_STARTED` | — | — | — |
-| 27 | `NOT_STARTED` | — | — | — |
+| Phase | Status        | Completed  | Commit                           | Notes                                                                                                                                                                                      |
+| ----: | ------------- | ---------- | -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+|    00 | `COMPLETED`   | 2026-09-15 | This phase commit                | Foundation gate passed                                                                                                                                                                     |
+|    01 | `COMPLETED`   | 2026-09-15 | This phase commit                | Auth/session gate passed                                                                                                                                                                   |
+|    02 | `COMPLETED`   | 2026-09-15 | This phase commit                | Profile/health/diet rules seeded                                                                                                                                                           |
+|    03 | `COMPLETED`   | 2026-09-15 | This phase commit                | Catalog and ingredient baseline ready                                                                                                                                                      |
+|    04 | `COMPLETED`   | 2026-09-15 | This phase commit                | Content/media baseline ready                                                                                                                                                               |
+|    05 | `COMPLETED`   | 2026-09-15 | This phase commit                | Search/related ready                                                                                                                                                                       |
+|    06 | `COMPLETED`   | 2026-09-15 | This phase commit                | Community interactions ready                                                                                                                                                               |
+|    07 | `COMPLETED`   | 2026-09-15 | This phase commit                | Legacy subtype model; scheduled for Phase 14 migration                                                                                                                                     |
+|    08 | `COMPLETED`   | 2026-09-16 | This phase commit                | Review/report/audit ready                                                                                                                                                                  |
+|    09 | `COMPLETED`   | 2026-09-16 | This phase commit                | Explainable ranking v1 ready                                                                                                                                                               |
+|    10 | `COMPLETED`   | 2026-09-16 | This phase commit                | Weekly planner/basic shopping ready                                                                                                                                                        |
+|    11 | `COMPLETED`   | 2026-09-16 | This phase commit                | AI chat gateway ready                                                                                                                                                                      |
+|    12 | `COMPLETED`   | 2026-09-19 | Not committed (review tree)      | Food/nutrient knowledge base, reviewed rules and idempotent imports ready; commit intentionally deferred by user                                                                           |
+|    13 | `IN_PROGRESS` | —          | Not committed (review tree)      | Source/OpenAPI/docs implemented; final READY gate blocked by Windows Prisma query-engine DLL `EPERM` during `npm run build`                                                                |
+|    14 | `IN_PROGRESS` | —          | Not committed (review tree)      | Source/migration/OpenAPI/docs implemented; breaking consumers remain `CHANGING` and final READY gate is blocked by Windows Prisma query-engine DLL `EPERM` during `npm run build`          |
+|    15 | `COMPLETED`   | 2026-09-21 | `252b792`                        | Storage migration deployed locally; seed and reconciliation dry-run pass; source/OpenAPI gates pass                                                                                        |
+|    16 | `COMPLETED`   | 2026-09-21 | Not committed (user review tree) | Shared draft/submit/Admin review lifecycle, video storage validation, moderation signals, history/audit, OpenAPI and runtime acceptance checks pass; commit intentionally deferred by user |
+|    17 | `COMPLETED`   | 2026-09-21 | Not committed (user review tree) | Custom meals, photos (quota-checked MediaAsset ref), user tags, MealPlanItem sourceType/customMealId, delete-in-use guard, OpenAPI, lint/typecheck/build gates pass                        |
+|    18 | `COMPLETED`   | 2026-09-23 | Not committed (user instruction) | Versioned portion/nutrient/guideline/interaction analysis, stale fingerprints, custom-meal manual-add, OpenAPI/docs, migrations/seed, and all quality gates pass                           |
+|    19 | `COMPLETED`   | 2026-09-23 | Not committed (user instruction) | Bounded versioned multi-week programs, weekly alternatives/snapshots, partial retry, cross-week analysis/invalidation, confirmation, OpenAPI/docs, migration/seed, and quality gates pass  |
+|    20 | `COMPLETED`   | 2026-09-23 | Not committed (user instruction) | Owner-scoped confirmed inventory, reviewed conversion, immutable ledger, duplicate merge, expiry query, idempotency/concurrency, OpenAPI/docs, migration/seed, and all quality gates pass  |
+|    21 | `COMPLETED`   | 2026-09-24 | Not committed (user instruction) | Multi-image committed-asset recognition, validated fake/local provider, dedupe/evidence, correction/rejection, partial retry/cancel, idempotent confirmation-only pantry diff, OpenAPI/docs, migration/seed, and all quality gates pass                 |
+|    22 | `COMPLETED`   | 2026-09-24 | Not committed (user instruction) | Receipt-image extraction with validated fake/local provider, editable/rejectable candidates, partial retry/cancel, explicit idempotent pantry confirmation, explainable pantry-aware shopping gaps, OpenAPI/docs, migration/seed, and all quality gates pass |
+|    23 | `COMPLETED`   | 2026-09-24 | Not committed (user instruction) | Versioned privacy-safe sharing, unified contributor verification, Admin override, immutability, OpenAPI, migration, and quality gates pass |
+|    24 | `NOT_STARTED` | —          | —                                | —                                                                                                                                                                                          |
+|    25 | `NOT_STARTED` | —          | —                                | —                                                                                                                                                                                          |
+|    26 | `NOT_STARTED` | —          | —                                | —                                                                                                                                                                                          |
+|    27 | `NOT_STARTED` | —          | —                                | —                                                                                                                                                                                          |
 
 ## 7. Prompt index
 
-| Phase | Prompt |
-|---:|---|
-| 00 | [`phase-00-foundation.md`](prompts/phase-00-foundation.md) |
-| 01 | [`phase-01-auth.md`](prompts/phase-01-auth.md) |
-| 02 | [`phase-02-profile-diet.md`](prompts/phase-02-profile-diet.md) |
-| 03 | [`phase-03-catalog.md`](prompts/phase-03-catalog.md) |
-| 04 | [`phase-04-content.md`](prompts/phase-04-content.md) |
-| 05 | [`phase-05-search.md`](prompts/phase-05-search.md) |
-| 06 | [`phase-06-community.md`](prompts/phase-06-community.md) |
-| 07 | [`phase-07-contributors.md`](prompts/phase-07-contributors.md) |
-| 08 | [`phase-08-moderation.md`](prompts/phase-08-moderation.md) |
-| 09 | [`phase-09-recommendations.md`](prompts/phase-09-recommendations.md) |
-| 10 | [`phase-10-meal-planner.md`](prompts/phase-10-meal-planner.md) |
-| 11 | [`phase-11-ai-chat.md`](prompts/phase-11-ai-chat.md) |
-| 12 | [`phase-12-food-data.md`](prompts/phase-12-food-data.md) |
-| 13 | [`phase-13-recipe-nutrition.md`](prompts/phase-13-recipe-nutrition.md) |
-| 14 | [`phase-14-unified-contributors.md`](prompts/phase-14-unified-contributors.md) |
-| 15 | [`phase-15-storage-quota.md`](prompts/phase-15-storage-quota.md) |
-| 16 | [`phase-16-video-review.md`](prompts/phase-16-video-review.md) |
-| 17 | [`phase-17-custom-meals.md`](prompts/phase-17-custom-meals.md) |
-| 18 | [`phase-18-meal-analysis.md`](prompts/phase-18-meal-analysis.md) |
-| 19 | [`phase-19-meal-programs.md`](prompts/phase-19-meal-programs.md) |
-| 20 | [`phase-20-pantry.md`](prompts/phase-20-pantry.md) |
-| 21 | [`phase-21-fridge-vision.md`](prompts/phase-21-fridge-vision.md) |
-| 22 | [`phase-22-receipts-shopping.md`](prompts/phase-22-receipts-shopping.md) |
-| 23 | [`phase-23-ai-review.md`](prompts/phase-23-ai-review.md) |
-| 24 | [`phase-24-restaurants.md`](prompts/phase-24-restaurants.md) |
-| 25 | [`phase-25-notifications.md`](prompts/phase-25-notifications.md) |
-| 26 | [`phase-26-ai-governance.md`](prompts/phase-26-ai-governance.md) |
-| 27 | [`phase-27-hardening.md`](prompts/phase-27-hardening.md) |
+| Phase | Prompt                                                                         |
+| ----: | ------------------------------------------------------------------------------ |
+|    00 | [`phase-00-foundation.md`](prompts/phase-00-foundation.md)                     |
+|    01 | [`phase-01-auth.md`](prompts/phase-01-auth.md)                                 |
+|    02 | [`phase-02-profile-diet.md`](prompts/phase-02-profile-diet.md)                 |
+|    03 | [`phase-03-catalog.md`](prompts/phase-03-catalog.md)                           |
+|    04 | [`phase-04-content.md`](prompts/phase-04-content.md)                           |
+|    05 | [`phase-05-search.md`](prompts/phase-05-search.md)                             |
+|    06 | [`phase-06-community.md`](prompts/phase-06-community.md)                       |
+|    07 | [`phase-07-contributors.md`](prompts/phase-07-contributors.md)                 |
+|    08 | [`phase-08-moderation.md`](prompts/phase-08-moderation.md)                     |
+|    09 | [`phase-09-recommendations.md`](prompts/phase-09-recommendations.md)           |
+|    10 | [`phase-10-meal-planner.md`](prompts/phase-10-meal-planner.md)                 |
+|    11 | [`phase-11-ai-chat.md`](prompts/phase-11-ai-chat.md)                           |
+|    12 | [`phase-12-food-data.md`](prompts/phase-12-food-data.md)                       |
+|    13 | [`phase-13-recipe-nutrition.md`](prompts/phase-13-recipe-nutrition.md)         |
+|    14 | [`phase-14-unified-contributors.md`](prompts/phase-14-unified-contributors.md) |
+|    15 | [`phase-15-storage-quota.md`](prompts/phase-15-storage-quota.md)               |
+|    16 | [`phase-16-video-review.md`](prompts/phase-16-video-review.md)                 |
+|    17 | [`phase-17-custom-meals.md`](prompts/phase-17-custom-meals.md)                 |
+|    18 | [`phase-18-meal-analysis.md`](prompts/phase-18-meal-analysis.md)               |
+|    19 | [`phase-19-meal-programs.md`](prompts/phase-19-meal-programs.md)               |
+|    20 | [`phase-20-pantry.md`](prompts/phase-20-pantry.md)                             |
+|    21 | [`phase-21-fridge-vision.md`](prompts/phase-21-fridge-vision.md)               |
+|    22 | [`phase-22-receipts-shopping.md`](prompts/phase-22-receipts-shopping.md)       |
+|    23 | [`phase-23-ai-review.md`](prompts/phase-23-ai-review.md)                       |
+|    24 | [`phase-24-restaurants.md`](prompts/phase-24-restaurants.md)                   |
+|    25 | [`phase-25-notifications.md`](prompts/phase-25-notifications.md)               |
+|    26 | [`phase-26-ai-governance.md`](prompts/phase-26-ai-governance.md)               |
+|    27 | [`phase-27-hardening.md`](prompts/phase-27-hardening.md)                       |
 
 ## 8. Starting a phase in a fresh session
 
