@@ -89,6 +89,12 @@ const environmentSchema = z
     VISION_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('fridge-v1'),
     VISION_MAX_IMAGES: z.coerce.number().int().min(2).max(12).default(6),
     VISION_MAX_IMAGE_BYTES: z.coerce.number().int().min(1).max(25_000_000).default(10_000_000),
+    RECEIPT_ENABLED: z.stringbool().default(true),
+    RECEIPT_PROVIDER: z.enum(['fake']).default('fake'),
+    RECEIPT_MODEL: z.string().trim().min(1).max(100).default('local-receipt-ocr-v1'),
+    RECEIPT_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('receipt-v1'),
+    RECEIPT_MAX_IMAGES: z.coerce.number().int().min(1).max(8).default(4),
+    RECEIPT_MAX_IMAGE_BYTES: z.coerce.number().int().min(1).max(25_000_000).default(10_000_000),
   })
   .transform((environment) => ({
     nodeEnv: environment.NODE_ENV,
@@ -150,6 +156,14 @@ const environmentSchema = z
       templateVersion: environment.VISION_TEMPLATE_VERSION,
       maxImages: environment.VISION_MAX_IMAGES,
       maxImageBytes: environment.VISION_MAX_IMAGE_BYTES,
+    },
+    receipt: {
+      enabled: environment.RECEIPT_ENABLED,
+      provider: environment.RECEIPT_PROVIDER,
+      model: environment.RECEIPT_MODEL,
+      templateVersion: environment.RECEIPT_TEMPLATE_VERSION,
+      maxImages: environment.RECEIPT_MAX_IMAGES,
+      maxImageBytes: environment.RECEIPT_MAX_IMAGE_BYTES,
     },
     cookieSecure: environment.NODE_ENV === 'production',
   }));

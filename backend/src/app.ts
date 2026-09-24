@@ -122,6 +122,11 @@ import { IngredientRecognitionRepository } from './modules/ingredient-recognitio
 import { createIngredientRecognitionRouter } from './modules/ingredient-recognition/ingredient-recognition.router.js';
 import { IngredientRecognitionService } from './modules/ingredient-recognition/ingredient-recognition.service.js';
 import { createIngredientVisionProvider } from './modules/ingredient-recognition/ingredient-vision.provider.js';
+import { ReceiptController } from './modules/receipts/receipt.controller.js';
+import { createReceiptExtractionProvider } from './modules/receipts/receipt.provider.js';
+import { ReceiptRepository } from './modules/receipts/receipt.repository.js';
+import { createReceiptRouter } from './modules/receipts/receipt.router.js';
+import { ReceiptService } from './modules/receipts/receipt.service.js';
 import { openApiDocument } from './openapi/document.js';
 
 export interface AppDependencies {
@@ -209,6 +214,13 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
       config,
     ),
   );
+  const receiptController = new ReceiptController(
+    new ReceiptService(
+      new ReceiptRepository(database.client),
+      createReceiptExtractionProvider(config),
+      config,
+    ),
+  );
 
   app.disable('x-powered-by');
   app.use(helmet());
@@ -288,6 +300,7 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
     '/api/v1/ingredient-recognition',
     createIngredientRecognitionRouter(ingredientRecognitionController, authentication),
   );
+  app.use('/api/v1', createReceiptRouter(receiptController, authentication));
 
   app.use(notFoundHandler);
   app.use(createErrorHandler(logger));

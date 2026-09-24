@@ -205,6 +205,7 @@ enum MediaKind {
   COVER_IMAGE
   VIDEO
   FRIDGE_IMAGE
+  RECEIPT_IMAGE
 
   @@map("media_kind")
 }
@@ -666,6 +667,35 @@ enum RecognitionCandidateStatus {
   @@map("recognition_candidate_status")
 }
 
+enum ReceiptJobStatus {
+  QUEUED
+  PROCESSING
+  READY
+  PARTIAL_FAILED
+  FAILED
+  CONFIRMED
+  CANCELLED
+
+  @@map("receipt_job_status")
+}
+
+enum ReceiptInputStatus {
+  PENDING
+  PROCESSED
+  FAILED
+
+  @@map("receipt_input_status")
+}
+
+enum ReceiptCandidateStatus {
+  PROPOSED
+  EDITED
+  REJECTED
+  CONFIRMED
+
+  @@map("receipt_candidate_status")
+}
+
 model User {
   id                             String                     @id @default(uuid()) @db.Uuid
   email                          String                     @unique @db.VarChar(320)
@@ -731,6 +761,7 @@ model User {
   pantryItems                    PantryItem[]
   pantryAdjustments              PantryAdjustment[]
   recognitionJobs                RecognitionJob[]
+  receiptJobs                    ReceiptJob[]
 
   @@map("users")
 }
@@ -802,6 +833,7 @@ model Ingredient {
   customMealIngredients CustomMealIngredient[]
   pantryItems           PantryItem[]
   recognitionCandidates RecognitionCandidate[]
+  receiptCandidates     ReceiptCandidate[]
 
   @@index([status, foodGroup, canonicalName])
   @@map("ingredients")
@@ -837,6 +869,7 @@ model PantryItem {
   adjustments             PantryAdjustment[]       @relation("PantryItemAdjustments")
   mergedIntoAdjustments   PantryAdjustment[]       @relation("PantryMergedIntoAdjustments")
   recognitionCandidates   RecognitionCandidate[]
+  receiptCandidates       ReceiptCandidate[]
 
   @@index([ownerId, deletedAt, confirmationStatus, updatedAt])
   @@index([ownerId, ingredientId, deletedAt])
@@ -968,6 +1001,98 @@ model RecognitionCandidateEvidence {
   @@id([candidateId, inputId])
   @@index([inputId])
   @@map("recognition_candidate_evidence")
+}
+
+model ReceiptJob {
+  id                    String             @id @default(uuid()) @db.Uuid
+  ownerId               String             @map("owner_id") @db.Uuid
+  status                ReceiptJobStatus   @default(QUEUED)
+  provider              String             @db.VarChar(40)
+  modelId               String             @map("model_id") @db.VarChar(100)
+  templateVersion       String             @map("template_version") @db.VarChar(80)
+  idempotencyKey        String             @map("idempotency_key") @db.VarChar(160)
+  requestHash           String             @map("request_hash") @db.Char(64)
+  attemptCount          Int                @default(0) @map("attempt_count")
+  merchantName          String?            @map("merchant_name") @db.VarChar(200)
+  purchasedAt           DateTime?          @map("purchased_at") @db.Date
+  currency              String?            @db.Char(3)
+  totalAmount           Decimal?           @map("total_amount") @db.Decimal(14, 2)
+  metadataConfidence    Decimal?           @map("metadata_confidence") @db.Decimal(5, 4)
+  errorCode             String?            @map("error_code") @db.VarChar(100)
+  errorMessage          String?            @map("error_message") @db.VarChar(500)
+  confirmationKey       String?            @map("confirmation_key") @db.VarChar(160)
+  confirmationHash      String?            @map("confirmation_hash") @db.Char(64)
+  lastRetryKey          String?            @map("last_retry_key") @db.VarChar(160)
+  lastRetryHash         String?            @map("last_retry_hash") @db.Char(64)
+  processingStartedAt   DateTime?          @map("processing_started_at") @db.Timestamptz(3)
+  processingCompletedAt DateTime?          @map("processing_completed_at") @db.Timestamptz(3)
+  confirmedAt           DateTime?          @map("confirmed_at") @db.Timestamptz(3)
+  cancelledAt           DateTime?          @map("cancelled_at") @db.Timestamptz(3)
+  createdAt             DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  owner                 User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  inputs                ReceiptInput[]
+  candidates            ReceiptCandidate[]
+
+  @@unique([ownerId, idempotencyKey])
+  @@unique([ownerId, confirmationKey])
+  @@index([ownerId, status, createdAt])
+  @@index([status, updatedAt])
+  @@map("receipt_jobs")
+}
+
+model ReceiptInput {
+  id           String             @id @default(uuid()) @db.Uuid
+  jobId        String             @map("job_id") @db.Uuid
+  assetId      String             @map("asset_id") @db.Uuid
+  position     Int
+  status       ReceiptInputStatus @default(PENDING)
+  errorCode    String?            @map("error_code") @db.VarChar(100)
+  errorMessage String?            @map("error_message") @db.VarChar(500)
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  job          ReceiptJob         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  asset        MediaAsset         @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  candidates   ReceiptCandidate[]
+
+  @@unique([jobId, position])
+  @@unique([jobId, assetId])
+  @@index([assetId])
+  @@map("receipt_inputs")
+}
+
+model ReceiptCandidate {
+  id              String                 @id @default(uuid()) @db.Uuid
+  jobId           String                 @map("job_id") @db.Uuid
+  inputId         String                 @map("input_id") @db.Uuid
+  ingredientId    String?                @map("ingredient_id") @db.Uuid
+  lineText        String                 @map("line_text") @db.VarChar(300)
+  detectedName    String                 @map("detected_name") @db.VarChar(160)
+  normalizedName  String                 @map("normalized_name") @db.VarChar(160)
+  quantity        Decimal?               @db.Decimal(14, 4)
+  unit            String?                @db.VarChar(40)
+  unitPrice       Decimal?               @map("unit_price") @db.Decimal(14, 2)
+  lineTotal       Decimal?               @map("line_total") @db.Decimal(14, 2)
+  currency        String?                @db.Char(3)
+  confidence      Decimal                @db.Decimal(5, 4)
+  matchConfidence Decimal?               @map("match_confidence") @db.Decimal(5, 4)
+  uncertaintyNote String?                @map("uncertainty_note") @db.VarChar(500)
+  status          ReceiptCandidateStatus @default(PROPOSED)
+  version         Int                    @default(1)
+  pantryItemId    String?                @map("pantry_item_id") @db.Uuid
+  pantryAction    String?                @map("pantry_action") @db.VarChar(20)
+  createdAt       DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  job             ReceiptJob             @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  input           ReceiptInput           @relation(fields: [inputId], references: [id], onDelete: Cascade)
+  ingredient      Ingredient?            @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  pantryItem      PantryItem?            @relation(fields: [pantryItemId], references: [id], onDelete: Restrict)
+
+  @@index([jobId, status, createdAt])
+  @@index([inputId])
+  @@index([ingredientId])
+  @@index([pantryItemId])
+  @@map("receipt_candidates")
 }
 
 model Post {
@@ -1871,6 +1996,7 @@ model MediaAsset {
   postMedia              PostMedia[]
   customMealPhotos       CustomMealPhoto[]
   recognitionInputs      RecognitionInput[]
+  receiptInputs          ReceiptInput[]
 
   @@index([ownerId, status, createdAt])
   @@index([status, reconciledAt])

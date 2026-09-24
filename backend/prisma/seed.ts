@@ -2258,6 +2258,56 @@ async function main(): Promise<void> {
       },
     });
   }
+  const receiptFixtures = [
+    {
+      id: '22000000-0000-4000-8000-000000000001',
+      publicId: 'seed/receipts/market-primary',
+      secureUrl: 'https://res.cloudinary.com/demo/image/upload/seed/receipts/market-primary.jpg',
+      bytes: 125_000,
+    },
+    {
+      id: '22000000-0000-4000-8000-000000000002',
+      publicId: 'seed/receipts/partial-failure',
+      secureUrl: 'https://res.cloudinary.com/demo/image/upload/seed/receipts/partial-failure.jpg',
+      bytes: 110_000,
+    },
+  ] as const;
+  for (const fixture of receiptFixtures) {
+    await prisma.mediaAsset.upsert({
+      where: { id: fixture.id },
+      update: {
+        ownerId: pantryMember.id,
+        kind: MediaKind.RECEIPT_IMAGE,
+        resourceType: MediaResourceType.IMAGE,
+        publicId: fixture.publicId,
+        secureUrl: fixture.secureUrl,
+        mimeType: 'image/jpeg',
+        extension: '.jpg',
+        bytes: fixture.bytes,
+        width: 1024,
+        height: 1600,
+        status: MediaAssetStatus.ACTIVE,
+        backfilled: true,
+        deletedAt: null,
+        deletedById: null,
+      },
+      create: {
+        id: fixture.id,
+        ownerId: pantryMember.id,
+        kind: MediaKind.RECEIPT_IMAGE,
+        resourceType: MediaResourceType.IMAGE,
+        publicId: fixture.publicId,
+        secureUrl: fixture.secureUrl,
+        mimeType: 'image/jpeg',
+        extension: '.jpg',
+        bytes: fixture.bytes,
+        width: 1024,
+        height: 1600,
+        status: MediaAssetStatus.ACTIVE,
+        backfilled: true,
+      },
+    });
+  }
   for (const user of seededUsers) {
     const aggregate = await prisma.mediaAsset.aggregate({
       where: {
@@ -2272,7 +2322,7 @@ async function main(): Promise<void> {
     });
   }
   console.info(
-    `Seeded local Member, unified Contributors with two approval bases, Admin, storage policy/accounting, pantry inventory, fridge-vision fake fixtures, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
+    `Seeded local Member, unified Contributors with two approval bases, Admin, storage policy/accounting, pantry inventory, fridge-vision and receipt fake fixtures, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
   );
 }
 

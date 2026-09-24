@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.8
+**Version:** 4.9
 
 **Cập nhật:** 24/09/2026
 
@@ -432,13 +432,17 @@ Phase 21 requires clients to reserve and commit every image through the Phase 15
 
 | Method | Path | Status | Backend updated | FE integrated | Ghi chú |
 |---|---|---|---|---|---|
-| POST | `/receipt-jobs` | `PLANNED` | — | No | Upload/attach image and start extraction |
-| GET | `/receipt-jobs/:id` | `PLANNED` | — | No | Candidate lines, matches, confidence, status |
-| PATCH | `/receipt-jobs/:id/candidates/:candidateId` | `PLANNED` | — | No | Correct/reject candidate |
-| POST | `/receipt-jobs/:id/confirm` | `PLANNED` | — | No | Idempotent confirmed pantry diff |
-| POST | `/shopping-lists/preview` | `PLANNED` | — | No | Required/available/missing + assumptions/source meals |
+| POST | `/receipt-jobs` | `READY` | 2026-09-24 | No | Start async extraction from ordered, owned, committed receipt-image assets; idempotent create |
+| GET | `/receipt-jobs/:id` | `READY` | 2026-09-24 | No | Owner-only status, receipt metadata, image results, editable candidate lines, confidence/uncertainty |
+| PATCH | `/receipt-jobs/:id/candidates/:candidateId` | `READY` | 2026-09-24 | No | Optimistic-version canonical/name/quantity/price correction or rejection; no pantry mutation |
+| POST | `/receipt-jobs/:id/confirm` | `READY` | 2026-09-24 | No | Idempotent transactional confirmation; selected candidates only; returns explicit pantry diff |
+| POST | `/receipt-jobs/:id/cancel` | `READY` | 2026-09-24 | No | Idempotent cancel before confirmation; committed images remain quota-accounted |
+| POST | `/receipt-jobs/:id/retry` | `READY` | 2026-09-24 | No | Idempotent retry for failed/partially failed extraction using all attached images |
+| POST | `/shopping-lists/preview` | `READY` | 2026-09-24 | No | Selected published recipes/private custom meals + servings; explainable confirmed-pantry gaps |
 
-Receipt extraction never mutates pantry before confirmation. Shopping gap uses confirmed pantry and selected meal servings.
+Reserve and commit each receipt image through Phase 15 with `kind: RECEIPT_IMAGE` before creating a job. Defaults are 4 images/job, 10 MB/image, and JPEG/PNG/WebP/AVIF. Extraction, candidate correction/rejection, retry, and cancel never mutate Pantry. Only explicit confirmation changes Pantry; it returns `CREATED`/`UPDATED` item summaries and is safe to replay with the same idempotency key.
+
+Shopping preview accepts selected recipe/custom-meal servings, scales ingredient requirements, applies reviewed mass/household conversions, and compares only current positive `CONFIRMED` Pantry quantities. Each resolved item exposes grams for `required`, `available`, `missing`, and `surplus`, plus assumptions, source meals, and confidence. Unsupported conversions and unresolved ingredients remain explicit in `unresolvedItems`; receipt candidates are never counted until confirmed into Pantry. Responses omit owner/internal foreign keys, raw provider output, provider/model identifiers, reservations, and persistence metadata.
 
 ### 6.15 AI artifacts và unified verification — Phase 23
 
@@ -808,8 +812,17 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `RECOGNITION_VERSION_CONFLICT`                | Refetch the job before editing or confirming candidates |
 | `RECOGNITION_STATE_CONFLICT`                  | Refetch status; do not confirm cancelled, processing, or differently confirmed jobs |
 | `RECOGNITION_PROVIDER_UNAVAILABLE`            | Keep the committed images/job for retry or offer manual pantry entry |
-| `RECEIPT_NEEDS_CONFIRMATION`                  | Mở receipt candidate editor; không cập nhật pantry tự động (planned Phase 22) |
-| `SHOPPING_UNIT_UNRESOLVED`                    | Hiển thị dòng riêng và conversion assumption/unknown (planned Phase 22) |
+| `RECEIPT_IMAGE_LIMIT_EXCEEDED`                | Reduce the ordered receipt image list to the configured limit (default 4) |
+| `RECEIPT_IMAGE_INVALID`                       | Re-upload/reserve as an owned committed `RECEIPT_IMAGE` with supported type/size |
+| `RECEIPT_IDEMPOTENCY_CONFLICT`                | Reuse a create key only for the identical ordered asset list |
+| `RECEIPT_JOB_NOT_FOUND`                       | Close stale job UI; do not reveal another owner's job |
+| `RECEIPT_INGREDIENT_INVALID`                  | Refresh active canonical ingredient choices or retain an unmatched receipt label |
+| `RECEIPT_CANDIDATE_INVALID`                   | Ask for a receipt line/name containing letters or numbers |
+| `RECEIPT_QUANTITY_INCOMPLETE`                 | Provide both quantity and unit, or clear both |
+| `RECEIPT_VERSION_CONFLICT`                    | Refetch the job before editing or confirming candidates |
+| `RECEIPT_STATE_CONFLICT`                      | Refetch status; do not confirm cancelled, processing, or differently confirmed jobs |
+| `RECEIPT_PROVIDER_UNAVAILABLE`                | Keep the committed images/job for retry or offer manual Pantry entry |
+| `SHOPPING_MEAL_NOT_FOUND`                     | Remove inaccessible/stale recipe or custom-meal selections and recalculate |
 | `AI_ARTIFACT_VERSION_CONFLICT`                | Refetch artifact/version trước khi share/verify (planned Phase 23)      |
 | `SELF_VERIFICATION_FORBIDDEN`                 | Không cho Contributor tự verify artifact của mình (planned Phase 23)   |
 
@@ -874,6 +887,7 @@ Thêm entry mới nhất ở trên cùng.
 
 | Date       | Version | Module         | Change                                                                                                                                | Breaking | FE action                                                                                            |
 | ---------- | ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- | :------: | ---------------------------------------------------------------------------------------------------- |
+| 2026-09-24 | 4.9     | Receipts / Shopping | Phase 22 READY: quota-accounted receipt images, validated fake/local async extraction, editable/rejectable lines, partial retry/cancel, explicit idempotent confirmation as the only pantry mutation boundary, and explainable selected-meal shopping gaps based on reviewed conversions plus confirmed Pantry. | No | Run `npm run sync:swagger`; add endpoint constants and receipt/shopping DTO/Model/Mapper/API/query layers; upload with Phase 15 `RECEIPT_IMAGE`; render unresolved conversions separately. |
 | 2026-09-24 | 4.8     | Fridge Vision  | Phase 21 READY: quota-accounted owned multi-image attachments, async provider abstraction with validated fake/local output, cross-image dedupe/evidence, canonical suggestions, editable quantity/freshness candidates, partial failure/retry/cancel, and idempotent transactional confirmation as the only pantry mutation boundary. | No | Run `npm run sync:swagger`; add endpoint constants and ingredient-vision DTO/Model/Mapper/API/query layers; use Phase 15 `FRIDGE_IMAGE` reservation/commit first and render confidence/uncertainty without food-safety claims. |
 | 2026-09-23 | 4.7     | Pantry         | Phase 20 READY: owner CRUD/filter, explicit UI DTOs, reviewed mass/household conversion with unknown status, immutable consume/restore/adjust ledger, negative prevention, soft-delete history, duplicate preview/atomic merge, inclusive expiry query, idempotency, and optimistic concurrency. | No | Run `npm run sync:swagger`; add endpoint constants plus Pantry DTO/Model/Mapper/API/query layers and handle conversion/expiry/version/idempotency states. |
 | 2026-09-23 | 4.6     | Meal Programs  | Phase 19 READY: owner-scoped 2–12 week programs, bounded draft alternatives, stable weekly snapshots, partial/retry generation, repeated-pattern and cumulative/average nutrition analysis, version/idempotency checks, later-week invalidation, reanalysis, and immutable confirmed content. | No | Run `npm run sync:swagger`; add DTO/Model/Mapper/query for program list/detail/actions and render partial, stale, warning, and confirmation states. |

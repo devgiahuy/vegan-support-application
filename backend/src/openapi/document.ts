@@ -22,6 +22,7 @@ import { registerStorageOpenApi } from '../modules/storage/storage.openapi.js';
 import { registerCustomMealOpenApi } from '../modules/custom-meals/custom-meal.openapi.js';
 import { registerPantryOpenApi } from '../modules/pantry/pantry.openapi.js';
 import { registerIngredientRecognitionOpenApi } from '../modules/ingredient-recognition/ingredient-recognition.openapi.js';
+import { registerReceiptOpenApi } from '../modules/receipts/receipt.openapi.js';
 
 const registry = new OpenAPIRegistry();
 
@@ -68,6 +69,7 @@ registerStorageOpenApi(registry, registeredErrorResponse);
 registerCustomMealOpenApi(registry, registeredErrorResponse);
 registerPantryOpenApi(registry, registeredErrorResponse);
 registerIngredientRecognitionOpenApi(registry, registeredErrorResponse);
+registerReceiptOpenApi(registry, registeredErrorResponse);
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
@@ -128,6 +130,8 @@ const generatedDocument = generator.generateDocument({
       name: 'Ingredient Recognition',
       description: 'Owner-scoped multi-image recognition with explicit pantry confirmation',
     },
+    { name: 'Receipts', description: 'Receipt image extraction with explicit pantry confirmation' },
+    { name: 'Shopping Lists', description: 'Pantry-aware explainable shopping-gap previews' },
   ],
 });
 
