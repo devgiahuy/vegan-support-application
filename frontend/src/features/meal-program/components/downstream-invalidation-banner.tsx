@@ -8,11 +8,13 @@ import { useReanalyzeMealProgramMutation } from '../queries/meal-program.queries
 
 interface DownstreamInvalidationBannerProps {
   programId: string;
+  version?: number;
   isInvalidated: boolean;
 }
 
 export const DownstreamInvalidationBanner: React.FC<DownstreamInvalidationBannerProps> = ({
   programId,
+  version = 1,
   isInvalidated,
 }) => {
   const reanalyzeMutation = useReanalyzeMealProgramMutation(programId);
@@ -21,7 +23,7 @@ export const DownstreamInvalidationBanner: React.FC<DownstreamInvalidationBanner
 
   const handleReanalyze = async () => {
     try {
-      await reanalyzeMutation.mutateAsync();
+      await reanalyzeMutation.mutateAsync({ expectedVersion: version });
       toast.success('Đã tính toán lại dữ liệu phân tích dinh dưỡng tích lũy!');
     } catch (err: unknown) {
       const errorMsg =

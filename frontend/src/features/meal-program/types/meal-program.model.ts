@@ -1,5 +1,6 @@
-export type MealProgramStatus = 'DRAFT' | 'CONFIRMED' | 'COMPLETED' | 'ARCHIVED';
+export type MealProgramStatus = 'DRAFT' | 'CONFIRMED' | 'COMPLETED' | 'ARCHIVED' | 'FAILED';
 export type ProgramWeekStatus = 'UPCOMING' | 'ACTIVE' | 'COMPLETED';
+export type MealProgramGoal = 'MAINTAIN' | 'LOSE' | 'GAIN';
 
 export interface MealItemSummary {
   id: string;
@@ -54,6 +55,7 @@ export interface RepeatedPatternWarning {
   sourceType: 'RECIPE' | 'CUSTOM_MEAL';
   occurrences: number;
   dates: string[];
+  formattedDates?: string[];
   message: string;
 }
 
@@ -76,6 +78,7 @@ export interface MealProgramListItem {
   userId: string;
   title: string;
   goal: string;
+  goalLabel: string;
   startDate: string;
   endDate: string;
   formattedDateRange: string;
@@ -83,7 +86,7 @@ export interface MealProgramListItem {
   horizonWeeks: number;
   status: MealProgramStatus;
   statusLabel: string;
-  statusBadgeVariant: 'warning' | 'default' | 'success' | 'secondary';
+  statusBadgeVariant: 'warning' | 'default' | 'success' | 'secondary' | 'destructive';
   version: number;
   templateId?: string | null;
   overallComplianceRate: number;
@@ -99,6 +102,7 @@ export interface MealProgram {
   userId: string;
   title: string;
   goal: string;
+  goalLabel: string;
   startDate: string;
   endDate: string;
   formattedDateRange: string;
@@ -106,7 +110,7 @@ export interface MealProgram {
   horizonWeeks: number;
   status: MealProgramStatus;
   statusLabel: string;
-  statusBadgeVariant: 'warning' | 'default' | 'success' | 'secondary';
+  statusBadgeVariant: 'warning' | 'default' | 'success' | 'secondary' | 'destructive';
   version: number;
   templateId?: string | null;
   weeks: ProgramWeek[];

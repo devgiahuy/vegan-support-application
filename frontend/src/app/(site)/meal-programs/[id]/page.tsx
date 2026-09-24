@@ -113,6 +113,7 @@ export default function MealProgramDetailPage({ params }: MealProgramDetailPageP
       {/* Cảnh báo vô hiệu hóa hạ lưu */}
       <DownstreamInvalidationBanner
         programId={program.id}
+        version={program.version}
         isInvalidated={hasInvalidatedWeeks || Boolean(program.cumulativeAnalysis?.isInvalidated)}
       />
 

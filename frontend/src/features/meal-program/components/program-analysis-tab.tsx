@@ -19,7 +19,7 @@ export const ProgramAnalysisTab: React.FC<ProgramAnalysisTabProps> = ({ program 
 
   const handleReanalyze = async () => {
     try {
-      await reanalyzeMutation.mutateAsync();
+      await reanalyzeMutation.mutateAsync({ expectedVersion: program.version });
       toast.success('Đã cập nhật phân tích dinh dưỡng tích lũy mới nhất!');
     } catch (err: unknown) {
       const errorMsg =

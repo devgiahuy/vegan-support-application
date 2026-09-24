@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { mealProgramApi, type MealProgramQueryParams } from '../api/meal-program.api';
 import type {
   CreateMealProgramRequestDto,
+  PatchMealProgramActionDto,
   RegenerateWeekRequestDto,
   UpdateMealProgramRequestDto,
   UpdateWeekProgressRequestDto,
@@ -55,13 +56,43 @@ export const useCreateMealProgramMutation = () => {
 };
 
 /**
- * Mutation cập nhật lộ trình (Xác nhận CONFIRMED, lưu trữ ARCHIVED, cập nhật tiêu đề...)
+ * Mutation cập nhật lộ trình chung (Tương thích ngược)
  */
 export const useUpdateMealProgramMutation = (id: string) => {
   const queryClient = useQueryClient();
 
   return useMutation<MealProgram, Error, UpdateMealProgramRequestDto>({
     mutationFn: (data) => mealProgramApi.updateMealProgram(id, data),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(MEAL_PROGRAM_KEYS.detail(id), updated);
+      queryClient.invalidateQueries({ queryKey: MEAL_PROGRAM_KEYS.lists() });
+    },
+  });
+};
+
+/**
+ * Mutation thực hiện một action PATCH trên lộ trình
+ */
+export const usePatchMealProgramMutation = (id: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation<MealProgram, Error, PatchMealProgramActionDto>({
+    mutationFn: (action) => mealProgramApi.patchMealProgram(id, action),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(MEAL_PROGRAM_KEYS.detail(id), updated);
+      queryClient.invalidateQueries({ queryKey: MEAL_PROGRAM_KEYS.lists() });
+    },
+  });
+};
+
+/**
+ * Mutation xác nhận lộ trình DRAFT -> CONFIRMED
+ */
+export const useConfirmMealProgramMutation = (id: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation<MealProgram, Error, { expectedVersion: number }>({
+    mutationFn: ({ expectedVersion }) => mealProgramApi.confirmMealProgram(id, expectedVersion),
     onSuccess: (updated) => {
       queryClient.setQueryData(MEAL_PROGRAM_KEYS.detail(id), updated);
       queryClient.invalidateQueries({ queryKey: MEAL_PROGRAM_KEYS.lists() });
@@ -86,13 +117,37 @@ export const useRegenerateProgramWeekMutation = (id: string) => {
 };
 
 /**
+ * Mutation chọn phương án thay thế cho tuần
+ */
+export const useSelectAlternativeMutation = (id: string) => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    MealProgram,
+    Error,
+    { expectedVersion: number; weekIndex: number; alternativeRank: number }
+  >({
+    mutationFn: ({ expectedVersion, weekIndex, alternativeRank }) =>
+      mealProgramApi.selectAlternative(id, expectedVersion, weekIndex, alternativeRank),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(MEAL_PROGRAM_KEYS.detail(id), updated);
+      queryClient.invalidateQueries({ queryKey: MEAL_PROGRAM_KEYS.lists() });
+    },
+  });
+};
+
+/**
  * Mutation tái phân tích dinh dưỡng tích lũy và lặp món
  */
 export const useReanalyzeMealProgramMutation = (id: string) => {
   const queryClient = useQueryClient();
 
-  return useMutation<MealProgram, Error, void>({
-    mutationFn: () => mealProgramApi.reanalyzeMealProgram(id),
+  return useMutation<MealProgram, Error, { expectedVersion?: number } | void>({
+    mutationFn: (variables) => {
+      const version =
+        variables && typeof variables === 'object' ? (variables.expectedVersion ?? 1) : 1;
+      return mealProgramApi.reanalyzeMealProgram(id, version);
+    },
     onSuccess: (updated) => {
       queryClient.setQueryData(MEAL_PROGRAM_KEYS.detail(id), updated);
     },

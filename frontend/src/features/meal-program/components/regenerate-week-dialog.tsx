@@ -39,6 +39,7 @@ export const RegenerateWeekDialog: React.FC<RegenerateWeekDialogProps> = ({
         weekNumber,
         data: {
           version,
+          weekIndex: Math.max(0, weekNumber - 1),
         },
       });
 

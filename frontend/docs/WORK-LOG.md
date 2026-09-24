@@ -16,6 +16,108 @@
 - Còn lại / rủi ro:
 ```
 
+## [2026-09-24] — Khắc phục lỗi VALIDATION_ERROR khi tạo lộ trình dinh dưỡng Phase 19
+
+- Mục tiêu: Khắc phục triệt để lỗi `VALIDATION_ERROR` từ backend khi tạo lộ trình (`goal` enum, `startDate` phải là Thứ Hai, `horizonWeeks`, `idempotencyKey`, và lỗi unrecognized keys snake_case do backend `.strict()`).
+- Đã làm:
+  - **Phân tích nguyên nhân**:
+    1. Backend `createMealProgramRequestSchema` sử dụng `.strict()` với định dạng camelCase (`startDate`, `horizonWeeks`), trong khi form trước đó gửi payload snake_case (`start_date`, `horizon_weeks`), dẫn đến lỗi `Unrecognized keys: "start_date", "horizon_weeks"`.
+    2. Backend bắt buộc `goal` là enum `MealGoal` (`'MAINTAIN' | 'LOSE' | 'GAIN'`), trong khi form trước đó là textarea tự do (gửi "GIẢM CÂN ĂN UỐNG HEALTHI").
+    3. Backend kiểm tra `(value) => new Date(`${value}T00:00:00.000Z`).getUTCDay() === 1` - ngày bắt đầu BẮT BUỘC là Thứ Hai, trong khi người dùng chọn ngày Thứ Sáu (2026-09-25).
+    4. Backend yêu cầu `idempotencyKey` (8-120 ký tự) không được để trống.
+  - **Triển khai khắc phục chuẩn kiến trúc**:
+    - Tạo bộ tiện ích ngày tháng `meal-program-date.utils.ts` và unit test `meal-program-date.utils.test.ts`: tính toán Thứ Hai tiếp theo (`getNextMonday`), kiểm tra Thứ Hai (`isMonday`), tự động nắn ngày sang Thứ Hai gần nhất (`snapToNextMonday`), gợi ý danh sách Thứ Hai dạng pills (`getUpcomingMondays`).
+    - Cập nhật `program-create-form.tsx`: Thay textarea tự do bằng 3 card chọn mục tiêu chuẩn enum (`LOSE`: Giảm cân & Thanh lọc, `MAINTAIN`: Duy trì vóc dáng, `GAIN`: Tăng cân & Tăng cơ) kèm icon và badge. Thêm date picker Thứ Hai kèm auto-snap và pills chọn nhanh 1 click. Gửi payload thuần camelCase khớp 100% backend schema.
+    - Cập nhật `meal-program.api.ts`: Chuẩn hóa `createMealProgram` tự động sinh `idempotencyKey` UUID chuẩn nếu chưa có, loại bỏ hoàn toàn các trường thừa chống lỗi `.strict()`. Đồng bộ các endpoint PATCH (`CONFIRM`, `REANALYZE`, `REGENERATE_WEEK`, `UPDATE_METADATA`, `SELECT_ALTERNATIVE`).
+    - Cập nhật `meal-program.queries.ts`, `program-confirm-dialog.tsx`, `downstream-invalidation-banner.tsx`, `program-analysis-tab.tsx`, `regenerate-week-dialog.tsx` đồng bộ với backend action schemas.
+- File tạo/sửa:
+  - `src/features/meal-program/utils/meal-program-date.utils.ts` (mới)
+  - `src/features/meal-program/utils/meal-program-date.utils.test.ts` (mới)
+  - `src/features/meal-program/types/meal-program.dto.ts`
+  - `src/features/meal-program/types/meal-program.model.ts`
+  - `src/features/meal-program/mappers/meal-program.mapper.ts`
+  - `src/features/meal-program/api/meal-program.api.ts`
+  - `src/features/meal-program/queries/meal-program.queries.ts`
+  - `src/features/meal-program/components/program-create-form.tsx`
+  - `src/features/meal-program/components/program-confirm-dialog.tsx`
+  - `src/features/meal-program/components/downstream-invalidation-banner.tsx`
+  - `src/features/meal-program/components/program-analysis-tab.tsx`
+  - `src/features/meal-program/components/regenerate-week-dialog.tsx`
+  - `src/app/(site)/meal-programs/[id]/page.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi typescript.
+  - `npm test`: 33/33 test files passed (325/325 tests passed).
+- PROGRESS: Phase 19 Meal Program Form & API Validation đã sửa triệt để 100%.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-24] — Khắc phục lỗi animation khi click chuyển trang Tra cứu dinh dưỡng và Cẩm nang trên Navbar
+
+- Mục tiêu: Khắc phục triệt để lỗi animation bị giật, nhấp nháy, chữ biến mất hoặc xung đột đo đạc tọa độ khi người dùng click vào các mục "Tra cứu dinh dưỡng" và "Cẩm nang" trên thanh Header.
+- Đã làm:
+  - **Phân tích nguyên nhân**:
+    1. Khi sử dụng `layoutId="header-active-pill"` cho trạng thái Active kết hợp với `layoutId="header-hover-pill"` cho Hover: lúc người dùng click vào một mục mới (vd: Cẩm nang), mục đó lập tức chuyển sang `active = true` và chữ nhận màu trắng `text-primary-foreground`. Tuy nhiên, thẻ nền xanh `header-active-pill` cần thời gian chuyển động lò xo (~300ms) để bay từ trang cũ sang. Trong 300ms đó, nền hover xám đã bị huỷ (`!active`), khiến chữ màu trắng nằm trên nền thanh menu màu trắng/trong suốt -> chữ bị biến mất tạm thời (chớp trắng).
+    2. Riêng mục "Tra cứu dinh dưỡng" (`/categories#tra-cuu`), khi click vào thì trình duyệt thực hiện scroll nhảy xuống anchor `#tra-cuu`. Việc scroll đột ngột cùng lúc Framer Motion đang đo tọa độ `getBoundingClientRect()` cho `layoutId="header-active-pill"` khiến khung tính toán bị lệch vị trí hoặc giật khung hình.
+    3. `hoveredHref` không được reset khi click, dẫn đến trạng thái hover bị kẹt ngay trên liên kết vừa click.
+  - **Giải pháp xử lý chuẩn UI/UX & Motion**:
+    - **Active Badge tĩnh & ổn định**: Gán trực tiếp lớp màu chuẩn `bg-primary font-semibold text-primary-foreground shadow-sm` cho mục trang đang chọn (`active`), loại bỏ việc di chuyển `header-active-pill` giữa các trang khác nhau. Điều này triệt tiêu hoàn toàn lỗi chớp chữ trắng, giật layout và xung đột scroll anchor.
+    - **Hover Pill mượt mà 60 FPS**: Giữ nguyên `layoutId="header-hover-pill"` chuyển động lướt dính theo con trỏ chuột (`stiffness: 380, damping: 30`) giữa các mục chưa active.
+    - **Reset `hoveredHref` khi click**: Thêm `onClick={() => setHoveredHref(null)}` trên mỗi thẻ `<Link>` để ngay khi click điều hướng, thanh hover tự động dọn dẹp sạch sẽ, không gây chồng chéo hiệu ứng.
+- File tạo/sửa:
+  - `src/components/layout/site-header.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi typescript.
+  - `npm test`: 32/32 test files passed (319/319 tests passed).
+  - `npm run build`: Build Next.js thành công 35/35 routes.
+- PROGRESS: Tinh chỉnh chuyển động Click & Hover Navbar Header hoàn tất 100%.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-24] — Tối ưu hiệu ứng lướt hover (Gliding Pill Animation) trên thanh điều hướng Header
+
+- Mục tiêu: Khắc phục lỗi animation hover bị giật, nhấp nháy hoặc xung đột layoutId trên thanh điều hướng (`SiteHeader`) khi có nhiều trang/mục menu.
+- Đã làm:
+  - **Phân tích nguyên nhân**: Việc bọc `<AnimatePresence>` kèm `initial={{ opacity: 0 }}` và `exit={{ opacity: 0 }}` bên trong từng phần tử lặp `.map()` khiến khi con trỏ chuột di chuyển nhanh giữa các mục menu, phần tử cũ vẫn tồn tại trong DOM trong suốt thời gian exit animation. Cả 2 phần tử cùng mang `layoutId="header-hover-pill"` dẫn đến xung đột vị trí tính toán của Framer Motion / Motion LayoutGroup, gây hiện tượng bóng ma hoặc giật cục.
+  - **Tối ưu hóa chuyển động (Performance & Motion guidelines)**:
+    - Loại bỏ việc bọc `<AnimatePresence>` riêng lẻ từng mục để `layoutId="header-hover-pill"` chuyển đổi vị trí mượt mà (smooth gliding) giữa các bounding box qua physics spring (`stiffness: 380, damping: 30`).
+    - Giữ `pointer-events-none` và `-z-0` trên thẻ `motion.span` để không can thiệp hoặc ngắt quãng các sự kiện `onMouseEnter` / `onMouseLeave` của thẻ `<Link>`.
+    - Phân tách rõ rệt giữa `header-active-pill` (trang hiện tại) và `header-hover-pill` (mục đang hover), khi rê chuột vào trang đang active thì hover pill tự tắt sạch sẽ, tránh đè 2 lớp nền.
+    - Duy trì hỗ trợ `shouldReduceMotion` cho người dùng cấu hình giảm tải chuyển động.
+- File tạo/sửa:
+  - `src/components/layout/site-header.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi typescript.
+  - `npm test`: 32/32 test files passed (319/319 tests passed).
+  - `npm run build`: Build Next.js thành công 35/35 routes.
+- PROGRESS: Tinh chỉnh chuyển động Navbar Header hoàn tất 100%.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-24] — Khắc phục lỗi tràn viền phải & lệch trang khi mở popup menu trên Header
+
+- Mục tiêu: Khắc phục hiện tượng khi người dùng click vào popup mở menu điều hướng (Avatar hồ sơ cá nhân hoặc Chuông thông báo trên Header) thì giao diện bị giật, lệch và tràn viền sang bên phải làm mất góc nhìn bên trái và hở viền trắng bên phải.
+- Đã làm:
+  - **Phân tích nguyên nhân**:
+    1. DropdownMenu của Radix UI mặc định kích hoạt `modal={true}`, sử dụng `react-remove-scroll` để khóa cuộn `body`. Khi khóa, thư viện tự động thêm `padding-right: 17px` (độ rộng scrollbar Windows) và ẩn scrollbar, gây layout shift dịch chuyển toàn bộ trang web.
+    2. Trong `globals.css`, cấu hình `max-width: 100vw` tính cả bề rộng scrollbar (vốn rộng hơn `clientWidth` 17px), khi kết hợp với `padding-right` của Radix khiến popper vượt quá màn hình, làm trình duyệt tự động cuộn ngang cửa sổ sang phải (`window.scrollX > 0`).
+  - **Giải pháp xử lý**:
+    - **Cấu hình `modal={false}` cho Header Dropdown**: Thiết lập `modal = false` mặc định cho `DropdownMenu` trong `src/components/ui/dropdown-menu.tsx` và cụ thể tại `SiteHeader` (Avatar menu) và `NotificationBell`. Menu hoạt động như một popover điều hướng tự nhiên: không khóa scroll body, không thêm `padding-right`, không làm nhảy khung hình và không gây cuộn ngang.
+    - **Thêm `collisionPadding = 8`**: Đảm bảo Popper của Radix luôn giữ khoảng cách an toàn ít nhất 8px so với mép phải màn hình, không bao giờ tì sát hay cấn viền.
+    - **Chỉnh `max-width: 100%` trong `globals.css`**: Thay thế `100vw` bằng `width: 100%; max-width: 100%;` để giới hạn chính xác theo `clientWidth`, triệt tiêu hoàn toàn khả năng tính dư pixel của scrollbar.
+    - **Responsive max-width cho DropdownContent**: Đặt `max-w-[calc(100vw-2rem)]` cho menu Avatar và `w-[calc(100vw-2rem)] max-w-sm sm:w-90` cho Notification panel để đảm bảo hiển thị hoàn hảo trên mọi kích cỡ màn hình.
+- File tạo/sửa:
+  - `src/components/ui/dropdown-menu.tsx`
+  - `src/components/layout/site-header.tsx`
+  - `src/features/notification/components/notification-bell.tsx`
+  - `src/app/globals.css`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi typescript.
+  - `npm test`: 32/32 test files passed (319/319 tests passed).
+  - `npm run build`: Build Next.js thành công 35/35 routes.
+- PROGRESS: Tinh chỉnh UI Header Dropdowns hoàn tất 100%.
+- Còn lại / rủi ro: Không có.
+
 ## [2026-09-24] — Tối ưu thanh công cụ Tab trang Hồ sơ (Profile) hiển thị 1 hàng & bổ sung thanh cuộn / nút báo hiệu nội dung
 
 - Mục tiêu:

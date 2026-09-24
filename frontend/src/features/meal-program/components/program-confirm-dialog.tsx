@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useUpdateMealProgramMutation } from '../queries/meal-program.queries';
+import { useConfirmMealProgramMutation } from '../queries/meal-program.queries';
 import type { MealProgram } from '../types/meal-program.model';
 
 interface ProgramConfirmDialogProps {
@@ -26,13 +26,12 @@ export const ProgramConfirmDialog: React.FC<ProgramConfirmDialogProps> = ({
   open,
   onOpenChange,
 }) => {
-  const updateMutation = useUpdateMealProgramMutation(program.id);
+  const confirmMutation = useConfirmMealProgramMutation(program.id);
 
   const handleConfirm = async () => {
     try {
-      await updateMutation.mutateAsync({
-        status: 'CONFIRMED',
-        version: program.version,
+      await confirmMutation.mutateAsync({
+        expectedVersion: program.version,
       });
 
       toast.success(
@@ -86,17 +85,17 @@ export const ProgramConfirmDialog: React.FC<ProgramConfirmDialogProps> = ({
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={updateMutation.isPending}
+            disabled={confirmMutation.isPending}
           >
             Xem lại thêm
           </Button>
           <Button
             type="button"
             onClick={handleConfirm}
-            disabled={updateMutation.isPending}
+            disabled={confirmMutation.isPending}
             className="bg-emerald-600 hover:bg-emerald-700 text-white"
           >
-            {updateMutation.isPending ? (
+            {confirmMutation.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 Đang xác nhận...

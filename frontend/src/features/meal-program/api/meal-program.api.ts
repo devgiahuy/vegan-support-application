@@ -4,6 +4,7 @@ import type {
   CreateMealProgramRequestDto,
   MealProgramDto,
   MealProgramListResponseDto,
+  PatchMealProgramActionDto,
   RegenerateWeekRequestDto,
   UpdateMealProgramRequestDto,
   UpdateWeekProgressRequestDto,
@@ -16,6 +17,13 @@ export interface MealProgramQueryParams {
   limit?: number;
   type?: 'TEMPLATES' | 'MY_PROGRAMS';
   status?: string;
+}
+
+function generateIdempotencyKey(prefix = 'mp'): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return `${prefix}-${crypto.randomUUID()}`;
+  }
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
 }
 
 export const mealProgramApi = {
@@ -40,24 +48,65 @@ export const mealProgramApi = {
 
   /**
    * Khởi tạo chương trình dinh dưỡng nhiều tuần mới (Trạng thái DRAFT)
+   * Backend schema là .strict() với startDate (bắt buộc Thứ Hai), goal (MAINTAIN | LOSE | GAIN),
+   * horizonWeeks, timezone, idempotencyKey
    */
   createMealProgram: async (data: CreateMealProgramRequestDto): Promise<MealProgram> => {
-    const res = await api.post<{ data: MealProgramDto }>(API_ENDPOINTS.MEAL_PROGRAMS.CREATE, data);
+    const payload = {
+      title: data.title.trim(),
+      goal: data.goal,
+      startDate: data.startDate,
+      timezone:
+        data.timezone ||
+        (typeof Intl !== 'undefined'
+          ? Intl.DateTimeFormat().resolvedOptions().timeZone
+          : 'Asia/Bangkok'),
+      horizonWeeks: Number(data.horizonWeeks),
+      alternativesPerWeek: data.alternativesPerWeek ?? 2,
+      ...(data.seed?.trim() ? { seed: data.seed.trim() } : {}),
+      idempotencyKey: data.idempotencyKey?.trim() || generateIdempotencyKey('create'),
+    };
+    const res = await api.post<{ data: MealProgramDto }>(
+      API_ENDPOINTS.MEAL_PROGRAMS.CREATE,
+      payload
+    );
     return mealProgramMapper.toModel(res.data?.data);
   },
 
   /**
-   * Cập nhật trạng thái hoặc thông tin chương trình (Xác nhận CONFIRMED, lưu trữ ARCHIVED...)
+   * Thực hiện các hành động cập nhật lộ trình qua PATCH /meal-programs/:id với discriminated union action
    */
-  updateMealProgram: async (
-    id: string,
-    data: UpdateMealProgramRequestDto
-  ): Promise<MealProgram> => {
+  patchMealProgram: async (id: string, action: PatchMealProgramActionDto): Promise<MealProgram> => {
+    const payload = {
+      ...action,
+      idempotencyKey:
+        action.idempotencyKey?.trim() || generateIdempotencyKey(action.action.toLowerCase()),
+    };
     const res = await api.patch<{ data: MealProgramDto }>(
       API_ENDPOINTS.MEAL_PROGRAMS.UPDATE(id),
-      data
+      payload
     );
     return mealProgramMapper.toModel(res.data?.data);
+  },
+
+  /**
+   * Xác nhận lộ trình DRAFT -> CONFIRMED
+   */
+  confirmMealProgram: async (id: string, expectedVersion: number): Promise<MealProgram> => {
+    return mealProgramApi.patchMealProgram(id, {
+      action: 'CONFIRM',
+      expectedVersion,
+    });
+  },
+
+  /**
+   * Tái phân tích dinh dưỡng tích lũy và lặp món cho toàn lộ trình
+   */
+  reanalyzeMealProgram: async (id: string, expectedVersion = 1): Promise<MealProgram> => {
+    return mealProgramApi.patchMealProgram(id, {
+      action: 'REANALYZE',
+      expectedVersion,
+    });
   },
 
   /**
@@ -68,19 +117,55 @@ export const mealProgramApi = {
     weekNumber: number,
     data: RegenerateWeekRequestDto
   ): Promise<MealProgram> => {
-    const res = await api.post<{ data: MealProgramDto }>(
-      API_ENDPOINTS.MEAL_PROGRAMS.REGENERATE_WEEK(id, weekNumber),
-      data
-    );
-    return mealProgramMapper.toModel(res.data?.data);
+    const weekIndex =
+      typeof data.weekIndex === 'number' ? data.weekIndex : Math.max(0, weekNumber - 1);
+    return mealProgramApi.patchMealProgram(id, {
+      action: 'REGENERATE_WEEK',
+      expectedVersion: data.version,
+      weekIndex,
+      seed: data.seed,
+      selectGenerated: true,
+    });
   },
 
   /**
-   * Kích hoạt tái phân tích dinh dưỡng tích lũy và lặp món cho lộ trình
+   * Chọn phương án thực đơn thay thế cho một tuần
    */
-  reanalyzeMealProgram: async (id: string): Promise<MealProgram> => {
-    const res = await api.post<{ data: MealProgramDto }>(API_ENDPOINTS.MEAL_PROGRAMS.REANALYZE(id));
-    return mealProgramMapper.toModel(res.data?.data);
+  selectAlternative: async (
+    id: string,
+    expectedVersion: number,
+    weekIndex: number,
+    alternativeRank: number
+  ): Promise<MealProgram> => {
+    return mealProgramApi.patchMealProgram(id, {
+      action: 'SELECT_ALTERNATIVE',
+      expectedVersion,
+      weekIndex,
+      alternativeRank,
+    });
+  },
+
+  /**
+   * Cập nhật thông tin lộ trình (Hỗ trợ tương thích ngược)
+   */
+  updateMealProgram: async (
+    id: string,
+    data: UpdateMealProgramRequestDto
+  ): Promise<MealProgram> => {
+    if (data.action) {
+      return mealProgramApi.patchMealProgram(id, data as PatchMealProgramActionDto);
+    }
+    if (data.status === 'CONFIRMED') {
+      return mealProgramApi.confirmMealProgram(id, data.expectedVersion || data.version || 1);
+    }
+    if (data.action === 'REANALYZE') {
+      return mealProgramApi.reanalyzeMealProgram(id, data.expectedVersion || data.version || 1);
+    }
+    return mealProgramApi.patchMealProgram(id, {
+      action: 'UPDATE_METADATA',
+      expectedVersion: data.expectedVersion || data.version || 1,
+      title: data.title || '',
+    });
   },
 
   /**
