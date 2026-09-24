@@ -17,8 +17,9 @@ export interface MealItemSummary {
 
 export interface ProgramDaySummary {
   date: string;
-  formattedDate: string; // 'Thứ Hai, 28/09'
-  dayOfWeek: number;
+  formattedDate: string; // '28/09'
+  dayOfWeek: number; // 1..7
+  dayOfWeekLabel?: string; // 'Thứ Hai'
   meals: MealItemSummary[];
   totalCalories: number;
 }

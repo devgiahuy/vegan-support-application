@@ -89,44 +89,56 @@ export const DayMealChecklist: React.FC<DayMealChecklistProps> = ({ programId, w
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-          {days.map((day) => (
-            <div key={day.date} className="p-3 rounded-lg bg-muted/30 border space-y-2">
-              <span className="text-xs font-semibold text-foreground block border-b pb-1">
-                {day.formattedDate || day.date}
-              </span>
+          {days.map((day) => {
+            const dayTitle = day.dayOfWeekLabel
+              ? `${day.dayOfWeekLabel} (${day.formattedDate || day.date})`
+              : day.formattedDate || day.date;
 
-              <div className="space-y-1.5 pt-1">
-                {day.meals.map((meal) => {
-                  const isChecked = completedMealIds.includes(meal.id);
+            return (
+              <div
+                key={day.date || String(day.dayOfWeek)}
+                className="p-3 rounded-lg bg-muted/30 border space-y-2"
+              >
+                <span className="text-xs font-semibold text-foreground flex items-center justify-between border-b pb-1">
+                  <span>{dayTitle}</span>
+                  <span className="text-[11px] text-muted-foreground font-normal">
+                    {day.totalCalories} Kcal
+                  </span>
+                </span>
 
-                  return (
-                    <label
-                      key={meal.id}
-                      className="flex items-start gap-2 cursor-pointer p-1.5 rounded-md hover:bg-background transition-colors text-xs"
-                    >
-                      <Checkbox
-                        checked={isChecked}
-                        onCheckedChange={() => handleToggleMeal(meal.id)}
-                        className="mt-0.5"
-                      />
-                      <div className="space-y-0.5 flex-1 min-w-0">
-                        <p
-                          className={`font-medium truncate ${isChecked ? 'line-through text-muted-foreground' : 'text-foreground'}`}
-                        >
-                          {meal.name}
-                        </p>
-                        <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                          <span>{meal.mealTypeLabel}</span>
-                          <span>•</span>
-                          <span>{meal.calories} Kcal</span>
-                        </p>
-                      </div>
-                    </label>
-                  );
-                })}
+                <div className="space-y-1.5 pt-1">
+                  {day.meals.map((meal) => {
+                    const isChecked = completedMealIds.includes(meal.id);
+
+                    return (
+                      <label
+                        key={meal.id}
+                        className="flex items-start gap-2 cursor-pointer p-1.5 rounded-md hover:bg-background transition-colors text-xs"
+                      >
+                        <Checkbox
+                          checked={isChecked}
+                          onCheckedChange={() => handleToggleMeal(meal.id)}
+                          className="mt-0.5"
+                        />
+                        <div className="space-y-0.5 flex-1 min-w-0">
+                          <p
+                            className={`font-medium truncate ${isChecked ? 'line-through text-muted-foreground' : 'text-foreground'}`}
+                          >
+                            {meal.name}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                            <span>{meal.mealTypeLabel}</span>
+                            <span>•</span>
+                            <span>{meal.calories} Kcal</span>
+                          </p>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>

@@ -312,4 +312,97 @@ describe('MealProgramMapper', () => {
     expect(day.meals).toEqual([]);
     expect(day.totalCalories).toBe(0);
   });
+
+  it('11. should correctly group 21 slots by date and order by mealType into 7 days', () => {
+    const dates = [
+      '2026-09-28', // Monday
+      '2026-09-29', // Tuesday
+      '2026-09-30', // Wednesday
+      '2026-10-01', // Thursday
+      '2026-10-02', // Friday
+      '2026-10-03', // Saturday
+      '2026-10-04', // Sunday
+    ];
+
+    const mealTypes: Array<'BREAKFAST' | 'LUNCH' | 'DINNER'> = ['BREAKFAST', 'LUNCH', 'DINNER'];
+    const items: unknown[] = [];
+
+    // Create 21 items, intentionally shuffle mealType order in input
+    dates.forEach((date, dayIdx) => {
+      // Intentionally insert DINNER before BREAKFAST to test sorting
+      items.push({
+        id: `item-${dayIdx}-dinner`,
+        date,
+        mealType: 'DINNER',
+        position: dayIdx * 3 + 2,
+        calories: 600,
+        recipe: { title: `Cơm tối ngày ${dayIdx + 1}` },
+      });
+      items.push({
+        id: `item-${dayIdx}-breakfast`,
+        date,
+        mealType: 'BREAKFAST',
+        position: dayIdx * 3,
+        calories: 400,
+        recipe: { title: `Bữa sáng ngày ${dayIdx + 1}` },
+      });
+      items.push({
+        id: `item-${dayIdx}-lunch`,
+        date,
+        mealType: 'LUNCH',
+        position: dayIdx * 3 + 1,
+        calories: 500,
+        customMeal: { name: `Bữa trưa ngày ${dayIdx + 1}` },
+      });
+    });
+
+    const weekDto = {
+      id: 'w-multi-days',
+      weekNumber: 1,
+      startDate: '2026-09-28',
+      status: 'READY' as const,
+      snapshot: {
+        totalCalories: 10500,
+        items,
+      },
+    };
+
+    const weekModel = mapper.mapWeek(weekDto);
+    expect(weekModel.snapshot).not.toBeNull();
+    const days = weekModel.snapshot!.days;
+
+    // Verify 7 distinct days are generated
+    expect(days.length).toBe(7);
+
+    // Verify each day corresponds to the correct date and day of week
+    const expectedDayLabels = [
+      'Thứ Hai',
+      'Thứ Ba',
+      'Thứ Tư',
+      'Thứ Năm',
+      'Thứ Sáu',
+      'Thứ Bảy',
+      'Chủ Nhật',
+    ];
+    days.forEach((day, index) => {
+      expect(day.date).toBe(dates[index]);
+      expect(day.dayOfWeek).toBe(index + 1);
+      expect(day.dayOfWeekLabel).toBe(expectedDayLabels[index]);
+      expect(day.meals.length).toBe(3);
+      expect(day.totalCalories).toBe(1500); // 400 + 500 + 600
+
+      // Verify meals are sorted in order: BREAKFAST -> LUNCH -> DINNER
+      expect(day.meals[0].mealType).toBe('BREAKFAST');
+      expect(day.meals[0].mealTypeLabel).toBe('Bữa sáng');
+      expect(day.meals[0].sourceType).toBe('RECIPE');
+
+      expect(day.meals[1].mealType).toBe('LUNCH');
+      expect(day.meals[1].mealTypeLabel).toBe('Bữa trưa');
+      expect(day.meals[1].sourceType).toBe('CUSTOM_MEAL');
+
+      expect(day.meals[2].mealType).toBe('DINNER');
+      expect(day.meals[2].mealTypeLabel).toBe('Bữa tối');
+      expect(day.meals[2].sourceType).toBe('RECIPE');
+    });
+  });
 });

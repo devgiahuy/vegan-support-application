@@ -274,18 +274,29 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
       (dto.snapshot as WeeklyPlanSnapshotDto | undefined) ??
       (selectedAlternative?.snapshot as WeeklyPlanSnapshotDto | undefined);
 
+    const effectiveStartDate =
+      startDate ||
+      safeString(
+        pickField(
+          rawSnapshot as Record<string, unknown> | undefined,
+          ['weekStart', 'week_start', 'startDate', 'start_date'],
+          ''
+        ),
+        ''
+      );
+
     return {
       id: safeString(pickField(dto, ['id'], ''), ''),
       programId: safeString(pickField(dto, ['program_id', 'programId'], ''), ''),
       weekNumber,
-      startDate,
-      endDate,
-      formattedDateRange: this.formatDateRange(startDate, endDate),
+      startDate: startDate || effectiveStartDate,
+      endDate: endDate || (effectiveStartDate ? this.calculateEndDate(effectiveStartDate, 1) : ''),
+      formattedDateRange: this.formatDateRange(startDate || effectiveStartDate, endDate),
       status,
       statusLabel: this.mapWeekStatusLabel(status),
       complianceRate: safeNumber(pickField(dto, ['compliance_rate', 'complianceRate'], 0), 0),
       isDownstreamInvalidated,
-      snapshot: this.mapSnapshot(rawSnapshot, startDate),
+      snapshot: this.mapSnapshot(rawSnapshot, effectiveStartDate),
     };
   }
 
@@ -334,6 +345,7 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
         date: '',
         formattedDate: '',
         dayOfWeek: 1,
+        dayOfWeekLabel: 'Thứ Hai',
         meals: [],
         totalCalories: 0,
       };
@@ -342,12 +354,29 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
     const meals = safeArray<WeeklyPlanMealItemDto, MealItemSummary>(dto.meals, (mealDto) =>
       this.mapMealItem(mealDto)
     );
+
+    const MEAL_TYPE_ORDER: Record<string, number> = {
+      BREAKFAST: 1,
+      LUNCH: 2,
+      DINNER: 3,
+      SNACK: 4,
+    };
+
+    meals.sort((a, b) => {
+      const orderA = MEAL_TYPE_ORDER[a.mealType] ?? 99;
+      const orderB = MEAL_TYPE_ORDER[b.mealType] ?? 99;
+      return orderA - orderB;
+    });
+
     const totalCalories = meals.reduce((sum, meal) => sum + meal.calories, 0);
+    const date = safeString(pickField(dto, ['date'], ''), '');
+    const dayOfWeek = safeNumber(pickField(dto, ['day_of_week', 'dayOfWeek'], 1), 1);
 
     return {
-      date: safeString(pickField(dto, ['date'], ''), ''),
-      formattedDate: this.formatDayDate(safeString(pickField(dto, ['date'], ''), '')),
-      dayOfWeek: safeNumber(pickField(dto, ['day_of_week', 'dayOfWeek'], 1), 1),
+      date,
+      formattedDate: this.formatDayDate(date),
+      dayOfWeek,
+      dayOfWeekLabel: this.getDayOfWeekLabel(date, dayOfWeek),
       meals,
       totalCalories,
     };
@@ -628,25 +657,145 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
     }
   }
 
+  private getDayOfWeekLabel(dateStr?: string, dayOfWeek?: number): string {
+    if (dateStr && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+      try {
+        const d = new Date(`${dateStr}T00:00:00.000Z`);
+        const day = d.getUTCDay();
+        switch (day) {
+          case 1:
+            return 'Thứ Hai';
+          case 2:
+            return 'Thứ Ba';
+          case 3:
+            return 'Thứ Tư';
+          case 4:
+            return 'Thứ Năm';
+          case 5:
+            return 'Thứ Sáu';
+          case 6:
+            return 'Thứ Bảy';
+          case 0:
+            return 'Chủ Nhật';
+        }
+      } catch {
+        // fallback
+      }
+    }
+
+    if (dayOfWeek && dayOfWeek >= 1 && dayOfWeek <= 7) {
+      const labels = ['Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy', 'Chủ Nhật'];
+      return labels[dayOfWeek - 1];
+    }
+
+    return 'Thứ Hai';
+  }
+
   private groupSlotsIntoDays(rawSlots: unknown[], weekStartDate?: string): ProgramDaySummary[] {
-    const dayMap = new Map<number, MealItemSummary[]>();
+    const MEAL_TYPE_ORDER: Record<string, number> = {
+      BREAKFAST: 1,
+      LUNCH: 2,
+      DINNER: 3,
+      SNACK: 4,
+    };
+
+    // 1. Thu thập tất cả các ngày duy nhất xuất hiện trong các slot
+    const slotDatesSet = new Set<string>();
+    for (const raw of rawSlots) {
+      if (raw && typeof raw === 'object') {
+        const rawDate = safeString((raw as Record<string, unknown>).date, '');
+        if (/^\d{4}-\d{2}-\d{2}$/.test(rawDate)) {
+          slotDatesSet.add(rawDate);
+        }
+      }
+    }
+    const sortedSlotDates = Array.from(slotDatesSet).sort();
+
+    // 2. Xác định ngày bắt đầu tuần chuẩn
+    const baseStartDate =
+      weekStartDate && /^\d{4}-\d{2}-\d{2}$/.test(weekStartDate)
+        ? weekStartDate
+        : sortedSlotDates[0];
+
+    // 3. Khởi tạo danh sách 7 ngày trong tuần
+    const weekDates: string[] = [];
+    if (baseStartDate) {
+      for (let i = 0; i < 7; i++) {
+        try {
+          const d = new Date(`${baseStartDate}T00:00:00.000Z`);
+          d.setUTCDate(d.getUTCDate() + i);
+          weekDates.push(d.toISOString().slice(0, 10));
+        } catch {
+          // ignore
+        }
+      }
+    } else if (sortedSlotDates.length > 0) {
+      weekDates.push(...sortedSlotDates);
+    }
+
+    // 4. Nhóm các món ăn theo ngày (Map với key là date YYYY-MM-DD)
+    const mealsByDate = new Map<string, MealItemSummary[]>();
 
     for (const raw of rawSlots) {
       if (!raw || typeof raw !== 'object') continue;
       const slot = raw as Record<string, unknown>;
-      const dayOfWeek = safeNumber(pickField(slot, ['dayOfWeek', 'day_of_week'], 1), 1);
+      const slotDate = safeString(pickField(slot, ['date', 'mealDate', 'meal_date'], ''), '');
+
+      // Tìm ngày tương ứng cho slot này:
+      let targetDate = slotDate;
+      if (!targetDate || !/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
+        // Fallback 1: dayOfWeek (1..7)
+        const dayOfWeek = safeNumber(pickField(slot, ['dayOfWeek', 'day_of_week'], 0), 0);
+        if (dayOfWeek >= 1 && dayOfWeek <= 7 && weekDates[dayOfWeek - 1]) {
+          targetDate = weekDates[dayOfWeek - 1];
+        } else {
+          // Fallback 2: position (0..20)
+          const position = safeNumber(pickField(slot, ['position'], -1), -1);
+          if (position >= 0 && position < 21) {
+            const dayIdx = Math.floor(position / 3);
+            if (weekDates[dayIdx]) {
+              targetDate = weekDates[dayIdx];
+            }
+          }
+        }
+      }
+
+      // Nếu vẫn chưa có ngày thì gán vào ngày đầu tiên
+      if (!targetDate && weekDates[0]) {
+        targetDate = weekDates[0];
+      }
+
       const recipe = (slot.recipe as Record<string, unknown> | null) ?? null;
       const customMeal = (slot.customMeal as Record<string, unknown> | null) ?? null;
 
-      const name = safeString(recipe?.title ?? customMeal?.name ?? slot.name, 'Món ăn dinh dưỡng');
+      const name = safeString(
+        recipe?.title ?? customMeal?.name ?? slot.name ?? slot.title,
+        'Món ăn dinh dưỡng'
+      );
       const calories = safeNumber(slot.calories ?? recipe?.calories ?? customMeal?.calories, 0);
-      const mealType = safeString(
-        pickField(slot, ['mealType', 'meal_type'], 'BREAKFAST'),
-        'BREAKFAST'
-      ) as 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK';
+
+      // Phân biệt mealType: BREAKFAST, LUNCH, DINNER, SNACK
+      let mealTypeStr = safeString(
+        pickField(slot, ['mealType', 'meal_type'], ''),
+        ''
+      ).toUpperCase();
+
+      if (!['BREAKFAST', 'LUNCH', 'DINNER', 'SNACK'].includes(mealTypeStr)) {
+        const pos = safeNumber(pickField(slot, ['position'], -1), -1);
+        if (pos >= 0) {
+          const slotInDay = pos % 3;
+          mealTypeStr = slotInDay === 0 ? 'BREAKFAST' : slotInDay === 1 ? 'LUNCH' : 'DINNER';
+        } else {
+          mealTypeStr = 'BREAKFAST';
+        }
+      }
+      const mealType = mealTypeStr as 'BREAKFAST' | 'LUNCH' | 'DINNER' | 'SNACK';
+
       const sourceType = recipe ? 'RECIPE' : customMeal ? 'CUSTOM_MEAL' : 'RECIPE';
-      const imageUrl = (recipe?.coverImageUrl ?? customMeal?.photoUrl ?? slot.imageUrl) as
-        string | undefined;
+      const imageUrl = (recipe?.coverImageUrl ??
+        customMeal?.photoUrl ??
+        slot.imageUrl ??
+        slot.image_url) as string | undefined;
 
       const item: MealItemSummary = {
         id: safeString(slot.id, ''),
@@ -660,31 +809,35 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
         imageUrl: imageUrl ? safeString(imageUrl) : undefined,
       };
 
-      if (!dayMap.has(dayOfWeek)) {
-        dayMap.set(dayOfWeek, []);
+      if (!mealsByDate.has(targetDate)) {
+        mealsByDate.set(targetDate, []);
       }
-      dayMap.get(dayOfWeek)!.push(item);
+      mealsByDate.get(targetDate)!.push(item);
     }
 
+    // 5. Tạo 7 ngày chuẩn của tuần, sắp xếp món ăn theo thứ tự: Sáng -> Trưa -> Tối -> Phụ
     const days: ProgramDaySummary[] = [];
-    for (let dayOfWeek = 1; dayOfWeek <= 7; dayOfWeek++) {
-      let date = '';
-      if (weekStartDate) {
-        try {
-          const d = new Date(weekStartDate);
-          d.setDate(d.getDate() + (dayOfWeek - 1));
-          date = d.toISOString().split('T')[0];
-        } catch {
-          date = '';
-        }
-      }
-      const meals = dayMap.get(dayOfWeek) ?? [];
+    const targetDates = weekDates.length >= 7 ? weekDates.slice(0, 7) : weekDates;
+
+    for (let i = 0; i < Math.max(7, targetDates.length); i++) {
+      const date = targetDates[i] || '';
+      const dayOfWeek = i + 1;
+      const meals = (date ? mealsByDate.get(date) : undefined) ?? [];
+
+      // Sắp xếp các món ăn trong ngày: Bữa sáng -> Bữa trưa -> Bữa tối -> Bữa phụ
+      meals.sort((a, b) => {
+        const orderA = MEAL_TYPE_ORDER[a.mealType] ?? 99;
+        const orderB = MEAL_TYPE_ORDER[b.mealType] ?? 99;
+        return orderA - orderB;
+      });
+
       const totalCalories = meals.reduce((sum, m) => sum + m.calories, 0);
 
       days.push({
         date,
         formattedDate: this.formatDayDate(date),
         dayOfWeek,
+        dayOfWeekLabel: this.getDayOfWeekLabel(date, dayOfWeek),
         meals,
         totalCalories,
       });

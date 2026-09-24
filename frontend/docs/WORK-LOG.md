@@ -16,6 +16,40 @@
 - Còn lại / rủi ro:
 ```
 
+## [2026-09-24] — Khắc phục lỗi gom toàn bộ món ăn vào ngày đầu tiên của tuần (Phase 19 Meal Program)
+
+- Mục tiêu: Phân bổ chính xác các món ăn trong tuần về đúng 7 ngày dựa trên trường `date` (YYYY-MM-DD) và phân loại trực quan theo `mealType` (Bữa sáng, Bữa trưa, Bữa tối, Bữa phụ) thay vì dồn tất cả 21 món vào Ngày thứ nhất.
+- Đã làm:
+  - **Phân tích nguyên nhân**:
+    1. Trong `mealProgramMapper.groupSlotsIntoDays`: code cũ đọc `slot.dayOfWeek` hoặc `slot.day_of_week`. Tuy nhiên, backend `MealPlan` lưu trữ danh sách phẳng 21 slot trong `items` với trường định danh ngày là `date` (`"YYYY-MM-DD"`), không có `dayOfWeek`. Khi không tìm thấy `dayOfWeek`, mapper fallback về `1` cho toàn bộ 21 món, dẫn đến hiện tượng Ngày 1 chứa cả 21 món còn các ngày 2–7 bị rỗng.
+    2. Các món ăn chưa được sắp xếp theo thứ tự bữa ăn tự nhiên (`BREAKFAST` -> `LUNCH` -> `DINNER` -> `SNACK`).
+  - **Triển khai chuẩn hóa**:
+    - **Mapper (`mealProgramMapper.groupSlotsIntoDays`)**:
+      - Quét toàn bộ các giá trị `slot.date` duy nhất trong `items` để xác định chính xác 7 ngày theo chu kỳ tuần bắt đầu từ `startDate` / `weekStart`.
+      - Nhóm từng món ăn vào đúng ngày dựa trên trường `slot.date` (kèm fallback `dayOfWeek` và `position` an toàn).
+      - Bổ sung `dayOfWeekLabel` (`Thứ Hai`, `Thứ Ba`, ..., `Chủ Nhật`) cho từng ngày.
+      - Sắp xếp các món ăn trong ngày theo trình tự thời gian: Bữa sáng (`BREAKFAST`) ➔ Bữa trưa (`LUNCH`) ➔ Bữa tối (`DINNER`) ➔ Bữa phụ (`SNACK`).
+    - **UI (`WeekPlanView` & `DayMealChecklist`)**:
+      - Hiển thị tiêu đề ngày rõ ràng: Tên thứ + Ngày tháng (vd: `Thứ Hai (28/09)`, `Thứ Ba (29/09)`, ...).
+      - Trang bị badge màu sắc và icon riêng biệt theo `mealType`:
+        - ☀️ Bữa sáng (`amber` badge + icon `Sun`)
+        - 🍽️ Bữa trưa (`orange` badge + icon `Utensils`)
+        - 🌙 Bữa tối (`indigo` badge + icon `Moon`)
+        - ✨ Bữa phụ (`emerald` badge + icon `Sparkles`)
+    - **Unit Test**: Bổ sung test case 11 trong `meal-program.mapper.test.ts` kiểm thử 21 slot xáo trộn được phân bổ chuẩn xác thành 7 ngày, mỗi ngày 3 món đúng thứ tự `BREAKFAST` ➔ `LUNCH` ➔ `DINNER`.
+- File tạo/sửa:
+  - `src/features/meal-program/types/meal-program.model.ts`
+  - `src/features/meal-program/mappers/meal-program.mapper.ts`
+  - `src/features/meal-program/mappers/meal-program.mapper.test.ts`
+  - `src/features/meal-program/components/week-plan-view.tsx`
+  - `src/features/meal-program/components/day-meal-checklist.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi typescript.
+  - `npm test`: 33/33 test files passed (326/326 tests passed).
+- PROGRESS: Hoàn thiện hiển thị lịch thực đơn tuần Phase 19 đạt 100%.
+- Còn lại / rủi ro: Không có.
+
 ## [2026-09-24] — Khắc phục lỗi VALIDATION_ERROR khi tạo lộ trình dinh dưỡng Phase 19
 
 - Mục tiêu: Khắc phục triệt để lỗi `VALIDATION_ERROR` từ backend khi tạo lộ trình (`goal` enum, `startDate` phải là Thứ Hai, `horizonWeeks`, `idempotencyKey`, và lỗi unrecognized keys snake_case do backend `.strict()`).
