@@ -39,6 +39,10 @@ import {
   RecipeDifficulty,
   NutrientReferenceType,
   NutritionCoverage,
+  PantryAdjustmentType,
+  PantryConfirmationStatus,
+  PantryConversionStatus,
+  PantryItemSource,
   ReportStatus,
   ReportTargetType,
   Role,
@@ -746,6 +750,7 @@ const seedEnvironment = z
     SEED_MEMBER_PASSWORD: z.string().min(8),
     SEED_PLATFORM_CONTRIBUTOR_EMAIL: z.string().email().default('contributor@example.com'),
     SEED_ORGANIZATION_CONTRIBUTOR_EMAIL: z.string().email().default('expert@example.com'),
+    SEED_INVITED_CONTRIBUTOR_EMAIL: z.string().email().default('invited@example.com'),
     SEED_ADMIN_EMAIL: z.string().email().default('admin@example.com'),
     SEED_ADMIN_PASSWORD: z.string().min(8),
     STORAGE_DEFAULT_QUOTA_BYTES: z.coerce.number().int().positive().default(1_073_741_824),
@@ -918,6 +923,8 @@ async function main(): Promise<void> {
       applicationId: '70000000-0000-4000-8000-000000000001',
       email: seedEnvironment.SEED_PLATFORM_CONTRIBUTOR_EMAIL.toLowerCase(),
       displayName: 'Demo Platform Contributor',
+      source: ContributorApplicationSource.REGISTRATION,
+      invitationReason: null,
       claimedApprovalBasis: ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
       approvalBasis: ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
       organizationClaim: null,
@@ -942,6 +949,8 @@ async function main(): Promise<void> {
       applicationId: '70000000-0000-4000-8000-000000000002',
       email: seedEnvironment.SEED_ORGANIZATION_CONTRIBUTOR_EMAIL.toLowerCase(),
       displayName: 'Demo Organization Contributor',
+      source: ContributorApplicationSource.REGISTRATION,
+      invitationReason: null,
       claimedApprovalBasis: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
       approvalBasis: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
       organizationClaim: 'Demo Plant Nutrition Community',
@@ -955,6 +964,24 @@ async function main(): Promise<void> {
         organizationClaim: 'Demo Plant Nutrition Community',
         referenceLinks: ['https://example.com/demo-organization'],
         verificationStatus: 'CLAIM_RETAINED_NOT_VERIFIED',
+      },
+    },
+    {
+      applicationId: '70000000-0000-4000-8000-000000000003',
+      email: seedEnvironment.SEED_INVITED_CONTRIBUTOR_EMAIL.toLowerCase(),
+      displayName: 'Demo Invited Contributor',
+      source: ContributorApplicationSource.ADMIN_INVITATION,
+      claimedApprovalBasis: ContributorApprovalBasis.ADMIN_INVITED,
+      approvalBasis: ContributorApprovalBasis.ADMIN_INVITED,
+      organizationClaim: null,
+      referenceLinks: [] as string[],
+      experience: 'Admin-invited demo Contributor for unified permission validation.',
+      invitationReason: 'Seed profile for equal-permission verification acceptance.',
+      approvalEvidence: {
+        kind: ContributorApprovalBasis.ADMIN_INVITED,
+        capturedAt: '2026-09-15T00:00:00.000Z',
+        snapshotVersion: 'seed-admin-invitation-v1',
+        invitationReason: 'Seed profile for equal-permission verification acceptance.',
       },
     },
   ] as const;
@@ -985,7 +1012,9 @@ async function main(): Promise<void> {
           organizationClaim: definition.organizationClaim,
           experience: definition.experience,
           referenceLinks: definition.referenceLinks,
-          source: ContributorApplicationSource.REGISTRATION,
+          source: definition.source,
+          invitedById: definition.source === ContributorApplicationSource.ADMIN_INVITATION ? admin.id : null,
+          invitationReason: definition.invitationReason,
           status: ContributorApplicationStatus.APPROVED,
           approvalBasis: definition.approvalBasis,
           reviewEvidence: definition.approvalEvidence,
@@ -1001,7 +1030,11 @@ async function main(): Promise<void> {
           organizationClaim: definition.organizationClaim,
           experience: definition.experience,
           referenceLinks: definition.referenceLinks,
-          source: ContributorApplicationSource.REGISTRATION,
+          source: definition.source,
+          ...(definition.source === ContributorApplicationSource.ADMIN_INVITATION
+            ? { invitedById: admin.id }
+            : {}),
+          invitationReason: definition.invitationReason,
           status: ContributorApplicationStatus.APPROVED,
           approvalBasis: definition.approvalBasis,
           reviewEvidence: definition.approvalEvidence,
@@ -2052,6 +2085,84 @@ async function main(): Promise<void> {
     organizationContributorEmail: seedEnvironment.SEED_ORGANIZATION_CONTRIBUTOR_EMAIL.toLowerCase(),
     nextMonday,
   });
+  const pantryMember = await prisma.user.findUniqueOrThrow({
+    where: { email: seedEnvironment.SEED_MEMBER_EMAIL.toLowerCase() },
+  });
+  const pantryTofu = await prisma.ingredient.findUniqueOrThrow({
+    where: { normalizedName: 'dau hu' },
+  });
+  const pantrySeeds = [
+    {
+      id: '20000000-0000-4000-8000-000000000001',
+      quantity: 2,
+      unit: 'miếng',
+      normalizedGrams: 200,
+      conversionSource: 'PROJECT_CURATED',
+      conversionVersion: '1.0',
+      conversionConfidence: 0.7,
+      expiresAt: new Date('2026-09-27T00:00:00.000Z'),
+      idempotencyKey: 'seed-phase-20-pantry-tofu-pieces',
+    },
+    {
+      id: '20000000-0000-4000-8000-000000000002',
+      quantity: 50,
+      unit: 'g',
+      normalizedGrams: 50,
+      conversionSource: 'SYSTEM_MASS',
+      conversionVersion: 'UCUM-MASS-V1',
+      conversionConfidence: 1,
+      expiresAt: new Date('2026-09-28T00:00:00.000Z'),
+      idempotencyKey: 'seed-phase-20-pantry-tofu-grams',
+    },
+  ] as const;
+  for (const fixture of pantrySeeds) {
+    const pantryItem = await prisma.pantryItem.upsert({
+      where: { id: fixture.id },
+      update: {},
+      create: {
+        id: fixture.id,
+        ownerId: pantryMember.id,
+        ingredientId: pantryTofu.id,
+        quantity: fixture.quantity,
+        unit: fixture.unit,
+        normalizedGrams: fixture.normalizedGrams,
+        conversionStatus: PantryConversionStatus.CONVERTED,
+        conversionSource: fixture.conversionSource,
+        conversionVersion: fixture.conversionVersion,
+        conversionConfidence: fixture.conversionConfidence,
+        source: PantryItemSource.MANUAL,
+        confidence: 1,
+        confirmationStatus: PantryConfirmationStatus.CONFIRMED,
+        expiresAt: fixture.expiresAt,
+      },
+    });
+    await prisma.pantryAdjustment.upsert({
+      where: {
+        ownerId_idempotencyKey: {
+          ownerId: pantryMember.id,
+          idempotencyKey: fixture.idempotencyKey,
+        },
+      },
+      update: {},
+      create: {
+        ownerId: pantryMember.id,
+        pantryItemId: pantryItem.id,
+        type: PantryAdjustmentType.CREATE,
+        idempotencyKey: fixture.idempotencyKey,
+        requestHash: '0'.repeat(64),
+        inputQuantity: fixture.quantity,
+        inputUnit: fixture.unit,
+        appliedDeltaQuantity: fixture.quantity,
+        normalizedDeltaGrams: fixture.normalizedGrams,
+        beforeQuantity: 0,
+        afterQuantity: fixture.quantity,
+        beforeGrams: 0,
+        afterGrams: fixture.normalizedGrams,
+        versionBefore: 0,
+        versionAfter: 1,
+      },
+    });
+  }
   const storagePolicy = await prisma.storagePolicy.upsert({
     where: { code: 'MVP_DEFAULT' },
     update: {
@@ -2120,6 +2231,112 @@ async function main(): Promise<void> {
       data: { assetId: asset.id },
     });
   }
+  const fridgeVisionFixtures = [
+    {
+      id: '21000000-0000-4000-8000-000000000001',
+      publicId: 'seed/vision/fridge-primary',
+      secureUrl: 'https://res.cloudinary.com/demo/image/upload/seed/vision/fridge-primary.jpg',
+      bytes: 180_000,
+    },
+    {
+      id: '21000000-0000-4000-8000-000000000002',
+      publicId: 'seed/vision/fridge-secondary',
+      secureUrl: 'https://res.cloudinary.com/demo/image/upload/seed/vision/fridge-secondary.jpg',
+      bytes: 165_000,
+    },
+    {
+      id: '21000000-0000-4000-8000-000000000003',
+      publicId: 'seed/vision/partial-failure',
+      secureUrl: 'https://res.cloudinary.com/demo/image/upload/seed/vision/partial-failure.jpg',
+      bytes: 140_000,
+    },
+  ] as const;
+  for (const fixture of fridgeVisionFixtures) {
+    await prisma.mediaAsset.upsert({
+      where: { id: fixture.id },
+      update: {
+        ownerId: pantryMember.id,
+        kind: MediaKind.FRIDGE_IMAGE,
+        resourceType: MediaResourceType.IMAGE,
+        publicId: fixture.publicId,
+        secureUrl: fixture.secureUrl,
+        mimeType: 'image/jpeg',
+        extension: '.jpg',
+        bytes: fixture.bytes,
+        width: 1280,
+        height: 960,
+        status: MediaAssetStatus.ACTIVE,
+        backfilled: true,
+        deletedAt: null,
+        deletedById: null,
+      },
+      create: {
+        id: fixture.id,
+        ownerId: pantryMember.id,
+        kind: MediaKind.FRIDGE_IMAGE,
+        resourceType: MediaResourceType.IMAGE,
+        publicId: fixture.publicId,
+        secureUrl: fixture.secureUrl,
+        mimeType: 'image/jpeg',
+        extension: '.jpg',
+        bytes: fixture.bytes,
+        width: 1280,
+        height: 960,
+        status: MediaAssetStatus.ACTIVE,
+        backfilled: true,
+      },
+    });
+  }
+  const receiptFixtures = [
+    {
+      id: '22000000-0000-4000-8000-000000000001',
+      publicId: 'seed/receipts/market-primary',
+      secureUrl: 'https://res.cloudinary.com/demo/image/upload/seed/receipts/market-primary.jpg',
+      bytes: 125_000,
+    },
+    {
+      id: '22000000-0000-4000-8000-000000000002',
+      publicId: 'seed/receipts/partial-failure',
+      secureUrl: 'https://res.cloudinary.com/demo/image/upload/seed/receipts/partial-failure.jpg',
+      bytes: 110_000,
+    },
+  ] as const;
+  for (const fixture of receiptFixtures) {
+    await prisma.mediaAsset.upsert({
+      where: { id: fixture.id },
+      update: {
+        ownerId: pantryMember.id,
+        kind: MediaKind.RECEIPT_IMAGE,
+        resourceType: MediaResourceType.IMAGE,
+        publicId: fixture.publicId,
+        secureUrl: fixture.secureUrl,
+        mimeType: 'image/jpeg',
+        extension: '.jpg',
+        bytes: fixture.bytes,
+        width: 1024,
+        height: 1600,
+        status: MediaAssetStatus.ACTIVE,
+        backfilled: true,
+        deletedAt: null,
+        deletedById: null,
+      },
+      create: {
+        id: fixture.id,
+        ownerId: pantryMember.id,
+        kind: MediaKind.RECEIPT_IMAGE,
+        resourceType: MediaResourceType.IMAGE,
+        publicId: fixture.publicId,
+        secureUrl: fixture.secureUrl,
+        mimeType: 'image/jpeg',
+        extension: '.jpg',
+        bytes: fixture.bytes,
+        width: 1024,
+        height: 1600,
+        status: MediaAssetStatus.ACTIVE,
+        backfilled: true,
+      },
+    });
+  }
   for (const user of seededUsers) {
     const aggregate = await prisma.mediaAsset.aggregate({
       where: {
@@ -2134,7 +2351,7 @@ async function main(): Promise<void> {
     });
   }
   console.info(
-    `Seeded local Member, unified Contributors with two approval bases, Admin, storage policy/accounting, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
+    `Seeded local Member, unified Contributors with all three approval bases, Admin, storage policy/accounting, pantry inventory, fridge-vision and receipt fake fixtures, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
   );
 }
 

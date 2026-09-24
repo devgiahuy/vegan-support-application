@@ -113,6 +113,24 @@ import { CustomMealController } from './modules/custom-meals/custom-meal.control
 import { CustomMealRepository } from './modules/custom-meals/custom-meal.repository.js';
 import { createCustomMealRouter } from './modules/custom-meals/custom-meal.router.js';
 import { CustomMealService } from './modules/custom-meals/custom-meal.service.js';
+import { PantryController } from './modules/pantry/pantry.controller.js';
+import { PantryRepository } from './modules/pantry/pantry.repository.js';
+import { createPantryRouter } from './modules/pantry/pantry.router.js';
+import { PantryService } from './modules/pantry/pantry.service.js';
+import { IngredientRecognitionController } from './modules/ingredient-recognition/ingredient-recognition.controller.js';
+import { IngredientRecognitionRepository } from './modules/ingredient-recognition/ingredient-recognition.repository.js';
+import { createIngredientRecognitionRouter } from './modules/ingredient-recognition/ingredient-recognition.router.js';
+import { IngredientRecognitionService } from './modules/ingredient-recognition/ingredient-recognition.service.js';
+import { createIngredientVisionProvider } from './modules/ingredient-recognition/ingredient-vision.provider.js';
+import { ReceiptController } from './modules/receipts/receipt.controller.js';
+import { createReceiptExtractionProvider } from './modules/receipts/receipt.provider.js';
+import { ReceiptRepository } from './modules/receipts/receipt.repository.js';
+import { createReceiptRouter } from './modules/receipts/receipt.router.js';
+import { ReceiptService } from './modules/receipts/receipt.service.js';
+import { AiReviewController } from './modules/ai-review/ai-review.controller.js';
+import { AiReviewRepository } from './modules/ai-review/ai-review.repository.js';
+import { createAiReviewAdminRouter, createAiReviewRouter } from './modules/ai-review/ai-review.router.js';
+import { AiReviewService } from './modules/ai-review/ai-review.service.js';
 import { openApiDocument } from './openapi/document.js';
 
 export interface AppDependencies {
@@ -190,6 +208,26 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   const customMealController = new CustomMealController(
     new CustomMealService(new CustomMealRepository(database.client), storageRepository),
   );
+  const pantryController = new PantryController(
+    new PantryService(new PantryRepository(database.client)),
+  );
+  const ingredientRecognitionController = new IngredientRecognitionController(
+    new IngredientRecognitionService(
+      new IngredientRecognitionRepository(database.client),
+      createIngredientVisionProvider(config),
+      config,
+    ),
+  );
+  const receiptController = new ReceiptController(
+    new ReceiptService(
+      new ReceiptRepository(database.client),
+      createReceiptExtractionProvider(config),
+      config,
+    ),
+  );
+  const aiReviewController = new AiReviewController(
+    new AiReviewService(new AiReviewRepository(database.client)),
+  );
 
   app.disable('x-powered-by');
   app.use(helmet());
@@ -243,6 +281,7 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/admin', createContributorAdminRouter(contributorController, authentication));
   app.use('/api/v1/admin', createModerationAdminRouter(moderationController, authentication));
   app.use('/api/v1/admin', createStorageAdminRouter(storageController, authentication));
+  app.use('/api/v1/admin', createAiReviewAdminRouter(aiReviewController, authentication));
   app.use('/api/v1/review-queue', createReviewQueueRouter(moderationController, authentication));
   app.use('/api/v1/reports', createReportsRouter(moderationController, authentication));
   app.use(
@@ -264,6 +303,13 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/storage', createStorageRouter(storageController, authentication));
   app.use('/api/v1/uploads', createStorageUploadsRouter(storageController, authentication));
   app.use('/api/v1/custom-meals', createCustomMealRouter(customMealController, authentication));
+  app.use('/api/v1/pantry', createPantryRouter(pantryController, authentication));
+  app.use(
+    '/api/v1/ingredient-recognition',
+    createIngredientRecognitionRouter(ingredientRecognitionController, authentication),
+  );
+  app.use('/api/v1', createReceiptRouter(receiptController, authentication));
+  app.use('/api/v1', createAiReviewRouter(aiReviewController, authentication));
 
   app.use(notFoundHandler);
   app.use(createErrorHandler(logger));
