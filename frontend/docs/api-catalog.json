@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
   "source": "..\\backend\\openapi.json",
-  "generatedAt": "2026-09-23T03:51:21.535Z",
+  "generatedAt": "2026-09-23T15:20:08.094Z",
   "stats": {
-    "operations": 103,
-    "groups": 24,
-    "schemas": 95
+    "operations": 118,
+    "groups": 27,
+    "schemas": 104
   },
   "operations": [
     {
@@ -2554,6 +2554,205 @@
       },
       "responses": {
         "200": "MealPlanResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/meal-plans/{id}/items/{itemId}/manual-add",
+      "group": "Meal Plans",
+      "summary": "Thêm recipe hoặc private custom meal vào slot",
+      "operationId": "manualAddMealPlanItem",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "path",
+          "name": "itemId",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "ManualAddMealPlanItemRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "MealPlanResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/meal-plans/{id}/analyze",
+      "group": "Meal Analysis",
+      "summary": "Phân tích khẩu phần, giới hạn và tương tác của meal plan",
+      "operationId": "analyzeMealPlan",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "MealAnalysisRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "MealAnalysisResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/meal-plans/{id}/analysis",
+      "group": "Meal Analysis",
+      "summary": "Đọc kết quả phân tích hiện hành",
+      "operationId": "getCurrentMealAnalysis",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "MealAnalysisResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/meal-programs",
+      "group": "Meal Programs",
+      "summary": "List owned meal programs",
+      "operationId": "listMealPrograms",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "MealProgramListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/meal-programs",
+      "group": "Meal Programs",
+      "summary": "Generate a bounded multi-week meal program",
+      "operationId": "createMealProgram",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "CreateMealProgramRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "MealProgramResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/meal-programs/{id}",
+      "group": "Meal Programs",
+      "summary": "Read an owned program and weekly snapshots",
+      "operationId": "getMealProgram",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "MealProgramResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/meal-programs/{id}",
+      "group": "Meal Programs",
+      "summary": "Edit, regenerate, reanalyze, or confirm a program",
+      "operationId": "mutateMealProgram",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "PatchMealProgramRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "MealProgramResponse",
         "400": "ErrorResponse",
         "401": "ErrorResponse",
         "403": "ErrorResponse",
@@ -5509,6 +5708,410 @@
         "400": "ErrorResponse",
         "401": "ErrorResponse",
         "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/custom-meals",
+      "group": "Custom Meals",
+      "summary": "Danh sách bữa ăn tùy chỉnh của tôi",
+      "operationId": "listCustomMeals",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "tag",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "CustomMealListResponse",
+        "401": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/custom-meals",
+      "group": "Custom Meals",
+      "summary": "Tạo bữa ăn tùy chỉnh mới",
+      "operationId": "createCustomMeal",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "notes": {
+              "type": "string"
+            },
+            "servings": {
+              "type": "integer"
+            },
+            "sourceNote": {
+              "type": "string"
+            },
+            "userCalories": {
+              "type": "integer"
+            },
+            "userProteinGrams": {
+              "type": "number"
+            },
+            "userCarbsGrams": {
+              "type": "number"
+            },
+            "userFatGrams": {
+              "type": "number"
+            },
+            "deletePolicy": {
+              "type": "string",
+              "enum": [
+                "BLOCK",
+                "RETAIN_SNAPSHOT"
+              ]
+            },
+            "ingredients": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "position",
+                  "displayName",
+                  "amount",
+                  "unit"
+                ],
+                "properties": {
+                  "position": {
+                    "type": "integer",
+                    "_truncated": true
+                  },
+                  "displayName": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "amount": {
+                    "type": "number",
+                    "_truncated": true
+                  },
+                  "unit": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "ingredientId": {
+                    "type": "string",
+                    "_truncated": true
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "201": "object",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/custom-meals/{id}",
+      "group": "Custom Meals",
+      "summary": "Chi tiết bữa ăn tùy chỉnh",
+      "operationId": "getCustomMeal",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "object",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/custom-meals/{id}",
+      "group": "Custom Meals",
+      "summary": "Cập nhật bữa ăn tùy chỉnh",
+      "operationId": "updateCustomMeal",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "servings": {
+              "type": "integer"
+            },
+            "sourceNote": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "userCalories": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "userProteinGrams": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "userCarbsGrams": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "userFatGrams": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "deletePolicy": {
+              "type": "string",
+              "enum": [
+                "BLOCK",
+                "RETAIN_SNAPSHOT"
+              ]
+            },
+            "ingredients": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "position",
+                  "displayName",
+                  "amount",
+                  "unit"
+                ],
+                "properties": {
+                  "position": {
+                    "type": "integer",
+                    "_truncated": true
+                  },
+                  "displayName": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "amount": {
+                    "type": "number",
+                    "_truncated": true
+                  },
+                  "unit": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "ingredientId": {
+                    "type": "string",
+                    "_truncated": true
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "object",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/custom-meals/{id}",
+      "group": "Custom Meals",
+      "summary": "Xóa bữa ăn tùy chỉnh",
+      "operationId": "deleteCustomMeal",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "204": "Đã xóa thành công",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/custom-meals/{id}/photos",
+      "group": "Custom Meals",
+      "summary": "Gắn ảnh vào bữa ăn tùy chỉnh",
+      "operationId": "attachCustomMealPhoto",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "assetId"
+          ],
+          "properties": {
+            "assetId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "position": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "object",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/custom-meals/{id}/photos/{assetId}",
+      "group": "Custom Meals",
+      "summary": "Gỡ ảnh khỏi bữa ăn tùy chỉnh",
+      "operationId": "removeCustomMealPhoto",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "path",
+          "name": "assetId",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "object",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/custom-meals/{id}/photos/order",
+      "group": "Custom Meals",
+      "summary": "Sắp xếp lại thứ tự ảnh",
+      "operationId": "reorderCustomMealPhotos",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "orderedAssetIds"
+          ],
+          "properties": {
+            "orderedAssetIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "object",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     }
   ]

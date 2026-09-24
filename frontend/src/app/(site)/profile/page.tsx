@@ -21,6 +21,7 @@ import {
   BadgeCheck,
   CalendarDays,
   FileDown,
+  ChevronLeft,
   ChevronRight,
   HardDrive,
   Target,
@@ -133,6 +134,32 @@ export default function ProfilePage() {
     version?: number;
   } | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = React.useState(false);
+
+  const tabsContainerRef = React.useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = React.useState(false);
+  const [canScrollRight, setCanScrollRight] = React.useState(false);
+
+  const checkScroll = React.useCallback(() => {
+    const el = tabsContainerRef.current;
+    if (!el) return;
+    const hasOverflow = el.scrollWidth > el.clientWidth + 2;
+    setCanScrollLeft(el.scrollLeft > 6);
+    setCanScrollRight(hasOverflow && el.scrollLeft < el.scrollWidth - el.clientWidth - 6);
+  }, []);
+
+  React.useEffect(() => {
+    checkScroll();
+    const handleResize = () => checkScroll();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [checkScroll]);
+
+  const scrollByDirection = (direction: 'left' | 'right') => {
+    const el = tabsContainerRef.current;
+    if (!el) return;
+    const distance = 240;
+    el.scrollBy({ left: direction === 'left' ? -distance : distance, behavior: 'smooth' });
+  };
 
   // Bài viết của tôi: kết hợp Công thức + Cẩm nang, lọc theo tác giả đang đăng nhập.
   const myPosts = React.useMemo(() => {
@@ -281,53 +308,108 @@ export default function ProfilePage() {
         </Card>
       )}
 
-      {/* Tabs Bar với Motion Animation */}
-      <div className="relative mt-6 grid grid-cols-2 gap-1 rounded-2xl border border-border/80 bg-muted/80 p-1.5 shadow-sm backdrop-blur-sm sm:grid-cols-3 lg:grid-cols-7 lg:rounded-full">
-        {tabs.map((t) => {
-          const Icon = t.icon;
-          const isActive = tab === t.id;
-          return (
-            <motion.button
-              key={t.id}
-              type="button"
-              whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
-              onClick={() => setTab(t.id)}
-              className={cn(
-                'relative z-10 flex items-center justify-center gap-2 rounded-full px-3 py-2.5 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                isActive
-                  ? 'font-semibold text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              )}
+      {/* Tabs Bar với Motion Animation & Scroll Indicators */}
+      <div className="relative mt-6 w-full">
+        {/* Nút lướt sang trái khi bị cuộn */}
+        <AnimatePresence>
+          {canScrollLeft && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.15 }}
+              className="absolute -left-2 top-1/2 -translate-y-1/2 z-20 flex items-center"
             >
-              {isActive && (
-                <motion.div
-                  layoutId="active-profile-tab"
-                  className="absolute inset-0 -z-10 rounded-full bg-background shadow-sm border border-border/40"
-                  transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-                />
-              )}
-              <Icon
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => scrollByDirection('left')}
+                className="h-8 w-8 rounded-full bg-background/95 shadow-md border-border/80 hover:bg-accent text-foreground backdrop-blur-sm"
+                aria-label="Cuộn sang trái"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Thanh tabs cuộn với custom-scrollbar thanh mảnh */}
+        <div
+          ref={tabsContainerRef}
+          onScroll={checkScroll}
+          className="flex w-full items-center gap-1 overflow-x-auto rounded-full border border-border/80 bg-muted/80 p-1.5 shadow-sm backdrop-blur-sm custom-scrollbar pb-2 sm:pb-1.5"
+        >
+          {tabs.map((t) => {
+            const Icon = t.icon;
+            const isActive = tab === t.id;
+            return (
+              <motion.button
+                key={t.id}
+                type="button"
+                whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
+                onClick={() => setTab(t.id)}
                 className={cn(
-                  'h-4 w-4 transition-transform duration-200',
-                  isActive && 'scale-110 text-primary'
+                  'relative z-10 flex flex-1 shrink-0 items-center justify-center gap-1.5 rounded-full px-3 py-2 text-xs font-medium whitespace-nowrap transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary xl:gap-2 xl:px-3.5 xl:py-2.5 xl:text-sm',
+                  isActive
+                    ? 'font-semibold text-primary'
+                    : 'text-muted-foreground hover:text-foreground'
                 )}
-              />
-              <span className="hidden sm:inline">{t.label}</span>
-              {t.badge && (
-                <Badge
+              >
+                {isActive && (
+                  <motion.div
+                    layoutId="active-profile-tab"
+                    className="absolute inset-0 -z-10 rounded-full bg-background shadow-sm border border-border/40"
+                    transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                  />
+                )}
+                <Icon
                   className={cn(
-                    'hidden rounded-full px-1.5 py-0.5 text-[10px] font-semibold transition-colors lg:inline-flex',
-                    isActive
-                      ? 'bg-primary/15 text-primary'
-                      : 'bg-primary/10 text-primary/80 hover:bg-primary/20'
+                    'h-4 w-4 shrink-0 transition-transform duration-200',
+                    isActive && 'scale-110 text-primary'
                   )}
-                >
-                  {t.badge}
-                </Badge>
-              )}
-            </motion.button>
-          );
-        })}
+                />
+                <span className="whitespace-nowrap">{t.label}</span>
+                {t.badge && (
+                  <Badge
+                    className={cn(
+                      'shrink-0 whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold transition-colors',
+                      isActive
+                        ? 'bg-primary/15 text-primary'
+                        : 'bg-primary/10 text-primary/80 hover:bg-primary/20'
+                    )}
+                  >
+                    {t.badge}
+                  </Badge>
+                )}
+              </motion.button>
+            );
+          })}
+        </div>
+
+        {/* Nút lướt sang phải báo hiệu phía sau còn nội dung */}
+        <AnimatePresence>
+          {canScrollRight && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.15 }}
+              className="absolute -right-2 top-1/2 -translate-y-1/2 z-20 flex items-center"
+            >
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={() => scrollByDirection('right')}
+                className="h-8 w-8 rounded-full bg-background/95 shadow-md border-border/80 hover:bg-accent text-foreground backdrop-blur-sm animate-pulse hover:animate-none"
+                aria-label="Cuộn sang phải xem tiếp các mục"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Tab Contents với AnimatePresence */}

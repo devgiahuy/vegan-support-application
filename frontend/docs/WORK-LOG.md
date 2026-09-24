@@ -16,6 +16,81 @@
 - Còn lại / rủi ro:
 ```
 
+## [2026-09-24] — Tối ưu thanh công cụ Tab trang Hồ sơ (Profile) hiển thị 1 hàng & bổ sung thanh cuộn / nút báo hiệu nội dung
+
+- Mục tiêu:
+  - Khắc phục tình trạng văn bản trên các nút tab của trang Hồ sơ (`/profile`) bị bẻ dòng thành nhiều hàng.
+  - Bổ sung thanh scrollbar thanh mảnh tinh tế và các nút điều hướng / báo hiệu trực quan để người dùng nhận biết ngay khi phía sau còn nhiều tab nội dung.
+- Đã làm:
+  - **Hiển thị 1 hàng duy nhất**: Bổ sung `whitespace-nowrap` cho toàn bộ nút tab, nhãn text và các badge (`AI Phân tích`, `NĐ 13/2023`).
+  - **Thanh cuộn tùy biến (`custom-scrollbar`)**: Khai báo utility `.custom-scrollbar` trong `src/app/globals.css` với chiều cao 4px, thumb bo tròn thanh mảnh theo màu theme, hiển thị tự nhiên khi danh sách bị tràn.
+  - **Nút báo hiệu & cuộn tự động (`ChevronLeft` / `ChevronRight`)**:
+    - Sử dụng `tabsContainerRef` và bộ lắng nghe sự kiện cuộn/resize để tính toán `canScrollLeft` và `canScrollRight`.
+    - Khi phía sau còn nội dung, nút mũi tên phải (`ChevronRight`) xuất hiện nổi bật với hiệu ứng nhịp thở nhẹ (`animate-pulse`) để thu hút sự chú ý của người dùng; khi click, thanh tab tự động cuộn mượt mà sang các mục tiếp theo.
+    - Khi đã cuộn, nút mũi tên trái (`ChevronLeft`) hỗ trợ quay về đầu trang nhanh chóng.
+- File tạo/sửa:
+  - `src/app/globals.css`
+  - `src/app/(site)/profile/page.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi typescript.
+  - `npm test`: 32/32 test files passed (319/319 tests passed).
+  - `npm run build`: Build Next.js thành công 35/35 routes.
+- PROGRESS: Tinh chỉnh UI Profile Tab Bar hoàn tất 100%.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-24] — Khắc phục triệt để lỗi tràn ngang (Horizontal Overflow) trên giao diện toàn trang
+
+- Mục tiêu: Điều chỉnh toàn bộ layout và header trang web VeggieConnect để nằm gọn trong 1 khung hình (1 viewport width), xóa bỏ hoàn toàn thanh cuộn ngang (horizontal scrollbar) và ngăn chặn việc icon/avatar người dùng bị cắt ở cạnh phải màn hình.
+- Đã làm:
+  - **Phân tích nguyên nhân**: Trên màn hình laptop (độ phân giải 1280px–1366px hoặc có tỷ lệ display scale 125%–150%), header có tổng chiều rộng cố định các phần tử (Logo 215px + 7 mục điều hướng chữ dài 744px + Search input 160px + Actions 215px + gaps = ~1390px) vượt quá bề ngang container 1232px, làm tràn 140px ra cạnh phải, đẩy avatar người dùng bị cắt đôi và kích hoạt thanh cuộn ngang trên trình duyệt.
+  - **Tối ưu SiteHeader (`src/components/layout/site-header.tsx`)**:
+    - Bổ sung `shortLabel` cho `NAV_ITEMS`: Hiển thị nhãn rút gọn tinh tế trên các màn hình vừa/laptop (`shortLabel`: "Khám phá", "Dinh dưỡng", "Video", "Thực đơn", "Bản đồ") và chỉ bung nhãn đầy đủ trên màn hình cực lớn (`2xl:` 1536px+).
+    - Tối ưu padding và font-size cho các link nav (`px-1.5 py-1 text-xs xl:px-2.5 2xl:px-3.5`).
+    - Nút "AI Trợ lý": Thu gọn về icon mầm lá + sao khi ở kích thước `lg`, hiển thị đầy đủ chữ trên `xl:` và `2xl:`.
+    - Thanh tìm kiếm: Điều chỉnh độ rộng co giãn thông minh `lg:w-28 xl:w-36 2xl:w-56`.
+    - Nút Đăng nhập / Avatar: Đồng bộ kích thước `h-8.5 w-8.5` (co giãn sang `2xl:h-9 2xl:w-9`) để vừa khít hoàn hảo.
+  - **Tối ưu BrandLogo (`src/components/layout/brand-logo.tsx`)**: Cho phép `imageClassName` kiểm soát chiều cao (`h-7 xl:h-8 2xl:h-9`) với `width: auto; maxWidth: 100%`, tránh cố định cứng pixel inline style.
+  - **Tối ưu CSS Toàn Cục & Khung Trang (`src/app/globals.css`, `src/app/(site)/layout.tsx`, `src/app/(site)/page.tsx`)**:
+    - Thiết lập `html, body { max-width: 100vw; overflow-x: clip; }` ngăn ngừa thanh cuộn ngang mà không gây ảnh hưởng đến `position: sticky`.
+    - Thêm `overflow-x-clip` và `w-full` cho wrapper layout trang `SiteLayout`.
+    - Thêm `overflow-hidden` và `pointer-events-none` cho phần tử Hero section và các vòng sáng ambient blur (`-left-24`) tại trang chủ.
+- File tạo/sửa:
+  - `src/components/layout/brand-logo.tsx`
+  - `src/components/layout/site-header.tsx`
+  - `src/app/globals.css`
+  - `src/app/(site)/layout.tsx`
+  - `src/app/(site)/page.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi typescript.
+  - `npm test`: 32/32 test files passed (319/319 tests passed).
+  - `npm run build`: Compiled successfully, sinh thành công 35/35 static/dynamic pages.
+- PROGRESS: Tối ưu UI/UX Responsive & Chống tràn layout ngang hoàn tất 100%.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-23] — Kiểm tra Response và Đồng bộ Swagger / API Catalog cho Phase 12 đến Phase 19
+
+- Mục tiêu: Kiểm tra toàn diện các thay đổi response, OpenAPI schema và tài liệu audit cho Phase 12 đến Phase 19 theo cập nhật mới nhất từ Backend; đồng bộ Swagger vào API Catalog frontend.
+- Đã làm:
+  - Rà soát tài liệu `phase12_19_response_audit.md` ghi nhận toàn bộ cấu trúc response, mapper và kiểm tra rò rỉ trường nội bộ (FKs, `reviewedById`, `importBatchId`...): tất cả endpoint client-facing đều sạch; các trường kiểm toán của Admin được giữ lại đúng thiết kế.
+  - Chạy `node scripts/sync-swagger.mjs ../backend/openapi.json`: Đồng bộ thành công 118 endpoints, 27 nhóm OpenAPI vào `docs/API-CATALOG.md` và `docs/api/*.md` (bao gồm `custom-meals.md`, `meal-analysis.md`, `meal-programs.md` mới).
+  - Cập nhật `frontend/docs/BACKEND_INTEGRATION.md`:
+    - Dọn dẹp bảng Section 6.12 bỏ các hàng trùng lặp / PLANNED cũ; cập nhật đúng các endpoint thật của Custom Meals (Phase 17 - `/photos` thay vì `/media`), Meal Analysis (Phase 18) và Meal Programs (Phase 19).
+    - Bổ sung chi tiết Section 6.13 (Meal Analysis - Phase 18) và 6.14 (Multi-Week Meal Programs - Phase 19) bao gồm business rules và bảng mã lỗi chi tiết.
+    - Cập nhật Changelog (v5.0 - 2026-09-23).
+- File tạo/sửa:
+  - `frontend/docs/API-CATALOG.md`
+  - `frontend/docs/api-catalog.json`
+  - `frontend/docs/api/*.md` (các file api docs sinh tự động)
+  - `frontend/docs/BACKEND_INTEGRATION.md`
+  - `frontend/docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi typescript.
+  - `npm test`: 32/32 test files passed (319 tests passed).
+- PROGRESS: Đồng bộ contract BE/FE Phase 12–19 hoàn tất 100%.
+- Còn lại / rủi ro: Không có.
+
 ## [2026-09-23] — Triển khai hoàn tất Phase 14: Hợp nhất Quyền hạn & Căn cứ Xác minh Contributor (Unified Contributor Trust & Verification Parity)
 
 - Mục tiêu: Thực hiện breaking migration toàn diện phân hệ Contributor theo SRS §3.3 và IMPLEMENTATION_PLAN BL-01. Loại bỏ toàn bộ phân tầng subtype RBAC (ContributorType: EXPERIENCED_PRACTITIONER, NUTRITION_EXPERT). Thống nhất một vai trò CONTRIBUTOR duy nhất với 3 căn cứ phê duyệt chuẩn (ContributorApprovalBasis: ORGANIZATION_AFFILIATION, PLATFORM_TRACK_RECORD, ADMIN_INVITED). Căn cứ phê duyệt chỉ mang tính giải trình kiểm toán, không tạo ra nhánh phân quyền. Triển khai API và UI cho Admin mời trực tiếp (POST /api/v1/admin/contributor-invitations) và thu hồi tư cách Contributor kèm lý do kiểm toán bắt buộc (PATCH /api/v1/admin/contributors/:userId/revoke). Biểu mẫu nộp đơn công khai chỉ cho phép chọn ORGANIZATION_AFFILIATION hoặc PLATFORM_TRACK_RECORD (cấm tự chọn ADMIN_INVITED). Ngăn chặn tự duyệt đơn trong Review dialog. Tuân thủ 100% quy chuẩn kiến trúc 7 tầng scaffold, DTO/Model/BaseMapper, không sử dụng `any`, giao diện 100% tiếng Việt.

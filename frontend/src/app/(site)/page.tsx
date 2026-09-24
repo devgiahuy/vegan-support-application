@@ -50,11 +50,11 @@ export default function HomePage() {
   const [isWhyDialogOpen, setIsWhyDialogOpen] = React.useState(false);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pb-20 lg:px-6">
+    <div className="mx-auto w-full max-w-7xl px-4 pb-20 lg:px-6">
       {/* Hero */}
-      <section className="relative grid gap-8 pt-10 pb-12 lg:grid-cols-12 lg:pt-14">
-        <div className="absolute -left-24 top-10 h-56 w-56 rounded-full bg-secondary/50 blur-3xl" />
-        <div className="absolute right-0 top-40 h-56 w-56 rounded-full bg-cta/10 blur-3xl" />
+      <section className="relative grid gap-8 pt-10 pb-12 lg:grid-cols-12 lg:pt-14 overflow-hidden">
+        <div className="pointer-events-none absolute -left-24 top-10 h-56 w-56 rounded-full bg-secondary/50 blur-3xl" />
+        <div className="pointer-events-none absolute right-0 top-40 h-56 w-56 rounded-full bg-cta/10 blur-3xl" />
 
         <div className="relative lg:col-span-6 xl:col-span-7 flex flex-col justify-center">
           {/* Badge với hiệu ứng glow nhẹ */}

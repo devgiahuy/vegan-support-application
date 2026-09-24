@@ -71,7 +71,11 @@ export function BrandLogo({
               width={currentSize.width}
               height={currentSize.height}
               priority={priority}
-              style={{ width: currentSize.width, height: currentSize.height }}
+              style={
+                imageClassName
+                  ? { height: 'auto', maxWidth: '100%' }
+                  : { width: currentSize.width, height: currentSize.height }
+              }
               className={cn('block object-contain dark:hidden', imageClassName)}
             />
             {/* Dark mode horizontal logo (chữ Connect chuyển sang sáng màu) */}
@@ -81,7 +85,11 @@ export function BrandLogo({
               width={currentSize.width}
               height={currentSize.height}
               priority={priority}
-              style={{ width: currentSize.width, height: currentSize.height }}
+              style={
+                imageClassName
+                  ? { height: 'auto', maxWidth: '100%' }
+                  : { width: currentSize.width, height: currentSize.height }
+              }
               className={cn('hidden object-contain dark:block', imageClassName)}
             />
           </div>

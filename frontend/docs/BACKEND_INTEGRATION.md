@@ -400,15 +400,11 @@ MVP không có payment/quota purchase, DMCA workflow, audio/frame copyright dete
 
 | Method | Path | Status | Backend updated | FE integrated | Ghi chú |
 |---|---|---|---|---|---|
-| GET/POST | `/custom-meals` | `PLANNED` | — | Yes (Scaffold, 2026-09-23) | Owner-only list/create; multiple photos and structured ingredients; FE: `features/custom-meal` |
-| GET/PATCH/DELETE | `/custom-meals/:id` | `PLANNED` | — | Yes (Scaffold, 2026-09-23) | Owner-only; safe behavior when used by plan; FE: `features/custom-meal` |
-| POST | `/custom-meals/:id/media` | `PLANNED` | — | Yes (Scaffold, 2026-09-23) | Quota-aware photo attach/reorder; FE: `features/custom-meal` |
-| POST | `/meal-plans/:id/analyze` | `PLANNED` | — | No | Portion, daily limit, same-dish/meal/day warnings |
-| GET/POST | `/meal-programs` | `PLANNED` | — | No | Multi-week list/create/generate |
-| GET/PATCH | `/meal-programs/:id` | `PLANNED` | — | No | Versioned owner detail/edit/confirm |
-| GET/POST | `/custom-meals` | `PLANNED` | — | No | Owner-only list/create; multiple photos and structured ingredients |
-| GET/PATCH/DELETE | `/custom-meals/:id` | `PLANNED` | — | No | Owner-only; safe behavior when used by plan |
-| POST | `/custom-meals/:id/media` | `PLANNED` | — | No | Quota-aware photo attach/reorder |
+| GET/POST | `/custom-meals` | `READY` | 2026-09-21 | Yes (Scaffold, 2026-09-23) | Owner-only list/create; multiple photos and structured ingredients; FE: `features/custom-meal` |
+| GET/PATCH/DELETE | `/custom-meals/:id` | `READY` | 2026-09-21 | Yes (Scaffold, 2026-09-23) | Owner-only; safe behavior when used by plan (BLOCK vs RETAIN_SNAPSHOT); FE: `features/custom-meal` |
+| POST | `/custom-meals/:id/photos` | `READY` | 2026-09-21 | Yes (Scaffold, 2026-09-23) | Quota-aware photo attach (`assetId`); FE: `features/custom-meal` |
+| DELETE | `/custom-meals/:id/photos/:assetId` | `READY` | 2026-09-21 | Yes (Scaffold, 2026-09-23) | Gỡ ảnh khỏi bữa ăn tùy chỉnh; FE: `features/custom-meal` |
+| PUT | `/custom-meals/:id/photos/order` | `READY` | 2026-09-21 | Yes (Scaffold, 2026-09-23) | Reorder thứ tự ảnh (`orderedAssetIds`); FE: `features/custom-meal` |
 | PATCH | `/meal-plans/:id/items/:itemId/manual-add` | `READY` | 2026-09-23 | No | Recipe/private custom meal; hard diet/allergy/exclusion/tradition precedence; returns refreshed analysis |
 | POST | `/meal-plans/:id/analyze` | `READY` | 2026-09-23 | No | Versioned portion, nutrient limit, ingredient guideline, same-dish/meal/day warnings with UI dialog fields |
 | GET | `/meal-plans/:id/analysis` | `READY` | 2026-09-23 | No | Current fingerprint-validated result; returns `MEAL_ANALYSIS_STALE` after relevant input changes |
@@ -871,6 +867,7 @@ Thêm entry mới nhất ở trên cùng.
 | 2026-09-19 | 4.3     | Contributors   | Phase 14 source/migration/OpenAPI implemented: removed subtype fields/RBAC, added typed approval basis, immutable organization/platform/invitation evidence, Admin invitation, manual approve/reject, audited revoke, conservative legacy migration, stale-session revocation. Existing consumed endpoints remain `CHANGING`; new endpoints remain `IN_PROGRESS` because `npm run build` is blocked by Windows Prisma DLL `EPERM`. | Yes | Run `npm run sync:swagger`; replace subtype DTO/model/forms/mappers/tests and UI/RBAC branches with unified role/profile contract after backend build gate passes; integrate invitation/revoke when scheduled. |
 | 2026-09-19 | 4.2     | Recipe Nutrition | Phase 13 implemented in source/OpenAPI: structured recipe steps on recipe revisions plus cooking-aware preview/recalculate/current/history/status endpoints; deterministic calculation uses unit conversion, edible portion, reviewed yield/retention factors, provenance, confidence, uncertainty and uncovered ingredients; AI fallback is provider-adapter only và labeled. Runtime status remains `IN_PROGRESS` until the blocked `npm run build` gate completes. | No | Do not integrate until status returns to `READY`; then sync OpenAPI and add `features/recipe-nutrition` DTO/Model/Mapper/query with partial coverage/stale/provider fallback handling. |
 | 2026-09-19 | 4.1     | Food Data      | Phase 12 READY: canonical profiles/nutrients/conversions, intake/guidelines, cooking factors, interaction rules, typed Admin CRUD, staged AI suggestions và provider-neutral idempotent imports. | No | Sync OpenAPI; thêm DTO/Model/Mapper/query cho các read endpoint và màn quản trị khi được ưu tiên. Missing nutrient không render thành 0. |
+| 2026-09-23 | 5.0 | Phases 12–19 | BE đã cập nhật OpenAPI và response models cho Phase 12 (Food Data), Phase 13 (Recipe Nutrition), Phase 14 (Unified Contributor), Phase 15 (Storage Quota), Phase 16 (Video Review), Phase 17 (Custom Meals), Phase 18 (Meal Analysis), và Phase 19 (Meal Programs). Tiến hành audit toàn bộ client-facing responses: loại bỏ trường nội bộ/FK rò rỉ, bảo toàn audit log của Admin. Đồng bộ 118 endpoints / 27 nhóm OpenAPI vào `docs/API-CATALOG.md` và `docs/api/*.md`. | No | Cập nhật catalog và đối chiếu DTO/Model/Mapper cho các phase đã READY. |
 | 2026-09-19 | 4.1 | Storage Phase 15 | Schema+migration (`20260919170000_storage_quota_accounting`), StoragePolicy/Account/Reservation/MediaAsset/StorageAdjustment models; reservation->commit->release flow; expiry cleanup; reconciliation; existing-media backfill; `/uploads/signature` REMOVED and replaced by reservation flow; 9 new READY endpoints (`GET /storage/me`, `POST /uploads/reservations`, `POST /uploads/reservations/:id/commit`, `DELETE /uploads/reservations/:id`, `DELETE /storage/assets/:id`, `GET /admin/storage/accounts`, `GET /admin/storage/policies`, `PATCH /admin/storage/policies/:id`, `POST /admin/storage/accounts/:userId/adjustments`, `GET /admin/storage/adjustments`); error codes `STORAGE_QUOTA_EXCEEDED`, `UPLOAD_RESERVATION_EXPIRED`, `UPLOAD_IDEMPOTENCY_CONFLICT`, `UPLOAD_RESERVATION_CONFLICT`, `UPLOAD_PROVIDER_MISMATCH`, `MEDIA_ASSET_IN_USE`, `MEDIA_DELETE_IDEMPOTENCY_CONFLICT`, `STORAGE_POLICY_CONFLICT`, `STORAGE_ADJUSTMENT_IDEMPOTENCY_CONFLICT`, `STORAGE_ADJUSTMENT_INVALID` now READY. Default quota: 1 GiB per user. Reservation TTL: 900 s. | No | Run `npm run sync:swagger`; integrate reservation->commit flow for Cloudinary uploads; add `GET /storage/me` usage widget |
 | 2026-09-18 | 4.0     | Product plan   | Đồng bộ canonical SRS và backend Phases 12–27: food data, cooking-aware nutrition, unified Contributor, quota/video review, custom meals/tags, meal analysis/programs, pantry, fridge, receipt, AI artifacts, maps, notifications và governance. Contract runtime hiện tại không đổi; Contributor Phase 14 được ghi là breaking migration tương lai. | Future Phase 14 | Chưa đổi consumer live; chỉ sync/migrate khi từng endpoint chuyển READY/CHANGING theo OpenAPI |
 | 2026-09-17 | 3.8     | AI Governance  | FE scaffold 5 ops AI governance theo spec 017 (DTO suy luận + reconfirm ở task nối live/Mapper/test redaction/fixtures 0 nội dung thô/API fixture 0 request/Query/tab dashboard tổng quan + log che mờ + cờ + công tắc); endpoint giữ `PLANNED`, `FE integrated` giữ `No` |    No    | Test tay AG-1..AG-3 + check Network 0 request + quét DOM 0 nội dung thô theo `specs/017-ai-governance/quickstart.md`; nối live khi BE đánh `READY` |
@@ -951,3 +948,51 @@ Một frontend/backend capability chỉ được xem là tích hợp xong khi:
 | CUSTOM_MEAL_IN_USE | 409 | BLOCK policy delete rejected because meal is referenced by a plan item |
 | CUSTOM_MEAL_PHOTO_LIMIT | 422 | Meal already has 10 photos |
 | ASSET_NOT_FOUND_OR_INELIGIBLE | 422 | Asset is not COVER_IMAGE, not owned by user, or not ACTIVE |
+
+### 6.13 Meal Analysis — Phase 18
+
+| Method | Endpoint | Status | FE integrated | FE integrated date | Notes |
+|--------|----------|--------|---------------|--------------------|-------|
+| POST | /api/v1/meal-plans/{id}/analyze | READY | No | — | Analyze portion, nutrient limits, guidelines, and interaction warnings; returns versioned analysis |
+| GET | /api/v1/meal-plans/{id}/analysis | READY | No | — | Get current meal plan analysis; returns 409 MEAL_ANALYSIS_STALE if inputs changed |
+| PATCH | /api/v1/meal-plans/{id}/items/{itemId}/manual-add | READY | No | — | Manually add recipe or custom meal to plan item with strict constraint verification |
+
+**Business rules (backend-enforced):**
+- Auth + ownership required; users cannot analyze or alter other users' meal plans.
+- Strict constraint precedence: hard allergy, diet pattern, exclusion, and tradition rules reject manual addition (`400 DIET_CONSTRAINT_VIOLATION` / `ALLERGY_VIOLATION`).
+- Analysis validation: returns `409 MEAL_ANALYSIS_STALE` when fingerprint mismatches due to recipe, ingredient, or item change.
+- Warning DTOs must provide `code`, `severity` (INFO, CAUTION, HIGH), `scope` (DISH, MEAL, DAILY), `evidenceGrade`, `source`, `affectedItems`, `affectedIngredients`, `measured`, `limit`, `explanation`, `suggestedAdjustment`, `confidence`, `advisory`.
+
+**Error codes:**
+| Code | HTTP | Description |
+|------|------|-------------|
+| MEAL_PLAN_NOT_FOUND | 404 | Meal plan not found or not owned by user |
+| MEAL_ANALYSIS_NOT_FOUND | 404 | No analysis recorded for this meal plan |
+| MEAL_ANALYSIS_STALE | 409 | Analysis fingerprint is stale; reanalysis required |
+| PLAN_VERSION_MISMATCH | 409 | Concurrent plan modification detected |
+| DIET_CONSTRAINT_VIOLATION | 400 | Hard diet constraint violated |
+| ALLERGY_VIOLATION | 400 | Ingredient allergen violates user preference |
+
+### 6.14 Multi-Week Meal Programs — Phase 19
+
+| Method | Endpoint | Status | FE integrated | FE integrated date | Notes |
+|--------|----------|--------|---------------|--------------------|-------|
+| POST | /api/v1/meal-programs | READY | No | — | Create/generate multi-week program (2–12 weeks) with bounded alternatives |
+| GET | /api/v1/meal-programs | READY | No | — | Owner paginated list of programs |
+| GET | /api/v1/meal-programs/{id} | READY | No | — | Full program detail with weekly snapshots, alternatives, and cross-week analysis |
+| PATCH | /api/v1/meal-programs/{id} | READY | No | — | Versioned program update, alternative selection, reanalysis, or confirmation |
+
+**Business rules (backend-enforced):**
+- Bounded program horizon: between 2 and 12 weeks (`PROGRAM_HORIZON_INVALID` if out of bounds).
+- Program alternatives: 1 to 3 alternatives per week.
+- Weekly snapshots: alternatives snapshot base meal plans so future recipe/plan changes do not corrupt active programs.
+- Confirmation lifecycle: once confirmed (`CONFIRMED`), program structure is locked against further generation edits (`PROGRAM_ALREADY_CONFIRMED`).
+- Cross-week aggregated analysis: aggregates nutrition and nutrient limits across weeks, invalidating downstream weeks if alternative changed.
+
+**Error codes:**
+| Code | HTTP | Description |
+|------|------|-------------|
+| MEAL_PROGRAM_NOT_FOUND | 404 | Meal program not found or not owned by user |
+| PROGRAM_HORIZON_INVALID | 400 | Horizon weeks must be between 2 and 12 |
+| PROGRAM_ALREADY_CONFIRMED | 409 | Confirmed programs cannot be edited |
+| PROGRAM_VERSION_MISMATCH | 409 | Concurrent program modification detected |
