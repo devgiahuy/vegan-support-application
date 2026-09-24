@@ -601,6 +601,41 @@ enum NutritionCoverage {
   @@map("nutrition_coverage")
 }
 
+enum PantryItemSource {
+  MANUAL
+  FRIDGE_RECOGNITION
+  RECEIPT
+
+  @@map("pantry_item_source")
+}
+
+enum PantryConfirmationStatus {
+  PENDING
+  CONFIRMED
+
+  @@map("pantry_confirmation_status")
+}
+
+enum PantryConversionStatus {
+  CONVERTED
+  UNKNOWN
+
+  @@map("pantry_conversion_status")
+}
+
+enum PantryAdjustmentType {
+  CREATE
+  UPDATE
+  CONSUME
+  RESTORE
+  ADJUST
+  MERGE_IN
+  MERGE_OUT
+  DELETE
+
+  @@map("pantry_adjustment_type")
+}
+
 model User {
   id                             String                     @id @default(uuid()) @db.Uuid
   email                          String                     @unique @db.VarChar(320)
@@ -663,6 +698,8 @@ model User {
   customMeals                    CustomMeal[]
   mealPrograms                   MealProgram[]
   mealProgramMutations           MealProgramMutation[]
+  pantryItems                    PantryItem[]
+  pantryAdjustments              PantryAdjustment[]
 
   @@map("users")
 }
@@ -732,9 +769,77 @@ model Ingredient {
   interactionRulesB     IngredientInteractionRule[]   @relation("InteractionIngredientB")
   nutritionLines        RecipeNutritionEstimateLine[]
   customMealIngredients CustomMealIngredient[]
+  pantryItems           PantryItem[]
 
   @@index([status, foodGroup, canonicalName])
   @@map("ingredients")
+}
+
+model PantryItem {
+  id                      String                   @id @default(uuid()) @db.Uuid
+  ownerId                 String                   @map("owner_id") @db.Uuid
+  ingredientId            String?                  @map("ingredient_id") @db.Uuid
+  unmatchedText           String?                  @map("unmatched_text") @db.VarChar(160)
+  normalizedUnmatchedText String?                  @map("normalized_unmatched_text") @db.VarChar(160)
+  quantity                Decimal                  @db.Decimal(14, 4)
+  unit                    String                   @db.VarChar(40)
+  normalizedGrams         Decimal?                 @map("normalized_grams") @db.Decimal(16, 4)
+  conversionStatus        PantryConversionStatus   @map("conversion_status")
+  conversionSource        String?                  @map("conversion_source") @db.VarChar(80)
+  conversionVersion       String?                  @map("conversion_version") @db.VarChar(120)
+  conversionConfidence    Decimal?                 @map("conversion_confidence") @db.Decimal(5, 4)
+  source                  PantryItemSource
+  sourceReferenceId       String?                  @map("source_reference_id") @db.Uuid
+  confidence              Decimal                  @default(1) @db.Decimal(5, 4)
+  confirmationStatus      PantryConfirmationStatus @default(CONFIRMED) @map("confirmation_status")
+  purchasedAt             DateTime?                @map("purchased_at") @db.Date
+  openedAt                DateTime?                @map("opened_at") @db.Date
+  expiresAt               DateTime?                @map("expires_at") @db.Date
+  freshnessNote           String?                  @map("freshness_note") @db.VarChar(1000)
+  version                 Int                      @default(1)
+  deletedAt               DateTime?                @map("deleted_at") @db.Timestamptz(3)
+  createdAt               DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
+  owner                   User                     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ingredient              Ingredient?              @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  adjustments             PantryAdjustment[]       @relation("PantryItemAdjustments")
+  mergedIntoAdjustments   PantryAdjustment[]       @relation("PantryMergedIntoAdjustments")
+
+  @@index([ownerId, deletedAt, confirmationStatus, updatedAt])
+  @@index([ownerId, ingredientId, deletedAt])
+  @@index([ownerId, normalizedUnmatchedText, deletedAt])
+  @@index([ownerId, expiresAt, deletedAt])
+  @@map("pantry_items")
+}
+
+model PantryAdjustment {
+  id                   String               @id @default(uuid()) @db.Uuid
+  ownerId              String               @map("owner_id") @db.Uuid
+  pantryItemId         String               @map("pantry_item_id") @db.Uuid
+  type                 PantryAdjustmentType
+  idempotencyKey       String               @map("idempotency_key") @db.VarChar(160)
+  requestHash          String               @map("request_hash") @db.Char(64)
+  inputQuantity        Decimal              @map("input_quantity") @db.Decimal(14, 4)
+  inputUnit            String               @map("input_unit") @db.VarChar(40)
+  appliedDeltaQuantity Decimal              @map("applied_delta_quantity") @db.Decimal(14, 4)
+  normalizedDeltaGrams Decimal?             @map("normalized_delta_grams") @db.Decimal(16, 4)
+  beforeQuantity       Decimal              @map("before_quantity") @db.Decimal(14, 4)
+  afterQuantity        Decimal              @map("after_quantity") @db.Decimal(14, 4)
+  beforeGrams          Decimal?             @map("before_grams") @db.Decimal(16, 4)
+  afterGrams           Decimal?             @map("after_grams") @db.Decimal(16, 4)
+  versionBefore        Int                  @map("version_before")
+  versionAfter         Int                  @map("version_after")
+  reason               String?              @db.VarChar(1000)
+  mergedFromItemId     String?              @map("merged_from_item_id") @db.Uuid
+  createdAt            DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  owner                User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  pantryItem           PantryItem           @relation("PantryItemAdjustments", fields: [pantryItemId], references: [id], onDelete: Restrict)
+  mergedFromItem       PantryItem?          @relation("PantryMergedIntoAdjustments", fields: [mergedFromItemId], references: [id], onDelete: Restrict)
+
+  @@unique([ownerId, idempotencyKey])
+  @@index([pantryItemId, createdAt, id])
+  @@index([ownerId, createdAt, id])
+  @@map("pantry_adjustments")
 }
 
 model Post {

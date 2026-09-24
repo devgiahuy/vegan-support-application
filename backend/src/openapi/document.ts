@@ -20,6 +20,7 @@ import { registerFoodDataOpenApi } from '../modules/food-data/food-data.openapi.
 import { registerRecipeNutritionOpenApi } from '../modules/recipe-nutrition/recipe-nutrition.openapi.js';
 import { registerStorageOpenApi } from '../modules/storage/storage.openapi.js';
 import { registerCustomMealOpenApi } from '../modules/custom-meals/custom-meal.openapi.js';
+import { registerPantryOpenApi } from '../modules/pantry/pantry.openapi.js';
 
 const registry = new OpenAPIRegistry();
 
@@ -64,6 +65,7 @@ registerFoodDataOpenApi(registry, registeredErrorResponse);
 registerRecipeNutritionOpenApi(registry, registeredErrorResponse);
 registerStorageOpenApi(registry, registeredErrorResponse);
 registerCustomMealOpenApi(registry, registeredErrorResponse);
+registerPantryOpenApi(registry, registeredErrorResponse);
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
@@ -114,6 +116,11 @@ const generatedDocument = generator.generateDocument({
     {
       name: 'Custom Meals',
       description: 'Private owner-scoped custom meals usable in meal planning',
+    },
+    {
+      name: 'Pantry',
+      description:
+        'Confirmed owner-scoped inventory, conversions, ledger, duplicate merge, and expiry observations',
     },
   ],
 });

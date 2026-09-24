@@ -39,6 +39,10 @@ import {
   RecipeDifficulty,
   NutrientReferenceType,
   NutritionCoverage,
+  PantryAdjustmentType,
+  PantryConfirmationStatus,
+  PantryConversionStatus,
+  PantryItemSource,
   ReportStatus,
   ReportTargetType,
   Role,
@@ -2052,6 +2056,84 @@ async function main(): Promise<void> {
     organizationContributorEmail: seedEnvironment.SEED_ORGANIZATION_CONTRIBUTOR_EMAIL.toLowerCase(),
     nextMonday,
   });
+  const pantryMember = await prisma.user.findUniqueOrThrow({
+    where: { email: seedEnvironment.SEED_MEMBER_EMAIL.toLowerCase() },
+  });
+  const pantryTofu = await prisma.ingredient.findUniqueOrThrow({
+    where: { normalizedName: 'dau hu' },
+  });
+  const pantrySeeds = [
+    {
+      id: '20000000-0000-4000-8000-000000000001',
+      quantity: 2,
+      unit: 'miếng',
+      normalizedGrams: 200,
+      conversionSource: 'PROJECT_CURATED',
+      conversionVersion: '1.0',
+      conversionConfidence: 0.7,
+      expiresAt: new Date('2026-09-27T00:00:00.000Z'),
+      idempotencyKey: 'seed-phase-20-pantry-tofu-pieces',
+    },
+    {
+      id: '20000000-0000-4000-8000-000000000002',
+      quantity: 50,
+      unit: 'g',
+      normalizedGrams: 50,
+      conversionSource: 'SYSTEM_MASS',
+      conversionVersion: 'UCUM-MASS-V1',
+      conversionConfidence: 1,
+      expiresAt: new Date('2026-09-28T00:00:00.000Z'),
+      idempotencyKey: 'seed-phase-20-pantry-tofu-grams',
+    },
+  ] as const;
+  for (const fixture of pantrySeeds) {
+    const pantryItem = await prisma.pantryItem.upsert({
+      where: { id: fixture.id },
+      update: {},
+      create: {
+        id: fixture.id,
+        ownerId: pantryMember.id,
+        ingredientId: pantryTofu.id,
+        quantity: fixture.quantity,
+        unit: fixture.unit,
+        normalizedGrams: fixture.normalizedGrams,
+        conversionStatus: PantryConversionStatus.CONVERTED,
+        conversionSource: fixture.conversionSource,
+        conversionVersion: fixture.conversionVersion,
+        conversionConfidence: fixture.conversionConfidence,
+        source: PantryItemSource.MANUAL,
+        confidence: 1,
+        confirmationStatus: PantryConfirmationStatus.CONFIRMED,
+        expiresAt: fixture.expiresAt,
+      },
+    });
+    await prisma.pantryAdjustment.upsert({
+      where: {
+        ownerId_idempotencyKey: {
+          ownerId: pantryMember.id,
+          idempotencyKey: fixture.idempotencyKey,
+        },
+      },
+      update: {},
+      create: {
+        ownerId: pantryMember.id,
+        pantryItemId: pantryItem.id,
+        type: PantryAdjustmentType.CREATE,
+        idempotencyKey: fixture.idempotencyKey,
+        requestHash: '0'.repeat(64),
+        inputQuantity: fixture.quantity,
+        inputUnit: fixture.unit,
+        appliedDeltaQuantity: fixture.quantity,
+        normalizedDeltaGrams: fixture.normalizedGrams,
+        beforeQuantity: 0,
+        afterQuantity: fixture.quantity,
+        beforeGrams: 0,
+        afterGrams: fixture.normalizedGrams,
+        versionBefore: 0,
+        versionAfter: 1,
+      },
+    });
+  }
   const storagePolicy = await prisma.storagePolicy.upsert({
     where: { code: 'MVP_DEFAULT' },
     update: {
@@ -2134,7 +2216,7 @@ async function main(): Promise<void> {
     });
   }
   console.info(
-    `Seeded local Member, unified Contributors with two approval bases, Admin, storage policy/accounting, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
+    `Seeded local Member, unified Contributors with two approval bases, Admin, storage policy/accounting, pantry inventory, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
   );
 }
 
