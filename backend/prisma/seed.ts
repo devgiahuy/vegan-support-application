@@ -750,6 +750,7 @@ const seedEnvironment = z
     SEED_MEMBER_PASSWORD: z.string().min(8),
     SEED_PLATFORM_CONTRIBUTOR_EMAIL: z.string().email().default('contributor@example.com'),
     SEED_ORGANIZATION_CONTRIBUTOR_EMAIL: z.string().email().default('expert@example.com'),
+    SEED_INVITED_CONTRIBUTOR_EMAIL: z.string().email().default('invited@example.com'),
     SEED_ADMIN_EMAIL: z.string().email().default('admin@example.com'),
     SEED_ADMIN_PASSWORD: z.string().min(8),
     STORAGE_DEFAULT_QUOTA_BYTES: z.coerce.number().int().positive().default(1_073_741_824),
@@ -922,6 +923,8 @@ async function main(): Promise<void> {
       applicationId: '70000000-0000-4000-8000-000000000001',
       email: seedEnvironment.SEED_PLATFORM_CONTRIBUTOR_EMAIL.toLowerCase(),
       displayName: 'Demo Platform Contributor',
+      source: ContributorApplicationSource.REGISTRATION,
+      invitationReason: null,
       claimedApprovalBasis: ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
       approvalBasis: ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
       organizationClaim: null,
@@ -946,6 +949,8 @@ async function main(): Promise<void> {
       applicationId: '70000000-0000-4000-8000-000000000002',
       email: seedEnvironment.SEED_ORGANIZATION_CONTRIBUTOR_EMAIL.toLowerCase(),
       displayName: 'Demo Organization Contributor',
+      source: ContributorApplicationSource.REGISTRATION,
+      invitationReason: null,
       claimedApprovalBasis: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
       approvalBasis: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
       organizationClaim: 'Demo Plant Nutrition Community',
@@ -959,6 +964,24 @@ async function main(): Promise<void> {
         organizationClaim: 'Demo Plant Nutrition Community',
         referenceLinks: ['https://example.com/demo-organization'],
         verificationStatus: 'CLAIM_RETAINED_NOT_VERIFIED',
+      },
+    },
+    {
+      applicationId: '70000000-0000-4000-8000-000000000003',
+      email: seedEnvironment.SEED_INVITED_CONTRIBUTOR_EMAIL.toLowerCase(),
+      displayName: 'Demo Invited Contributor',
+      source: ContributorApplicationSource.ADMIN_INVITATION,
+      claimedApprovalBasis: ContributorApprovalBasis.ADMIN_INVITED,
+      approvalBasis: ContributorApprovalBasis.ADMIN_INVITED,
+      organizationClaim: null,
+      referenceLinks: [] as string[],
+      experience: 'Admin-invited demo Contributor for unified permission validation.',
+      invitationReason: 'Seed profile for equal-permission verification acceptance.',
+      approvalEvidence: {
+        kind: ContributorApprovalBasis.ADMIN_INVITED,
+        capturedAt: '2026-09-15T00:00:00.000Z',
+        snapshotVersion: 'seed-admin-invitation-v1',
+        invitationReason: 'Seed profile for equal-permission verification acceptance.',
       },
     },
   ] as const;
@@ -989,7 +1012,9 @@ async function main(): Promise<void> {
           organizationClaim: definition.organizationClaim,
           experience: definition.experience,
           referenceLinks: definition.referenceLinks,
-          source: ContributorApplicationSource.REGISTRATION,
+          source: definition.source,
+          invitedById: definition.source === ContributorApplicationSource.ADMIN_INVITATION ? admin.id : null,
+          invitationReason: definition.invitationReason,
           status: ContributorApplicationStatus.APPROVED,
           approvalBasis: definition.approvalBasis,
           reviewEvidence: definition.approvalEvidence,
@@ -1005,7 +1030,11 @@ async function main(): Promise<void> {
           organizationClaim: definition.organizationClaim,
           experience: definition.experience,
           referenceLinks: definition.referenceLinks,
-          source: ContributorApplicationSource.REGISTRATION,
+          source: definition.source,
+          ...(definition.source === ContributorApplicationSource.ADMIN_INVITATION
+            ? { invitedById: admin.id }
+            : {}),
+          invitationReason: definition.invitationReason,
           status: ContributorApplicationStatus.APPROVED,
           approvalBasis: definition.approvalBasis,
           reviewEvidence: definition.approvalEvidence,
@@ -2322,7 +2351,7 @@ async function main(): Promise<void> {
     });
   }
   console.info(
-    `Seeded local Member, unified Contributors with two approval bases, Admin, storage policy/accounting, pantry inventory, fridge-vision and receipt fake fixtures, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
+    `Seeded local Member, unified Contributors with all three approval bases, Admin, storage policy/accounting, pantry inventory, fridge-vision and receipt fake fixtures, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
   );
 }
 

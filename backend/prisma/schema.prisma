@@ -696,53 +696,99 @@ enum ReceiptCandidateStatus {
   @@map("receipt_candidate_status")
 }
 
+enum AiArtifactType {
+  CHAT_ANSWER
+  RECIPE_NUTRITION
+  FRIDGE_RECOGNITION
+  RECEIPT_EXTRACTION
+
+  @@map("ai_artifact_type")
+}
+
+enum AiArtifactStatus {
+  DRAFT
+  SUBMITTED
+
+  @@map("ai_artifact_status")
+}
+
+enum AiArtifactVisibility {
+  PRIVATE
+  PUBLIC
+
+  @@map("ai_artifact_visibility")
+}
+
+enum AiVerificationConclusion {
+  VERIFIED
+  CORRECTION_NEEDED
+  REJECTED
+
+  @@map("ai_verification_conclusion")
+}
+
+enum AiVerificationStatus {
+  ACTIVE
+  SUPERSEDED
+  REVOKED
+
+  @@map("ai_verification_status")
+}
+
+enum AiVerificationAdminActionType {
+  OVERRIDE
+  REVOKE
+
+  @@map("ai_verification_admin_action_type")
+}
+
 model User {
-  id                             String                     @id @default(uuid()) @db.Uuid
-  email                          String                     @unique @db.VarChar(320)
-  passwordHash                   String                     @map("password_hash")
-  displayName                    String                     @map("display_name") @db.VarChar(100)
-  avatarUrl                      String?                    @map("avatar_url") @db.VarChar(2048)
-  role                           Role                       @default(MEMBER)
-  status                         UserStatus                 @default(ACTIVE)
-  failedLoginAttempts            Int                        @default(0) @map("failed_login_attempts")
-  lockedUntil                    DateTime?                  @map("locked_until") @db.Timestamptz(3)
-  lastLoginAt                    DateTime?                  @map("last_login_at") @db.Timestamptz(3)
-  createdAt                      DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt                      DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt                      DateTime?                  @map("deleted_at") @db.Timestamptz(3)
-  privateDataPurgeAt             DateTime?                  @map("private_data_purge_at") @db.Timestamptz(3)
+  id                             String                      @id @default(uuid()) @db.Uuid
+  email                          String                      @unique @db.VarChar(320)
+  passwordHash                   String                      @map("password_hash")
+  displayName                    String                      @map("display_name") @db.VarChar(100)
+  avatarUrl                      String?                     @map("avatar_url") @db.VarChar(2048)
+  role                           Role                        @default(MEMBER)
+  status                         UserStatus                  @default(ACTIVE)
+  failedLoginAttempts            Int                         @default(0) @map("failed_login_attempts")
+  lockedUntil                    DateTime?                   @map("locked_until") @db.Timestamptz(3)
+  lastLoginAt                    DateTime?                   @map("last_login_at") @db.Timestamptz(3)
+  createdAt                      DateTime                    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                      DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt                      DateTime?                   @map("deleted_at") @db.Timestamptz(3)
+  privateDataPurgeAt             DateTime?                   @map("private_data_purge_at") @db.Timestamptz(3)
   refreshSessions                RefreshSession[]
   applications                   ContributorApplication[]
-  reviewedApplications           ContributorApplication[]   @relation("ContributorApplicationReviewer")
-  invitedContributorApplications ContributorApplication[]   @relation("ContributorApplicationInviter")
-  contributorProfile             ContributorProfile?        @relation("ContributorProfileUser")
-  approvedContributorProfiles    ContributorProfile[]       @relation("ContributorProfileApprover")
-  revokedContributorProfiles     ContributorProfile[]       @relation("ContributorProfileRevoker")
-  contributorDecisions           ContributorDecision[]      @relation("ContributorDecisionSubject")
-  madeContributorDecisions       ContributorDecision[]      @relation("ContributorDecisionActor")
+  reviewedApplications           ContributorApplication[]    @relation("ContributorApplicationReviewer")
+  invitedContributorApplications ContributorApplication[]    @relation("ContributorApplicationInviter")
+  contributorProfile             ContributorProfile?         @relation("ContributorProfileUser")
+  approvedContributorProfiles    ContributorProfile[]        @relation("ContributorProfileApprover")
+  revokedContributorProfiles     ContributorProfile[]        @relation("ContributorProfileRevoker")
+  contributorDecisions           ContributorDecision[]       @relation("ContributorDecisionSubject")
+  madeContributorDecisions       ContributorDecision[]       @relation("ContributorDecisionActor")
   healthProfile                  HealthProfile?
   dietPreference                 DietPreference?
   dietPreferenceRules            DietPreferenceRule[]
   dietScheduleDates              DietScheduleDate[]
   allergies                      UserAllergy[]
   ingredientExclusions           UserIngredientExclusion[]
-  categoryProposals              CategoryProposal[]         @relation("CategoryProposalAuthor")
-  reviewedCategoryProposals      CategoryProposal[]         @relation("CategoryProposalReviewer")
-  posts                          Post[]                     @relation("PostAuthor")
-  deletedPosts                   Post[]                     @relation("PostDeletedBy")
-  postRevisions                  PostRevision[]             @relation("PostRevisionAuthor")
-  comments                       Comment[]                  @relation("CommentAuthor")
-  hiddenComments                 Comment[]                  @relation("CommentHiddenBy")
+  categoryProposals              CategoryProposal[]          @relation("CategoryProposalAuthor")
+  reviewedCategoryProposals      CategoryProposal[]          @relation("CategoryProposalReviewer")
+  posts                          Post[]                      @relation("PostAuthor")
+  deletedPosts                   Post[]                      @relation("PostDeletedBy")
+  postRevisions                  PostRevision[]              @relation("PostRevisionAuthor")
+  comments                       Comment[]                   @relation("CommentAuthor")
+  hiddenComments                 Comment[]                   @relation("CommentHiddenBy")
   postVotes                      PostVote[]
   postRatings                    PostRating[]
   postBookmarks                  PostBookmark[]
   communityRateLimits            CommunityRateLimitBucket[]
-  reports                        Report[]                   @relation("ReportReporter")
-  resolvedReports                Report[]                   @relation("ReportResolver")
-  reviewedAiFlags                AiFlag[]                   @relation("AiFlagReviewer")
-  moderationActions              ModerationAction[]         @relation("ModerationActor")
-  reviewedPostRevisions          PostRevision[]             @relation("PostRevisionReviewer")
-  hiddenPosts                    Post[]                     @relation("PostHiddenBy")
+  reports                        Report[]                    @relation("ReportReporter")
+  resolvedReports                Report[]                    @relation("ReportResolver")
+  reviewedAiFlags                AiFlag[]                    @relation("AiFlagReviewer")
+  moderationActions              ModerationAction[]          @relation("ModerationActor")
+  reviewedPostRevisions          PostRevision[]              @relation("PostRevisionReviewer")
+  hiddenPosts                    Post[]                      @relation("PostHiddenBy")
   personalizationPreference      PersonalizationPreference?
   behaviorEvents                 BehaviorEvent[]
   mealPlans                      MealPlan[]
@@ -750,11 +796,11 @@ model User {
   chatSessions                   ChatSession[]
   aiRequestLogs                  AiRequestLog[]
   storageAccount                 StorageAccount?
-  mediaAssets                    MediaAsset[]               @relation("MediaAssetOwner")
-  deletedMediaAssets             MediaAsset[]               @relation("MediaAssetDeletedBy")
-  storageAdjustments             StorageAdjustment[]        @relation("StorageAdjustmentSubject")
-  madeStorageAdjustments         StorageAdjustment[]        @relation("StorageAdjustmentActor")
-  updatedStoragePolicies         StoragePolicy[]            @relation("StoragePolicyUpdater")
+  mediaAssets                    MediaAsset[]                @relation("MediaAssetOwner")
+  deletedMediaAssets             MediaAsset[]                @relation("MediaAssetDeletedBy")
+  storageAdjustments             StorageAdjustment[]         @relation("StorageAdjustmentSubject")
+  madeStorageAdjustments         StorageAdjustment[]         @relation("StorageAdjustmentActor")
+  updatedStoragePolicies         StoragePolicy[]             @relation("StoragePolicyUpdater")
   customMeals                    CustomMeal[]
   mealPrograms                   MealProgram[]
   mealProgramMutations           MealProgramMutation[]
@@ -762,6 +808,9 @@ model User {
   pantryAdjustments              PantryAdjustment[]
   recognitionJobs                RecognitionJob[]
   receiptJobs                    ReceiptJob[]
+  aiArtifacts                    AiArtifact[]                @relation("AiArtifactOwner")
+  aiVerifications                AiVerification[]            @relation("AiVerificationReviewer")
+  aiVerificationAdminActions     AiVerificationAdminAction[] @relation("AiVerificationAdminActor")
 
   @@map("users")
 }
@@ -1093,6 +1142,82 @@ model ReceiptCandidate {
   @@index([ingredientId])
   @@index([pantryItemId])
   @@map("receipt_candidates")
+}
+
+model AiArtifact {
+  id               String               @id @default(uuid()) @db.Uuid
+  ownerId          String               @map("owner_id") @db.Uuid
+  type             AiArtifactType
+  sourceId         String               @map("source_id") @db.Uuid
+  sourceVersion    Int                  @map("source_version")
+  snapshot         Json
+  snapshotHash     String               @map("snapshot_hash") @db.Char(64)
+  title            String               @db.VarChar(160)
+  summary          String               @db.VarChar(1000)
+  authorAnonymous  Boolean              @default(true) @map("author_anonymous")
+  status           AiArtifactStatus     @default(DRAFT)
+  visibility       AiArtifactVisibility @default(PRIVATE)
+  version          Int                  @default(1)
+  lifecycleVersion Int                  @default(1) @map("lifecycle_version")
+  submittedAt      DateTime?            @map("submitted_at") @db.Timestamptz(3)
+  sharedAt         DateTime?            @map("shared_at") @db.Timestamptz(3)
+  createdAt        DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  owner            User                 @relation("AiArtifactOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  verifications    AiVerification[]
+
+  @@unique([ownerId, type, sourceId, sourceVersion])
+  @@index([ownerId, createdAt, id])
+  @@index([visibility, status, sharedAt, id])
+  @@map("ai_artifacts")
+}
+
+model AiVerification {
+  id                 String                      @id @default(uuid()) @db.Uuid
+  artifactId         String                      @map("artifact_id") @db.Uuid
+  artifactVersion    Int                         @map("artifact_version")
+  reviewerId         String                      @map("reviewer_id") @db.Uuid
+  reviewerRole       Role                        @map("reviewer_role")
+  conclusion         AiVerificationConclusion
+  scope              String                      @db.VarChar(500)
+  evidenceNote       String                      @map("evidence_note") @db.VarChar(2000)
+  correction         String?                     @db.VarChar(2000)
+  status             AiVerificationStatus        @default(ACTIVE)
+  supersedesId       String?                     @map("supersedes_id") @db.Uuid
+  version            Int                         @default(1)
+  createdAt          DateTime                    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(3)
+  artifact           AiArtifact                  @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+  reviewer           User                        @relation("AiVerificationReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
+  supersedes         AiVerification?             @relation("AiVerificationSupersession", fields: [supersedesId], references: [id], onDelete: Restrict)
+  supersededBy       AiVerification[]            @relation("AiVerificationSupersession")
+  adminActions       AiVerificationAdminAction[] @relation("AiVerificationActionTarget")
+  replacementActions AiVerificationAdminAction[] @relation("AiVerificationActionReplacement")
+
+  @@index([artifactId, createdAt, id])
+  @@index([reviewerId, createdAt])
+  @@index([supersedesId])
+  @@map("ai_verifications")
+}
+
+model AiVerificationAdminAction {
+  id                        String                        @id @default(uuid()) @db.Uuid
+  verificationId            String                        @map("verification_id") @db.Uuid
+  actorId                   String                        @map("actor_id") @db.Uuid
+  action                    AiVerificationAdminActionType
+  reason                    String                        @db.VarChar(2000)
+  expectedVersion           Int                           @map("expected_version")
+  resultingVersion          Int                           @map("resulting_version")
+  replacementVerificationId String?                       @map("replacement_verification_id") @db.Uuid
+  createdAt                 DateTime                      @default(now()) @map("created_at") @db.Timestamptz(3)
+  verification              AiVerification                @relation("AiVerificationActionTarget", fields: [verificationId], references: [id], onDelete: Restrict)
+  actor                     User                          @relation("AiVerificationAdminActor", fields: [actorId], references: [id], onDelete: Restrict)
+  replacementVerification   AiVerification?               @relation("AiVerificationActionReplacement", fields: [replacementVerificationId], references: [id], onDelete: Restrict)
+
+  @@index([verificationId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([replacementVerificationId])
+  @@map("ai_verification_admin_actions")
 }
 
 model Post {

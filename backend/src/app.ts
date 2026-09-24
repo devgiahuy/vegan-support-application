@@ -127,6 +127,10 @@ import { createReceiptExtractionProvider } from './modules/receipts/receipt.prov
 import { ReceiptRepository } from './modules/receipts/receipt.repository.js';
 import { createReceiptRouter } from './modules/receipts/receipt.router.js';
 import { ReceiptService } from './modules/receipts/receipt.service.js';
+import { AiReviewController } from './modules/ai-review/ai-review.controller.js';
+import { AiReviewRepository } from './modules/ai-review/ai-review.repository.js';
+import { createAiReviewAdminRouter, createAiReviewRouter } from './modules/ai-review/ai-review.router.js';
+import { AiReviewService } from './modules/ai-review/ai-review.service.js';
 import { openApiDocument } from './openapi/document.js';
 
 export interface AppDependencies {
@@ -221,6 +225,9 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
       config,
     ),
   );
+  const aiReviewController = new AiReviewController(
+    new AiReviewService(new AiReviewRepository(database.client)),
+  );
 
   app.disable('x-powered-by');
   app.use(helmet());
@@ -274,6 +281,7 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/admin', createContributorAdminRouter(contributorController, authentication));
   app.use('/api/v1/admin', createModerationAdminRouter(moderationController, authentication));
   app.use('/api/v1/admin', createStorageAdminRouter(storageController, authentication));
+  app.use('/api/v1/admin', createAiReviewAdminRouter(aiReviewController, authentication));
   app.use('/api/v1/review-queue', createReviewQueueRouter(moderationController, authentication));
   app.use('/api/v1/reports', createReportsRouter(moderationController, authentication));
   app.use(
@@ -301,6 +309,7 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
     createIngredientRecognitionRouter(ingredientRecognitionController, authentication),
   );
   app.use('/api/v1', createReceiptRouter(receiptController, authentication));
+  app.use('/api/v1', createAiReviewRouter(aiReviewController, authentication));
 
   app.use(notFoundHandler);
   app.use(createErrorHandler(logger));
