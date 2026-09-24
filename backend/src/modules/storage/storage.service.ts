@@ -67,7 +67,7 @@ export class StorageService {
 
   async createReservation(userId: string, input: CreateReservationInput) {
     const resourceType =
-      input.kind === MediaKind.COVER_IMAGE ? MediaResourceType.IMAGE : MediaResourceType.VIDEO;
+      input.kind === MediaKind.VIDEO ? MediaResourceType.VIDEO : MediaResourceType.IMAGE;
     this.validateDeclaration(input, resourceType);
     const hash = payloadHash({
       kind: input.kind,

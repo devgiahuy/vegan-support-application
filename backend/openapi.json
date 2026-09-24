@@ -111,6 +111,10 @@
     {
       "name": "Pantry",
       "description": "Confirmed owner-scoped inventory, conversions, ledger, duplicate merge, and expiry observations"
+    },
+    {
+      "name": "Ingredient Recognition",
+      "description": "Owner-scoped multi-image recognition with explicit pantry confirmation"
     }
   ],
   "components": {
@@ -3057,7 +3061,8 @@
                           "type": "string",
                           "enum": [
                             "COVER_IMAGE",
-                            "VIDEO"
+                            "VIDEO",
+                            "FRIDGE_IMAGE"
                           ]
                         },
                         "assetId": {
@@ -3332,7 +3337,8 @@
                           "type": "string",
                           "enum": [
                             "COVER_IMAGE",
-                            "VIDEO"
+                            "VIDEO",
+                            "FRIDGE_IMAGE"
                           ]
                         },
                         "assetId": {
@@ -3454,7 +3460,8 @@
                           "type": "string",
                           "enum": [
                             "COVER_IMAGE",
-                            "VIDEO"
+                            "VIDEO",
+                            "FRIDGE_IMAGE"
                           ]
                         },
                         "assetId": {
@@ -3580,7 +3587,8 @@
                           "type": "string",
                           "enum": [
                             "COVER_IMAGE",
-                            "VIDEO"
+                            "VIDEO",
+                            "FRIDGE_IMAGE"
                           ]
                         },
                         "assetId": {
@@ -3860,7 +3868,8 @@
                           "type": "string",
                           "enum": [
                             "COVER_IMAGE",
-                            "VIDEO"
+                            "VIDEO",
+                            "FRIDGE_IMAGE"
                           ]
                         },
                         "assetId": {
@@ -3987,7 +3996,8 @@
                           "type": "string",
                           "enum": [
                             "COVER_IMAGE",
-                            "VIDEO"
+                            "VIDEO",
+                            "FRIDGE_IMAGE"
                           ]
                         },
                         "assetId": {
@@ -4260,7 +4270,8 @@
                           "type": "string",
                           "enum": [
                             "COVER_IMAGE",
-                            "VIDEO"
+                            "VIDEO",
+                            "FRIDGE_IMAGE"
                           ]
                         },
                         "provider": {
@@ -4848,7 +4859,8 @@
                           "type": "string",
                           "enum": [
                             "COVER_IMAGE",
-                            "VIDEO"
+                            "VIDEO",
+                            "FRIDGE_IMAGE"
                           ]
                         },
                         "provider": {
@@ -5140,7 +5152,8 @@
                           "type": "string",
                           "enum": [
                             "COVER_IMAGE",
-                            "VIDEO"
+                            "VIDEO",
+                            "FRIDGE_IMAGE"
                           ]
                         },
                         "provider": {
@@ -5458,7 +5471,8 @@
                             "type": "string",
                             "enum": [
                               "COVER_IMAGE",
-                              "VIDEO"
+                              "VIDEO",
+                              "FRIDGE_IMAGE"
                             ]
                           },
                           "provider": {
@@ -6046,7 +6060,8 @@
                             "type": "string",
                             "enum": [
                               "COVER_IMAGE",
-                              "VIDEO"
+                              "VIDEO",
+                              "FRIDGE_IMAGE"
                             ]
                           },
                           "provider": {
@@ -6338,7 +6353,8 @@
                             "type": "string",
                             "enum": [
                               "COVER_IMAGE",
-                              "VIDEO"
+                              "VIDEO",
+                              "FRIDGE_IMAGE"
                             ]
                           },
                           "provider": {
@@ -6742,7 +6758,8 @@
                             "type": "string",
                             "enum": [
                               "COVER_IMAGE",
-                              "VIDEO"
+                              "VIDEO",
+                              "FRIDGE_IMAGE"
                             ]
                           },
                           "provider": {
@@ -7333,7 +7350,8 @@
                             "type": "string",
                             "enum": [
                               "COVER_IMAGE",
-                              "VIDEO"
+                              "VIDEO",
+                              "FRIDGE_IMAGE"
                             ]
                           },
                           "provider": {
@@ -7628,7 +7646,8 @@
                             "type": "string",
                             "enum": [
                               "COVER_IMAGE",
-                              "VIDEO"
+                              "VIDEO",
+                              "FRIDGE_IMAGE"
                             ]
                           },
                           "provider": {
@@ -8047,7 +8066,8 @@
                             "type": "string",
                             "enum": [
                               "COVER_IMAGE",
-                              "VIDEO"
+                              "VIDEO",
+                              "FRIDGE_IMAGE"
                             ]
                           },
                           "provider": {
@@ -16611,7 +16631,8 @@
             "type": "string",
             "enum": [
               "COVER_IMAGE",
-              "VIDEO"
+              "VIDEO",
+              "FRIDGE_IMAGE"
             ]
           },
           "mimeType": {
@@ -16682,7 +16703,8 @@
                     "type": "string",
                     "enum": [
                       "COVER_IMAGE",
-                      "VIDEO"
+                      "VIDEO",
+                      "FRIDGE_IMAGE"
                     ]
                   },
                   "declaredMimeType": {
@@ -16747,7 +16769,8 @@
                         "type": "string",
                         "enum": [
                           "COVER_IMAGE",
-                          "VIDEO"
+                          "VIDEO",
+                          "FRIDGE_IMAGE"
                         ]
                       },
                       "publicId": {
@@ -17024,7 +17047,8 @@
                     "type": "string",
                     "enum": [
                       "COVER_IMAGE",
-                      "VIDEO"
+                      "VIDEO",
+                      "FRIDGE_IMAGE"
                     ]
                   },
                   "declaredMimeType": {
@@ -17089,7 +17113,8 @@
                         "type": "string",
                         "enum": [
                           "COVER_IMAGE",
-                          "VIDEO"
+                          "VIDEO",
+                          "FRIDGE_IMAGE"
                         ]
                       },
                       "publicId": {
@@ -17293,7 +17318,8 @@
                     "type": "string",
                     "enum": [
                       "COVER_IMAGE",
-                      "VIDEO"
+                      "VIDEO",
+                      "FRIDGE_IMAGE"
                     ]
                   },
                   "publicId": {
@@ -19672,6 +19698,808 @@
               "itemCount",
               "result",
               "warnings"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ]
+      },
+      "CreateRecognitionJobRequest": {
+        "type": "object",
+        "properties": {
+          "imageAssetIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 12
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 160
+          }
+        },
+        "required": [
+          "imageAssetIds",
+          "idempotencyKey"
+        ],
+        "additionalProperties": false
+      },
+      "UpdateRecognitionCandidateRequest": {
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "type": "integer",
+            "exclusiveMinimum": 0
+          },
+          "ingredientId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "uuid"
+          },
+          "detectedName": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+          },
+          "quantity": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "exclusiveMinimum": 0,
+            "maximum": 999999999
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 40
+          },
+          "freshnessObservation": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 1000
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "KEEP",
+              "REJECT"
+            ]
+          }
+        },
+        "required": [
+          "expectedVersion"
+        ],
+        "additionalProperties": false
+      },
+      "ConfirmRecognitionJobRequest": {
+        "type": "object",
+        "properties": {
+          "candidates": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "expectedVersion": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0
+                }
+              },
+              "required": [
+                "id",
+                "expectedVersion"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 100
+          },
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 160
+          }
+        },
+        "required": [
+          "candidates",
+          "idempotencyKey"
+        ],
+        "additionalProperties": false
+      },
+      "RetryRecognitionJobRequest": {
+        "type": "object",
+        "properties": {
+          "idempotencyKey": {
+            "type": "string",
+            "minLength": 8,
+            "maxLength": 160
+          }
+        },
+        "required": [
+          "idempotencyKey"
+        ],
+        "additionalProperties": false
+      },
+      "RecognitionJobResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "QUEUED",
+                  "PROCESSING",
+                  "READY",
+                  "PARTIAL_FAILED",
+                  "FAILED",
+                  "CONFIRMED",
+                  "CANCELLED"
+                ]
+              },
+              "progress": {
+                "type": "object",
+                "properties": {
+                  "completedImages": {
+                    "type": "integer"
+                  },
+                  "totalImages": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "completedImages",
+                  "totalImages"
+                ]
+              },
+              "images": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "position": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "url": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "PROCESSED",
+                        "FAILED"
+                      ]
+                    },
+                    "issue": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "position",
+                    "url",
+                    "status",
+                    "issue"
+                  ]
+                }
+              },
+              "candidates": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "ingredientSuggestion": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "confidence": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "confidence"
+                      ]
+                    },
+                    "quantity": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": [
+                            "number",
+                            "null"
+                          ],
+                          "exclusiveMinimum": 0
+                        },
+                        "unit": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "value",
+                        "unit"
+                      ]
+                    },
+                    "freshnessObservation": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "confidence": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 1
+                    },
+                    "uncertaintyNote": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PROPOSED",
+                        "EDITED",
+                        "REJECTED",
+                        "CONFIRMED"
+                      ]
+                    },
+                    "version": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "evidence": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "imageId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "imagePosition": {
+                            "type": "integer"
+                          },
+                          "confidence": {
+                            "type": "number"
+                          }
+                        },
+                        "required": [
+                          "imageId",
+                          "imagePosition",
+                          "confidence"
+                        ]
+                      }
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "ingredientSuggestion",
+                    "quantity",
+                    "freshnessObservation",
+                    "confidence",
+                    "uncertaintyNote",
+                    "status",
+                    "version",
+                    "evidence"
+                  ]
+                }
+              },
+              "attempt": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "issue": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string"
+                  },
+                  "message": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "code",
+                  "message"
+                ]
+              },
+              "freshnessDisclaimer": {
+                "type": "string"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "updatedAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "completedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "confirmedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "status",
+              "progress",
+              "images",
+              "candidates",
+              "attempt",
+              "issue",
+              "freshnessDisclaimer",
+              "createdAt",
+              "updatedAt",
+              "completedAt",
+              "confirmedAt"
+            ]
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ]
+      },
+      "RecognitionConfirmationResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "job": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "QUEUED",
+                      "PROCESSING",
+                      "READY",
+                      "PARTIAL_FAILED",
+                      "FAILED",
+                      "CONFIRMED",
+                      "CANCELLED"
+                    ]
+                  },
+                  "progress": {
+                    "type": "object",
+                    "properties": {
+                      "completedImages": {
+                        "type": "integer"
+                      },
+                      "totalImages": {
+                        "type": "integer"
+                      }
+                    },
+                    "required": [
+                      "completedImages",
+                      "totalImages"
+                    ]
+                  },
+                  "images": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "position": {
+                          "type": "integer",
+                          "minimum": 0
+                        },
+                        "url": {
+                          "type": "string",
+                          "format": "uri"
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING",
+                            "PROCESSED",
+                            "FAILED"
+                          ]
+                        },
+                        "issue": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "position",
+                        "url",
+                        "status",
+                        "issue"
+                      ]
+                    }
+                  },
+                  "candidates": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "ingredientSuggestion": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "name": {
+                              "type": "string"
+                            },
+                            "confidence": {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 1
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name",
+                            "confidence"
+                          ]
+                        },
+                        "quantity": {
+                          "type": "object",
+                          "properties": {
+                            "value": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "exclusiveMinimum": 0
+                            },
+                            "unit": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "value",
+                            "unit"
+                          ]
+                        },
+                        "freshnessObservation": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "confidence": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "uncertaintyNote": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PROPOSED",
+                            "EDITED",
+                            "REJECTED",
+                            "CONFIRMED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        },
+                        "evidence": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "imageId": {
+                                "type": "string",
+                                "format": "uuid"
+                              },
+                              "imagePosition": {
+                                "type": "integer"
+                              },
+                              "confidence": {
+                                "type": "number"
+                              }
+                            },
+                            "required": [
+                              "imageId",
+                              "imagePosition",
+                              "confidence"
+                            ]
+                          }
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "name",
+                        "ingredientSuggestion",
+                        "quantity",
+                        "freshnessObservation",
+                        "confidence",
+                        "uncertaintyNote",
+                        "status",
+                        "version",
+                        "evidence"
+                      ]
+                    }
+                  },
+                  "attempt": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "issue": {
+                    "type": [
+                      "object",
+                      "null"
+                    ],
+                    "properties": {
+                      "code": {
+                        "type": "string"
+                      },
+                      "message": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "code",
+                      "message"
+                    ]
+                  },
+                  "freshnessDisclaimer": {
+                    "type": "string"
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "completedAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "confirmedAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "id",
+                  "status",
+                  "progress",
+                  "images",
+                  "candidates",
+                  "attempt",
+                  "issue",
+                  "freshnessDisclaimer",
+                  "createdAt",
+                  "updatedAt",
+                  "completedAt",
+                  "confirmedAt"
+                ]
+              },
+              "pantryChanges": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "candidateId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "CREATED",
+                        "UPDATED"
+                      ]
+                    },
+                    "pantryItem": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "ingredient": {
+                          "type": [
+                            "object",
+                            "null"
+                          ],
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "name"
+                          ]
+                        },
+                        "unmatchedText": {
+                          "type": [
+                            "string",
+                            "null"
+                          ]
+                        },
+                        "quantity": {
+                          "type": "number"
+                        },
+                        "unit": {
+                          "type": "string"
+                        },
+                        "source": {
+                          "type": "string",
+                          "enum": [
+                            "MANUAL",
+                            "FRIDGE_RECOGNITION",
+                            "RECEIPT"
+                          ]
+                        },
+                        "confidence": {
+                          "type": "number"
+                        },
+                        "confirmationStatus": {
+                          "type": "string",
+                          "enum": [
+                            "CONFIRMED"
+                          ]
+                        },
+                        "version": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "ingredient",
+                        "unmatchedText",
+                        "quantity",
+                        "unit",
+                        "source",
+                        "confidence",
+                        "confirmationStatus",
+                        "version"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "candidateId",
+                    "action",
+                    "pantryItem"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "job",
+              "pantryChanges"
             ]
           }
         },
@@ -45999,6 +46827,582 @@
                     "message": "Tài khoản đang bị khóa",
                     "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ingredient-recognition/jobs": {
+      "post": {
+        "tags": [
+          "Ingredient Recognition"
+        ],
+        "summary": "Create an asynchronous multi-image fridge recognition job",
+        "description": "Attach owned, committed FRIDGE_IMAGE assets. Recognition candidates never modify pantry until the confirm endpoint is called.",
+        "operationId": "createIngredientRecognitionJob",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRecognitionJobRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Job queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecognitionJobResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ingredient-recognition/jobs/{id}": {
+      "get": {
+        "tags": [
+          "Ingredient Recognition"
+        ],
+        "summary": "Get recognition progress and editable candidates",
+        "operationId": "getIngredientRecognitionJob",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Owner-scoped job detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecognitionJobResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ingredient-recognition/jobs/{id}/candidates/{candidateId}": {
+      "patch": {
+        "tags": [
+          "Ingredient Recognition"
+        ],
+        "summary": "Correct or reject a recognition candidate",
+        "operationId": "updateIngredientRecognitionCandidate",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "candidateId",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRecognitionCandidateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated job detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecognitionJobResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ingredient-recognition/jobs/{id}/confirm": {
+      "post": {
+        "tags": [
+          "Ingredient Recognition"
+        ],
+        "summary": "Confirm selected candidates and apply the pantry diff",
+        "description": "This is the only recognition boundary that creates or updates pantry inventory. The transaction is idempotent.",
+        "operationId": "confirmIngredientRecognitionJob",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfirmRecognitionJobRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Confirmed job and explicit pantry changes",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecognitionConfirmationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ingredient-recognition/jobs/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Ingredient Recognition"
+        ],
+        "summary": "Cancel an unconfirmed recognition job",
+        "operationId": "cancelIngredientRecognitionJob",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cancelled job detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecognitionJobResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/ingredient-recognition/jobs/{id}/retry": {
+      "post": {
+        "tags": [
+          "Ingredient Recognition"
+        ],
+        "summary": "Retry a failed or partially failed recognition job",
+        "operationId": "retryIngredientRecognitionJob",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetryRecognitionJobRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Retry queued",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecognitionJobResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }

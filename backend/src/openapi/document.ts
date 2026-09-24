@@ -21,6 +21,7 @@ import { registerRecipeNutritionOpenApi } from '../modules/recipe-nutrition/reci
 import { registerStorageOpenApi } from '../modules/storage/storage.openapi.js';
 import { registerCustomMealOpenApi } from '../modules/custom-meals/custom-meal.openapi.js';
 import { registerPantryOpenApi } from '../modules/pantry/pantry.openapi.js';
+import { registerIngredientRecognitionOpenApi } from '../modules/ingredient-recognition/ingredient-recognition.openapi.js';
 
 const registry = new OpenAPIRegistry();
 
@@ -66,6 +67,7 @@ registerRecipeNutritionOpenApi(registry, registeredErrorResponse);
 registerStorageOpenApi(registry, registeredErrorResponse);
 registerCustomMealOpenApi(registry, registeredErrorResponse);
 registerPantryOpenApi(registry, registeredErrorResponse);
+registerIngredientRecognitionOpenApi(registry, registeredErrorResponse);
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
@@ -121,6 +123,10 @@ const generatedDocument = generator.generateDocument({
       name: 'Pantry',
       description:
         'Confirmed owner-scoped inventory, conversions, ledger, duplicate merge, and expiry observations',
+    },
+    {
+      name: 'Ingredient Recognition',
+      description: 'Owner-scoped multi-image recognition with explicit pantry confirmation',
     },
   ],
 });

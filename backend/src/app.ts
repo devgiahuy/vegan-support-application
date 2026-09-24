@@ -117,6 +117,11 @@ import { PantryController } from './modules/pantry/pantry.controller.js';
 import { PantryRepository } from './modules/pantry/pantry.repository.js';
 import { createPantryRouter } from './modules/pantry/pantry.router.js';
 import { PantryService } from './modules/pantry/pantry.service.js';
+import { IngredientRecognitionController } from './modules/ingredient-recognition/ingredient-recognition.controller.js';
+import { IngredientRecognitionRepository } from './modules/ingredient-recognition/ingredient-recognition.repository.js';
+import { createIngredientRecognitionRouter } from './modules/ingredient-recognition/ingredient-recognition.router.js';
+import { IngredientRecognitionService } from './modules/ingredient-recognition/ingredient-recognition.service.js';
+import { createIngredientVisionProvider } from './modules/ingredient-recognition/ingredient-vision.provider.js';
 import { openApiDocument } from './openapi/document.js';
 
 export interface AppDependencies {
@@ -197,6 +202,13 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   const pantryController = new PantryController(
     new PantryService(new PantryRepository(database.client)),
   );
+  const ingredientRecognitionController = new IngredientRecognitionController(
+    new IngredientRecognitionService(
+      new IngredientRecognitionRepository(database.client),
+      createIngredientVisionProvider(config),
+      config,
+    ),
+  );
 
   app.disable('x-powered-by');
   app.use(helmet());
@@ -272,6 +284,10 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/uploads', createStorageUploadsRouter(storageController, authentication));
   app.use('/api/v1/custom-meals', createCustomMealRouter(customMealController, authentication));
   app.use('/api/v1/pantry', createPantryRouter(pantryController, authentication));
+  app.use(
+    '/api/v1/ingredient-recognition',
+    createIngredientRecognitionRouter(ingredientRecognitionController, authentication),
+  );
 
   app.use(notFoundHandler);
   app.use(createErrorHandler(logger));

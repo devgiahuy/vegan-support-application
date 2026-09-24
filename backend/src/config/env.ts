@@ -83,6 +83,12 @@ const environmentSchema = z
     AI_GUEST_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(60).default(10),
     CHAT_GUEST_COOKIE_SECRET: z.string().min(32).optional(),
     CHAT_GUEST_COOKIE_TTL_DAYS: z.coerce.number().int().min(1).max(30).default(7),
+    VISION_ENABLED: z.stringbool().default(true),
+    VISION_PROVIDER: z.enum(['fake']).default('fake'),
+    VISION_MODEL: z.string().trim().min(1).max(100).default('local-fridge-vision-v1'),
+    VISION_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('fridge-v1'),
+    VISION_MAX_IMAGES: z.coerce.number().int().min(2).max(12).default(6),
+    VISION_MAX_IMAGE_BYTES: z.coerce.number().int().min(1).max(25_000_000).default(10_000_000),
   })
   .transform((environment) => ({
     nodeEnv: environment.NODE_ENV,
@@ -136,6 +142,14 @@ const environmentSchema = z
       guestRateLimitPerMinute: environment.AI_GUEST_RATE_LIMIT_PER_MINUTE,
       guestCookieSecret: environment.CHAT_GUEST_COOKIE_SECRET ?? environment.JWT_ACCESS_SECRET,
       guestCookieTtlDays: environment.CHAT_GUEST_COOKIE_TTL_DAYS,
+    },
+    vision: {
+      enabled: environment.VISION_ENABLED,
+      provider: environment.VISION_PROVIDER,
+      model: environment.VISION_MODEL,
+      templateVersion: environment.VISION_TEMPLATE_VERSION,
+      maxImages: environment.VISION_MAX_IMAGES,
+      maxImageBytes: environment.VISION_MAX_IMAGE_BYTES,
     },
     cookieSecure: environment.NODE_ENV === 'production',
   }));

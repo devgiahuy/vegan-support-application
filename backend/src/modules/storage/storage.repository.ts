@@ -266,6 +266,8 @@ export class StorageRepository {
         where: { assetId, customMeal: { deletedAt: null } },
       });
       if (customMealPhotoReferences > 0) return { kind: 'in-use' as const, asset };
+      const recognitionReferences = await transaction.recognitionInput.count({ where: { assetId } });
+      if (recognitionReferences > 0) return { kind: 'in-use' as const, asset };
       const prepared = await transaction.mediaAsset.update({
         where: { id: asset.id },
         data: { status: MediaAssetStatus.DELETING, deletionIdempotencyKey: idempotencyKey },

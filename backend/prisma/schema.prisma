@@ -204,6 +204,7 @@ enum IngredientResolutionStatus {
 enum MediaKind {
   COVER_IMAGE
   VIDEO
+  FRIDGE_IMAGE
 
   @@map("media_kind")
 }
@@ -636,6 +637,35 @@ enum PantryAdjustmentType {
   @@map("pantry_adjustment_type")
 }
 
+enum RecognitionJobStatus {
+  QUEUED
+  PROCESSING
+  READY
+  PARTIAL_FAILED
+  FAILED
+  CONFIRMED
+  CANCELLED
+
+  @@map("recognition_job_status")
+}
+
+enum RecognitionInputStatus {
+  PENDING
+  PROCESSED
+  FAILED
+
+  @@map("recognition_input_status")
+}
+
+enum RecognitionCandidateStatus {
+  PROPOSED
+  EDITED
+  REJECTED
+  CONFIRMED
+
+  @@map("recognition_candidate_status")
+}
+
 model User {
   id                             String                     @id @default(uuid()) @db.Uuid
   email                          String                     @unique @db.VarChar(320)
@@ -700,6 +730,7 @@ model User {
   mealProgramMutations           MealProgramMutation[]
   pantryItems                    PantryItem[]
   pantryAdjustments              PantryAdjustment[]
+  recognitionJobs                RecognitionJob[]
 
   @@map("users")
 }
@@ -770,6 +801,7 @@ model Ingredient {
   nutritionLines        RecipeNutritionEstimateLine[]
   customMealIngredients CustomMealIngredient[]
   pantryItems           PantryItem[]
+  recognitionCandidates RecognitionCandidate[]
 
   @@index([status, foodGroup, canonicalName])
   @@map("ingredients")
@@ -804,6 +836,7 @@ model PantryItem {
   ingredient              Ingredient?              @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
   adjustments             PantryAdjustment[]       @relation("PantryItemAdjustments")
   mergedIntoAdjustments   PantryAdjustment[]       @relation("PantryMergedIntoAdjustments")
+  recognitionCandidates   RecognitionCandidate[]
 
   @@index([ownerId, deletedAt, confirmationStatus, updatedAt])
   @@index([ownerId, ingredientId, deletedAt])
@@ -840,6 +873,101 @@ model PantryAdjustment {
   @@index([pantryItemId, createdAt, id])
   @@index([ownerId, createdAt, id])
   @@map("pantry_adjustments")
+}
+
+model RecognitionJob {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  ownerId               String                 @map("owner_id") @db.Uuid
+  status                RecognitionJobStatus   @default(QUEUED)
+  provider              String                 @db.VarChar(40)
+  modelId               String                 @map("model_id") @db.VarChar(100)
+  templateVersion       String                 @map("template_version") @db.VarChar(80)
+  idempotencyKey        String                 @map("idempotency_key") @db.VarChar(160)
+  requestHash           String                 @map("request_hash") @db.Char(64)
+  attemptCount          Int                    @default(0) @map("attempt_count")
+  errorCode             String?                @map("error_code") @db.VarChar(100)
+  errorMessage          String?                @map("error_message") @db.VarChar(500)
+  confirmationKey       String?                @map("confirmation_key") @db.VarChar(160)
+  confirmationHash      String?                @map("confirmation_hash") @db.Char(64)
+  lastRetryKey          String?                @map("last_retry_key") @db.VarChar(160)
+  lastRetryHash         String?                @map("last_retry_hash") @db.Char(64)
+  processingStartedAt   DateTime?              @map("processing_started_at") @db.Timestamptz(3)
+  processingCompletedAt DateTime?              @map("processing_completed_at") @db.Timestamptz(3)
+  confirmedAt           DateTime?              @map("confirmed_at") @db.Timestamptz(3)
+  cancelledAt           DateTime?              @map("cancelled_at") @db.Timestamptz(3)
+  createdAt             DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  owner                 User                   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  inputs                RecognitionInput[]
+  candidates            RecognitionCandidate[]
+
+  @@unique([ownerId, idempotencyKey])
+  @@unique([ownerId, confirmationKey])
+  @@index([ownerId, status, createdAt])
+  @@index([status, updatedAt])
+  @@map("recognition_jobs")
+}
+
+model RecognitionInput {
+  id           String                         @id @default(uuid()) @db.Uuid
+  jobId        String                         @map("job_id") @db.Uuid
+  assetId      String                         @map("asset_id") @db.Uuid
+  position     Int
+  status       RecognitionInputStatus         @default(PENDING)
+  errorCode    String?                        @map("error_code") @db.VarChar(100)
+  errorMessage String?                        @map("error_message") @db.VarChar(500)
+  createdAt    DateTime                       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime                       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  job          RecognitionJob                 @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  asset        MediaAsset                     @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  evidence     RecognitionCandidateEvidence[]
+
+  @@unique([jobId, position])
+  @@unique([jobId, assetId])
+  @@index([assetId])
+  @@map("recognition_inputs")
+}
+
+model RecognitionCandidate {
+  id                   String                         @id @default(uuid()) @db.Uuid
+  jobId                String                         @map("job_id") @db.Uuid
+  ingredientId         String?                        @map("ingredient_id") @db.Uuid
+  detectedName         String                         @map("detected_name") @db.VarChar(160)
+  normalizedName       String                         @map("normalized_name") @db.VarChar(160)
+  quantity             Decimal?                       @db.Decimal(14, 4)
+  unit                 String?                        @db.VarChar(40)
+  freshnessObservation String?                        @map("freshness_observation") @db.VarChar(1000)
+  confidence           Decimal                        @db.Decimal(5, 4)
+  matchConfidence      Decimal?                       @map("match_confidence") @db.Decimal(5, 4)
+  uncertaintyNote      String?                        @map("uncertainty_note") @db.VarChar(500)
+  status               RecognitionCandidateStatus     @default(PROPOSED)
+  version              Int                            @default(1)
+  pantryItemId         String?                        @map("pantry_item_id") @db.Uuid
+  pantryAction         String?                        @map("pantry_action") @db.VarChar(20)
+  createdAt            DateTime                       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime                       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  job                  RecognitionJob                 @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  ingredient           Ingredient?                    @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  pantryItem           PantryItem?                    @relation(fields: [pantryItemId], references: [id], onDelete: Restrict)
+  evidence             RecognitionCandidateEvidence[]
+
+  @@index([jobId, status, createdAt])
+  @@index([ingredientId])
+  @@index([pantryItemId])
+  @@map("recognition_candidates")
+}
+
+model RecognitionCandidateEvidence {
+  candidateId String               @map("candidate_id") @db.Uuid
+  inputId     String               @map("input_id") @db.Uuid
+  observation String?              @db.VarChar(500)
+  confidence  Decimal              @db.Decimal(5, 4)
+  candidate   RecognitionCandidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  input       RecognitionInput     @relation(fields: [inputId], references: [id], onDelete: Cascade)
+
+  @@id([candidateId, inputId])
+  @@index([inputId])
+  @@map("recognition_candidate_evidence")
 }
 
 model Post {
@@ -1742,6 +1870,7 @@ model MediaAsset {
   reservation            StorageReservation? @relation(fields: [reservationId], references: [id], onDelete: SetNull)
   postMedia              PostMedia[]
   customMealPhotos       CustomMealPhoto[]
+  recognitionInputs      RecognitionInput[]
 
   @@index([ownerId, status, createdAt])
   @@index([status, reconciledAt])

@@ -1,12 +1,12 @@
 # Backend Implementation Phases
 
-**Version:** 3.3
+**Version:** 3.4
 
-**Updated:** 2026-09-23
+**Updated:** 2026-09-24
 
 **Stack:** Node.js · Express · TypeScript · PostgreSQL · Prisma · Zod · OpenAPI
 
-**Current baseline:** Phases 00–12 and 15–20 completed; Phases 13–14 are in progress
+**Current baseline:** Phases 00–12 and 15–21 completed; Phases 13–14 are in progress
 
 This document splits the backend into independently implementable, verifiable, and committable phases. Every new session uses the matching prompt under `backend/docs/prompts/` and derives current state from the repository, not from previous chat history.
 
@@ -139,7 +139,7 @@ Regenerate/validate OpenAPI using the repository workflow. Live external-provide
 |    18 | `COMPLETED`   | 2026-09-23 | Not committed (user instruction) | Versioned portion/nutrient/guideline/interaction analysis, stale fingerprints, custom-meal manual-add, OpenAPI/docs, migrations/seed, and all quality gates pass                           |
 |    19 | `COMPLETED`   | 2026-09-23 | Not committed (user instruction) | Bounded versioned multi-week programs, weekly alternatives/snapshots, partial retry, cross-week analysis/invalidation, confirmation, OpenAPI/docs, migration/seed, and quality gates pass  |
 |    20 | `COMPLETED`   | 2026-09-23 | Not committed (user instruction) | Owner-scoped confirmed inventory, reviewed conversion, immutable ledger, duplicate merge, expiry query, idempotency/concurrency, OpenAPI/docs, migration/seed, and all quality gates pass  |
-|    21 | `NOT_STARTED` | —          | —                                | —                                                                                                                                                                                          |
+|    21 | `COMPLETED`   | 2026-09-24 | Not committed (user instruction) | Multi-image committed-asset recognition, validated fake/local provider, dedupe/evidence, correction/rejection, partial retry/cancel, idempotent confirmation-only pantry diff, OpenAPI/docs, migration/seed, and all quality gates pass                 |
 |    22 | `NOT_STARTED` | —          | —                                | —                                                                                                                                                                                          |
 |    23 | `NOT_STARTED` | —          | —                                | —                                                                                                                                                                                          |
 |    24 | `NOT_STARTED` | —          | —                                | —                                                                                                                                                                                          |
