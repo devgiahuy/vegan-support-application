@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Alert, Pressable, Share, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Link, type Href, useLocalSearchParams } from 'expo-router';
+import { Link, type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -12,9 +12,11 @@ import {
   Hourglass,
   Leaf,
   Minus,
+  Pencil,
   Plus,
   Share2,
   ShieldCheck,
+  Trash2,
   Users,
   Utensils,
 } from 'lucide-react-native';
@@ -23,10 +25,13 @@ import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { RecipeCard } from '@/features/recipe/components/recipe-card';
 import { useRecipeDetailQuery, useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
+import { useDeletePostMutation } from '@/features/post/queries/post.queries';
 import { CommunityPanel } from '@/features/community/components/community-panel';
 import { PostStatus } from '@/common/enums';
+import { getApiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
+import { useAuthStore } from '@/store/useAuthStore';
 
 function notifyComingSoon(feature: string) {
   Alert.alert('Sắp ra mắt', `${feature} đang được VeggieConnect hoàn thiện, quay lại sau nhé!`);
@@ -41,12 +46,17 @@ function notifyComingSoon(feature: string) {
 export default function RecipeDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useIconColors();
+  const router = useRouter();
+  const currentUserId = useAuthStore((state) => state.user?.id);
   const { data: recipe, isLoading, isError, refetch } = useRecipeDetailQuery(id ?? '');
   const { data: recipesPagination } = useRecipesQuery({ limit: 6 });
   const relatedRecipes = (recipesPagination?.items ?? []).filter((r) => r.id !== id).slice(0, 3);
+  const deleteMutation = useDeletePostMutation();
 
   const [servings, setServings] = React.useState<number | null>(null);
   const [checked, setChecked] = React.useState<string[]>([]);
+
+  const isOwner = !!currentUserId && recipe?.author.id === currentUserId;
 
   const toggleIngredient = (name: string) => {
     setChecked((prev) => (prev.includes(name) ? prev.filter((i) => i !== name) : [...prev, name]));
@@ -55,6 +65,26 @@ export default function RecipeDetailScreen() {
   const handleShare = () => {
     if (!recipe) return;
     void Share.share({ message: `${recipe.title} — VeggieConnect`, title: recipe.title });
+  };
+
+  const confirmDelete = () => {
+    if (!recipe) return;
+    Alert.alert('Xoá công thức', 'Bạn có chắc muốn xoá công thức này? Hành động này không thể hoàn tác.', [
+      { text: 'Huỷ', style: 'cancel' },
+      {
+        text: 'Xoá',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteMutation.mutateAsync({ id: recipe.id, expectedVersion: recipe.version });
+            Alert.alert('Đã xoá', 'Công thức đã được xoá.');
+            router.replace('/recipes' as Href);
+          } catch (error) {
+            Alert.alert('Không xoá được', getApiErrorMessage(error));
+          }
+        },
+      },
+    ]);
   };
 
   if (isLoading) {
@@ -152,6 +182,21 @@ export default function RecipeDetailScreen() {
             </View>
             <Text className="text-sm font-semibold text-foreground">{recipe.author.name}</Text>
           </View>
+          {isOwner ? (
+            <View className="flex-row gap-1.5">
+              <Link href={`/recipes/${recipe.id}/edit` as Href} asChild>
+                <Pressable className="h-9 w-9 items-center justify-center rounded-full bg-muted">
+                  <Pencil size={15} color={colors.foreground} />
+                </Pressable>
+              </Link>
+              <Pressable
+                onPress={confirmDelete}
+                disabled={deleteMutation.isPending}
+                className="h-9 w-9 items-center justify-center rounded-full bg-destructive/10">
+                <Trash2 size={15} color={colors.destructive} />
+              </Pressable>
+            </View>
+          ) : null}
         </View>
 
         <View className="flex-row flex-wrap gap-2">

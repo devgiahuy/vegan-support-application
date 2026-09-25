@@ -41,6 +41,10 @@ export interface CreateRecipeInput {
   ingredients: CreateRecipeIngredientInput[];
 }
 
+export interface UpdateRecipeInput extends CreateRecipeInput {
+  expectedVersion: number;
+}
+
 export const recipeApi = {
   /** Danh sách công thức nấu ăn (phân trang, lọc danh mục/độ khó/từ khóa). `GET /posts?type=RECIPE`. */
   getRecipes: async (params?: RecipeQueryParams): Promise<RecipePaginationResult> => {
@@ -109,5 +113,54 @@ export const recipeApi = {
       }
     }
     return recipeMapper.toModel(created);
+  },
+
+  /**
+   * Sửa công thức của chính mình rồi gửi lại để duyệt: `PATCH /posts/:id` (tạo draft
+   * revision mới) → `POST /posts/:id/submit`. `expectedVersion` là `version` hiện tại.
+   */
+  updateRecipe: async (id: string, input: UpdateRecipeInput): Promise<Recipe> => {
+    const payload = {
+      type: PostType.RECIPE,
+      title: input.title,
+      ...(input.excerpt ? { excerpt: input.excerpt } : {}),
+      ...(input.categoryIds?.length ? { categoryIds: input.categoryIds } : {}),
+      ...(input.tags?.length ? { tags: input.tags } : {}),
+      media: [],
+      body: input.body,
+      recipe: {
+        servings: input.servings,
+        prepTimeMinutes: input.prepTimeMinutes,
+        cookTimeMinutes: input.cookTimeMinutes,
+        difficulty: input.difficulty,
+        nutrition: input.nutrition ?? {},
+        ingredients: input.ingredients.map((ing) => ({
+          displayName: ing.displayName,
+          amount: ing.amount,
+          unit: ing.unit,
+          optional: ing.optional ?? false,
+        })),
+        steps: [],
+      },
+      expectedVersion: input.expectedVersion,
+    };
+
+    const updateRes = await api.patch<RecipeDetailResponseDto>(API_ENDPOINTS.POSTS.DETAIL(id), payload);
+    const updated = updateRes.data.data;
+    const revisionId = updated.revision?.id;
+    const newExpectedVersion = updated.version;
+
+    if (revisionId && newExpectedVersion) {
+      try {
+        const submitRes = await api.post<RecipeDetailResponseDto>(
+          API_ENDPOINTS.POSTS.SUBMIT(updated.id ?? ''),
+          { revisionId, expectedVersion: newExpectedVersion }
+        );
+        return recipeMapper.toModel(submitRes.data.data);
+      } catch {
+        return recipeMapper.toModel(updated);
+      }
+    }
+    return recipeMapper.toModel(updated);
   },
 };

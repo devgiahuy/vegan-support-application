@@ -30,16 +30,22 @@ export default function RootLayout() {
           {/* Màn phụ và màn chi tiết: mở chồng lên tab, có nút quay lại trên header */}
           <Stack.Screen name="recipes/[id]" />
           <Stack.Screen name="recipes/new" />
+          <Stack.Screen name="recipes/[id]/edit" />
           <Stack.Screen name="articles/[id]" />
           <Stack.Screen name="articles/new" />
+          <Stack.Screen name="articles/[id]/edit" />
           <Stack.Screen name="videos/new" />
           <Stack.Screen name="videos/[id]" />
+          <Stack.Screen name="videos/[id]/edit" />
           <Stack.Screen name="meal-plans/[id]" />
           <Stack.Screen name="categories" />
           <Stack.Screen name="search" />
           <Stack.Screen name="bookmarks" />
           <Stack.Screen name="contributor-status" />
           <Stack.Screen name="diet-preferences" />
+          <Stack.Screen name="diet-schedule" />
+          <Stack.Screen name="my-content" />
+          <Stack.Screen name="food-data" />
           <Stack.Screen name="(auth)/login" options={{ presentation: 'modal' }} />
           <Stack.Screen name="(auth)/register" options={{ presentation: 'modal' }} />
         </Stack>

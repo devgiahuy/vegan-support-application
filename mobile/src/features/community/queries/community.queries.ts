@@ -43,6 +43,25 @@ export function useCreateCommentMutation() {
   });
 }
 
+/** Sửa bình luận của chính mình — `postId` chỉ dùng để invalidate cache đúng thread. */
+export function useUpdateCommentMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { commentId: string; postId: string; content: string }) =>
+      communityApi.updateComment(vars.commentId, vars.content),
+    onSuccess: (_, vars) => invalidatePost(queryClient, vars.postId),
+  });
+}
+
+/** Xoá (ẩn mềm) bình luận của chính mình. */
+export function useDeleteCommentMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { commentId: string; postId: string }) => communityApi.deleteComment(vars.commentId),
+    onSuccess: (_, vars) => invalidatePost(queryClient, vars.postId),
+  });
+}
+
 export function useVoteMutation() {
   const queryClient = useQueryClient();
   return useMutation({

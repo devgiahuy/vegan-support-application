@@ -22,6 +22,19 @@ export interface CreateArticleInput {
   tags?: string[];
 }
 
+export interface UpdateArticleInput extends CreateArticleInput {
+  expectedVersion: number;
+}
+
+/**
+ * Xoá bài đăng (Recipe/Blog/Video) của chính mình — dùng chung cho cả 3 loại vì
+ * `DELETE /posts/:id` không phân biệt type, chỉ kiểm tra "Author-only" (BL). Soft-delete,
+ * giữ evidence kiểm duyệt.
+ */
+export async function deletePost(id: string, expectedVersion: number): Promise<void> {
+  await api.delete(API_ENDPOINTS.POSTS.DETAIL(id), { params: { expectedVersion } });
+}
+
 export const postApi = {
   /** Danh sách bài viết Cẩm nang. `GET /posts?type=BLOG`. */
   getArticles: async (params?: ArticleQueryParams): Promise<PaginationResult<Article>> => {
@@ -82,5 +95,41 @@ export const postApi = {
       }
     }
     return postMapper.toModel(created);
+  },
+
+  /**
+   * Sửa bài viết của chính mình rồi gửi lại để duyệt: `PATCH /posts/:id` (tạo draft
+   * revision mới) → `POST /posts/:id/submit`. `expectedVersion` là `version` hiện tại
+   * của bài (optimistic concurrency — backend từ chối nếu đã có thay đổi khác).
+   */
+  updateArticle: async (id: string, input: UpdateArticleInput): Promise<Article> => {
+    const payload = {
+      type: PostType.BLOG,
+      title: input.title,
+      ...(input.excerpt ? { excerpt: input.excerpt } : {}),
+      ...(input.categoryIds?.length ? { categoryIds: input.categoryIds } : {}),
+      ...(input.tags?.length ? { tags: input.tags } : {}),
+      media: [],
+      body: input.body,
+      expectedVersion: input.expectedVersion,
+    };
+
+    const updateRes = await api.patch<PostDetailResponseDto>(API_ENDPOINTS.POSTS.DETAIL(id), payload);
+    const updated = updateRes.data?.data;
+    const revisionId = updated?.revision?.id;
+    const newExpectedVersion = updated?.version;
+
+    if (updated?.id && revisionId && newExpectedVersion) {
+      try {
+        const submitRes = await api.post<PostDetailResponseDto>(
+          API_ENDPOINTS.POSTS.SUBMIT(updated.id),
+          { revisionId, expectedVersion: newExpectedVersion }
+        );
+        return postMapper.toModel(submitRes.data?.data);
+      } catch {
+        return postMapper.toModel(updated);
+      }
+    }
+    return postMapper.toModel(updated);
   },
 };

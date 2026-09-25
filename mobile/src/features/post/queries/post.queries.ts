@@ -1,5 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { postApi, type ArticleQueryParams, type CreateArticleInput } from '../api/post.api';
+import {
+  deletePost,
+  postApi,
+  type ArticleQueryParams,
+  type CreateArticleInput,
+  type UpdateArticleInput,
+} from '../api/post.api';
 
 export const POST_QUERY_KEYS = {
   all: ['articles'] as const,
@@ -38,6 +44,29 @@ export function useCreateArticleMutation() {
     mutationFn: (input: CreateArticleInput) => postApi.createArticle(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.all });
+    },
+  });
+}
+
+export function useUpdateArticleMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { id: string; input: UpdateArticleInput }) => postApi.updateArticle(vars.id, vars.input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.all });
+    },
+  });
+}
+
+/** Xoá bài đăng của chính mình — dùng chung cho Recipe/Blog/Video (`DELETE /posts/:id`). */
+export function useDeletePostMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (vars: { id: string; expectedVersion: number }) => deletePost(vars.id, vars.expectedVersion),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.all });
+      void queryClient.invalidateQueries({ queryKey: ['recipes'] });
+      void queryClient.invalidateQueries({ queryKey: ['videos'] });
     },
   });
 }

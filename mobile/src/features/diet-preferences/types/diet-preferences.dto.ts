@@ -61,3 +61,14 @@ export interface DietPreferenceResponseDto {
   data?: Record<string, unknown> | null;
   meta?: null;
 }
+
+/** `PUT /users/me/diet-schedule` response — chỉ cập nhật ngày chay kỳ, không đụng rule set. */
+export interface DietScheduleResponseDto {
+  success?: boolean;
+  data?: {
+    practiceSchedule?: string;
+    timezone?: string;
+    dates?: string[];
+  } | null;
+  meta?: null;
+}

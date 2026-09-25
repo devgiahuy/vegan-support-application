@@ -40,6 +40,21 @@ export const communityApi = {
     return communityMapper.toSingleComment(res.data);
   },
 
+  /** `PATCH /comments/:id` — chỉ chủ sở hữu bình luận. */
+  updateComment: async (commentId: string, content: string): Promise<CommunityComment> => {
+    const res = await api.patch<CommunityCommentResponseDto>(
+      API_ENDPOINTS.COMMUNITY.COMMENT(commentId),
+      { content }
+    );
+    return communityMapper.toSingleComment(res.data);
+  },
+
+  /** `DELETE /comments/:id` — soft-delete, chỉ chủ sở hữu bình luận. */
+  deleteComment: async (commentId: string): Promise<CommunityComment> => {
+    const res = await api.delete<CommunityCommentResponseDto>(API_ENDPOINTS.COMMUNITY.COMMENT(commentId));
+    return communityMapper.toSingleComment(res.data);
+  },
+
   getSummary: async (postId: string): Promise<CommunitySummary> => {
     const res = await api.get<CommunitySummaryResponseDto>(API_ENDPOINTS.COMMUNITY.SUMMARY(postId), {
       silent: true,

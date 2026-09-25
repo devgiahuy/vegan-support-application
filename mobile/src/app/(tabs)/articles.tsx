@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import { Link, type Href, useLocalSearchParams } from 'expo-router';
 import { BadgeCheck, BookOpen, Plus, Search } from 'lucide-react-native';
 
@@ -21,10 +21,6 @@ const DIET_SCHOOL_FILTERS: { value: DietSchool; label: string }[] = [
   { value: 'DAO_GIAO', label: 'Chay Đạo giáo / Cao Đài' },
   { value: 'THUAN_CHAY', label: 'Thuần chay (Vegan)' },
 ];
-
-function notifyComingSoon(feature: string) {
-  Alert.alert('Sắp ra mắt', `${feature} đang được VeggieConnect hoàn thiện, quay lại sau nhé!`);
-}
 
 /**
  * "Cẩm nang" — đồng bộ bố cục/nội dung `frontend/src/app/(site)/articles/page.tsx`
@@ -88,11 +84,9 @@ export default function ArticlesScreen() {
                 icon={<Plus size={16} color={colors.primaryForeground} />}
               />
             </Link>
-            <PrimaryButton
-              label="Bài viết của tôi"
-              variant="outline"
-              onPress={() => notifyComingSoon('Hồ sơ bài viết')}
-            />
+            <Link href={'/my-content' as Href} asChild>
+              <PrimaryButton label="Bài viết của tôi" variant="outline" />
+            </Link>
           </View>
         </View>
 

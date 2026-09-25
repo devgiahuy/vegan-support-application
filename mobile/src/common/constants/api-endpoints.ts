@@ -9,6 +9,7 @@ export const API_ENDPOINTS = {
     ME: '/users/me',
     HEALTH_PROFILE: '/users/me/health-profile',
     DIET_PREFERENCES: '/users/me/diet-preferences',
+    DIET_SCHEDULE: '/users/me/diet-schedule',
   },
   DIET_RULES: {
     PREVIEW: '/diet-rules/preview',
@@ -46,5 +47,15 @@ export const API_ENDPOINTS = {
   CONTRIBUTOR: {
     APPLICATIONS: '/contributor-applications',
     APPLICATIONS_ME: '/contributor-applications/me',
+  },
+  INGREDIENTS: {
+    LIST: '/ingredients',
+  },
+  FOOD_DATA: {
+    NUTRIENTS: (ingredientId: string) => `/food-data/ingredients/${ingredientId}/nutrients`,
+    REFERENCE_INTAKES: '/food-data/reference-intakes',
+    GUIDELINES: '/food-data/ingredient-guidelines',
+    COOKING_METHODS: '/food-data/cooking-methods',
+    INTERACTIONS: '/food-data/interaction-rules',
   },
 } as const;

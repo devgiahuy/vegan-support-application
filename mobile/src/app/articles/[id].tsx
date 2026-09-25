@@ -1,16 +1,22 @@
 import * as React from 'react';
-import { Pressable, Share, Text, View } from 'react-native';
+import { Alert, Pressable, Share, Text, View } from 'react-native';
 import { Image } from 'expo-image';
-import { Link, type Href, useLocalSearchParams } from 'expo-router';
-import { AlertTriangle, ArrowLeft, Clock, Hourglass, Share2 } from 'lucide-react-native';
+import { Link, type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import { AlertTriangle, ArrowLeft, Clock, Hourglass, Pencil, Share2, Trash2 } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { PostCard } from '@/features/post/components/post-card';
-import { useArticleDetailQuery, useRelatedArticlesQuery } from '@/features/post/queries/post.queries';
+import {
+  useArticleDetailQuery,
+  useDeletePostMutation,
+  useRelatedArticlesQuery,
+} from '@/features/post/queries/post.queries';
 import { CommunityPanel } from '@/features/community/components/community-panel';
 import { PostStatus } from '@/common/enums';
+import { getApiErrorMessage } from '@/lib/api-error';
 import { useIconColors } from '@/lib/theme-colors';
+import { useAuthStore } from '@/store/useAuthStore';
 
 /**
  * Chi tiết bài viết Cẩm nang — đồng bộ `frontend/src/app/(site)/articles/[id]/page.tsx`:
@@ -20,12 +26,37 @@ import { useIconColors } from '@/lib/theme-colors';
 export default function ArticleDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useIconColors();
+  const router = useRouter();
+  const currentUserId = useAuthStore((state) => state.user?.id);
   const { data: article, isLoading, isError, refetch } = useArticleDetailQuery(id ?? '');
   const { data: relatedArticles = [] } = useRelatedArticlesQuery(article?.id ?? '');
+  const deleteMutation = useDeletePostMutation();
+
+  const isOwner = !!currentUserId && article?.author.id === currentUserId;
 
   const handleShare = () => {
     if (!article) return;
     void Share.share({ message: `${article.title} — VeggieConnect`, title: article.title });
+  };
+
+  const confirmDelete = () => {
+    if (!article) return;
+    Alert.alert('Xoá bài viết', 'Bạn có chắc muốn xoá bài viết này? Hành động này không thể hoàn tác.', [
+      { text: 'Huỷ', style: 'cancel' },
+      {
+        text: 'Xoá',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteMutation.mutateAsync({ id: article.id, expectedVersion: article.version });
+            Alert.alert('Đã xoá', 'Bài viết đã được xoá.');
+            router.replace('/articles' as Href);
+          } catch (error) {
+            Alert.alert('Không xoá được', getApiErrorMessage(error));
+          }
+        },
+      },
+    ]);
   };
 
   if (isLoading) {
@@ -118,6 +149,21 @@ export default function ArticleDetailScreen() {
               <Text className="text-xs font-bold text-primary">{article.author.name.charAt(0)}</Text>
             </View>
             <Text className="flex-1 text-sm font-semibold text-foreground">{article.author.name}</Text>
+            {isOwner ? (
+              <View className="flex-row gap-1.5">
+                <Link href={`/articles/${article.id}/edit` as Href} asChild>
+                  <Pressable className="h-9 w-9 items-center justify-center rounded-full bg-muted">
+                    <Pencil size={15} color={colors.foreground} />
+                  </Pressable>
+                </Link>
+                <Pressable
+                  onPress={confirmDelete}
+                  disabled={deleteMutation.isPending}
+                  className="h-9 w-9 items-center justify-center rounded-full bg-destructive/10">
+                  <Trash2 size={15} color={colors.destructive} />
+                </Pressable>
+              </View>
+            ) : null}
           </View>
         </View>
 

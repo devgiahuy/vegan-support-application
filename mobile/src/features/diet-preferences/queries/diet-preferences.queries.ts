@@ -20,3 +20,14 @@ export function useSaveDietPreferencesMutation() {
     },
   });
 }
+
+/** Sửa riêng ngày chay kỳ — không chạy lại wizard chọn quy tắc. */
+export function useSaveDietScheduleMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (dates: string[]) => dietPreferencesApi.saveDietSchedule(dates),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEYS.all });
+    },
+  });
+}

@@ -1,11 +1,12 @@
 import * as React from 'react';
 import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
-import { Link } from 'expo-router';
+import { Link, type Href } from 'expo-router';
 import {
   Activity,
   AlertTriangle,
   BadgeCheck,
   Bookmark,
+  BookOpen,
   CalendarDays,
   CheckCircle2,
   ChevronRight,
@@ -21,6 +22,7 @@ import {
 import {
   ActivityLevel,
   BiologicalSex,
+  PracticeSchedule,
 } from '@/common/enums';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -386,11 +388,20 @@ export default function ProfileScreen() {
                   <Text className="text-sm text-muted-foreground">Chưa khai báo dị ứng.</Text>
                 )}
               </View>
-              <Link href="/diet-preferences" asChild>
-                <Pressable className="mt-4 flex-row items-center justify-center gap-1.5 rounded-xl border border-input py-2.5">
-                  <Text className="text-sm font-semibold text-foreground">Chỉnh sửa chế độ ăn</Text>
-                </Pressable>
-              </Link>
+              <View className="mt-4 flex-row gap-2">
+                <Link href="/diet-preferences" asChild>
+                  <Pressable className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl border border-input py-2.5">
+                    <Text className="text-sm font-semibold text-foreground">Chỉnh sửa chế độ ăn</Text>
+                  </Pressable>
+                </Link>
+                {diet.practiceSchedule === PracticeSchedule.PERIODIC ? (
+                  <Link href={'/diet-schedule' as Href} asChild>
+                    <Pressable className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl bg-primary/10 py-2.5">
+                      <Text className="text-sm font-semibold text-primary">Sửa lịch chay kỳ</Text>
+                    </Pressable>
+                  </Link>
+                ) : null}
+              </View>
             </>
           ) : (
             <View className="items-center rounded-2xl border border-dashed border-border p-5">
@@ -408,6 +419,20 @@ export default function ProfileScreen() {
 
         <SectionTitle title="Nội dung của bạn" subtitle="Nội dung và nguyện vọng bạn đã lưu/gửi trên VeggieConnect." />
         <View className="overflow-hidden rounded-2xl border border-border bg-card">
+          <Link href={'/my-content' as Href} asChild>
+            <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <BookOpen size={18} color={colors.primary} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-semibold text-foreground">Bài viết của tôi</Text>
+                <Text className="mt-0.5 text-xs text-muted-foreground">
+                  Công thức, cẩm nang, video bạn đã đăng — sửa, xoá, theo dõi trạng thái duyệt.
+                </Text>
+              </View>
+              <ChevronRight size={16} color={colors.mutedForeground} />
+            </Pressable>
+          </Link>
           <Link href="/bookmarks" asChild>
             <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
               <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">

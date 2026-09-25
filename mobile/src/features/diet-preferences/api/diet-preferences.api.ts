@@ -6,6 +6,7 @@ import { toDietSummary } from '@/features/profile/mappers/profile.mapper';
 import type {
   DietPreferenceResponseDto,
   DietRulePreviewResponseDto,
+  DietScheduleResponseDto,
   SaveDietPreferencesRequestDto,
 } from '../types/diet-preferences.dto';
 import type { DietRulePreview, DraftAllergy, DraftIngredientExclusion } from '../types/diet-preferences.model';
@@ -53,5 +54,19 @@ export const dietPreferencesApi = {
     };
     const res = await api.put<DietPreferenceResponseDto>(API_ENDPOINTS.USERS.DIET_PREFERENCES, payload);
     return toDietSummary(res.data?.data as Record<string, unknown> | null);
+  },
+
+  /**
+   * `PUT /users/me/diet-schedule` — sửa riêng ngày chay kỳ, không phải chạy lại cả
+   * wizard. Chỉ áp dụng khi đã lưu chế độ ăn và `practiceSchedule === PERIODIC`; cho
+   * phép gửi mảng rỗng để xoá hết ngày đã chọn.
+   */
+  saveDietSchedule: async (dates: string[]): Promise<{ practiceSchedule: string; timezone: string; dates: string[] }> => {
+    const res = await api.put<DietScheduleResponseDto>(API_ENDPOINTS.USERS.DIET_SCHEDULE, { dates });
+    return {
+      practiceSchedule: res.data?.data?.practiceSchedule ?? '',
+      timezone: res.data?.data?.timezone ?? 'Asia/Ho_Chi_Minh',
+      dates: res.data?.data?.dates ?? [],
+    };
   },
 };

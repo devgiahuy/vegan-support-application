@@ -26,6 +26,10 @@ export interface CreateVideoInput {
   tags?: string[];
 }
 
+export interface UpdateVideoInput extends CreateVideoInput {
+  expectedVersion: number;
+}
+
 export const videoApi = {
   getVideos: async (params?: VideoQueryParams): Promise<VideoPaginationResult> => {
     const res = await api.get<VideoListResponseDto>(API_ENDPOINTS.POSTS.LIST, {
@@ -71,5 +75,40 @@ export const videoApi = {
       silent: true,
     });
     return videoMapper.toModel(res.data.data);
+  },
+
+  /**
+   * Sửa video của chính mình rồi gửi lại để duyệt: `PATCH /posts/:id` (tạo draft
+   * revision mới) → `POST /posts/:id/submit`. `expectedVersion` là `version` hiện tại.
+   */
+  updateVideo: async (id: string, input: UpdateVideoInput): Promise<CookingVideo> => {
+    const payload = {
+      type: PostType.VIDEO,
+      title: input.title,
+      ...(input.excerpt ? { excerpt: input.excerpt } : {}),
+      ...(input.categoryIds?.length ? { categoryIds: input.categoryIds } : {}),
+      ...(input.tags?.length ? { tags: input.tags } : {}),
+      media: [{ provider: 'YOUTUBE', kind: 'VIDEO', secureUrl: input.youtubeUrl }],
+      body: input.body,
+      expectedVersion: input.expectedVersion,
+    };
+
+    const updateRes = await api.patch<VideoDetailResponseDto>(API_ENDPOINTS.POSTS.DETAIL(id), payload);
+    const updated = updateRes.data.data;
+    const revisionId = updated.revision?.id;
+    const newExpectedVersion = updated.version;
+
+    if (revisionId && newExpectedVersion) {
+      try {
+        const submitRes = await api.post<VideoDetailResponseDto>(
+          API_ENDPOINTS.POSTS.SUBMIT(updated.id ?? ''),
+          { revisionId, expectedVersion: newExpectedVersion }
+        );
+        return videoMapper.toModel(submitRes.data.data);
+      } catch {
+        return videoMapper.toModel(updated);
+      }
+    }
+    return videoMapper.toModel(updated);
   },
 };

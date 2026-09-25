@@ -1,5 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { videoApi, type CreateVideoInput, type VideoQueryParams } from '../api/video.api';
+import {
+  videoApi,
+  type CreateVideoInput,
+  type UpdateVideoInput,
+  type VideoQueryParams,
+} from '../api/video.api';
 
 export const VIDEO_QUERY_KEYS = {
   all: ['videos'] as const,
@@ -39,6 +44,17 @@ export function useCreateVideoMutation() {
 
   return useMutation({
     mutationFn: (input: CreateVideoInput) => videoApi.createVideo(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: VIDEO_QUERY_KEYS.all });
+    },
+  });
+}
+
+export function useUpdateVideoMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (vars: { id: string; input: UpdateVideoInput }) => videoApi.updateVideo(vars.id, vars.input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: VIDEO_QUERY_KEYS.all });
     },

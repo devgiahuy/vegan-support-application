@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Link, type Href } from 'expo-router';
-import { ChevronRight, FolderTree } from 'lucide-react-native';
+import { ChevronRight, FlaskConical, FolderTree } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
@@ -27,9 +27,10 @@ function hrefForCategory(type: CategoryType, id: string): Href | null {
 }
 
 /**
- * Duyệt cây danh mục public (đồng bộ `frontend/src/app/(site)/categories/page.tsx`,
- * bản rút gọn — chưa gồm các khối tra cứu nguyên liệu/dinh dưỡng riêng của food-data).
+ * Duyệt cây danh mục public (đồng bộ `frontend/src/app/(site)/categories/page.tsx`).
  * Bấm danh mục con điều hướng thẳng tới Món chay/Cẩm nang đã lọc sẵn theo danh mục đó.
+ * Khối tra cứu nguyên liệu/dinh dưỡng của FE (IngredientSearch, CookingMethodCards,
+ * ReferenceIntakeExplorer, FoodInteractionTable) chuyển sang màn riêng `/food-data`.
  */
 export default function CategoriesScreen() {
   const colors = useIconColors();
@@ -47,6 +48,21 @@ export default function CategoriesScreen() {
             Khám phá món chay và bài viết theo từng nhóm, chủ đề.
           </Text>
         </View>
+
+        <Link href={'/food-data' as Href} asChild>
+          <Pressable className="flex-row items-center gap-3 rounded-2xl border border-primary/20 bg-primary/10 p-4">
+            <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/20">
+              <FlaskConical size={18} color={colors.primary} />
+            </View>
+            <View className="flex-1">
+              <Text className="text-sm font-semibold text-foreground">Tra cứu dữ liệu dinh dưỡng</Text>
+              <Text className="mt-0.5 text-xs text-muted-foreground">
+                Thành phần nguyên liệu, phương pháp nấu, nhu cầu khuyến nghị và quy tắc tương kỵ.
+              </Text>
+            </View>
+            <ChevronRight size={16} color={colors.mutedForeground} />
+          </Pressable>
+        </Link>
 
         <View className="flex-row flex-wrap gap-2">
           {TYPE_OPTIONS.map((option) => {
