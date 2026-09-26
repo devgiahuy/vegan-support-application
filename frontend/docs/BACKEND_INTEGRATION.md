@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.11
+**Version:** 4.12
 
 **Cập nhật:** 27/09/2026
 
@@ -339,9 +339,12 @@ review proposal vẫn là `PLANNED` cho tới Phase 07; frontend chưa được 
 | GET    | `/admin/ai/flags`             | `PLANNED` | —               | No            | Review status                 |
 | GET    | `/admin/ai/features`          | `PLANNED` | —               | No            | Current provider/model/toggle |
 | PATCH  | `/admin/ai/features/:feature` | `PLANNED` | —               | No            | Reason required               |
-| GET    | `/notifications`              | `PLANNED` | —               | No            | Pagination                    |
-| PATCH  | `/notifications/:id/read`     | `PLANNED` | —               | No            | Owner only                    |
-| PATCH  | `/notifications/read-all`     | `PLANNED` | —               | No            | Owner only                    |
+| GET    | `/notifications`              | `READY` | 2026-09-27 | No | Owner only; `page` 1–10000, `limit` 1–100, `unreadOnly`; unexpired, newest first; `{data,meta}`; payload v1 allowlist |
+| GET    | `/notifications/unread-count` | `READY` | 2026-09-27 | No | Owner only; exact unexpired unread `count`, no polling server push |
+| PATCH  | `/notifications/:id/read`     | `READY` | 2026-09-27 | No | Owner only, idempotent; another owner's or expired ID returns `NOTIFICATION_NOT_FOUND` 404 |
+| PATCH  | `/notifications/read-all`     | `READY` | 2026-09-27 | No | Owner only, atomic snapshot; returns `updatedCount`; concurrently arriving rows stay unread |
+
+Notifications are produced transactionally for content/video review decisions, Contributor approval/rejection/revocation, report resolution, separate post/comment/account moderation decisions, storage warning threshold crossings, AI verification creation/status changes, and Member restaurant submission decisions. The database dispatcher dedupes by event source and version; quota warnings dedupe per owner, threshold and UTC month. Only fixed titles, optional safe internal links, `sourceId` or `thresholdPercent` payload v1 reach the client; reasons, reports' targets, AI prompts, health profiles, receipts and images are excluded. Rows expire after 90 days; run `npm run notifications:cleanup` in `backend/` to purge. No email, push or realtime delivery. Existing frontend notification fixture is still mock only: run `npm run sync:swagger` and migrate its DTO/Model/Mapper/API/query before changing `FE integrated` to Yes.
 
 ### 6.9 Food data và cooking-aware nutrition — Phases 12–13
 
@@ -697,6 +700,7 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `FORBIDDEN`                                   | Trang/notification không đủ quyền                                      |
 | `VALIDATION_ERROR`                            | Map `fields` vào form                                                  |
 | `NOT_FOUND`                                   | Hiển thị trạng thái không tìm thấy phù hợp với resource/page           |
+| `NOTIFICATION_NOT_FOUND`                      | Bỏ mục thông báo đã hết hạn/không thuộc tài khoản khỏi cache; không tiết lộ owner khác |
 | `INVALID_JSON`                                | Báo request không hợp lệ; không retry tự động                          |
 | `PAYLOAD_TOO_LARGE`                           | Yêu cầu user giảm kích thước payload/file trước khi thử lại            |
 | `DATABASE_UNAVAILABLE`                        | Hiển thị trạng thái dịch vụ tạm thời không khả dụng và cho phép retry  |
@@ -908,6 +912,7 @@ Thêm entry mới nhất ở trên cùng.
 
 | Date       | Version | Module         | Change                                                                                                                                | Breaking | FE action                                                                                            |
 | ---------- | ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- | :------: | ---------------------------------------------------------------------------------------------------- |
+| 2026-09-27 | 4.12 | Notifications | Phase 25 READY: transactional allowlisted events, 90-day retention, owner-scoped list/count/read/read-all and dedupe; frontend bell remains fixture-only. | No | Run `npm run sync:swagger`; replace notification fixture with endpoint constants, DTO/Model/Mapper/API/query and dedicated unread-count hook; handle `NOTIFICATION_NOT_FOUND`. |
 | 2026-09-27 | 4.11 | Restaurants / Location | Phase 24 READY: internal reviewed places plus live fake/optional Google adapter, coordinates/bounds and consent, hard dietary filtering, dedupe, provider degradation, Member submissions, Admin review/edit, append only audit, no durable Google content cache. | No | Run `npm run sync:swagger`; migrate mock restaurant UI to endpoint constants + DTO/Model/Mapper/API/query with location consent, attribution, provider limits, and review states. |
 | 2026-09-27 | 4.10    | AI Provider    | Thêm `OPENAI_BASE_URL` để backend OpenAI adapter dùng endpoint OpenAI-compatible cấu hình qua environment; mặc định vẫn là endpoint chính thức và giữ nguyên SSE/fallback/quota contract. | No | Không cần đổi frontend; vận hành có thể cấu hình URL backend khi dùng gateway tương thích OpenAI. |
 | 2026-09-24 | 4.9     | Receipts / Shopping | Phase 22 READY: quota-accounted receipt images, validated fake/local async extraction, editable/rejectable lines, partial retry/cancel, explicit idempotent confirmation as the only pantry mutation boundary, and explainable selected-meal shopping gaps based on reviewed conversions plus confirmed Pantry. | No | Run `npm run sync:swagger`; add endpoint constants and receipt/shopping DTO/Model/Mapper/API/query layers; upload with Phase 15 `RECEIPT_IMAGE`; render unresolved conversions separately. |

@@ -2422,6 +2422,9 @@ async function main(): Promise<void> {
       },
     });
   }
+  // Notification rows are created by committed domain decisions and quota
+  // crossings. Seed does not invent review outcomes or expose fixture users'
+  // private data through a synthetic notification.
   console.info(
     `Seeded local Member, unified Contributors with all three approval bases, Admin, storage policy/accounting, pantry inventory, fridge-vision, receipt and restaurant fake fixtures, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
   );

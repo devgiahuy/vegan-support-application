@@ -25,6 +25,7 @@ import { registerIngredientRecognitionOpenApi } from '../modules/ingredient-reco
 import { registerReceiptOpenApi } from '../modules/receipts/receipt.openapi.js';
 import { registerAiReviewOpenApi } from '../modules/ai-review/ai-review.openapi.js';
 import { registerRestaurantOpenApi } from '../modules/restaurants/restaurant.openapi.js';
+import { registerNotificationOpenApi } from '../modules/notifications/notification.openapi.js';
 
 const registry = new OpenAPIRegistry();
 
@@ -74,6 +75,7 @@ registerIngredientRecognitionOpenApi(registry, registeredErrorResponse);
 registerReceiptOpenApi(registry, registeredErrorResponse);
 registerAiReviewOpenApi(registry, registeredErrorResponse);
 registerRestaurantOpenApi(registry, registeredErrorResponse);
+registerNotificationOpenApi(registry, registeredErrorResponse);
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
@@ -145,6 +147,7 @@ const generatedDocument = generator.generateDocument({
     { name: 'Restaurants', description: 'Dietary filtered internal and live provider discovery' },
     { name: 'Restaurant Admin', description: 'Manual place review and curation' },
     { name: 'Location', description: 'Explicit address geocoding without location history' },
+    { name: 'Notifications', description: 'Owner-scoped in-app domain event notifications' },
   ],
 });
 

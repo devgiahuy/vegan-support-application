@@ -138,6 +138,9 @@ import { openApiDocument } from './openapi/document.js';
 import { RestaurantController } from './modules/restaurants/restaurant.controller.js';
 import { RestaurantService } from './modules/restaurants/restaurant.service.js';
 import { createMapsProvider } from './modules/restaurants/maps.provider.js';
+import { NotificationController } from './modules/notifications/notification.controller.js';
+import { NotificationService } from './modules/notifications/notification.service.js';
+import { createNotificationRouter } from './modules/notifications/notification.router.js';
 import {
   createLocationRouter,
   createRestaurantAdminRouter,
@@ -242,6 +245,7 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   const restaurantController = new RestaurantController(
     new RestaurantService(database.client, createMapsProvider(config)),
   );
+  const notificationController = new NotificationController(new NotificationService(database.client));
 
   app.disable('x-powered-by');
   app.use(helmet());
@@ -330,6 +334,7 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
     createIngredientRecognitionRouter(ingredientRecognitionController, authentication),
   );
   app.use('/api/v1/restaurants', createRestaurantRouter(restaurantController, authentication));
+  app.use('/api/v1/notifications', createNotificationRouter(notificationController, authentication));
   app.use('/api/v1/location', createLocationRouter(restaurantController, authentication));
   app.use('/api/v1', createReceiptRouter(receiptController, authentication));
   app.use('/api/v1', createAiReviewRouter(aiReviewController, authentication));
