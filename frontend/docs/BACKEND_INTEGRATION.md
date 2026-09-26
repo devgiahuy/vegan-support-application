@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.10
+**Version:** 4.11
 
 **Cập nhật:** 27/09/2026
 
@@ -319,13 +319,16 @@ review proposal vẫn là `PLANNED` cho tới Phase 07; frontend chưa được 
 
 | Method | Path                            | Status    | Backend updated | FE integrated | Ghi chú                             |
 | ------ | ------------------------------- | --------- | --------------- | ------------- | ----------------------------------- |
-| GET    | `/restaurants/nearby`           | `PLANNED` | —               | No            | lat/lng/radius                      |
-| GET    | `/restaurants/search`           | `PLANNED` | —               | No            | Food query + Google/internal hybrid |
-| GET    | `/restaurants/:id`              | `PLANNED` | —               | No            | Source/fetchedAt fields             |
-| POST   | `/restaurants`                  | `PLANNED` | —               | No            | Member submission pending           |
-| GET    | `/location/geocode`             | `PLANNED` | —               | No            | Backend server key                  |
-| GET    | `/admin/restaurants`            | `PLANNED` | —               | No            | Pending queue                       |
-| PATCH  | `/admin/restaurants/:id/review` | `PLANNED` | —               | No            | Approve/reject                      |
+| GET    | `/restaurants/nearby`           | `READY` | 2026-09-27 | No | Explicit coordinates or bounds; optional device consent; diet filtering |
+| GET    | `/restaurants/search`           | `READY` | 2026-09-27 | No | Required `q`, location, hybrid ranking |
+| GET    | `/restaurants/mine`             | `READY` | 2026-09-27 | No | Authenticated owner submissions/status |
+| GET    | `/restaurants/:id`              | `READY` | 2026-09-27 | No | Approved internal UUID or live `google:`/`fake:` ID |
+| POST   | `/restaurants`                  | `READY` | 2026-09-27 | No | Authenticated Member/Contributor/Admin; pending review |
+| GET    | `/location/geocode`             | `READY` | 2026-09-27 | No | Explicit address; live provider, no durable cache |
+| GET    | `/admin/restaurants`            | `READY` | 2026-09-27 | No | Admin paginated status queue |
+| GET    | `/admin/restaurants/:id/history` | `READY` | 2026-09-27 | No | Append only submission/review/edit audit |
+| PATCH  | `/admin/restaurants/:id/review` | `READY` | 2026-09-27 | No | Admin approve/reject pending with reason; self-review blocked |
+| PATCH  | `/admin/restaurants/:id`        | `READY` | 2026-09-27 | No | Admin edit and dietary claim curation |
 
 ### 6.8 AI Governance và Notifications
 
@@ -616,6 +619,11 @@ error
 - Map và list dùng cùng một result set/backend IDs.
 - Không gọi Places web service bằng backend key từ browser.
 - Khi `externalDataUnavailable=true`, UI vẫn hiển thị list nội bộ và thông báo nhẹ, không block màn hình.
+- Discovery dùng `lat` + `lng` hoặc đủ `north/south/east/west`; `radiusMeters` 100–50,000 (default 5,000), `page` + `limit` (max 20). `locationSource=DEVICE` bắt buộc `locationConsent=true`; API không lưu lịch sử tọa độ. `GET /location/geocode?address=` dành cho địa chỉ do người dùng nhập.
+- Backend áp diet pattern của profile hoặc filter được yêu cầu, enabled tradition rules, allergies và ingredient exclusions trước khi rank. Chỉ internal record đã Admin review với các assertion tương ứng được trả khi có hard constraint; provider text/type không chứng minh an toàn ăn uống. `dietaryReviewed` nghĩa là claim nội bộ đã được review, không phải chứng nhận an toàn.
+- Result có `source`, `attribution`, `externalPlaceId`, `distanceMeters`, `matchReasons`, `fetchedAt`; meta có `externalDataUnavailable`, `provider`, `providerResultLimit`, `resultsTruncated`, `locationStored=false`. Provider chỉ trả tối đa 20 item mỗi lần; pagination áp lên tập hợp đã dedupe. UI cần thể hiện giới hạn này.
+- `MAPS_PROVIDER=fake` mặc định; `MAPS_PROVIDER=google` cần `GOOGLE_MAPS_API_KEY` server-side. Google Places/Geocoding content không được cache/persist; DB chỉ giữ Google place ID được Admin liên kết và record nội bộ do người dùng/Admin cung cấp độc lập. `Cache-Control: no-store` trên discovery/detail/geocode. Khi hiển thị Google Places/Geocoding ngoài Google Map, UI phải hiện Google logo/attribution theo chính sách; khi hiện trên map phải dùng Google Map. Đọc [Places policies](https://developers.google.com/maps/documentation/places/web-service/policies) và [Geocoding policies](https://developers.google.com/maps/documentation/geocoding/policies) trước khi kết nối live.
+- FE scaffold hiện vẫn là mock. Trước khi tích hợp live: `npm run sync:swagger`, cập nhật endpoint constants, DTO/Model/Mapper/query/mappers tests, thêm consent/address fallback và attribution UI, xử lý `LOCATION_REQUIRED`, `LOCATION_CONSENT_REQUIRED`, `INVALID_LOCATION_BOUNDS`, `RESTAURANT_DUPLICATE`, `RESTAURANT_REVIEW_CONFLICT`.
 
 ### 7.8 Cooking-aware nutrition — planned Phase 13
 
@@ -769,6 +777,11 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `CHAT_IDEMPOTENCY_CONFLICT`                   | Chỉ tạo key mới cho user action mới; không đổi payload của key cũ      |
 | `CHAT_REQUEST_IN_PROGRESS`                    | Giữ stream hiện tại hoặc chờ rồi retry cùng idempotency key            |
 | `EXTERNAL_LOCATION_UNAVAILABLE`               | Dùng internal restaurant results                                       |
+| `LOCATION_REQUIRED`                            | Yêu cầu nhập tọa độ/bounds hoặc geocode địa chỉ                        |
+| `LOCATION_CONSENT_REQUIRED`                    | Xin consent trước khi gửi vị trí thiết bị                              |
+| `INVALID_LOCATION_BOUNDS`                      | Thu nhỏ bounds trong phạm vi 50 km                                     |
+| `RESTAURANT_DUPLICATE`                         | Hiển thị bản ghi đã có, không nộp lại                                 |
+| `RESTAURANT_REVIEW_CONFLICT`                   | Refetch trạng thái; không review lại hoặc tự review                   |
 | `RESOURCE_CONFLICT`                           | Refresh entity/version trước khi sửa lại                               |
 | `FOOD_DATA_SOURCE_UNAVAILABLE`                | Chọn nguồn active đã được Admin cấu hình trước khi preview import       |
 | `DUPLICATE_SOURCE_RECORD`                     | Loại source record ID trùng trong cùng payload import                   |
@@ -895,6 +908,7 @@ Thêm entry mới nhất ở trên cùng.
 
 | Date       | Version | Module         | Change                                                                                                                                | Breaking | FE action                                                                                            |
 | ---------- | ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- | :------: | ---------------------------------------------------------------------------------------------------- |
+| 2026-09-27 | 4.11 | Restaurants / Location | Phase 24 READY: internal reviewed places plus live fake/optional Google adapter, coordinates/bounds and consent, hard dietary filtering, dedupe, provider degradation, Member submissions, Admin review/edit, append only audit, no durable Google content cache. | No | Run `npm run sync:swagger`; migrate mock restaurant UI to endpoint constants + DTO/Model/Mapper/API/query with location consent, attribution, provider limits, and review states. |
 | 2026-09-27 | 4.10    | AI Provider    | Thêm `OPENAI_BASE_URL` để backend OpenAI adapter dùng endpoint OpenAI-compatible cấu hình qua environment; mặc định vẫn là endpoint chính thức và giữ nguyên SSE/fallback/quota contract. | No | Không cần đổi frontend; vận hành có thể cấu hình URL backend khi dùng gateway tương thích OpenAI. |
 | 2026-09-24 | 4.9     | Receipts / Shopping | Phase 22 READY: quota-accounted receipt images, validated fake/local async extraction, editable/rejectable lines, partial retry/cancel, explicit idempotent confirmation as the only pantry mutation boundary, and explainable selected-meal shopping gaps based on reviewed conversions plus confirmed Pantry. | No | Run `npm run sync:swagger`; add endpoint constants and receipt/shopping DTO/Model/Mapper/API/query layers; upload with Phase 15 `RECEIPT_IMAGE`; render unresolved conversions separately. |
 | 2026-09-24 | 4.8     | Fridge Vision  | Phase 21 READY: quota-accounted owned multi-image attachments, async provider abstraction with validated fake/local output, cross-image dedupe/evidence, canonical suggestions, editable quantity/freshness candidates, partial failure/retry/cancel, and idempotent transactional confirmation as the only pantry mutation boundary. | No | Run `npm run sync:swagger`; add endpoint constants and ingredient-vision DTO/Model/Mapper/API/query layers; use Phase 15 `FRIDGE_IMAGE` reservation/commit first and render confidence/uncertainty without food-safety claims. |

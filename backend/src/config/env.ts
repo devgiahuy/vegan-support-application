@@ -99,6 +99,21 @@ const environmentSchema = z
     RECEIPT_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('receipt-v1'),
     RECEIPT_MAX_IMAGES: z.coerce.number().int().min(1).max(8).default(4),
     RECEIPT_MAX_IMAGE_BYTES: z.coerce.number().int().min(1).max(25_000_000).default(10_000_000),
+    MAPS_PROVIDER: z.enum(['fake', 'google']).default('fake'),
+    GOOGLE_MAPS_API_KEY: z.preprocess(
+      (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+      z.string().trim().min(1).optional(),
+    ),
+    MAPS_TIMEOUT_MS: z.coerce.number().int().min(1000).max(30000).default(5000),
+  })
+  .superRefine((environment, context) => {
+    if (environment.MAPS_PROVIDER === 'google' && !environment.GOOGLE_MAPS_API_KEY) {
+      context.addIssue({
+        code: 'custom',
+        path: ['GOOGLE_MAPS_API_KEY'],
+        message: 'required when MAPS_PROVIDER=google',
+      });
+    }
   })
   .transform((environment) => ({
     nodeEnv: environment.NODE_ENV,
@@ -169,6 +184,11 @@ const environmentSchema = z
       templateVersion: environment.RECEIPT_TEMPLATE_VERSION,
       maxImages: environment.RECEIPT_MAX_IMAGES,
       maxImageBytes: environment.RECEIPT_MAX_IMAGE_BYTES,
+    },
+    maps: {
+      provider: environment.MAPS_PROVIDER,
+      apiKey: environment.GOOGLE_MAPS_API_KEY,
+      timeoutMs: environment.MAPS_TIMEOUT_MS,
     },
     cookieSecure: environment.NODE_ENV === 'production',
   }));

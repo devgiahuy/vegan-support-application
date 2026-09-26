@@ -24,6 +24,7 @@ import { registerPantryOpenApi } from '../modules/pantry/pantry.openapi.js';
 import { registerIngredientRecognitionOpenApi } from '../modules/ingredient-recognition/ingredient-recognition.openapi.js';
 import { registerReceiptOpenApi } from '../modules/receipts/receipt.openapi.js';
 import { registerAiReviewOpenApi } from '../modules/ai-review/ai-review.openapi.js';
+import { registerRestaurantOpenApi } from '../modules/restaurants/restaurant.openapi.js';
 
 const registry = new OpenAPIRegistry();
 
@@ -72,6 +73,7 @@ registerPantryOpenApi(registry, registeredErrorResponse);
 registerIngredientRecognitionOpenApi(registry, registeredErrorResponse);
 registerReceiptOpenApi(registry, registeredErrorResponse);
 registerAiReviewOpenApi(registry, registeredErrorResponse);
+registerRestaurantOpenApi(registry, registeredErrorResponse);
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
@@ -135,8 +137,14 @@ const generatedDocument = generator.generateDocument({
     { name: 'Receipts', description: 'Receipt image extraction with explicit pantry confirmation' },
     { name: 'Shopping Lists', description: 'Pantry-aware explainable shopping-gap previews' },
     { name: 'AI Artifacts', description: 'Versioned privacy-safe sharing of eligible AI outputs' },
-    { name: 'AI Verification', description: 'Unified Contributor verification and immutable audit history' },
+    {
+      name: 'AI Verification',
+      description: 'Unified Contributor verification and immutable audit history',
+    },
     { name: 'AI Verification Admin', description: 'Admin override and revocation audit actions' },
+    { name: 'Restaurants', description: 'Dietary filtered internal and live provider discovery' },
+    { name: 'Restaurant Admin', description: 'Manual place review and curation' },
+    { name: 'Location', description: 'Explicit address geocoding without location history' },
   ],
 });
 

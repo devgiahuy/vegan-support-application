@@ -37,6 +37,8 @@ import {
   PracticeSchedule,
   PrismaClient,
   RecipeDifficulty,
+  RestaurantSource,
+  RestaurantStatus,
   NutrientReferenceType,
   NutritionCoverage,
   PantryAdjustmentType,
@@ -1013,7 +1015,8 @@ async function main(): Promise<void> {
           experience: definition.experience,
           referenceLinks: definition.referenceLinks,
           source: definition.source,
-          invitedById: definition.source === ContributorApplicationSource.ADMIN_INVITATION ? admin.id : null,
+          invitedById:
+            definition.source === ContributorApplicationSource.ADMIN_INVITATION ? admin.id : null,
           invitationReason: definition.invitationReason,
           status: ContributorApplicationStatus.APPROVED,
           approvalBasis: definition.approvalBasis,
@@ -2350,8 +2353,77 @@ async function main(): Promise<void> {
       data: { usedBytes: aggregate._sum.bytes ?? 0 },
     });
   }
+  const restaurantFixtures = [
+    {
+      id: '24000000-0000-4000-8000-000000000001',
+      name: 'Vegan House Demo',
+      address: '1 Nguyễn Huệ, Quận 1, TP Hồ Chí Minh',
+      latitude: 10.7735,
+      longitude: 106.7032,
+      dietTags: ['VEGAN', 'LACTO_OVO'],
+      status: RestaurantStatus.APPROVED,
+      source: RestaurantSource.ADMIN,
+    },
+    {
+      id: '24000000-0000-4000-8000-000000000002',
+      name: 'Lacto Garden Demo',
+      address: '5 Đồng Khởi, Quận 1, TP Hồ Chí Minh',
+      latitude: 10.775,
+      longitude: 106.704,
+      dietTags: ['LACTO_OVO'],
+      status: RestaurantStatus.APPROVED,
+      source: RestaurantSource.ADMIN,
+    },
+    {
+      id: '24000000-0000-4000-8000-000000000003',
+      name: 'Pending Vegetarian Demo',
+      address: '9 Pasteur, Quận 1, TP Hồ Chí Minh',
+      latitude: 10.776,
+      longitude: 106.702,
+      dietTags: ['VEGAN'],
+      status: RestaurantStatus.PENDING,
+      source: RestaurantSource.MEMBER,
+    },
+  ] as const;
+  for (const fixture of restaurantFixtures) {
+    const { id, name, address, latitude, longitude, dietTags, status, source } = fixture;
+    await prisma.restaurant.upsert({
+      where: { id },
+      update: { name, address, latitude, longitude, dietTags: [...dietTags], status, source },
+      create: {
+        id,
+        name,
+        normalizedName: name.toLowerCase(),
+        address,
+        normalizedAddress: address.toLowerCase(),
+        latitude,
+        longitude,
+        categories: ['restaurant'],
+        dietTags: [...dietTags],
+        allergenFreeCodes: [],
+        excludedIngredients: [],
+        status,
+        source,
+        submitterId: source === RestaurantSource.MEMBER ? member.id : null,
+        reviewerId: status === RestaurantStatus.APPROVED ? admin.id : null,
+        reviewedAt: status === RestaurantStatus.APPROVED ? new Date() : null,
+        dataCheckedAt: status === RestaurantStatus.APPROVED ? new Date() : null,
+      },
+    });
+    await prisma.restaurantAudit.upsert({
+      where: { id: `24000000-0000-4000-9000-00000000000${id.slice(-1)}` },
+      update: {},
+      create: {
+        id: `24000000-0000-4000-9000-00000000000${id.slice(-1)}`,
+        restaurantId: id,
+        actorId: source === RestaurantSource.MEMBER ? member.id : admin.id,
+        action: status === RestaurantStatus.PENDING ? 'SUBMITTED' : 'APPROVED',
+        reason: 'Local demonstration fixture',
+      },
+    });
+  }
   console.info(
-    `Seeded local Member, unified Contributors with all three approval bases, Admin, storage policy/accounting, pantry inventory, fridge-vision and receipt fake fixtures, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
+    `Seeded local Member, unified Contributors with all three approval bases, Admin, storage policy/accounting, pantry inventory, fridge-vision, receipt and restaurant fake fixtures, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
   );
 }
 

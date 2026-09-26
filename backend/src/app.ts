@@ -129,9 +129,20 @@ import { createReceiptRouter } from './modules/receipts/receipt.router.js';
 import { ReceiptService } from './modules/receipts/receipt.service.js';
 import { AiReviewController } from './modules/ai-review/ai-review.controller.js';
 import { AiReviewRepository } from './modules/ai-review/ai-review.repository.js';
-import { createAiReviewAdminRouter, createAiReviewRouter } from './modules/ai-review/ai-review.router.js';
+import {
+  createAiReviewAdminRouter,
+  createAiReviewRouter,
+} from './modules/ai-review/ai-review.router.js';
 import { AiReviewService } from './modules/ai-review/ai-review.service.js';
 import { openApiDocument } from './openapi/document.js';
+import { RestaurantController } from './modules/restaurants/restaurant.controller.js';
+import { RestaurantService } from './modules/restaurants/restaurant.service.js';
+import { createMapsProvider } from './modules/restaurants/maps.provider.js';
+import {
+  createLocationRouter,
+  createRestaurantAdminRouter,
+  createRestaurantRouter,
+} from './modules/restaurants/restaurant.router.js';
 
 export interface AppDependencies {
   config: AppConfig;
@@ -228,6 +239,9 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   const aiReviewController = new AiReviewController(
     new AiReviewService(new AiReviewRepository(database.client)),
   );
+  const restaurantController = new RestaurantController(
+    new RestaurantService(database.client, createMapsProvider(config)),
+  );
 
   app.disable('x-powered-by');
   app.use(helmet());
@@ -248,6 +262,12 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
     pinoHttp<Request, Response>({
       logger,
       genReqId: (request) => request.requestId,
+      autoLogging: {
+        ignore: (request) =>
+          request.url?.startsWith('/api/v1/restaurants') ||
+          request.url?.startsWith('/api/v1/location') ||
+          false,
+      },
     }),
   );
   app.use(cookieParser());
@@ -282,6 +302,7 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/admin', createModerationAdminRouter(moderationController, authentication));
   app.use('/api/v1/admin', createStorageAdminRouter(storageController, authentication));
   app.use('/api/v1/admin', createAiReviewAdminRouter(aiReviewController, authentication));
+  app.use('/api/v1/admin', createRestaurantAdminRouter(restaurantController, authentication));
   app.use('/api/v1/review-queue', createReviewQueueRouter(moderationController, authentication));
   app.use('/api/v1/reports', createReportsRouter(moderationController, authentication));
   app.use(
@@ -308,6 +329,8 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
     '/api/v1/ingredient-recognition',
     createIngredientRecognitionRouter(ingredientRecognitionController, authentication),
   );
+  app.use('/api/v1/restaurants', createRestaurantRouter(restaurantController, authentication));
+  app.use('/api/v1/location', createLocationRouter(restaurantController, authentication));
   app.use('/api/v1', createReceiptRouter(receiptController, authentication));
   app.use('/api/v1', createAiReviewRouter(aiReviewController, authentication));
 
