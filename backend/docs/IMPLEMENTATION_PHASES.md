@@ -144,7 +144,7 @@ Regenerate/validate OpenAPI using the repository workflow. Live external-provide
 |    23 | `COMPLETED`   | 2026-09-24 | Not committed (user instruction) | Versioned privacy-safe sharing, unified contributor verification, Admin override, immutability, OpenAPI, migration, and quality gates pass |
 |    24 | `COMPLETED`   | 2026-09-27 | This phase commit | Internal reviewed places, append-only review audit, consent-aware radius/bounds search, hard diet filtering, live fake/optional Google adapter without durable Google content caching, migration/seed/OpenAPI and gates pass |
 |    25 | `COMPLETED` | 2026-09-27 | This phase commit | Transactional database event dispatcher, private owner-scoped API, 90-day cleanup, migration/OpenAPI/docs and verification gates pass; Phase 14 legacy frontend consumers remain `CHANGING` independently |
-|    26 | `NOT_STARTED` | —          | —                                | —                                                                                                                                                                                          |
+|    26 | `COMPLETED` | 2026-09-27 | This phase commit | Admin-only redacted events/metrics/flags, versioned provider controls and audit, documented fallbacks and 90-day cleanup; migration, OpenAPI, runtime acceptance and quality gates pass |
 |    27 | `NOT_STARTED` | —          | —                                | —                                                                                                                                                                                          |
 
 ## 7. Prompt index

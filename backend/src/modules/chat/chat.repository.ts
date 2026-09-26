@@ -7,6 +7,7 @@ import {
   type PrismaClient,
 } from '@prisma/client';
 import type { ChatIdentity } from './chat.identity.js';
+import { aiCorrelationId } from '../ai-governance/ai-governance.context.js';
 
 const messageInclude = { feedback: true } satisfies Prisma.ChatMessageInclude;
 export type ChatMessageRecord = Prisma.ChatMessageGetPayload<{ include: typeof messageInclude }>;
@@ -508,6 +509,16 @@ export class ChatRepository {
           completedAt: new Date(),
         },
       });
+      const completedAt = new Date();
+      await transaction.aiGovernanceEvent.create({ data: {
+        capability: 'CHAT', provider: data.provider, modelId: data.modelId,
+        templateVersion: data.provider === 'local-rule' ? data.modelId : null,
+        correlationId: aiCorrelationId(),
+        status: data.requestStatus === AiRequestStatus.BLOCKED ? 'BLOCKED' : 'FALLBACK',
+        errorClass: data.errorCode ?? null,
+        safetyOutcome: data.requestStatus === AiRequestStatus.BLOCKED ? 'LOCAL_BLOCK' : 'STATIC_ADVISORY',
+        latencyMs: data.latencyMs, startedAt: new Date(completedAt.getTime() - data.latencyMs), completedAt,
+      } });
       return message;
     });
   }

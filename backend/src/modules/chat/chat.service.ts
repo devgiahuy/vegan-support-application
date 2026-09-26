@@ -369,6 +369,27 @@ export class ChatService {
         redactPii(data.requestMessage.content),
         controller.signal,
       );
+      if (moderation.unavailable) {
+        const message = await this.repository.completeNonQuotaTurn({
+          subjectKey: data.identity.subjectKey,
+          usageDate: data.window.usageDate,
+          reservationKey: data.assistantMessage.id,
+          assistantMessageId: data.assistantMessage.id,
+          content: PROVIDER_FALLBACK_RESPONSE,
+          provider: 'local-fallback',
+          modelId: this.config.ai.fallbackModel,
+          requestMessageId: data.requestMessage.id,
+          requestStatus: AiRequestStatus.FALLBACK,
+          latencyMs: Date.now() - data.startedAt.getTime(),
+          errorCode: 'AI_PROVIDER_UNAVAILABLE',
+        });
+        settled = true;
+        yield { event: 'content_delta', data: { delta: PROVIDER_FALLBACK_RESPONSE } };
+        const quota = await this.currentQuota(data.identity, data.window);
+        yield { event: 'message_complete', data: { message: this.messageOutput(message), quota } };
+        yield { event: 'quota', data: quota };
+        return;
+      }
       if (moderation.flagged) {
         const message = await this.repository.completeNonQuotaTurn({
           subjectKey: data.identity.subjectKey,
@@ -458,7 +479,7 @@ export class ChatService {
           assistantMessageId: data.assistantMessage.id,
           content: PROVIDER_FALLBACK_RESPONSE,
           provider: 'local-fallback',
-          modelId: 'static-fallback-v1',
+          modelId: this.config.ai.fallbackModel,
           requestMessageId: data.requestMessage.id,
           requestStatus: AiRequestStatus.FALLBACK,
           latencyMs: Date.now() - data.startedAt.getTime(),
@@ -530,7 +551,7 @@ export class ChatService {
       sessionId: requestMessage.sessionId,
       requestMessageId: requestMessage.id,
       provider: 'local-rule',
-      modelId: 'topic-boundary-v1',
+      modelId: this.config.ai.topicRuleVersion,
       redactedMetadata: {
         promptHash: requestMessage.payloadHash,
         topicCodes: requestMessage.topicCodes,
@@ -542,7 +563,7 @@ export class ChatService {
       assistantMessageId: assistantMessage.id,
       content,
       provider: 'local-rule',
-      modelId: 'topic-boundary-v1',
+      modelId: this.config.ai.topicRuleVersion,
       requestMessageId: requestMessage.id,
       requestStatus: status,
       latencyMs: Date.now() - startedAt.getTime(),

@@ -148,6 +148,7 @@ export class IngredientRecognitionService {
         input.decision === 'REJECT'
           ? RecognitionCandidateStatus.REJECTED
           : RecognitionCandidateStatus.EDITED,
+      ...(input.decision === 'REJECT' ? {} : { editedByUser: true }),
       ...(input.freshnessObservation !== undefined
         ? { freshnessObservation: input.freshnessObservation }
         : {}),

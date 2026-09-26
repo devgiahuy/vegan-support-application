@@ -160,6 +160,7 @@ export class ReceiptService {
       quantity,
       unit,
       status: input.decision === 'REJECT' ? ReceiptCandidateStatus.REJECTED : ReceiptCandidateStatus.EDITED,
+      ...(input.decision === 'REJECT' ? {} : { editedByUser: true }),
       ...(input.lineText !== undefined ? { lineText: input.lineText } : {}),
       ...(input.unitPrice !== undefined ? { unitPrice: input.unitPrice } : {}),
       ...(input.lineTotal !== undefined ? { lineTotal: input.lineTotal } : {}),

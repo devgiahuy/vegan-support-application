@@ -1123,6 +1123,7 @@ model RecognitionCandidate {
   uncertaintyNote      String?                        @map("uncertainty_note") @db.VarChar(500)
   status               RecognitionCandidateStatus     @default(PROPOSED)
   version              Int                            @default(1)
+  editedByUser         Boolean                        @default(false) @map("edited_by_user")
   pantryItemId         String?                        @map("pantry_item_id") @db.Uuid
   pantryAction         String?                        @map("pantry_action") @db.VarChar(20)
   createdAt            DateTime                       @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -1227,6 +1228,7 @@ model ReceiptCandidate {
   uncertaintyNote String?                @map("uncertainty_note") @db.VarChar(500)
   status          ReceiptCandidateStatus @default(PROPOSED)
   version         Int                    @default(1)
+  editedByUser    Boolean                @default(false) @map("edited_by_user")
   pantryItemId    String?                @map("pantry_item_id") @db.Uuid
   pantryAction    String?                @map("pantry_action") @db.VarChar(20)
   createdAt       DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -1892,6 +1894,57 @@ model AiRequestLog {
   @@index([userId, createdAt])
   @@index([guestIdHash, createdAt])
   @@map("ai_request_logs")
+}
+
+model AiGovernanceEvent {
+  id              String   @id @default(uuid()) @db.Uuid
+  capability      String   @db.VarChar(40)
+  provider        String   @db.VarChar(80)
+  modelId         String?  @map("model_id") @db.VarChar(100)
+  templateVersion String?  @map("template_version") @db.VarChar(80)
+  correlationId   String   @map("correlation_id") @db.VarChar(128)
+  status          String   @db.VarChar(30)
+  errorClass      String?  @map("error_class") @db.VarChar(60)
+  safetyOutcome   String   @map("safety_outcome") @db.VarChar(40)
+  latencyMs       Int?     @map("latency_ms")
+  inputTokens     Int?     @map("input_tokens")
+  outputTokens    Int?     @map("output_tokens")
+  costMicros      BigInt?  @map("cost_micros")
+  confidence      Decimal? @db.Decimal(5, 4)
+  coverage        Decimal? @db.Decimal(5, 4)
+  startedAt       DateTime @map("started_at") @db.Timestamptz(3)
+  completedAt     DateTime @map("completed_at") @db.Timestamptz(3)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([createdAt, id])
+  @@index([capability, status, createdAt])
+  @@index([provider, createdAt])
+  @@map("ai_governance_events")
+}
+
+model AiCapabilityControl {
+  capability String   @db.VarChar(40)
+  provider   String   @db.VarChar(80)
+  enabled    Boolean  @default(true)
+  version    Int      @default(1)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@id([capability, provider])
+  @@map("ai_capability_controls")
+}
+
+model AiCapabilityControlAudit {
+  id         String   @id @default(uuid()) @db.Uuid
+  capability String   @db.VarChar(40)
+  provider   String   @db.VarChar(80)
+  enabled    Boolean
+  version    Int
+  actorId    String   @map("actor_id") @db.Uuid
+  reason     String   @db.VarChar(500)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([capability, provider, createdAt])
+  @@map("ai_capability_control_audit")
 }
 
 model AiQuotaBucket {

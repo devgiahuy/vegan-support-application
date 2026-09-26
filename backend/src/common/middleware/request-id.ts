@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
+import { aiCorrelationContext } from '../../modules/ai-governance/ai-governance.context.js';
 
 const safeRequestIdPattern = /^[a-zA-Z0-9._:-]{1,128}$/;
 
@@ -14,5 +15,5 @@ export function requestIdMiddleware(
       ? suppliedRequestId
       : randomUUID();
   response.setHeader('x-request-id', request.requestId);
-  next();
+  aiCorrelationContext.run(request.requestId, next);
 }

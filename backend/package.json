@@ -18,6 +18,8 @@
     "storage:cleanup": "tsx src/modules/storage/storage-maintenance.ts cleanup",
     "storage:reconcile": "tsx src/modules/storage/storage-maintenance.ts reconcile",
     "notifications:cleanup": "tsx src/modules/notifications/notification-maintenance.ts cleanup",
+    "ai-governance:cleanup": "tsx src/modules/ai-governance/ai-governance-maintenance.ts cleanup",
+    "ai-governance:acceptance": "tsx src/modules/ai-governance/ai-governance.acceptance.ts",
     "notifications:acceptance": "tsx src/modules/notifications/notification.acceptance.ts",
     "vision:acceptance": "tsx src/modules/ingredient-recognition/ingredient-recognition.acceptance.ts",
     "receipts:acceptance": "tsx src/modules/receipts/receipt.acceptance.ts",

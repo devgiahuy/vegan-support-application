@@ -23,6 +23,7 @@ import type { ResolvedMediaInput } from './media.service.js';
 import type { SubmissionDecision } from './content-publication.policy.js';
 import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 import { MODERATION_RULE_VERSION } from '../moderation/rule-moderation.service.js';
+import { aiCorrelationId } from '../ai-governance/ai-governance.context.js';
 
 const revisionInclude = {
   recipeDetail: true,
@@ -767,6 +768,7 @@ export class ContentRepository {
           data: { postRevisionId: revision.id, ...decision.moderationFlag },
         });
       }
+      if (decision.revisionStatus === PostRevisionStatus.PENDING_REVIEW) await transaction.aiGovernanceEvent.create({ data: { capability: 'MODERATION', provider: 'RULE_ENGINE', modelId: decision.moderationFlag?.model ?? null, templateVersion: MODERATION_RULE_VERSION, correlationId: aiCorrelationId(), status: decision.moderationFlag ? 'BLOCKED' : 'SUCCESS', safetyOutcome: decision.moderationFlag ? 'FLAGGED_FOR_REVIEW' : 'CLEAR', confidence: decision.moderationFlag?.riskScore ?? null, startedAt: new Date(), completedAt: new Date() } });
       const createdPost =
         decision.revisionStatus === PostRevisionStatus.PUBLISHED
           ? await transaction.post.update({
@@ -829,6 +831,7 @@ export class ContentRepository {
           data: { postRevisionId: revision.id, ...decision.moderationFlag },
         });
       }
+      if (decision.revisionStatus === PostRevisionStatus.PENDING_REVIEW) await transaction.aiGovernanceEvent.create({ data: { capability: 'MODERATION', provider: 'RULE_ENGINE', modelId: decision.moderationFlag?.model ?? null, templateVersion: MODERATION_RULE_VERSION, correlationId: aiCorrelationId(), status: decision.moderationFlag ? 'BLOCKED' : 'SUCCESS', safetyOutcome: decision.moderationFlag ? 'FLAGGED_FOR_REVIEW' : 'CLEAR', confidence: decision.moderationFlag?.riskScore ?? null, startedAt: new Date(), completedAt: new Date() } });
       if (decision.revisionStatus === PostRevisionStatus.PUBLISHED) {
         await transaction.post.update({
           where: { id: post.id },
@@ -904,6 +907,7 @@ export class ContentRepository {
           data: { postRevisionId: revisionId, ...decision.moderationFlag },
         });
       }
+      await transaction.aiGovernanceEvent.create({ data: { capability: 'MODERATION', provider: 'RULE_ENGINE', modelId: decision.moderationFlag?.model ?? null, templateVersion: MODERATION_RULE_VERSION, correlationId: aiCorrelationId(), status: decision.moderationFlag ? 'BLOCKED' : 'SUCCESS', safetyOutcome: decision.moderationFlag ? 'FLAGGED_FOR_REVIEW' : 'CLEAR', confidence: decision.moderationFlag?.riskScore ?? null, startedAt: new Date(), completedAt: new Date() } });
       const current = await transaction.post.findUniqueOrThrow({ where: { id: postId } });
       await transaction.post.update({
         where: { id: postId },

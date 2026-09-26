@@ -84,6 +84,10 @@ import { MealAnalysisRepository } from './modules/meal-analysis/meal-analysis.re
 import { createMealAnalysisRouter } from './modules/meal-analysis/meal-analysis.router.js';
 import { MealAnalysisService } from './modules/meal-analysis/meal-analysis.service.js';
 import { createAiProvider } from './modules/chat/ai-provider.js';
+import { AiGovernanceService } from './modules/ai-governance/ai-governance.service.js';
+import { AiGovernanceController } from './modules/ai-governance/ai-governance.controller.js';
+import { createAiGovernanceRouter } from './modules/ai-governance/ai-governance.router.js';
+import { governAiProvider, governReceiptProvider, governVisionProvider } from './modules/ai-governance/ai-governance.providers.js';
 import { ChatController } from './modules/chat/chat.controller.js';
 import { ChatIdentityService } from './modules/chat/chat.identity.js';
 import { ChatRepository } from './modules/chat/chat.repository.js';
@@ -208,7 +212,9 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   const mealProgramController = new MealProgramController(
     new MealProgramService(new MealProgramRepository(database.client), mealPlanService, config),
   );
-  const aiProvider = createAiProvider(config);
+  const baseAiProvider = createAiProvider(config);
+  const aiGovernance = new AiGovernanceService(database.client, config, baseAiProvider.chatModel);
+  const aiProvider = governAiProvider(baseAiProvider, aiGovernance, config);
   const chatController = new ChatController(
     new ChatService(new ChatRepository(database.client), aiProvider, recommendationService, config),
     new ChatIdentityService(config),
@@ -228,14 +234,14 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   const ingredientRecognitionController = new IngredientRecognitionController(
     new IngredientRecognitionService(
       new IngredientRecognitionRepository(database.client),
-      createIngredientVisionProvider(config),
+      governVisionProvider(createIngredientVisionProvider(config), aiGovernance),
       config,
     ),
   );
   const receiptController = new ReceiptController(
     new ReceiptService(
       new ReceiptRepository(database.client),
-      createReceiptExtractionProvider(config),
+      governReceiptProvider(createReceiptExtractionProvider(config), aiGovernance),
       config,
     ),
   );
@@ -306,6 +312,7 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/admin', createModerationAdminRouter(moderationController, authentication));
   app.use('/api/v1/admin', createStorageAdminRouter(storageController, authentication));
   app.use('/api/v1/admin', createAiReviewAdminRouter(aiReviewController, authentication));
+  app.use('/api/v1/admin', createAiGovernanceRouter(new AiGovernanceController(aiGovernance), authentication));
   app.use('/api/v1/admin', createRestaurantAdminRouter(restaurantController, authentication));
   app.use('/api/v1/review-queue', createReviewQueueRouter(moderationController, authentication));
   app.use('/api/v1/reports', createReportsRouter(moderationController, authentication));

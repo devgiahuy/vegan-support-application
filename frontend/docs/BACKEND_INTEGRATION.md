@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.12
+**Version:** 4.13
 
 **Cập nhật:** 27/09/2026
 
@@ -334,11 +334,13 @@ review proposal vẫn là `PLANNED` cho tới Phase 07; frontend chưa được 
 
 | Method | Path                          | Status    | Backend updated | FE integrated | Ghi chú                       |
 | ------ | ----------------------------- | --------- | --------------- | ------------- | ----------------------------- |
-| GET    | `/admin/ai/metrics`           | `PLANNED` | —               | No            | Date range + feature filters  |
-| GET    | `/admin/ai/requests`          | `PLANNED` | —               | No            | Redacted logs only            |
-| GET    | `/admin/ai/flags`             | `PLANNED` | —               | No            | Review status                 |
-| GET    | `/admin/ai/features`          | `PLANNED` | —               | No            | Current provider/model/toggle |
-| PATCH  | `/admin/ai/features/:feature` | `PLANNED` | —               | No            | Reason required               |
+| GET    | `/admin/ai/metrics`           | `READY` | 2026-09-27 | No | Admin; request/feedback/moderation/recognition/receipt/nutrition/verification aggregates; missing values nullable |
+| GET    | `/admin/ai/requests`          | `READY` | 2026-09-27 | No | Admin; redacted metadata only; page 1–10000, limit 1–100, filters and ≤90-day window |
+| GET    | `/admin/ai/flags`             | `READY` | 2026-09-27 | No | Admin; paginated flag risk/status without source content |
+| GET    | `/admin/ai/features`          | `READY` | 2026-09-27 | No | Admin; effective configured provider/model, version, fallback, no credentials |
+| GET    | `/admin/ai/features/audit`    | `READY` | 2026-09-27 | No | Admin; paginated toggle actor, allowlisted reason, version, time |
+| PATCH  | `/admin/ai/features/:feature` | `READY` | 2026-09-27 | No | Admin; body `provider`, `enabled`, `expectedVersion`, allowlisted reason; version conflict 409 |
+| GET    | `/admin/ai/health`            | `READY` | 2026-09-27 | No | Admin; 24-hour operational summary and retention days |
 | GET    | `/notifications`              | `READY` | 2026-09-27 | No | Owner only; `page` 1–10000, `limit` 1–100, `unreadOnly`; unexpired, newest first; `{data,meta}`; payload v1 allowlist |
 | GET    | `/notifications/unread-count` | `READY` | 2026-09-27 | No | Owner only; exact unexpired unread `count`, no polling server push |
 | PATCH  | `/notifications/:id/read`     | `READY` | 2026-09-27 | No | Owner only, idempotent; another owner's or expired ID returns `NOTIFICATION_NOT_FOUND` 404 |
@@ -472,7 +474,7 @@ Verification is not canonical food-data promotion. UI badge says “Contributor 
 
 ### 6.16 Phase 26 governance additions
 
-The existing Phase 26 governance paths in section 6.8 will expand to cover cooking-aware nutrition, fridge recognition, receipt extraction, and verification metrics. Required DTOs include provider/model/template version, status, latency, coverage/confidence aggregates, correction rates, redaction state, and feature fallback; raw health/image/receipt/prompt content must not be returned.
+Phase 26 governance paths in section 6.8 are READY in the backend; the frontend `/admin` scaffold remains fixture-only (`FE integrated = No`). Before live integration run `npm run sync:swagger`, then update endpoint constants and separate DTO/Model/Mapper/API/query layers with mapper tests. Render `redacted: true` logs without a raw-content expansion. Request filters are `capability`, `provider`, `status`, `from`, `to`, `page`, `limit`; range must be ordered and at most 90 days. Metrics include token/cost totals only where providers supply them; null cost or confidence means unavailable. Correction rate counts explicit user edits, including candidates later confirmed, and excludes automatic rejection. Flags are signals, never final violations. Toggle PATCH requires exact current `expectedVersion` (0 for no stored override) and an allowlisted reason (`PROVIDER_INCIDENT`, `QUALITY_INVESTIGATION`, `SAFETY_HOLD`, `PLANNED_MAINTENANCE`, `RESTORE_SERVICE`); refetch on `AI_CONFIG_CONFLICT`. Controls apply only to configured AI provider capabilities; environment disabled capability cannot be enabled by Admin. Chat uses static advisory, unavailable moderation suppresses generated chat and returns the same advisory, nutrition remains deterministic/partial, and vision/receipt jobs expose provider-unavailable failure with manual pantry entry. Human verification is not a toggle target. All endpoints are Admin-only and `Cache-Control: private, no-store`; no raw health/image/receipt/prompt content or credentials are returned. Daily `npm run ai-governance:cleanup` removes governance events and legacy chat request metadata after 90 days; control audit remains. See `backend/docs/AI_GOVERNANCE.md`.
 
 ### 6.17 Roadmap Phase 2 boundary
 
@@ -778,6 +780,9 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `AI_RATE_LIMITED`                             | Tôn trọng `retryAfterSeconds`; không tự đổi guest identity             |
 | `AI_FEATURE_DISABLED`                         | Hiển thị maintenance state; history vẫn xem được                       |
 | `AI_PROVIDER_UNAVAILABLE`                     | Retry/fallback message                                                 |
+| `AI_GOVERNANCE_WINDOW_INVALID`                | Reduce/reorder Admin date range to at most 90 days                     |
+| `AI_PROVIDER_NOT_CONFIGURED`                  | Refresh capability controls; only configured provider can be toggled  |
+| `AI_CONFIG_CONFLICT`                          | Refetch current control/version before submitting a new reason        |
 | `CHAT_IDEMPOTENCY_CONFLICT`                   | Chỉ tạo key mới cho user action mới; không đổi payload của key cũ      |
 | `CHAT_REQUEST_IN_PROGRESS`                    | Giữ stream hiện tại hoặc chờ rồi retry cùng idempotency key            |
 | `EXTERNAL_LOCATION_UNAVAILABLE`               | Dùng internal restaurant results                                       |
@@ -912,6 +917,7 @@ Thêm entry mới nhất ở trên cùng.
 
 | Date       | Version | Module         | Change                                                                                                                                | Breaking | FE action                                                                                            |
 | ---------- | ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- | :------: | ---------------------------------------------------------------------------------------------------- |
+| 2026-09-27 | 4.13 | AI Governance | Phase 26 READY: Admin redacted logs, aggregates, moderation flags, provider controls with version/reason audit, health and 90-day cleanup. Frontend Admin AI scaffold remains fixture-only. | No | Run `npm run sync:swagger`; replace fixture with endpoint constants, DTO/Model/Mapper/API/query and mapper tests. Handle `AI_CONFIG_CONFLICT`, unavailable metrics and fallbacks. |
 | 2026-09-27 | 4.12 | Notifications | Phase 25 READY: transactional allowlisted events, 90-day retention, owner-scoped list/count/read/read-all and dedupe; frontend bell remains fixture-only. | No | Run `npm run sync:swagger`; replace notification fixture with endpoint constants, DTO/Model/Mapper/API/query and dedicated unread-count hook; handle `NOTIFICATION_NOT_FOUND`. |
 | 2026-09-27 | 4.11 | Restaurants / Location | Phase 24 READY: internal reviewed places plus live fake/optional Google adapter, coordinates/bounds and consent, hard dietary filtering, dedupe, provider degradation, Member submissions, Admin review/edit, append only audit, no durable Google content cache. | No | Run `npm run sync:swagger`; migrate mock restaurant UI to endpoint constants + DTO/Model/Mapper/API/query with location consent, attribution, provider limits, and review states. |
 | 2026-09-27 | 4.10    | AI Provider    | Thêm `OPENAI_BASE_URL` để backend OpenAI adapter dùng endpoint OpenAI-compatible cấu hình qua environment; mặc định vẫn là endpoint chính thức và giữ nguyên SSE/fallback/quota contract. | No | Không cần đổi frontend; vận hành có thể cấu hình URL backend khi dùng gateway tương thích OpenAI. |
