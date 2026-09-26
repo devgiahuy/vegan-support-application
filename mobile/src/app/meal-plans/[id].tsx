@@ -1,11 +1,20 @@
 import * as React from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, Text, View } from 'react-native';
 import { Link, type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, RefreshCw, ShoppingCart, Shuffle, Trash2, TriangleAlert } from 'lucide-react-native';
+import { ArrowLeft, BarChart3, RefreshCw, ShoppingCart, Shuffle, Trash2, TriangleAlert } from 'lucide-react-native';
 
 import { MealType } from '@/common/enums';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
+import {
+  useAnalyzeMealPlanMutation,
+  useMealAnalysisQuery,
+} from '@/features/meal-analysis/queries/meal-analysis.queries';
+import type {
+  MealAnalysis,
+  MealAnalysisWarning,
+  MealWarningSeverity,
+} from '@/features/meal-analysis/types/meal-analysis.model';
 import {
   useDeleteMealPlanMutation,
   useMealPlanDetailQuery,
@@ -23,7 +32,7 @@ const MEAL_ORDER = [MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER];
 
 function getMealPlanErrorMessage(error: unknown): string {
   const code = getApiErrorCode(error);
-  if (code === 'MEAL_PLAN_VERSION_CONFLICT') {
+  if (code === 'MEAL_PLAN_VERSION_CONFLICT' || code === 'PLAN_VERSION_MISMATCH') {
     return 'Thực đơn đã có phiên bản mới. Hãy tải lại rồi thao tác lại.';
   }
   if (code === 'NO_ELIGIBLE_RECIPE') {
@@ -33,6 +42,20 @@ function getMealPlanErrorMessage(error: unknown): string {
     return 'Bạn cần đăng nhập để xem thực đơn.';
   }
   return getApiErrorMessage(error, 'Không thể hoàn tất thao tác. Vui lòng thử lại.');
+}
+
+function getMealAnalysisErrorMessage(error: unknown): string {
+  const code = getApiErrorCode(error);
+  if (code === 'MEAL_ANALYSIS_NOT_FOUND' || code === 'MEAL_PLAN_ANALYSIS_NOT_FOUND') {
+    return 'Chưa có kết quả phân tích cho thực đơn này.';
+  }
+  if (code === 'MEAL_ANALYSIS_STALE') {
+    return 'Phân tích đã cũ vì thực đơn vừa thay đổi. Hãy phân tích lại.';
+  }
+  if (code === 'PLAN_VERSION_MISMATCH' || code === 'MEAL_PLAN_VERSION_CONFLICT') {
+    return 'Thực đơn đã có phiên bản mới. Hãy tải lại rồi phân tích lại.';
+  }
+  return getApiErrorMessage(error, 'Không phân tích được thực đơn. Vui lòng thử lại.');
 }
 
 function groupSlots(plan: MealPlan): { date: string; label: string; slots: MealSlot[] }[] {
@@ -48,6 +71,7 @@ function groupSlots(plan: MealPlan): { date: string; label: string; slots: MealS
 
 function Warnings({ plan }: { plan: MealPlan }) {
   if (plan.warnings.length === 0) return null;
+
   return (
     <View className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4">
       <View className="flex-row items-center gap-2">
@@ -101,6 +125,141 @@ function SlotCard({
   );
 }
 
+function severityTone(severity: MealWarningSeverity): { border: string; bg: string; text: string } {
+  if (severity === 'HIGH') {
+    return { border: 'border-destructive/30', bg: 'bg-destructive/5', text: 'text-destructive' };
+  }
+  if (severity === 'CAUTION') {
+    return { border: 'border-amber-300', bg: 'bg-amber-50', text: 'text-amber-800' };
+  }
+  return { border: 'border-primary/20', bg: 'bg-primary/5', text: 'text-primary' };
+}
+
+function AnalysisWarningCard({ warning }: { warning: MealAnalysisWarning }) {
+  const tone = severityTone(warning.severity);
+  const measuredLine =
+    warning.measuredValue !== null && warning.limitValue !== null
+      ? `${warning.measuredValue}${warning.unit ?? ''} / giới hạn ${warning.limitValue}${warning.unit ?? ''}`
+      : null;
+
+  return (
+    <View className={cn('rounded-xl border p-3', tone.border, tone.bg)}>
+      <View className="flex-row items-start justify-between gap-3">
+        <View className="flex-1">
+          <Text className={cn('text-sm font-bold', tone.text)}>{warning.title}</Text>
+          <Text className="mt-1 text-xs text-muted-foreground">
+            {warning.severityLabel} · {warning.scopeLabel}
+          </Text>
+        </View>
+        {warning.confidence > 0 ? (
+          <Text className="text-xs font-semibold text-muted-foreground">{Math.round(warning.confidence * 100)}%</Text>
+        ) : null}
+      </View>
+      <Text className="mt-2 text-sm leading-relaxed text-foreground">{warning.explanation}</Text>
+      {measuredLine ? <Text className="mt-2 text-xs text-muted-foreground">{measuredLine}</Text> : null}
+      {warning.suggestedAdjustment ? (
+        <Text className="mt-2 text-xs font-medium text-foreground">{warning.suggestedAdjustment}</Text>
+      ) : null}
+      {warning.affectedItemNames.length > 0 ? (
+        <Text className="mt-2 text-xs text-muted-foreground">Món liên quan: {warning.affectedItemNames.join(', ')}</Text>
+      ) : null}
+    </View>
+  );
+}
+
+function AnalysisPanel({
+  analysis,
+  error,
+  isLoading,
+  isError,
+  isAnalyzing,
+  onAnalyze,
+}: {
+  analysis: MealAnalysis | undefined;
+  error: unknown;
+  isLoading: boolean;
+  isError: boolean;
+  isAnalyzing: boolean;
+  onAnalyze: () => void;
+}) {
+  const colors = useIconColors();
+
+  return (
+    <View className="mt-6 rounded-2xl border border-border bg-card p-4">
+      <View className="flex-row items-start justify-between gap-3">
+        <View className="flex-1">
+          <View className="flex-row items-center gap-2">
+            <BarChart3 size={16} color={colors.primary} />
+            <Text className="text-base font-bold text-foreground">Phân tích thực đơn</Text>
+          </View>
+          <Text className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            Kiểm tra khẩu phần, giới hạn dinh dưỡng và cách kết hợp món trong tuần.
+          </Text>
+        </View>
+      </View>
+
+      <View className="mt-4">
+        <PrimaryButton
+          label={isAnalyzing ? 'Đang phân tích...' : analysis ? 'Phân tích lại' : 'Phân tích thực đơn'}
+          loading={isAnalyzing}
+          icon={<BarChart3 size={16} color={colors.primaryForeground} />}
+          onPress={onAnalyze}
+        />
+      </View>
+
+      {isLoading ? (
+        <View className="mt-4 items-center rounded-xl border border-border p-4">
+          <ActivityIndicator color={colors.primary} />
+          <Text className="mt-2 text-sm text-muted-foreground">Đang tải kết quả phân tích...</Text>
+        </View>
+      ) : isError && !analysis ? (
+        <View className="mt-4 rounded-xl border border-dashed border-border p-4">
+          <Text className="text-sm font-semibold text-foreground">Chưa có phân tích hiện hành</Text>
+          <Text className="mt-1 text-sm leading-relaxed text-muted-foreground">{getMealAnalysisErrorMessage(error)}</Text>
+        </View>
+      ) : analysis ? (
+        <View className="mt-4 gap-3">
+          <View className="flex-row gap-2">
+            <View className="flex-1 rounded-xl bg-muted/50 p-3">
+              <Text className="text-xs text-muted-foreground">Cảnh báo</Text>
+              <Text className="mt-1 text-lg font-bold text-foreground">{analysis.summary.warningCount}</Text>
+            </View>
+            <View className="flex-1 rounded-xl bg-muted/50 p-3">
+              <Text className="text-xs text-muted-foreground">Nguy cơ cao</Text>
+              <Text className="mt-1 text-lg font-bold text-destructive">{analysis.summary.highCount}</Text>
+            </View>
+            <View className="flex-1 rounded-xl bg-muted/50 p-3">
+              <Text className="text-xs text-muted-foreground">Độ tin cậy</Text>
+              <Text className="mt-1 text-lg font-bold text-primary">{analysis.confidencePercent}%</Text>
+            </View>
+          </View>
+
+          <Text className="text-xs text-muted-foreground">
+            Cập nhật: {analysis.formattedCreatedAt}
+            {analysis.isStale ? ' · cần phân tích lại' : ''}
+          </Text>
+
+          {analysis.incompleteData.length > 0 ? (
+            <View className="rounded-xl border border-amber-300 bg-amber-50 p-3">
+              <Text className="text-sm font-semibold text-amber-800">Dữ liệu chưa đầy đủ</Text>
+              <Text className="mt-1 text-xs leading-relaxed text-amber-800">{analysis.incompleteData.join(', ')}</Text>
+            </View>
+          ) : null}
+
+          {analysis.warnings.length === 0 ? (
+            <View className="rounded-xl border border-primary/20 bg-primary/5 p-3">
+              <Text className="text-sm font-semibold text-primary">Không có cảnh báo đáng chú ý</Text>
+              <Text className="mt-1 text-xs leading-relaxed text-muted-foreground">{analysis.disclaimer}</Text>
+            </View>
+          ) : (
+            analysis.warnings.map((warning) => <AnalysisWarningCard key={warning.id} warning={warning} />)
+          )}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 export default function MealPlanDetailScreen() {
   const router = useRouter();
   const colors = useIconColors();
@@ -109,8 +268,15 @@ export default function MealPlanDetailScreen() {
   const id = typeof params.id === 'string' ? params.id : '';
 
   const { data: plan, error, isLoading, isError, refetch, isRefetching } = useMealPlanDetailQuery(id, isAuthenticated);
+  const {
+    data: analysis,
+    error: analysisError,
+    isLoading: isAnalysisLoading,
+    isError: isAnalysisError,
+  } = useMealAnalysisQuery(id, isAuthenticated && id.length > 0);
   const swapMutation = useSwapMealItemMutation();
   const deleteMutation = useDeleteMealPlanMutation();
+  const analyzeMutation = useAnalyzeMealPlanMutation(id, plan?.lockVersion ?? 0);
 
   const swapSlot = async (slot: MealSlot) => {
     if (!plan) return;
@@ -130,10 +296,10 @@ export default function MealPlanDetailScreen() {
     try {
       const result = await refetch();
       if (result.error) {
-        Alert.alert('KhÃ´ng táº£i láº¡i Ä‘Æ°á»£c thá»±c Ä‘Æ¡n', getMealPlanErrorMessage(result.error));
+        Alert.alert('Không tải lại được thực đơn', getMealPlanErrorMessage(result.error));
       }
     } catch (refreshError) {
-      Alert.alert('KhÃ´ng táº£i láº¡i Ä‘Æ°á»£c thá»±c Ä‘Æ¡n', getMealPlanErrorMessage(refreshError));
+      Alert.alert('Không tải lại được thực đơn', getMealPlanErrorMessage(refreshError));
     }
   };
 
@@ -143,13 +309,13 @@ export default function MealPlanDetailScreen() {
       await deleteMutation.mutateAsync({ id: plan.id, expectedVersion: plan.lockVersion });
       router.replace('/meal-plans' as Href);
     } catch (mutationError) {
-      Alert.alert('KhÃ´ng xÃ³a Ä‘Æ°á»£c thá»±c Ä‘Æ¡n', getMealPlanErrorMessage(mutationError));
+      Alert.alert('Không xóa được thực đơn', getMealPlanErrorMessage(mutationError));
     }
   };
 
   const confirmDelete = () => {
     if (!plan) return;
-    const deleteMessage = `Tuan ${plan.formattedWeekRange} se duoc xoa khoi danh sach da luu.`;
+    const deleteMessage = `Tuần ${plan.formattedWeekRange} sẽ được xóa khỏi danh sách đã lưu.`;
 
     if (Platform.OS === 'web') {
       const confirm = (globalThis as unknown as { confirm?: (message?: string) => boolean }).confirm;
@@ -159,14 +325,23 @@ export default function MealPlanDetailScreen() {
       return;
     }
 
-    Alert.alert('Xoa thuc don?', deleteMessage, [
-      { text: 'Huy', style: 'cancel' },
+    Alert.alert('Xóa thực đơn?', deleteMessage, [
+      { text: 'Hủy', style: 'cancel' },
       {
-        text: 'Xoa',
+        text: 'Xóa',
         style: 'destructive',
         onPress: () => void deletePlan(),
       },
     ]);
+  };
+
+  const analyzePlan = async () => {
+    if (!plan) return;
+    try {
+      await analyzeMutation.mutateAsync();
+    } catch (mutationError) {
+      Alert.alert('Không phân tích được thực đơn', getMealAnalysisErrorMessage(mutationError));
+    }
   };
 
   if (!isAuthenticated) {
@@ -229,7 +404,7 @@ export default function MealPlanDetailScreen() {
   }
 
   const days = groupSlots(plan);
-  const busy = swapMutation.isPending || deleteMutation.isPending;
+  const busy = swapMutation.isPending || deleteMutation.isPending || analyzeMutation.isPending;
 
   return (
     <SiteScreen>
@@ -277,6 +452,15 @@ export default function MealPlanDetailScreen() {
         </View>
 
         <Warnings plan={plan} />
+
+        <AnalysisPanel
+          analysis={analysis}
+          error={analysisError}
+          isLoading={isAnalysisLoading}
+          isError={isAnalysisError}
+          isAnalyzing={analyzeMutation.isPending}
+          onAnalyze={() => void analyzePlan()}
+        />
 
         <View className="mt-6 gap-4">
           {days.map((day) => (
