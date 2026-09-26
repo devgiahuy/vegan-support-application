@@ -1,8 +1,8 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.7
+**Version:** 4.9
 
-**Cập nhật:** 23/09/2026
+**Cập nhật:** 24/09/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
@@ -417,27 +417,38 @@ MVP không có payment/quota purchase, DMCA workflow, audio/frame copyright dete
 
 | Method | Path | Status | Backend updated | FE integrated | Ghi chú |
 |---|---|---|---|---|---|
-| GET/POST | `/pantry/items` | `PLANNED` | — | No | Confirmed owner inventory |
-| PATCH/DELETE | `/pantry/items/:id` | `PLANNED` | — | No | Optimistic version; preserve adjustment history |
-| POST | `/pantry/merge` | `PLANNED` | — | No | Preview/confirm duplicate merge |
-| POST | `/ingredient-recognition/jobs` | `PLANNED` | — | No | Multiple images; asynchronous |
-| GET | `/ingredient-recognition/jobs/:id` | `PLANNED` | — | No | Candidates/confidence/evidence/status |
-| PATCH | `/ingredient-recognition/jobs/:id/candidates/:candidateId` | `PLANNED` | — | No | User correction/rejection |
-| POST | `/ingredient-recognition/jobs/:id/confirm` | `PLANNED` | — | No | Only this boundary updates pantry |
+| GET/POST | `/pantry/items` | `READY` | 2026-09-23 | No | Owner list/filter and confirmed manual create; canonical or unmatched identity; UI DTO only |
+| GET/PATCH/DELETE | `/pantry/items/:id` | `READY` | 2026-09-23 | No | Detail, freshness/expiry observations, optimistic version, soft delete/history |
+| GET/POST | `/pantry/items/:id/adjustments` | `READY` | 2026-09-23 | No | Paginated immutable ledger; idempotent consume/restore/adjust; negative balance blocked |
+| GET | `/pantry/items/expiring-soon` | `READY` | 2026-09-23 | No | Inclusive `asOf..asOf+days` date-only boundary; confirmed positive inventory only |
+| POST | `/pantry/merge-preview` | `READY` | 2026-09-23 | No | Duplicate identity/unit compatibility and projected balance, no mutation |
+| POST | `/pantry/merge` | `READY` | 2026-09-23 | No | Idempotent atomic merge with expected version per item; sources soft-deleted |
+| POST | `/ingredient-recognition/jobs` | `READY` | 2026-09-24 | No | Attach 1–6 owned committed `FRIDGE_IMAGE` assets; asynchronous fake/local verification provider |
+| GET | `/ingredient-recognition/jobs/:id` | `READY` | 2026-09-24 | No | Owner-only progress, ordered images, deduplicated candidates, evidence, uncertainty, cautious freshness copy |
+| PATCH | `/ingredient-recognition/jobs/:id/candidates/:candidateId` | `READY` | 2026-09-24 | No | Optimistic-version quantity/name/canonical correction or candidate rejection; no pantry mutation |
+| POST | `/ingredient-recognition/jobs/:id/confirm` | `READY` | 2026-09-24 | No | Idempotent transactional explicit pantry diff; only this boundary updates pantry |
+| POST | `/ingredient-recognition/jobs/:id/cancel` | `READY` | 2026-09-24 | No | Idempotent cancel before confirmation; committed images remain storage-accounted |
+| POST | `/ingredient-recognition/jobs/:id/retry` | `READY` | 2026-09-24 | No | Idempotent retry for `FAILED`/`PARTIAL_FAILED`; candidates are regenerated from all images |
 
-Freshness is an uncertain observation. UI must not say the system has certified food safety.
+Phase 20 returns explicit UI-facing item/adjustment DTOs, never raw Prisma rows or owner/internal foreign keys. Quantity retains the entered unit and exposes reviewed normalized grams when supported; unknown conversion remains explicit. `MANUAL`, `FRIDGE_RECOGNITION`, and `RECEIPT` are stable source values, but the Phase 20 public create route creates confirmed `MANUAL` items only. Freshness and expiry are user observations. UI must not say the system has certified food safety.
+
+Phase 21 requires clients to reserve and commit every image through the Phase 15 upload flow using `kind: FRIDGE_IMAGE`, then pass committed asset IDs in display order. Defaults are 6 images/job, 10 MB/image, and JPEG/PNG/WebP/AVIF. Job/candidate responses expose ordered image URLs, progress, canonical suggestions, amount/unit, confidence, uncertainty, and evidence references, but not owner IDs, raw provider output, provider/model identifiers, reservation IDs, or persistence metadata. Recognition, correction, retry, and cancel never mutate pantry. Confirmation returns only the explicit `CREATED`/`UPDATED` pantry diff and is the sole pantry mutation boundary. Committed images remain owned storage assets and continue counting against Phase 15 quota; referenced assets cannot be deleted while recognition audit records use them.
 
 ### 6.14 Receipt analysis và shopping gaps — Phase 22
 
 | Method | Path | Status | Backend updated | FE integrated | Ghi chú |
 |---|---|---|---|---|---|
-| POST | `/receipt-jobs` | `PLANNED` | — | No | Upload/attach image and start extraction |
-| GET | `/receipt-jobs/:id` | `PLANNED` | — | No | Candidate lines, matches, confidence, status |
-| PATCH | `/receipt-jobs/:id/candidates/:candidateId` | `PLANNED` | — | No | Correct/reject candidate |
-| POST | `/receipt-jobs/:id/confirm` | `PLANNED` | — | No | Idempotent confirmed pantry diff |
-| POST | `/shopping-lists/preview` | `PLANNED` | — | No | Required/available/missing + assumptions/source meals |
+| POST | `/receipt-jobs` | `READY` | 2026-09-24 | No | Start async extraction from ordered, owned, committed receipt-image assets; idempotent create |
+| GET | `/receipt-jobs/:id` | `READY` | 2026-09-24 | No | Owner-only status, receipt metadata, image results, editable candidate lines, confidence/uncertainty |
+| PATCH | `/receipt-jobs/:id/candidates/:candidateId` | `READY` | 2026-09-24 | No | Optimistic-version canonical/name/quantity/price correction or rejection; no pantry mutation |
+| POST | `/receipt-jobs/:id/confirm` | `READY` | 2026-09-24 | No | Idempotent transactional confirmation; selected candidates only; returns explicit pantry diff |
+| POST | `/receipt-jobs/:id/cancel` | `READY` | 2026-09-24 | No | Idempotent cancel before confirmation; committed images remain quota-accounted |
+| POST | `/receipt-jobs/:id/retry` | `READY` | 2026-09-24 | No | Idempotent retry for failed/partially failed extraction using all attached images |
+| POST | `/shopping-lists/preview` | `READY` | 2026-09-24 | No | Selected published recipes/private custom meals + servings; explainable confirmed-pantry gaps |
 
-Receipt extraction never mutates pantry before confirmation. Shopping gap uses confirmed pantry and selected meal servings.
+Reserve and commit each receipt image through Phase 15 with `kind: RECEIPT_IMAGE` before creating a job. Defaults are 4 images/job, 10 MB/image, and JPEG/PNG/WebP/AVIF. Extraction, candidate correction/rejection, retry, and cancel never mutate Pantry. Only explicit confirmation changes Pantry; it returns `CREATED`/`UPDATED` item summaries and is safe to replay with the same idempotency key.
+
+Shopping preview accepts selected recipe/custom-meal servings, scales ingredient requirements, applies reviewed mass/household conversions, and compares only current positive `CONFIRMED` Pantry quantities. Each resolved item exposes grams for `required`, `available`, `missing`, and `surplus`, plus assumptions, source meals, and confidence. Unsupported conversions and unresolved ingredients remain explicit in `unresolvedItems`; receipt candidates are never counted until confirmed into Pantry. Responses omit owner/internal foreign keys, raw provider output, provider/model identifiers, reservations, and persistence metadata.
 
 ### 6.15 AI artifacts và unified verification — Phase 23
 
@@ -787,11 +798,37 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `MEAL_PROGRAM_REGENERATION_LIMIT`             | Stop regenerating that week or select an existing alternative |
 | `MEAL_PROGRAM_NOT_CONFIRMABLE`                | Resolve failed/missing weeks and select every week before confirmation |
 | `MEAL_PROGRAM_CONFIRMED_IMMUTABLE`            | Keep confirmed snapshots; create a new draft program for content changes |
-| `PANTRY_VERSION_CONFLICT`                     | Refetch inventory và cho user áp dụng lại adjustment (planned Phase 20) |
-| `RECOGNITION_NEEDS_CONFIRMATION`              | Mở candidate editor; không cập nhật pantry tự động (planned Phase 21)   |
-| `RECOGNITION_PROVIDER_UNAVAILABLE`            | Giữ ảnh/job để retry hoặc cho nhập pantry thủ công (planned Phase 21)   |
-| `RECEIPT_NEEDS_CONFIRMATION`                  | Mở receipt candidate editor; không cập nhật pantry tự động (planned Phase 22) |
-| `SHOPPING_UNIT_UNRESOLVED`                    | Hiển thị dòng riêng và conversion assumption/unknown (planned Phase 22) |
+| `PANTRY_ITEM_NOT_FOUND`                       | Close stale detail/editor; do not reveal whether another owner has that ID |
+| `PANTRY_INGREDIENT_INVALID`                   | Refresh canonical ingredient choices or use unmatched text |
+| `PANTRY_UNMATCHED_TEXT_INVALID`               | Ask for an unmatched label containing letters or numbers |
+| `PANTRY_DATE_INVALID`                         | Correct opened/expiry dates so they are not before purchase date |
+| `PANTRY_VERSION_CONFLICT`                     | Refetch READY inventory and let the user apply the change again |
+| `PANTRY_IDEMPOTENCY_CONFLICT`                 | Reuse a key only for the identical create/adjust/merge payload |
+| `PANTRY_NEGATIVE_QUANTITY`                    | Keep the current balance and ask for a smaller consumption/negative adjustment |
+| `PANTRY_UNIT_CONVERSION_UNAVAILABLE`          | Keep original unit visible; request a supported unit or separate inventory line |
+| `PANTRY_MERGE_INCOMPATIBLE`                   | Render preview warnings; do not submit merge until identity/unit issues are resolved |
+| `PANTRY_MERGE_CONFLICT`                       | Refetch all duplicate candidates because one changed or was removed |
+| `RECOGNITION_IMAGE_LIMIT_EXCEEDED`            | Reduce the ordered image list to the configured limit (default 6) |
+| `RECOGNITION_IMAGE_INVALID`                   | Re-upload/reserve as an owned committed `FRIDGE_IMAGE` with supported type/size |
+| `RECOGNITION_IDEMPOTENCY_CONFLICT`            | Reuse the create key only with the identical ordered asset list |
+| `RECOGNITION_JOB_NOT_FOUND`                   | Close stale job UI; do not reveal another owner's job |
+| `RECOGNITION_INGREDIENT_INVALID`              | Refresh active canonical ingredient options or retain an unmatched label |
+| `RECOGNITION_CANDIDATE_INVALID`               | Ask for a candidate name containing letters or numbers |
+| `RECOGNITION_QUANTITY_INCOMPLETE`             | Provide both quantity and unit, or clear both |
+| `RECOGNITION_VERSION_CONFLICT`                | Refetch the job before editing or confirming candidates |
+| `RECOGNITION_STATE_CONFLICT`                  | Refetch status; do not confirm cancelled, processing, or differently confirmed jobs |
+| `RECOGNITION_PROVIDER_UNAVAILABLE`            | Keep the committed images/job for retry or offer manual pantry entry |
+| `RECEIPT_IMAGE_LIMIT_EXCEEDED`                | Reduce the ordered receipt image list to the configured limit (default 4) |
+| `RECEIPT_IMAGE_INVALID`                       | Re-upload/reserve as an owned committed `RECEIPT_IMAGE` with supported type/size |
+| `RECEIPT_IDEMPOTENCY_CONFLICT`                | Reuse a create key only for the identical ordered asset list |
+| `RECEIPT_JOB_NOT_FOUND`                       | Close stale job UI; do not reveal another owner's job |
+| `RECEIPT_INGREDIENT_INVALID`                  | Refresh active canonical ingredient choices or retain an unmatched receipt label |
+| `RECEIPT_CANDIDATE_INVALID`                   | Ask for a receipt line/name containing letters or numbers |
+| `RECEIPT_QUANTITY_INCOMPLETE`                 | Provide both quantity and unit, or clear both |
+| `RECEIPT_VERSION_CONFLICT`                    | Refetch the job before editing or confirming candidates |
+| `RECEIPT_STATE_CONFLICT`                      | Refetch status; do not confirm cancelled, processing, or differently confirmed jobs |
+| `RECEIPT_PROVIDER_UNAVAILABLE`                | Keep the committed images/job for retry or offer manual Pantry entry |
+| `SHOPPING_MEAL_NOT_FOUND`                     | Remove inaccessible/stale recipe or custom-meal selections and recalculate |
 | `AI_ARTIFACT_VERSION_CONFLICT`                | Refetch artifact/version trước khi share/verify (planned Phase 23)      |
 | `SELF_VERIFICATION_FORBIDDEN`                 | Không cho Contributor tự verify artifact của mình (planned Phase 23)   |
 
@@ -856,11 +893,9 @@ Thêm entry mới nhất ở trên cùng.
 
 | Date       | Version | Module         | Change                                                                                                                                | Breaking | FE action                                                                                            |
 | ---------- | ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- | :------: | ---------------------------------------------------------------------------------------------------- |
-| 2026-09-23 | 4.7     | Custom Meals (FE) | Scaffold hoàn chỉnh 7 tầng module features/custom-meal theo spec 009 (DTO, Model, Mapper với 11 unit tests, API client, queries, UI components, các trang /custom-meals*, dialog chặn xóa an toàn khi đang dùng trong thực đơn tuần); endpoint giữ PLANNED | No | Sẵn sàng kết nối live khi BE Phase 17 READY |
-| 2026-09-23 | 4.6     | Food Data (FE) | Tích hợp hoàn tất 11 endpoints Phase 12 Food Data Knowledge Base: DTO/Model/Mapper (13 unit tests pass), NutritionFactsPanel (tuân thủ luật Missing is NOT zero, tính %DV tự động theo RDA/AI, cảnh báo vượt ngưỡng an toàn UL), SourceProvenanceBadge minh bạch nguồn và giấy phép bản quyền, ReferenceIntakeExplorer tra cứu nhu cầu khuyến nghị, CookingMethodCards tra cứu hệ số hao hụt và bảo tồn vi chất nhạy cảm, FoodInteractionTable tra cứu kiêng kỵ theo 3 phạm vi (Cùng món, Cùng bữa, Cùng ngày), AdminRecordsManager quản trị bản ghi chuẩn đa dạng theo kind, và AdminImportManager nạp dữ liệu chuẩn 2 bước Preview/Commit có tính chất idempotent replay an toàn. | No | Đã tích hợp đầy đủ 11 endpoints với `FE integrated = Yes (2026-09-23)`; No Orphan Pages (/categories, recipe detail, admin dashboard). |
-| 2026-09-23 | 4.5     | Storage Quota  | Tích hợp hoàn tất Phase 15 Storage Quota & Upload Accounting: DTO/Model/Mapper (12 unit tests pass), upload reservation 3 bước với automatic rollback khi abort/error, migrate 3 uploaders (post image, post video, avatar), widget dung lượng trực quan 3 màu, xóa media asset giải phóng bộ nhớ, và phân hệ Quản trị Admin (/admin/storage) gồm tài khoản, lịch sử điều chỉnh và cấu hình chính sách. | No | Đã tích hợp đầy đủ 10 endpoints với `FE integrated = Yes (2026-09-23)`; pass build và 248/248 tests. |
-| 2026-09-23 | 4.1     | Sync Contract  | Đồng bộ trạng thái `READY` và `FE integrated = Yes` cho Content (Phase 04, 7 ops), Community (Phase 06, 11 ops) và Review Queue (Phase 08, 3 ops) sau khi audit xác nhận Backend Phases 00–11 đã hoàn thành và OpenAPI schema chứa đầy đủ 71 endpoints. `features/community` đã chạy ở chế độ live (`USE_FIXTURES = false`). |    No    | Đã hoàn thành; các tính năng đã nối live và pass 236/236 tests.                                     |
-| 2026-09-23 | 4.5     | Video Review (FE) | Tích hợp hoàn thiện Phase 16: Video Review Parity & Content Submission Lifecycle. Tác giả nộp bản nháp (`POST /posts/:id/submit`), xem lịch sử duyệt (`GET /posts/:id/review-history`). Admin duyệt hàng đợi tập trung (`GET /admin/content-review`), thẩm định bản nháp video player/công thức/cờ AI (`GET /admin/content-review/:id`) và ra quyết định (`PATCH /admin/content-review/:id`). Deprecated các route cũ `/review-queue/posts*`. | Yes | FE hoàn tất DTO, Model, Mapper, 11 unit tests, queries, ReviewStatusBanner, ReviewHistoryDialog, ReviewDetailModal, video preview player, tích hợp articles/recipes/videos edit screens và profile posts tab |
+| 2026-09-24 | 4.9     | Receipts / Shopping | Phase 22 READY: quota-accounted receipt images, validated fake/local async extraction, editable/rejectable lines, partial retry/cancel, explicit idempotent confirmation as the only pantry mutation boundary, and explainable selected-meal shopping gaps based on reviewed conversions plus confirmed Pantry. | No | Run `npm run sync:swagger`; add endpoint constants and receipt/shopping DTO/Model/Mapper/API/query layers; upload with Phase 15 `RECEIPT_IMAGE`; render unresolved conversions separately. |
+| 2026-09-24 | 4.8     | Fridge Vision  | Phase 21 READY: quota-accounted owned multi-image attachments, async provider abstraction with validated fake/local output, cross-image dedupe/evidence, canonical suggestions, editable quantity/freshness candidates, partial failure/retry/cancel, and idempotent transactional confirmation as the only pantry mutation boundary. | No | Run `npm run sync:swagger`; add endpoint constants and ingredient-vision DTO/Model/Mapper/API/query layers; use Phase 15 `FRIDGE_IMAGE` reservation/commit first and render confidence/uncertainty without food-safety claims. |
+| 2026-09-23 | 4.7     | Pantry         | Phase 20 READY: owner CRUD/filter, explicit UI DTOs, reviewed mass/household conversion with unknown status, immutable consume/restore/adjust ledger, negative prevention, soft-delete history, duplicate preview/atomic merge, inclusive expiry query, idempotency, and optimistic concurrency. | No | Run `npm run sync:swagger`; add endpoint constants plus Pantry DTO/Model/Mapper/API/query layers and handle conversion/expiry/version/idempotency states. |
 | 2026-09-23 | 4.6     | Meal Programs  | Phase 19 READY: owner-scoped 2–12 week programs, bounded draft alternatives, stable weekly snapshots, partial/retry generation, repeated-pattern and cumulative/average nutrition analysis, version/idempotency checks, later-week invalidation, reanalysis, and immutable confirmed content. | No | Run `npm run sync:swagger`; add DTO/Model/Mapper/query for program list/detail/actions and render partial, stale, warning, and confirmation states. |
 | 2026-09-23 | 4.5     | Meal Analysis  | Phase 18 READY: versioned analysis for recipe/custom-meal portions, cooking-aware daily nutrients, ingredient guidelines and SAME_DISH/SAME_MEAL/SAME_DAY interactions; duplicate suppression, provenance/applicability/confidence/incomplete notes, stale fingerprints, plus hard-safe manual-add and refreshed generate/swap responses. | No | Run `npm run sync:swagger`; add DTO/Model/Mapper/query for analysis and render backend warning fields without promoting advisory evidence to a frontend prohibition. |
 | 2026-09-21 | 4.4     | Video Review   | Phase 16 READY: mọi content dùng draft → explicit submit → Admin approve/reject-with-reason; approved edit giữ revision cũ public; uploaded video bắt buộc Phase 15 committed owned asset, external YouTube không tính quota; moderation chỉ ghi signal; thêm author history và Admin queue/detail/decision. Legacy `/review-queue/posts*` chuyển `DEPRECATED` và Admin-only. | Yes | Run `npm run sync:swagger`; migrate create/edit UI khỏi role-based auto-publish, thêm submit/status/history và dùng `/admin/content-review*`. |

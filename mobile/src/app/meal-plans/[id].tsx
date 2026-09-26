@@ -234,12 +234,7 @@ export default function MealPlanDetailScreen() {
   return (
     <SiteScreen>
       <View className="px-5 pt-4">
-        <View className="flex-row items-center justify-between">
-          <Link href={'/meal-plans' as Href} asChild>
-            <Pressable className="h-10 w-10 items-center justify-center rounded-full bg-muted">
-              <ArrowLeft size={17} color={colors.foreground} />
-            </Pressable>
-          </Link>
+        <View className="flex-row items-center justify-end">
           <View className="flex-row gap-2">
             <Pressable
               disabled={busy || isRefetching}

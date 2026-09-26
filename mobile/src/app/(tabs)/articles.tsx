@@ -1,5 +1,6 @@
 import * as React from 'react';
-import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
+import { Link, type Href, useLocalSearchParams } from 'expo-router';
 import { BadgeCheck, BookOpen, Plus, Search } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
@@ -21,10 +22,6 @@ const DIET_SCHOOL_FILTERS: { value: DietSchool; label: string }[] = [
   { value: 'THUAN_CHAY', label: 'Thuần chay (Vegan)' },
 ];
 
-function notifyComingSoon(feature: string) {
-  Alert.alert('Sắp ra mắt', `${feature} đang được VeggieConnect hoàn thiện, quay lại sau nhé!`);
-}
-
 /**
  * "Cẩm nang" — đồng bộ bố cục/nội dung `frontend/src/app/(site)/articles/page.tsx`
  * (hero banner, tìm kiếm, pill trường phái/chủ đề, grid bài viết, callout kiểm chứng).
@@ -33,8 +30,9 @@ function notifyComingSoon(feature: string) {
  */
 export default function ArticlesScreen() {
   const colors = useIconColors();
+  const params = useLocalSearchParams<{ category?: string }>();
   const [query, setQuery] = React.useState('');
-  const [categoryId, setCategoryId] = React.useState<string | null>(null);
+  const [categoryId, setCategoryId] = React.useState<string | null>(params.category ?? null);
   const [dietSchool, setDietSchool] = React.useState<DietSchool>('ALL');
 
   const {
@@ -80,29 +78,35 @@ export default function ArticlesScreen() {
             thanh ngọt và nét đẹp văn hoá ăn chay tại Việt Nam.
           </Text>
           <View className="mt-4 gap-2.5">
-            <PrimaryButton
-              label="Viết bài chia sẻ mới"
-              icon={<Plus size={16} color={colors.primaryForeground} />}
-              onPress={() => notifyComingSoon('Viết bài chia sẻ')}
-            />
-            <PrimaryButton
-              label="Bài viết của tôi"
-              variant="outline"
-              onPress={() => notifyComingSoon('Hồ sơ bài viết')}
-            />
+            <Link href={'/articles/new' as Href} asChild>
+              <PrimaryButton
+                label="Viết bài chia sẻ mới"
+                icon={<Plus size={16} color={colors.primaryForeground} />}
+              />
+            </Link>
+            <Link href={'/my-content' as Href} asChild>
+              <PrimaryButton label="Bài viết của tôi" variant="outline" />
+            </Link>
           </View>
         </View>
 
         {/* Search */}
-        <View className="flex-row items-center gap-2 rounded-2xl border border-input bg-card px-3.5">
-          <Search size={16} color={colors.mutedForeground} />
-          <TextInput
-            value={query}
-            onChangeText={setQuery}
-            placeholder="Tìm bài viết, vitamin B12, mẹo hầm nấm..."
-            placeholderTextColor={colors.mutedForeground}
-            className="h-11 flex-1 text-sm text-foreground"
-          />
+        <View className="flex-row items-center gap-2">
+          <View className="flex-1 flex-row items-center gap-2 rounded-2xl border border-input bg-card px-3.5">
+            <Search size={16} color={colors.mutedForeground} />
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Tìm bài viết, vitamin B12, mẹo hầm nấm..."
+              placeholderTextColor={colors.mutedForeground}
+              className="h-11 flex-1 text-sm text-foreground"
+            />
+          </View>
+          <Link href={'/categories' as Href} asChild>
+            <Pressable className="h-11 items-center justify-center rounded-2xl bg-muted px-3.5">
+              <Text className="text-xs font-semibold text-foreground">Danh mục</Text>
+            </Pressable>
+          </Link>
         </View>
 
         {/* Trường phái */}
@@ -169,7 +173,13 @@ export default function ArticlesScreen() {
               ) : null}
             </View>
           ) : (
-            articles.map((post) => <PostCard key={post.id} post={post} />)
+            articles.map((post) => (
+              <Link key={post.id} href={`/articles/${post.id}` as Href} asChild>
+                <Pressable>
+                  <PostCard post={post} />
+                </Pressable>
+              </Link>
+            ))
           )}
         </View>
 
@@ -188,11 +198,9 @@ export default function ArticlesScreen() {
             </View>
           </View>
           <View className="mt-4">
-            <PrimaryButton
-              label="Tham gia đóng góp bài viết"
-              variant="outline"
-              onPress={() => notifyComingSoon('Đóng góp bài viết')}
-            />
+            <Link href="/contributor-status" asChild>
+              <PrimaryButton label="Tham gia đóng góp bài viết" variant="outline" />
+            </Link>
           </View>
         </View>
       </View>

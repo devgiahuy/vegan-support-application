@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { PlayCircle, Plus, Search, Video } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
@@ -16,9 +16,10 @@ import { useAuthStore } from '@/store/useAuthStore';
 export default function VideosScreen() {
   const colors = useIconColors();
   const router = useRouter();
+  const params = useLocalSearchParams<{ category?: string }>();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [query, setQuery] = React.useState('');
-  const [categoryId, setCategoryId] = React.useState<string | null>(null);
+  const [categoryId, setCategoryId] = React.useState<string | null>(params.category ?? null);
 
   const {
     data: categoryTree = [],
