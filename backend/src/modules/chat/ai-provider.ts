@@ -96,6 +96,7 @@ export class OpenAiProvider implements AiProvider {
     this.chatModel = config.ai.chatModel;
     this.client = new OpenAI({
       apiKey: config.ai.openAiApiKey,
+      baseURL: config.ai.openAiBaseUrl,
       timeout: config.ai.timeoutMs,
       maxRetries: 1,
     });

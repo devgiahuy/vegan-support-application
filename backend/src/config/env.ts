@@ -73,6 +73,10 @@ const environmentSchema = z
       (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
       z.string().trim().min(1).optional(),
     ),
+    OPENAI_BASE_URL: z.preprocess(
+      (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+      z.string().trim().url().optional(),
+    ),
     AI_MODEL_CHAT: z.string().trim().min(1).max(100).default('gpt-5.6-terra'),
     AI_MODEL_MODERATION: z.string().trim().min(1).max(100).default('omni-moderation-latest'),
     AI_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(120_000).default(30_000),
@@ -138,6 +142,7 @@ const environmentSchema = z
       chatEnabled: environment.AI_CHAT_ENABLED,
       provider: environment.AI_PROVIDER,
       openAiApiKey: environment.OPENAI_API_KEY,
+      openAiBaseUrl: environment.OPENAI_BASE_URL,
       chatModel: environment.AI_MODEL_CHAT,
       moderationModel: environment.AI_MODEL_MODERATION,
       timeoutMs: environment.AI_TIMEOUT_MS,

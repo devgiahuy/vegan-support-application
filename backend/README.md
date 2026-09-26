@@ -57,7 +57,9 @@ PostgreSQL `pg_trgm` GIN indexes; local query-plan evidence is recorded in
 Phase 11 uses the official OpenAI SDK and Responses API behind an `AiProvider` boundary. The live
 default is `gpt-5.6-terra` with `omni-moderation-latest`; set `AI_PROVIDER=fake` for deterministic
 local development or provide `OPENAI_API_KEY` for the live path. Missing/unavailable OpenAI access
-degrades to a static safe response without consuming daily quota.
+degrades to a static safe response without consuming daily quota. `OPENAI_BASE_URL` optionally points
+the same adapter at an OpenAI-compatible endpoint and defaults to `https://api.openai.com/v1` when it
+is omitted; the configured endpoint must be a valid absolute URL.
 
 ## Seed data for local API and frontend development
 

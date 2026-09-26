@@ -1,8 +1,8 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.9
+**Version:** 4.10
 
-**Cập nhật:** 24/09/2026
+**Cập nhật:** 27/09/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
@@ -300,7 +300,9 @@ review proposal vẫn là `PLANNED` cho tới Phase 07; frontend chưa được 
 > Provider decision: live AI dùng OpenAI Responses API; chat mặc định `gpt-5.6-terra`, moderation
 > dùng `omni-moderation-latest`. Frontend chỉ gọi backend SSE contract, không gọi OpenAI trực tiếp và
 > không phụ thuộc provider event shape. Năm endpoint private chat đã `READY`; public sharing và expert
-> verification vẫn `PLANNED` cho Phase 23. Phase 14 sẽ thống nhất Contributor trước khi mở verification.
+> verification vẫn `PLANNED` cho Phase 23. Backend có thể cấu hình endpoint OpenAI-compatible qua
+> `OPENAI_BASE_URL`; thay đổi này không làm đổi contract frontend. Phase 14 sẽ thống nhất Contributor
+> trước khi mở verification.
 
 | Method | Path                              | Status    | Backend updated | FE integrated | Ghi chú                                      |
 | ------ | --------------------------------- | --------- | --------------- | ------------- | -------------------------------------------- |
@@ -893,6 +895,7 @@ Thêm entry mới nhất ở trên cùng.
 
 | Date       | Version | Module         | Change                                                                                                                                | Breaking | FE action                                                                                            |
 | ---------- | ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- | :------: | ---------------------------------------------------------------------------------------------------- |
+| 2026-09-27 | 4.10    | AI Provider    | Thêm `OPENAI_BASE_URL` để backend OpenAI adapter dùng endpoint OpenAI-compatible cấu hình qua environment; mặc định vẫn là endpoint chính thức và giữ nguyên SSE/fallback/quota contract. | No | Không cần đổi frontend; vận hành có thể cấu hình URL backend khi dùng gateway tương thích OpenAI. |
 | 2026-09-24 | 4.9     | Receipts / Shopping | Phase 22 READY: quota-accounted receipt images, validated fake/local async extraction, editable/rejectable lines, partial retry/cancel, explicit idempotent confirmation as the only pantry mutation boundary, and explainable selected-meal shopping gaps based on reviewed conversions plus confirmed Pantry. | No | Run `npm run sync:swagger`; add endpoint constants and receipt/shopping DTO/Model/Mapper/API/query layers; upload with Phase 15 `RECEIPT_IMAGE`; render unresolved conversions separately. |
 | 2026-09-24 | 4.8     | Fridge Vision  | Phase 21 READY: quota-accounted owned multi-image attachments, async provider abstraction with validated fake/local output, cross-image dedupe/evidence, canonical suggestions, editable quantity/freshness candidates, partial failure/retry/cancel, and idempotent transactional confirmation as the only pantry mutation boundary. | No | Run `npm run sync:swagger`; add endpoint constants and ingredient-vision DTO/Model/Mapper/API/query layers; use Phase 15 `FRIDGE_IMAGE` reservation/commit first and render confidence/uncertainty without food-safety claims. |
 | 2026-09-23 | 4.7     | Pantry         | Phase 20 READY: owner CRUD/filter, explicit UI DTOs, reviewed mass/household conversion with unknown status, immutable consume/restore/adjust ledger, negative prevention, soft-delete history, duplicate preview/atomic merge, inclusive expiry query, idempotency, and optimistic concurrency. | No | Run `npm run sync:swagger`; add endpoint constants plus Pantry DTO/Model/Mapper/API/query layers and handle conversion/expiry/version/idempotency states. |
