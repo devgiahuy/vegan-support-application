@@ -23,7 +23,7 @@ export default function CreateVideoScreen() {
   return (
     <SiteScreen>
       <View className="gap-5 px-5 pt-4">
-        <Text className="text-2xl font-extrabold tracking-tight text-foreground">Đăng video nấu ăn</Text>
+        <Text className="text-2xl font-extrabold text-foreground">Đăng video nấu ăn</Text>
 
         <VideoForm
           submitLabel="Gửi video"
@@ -37,6 +37,7 @@ export default function CreateVideoScreen() {
                 body: values.body,
                 categoryIds: values.categoryIds,
                 tags: values.tags,
+                coverMedia: values.coverMedia,
               });
               Alert.alert('Đã gửi video', 'Video đã được gửi lên hệ thống nội dung.');
               router.replace(`/videos/${created.id}` as Href);
