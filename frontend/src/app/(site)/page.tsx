@@ -267,7 +267,7 @@ export default function HomePage() {
       </section>
 
       {/* AI + Weekly plan split */}
-      <section className="grid gap-6 py-10 lg:grid-cols-12">
+      {/* <section className="grid gap-6 py-10 lg:grid-cols-12">
         <Card className="lg:col-span-6">
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
@@ -418,7 +418,7 @@ export default function HomePage() {
             </Button>
           </CardContent>
         </Card>
-      </section>
+      </section> */}
 
       {/* Kho Dữ liệu Dinh dưỡng & Tra cứu Khoa học (Phase 12) */}
       <section className="py-10">

@@ -26,7 +26,7 @@ export function NotificationBell() {
   if (!isAuthenticated) return null;
 
   return (
-    <DropdownMenu open={open} onOpenChange={setOpen}>
+    <DropdownMenu open={open} onOpenChange={setOpen} modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
@@ -46,7 +46,7 @@ export function NotificationBell() {
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-90 p-3">
+      <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)] max-w-sm sm:w-90 p-3">
         <NotificationPanel onNavigate={() => setOpen(false)} />
       </DropdownMenuContent>
     </DropdownMenu>

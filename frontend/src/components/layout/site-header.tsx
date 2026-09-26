@@ -63,7 +63,10 @@ export function SiteHeader() {
 
   const isActive = (href: string) => {
     const baseHref = href.split('#')[0];
-    return baseHref === '/' ? pathname === '/' : pathname.startsWith(baseHref);
+    if (baseHref === '/') {
+      return pathname === '/';
+    }
+    return pathname === baseHref || pathname.startsWith(baseHref + '/');
   };
 
   return (
@@ -89,42 +92,29 @@ export function SiteHeader() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={() => setHoveredHref(null)}
                 onMouseEnter={() => setHoveredHref(item.href)}
                 onFocus={() => setHoveredHref(item.href)}
                 onBlur={() => setHoveredHref(null)}
                 className={cn(
                   'relative shrink-0 rounded-full px-1.5 py-1 text-xs font-medium whitespace-nowrap transition-colors select-none outline-none focus-visible:ring-2 focus-visible:ring-ring xl:px-2.5 xl:text-[13px] 2xl:px-3.5 2xl:py-2 2xl:text-sm',
                   active
-                    ? 'font-semibold text-primary-foreground'
+                    ? 'bg-primary font-semibold text-primary-foreground shadow-sm'
                     : isHovered
                       ? 'text-foreground'
                       : 'text-muted-foreground'
                 )}
               >
-                {/* Active pill: chuyển động mượt mà khi đổi giữa các trang */}
-                {active && (
+                {/* Hover pill: lướt mượt mà dưới con trỏ chuột cho các mục chưa active */}
+                {!active && isHovered && (
                   <motion.span
-                    layoutId="header-active-pill"
-                    className="absolute inset-0 rounded-full bg-primary shadow-sm"
+                    layoutId="header-hover-pill"
+                    className="pointer-events-none absolute inset-0 -z-0 rounded-full bg-accent/80 dark:bg-accent/60"
                     style={{ borderRadius: 9999 }}
                     transition={
                       shouldReduceMotion
                         ? { duration: 0 }
                         : { type: 'spring', stiffness: 380, damping: 30 }
-                    }
-                  />
-                )}
-
-                {/* Hover pill: lướt mượt mà dưới con trỏ chuột cho các mục chưa active */}
-                {!active && isHovered && (
-                  <motion.span
-                    layoutId="header-hover-pill"
-                    className="absolute inset-0 rounded-full bg-accent/80 dark:bg-accent/60"
-                    style={{ borderRadius: 9999 }}
-                    transition={
-                      shouldReduceMotion
-                        ? { duration: 0 }
-                        : { type: 'spring', stiffness: 420, damping: 32 }
                     }
                   />
                 )}
@@ -179,7 +169,7 @@ export function SiteHeader() {
           <NotificationBell />
 
           {isAuthenticated && user ? (
-            <DropdownMenu>
+            <DropdownMenu modal={false}>
               <DropdownMenuTrigger asChild>
                 <button className="ml-1 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring">
                   <Avatar className="h-8.5 w-8.5 2xl:h-9 2xl:w-9">
@@ -190,7 +180,7 @@ export function SiteHeader() {
                   </Avatar>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuContent align="end" className="w-56 max-w-[calc(100vw-2rem)]">
                 <DropdownMenuLabel>
                   <p className="text-sm font-semibold">{user.displayName}</p>
                   <p className="text-xs font-normal text-muted-foreground">{user.email}</p>
