@@ -38,12 +38,21 @@ export interface CreateVideoPostRequestDto {
   excerpt?: string;
   categoryIds?: string[];
   tags?: string[];
-  media: [
+  media: (
     {
       provider: 'YOUTUBE';
       kind: 'VIDEO';
       secureUrl: string;
-    },
-  ];
+    } | {
+      provider: 'CLOUDINARY';
+      kind: 'COVER_IMAGE';
+      publicId: string;
+      secureUrl: string;
+      mimeType: string;
+      bytes: number;
+      width?: number;
+      height?: number;
+    }
+  )[];
   body: string;
 }

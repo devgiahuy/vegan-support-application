@@ -1,11 +1,12 @@
 import * as React from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { Image } from 'expo-image';
 import { Link, type Href, useRouter } from 'expo-router';
-import { ArrowLeft, Link as LinkIcon, Send, Tags } from 'lucide-react-native';
+import { ArrowLeft, Image as ImageIcon, Link as LinkIcon, Send, Tags } from 'lucide-react-native';
 
+import { CategoryType } from '@/common/enums';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { CategoryType } from '@/common/enums';
 import { CategoryFilterPills } from '@/features/category/components/category-filter-pills';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
 import { useCreateVideoMutation } from '@/features/video/queries/video.queries';
@@ -30,6 +31,13 @@ function isValidUrl(value: string): boolean {
   }
 }
 
+function optionalPositiveNumber(value: string): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
 export default function CreateVideoScreen() {
   const colors = useIconColors();
   const router = useRouter();
@@ -42,6 +50,12 @@ export default function CreateVideoScreen() {
   const [body, setBody] = React.useState('');
   const [tags, setTags] = React.useState('');
   const [categoryId, setCategoryId] = React.useState<string | null>(null);
+  const [coverSecureUrl, setCoverSecureUrl] = React.useState('');
+  const [coverPublicId, setCoverPublicId] = React.useState('');
+  const [coverMimeType, setCoverMimeType] = React.useState('image/jpeg');
+  const [coverBytes, setCoverBytes] = React.useState('');
+  const [coverWidth, setCoverWidth] = React.useState('');
+  const [coverHeight, setCoverHeight] = React.useState('');
 
   const {
     data: categoryTree = [],
@@ -62,6 +76,15 @@ export default function CreateVideoScreen() {
     const cleanUrl = youtubeUrl.trim();
     const cleanBody = body.trim();
     const cleanExcerpt = excerpt.trim();
+    const cleanCoverUrl = coverSecureUrl.trim();
+    const cleanCoverPublicId = coverPublicId.trim();
+    const cleanCoverMimeType = coverMimeType.trim();
+    const coverBytesNumber = optionalPositiveNumber(coverBytes);
+    const coverWidthNumber = optionalPositiveNumber(coverWidth);
+    const coverHeightNumber = optionalPositiveNumber(coverHeight);
+    const hasCoverInput = Boolean(
+      cleanCoverUrl || cleanCoverPublicId || coverBytes.trim() || coverWidth.trim() || coverHeight.trim()
+    );
 
     if (cleanTitle.length < 3) {
       Alert.alert('Thiếu tiêu đề', 'Tiêu đề video cần ít nhất 3 ký tự.');
@@ -75,6 +98,20 @@ export default function CreateVideoScreen() {
       Alert.alert('Thiếu tóm tắt', 'Tóm tắt công thức cần ít nhất 20 ký tự.');
       return;
     }
+    if (hasCoverInput) {
+      if (!isValidUrl(cleanCoverUrl)) {
+        Alert.alert('Ảnh bìa chưa hợp lệ', 'Secure URL ảnh bìa phải là URL http(s) từ Cloudinary.');
+        return;
+      }
+      if (!cleanCoverPublicId || !cleanCoverMimeType || !coverBytesNumber) {
+        Alert.alert('Thiếu metadata ảnh bìa', 'Ảnh bìa cần đủ publicId, MIME type và dung lượng bytes.');
+        return;
+      }
+      if (!cleanCoverMimeType.startsWith('image/')) {
+        Alert.alert('MIME ảnh bìa chưa hợp lệ', 'MIME type ảnh bìa phải bắt đầu bằng image/.');
+        return;
+      }
+    }
 
     try {
       const created = await createVideoMutation.mutateAsync({
@@ -84,6 +121,18 @@ export default function CreateVideoScreen() {
         body: cleanBody,
         categoryIds: categoryId ? [categoryId] : undefined,
         tags: splitTags(tags),
+        ...(hasCoverInput && coverBytesNumber
+          ? {
+              coverMedia: {
+                publicId: cleanCoverPublicId,
+                secureUrl: cleanCoverUrl,
+                mimeType: cleanCoverMimeType,
+                bytes: coverBytesNumber,
+                ...(coverWidthNumber ? { width: coverWidthNumber } : {}),
+                ...(coverHeightNumber ? { height: coverHeightNumber } : {}),
+              },
+            }
+          : {}),
       });
       Alert.alert('Đã gửi video', 'Video đã được gửi lên hệ thống nội dung.');
       router.replace(`/videos/${created.id}` as Href);
@@ -102,7 +151,7 @@ export default function CreateVideoScreen() {
         </Link>
 
         <View>
-          <Text className="text-2xl font-extrabold tracking-tight text-foreground">Đăng video nấu ăn</Text>
+          <Text className="text-2xl font-extrabold text-foreground">Đăng video nấu ăn</Text>
         </View>
 
         <View className="gap-4">
@@ -142,6 +191,99 @@ export default function CreateVideoScreen() {
               placeholderTextColor={colors.mutedForeground}
               className="h-12 rounded-2xl border border-input bg-card px-3.5 text-sm text-foreground"
             />
+          </View>
+
+          <View className="rounded-2xl border border-border bg-card p-4">
+            <View className="flex-row items-center gap-2">
+              <ImageIcon size={16} color={colors.primary} />
+              <Text className="text-xs font-bold uppercase text-muted-foreground">Ảnh bìa Cloudinary</Text>
+            </View>
+            <Text className="mt-2 text-xs leading-relaxed text-muted-foreground">
+              Mobile hiện chưa có luồng chọn ảnh/upload trực tiếp. Dán metadata ảnh đã upload Cloudinary để backend lưu media COVER_IMAGE.
+            </Text>
+
+            {isValidUrl(coverSecureUrl.trim()) ? (
+              <View className="mt-3 aspect-video overflow-hidden rounded-xl bg-muted">
+                <Image source={{ uri: coverSecureUrl.trim() }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+              </View>
+            ) : null}
+
+            <View className="mt-3 gap-3">
+              <View>
+                <Text className="mb-1.5 text-xs font-semibold text-muted-foreground">Secure URL</Text>
+                <TextInput
+                  value={coverSecureUrl}
+                  onChangeText={setCoverSecureUrl}
+                  autoCapitalize="none"
+                  keyboardType="url"
+                  placeholder="https://res.cloudinary.com/.../image/upload/..."
+                  placeholderTextColor={colors.mutedForeground}
+                  className="h-12 rounded-2xl border border-input bg-background px-3.5 text-sm text-foreground"
+                />
+              </View>
+
+              <View>
+                <Text className="mb-1.5 text-xs font-semibold text-muted-foreground">Public ID</Text>
+                <TextInput
+                  value={coverPublicId}
+                  onChangeText={setCoverPublicId}
+                  autoCapitalize="none"
+                  placeholder="vegan-app/..."
+                  placeholderTextColor={colors.mutedForeground}
+                  className="h-12 rounded-2xl border border-input bg-background px-3.5 text-sm text-foreground"
+                />
+              </View>
+
+              <View className="flex-row gap-2">
+                <View className="flex-1">
+                  <Text className="mb-1.5 text-xs font-semibold text-muted-foreground">MIME type</Text>
+                  <TextInput
+                    value={coverMimeType}
+                    onChangeText={setCoverMimeType}
+                    autoCapitalize="none"
+                    placeholder="image/jpeg"
+                    placeholderTextColor={colors.mutedForeground}
+                    className="h-12 rounded-2xl border border-input bg-background px-3.5 text-sm text-foreground"
+                  />
+                </View>
+                <View className="flex-1">
+                  <Text className="mb-1.5 text-xs font-semibold text-muted-foreground">Bytes</Text>
+                  <TextInput
+                    value={coverBytes}
+                    onChangeText={setCoverBytes}
+                    keyboardType="numeric"
+                    placeholder="120000"
+                    placeholderTextColor={colors.mutedForeground}
+                    className="h-12 rounded-2xl border border-input bg-background px-3.5 text-sm text-foreground"
+                  />
+                </View>
+              </View>
+
+              <View className="flex-row gap-2">
+                <View className="flex-1">
+                  <Text className="mb-1.5 text-xs font-semibold text-muted-foreground">Width</Text>
+                  <TextInput
+                    value={coverWidth}
+                    onChangeText={setCoverWidth}
+                    keyboardType="numeric"
+                    placeholder="1280"
+                    placeholderTextColor={colors.mutedForeground}
+                    className="h-12 rounded-2xl border border-input bg-background px-3.5 text-sm text-foreground"
+                  />
+                </View>
+                <View className="flex-1">
+                  <Text className="mb-1.5 text-xs font-semibold text-muted-foreground">Height</Text>
+                  <TextInput
+                    value={coverHeight}
+                    onChangeText={setCoverHeight}
+                    keyboardType="numeric"
+                    placeholder="720"
+                    placeholderTextColor={colors.mutedForeground}
+                    className="h-12 rounded-2xl border border-input bg-background px-3.5 text-sm text-foreground"
+                  />
+                </View>
+              </View>
+            </View>
           </View>
 
           <View>
