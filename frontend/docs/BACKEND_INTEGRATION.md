@@ -1,14 +1,14 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.0
+**Version:** 4.9
 
-**Cập nhật:** 18/09/2026
+**Cập nhật:** 24/09/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
 **Contract target:** `/api/v1`
 
-> Tài liệu này là registry sống cho capability backend thực tế. Phases 00–11 là baseline hiện có; Phases 12–27 chỉ là `PLANNED` cho tới khi từng phase vượt completion gate. Contributor hiện vẫn dùng contract subtype legacy và sẽ có breaking migration ở Phase 14; frontend không được dùng approval/request data để tự cấp quyền.
+> Tài liệu này là registry sống cho capability backend thực tế. Phases 00–11 là baseline hiện có; Phases 12–27 chỉ được nâng trạng thái sau khi từng phase vượt completion gate. Backend Phase 14 đã thay subtype bằng một Contributor role với approval basis chỉ dùng cho audit/presentation. Các consumer frontend legacy phải migrate trước khi các endpoint breaking trở lại `READY`.
 
 ---
 
@@ -206,11 +206,11 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 
 | Method | Path                         | Status    | Backend updated | FE integrated    | Ghi chú                                                                                                                                                   |
 | ------ | ---------------------------- | --------- | --------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| POST   | `/auth/register`             | `READY`   | 2026-09-15      | Yes (2026-09-15) | Optional `contributorRequest` chỉ tạo application `PENDING`; account/JWT vẫn là `MEMBER`; FE: `features/auth` register + session + contributor form       |
-| POST   | `/auth/login`                | `READY`   | 2026-09-15      | Yes (2026-09-15) | Trả access token và đặt access/refresh HttpOnly cookies; generic invalid-credential response; FE: login form xử lý theo `error.code`                      |
+| POST   | `/auth/register`             | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Breaking Phase 14: `contributorRequest.claimedApprovalBasis`, optional `organizationClaim`, `experience`, `referenceLinks`; pending account/JWT vẫn `MEMBER` |
+| POST   | `/auth/login`                | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Session user bỏ subtype fields; Contributor profile trả `approvalBasis`/label chỉ để hiển thị; authorization vẫn theo role/profile |
 | POST   | `/auth/refresh`              | `READY`   | 2026-09-15      | Yes (2026-09-15) | Đọc refresh cookie, rotation mỗi lần dùng; reuse revoke toàn token family; FE: Next proxy `/api/auth/refresh-token` + refresh-queue                       |
 | POST   | `/auth/logout`               | `READY`   | 2026-09-15      | Yes (2026-09-15) | Idempotent; body `{ allDevices?: boolean }`; revoke phiên hiện tại hoặc toàn bộ phiên của user; FE: Next proxy + xóa 4 cookie                             |
-| GET    | `/users/me`                  | `READY`   | 2026-09-15      | Yes (2026-09-15) | Trả profile, health `MANUAL`, diet snapshot/effective constraints; không lộ hash/session; FE auth chỉ map 8 field user, health/diet để `features/profile` |
+| GET    | `/users/me`                  | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Breaking Phase 14 user shape: bỏ subtype; pending application dùng `claimedApprovalBasis`; active profile dùng `approvalBasis`/label |
 | PATCH  | `/users/me`                  | `READY`   | 2026-09-15      | Yes (2026-09-15) | Cập nhật `displayName`/HTTP(S) `avatarUrl`; cần ít nhất một field                                                                                         |
 | PUT    | `/users/me/health-profile`   | `READY`   | 2026-09-15      | Yes (2026-09-15) | Upsert manual inputs; backend tính BMI, Mifflin–St Jeor BMR và activity-factor TDEE                                                                       |
 | POST   | `/diet-rules/preview`        | `READY`   | 2026-09-15      | Yes (2026-09-15) | Auth required; trả rule set v1, source/default/hard flag; tradition rule là configurable                                                                  |
@@ -219,43 +219,51 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 
 ### 6.3 Content và Community
 
-| Method | Path                  | Status    | Backend updated | FE integrated | Ghi chú                        |
-| ------ | --------------------- | --------- | --------------- | ------------- | ------------------------------ |
-| GET    | `/posts`              | `PLANNED` | —               | No            | Search/filter/pagination       |
-| POST   | `/posts`              | `PLANNED` | —               | No            | Role-based publish state       |
-| GET    | `/posts/:idOrSlug`    | `PLANNED` | —               | No            | Published revision cho public  |
-| PATCH  | `/posts/:id`          | `PLANNED` | —               | No            | Tạo revision theo role         |
-| DELETE | `/posts/:id`          | `PLANNED` | —               | No            | Soft-delete owner/admin rules  |
-| GET    | `/posts/:id/related`  | `PLANNED` | —               | No            | Trả recipes/blogs/videos riêng |
-| POST   | `/uploads/signature`  | `PLANNED` | —               | No            | Cloudinary signed upload       |
-| GET    | `/posts/:id/comments` | `PLANNED` | —               | No            | Reply tối đa một tầng          |
-| POST   | `/posts/:id/comments` | `PLANNED` | —               | No            | Member+                        |
-| PATCH  | `/comments/:id`       | `PLANNED` | —               | No            | Owner only, editedAt           |
-| DELETE | `/comments/:id`       | `PLANNED` | —               | No            | Soft-delete                    |
-| PUT    | `/posts/:id/vote`     | `PLANNED` | —               | No            | Upvote toggle/create           |
-| DELETE | `/posts/:id/vote`     | `PLANNED` | —               | No            | Remove upvote                  |
-| PUT    | `/posts/:id/rating`   | `PLANNED` | —               | No            | Recipe only, upsert            |
-| PUT    | `/posts/:id/bookmark` | `PLANNED` | —               | No            | Recipe/Video only              |
-| DELETE | `/posts/:id/bookmark` | `PLANNED` | —               | No            | Remove bookmark                |
+| Method | Path                            | Status        | Backend updated | FE integrated         | Ghi chú                                                                                                                       |
+| ------ | ------------------------------- | ------------- | --------------- | --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/posts`                        | `READY`       | 2026-09-21      | Yes (2026-09-16)      | Public chỉ thấy approved revision; filter/type/pagination; FE: `features/post`, `features/recipe`, `features/video`          |
+| POST   | `/posts`                        | `READY`       | 2026-09-21      | Yes (2026-09-16)      | Auth; luôn tạo draft revision, không auto-publish                                                                             |
+| GET    | `/posts/:idOrSlug`              | `READY`       | 2026-09-21      | Yes (2026-09-16)      | Public thấy approved revision gần nhất trong lúc edit pending                                                                |
+| PATCH  | `/posts/:id`                    | `READY`       | 2026-09-21      | Yes (2026-09-16)      | Author-only; tạo draft revision mới với expectedVersion                                                                     |
+| DELETE | `/posts/:id`                    | `READY`       | 2026-09-21      | Yes (2026-09-16)      | Author-only soft-delete; giữ review/audit evidence                                                                           |
+| POST   | `/posts/:id/submit`             | `READY`       | 2026-09-21      | Yes (2026-09-23)      | Author-only; latest draft + expectedVersion; video asset phải committed/owned; FE: `features/review` |
+| GET    | `/posts/:id/review-history`     | `READY`       | 2026-09-21      | Yes (2026-09-23)      | Author/Admin; revisions, media source, signals, reviewer/reason, pagination; FE: `features/review`   |
+| GET    | `/posts/:id/related`            | `READY`       | 2026-09-15      | Yes (2026-09-16)      | Trả recipes/blogs/videos riêng                                                                                               |
+| POST   | `/uploads/signature`            | `REMOVED`     | 2026-09-19      | No                    | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead                                           |
+| GET    | `/posts/:id/comments`           | `READY`       | 2026-09-15      | Yes (2026-09-17)      | Reply tối đa một tầng; FE: `features/community` live (`USE_FIXTURES = false`)                                                |
+| POST   | `/posts/:id/comments`           | `READY`       | 2026-09-15      | Yes (2026-09-17)      | Member+; tạo comment hoặc reply                                                                                              |
+| PATCH  | `/comments/:id`                 | `READY`       | 2026-09-15      | Yes (2026-09-17)      | Owner only, editedAt                                                                                                         |
+| DELETE | `/comments/:id`                 | `READY`       | 2026-09-15      | Yes (2026-09-17)      | Soft-delete comment của chính mình                                                                                           |
+| GET    | `/posts/:id/community-summary`  | `READY`       | 2026-09-15      | Yes (2026-09-17)      | Lấy aggregate community và viewer state; FE: `features/community`                                                            |
+| PUT    | `/posts/:id/vote`               | `READY`       | 2026-09-15      | Yes (2026-09-17)      | Upvote toggle/create idempotent                                                                                              |
+| DELETE | `/posts/:id/vote`               | `READY`       | 2026-09-15      | Yes (2026-09-17)      | Remove upvote idempotent                                                                                                     |
+| PUT    | `/posts/:id/rating`             | `READY`       | 2026-09-15      | Yes (2026-09-17)      | Recipe only, upsert taste & difficulty                                                                                       |
+| PUT    | `/posts/:id/bookmark`           | `READY`       | 2026-09-15      | Yes (2026-09-17)      | Recipe/Video only idempotent                                                                                                 |
+| DELETE | `/posts/:id/bookmark`           | `READY`       | 2026-09-15      | Yes (2026-09-17)      | Remove bookmark idempotent                                                                                                   |
+| GET    | `/users/me/bookmarks`           | `READY`       | 2026-09-15      | Yes (2026-09-17)      | List bookmark Recipe/Video của current user                                                                                  |
 
 ### 6.4 Contributor, Moderation và Catalog
 
-| Method | Path                                         | Status    | Backend updated | FE integrated         | Ghi chú                                                                            |
-| ------ | -------------------------------------------- | --------- | --------------- | --------------------- | ---------------------------------------------------------------------------------- |
-| POST   | `/contributor-applications`                  | `READY`   | 2026-09-17      | Yes (2026-09-17)      | Member upgrade; không có certificate MVP; FE: `features/contributor` |
-| GET    | `/contributor-applications/me`               | `READY`   | 2026-09-17      | Yes (2026-09-17)      | Member xem lịch sử đơn; FE: `features/contributor` |
-| GET    | `/admin/contributor-applications`            | `READY`   | 2026-09-17      | Yes (2026-09-17)      | Admin only; hàng chờ duyệt; FE: `features/contributor` |
-| PATCH  | `/admin/contributor-applications/:id/review` | `READY`   | 2026-09-17      | Yes (2026-09-17)      | Contract hiện tại approve/reject + subtype/basis; Phase 14 sẽ bỏ subtype, khi bắt đầu phải chuyển `CHANGING` |
-| GET    | `/review-queue/posts`                        | `PLANNED` | —               | Yes (2026-09-16, chờ READY chính thức) | Contributor/Admin filtering; FE: `features/review` list + filter + pagination |
-| PATCH  | `/review-queue/posts/:id/approve`            | `PLANNED` | —               | Yes (2026-09-16, chờ READY chính thức) | Cấm self-approve; FE: dialog reason bắt buộc + chặn tự duyệt 2 lớp              |
-| PATCH  | `/review-queue/posts/:id/reject`             | `PLANNED` | —               | Yes (2026-09-16, chờ READY chính thức) | Reason required; FE: chung dialog + toast lý do cho tác giả                     |
+| Method | Path                                         | Status        | Backend updated | FE integrated                  | Ghi chú                                                                                                                       |
+| ------ | -------------------------------------------- | ------------- | --------------- | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/contributor-applications`                  | `CHANGING`    | 2026-09-19      | Yes (legacy; migrate)          | Member-only unified application; public claim chỉ organization/platform; pending không cấp quyền                              |
+| GET    | `/contributor-applications/me`               | `CHANGING`    | 2026-09-19      | Yes (legacy; migrate)          | Breaking response bỏ requested/approved subtype; trả claimed/final basis và evidence audit                                    |
+| GET    | `/admin/contributor-applications`            | `CHANGING`    | 2026-09-19      | Yes (legacy; migrate)          | Filter `claimedApprovalBasis`; response unified basis/evidence/inviter                                                        |
+| POST   | `/admin/contributor-invitations`             | `IN_PROGRESS` | 2026-09-19      | No                             | Source/OpenAPI complete; final READY blocked by Windows Prisma query-engine DLL `EPERM` during build                          |
+| PATCH  | `/admin/contributor-applications/:id/review` | `CHANGING`    | 2026-09-19      | Yes (legacy; migrate)          | APPROVE chọn final basis + reason; transactional role/profile/evidence/decision/session revoke; REJECT giữ Member + cooldown  |
+| GET    | `/admin/content-review`                      | `READY`       | 2026-09-21      | Yes (2026-09-23)      | Admin review queue; filter type, status, priority; FE: `features/review`                                                      |
+| GET    | `/admin/content-review/:id`                  | `READY`       | 2026-09-21      | Yes (2026-09-23)      | Admin inspect immutable revision details with video player, AI flags; FE: `features/review`                                  |
+| PATCH  | `/admin/content-review/:id`                  | `READY`       | 2026-09-21      | Yes (2026-09-23)      | Admin decision APPROVE/REJECT; reason >= 10 chars on reject; anti-self-approval; FE: `features/review`                        |
+| GET    | `/review-queue/posts`                        | `DEPRECATED`  | 2026-09-21      | Deprecated (migrated) | Thay thế bằng `/admin/content-review` (Phase 16)                                                                              |
+| PATCH  | `/review-queue/posts/:id/approve`            | `DEPRECATED`  | 2026-09-21      | Deprecated (migrated) | Thay thế bằng `PATCH /admin/content-review/:id` (Phase 16)                                                                    |
+| PATCH  | `/review-queue/posts/:id/reject`             | `DEPRECATED`  | 2026-09-21      | Deprecated (migrated) | Thay thế bằng `PATCH /admin/content-review/:id` (Phase 16)                                                                    |
 | POST   | `/reports`                                   | `READY`   | 2026-09-17      | Yes (2026-09-17)      | One active report/user/target; FE: `features/safety`                               |
 | GET    | `/admin/reports`                             | `READY`   | 2026-09-16      | Yes (2026-09-17) | Admin only; filter status/priority/targetType                                      |
-| PATCH  | `/admin/reports/:id/resolve`                 | `READY`   | 2026-09-16      | Yes (2026-09-17) | Audit required; reason min 10 chars; resolve gộp cùng target                       |
-| GET    | `/admin/users`                               | `READY`   | 2026-09-16      | Yes (2026-09-17) | Search/filter/pagination                                                           |
+| PATCH  | `/admin/reports/:id/resolve`                 | `IN_PROGRESS` | 2026-09-19  | Yes (2026-09-17) | DEMOTE preservation/audit change implemented; final gate blocked by Windows Prisma query-engine DLL `EPERM` |
+| GET    | `/admin/users`                               | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Breaking response đổi `contributorType` thành optional `contributorApprovalBasis` |
 | PATCH  | `/admin/users/:id/status`                    | `READY`   | 2026-09-16      | Yes (2026-09-17) | Lock/ban/unban/delete rules; chặn self & protected admin                           |
-| GET    | `/admin/comments`                            | `READY`   | 2026-09-16      | Yes (2026-09-17) | Moderation list; filter status/post/author                                         |
-| PATCH  | `/admin/comments/:id/status`                 | `READY`   | 2026-09-16      | Yes (2026-09-17) | Hide/restore; chặn comment đã bị tác giả xóa                                       |
+| GET    | `/admin/comments`                            | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Author summary đổi subtype thành optional approval basis; basis không cấp quyền |
+| PATCH  | `/admin/comments/:id/status`                 | `CHANGING` | 2026-09-19     | Yes (legacy; migrate) | Response author summary dùng unified Contributor contract |
 | GET    | `/categories`                                | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Public active tree tối đa hai tầng; filter `type`                                  |
 | GET    | `/admin/categories`                          | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Admin only; pagination; xem cả archived                                            |
 | POST   | `/admin/categories`                          | `READY`   | 2026-09-15      | Yes (2026-09-15)READY | Admin only; parent/child cùng type                                                 |
@@ -336,40 +344,55 @@ Các path dưới đây là contract target để định hướng; phase triể
 
 | Method | Path | Status | Backend updated | FE integrated | Ghi chú |
 |---|---|---|---|---|---|
-| GET | `/food-data/ingredients/:id/nutrients` | `PLANNED` | — | No | Canonical nutrients + provenance/version; missing không phải zero |
-| GET | `/food-data/reference-intakes` | `PLANNED` | — | No | Population/unit/source/version |
-| GET | `/food-data/ingredient-guidelines` | `PLANNED` | — | No | Amount/frequency per period; population/evidence/source/severity |
-| GET | `/food-data/cooking-methods` | `PLANNED` | — | No | Retention/yield factors đã review |
-| GET | `/food-data/interaction-rules` | `PLANNED` | — | No | Evidence-graded; scope dish/meal/day |
-| POST | `/admin/food-data/imports/preview` | `PLANNED` | — | No | Admin, provider-neutral, không ghi dữ liệu |
-| POST | `/admin/food-data/imports` | `PLANNED` | — | No | Admin, idempotent commit + audit |
-| POST | `/recipes/:id/nutrition/preview` | `PLANNED` | — | No | Phase 13; ingredients + structured cooking steps |
-| POST | `/recipes/:id/nutrition/recalculate` | `PLANNED` | — | No | Owner/Admin; versioned result |
-| GET | `/recipes/:id/nutrition` | `PLANNED` | — | No | Origin/confidence/range/assumptions/uncovered ingredients |
+| GET | `/food-data/ingredients/:ingredientId/nutrients` | `READY` | 2026-09-19 | Yes (2026-09-23) | Approved effective profiles, conversions, nutrients + provenance/version; missing không phải zero; FE: `features/food-data` (NutritionFactsPanel, SourceProvenanceBadge) |
+| GET | `/food-data/reference-intakes` | `READY` | 2026-09-19 | Yes (2026-09-23) | Approved effective population/unit/source/version records; FE: `features/food-data` (ReferenceIntakeExplorer, tính %DV) |
+| GET | `/food-data/ingredient-guidelines` | `READY` | 2026-09-19 | Yes (2026-09-23) | Amount/frequency per period; population/evidence/source/severity; FE: `features/food-data` |
+| GET | `/food-data/cooking-methods` | `READY` | 2026-09-19 | Yes (2026-09-23) | Active methods with approved effective retention/yield factors; FE: `features/food-data` (CookingMethodCards) |
+| GET | `/food-data/interaction-rules` | `READY` | 2026-09-19 | Yes (2026-09-23) | Reviewed evidence-graded rules; scope dish/meal/day; FE: `features/food-data` (FoodInteractionTable) |
+| GET/POST | `/admin/food-data/records` | `READY` | 2026-09-19 | Yes (2026-09-23) | Admin list/create by typed `kind`; AI suggestions remain `STAGED`; FE: `features/food-data` (AdminRecordsManager, AdminRecordDialog) |
+| PUT/DELETE | `/admin/food-data/records/:id` | `READY` | 2026-09-19 | Yes (2026-09-23) | Full replace or archive/supersede; no hard-delete of reviewed records; FE: `features/food-data` (AdminRecordsManager, AdminRecordDialog) |
+| POST | `/admin/food-data/imports/preview` | `READY` | 2026-09-19 | Yes (2026-09-23) | Admin, provider adapter validation; writes staging/audit only, not canonical data; FE: `features/food-data` (AdminImportManager) |
+| POST | `/admin/food-data/imports` | `READY` | 2026-09-19 | Yes (2026-09-23) | Admin, commits a preview by `importId`; idempotent replay + audit; FE: `features/food-data` (AdminImportManager) |
+| POST | `/posts/:id/nutrition/preview` | `IN_PROGRESS` | 2026-09-19 | No | Implemented in source/OpenAPI; public for published recipe, owner/Admin for draft/latest; unsaved deterministic/partial estimate; pending final `npm run build` gate |
+| POST | `/posts/:id/nutrition/recalculate` | `IN_PROGRESS` | 2026-09-19 | No | Implemented in source/OpenAPI; Auth owner/Admin; saves new estimate version, histories previous current estimate; pending final `npm run build` gate |
+| GET | `/posts/:id/nutrition/current` | `IN_PROGRESS` | 2026-09-19 | No | Implemented in source/OpenAPI; current saved estimate; stale/incomplete errors documented; pending final `npm run build` gate |
+| GET | `/posts/:id/nutrition/history` | `IN_PROGRESS` | 2026-09-19 | No | Implemented in source/OpenAPI; paginated saved estimate versions with `CURRENT/HISTORICAL/STALE` status; pending final `npm run build` gate |
+| GET | `/posts/:id/nutrition/status` | `IN_PROGRESS` | 2026-09-19 | No | Implemented in source/OpenAPI; estimate freshness and latest nutrition AI fallback job status; pending final `npm run build` gate |
 
 ### 6.10 Unified Contributor migration — Phase 14
 
 | Contract area | Status | FE action |
 |---|---|---|
-| Registration/application request | `PLANNED` migration | Replace `requestedType` with requested `approvalBasis`; role remains `MEMBER` while pending |
-| Admin review | `PLANNED` migration | Remove subtype selection; choose final basis and enter reason |
-| Contributor profile/session | `PLANNED` migration | Remove `contributorType`; show one Contributor role plus optional approval-basis label |
-| RBAC/UI gates | `PLANNED` migration | Gate only by authoritative approved role/profile, never by basis |
+| Registration/application request | `CHANGING` | Replace `requestedType` with `claimedApprovalBasis`; add conditional `organizationClaim`; role remains `MEMBER` while pending |
+| Admin review | `CHANGING` | Remove subtype selection; choose final `approvalBasis` and enter reason; handle basis/source conflict |
+| Contributor profile/session | `CHANGING` | Remove `contributorType`; show one Contributor role plus optional approval-basis label |
+| Admin invitation/revocation | `IN_PROGRESS`, FE not integrated | Source/OpenAPI complete; wait for backend build gate, then add DTOs/hooks when scheduled |
+| RBAC/UI gates | `CHANGING` | Gate only by authoritative `role === CONTRIBUTOR` plus active profile returned by backend, never by basis |
 
-When Phase 14 starts, affected READY endpoints must become `CHANGING`. Do not preemptively change the current consumer until the new OpenAPI contract lands.
+Phase 14 source/migration/OpenAPI is implemented. Existing frontend consumers still use the removed subtype fields, so affected endpoints remain `CHANGING` until frontend runs `npm run sync:swagger` and migrates DTO/Model/Mapper/forms/tests. New invitation/revocation endpoints remain `IN_PROGRESS` until the backend build gate passes; `FE integrated = No`.
+
+Legacy data mapping is intentionally conservative: both `EXPERIENCED_PRACTITIONER` and `NUTRITION_EXPERT` rows become `PLATFORM_TRACK_RECORD`. The migration snapshots platform post/interaction counts and retains old values/free-text basis inside database audit evidence; it does not infer organization affiliation, certificate verification, or professional status.
 
 ### 6.11 Storage quota và video review — Phases 15–16
 
 | Method | Path | Status | Backend updated | FE integrated | Ghi chú |
 |---|---|---|---|---|---|
-| GET | `/storage/me` | `PLANNED` | — | No | used/reserved/limit/remaining bytes |
-| POST | `/uploads/reservations` | `PLANNED` | — | No | Reserve quota before upload |
-| POST | `/uploads/reservations/:id/commit` | `PLANNED` | — | No | Commit actual provider bytes |
-| DELETE | `/uploads/reservations/:id` | `PLANNED` | — | No | Cancel/release owner reservation |
-| GET | `/admin/storage/accounts` | `PLANNED` | — | No | Admin usage/policy inspection |
-| POST | `/posts/:id/submit` | `PLANNED` | — | No | Shared recipe/handbook/video revision submission target |
-| GET | `/admin/content-review` | `PLANNED` | — | No | Review queue includes video |
-| PATCH | `/admin/content-review/:revisionId` | `PLANNED` | — | No | Admin approve/reject with reason |
+| GET | `/storage/me` | `READY` | 2026-09-19 | Yes (2026-09-23) | used/reserved/limit/remaining bytes; FE: `features/storage` |
+| POST | `/uploads/reservations` | `READY` | 2026-09-19 | Yes (2026-09-23) | Reserve quota before upload; FE: `uploadWithReservation` |
+| POST | `/uploads/reservations/:id/commit` | `READY` | 2026-09-19 | Yes (2026-09-23) | Commit actual provider bytes; FE: `uploadWithReservation` |
+| DELETE | `/uploads/reservations/:id` | `READY` | 2026-09-19 | Yes (2026-09-23) | Cancel/release owner reservation; rollback on abort/error |
+| GET | `/admin/storage/accounts` | `READY` | 2026-09-19 | Yes (2026-09-23) | Admin usage/policy inspection; FE: `StorageAccountList` |
+| DELETE | `/storage/assets/:id` | `READY` | 2026-09-19 | Yes (2026-09-23) | Idempotent durable provider delete; FE: `StorageDeleteAssetDialog` |
+| GET | `/admin/storage/policies` | `READY` | 2026-09-19 | Yes (2026-09-23) | List configurable quota policies; FE: `StoragePolicyForm` |
+| PATCH | `/admin/storage/policies/:id` | `READY` | 2026-09-19 | Yes (2026-09-23) | Update policy fields with optimistic version; FE: `StoragePolicyForm` |
+| POST | `/admin/storage/accounts/:userId/adjustments` | `READY` | 2026-09-19 | Yes (2026-09-23) | Idempotent audited byte-level quota adjustment; FE: `StorageAdjustmentDialog` |
+| GET | `/admin/storage/adjustments` | `READY` | 2026-09-19 | Yes (2026-09-23) | Paginated immutable adjustment audit log; FE: `StorageAdjustmentList` |
+| POST | `/posts/:id/submit` | `READY` | 2026-09-21 | No | Shared recipe/handbook/video submission; moderation signal only |
+| GET | `/posts/:id/review-history` | `READY` | 2026-09-21 | No | Author/Admin paginated immutable revision/review/media/signal history |
+| GET | `/admin/content-review` | `READY` | 2026-09-21 | No | Admin-only; filter `type=VIDEO`, status/priority và pagination |
+| GET | `/admin/content-review/:revisionId` | `READY` | 2026-09-21 | No | Admin-only detail; retained for hidden/deleted audit evidence |
+| PATCH | `/admin/content-review/:revisionId` | `READY` | 2026-09-21 | No | Admin-only `APPROVE`/`REJECT`; reason bắt buộc; cấm self-review |
+| GET/PATCH | `/review-queue/posts*` | `DEPRECATED` | 2026-09-21 | Yes (legacy; migrate) | Admin-only legacy aliases; migrate sang `/admin/content-review*` |
 
 MVP không có payment/quota purchase, DMCA workflow, audio/frame copyright detection, hoặc video transcription.
 
@@ -377,12 +400,16 @@ MVP không có payment/quota purchase, DMCA workflow, audio/frame copyright dete
 
 | Method | Path | Status | Backend updated | FE integrated | Ghi chú |
 |---|---|---|---|---|---|
-| GET/POST | `/custom-meals` | `PLANNED` | — | No | Owner-only list/create; multiple photos and structured ingredients |
-| GET/PATCH/DELETE | `/custom-meals/:id` | `PLANNED` | — | No | Owner-only; safe behavior when used by plan |
-| POST | `/custom-meals/:id/media` | `PLANNED` | — | No | Quota-aware photo attach/reorder |
-| POST | `/meal-plans/:id/analyze` | `PLANNED` | — | No | Portion, daily limit, same-dish/meal/day warnings |
-| GET/POST | `/meal-programs` | `PLANNED` | — | No | Multi-week list/create/generate |
-| GET/PATCH | `/meal-programs/:id` | `PLANNED` | — | No | Versioned owner detail/edit/confirm |
+| GET/POST | `/custom-meals` | `READY` | 2026-09-21 | Yes (Scaffold, 2026-09-23) | Owner-only list/create; multiple photos and structured ingredients; FE: `features/custom-meal` |
+| GET/PATCH/DELETE | `/custom-meals/:id` | `READY` | 2026-09-21 | Yes (Scaffold, 2026-09-23) | Owner-only; safe behavior when used by plan (BLOCK vs RETAIN_SNAPSHOT); FE: `features/custom-meal` |
+| POST | `/custom-meals/:id/photos` | `READY` | 2026-09-21 | Yes (Scaffold, 2026-09-23) | Quota-aware photo attach (`assetId`); FE: `features/custom-meal` |
+| DELETE | `/custom-meals/:id/photos/:assetId` | `READY` | 2026-09-21 | Yes (Scaffold, 2026-09-23) | Gỡ ảnh khỏi bữa ăn tùy chỉnh; FE: `features/custom-meal` |
+| PUT | `/custom-meals/:id/photos/order` | `READY` | 2026-09-21 | Yes (Scaffold, 2026-09-23) | Reorder thứ tự ảnh (`orderedAssetIds`); FE: `features/custom-meal` |
+| PATCH | `/meal-plans/:id/items/:itemId/manual-add` | `READY` | 2026-09-23 | No | Recipe/private custom meal; hard diet/allergy/exclusion/tradition precedence; returns refreshed analysis |
+| POST | `/meal-plans/:id/analyze` | `READY` | 2026-09-23 | No | Versioned portion, nutrient limit, ingredient guideline, same-dish/meal/day warnings with UI dialog fields |
+| GET | `/meal-plans/:id/analysis` | `READY` | 2026-09-23 | No | Current fingerprint-validated result; returns `MEAL_ANALYSIS_STALE` after relevant input changes |
+| GET/POST | `/meal-programs` | `READY` | 2026-09-23 | No | Owner list/create; 2–12 ordered weeks, bounded alternatives, resumable partial generation |
+| GET/PATCH | `/meal-programs/:id` | `READY` | 2026-09-23 | No | Snapshot detail; versioned metadata/select/regenerate/reanalyze/confirm actions |
 
 `tags` của custom meal là text do user tạo; `shopee` không phải service/provider ID. Warning DTO phải có code, severity, source/evidence, affected items, explanation, confidence, và suggested adjustment để FE render tooltip/dialog.
 
@@ -390,27 +417,38 @@ MVP không có payment/quota purchase, DMCA workflow, audio/frame copyright dete
 
 | Method | Path | Status | Backend updated | FE integrated | Ghi chú |
 |---|---|---|---|---|---|
-| GET/POST | `/pantry/items` | `PLANNED` | — | No | Confirmed owner inventory |
-| PATCH/DELETE | `/pantry/items/:id` | `PLANNED` | — | No | Optimistic version; preserve adjustment history |
-| POST | `/pantry/merge` | `PLANNED` | — | No | Preview/confirm duplicate merge |
-| POST | `/ingredient-recognition/jobs` | `PLANNED` | — | No | Multiple images; asynchronous |
-| GET | `/ingredient-recognition/jobs/:id` | `PLANNED` | — | No | Candidates/confidence/evidence/status |
-| PATCH | `/ingredient-recognition/jobs/:id/candidates/:candidateId` | `PLANNED` | — | No | User correction/rejection |
-| POST | `/ingredient-recognition/jobs/:id/confirm` | `PLANNED` | — | No | Only this boundary updates pantry |
+| GET/POST | `/pantry/items` | `READY` | 2026-09-23 | No | Owner list/filter and confirmed manual create; canonical or unmatched identity; UI DTO only |
+| GET/PATCH/DELETE | `/pantry/items/:id` | `READY` | 2026-09-23 | No | Detail, freshness/expiry observations, optimistic version, soft delete/history |
+| GET/POST | `/pantry/items/:id/adjustments` | `READY` | 2026-09-23 | No | Paginated immutable ledger; idempotent consume/restore/adjust; negative balance blocked |
+| GET | `/pantry/items/expiring-soon` | `READY` | 2026-09-23 | No | Inclusive `asOf..asOf+days` date-only boundary; confirmed positive inventory only |
+| POST | `/pantry/merge-preview` | `READY` | 2026-09-23 | No | Duplicate identity/unit compatibility and projected balance, no mutation |
+| POST | `/pantry/merge` | `READY` | 2026-09-23 | No | Idempotent atomic merge with expected version per item; sources soft-deleted |
+| POST | `/ingredient-recognition/jobs` | `READY` | 2026-09-24 | No | Attach 1–6 owned committed `FRIDGE_IMAGE` assets; asynchronous fake/local verification provider |
+| GET | `/ingredient-recognition/jobs/:id` | `READY` | 2026-09-24 | No | Owner-only progress, ordered images, deduplicated candidates, evidence, uncertainty, cautious freshness copy |
+| PATCH | `/ingredient-recognition/jobs/:id/candidates/:candidateId` | `READY` | 2026-09-24 | No | Optimistic-version quantity/name/canonical correction or candidate rejection; no pantry mutation |
+| POST | `/ingredient-recognition/jobs/:id/confirm` | `READY` | 2026-09-24 | No | Idempotent transactional explicit pantry diff; only this boundary updates pantry |
+| POST | `/ingredient-recognition/jobs/:id/cancel` | `READY` | 2026-09-24 | No | Idempotent cancel before confirmation; committed images remain storage-accounted |
+| POST | `/ingredient-recognition/jobs/:id/retry` | `READY` | 2026-09-24 | No | Idempotent retry for `FAILED`/`PARTIAL_FAILED`; candidates are regenerated from all images |
 
-Freshness is an uncertain observation. UI must not say the system has certified food safety.
+Phase 20 returns explicit UI-facing item/adjustment DTOs, never raw Prisma rows or owner/internal foreign keys. Quantity retains the entered unit and exposes reviewed normalized grams when supported; unknown conversion remains explicit. `MANUAL`, `FRIDGE_RECOGNITION`, and `RECEIPT` are stable source values, but the Phase 20 public create route creates confirmed `MANUAL` items only. Freshness and expiry are user observations. UI must not say the system has certified food safety.
+
+Phase 21 requires clients to reserve and commit every image through the Phase 15 upload flow using `kind: FRIDGE_IMAGE`, then pass committed asset IDs in display order. Defaults are 6 images/job, 10 MB/image, and JPEG/PNG/WebP/AVIF. Job/candidate responses expose ordered image URLs, progress, canonical suggestions, amount/unit, confidence, uncertainty, and evidence references, but not owner IDs, raw provider output, provider/model identifiers, reservation IDs, or persistence metadata. Recognition, correction, retry, and cancel never mutate pantry. Confirmation returns only the explicit `CREATED`/`UPDATED` pantry diff and is the sole pantry mutation boundary. Committed images remain owned storage assets and continue counting against Phase 15 quota; referenced assets cannot be deleted while recognition audit records use them.
 
 ### 6.14 Receipt analysis và shopping gaps — Phase 22
 
 | Method | Path | Status | Backend updated | FE integrated | Ghi chú |
 |---|---|---|---|---|---|
-| POST | `/receipt-jobs` | `PLANNED` | — | No | Upload/attach image and start extraction |
-| GET | `/receipt-jobs/:id` | `PLANNED` | — | No | Candidate lines, matches, confidence, status |
-| PATCH | `/receipt-jobs/:id/candidates/:candidateId` | `PLANNED` | — | No | Correct/reject candidate |
-| POST | `/receipt-jobs/:id/confirm` | `PLANNED` | — | No | Idempotent confirmed pantry diff |
-| POST | `/shopping-lists/preview` | `PLANNED` | — | No | Required/available/missing + assumptions/source meals |
+| POST | `/receipt-jobs` | `READY` | 2026-09-24 | No | Start async extraction from ordered, owned, committed receipt-image assets; idempotent create |
+| GET | `/receipt-jobs/:id` | `READY` | 2026-09-24 | No | Owner-only status, receipt metadata, image results, editable candidate lines, confidence/uncertainty |
+| PATCH | `/receipt-jobs/:id/candidates/:candidateId` | `READY` | 2026-09-24 | No | Optimistic-version canonical/name/quantity/price correction or rejection; no pantry mutation |
+| POST | `/receipt-jobs/:id/confirm` | `READY` | 2026-09-24 | No | Idempotent transactional confirmation; selected candidates only; returns explicit pantry diff |
+| POST | `/receipt-jobs/:id/cancel` | `READY` | 2026-09-24 | No | Idempotent cancel before confirmation; committed images remain quota-accounted |
+| POST | `/receipt-jobs/:id/retry` | `READY` | 2026-09-24 | No | Idempotent retry for failed/partially failed extraction using all attached images |
+| POST | `/shopping-lists/preview` | `READY` | 2026-09-24 | No | Selected published recipes/private custom meals + servings; explainable confirmed-pantry gaps |
 
-Receipt extraction never mutates pantry before confirmation. Shopping gap uses confirmed pantry and selected meal servings.
+Reserve and commit each receipt image through Phase 15 with `kind: RECEIPT_IMAGE` before creating a job. Defaults are 4 images/job, 10 MB/image, and JPEG/PNG/WebP/AVIF. Extraction, candidate correction/rejection, retry, and cancel never mutate Pantry. Only explicit confirmation changes Pantry; it returns `CREATED`/`UPDATED` item summaries and is safe to replay with the same idempotency key.
+
+Shopping preview accepts selected recipe/custom-meal servings, scales ingredient requirements, applies reviewed mass/household conversions, and compares only current positive `CONFIRMED` Pantry quantities. Each resolved item exposes grams for `required`, `available`, `missing`, and `surplus`, plus assumptions, source meals, and confidence. Unsupported conversions and unresolved ingredients remain explicit in `unresolvedItems`; receipt candidates are never counted until confirmed into Pantry. Responses omit owner/internal foreign keys, raw provider output, provider/model identifiers, reservations, and persistence metadata.
 
 ### 6.15 AI artifacts và unified verification — Phase 23
 
@@ -436,9 +474,9 @@ Do not add live consumers for wearables/HealthKit/Health Connect, video STT/summ
 
 ## 7. Luồng tích hợp đặc biệt
 
-### 7.1 Register có Contributor request
+### 7.1 Register có Contributor request — Phase 14 breaking contract
 
-Contract `READY` hiện tại trước Phase 14 vẫn là legacy:
+Current backend target:
 
 ```json
 {
@@ -446,9 +484,10 @@ Contract `READY` hiện tại trước Phase 14 vẫn là legacy:
   "password": "...",
   "displayName": "...",
   "contributorRequest": {
-    "requestedType": "NUTRITION_EXPERT",
-    "experience": "...",
-    "referenceLinks": []
+    "claimedApprovalBasis": "ORGANIZATION_AFFILIATION",
+    "organizationClaim": "Tên tổ chức do applicant khai báo",
+    "experience": "Động lực và kinh nghiệm đóng góp...",
+    "referenceLinks": ["https://example.com/reference"]
   }
 }
 ```
@@ -460,26 +499,14 @@ Response user luôn có:
   "role": "MEMBER",
   "contributorApplication": {
     "status": "PENDING",
-    "requestedType": "NUTRITION_EXPERT"
+    "claimedApprovalBasis": "ORGANIZATION_AFFILIATION"
   }
 }
 ```
 
-Frontend tuyệt đối không mở contributor routes dựa trên `requestedType`. Chỉ dùng `user.role` và approved contributor profile từ `/users/me`.
+User form chỉ cho claim `ORGANIZATION_AFFILIATION` hoặc `PLATFORM_TRACK_RECORD`; `organizationClaim` bắt buộc cho organization và không gửi cho platform. `ADMIN_INVITED` chỉ do `POST /admin/contributor-invitations` tạo, vẫn `PENDING` và cần manual review. Response bỏ `requestedType`, `approvedType`, và `contributorType`; approval trả `approvalBasis`, `approvalBasisLabel`, và evidence theo kind. Cả ba basis có quyền giống hệt nhau.
 
-Target breaking contract của Phase 14, chỉ áp dụng sau khi endpoint chuyển qua `CHANGING` rồi `READY` và frontend đã sync OpenAPI:
-
-```json
-{
-  "contributorRequest": {
-    "claimedApprovalBasis": "ORGANIZATION_AFFILIATION",
-    "experience": "...",
-    "referenceLinks": []
-  }
-}
-```
-
-User form target chỉ cho claim `ORGANIZATION_AFFILIATION` hoặc `PLATFORM_TRACK_RECORD`; `ADMIN_INVITED` chỉ đến từ luồng Admin. Response target bỏ `requestedType`, `approvedContributorType`, và `contributorType`; thay bằng final approval basis phù hợp. Cả ba basis đều có cùng quyền sau khi Admin duyệt thủ công. Không đổi consumer theo target này trước khi Phase 14 hoàn tất.
+Frontend migration bắt buộc: sync OpenAPI; xóa `ContributorType` và mọi subtype label/branch; đổi register/application/admin review DTO + Zod form + mapper/tests; đổi filter `requestedType` thành `claimedApprovalBasis`; đổi author/admin summaries sang `contributorApprovalBasis`; xử lý `CONTRIBUTOR_APPROVAL_BASIS_INVALID`, invitation/revoke conflicts và `STALE_ACCESS_TOKEN` sau approve/revoke.
 
 ### 7.2 Diet rule confirmation
 
@@ -667,7 +694,9 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `CONTRIBUTOR_APPLICATION_PENDING`             | Disable submit, link xem trạng thái                                    |
 | `CONTRIBUTOR_REAPPLY_NOT_ALLOWED`             | Hiển thị ngày được apply lại                                           |
 | `CONTRIBUTOR_APPLICATION_NOT_ALLOWED`         | Ẩn form apply với Admin hoặc role không phù hợp                        |
-| `CONTRIBUTOR_TYPE_UNCHANGED`                  | Legacy pre-Phase-14 only; không tạo consumer mới, xóa khi migration READY |
+| `CONTRIBUTOR_APPROVAL_BASIS_INVALID`          | Refresh application; chỉ chọn basis hợp lệ cho source/evidence đã lưu |
+| `CONTRIBUTOR_INVITATION_NOT_ALLOWED`          | Refresh target; chỉ mời Member ACTIVE chưa có application pending |
+| `CONTRIBUTOR_REVOCATION_NOT_APPLICABLE`       | Refresh user; Contributor đã bị revoke hoặc không còn active |
 | `CONTRIBUTOR_APPLICATION_ALREADY_REVIEWED`    | Refresh Admin queue; application đã có quyết định                      |
 | `CONTRIBUTOR_APPLICATION_NOT_REVIEWABLE`      | Giữ queue và báo applicant không còn đủ điều kiện                      |
 | `SELF_APPROVAL_FORBIDDEN`                     | Giữ queue và báo lỗi rõ                                                |
@@ -739,20 +768,67 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `CHAT_REQUEST_IN_PROGRESS`                    | Giữ stream hiện tại hoặc chờ rồi retry cùng idempotency key            |
 | `EXTERNAL_LOCATION_UNAVAILABLE`               | Dùng internal restaurant results                                       |
 | `RESOURCE_CONFLICT`                           | Refresh entity/version trước khi sửa lại                               |
-| `FOOD_DATA_VERSION_CONFLICT`                  | Refetch source/version trước khi Admin sửa/import lại (planned Phase 12) |
-| `NUTRITION_DATA_INCOMPLETE`                   | Hiển thị partial/unknown và assumptions; không coi missing là zero (planned Phase 13) |
-| `NUTRITION_ESTIMATE_STALE`                    | Refetch/recalculate vì ingredient/step/source version đã đổi (planned Phase 13) |
-| `STORAGE_QUOTA_EXCEEDED`                      | Hiển thị used/limit/remaining; yêu cầu xóa media hoặc giảm upload (planned Phase 15) |
-| `UPLOAD_RESERVATION_EXPIRED`                  | Xin reservation mới trước khi retry upload (planned Phase 15)          |
-| `UPLOAD_PROVIDER_MISMATCH`                    | Không attach asset; thông báo upload thất bại và release quota (planned Phase 15) |
+| `FOOD_DATA_SOURCE_UNAVAILABLE`                | Chọn nguồn active đã được Admin cấu hình trước khi preview import       |
+| `DUPLICATE_SOURCE_RECORD`                     | Loại source record ID trùng trong cùng payload import                   |
+| `UNKNOWN_NUTRIENT_CODE`                       | Tạo/activate nutrient definition rồi preview lại                        |
+| `NUTRIENT_UNIT_MISMATCH`                      | Đổi về default unit của nutrient; backend không tự đổi dimension        |
+| `FOOD_DATA_REFERENCE_INVALID`                 | Refetch source/nutrient/ingredient/method ID trước khi lưu              |
+| `FOOD_DATA_DUPLICATE`                         | Refetch code/source identity/effective version; không retry mù          |
+| `FOOD_DATA_NOT_FOUND`                         | Hiển thị record không tồn tại hoặc ingredient không active              |
+| `FOOD_DATA_VERSION_CONFLICT`                  | Refetch source/version trước khi Admin sửa/import lại                    |
+| `IMPORT_IDEMPOTENCY_CONFLICT`                 | Giữ key cho cùng payload; tạo key mới chỉ cho import action mới         |
+| `IMPORT_NOT_COMMITTABLE`                      | Tạo preview mới thay vì commit batch FAILED                             |
+| `IMPORT_STAGING_INVALID`                      | Preview lại theo contract hiện tại                                      |
+| `IMPORT_REFERENCE_CHANGED`                    | Nutrient definition đổi sau preview; preview lại trước khi commit       |
+| `INVALID_SERVINGS`                            | Chặn lưu/tính với servings không hợp lệ; yêu cầu sửa recipe trước khi thử lại |
+| `NUTRITION_DATA_INCOMPLETE`                   | Hiển thị trạng thái chưa có estimate đã lưu hoặc partial/unknown; không coi missing là zero |
+| `NUTRITION_ESTIMATE_STALE`                    | Refetch/recalculate vì ingredient/step/source/factor fingerprint đã đổi |
+| `STORAGE_QUOTA_EXCEEDED`                      | Hiển thị used/limit/remaining; yêu cầu xóa media hoặc giảm upload (READY Phase 15) |
+| `UPLOAD_RESERVATION_EXPIRED`                  | Xin reservation mới trước khi retry upload (READY Phase 15)          |
+| `UPLOAD_PROVIDER_MISMATCH`                    | Không attach asset; thông báo upload thất bại và release quota (READY Phase 15) |
 | `CUSTOM_MEAL_IN_USE`                          | Giải thích plan đang tham chiếu; dùng policy snapshot/block của backend (planned Phase 17) |
-| `MEAL_ANALYSIS_STALE`                         | Refetch analysis sau khi plan/portion/profile/rule đổi (planned Phase 18) |
-| `MEAL_PROGRAM_VERSION_CONFLICT`               | Refetch chương trình nhiều tuần trước khi edit/regenerate (planned Phase 19) |
-| `PANTRY_VERSION_CONFLICT`                     | Refetch inventory và cho user áp dụng lại adjustment (planned Phase 20) |
-| `RECOGNITION_NEEDS_CONFIRMATION`              | Mở candidate editor; không cập nhật pantry tự động (planned Phase 21)   |
-| `RECOGNITION_PROVIDER_UNAVAILABLE`            | Giữ ảnh/job để retry hoặc cho nhập pantry thủ công (planned Phase 21)   |
-| `RECEIPT_NEEDS_CONFIRMATION`                  | Mở receipt candidate editor; không cập nhật pantry tự động (planned Phase 22) |
-| `SHOPPING_UNIT_UNRESOLVED`                    | Hiển thị dòng riêng và conversion assumption/unknown (planned Phase 22) |
+| `MEAL_ANALYSIS_STALE`                         | Refetch plan then rerun analysis after plan/portion/recipe/nutrition/profile/rule changes (READY Phase 18) |
+| `MEAL_ANALYSIS_ITEM_UNFILLED`                 | Exclude unfilled slots or add a meal first (READY Phase 18) |
+| `MEAL_ANALYSIS_SOURCE_MISSING`                | Refetch the plan; the selected item no longer has a usable source (READY Phase 18) |
+| `MEAL_PLAN_HARD_CONSTRAINT_VIOLATION`         | Do not confirm manual-add; show backend hard diet/allergy/exclusion/tradition reasons (READY Phase 18) |
+| `MEAL_PROGRAM_VERSION_CONFLICT`               | Refetch the READY Phase 19 program before retrying a mutation |
+| `MEAL_PROGRAM_IDEMPOTENCY_CONFLICT`           | Reuse a key only with the identical create/mutation payload |
+| `MEAL_PROGRAM_LIMIT_EXCEEDED`                 | Reduce horizon or alternatives to the advertised configuration limits |
+| `MEAL_PROGRAM_ALTERNATIVE_NOT_FOUND`          | Refetch program alternatives before selecting |
+| `MEAL_PROGRAM_REGENERATION_LIMIT`             | Stop regenerating that week or select an existing alternative |
+| `MEAL_PROGRAM_NOT_CONFIRMABLE`                | Resolve failed/missing weeks and select every week before confirmation |
+| `MEAL_PROGRAM_CONFIRMED_IMMUTABLE`            | Keep confirmed snapshots; create a new draft program for content changes |
+| `PANTRY_ITEM_NOT_FOUND`                       | Close stale detail/editor; do not reveal whether another owner has that ID |
+| `PANTRY_INGREDIENT_INVALID`                   | Refresh canonical ingredient choices or use unmatched text |
+| `PANTRY_UNMATCHED_TEXT_INVALID`               | Ask for an unmatched label containing letters or numbers |
+| `PANTRY_DATE_INVALID`                         | Correct opened/expiry dates so they are not before purchase date |
+| `PANTRY_VERSION_CONFLICT`                     | Refetch READY inventory and let the user apply the change again |
+| `PANTRY_IDEMPOTENCY_CONFLICT`                 | Reuse a key only for the identical create/adjust/merge payload |
+| `PANTRY_NEGATIVE_QUANTITY`                    | Keep the current balance and ask for a smaller consumption/negative adjustment |
+| `PANTRY_UNIT_CONVERSION_UNAVAILABLE`          | Keep original unit visible; request a supported unit or separate inventory line |
+| `PANTRY_MERGE_INCOMPATIBLE`                   | Render preview warnings; do not submit merge until identity/unit issues are resolved |
+| `PANTRY_MERGE_CONFLICT`                       | Refetch all duplicate candidates because one changed or was removed |
+| `RECOGNITION_IMAGE_LIMIT_EXCEEDED`            | Reduce the ordered image list to the configured limit (default 6) |
+| `RECOGNITION_IMAGE_INVALID`                   | Re-upload/reserve as an owned committed `FRIDGE_IMAGE` with supported type/size |
+| `RECOGNITION_IDEMPOTENCY_CONFLICT`            | Reuse the create key only with the identical ordered asset list |
+| `RECOGNITION_JOB_NOT_FOUND`                   | Close stale job UI; do not reveal another owner's job |
+| `RECOGNITION_INGREDIENT_INVALID`              | Refresh active canonical ingredient options or retain an unmatched label |
+| `RECOGNITION_CANDIDATE_INVALID`               | Ask for a candidate name containing letters or numbers |
+| `RECOGNITION_QUANTITY_INCOMPLETE`             | Provide both quantity and unit, or clear both |
+| `RECOGNITION_VERSION_CONFLICT`                | Refetch the job before editing or confirming candidates |
+| `RECOGNITION_STATE_CONFLICT`                  | Refetch status; do not confirm cancelled, processing, or differently confirmed jobs |
+| `RECOGNITION_PROVIDER_UNAVAILABLE`            | Keep the committed images/job for retry or offer manual pantry entry |
+| `RECEIPT_IMAGE_LIMIT_EXCEEDED`                | Reduce the ordered receipt image list to the configured limit (default 4) |
+| `RECEIPT_IMAGE_INVALID`                       | Re-upload/reserve as an owned committed `RECEIPT_IMAGE` with supported type/size |
+| `RECEIPT_IDEMPOTENCY_CONFLICT`                | Reuse a create key only for the identical ordered asset list |
+| `RECEIPT_JOB_NOT_FOUND`                       | Close stale job UI; do not reveal another owner's job |
+| `RECEIPT_INGREDIENT_INVALID`                  | Refresh active canonical ingredient choices or retain an unmatched receipt label |
+| `RECEIPT_CANDIDATE_INVALID`                   | Ask for a receipt line/name containing letters or numbers |
+| `RECEIPT_QUANTITY_INCOMPLETE`                 | Provide both quantity and unit, or clear both |
+| `RECEIPT_VERSION_CONFLICT`                    | Refetch the job before editing or confirming candidates |
+| `RECEIPT_STATE_CONFLICT`                      | Refetch status; do not confirm cancelled, processing, or differently confirmed jobs |
+| `RECEIPT_PROVIDER_UNAVAILABLE`                | Keep the committed images/job for retry or offer manual Pantry entry |
+| `SHOPPING_MEAL_NOT_FOUND`                     | Remove inaccessible/stale recipe or custom-meal selections and recalculate |
 | `AI_ARTIFACT_VERSION_CONFLICT`                | Refetch artifact/version trước khi share/verify (planned Phase 23)      |
 | `SELF_VERIFICATION_FORBIDDEN`                 | Không cho Contributor tự verify artifact của mình (planned Phase 23)   |
 
@@ -817,6 +893,17 @@ Thêm entry mới nhất ở trên cùng.
 
 | Date       | Version | Module         | Change                                                                                                                                | Breaking | FE action                                                                                            |
 | ---------- | ------- | -------------- | ------------------------------------------------------------------------------------------------------------------------------------- | :------: | ---------------------------------------------------------------------------------------------------- |
+| 2026-09-24 | 4.9     | Receipts / Shopping | Phase 22 READY: quota-accounted receipt images, validated fake/local async extraction, editable/rejectable lines, partial retry/cancel, explicit idempotent confirmation as the only pantry mutation boundary, and explainable selected-meal shopping gaps based on reviewed conversions plus confirmed Pantry. | No | Run `npm run sync:swagger`; add endpoint constants and receipt/shopping DTO/Model/Mapper/API/query layers; upload with Phase 15 `RECEIPT_IMAGE`; render unresolved conversions separately. |
+| 2026-09-24 | 4.8     | Fridge Vision  | Phase 21 READY: quota-accounted owned multi-image attachments, async provider abstraction with validated fake/local output, cross-image dedupe/evidence, canonical suggestions, editable quantity/freshness candidates, partial failure/retry/cancel, and idempotent transactional confirmation as the only pantry mutation boundary. | No | Run `npm run sync:swagger`; add endpoint constants and ingredient-vision DTO/Model/Mapper/API/query layers; use Phase 15 `FRIDGE_IMAGE` reservation/commit first and render confidence/uncertainty without food-safety claims. |
+| 2026-09-23 | 4.7     | Pantry         | Phase 20 READY: owner CRUD/filter, explicit UI DTOs, reviewed mass/household conversion with unknown status, immutable consume/restore/adjust ledger, negative prevention, soft-delete history, duplicate preview/atomic merge, inclusive expiry query, idempotency, and optimistic concurrency. | No | Run `npm run sync:swagger`; add endpoint constants plus Pantry DTO/Model/Mapper/API/query layers and handle conversion/expiry/version/idempotency states. |
+| 2026-09-23 | 4.6     | Meal Programs  | Phase 19 READY: owner-scoped 2–12 week programs, bounded draft alternatives, stable weekly snapshots, partial/retry generation, repeated-pattern and cumulative/average nutrition analysis, version/idempotency checks, later-week invalidation, reanalysis, and immutable confirmed content. | No | Run `npm run sync:swagger`; add DTO/Model/Mapper/query for program list/detail/actions and render partial, stale, warning, and confirmation states. |
+| 2026-09-23 | 4.5     | Meal Analysis  | Phase 18 READY: versioned analysis for recipe/custom-meal portions, cooking-aware daily nutrients, ingredient guidelines and SAME_DISH/SAME_MEAL/SAME_DAY interactions; duplicate suppression, provenance/applicability/confidence/incomplete notes, stale fingerprints, plus hard-safe manual-add and refreshed generate/swap responses. | No | Run `npm run sync:swagger`; add DTO/Model/Mapper/query for analysis and render backend warning fields without promoting advisory evidence to a frontend prohibition. |
+| 2026-09-21 | 4.4     | Video Review   | Phase 16 READY: mọi content dùng draft → explicit submit → Admin approve/reject-with-reason; approved edit giữ revision cũ public; uploaded video bắt buộc Phase 15 committed owned asset, external YouTube không tính quota; moderation chỉ ghi signal; thêm author history và Admin queue/detail/decision. Legacy `/review-queue/posts*` chuyển `DEPRECATED` và Admin-only. | Yes | Run `npm run sync:swagger`; migrate create/edit UI khỏi role-based auto-publish, thêm submit/status/history và dùng `/admin/content-review*`. |
+| 2026-09-19 | 4.3     | Contributors   | Phase 14 source/migration/OpenAPI implemented: removed subtype fields/RBAC, added typed approval basis, immutable organization/platform/invitation evidence, Admin invitation, manual approve/reject, audited revoke, conservative legacy migration, stale-session revocation. Existing consumed endpoints remain `CHANGING`; new endpoints remain `IN_PROGRESS` because `npm run build` is blocked by Windows Prisma DLL `EPERM`. | Yes | Run `npm run sync:swagger`; replace subtype DTO/model/forms/mappers/tests and UI/RBAC branches with unified role/profile contract after backend build gate passes; integrate invitation/revoke when scheduled. |
+| 2026-09-19 | 4.2     | Recipe Nutrition | Phase 13 implemented in source/OpenAPI: structured recipe steps on recipe revisions plus cooking-aware preview/recalculate/current/history/status endpoints; deterministic calculation uses unit conversion, edible portion, reviewed yield/retention factors, provenance, confidence, uncertainty and uncovered ingredients; AI fallback is provider-adapter only và labeled. Runtime status remains `IN_PROGRESS` until the blocked `npm run build` gate completes. | No | Do not integrate until status returns to `READY`; then sync OpenAPI and add `features/recipe-nutrition` DTO/Model/Mapper/query with partial coverage/stale/provider fallback handling. |
+| 2026-09-19 | 4.1     | Food Data      | Phase 12 READY: canonical profiles/nutrients/conversions, intake/guidelines, cooking factors, interaction rules, typed Admin CRUD, staged AI suggestions và provider-neutral idempotent imports. | No | Sync OpenAPI; thêm DTO/Model/Mapper/query cho các read endpoint và màn quản trị khi được ưu tiên. Missing nutrient không render thành 0. |
+| 2026-09-23 | 5.0 | Phases 12–19 | BE đã cập nhật OpenAPI và response models cho Phase 12 (Food Data), Phase 13 (Recipe Nutrition), Phase 14 (Unified Contributor), Phase 15 (Storage Quota), Phase 16 (Video Review), Phase 17 (Custom Meals), Phase 18 (Meal Analysis), và Phase 19 (Meal Programs). Tiến hành audit toàn bộ client-facing responses: loại bỏ trường nội bộ/FK rò rỉ, bảo toàn audit log của Admin. Đồng bộ 118 endpoints / 27 nhóm OpenAPI vào `docs/API-CATALOG.md` và `docs/api/*.md`. | No | Cập nhật catalog và đối chiếu DTO/Model/Mapper cho các phase đã READY. |
+| 2026-09-19 | 4.1 | Storage Phase 15 | Schema+migration (`20260919170000_storage_quota_accounting`), StoragePolicy/Account/Reservation/MediaAsset/StorageAdjustment models; reservation->commit->release flow; expiry cleanup; reconciliation; existing-media backfill; `/uploads/signature` REMOVED and replaced by reservation flow; 9 new READY endpoints (`GET /storage/me`, `POST /uploads/reservations`, `POST /uploads/reservations/:id/commit`, `DELETE /uploads/reservations/:id`, `DELETE /storage/assets/:id`, `GET /admin/storage/accounts`, `GET /admin/storage/policies`, `PATCH /admin/storage/policies/:id`, `POST /admin/storage/accounts/:userId/adjustments`, `GET /admin/storage/adjustments`); error codes `STORAGE_QUOTA_EXCEEDED`, `UPLOAD_RESERVATION_EXPIRED`, `UPLOAD_IDEMPOTENCY_CONFLICT`, `UPLOAD_RESERVATION_CONFLICT`, `UPLOAD_PROVIDER_MISMATCH`, `MEDIA_ASSET_IN_USE`, `MEDIA_DELETE_IDEMPOTENCY_CONFLICT`, `STORAGE_POLICY_CONFLICT`, `STORAGE_ADJUSTMENT_IDEMPOTENCY_CONFLICT`, `STORAGE_ADJUSTMENT_INVALID` now READY. Default quota: 1 GiB per user. Reservation TTL: 900 s. | No | Run `npm run sync:swagger`; integrate reservation->commit flow for Cloudinary uploads; add `GET /storage/me` usage widget |
 | 2026-09-18 | 4.0     | Product plan   | Đồng bộ canonical SRS và backend Phases 12–27: food data, cooking-aware nutrition, unified Contributor, quota/video review, custom meals/tags, meal analysis/programs, pantry, fridge, receipt, AI artifacts, maps, notifications và governance. Contract runtime hiện tại không đổi; Contributor Phase 14 được ghi là breaking migration tương lai. | Future Phase 14 | Chưa đổi consumer live; chỉ sync/migrate khi từng endpoint chuyển READY/CHANGING theo OpenAPI |
 | 2026-09-17 | 3.8     | AI Governance  | FE scaffold 5 ops AI governance theo spec 017 (DTO suy luận + reconfirm ở task nối live/Mapper/test redaction/fixtures 0 nội dung thô/API fixture 0 request/Query/tab dashboard tổng quan + log che mờ + cờ + công tắc); endpoint giữ `PLANNED`, `FE integrated` giữ `No` |    No    | Test tay AG-1..AG-3 + check Network 0 request + quét DOM 0 nội dung thô theo `specs/017-ai-governance/quickstart.md`; nối live khi BE đánh `READY` |
 | 2026-09-17 | 3.7     | Restaurants    | FE scaffold 7 ops restaurants/location theo spec 016 (DTO suy luận + reconfirm ở task nối live/Mapper/test haversine/fixtures/API fixture 0 request + 0 maps/Query/viết lại 2 routes + tab dashboard, khung bản đồ CSS không SDK); endpoint giữ `PLANNED`, `FE integrated` giữ `No` |    No    | Test tay RT-1..RT-4 + check Network 0 request/maps theo `specs/016-restaurants-location/quickstart.md`; nối live (SDK maps/key) khi BE đánh `READY` |
@@ -867,3 +954,80 @@ Một frontend/backend capability chỉ được xem là tích hợp xong khi:
 - Backend gates và frontend checks liên quan pass.
 - Ma trận mục 6 ghi `FE integrated = Yes` kèm ngày hoặc PR/commit reference.
 - Changelog được cập nhật nếu behavior hoặc contract thay đổi.
+
+### 6.12 Custom Meals — Phase 17
+
+| Method | Endpoint | Status | FE integrated | FE integrated date | Notes |
+|--------|----------|--------|---------------|--------------------|-------|
+| GET | /api/v1/custom-meals | READY | No | — | Owner-scoped paginated list; optional ?tag= filter |
+| POST | /api/v1/custom-meals | READY | No | — | Create private custom meal with ingredients and tags |
+| GET | /api/v1/custom-meals/{id} | READY | No | — | Detail with ingredients, photos, tags |
+| PATCH | /api/v1/custom-meals/{id} | READY | No | — | Partial update; replaces entire ingredients/tags lists if provided |
+| DELETE | /api/v1/custom-meals/{id} | READY | No | — | Soft-delete; 409 CUSTOM_MEAL_IN_USE if BLOCK policy and plan references exist |
+| POST | /api/v1/custom-meals/{id}/photos | READY | No | — | Attach existing MediaAsset (COVER_IMAGE); max 10 per meal |
+| DELETE | /api/v1/custom-meals/{id}/photos/{assetId} | READY | No | — | Detach photo; asset deletion handled via storage module |
+| PUT | /api/v1/custom-meals/{id}/photos/order | READY | No | — | Reorder photos by orderedAssetIds array |
+
+**Business rules (backend-enforced):**
+- All endpoints require authentication; owner-scoped (no cross-user access).
+- deletePolicy=BLOCK (default): DELETE returns 409 if meal is referenced by any MealPlanItem with RETAIN_SNAPSHOT not set.
+- deletePolicy=RETAIN_SNAPSHOT: allows delete; plan items retain the snapshot on customMealSnapshot JSON field.
+- Asset attached as photo must be owned by the same user and of COVER_IMAGE kind.
+- Deleting a MediaAsset used as a custom meal photo is blocked (409 ASSET_IN_USE) by storage module.
+- MealPlanItem now has sourceType (RECIPE|CUSTOM_MEAL) and customMealId; existing rows default to RECIPE.
+
+**Error codes:**
+| Code | HTTP | Description |
+|------|------|-------------|
+| CUSTOM_MEAL_NOT_FOUND | 404 | Meal does not exist or is not owned by the requester |
+| CUSTOM_MEAL_IN_USE | 409 | BLOCK policy delete rejected because meal is referenced by a plan item |
+| CUSTOM_MEAL_PHOTO_LIMIT | 422 | Meal already has 10 photos |
+| ASSET_NOT_FOUND_OR_INELIGIBLE | 422 | Asset is not COVER_IMAGE, not owned by user, or not ACTIVE |
+
+### 6.13 Meal Analysis — Phase 18
+
+| Method | Endpoint | Status | FE integrated | FE integrated date | Notes |
+|--------|----------|--------|---------------|--------------------|-------|
+| POST | /api/v1/meal-plans/{id}/analyze | READY | No | — | Analyze portion, nutrient limits, guidelines, and interaction warnings; returns versioned analysis |
+| GET | /api/v1/meal-plans/{id}/analysis | READY | No | — | Get current meal plan analysis; returns 409 MEAL_ANALYSIS_STALE if inputs changed |
+| PATCH | /api/v1/meal-plans/{id}/items/{itemId}/manual-add | READY | No | — | Manually add recipe or custom meal to plan item with strict constraint verification |
+
+**Business rules (backend-enforced):**
+- Auth + ownership required; users cannot analyze or alter other users' meal plans.
+- Strict constraint precedence: hard allergy, diet pattern, exclusion, and tradition rules reject manual addition (`400 DIET_CONSTRAINT_VIOLATION` / `ALLERGY_VIOLATION`).
+- Analysis validation: returns `409 MEAL_ANALYSIS_STALE` when fingerprint mismatches due to recipe, ingredient, or item change.
+- Warning DTOs must provide `code`, `severity` (INFO, CAUTION, HIGH), `scope` (DISH, MEAL, DAILY), `evidenceGrade`, `source`, `affectedItems`, `affectedIngredients`, `measured`, `limit`, `explanation`, `suggestedAdjustment`, `confidence`, `advisory`.
+
+**Error codes:**
+| Code | HTTP | Description |
+|------|------|-------------|
+| MEAL_PLAN_NOT_FOUND | 404 | Meal plan not found or not owned by user |
+| MEAL_ANALYSIS_NOT_FOUND | 404 | No analysis recorded for this meal plan |
+| MEAL_ANALYSIS_STALE | 409 | Analysis fingerprint is stale; reanalysis required |
+| PLAN_VERSION_MISMATCH | 409 | Concurrent plan modification detected |
+| DIET_CONSTRAINT_VIOLATION | 400 | Hard diet constraint violated |
+| ALLERGY_VIOLATION | 400 | Ingredient allergen violates user preference |
+
+### 6.14 Multi-Week Meal Programs — Phase 19
+
+| Method | Endpoint | Status | FE integrated | FE integrated date | Notes |
+|--------|----------|--------|---------------|--------------------|-------|
+| POST | /api/v1/meal-programs | READY | No | — | Create/generate multi-week program (2–12 weeks) with bounded alternatives |
+| GET | /api/v1/meal-programs | READY | No | — | Owner paginated list of programs |
+| GET | /api/v1/meal-programs/{id} | READY | No | — | Full program detail with weekly snapshots, alternatives, and cross-week analysis |
+| PATCH | /api/v1/meal-programs/{id} | READY | No | — | Versioned program update, alternative selection, reanalysis, or confirmation |
+
+**Business rules (backend-enforced):**
+- Bounded program horizon: between 2 and 12 weeks (`PROGRAM_HORIZON_INVALID` if out of bounds).
+- Program alternatives: 1 to 3 alternatives per week.
+- Weekly snapshots: alternatives snapshot base meal plans so future recipe/plan changes do not corrupt active programs.
+- Confirmation lifecycle: once confirmed (`CONFIRMED`), program structure is locked against further generation edits (`PROGRAM_ALREADY_CONFIRMED`).
+- Cross-week aggregated analysis: aggregates nutrition and nutrient limits across weeks, invalidating downstream weeks if alternative changed.
+
+**Error codes:**
+| Code | HTTP | Description |
+|------|------|-------------|
+| MEAL_PROGRAM_NOT_FOUND | 404 | Meal program not found or not owned by user |
+| PROGRAM_HORIZON_INVALID | 400 | Horizon weeks must be between 2 and 12 |
+| PROGRAM_ALREADY_CONFIRMED | 409 | Confirmed programs cannot be edited |
+| PROGRAM_VERSION_MISMATCH | 409 | Concurrent program modification detected |

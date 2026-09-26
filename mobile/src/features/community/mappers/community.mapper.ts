@@ -1,16 +1,41 @@
 import { BaseMapper, pickField, safeArray, safeDate, safeEnum, safeNumber, safeString } from '@/lib/mapper';
-import { CommentStatus } from '@/common/enums';
+import { CommentStatus, PostType } from '@/common/enums';
 import type { PaginationResult } from '@/types/api';
 import type {
+  BookmarkedItemDto,
+  BookmarkListResponseDto,
   CommentAuthorDto,
   CommunityBookmarkResponseDto,
   CommunityCommentDto,
   CommunityCommentListResponseDto,
   CommunityCommentResponseDto,
+  CommunityRatingResponseDto,
   CommunitySummaryResponseDto,
   CommunityVoteResponseDto,
+  CurrentRatingDto,
+  RatingAggregateDto,
 } from '../types/community.dto';
-import type { CommunityComment, CommunitySummary } from '../types/community.model';
+import type {
+  BookmarkedItem,
+  CommunityComment,
+  CommunitySummary,
+  CurrentRating,
+  RatingAggregate,
+} from '../types/community.model';
+
+function toRatingAggregate(dto: RatingAggregateDto | null | undefined): RatingAggregate | null {
+  if (!dto || typeof dto !== 'object') return null;
+  return {
+    count: safeNumber(pickField(dto, ['count'], 0)),
+    tasteAverage: dto.tasteAverage == null ? null : safeNumber(dto.tasteAverage),
+    difficultyAverage: dto.difficultyAverage == null ? null : safeNumber(dto.difficultyAverage),
+  };
+}
+
+function toCurrentRating(dto: CurrentRatingDto | null | undefined): CurrentRating | null {
+  if (!dto || typeof dto !== 'object' || dto.taste == null || dto.difficulty == null) return null;
+  return { taste: safeNumber(dto.taste), difficulty: safeNumber(dto.difficulty) };
+}
 
 export class CommunityMapper extends BaseMapper<CommunityCommentDto, CommunityComment> {
   toModel(dto: CommunityCommentDto | null | undefined): CommunityComment {
@@ -73,6 +98,8 @@ export class CommunityMapper extends BaseMapper<CommunityCommentDto, CommunityCo
       voteCount: safeNumber(pickField(data, ['voteCount'], 0)),
       viewerVoted: Boolean(pickField(viewer, ['voted'], false)),
       viewerBookmarked: Boolean(pickField(viewer, ['bookmarked'], false)),
+      rating: toRatingAggregate(pickField(data, ['rating'], null)),
+      viewerRating: toCurrentRating(pickField(viewer, ['rating'], null)),
     };
   }
 
@@ -90,6 +117,55 @@ export class CommunityMapper extends BaseMapper<CommunityCommentDto, CommunityCo
     return {
       postId: safeString(pickField(data, ['postId'], '')),
       bookmarked: Boolean(pickField(data, ['bookmarked'], false)),
+    };
+  }
+
+  /** `PUT /posts/:id/rating` → đánh giá vừa lưu + tổng hợp mới. Chỉ Recipe. */
+  toRatingResultModel(dto: CommunityRatingResponseDto | null | undefined): {
+    postId: string;
+    rating: CurrentRating | null;
+    aggregate: RatingAggregate | null;
+  } {
+    const data = pickField<CommunityRatingResponseDto['data']>(dto, ['data'], null);
+    return {
+      postId: safeString(pickField(data, ['postId'], '')),
+      rating: toCurrentRating(pickField(data, ['rating'], null)),
+      aggregate: toRatingAggregate(pickField(data, ['aggregate'], null)),
+    };
+  }
+
+  toBookmarkedItem(dto: BookmarkedItemDto | null | undefined): BookmarkedItem {
+    return {
+      postId: safeString(pickField(dto, ['postId'], '')),
+      type: safeEnum(pickField(dto, ['type'], 'RECIPE'), PostType, PostType.RECIPE) as 'RECIPE' | 'VIDEO',
+      slug: safeString(pickField(dto, ['slug'], '')),
+      title: safeString(pickField(dto, ['title'], 'Nội dung đã lưu')),
+      excerpt: safeString(pickField(dto, ['excerpt'], '')) || null,
+      coverImageUrl: safeString(pickField(dto, ['coverImageUrl'], '')) || null,
+      publishedAt: safeDate(pickField(dto, ['publishedAt'], null)),
+      bookmarkedAt: safeDate(pickField(dto, ['bookmarkedAt'], null)),
+    };
+  }
+
+  toBookmarkListModel(dto: BookmarkListResponseDto | null | undefined): PaginationResult<BookmarkedItem> {
+    const items = safeArray<BookmarkedItemDto | null, BookmarkedItem>(
+      pickField(dto, ['data'], []),
+      (item) => this.toBookmarkedItem(item)
+    ).filter((item) => item.postId.length > 0);
+    const meta = pickField<BookmarkListResponseDto['meta']>(dto, ['meta'], null);
+    const page = safeNumber(meta?.page, 1);
+    const limit = safeNumber(meta?.limit, 20);
+    const totalPages = safeNumber(meta?.totalPages, 1);
+    return {
+      items,
+      metadata: {
+        page,
+        limit,
+        totalItems: safeNumber(meta?.total, items.length),
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+      },
     };
   }
 }

@@ -16,6 +16,814 @@
 - Còn lại / rủi ro:
 ```
 
+## [2026-09-24] — Khắc phục lỗi gom toàn bộ món ăn vào ngày đầu tiên của tuần (Phase 19 Meal Program)
+
+- Mục tiêu: Phân bổ chính xác các món ăn trong tuần về đúng 7 ngày dựa trên trường `date` (YYYY-MM-DD) và phân loại trực quan theo `mealType` (Bữa sáng, Bữa trưa, Bữa tối, Bữa phụ) thay vì dồn tất cả 21 món vào Ngày thứ nhất.
+- Đã làm:
+  - **Phân tích nguyên nhân**:
+    1. Trong `mealProgramMapper.groupSlotsIntoDays`: code cũ đọc `slot.dayOfWeek` hoặc `slot.day_of_week`. Tuy nhiên, backend `MealPlan` lưu trữ danh sách phẳng 21 slot trong `items` với trường định danh ngày là `date` (`"YYYY-MM-DD"`), không có `dayOfWeek`. Khi không tìm thấy `dayOfWeek`, mapper fallback về `1` cho toàn bộ 21 món, dẫn đến hiện tượng Ngày 1 chứa cả 21 món còn các ngày 2–7 bị rỗng.
+    2. Các món ăn chưa được sắp xếp theo thứ tự bữa ăn tự nhiên (`BREAKFAST` -> `LUNCH` -> `DINNER` -> `SNACK`).
+  - **Triển khai chuẩn hóa**:
+    - **Mapper (`mealProgramMapper.groupSlotsIntoDays`)**:
+      - Quét toàn bộ các giá trị `slot.date` duy nhất trong `items` để xác định chính xác 7 ngày theo chu kỳ tuần bắt đầu từ `startDate` / `weekStart`.
+      - Nhóm từng món ăn vào đúng ngày dựa trên trường `slot.date` (kèm fallback `dayOfWeek` và `position` an toàn).
+      - Bổ sung `dayOfWeekLabel` (`Thứ Hai`, `Thứ Ba`, ..., `Chủ Nhật`) cho từng ngày.
+      - Sắp xếp các món ăn trong ngày theo trình tự thời gian: Bữa sáng (`BREAKFAST`) ➔ Bữa trưa (`LUNCH`) ➔ Bữa tối (`DINNER`) ➔ Bữa phụ (`SNACK`).
+    - **UI (`WeekPlanView` & `DayMealChecklist`)**:
+      - Hiển thị tiêu đề ngày rõ ràng: Tên thứ + Ngày tháng (vd: `Thứ Hai (28/09)`, `Thứ Ba (29/09)`, ...).
+      - Trang bị badge màu sắc và icon riêng biệt theo `mealType`:
+        - ☀️ Bữa sáng (`amber` badge + icon `Sun`)
+        - 🍽️ Bữa trưa (`orange` badge + icon `Utensils`)
+        - 🌙 Bữa tối (`indigo` badge + icon `Moon`)
+        - ✨ Bữa phụ (`emerald` badge + icon `Sparkles`)
+    - **Unit Test**: Bổ sung test case 11 trong `meal-program.mapper.test.ts` kiểm thử 21 slot xáo trộn được phân bổ chuẩn xác thành 7 ngày, mỗi ngày 3 món đúng thứ tự `BREAKFAST` ➔ `LUNCH` ➔ `DINNER`.
+- File tạo/sửa:
+  - `src/features/meal-program/types/meal-program.model.ts`
+  - `src/features/meal-program/mappers/meal-program.mapper.ts`
+  - `src/features/meal-program/mappers/meal-program.mapper.test.ts`
+  - `src/features/meal-program/components/week-plan-view.tsx`
+  - `src/features/meal-program/components/day-meal-checklist.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi typescript.
+  - `npm test`: 33/33 test files passed (326/326 tests passed).
+- PROGRESS: Hoàn thiện hiển thị lịch thực đơn tuần Phase 19 đạt 100%.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-24] — Khắc phục lỗi VALIDATION_ERROR khi tạo lộ trình dinh dưỡng Phase 19
+
+- Mục tiêu: Khắc phục triệt để lỗi `VALIDATION_ERROR` từ backend khi tạo lộ trình (`goal` enum, `startDate` phải là Thứ Hai, `horizonWeeks`, `idempotencyKey`, và lỗi unrecognized keys snake_case do backend `.strict()`).
+- Đã làm:
+  - **Phân tích nguyên nhân**:
+    1. Backend `createMealProgramRequestSchema` sử dụng `.strict()` với định dạng camelCase (`startDate`, `horizonWeeks`), trong khi form trước đó gửi payload snake_case (`start_date`, `horizon_weeks`), dẫn đến lỗi `Unrecognized keys: "start_date", "horizon_weeks"`.
+    2. Backend bắt buộc `goal` là enum `MealGoal` (`'MAINTAIN' | 'LOSE' | 'GAIN'`), trong khi form trước đó là textarea tự do (gửi "GIẢM CÂN ĂN UỐNG HEALTHI").
+    3. Backend kiểm tra `(value) => new Date(`${value}T00:00:00.000Z`).getUTCDay() === 1` - ngày bắt đầu BẮT BUỘC là Thứ Hai, trong khi người dùng chọn ngày Thứ Sáu (2026-09-25).
+    4. Backend yêu cầu `idempotencyKey` (8-120 ký tự) không được để trống.
+  - **Triển khai khắc phục chuẩn kiến trúc**:
+    - Tạo bộ tiện ích ngày tháng `meal-program-date.utils.ts` và unit test `meal-program-date.utils.test.ts`: tính toán Thứ Hai tiếp theo (`getNextMonday`), kiểm tra Thứ Hai (`isMonday`), tự động nắn ngày sang Thứ Hai gần nhất (`snapToNextMonday`), gợi ý danh sách Thứ Hai dạng pills (`getUpcomingMondays`).
+    - Cập nhật `program-create-form.tsx`: Thay textarea tự do bằng 3 card chọn mục tiêu chuẩn enum (`LOSE`: Giảm cân & Thanh lọc, `MAINTAIN`: Duy trì vóc dáng, `GAIN`: Tăng cân & Tăng cơ) kèm icon và badge. Thêm date picker Thứ Hai kèm auto-snap và pills chọn nhanh 1 click. Gửi payload thuần camelCase khớp 100% backend schema.
+    - Cập nhật `meal-program.api.ts`: Chuẩn hóa `createMealProgram` tự động sinh `idempotencyKey` UUID chuẩn nếu chưa có, loại bỏ hoàn toàn các trường thừa chống lỗi `.strict()`. Đồng bộ các endpoint PATCH (`CONFIRM`, `REANALYZE`, `REGENERATE_WEEK`, `UPDATE_METADATA`, `SELECT_ALTERNATIVE`).
+    - Cập nhật `meal-program.queries.ts`, `program-confirm-dialog.tsx`, `downstream-invalidation-banner.tsx`, `program-analysis-tab.tsx`, `regenerate-week-dialog.tsx` đồng bộ với backend action schemas.
+- File tạo/sửa:
+  - `src/features/meal-program/utils/meal-program-date.utils.ts` (mới)
+  - `src/features/meal-program/utils/meal-program-date.utils.test.ts` (mới)
+  - `src/features/meal-program/types/meal-program.dto.ts`
+  - `src/features/meal-program/types/meal-program.model.ts`
+  - `src/features/meal-program/mappers/meal-program.mapper.ts`
+  - `src/features/meal-program/api/meal-program.api.ts`
+  - `src/features/meal-program/queries/meal-program.queries.ts`
+  - `src/features/meal-program/components/program-create-form.tsx`
+  - `src/features/meal-program/components/program-confirm-dialog.tsx`
+  - `src/features/meal-program/components/downstream-invalidation-banner.tsx`
+  - `src/features/meal-program/components/program-analysis-tab.tsx`
+  - `src/features/meal-program/components/regenerate-week-dialog.tsx`
+  - `src/app/(site)/meal-programs/[id]/page.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi typescript.
+  - `npm test`: 33/33 test files passed (325/325 tests passed).
+- PROGRESS: Phase 19 Meal Program Form & API Validation đã sửa triệt để 100%.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-24] — Khắc phục lỗi animation khi click chuyển trang Tra cứu dinh dưỡng và Cẩm nang trên Navbar
+
+- Mục tiêu: Khắc phục triệt để lỗi animation bị giật, nhấp nháy, chữ biến mất hoặc xung đột đo đạc tọa độ khi người dùng click vào các mục "Tra cứu dinh dưỡng" và "Cẩm nang" trên thanh Header.
+- Đã làm:
+  - **Phân tích nguyên nhân**:
+    1. Khi sử dụng `layoutId="header-active-pill"` cho trạng thái Active kết hợp với `layoutId="header-hover-pill"` cho Hover: lúc người dùng click vào một mục mới (vd: Cẩm nang), mục đó lập tức chuyển sang `active = true` và chữ nhận màu trắng `text-primary-foreground`. Tuy nhiên, thẻ nền xanh `header-active-pill` cần thời gian chuyển động lò xo (~300ms) để bay từ trang cũ sang. Trong 300ms đó, nền hover xám đã bị huỷ (`!active`), khiến chữ màu trắng nằm trên nền thanh menu màu trắng/trong suốt -> chữ bị biến mất tạm thời (chớp trắng).
+    2. Riêng mục "Tra cứu dinh dưỡng" (`/categories#tra-cuu`), khi click vào thì trình duyệt thực hiện scroll nhảy xuống anchor `#tra-cuu`. Việc scroll đột ngột cùng lúc Framer Motion đang đo tọa độ `getBoundingClientRect()` cho `layoutId="header-active-pill"` khiến khung tính toán bị lệch vị trí hoặc giật khung hình.
+    3. `hoveredHref` không được reset khi click, dẫn đến trạng thái hover bị kẹt ngay trên liên kết vừa click.
+  - **Giải pháp xử lý chuẩn UI/UX & Motion**:
+    - **Active Badge tĩnh & ổn định**: Gán trực tiếp lớp màu chuẩn `bg-primary font-semibold text-primary-foreground shadow-sm` cho mục trang đang chọn (`active`), loại bỏ việc di chuyển `header-active-pill` giữa các trang khác nhau. Điều này triệt tiêu hoàn toàn lỗi chớp chữ trắng, giật layout và xung đột scroll anchor.
+    - **Hover Pill mượt mà 60 FPS**: Giữ nguyên `layoutId="header-hover-pill"` chuyển động lướt dính theo con trỏ chuột (`stiffness: 380, damping: 30`) giữa các mục chưa active.
+    - **Reset `hoveredHref` khi click**: Thêm `onClick={() => setHoveredHref(null)}` trên mỗi thẻ `<Link>` để ngay khi click điều hướng, thanh hover tự động dọn dẹp sạch sẽ, không gây chồng chéo hiệu ứng.
+- File tạo/sửa:
+  - `src/components/layout/site-header.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi typescript.
+  - `npm test`: 32/32 test files passed (319/319 tests passed).
+  - `npm run build`: Build Next.js thành công 35/35 routes.
+- PROGRESS: Tinh chỉnh chuyển động Click & Hover Navbar Header hoàn tất 100%.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-24] — Tối ưu hiệu ứng lướt hover (Gliding Pill Animation) trên thanh điều hướng Header
+
+- Mục tiêu: Khắc phục lỗi animation hover bị giật, nhấp nháy hoặc xung đột layoutId trên thanh điều hướng (`SiteHeader`) khi có nhiều trang/mục menu.
+- Đã làm:
+  - **Phân tích nguyên nhân**: Việc bọc `<AnimatePresence>` kèm `initial={{ opacity: 0 }}` và `exit={{ opacity: 0 }}` bên trong từng phần tử lặp `.map()` khiến khi con trỏ chuột di chuyển nhanh giữa các mục menu, phần tử cũ vẫn tồn tại trong DOM trong suốt thời gian exit animation. Cả 2 phần tử cùng mang `layoutId="header-hover-pill"` dẫn đến xung đột vị trí tính toán của Framer Motion / Motion LayoutGroup, gây hiện tượng bóng ma hoặc giật cục.
+  - **Tối ưu hóa chuyển động (Performance & Motion guidelines)**:
+    - Loại bỏ việc bọc `<AnimatePresence>` riêng lẻ từng mục để `layoutId="header-hover-pill"` chuyển đổi vị trí mượt mà (smooth gliding) giữa các bounding box qua physics spring (`stiffness: 380, damping: 30`).
+    - Giữ `pointer-events-none` và `-z-0` trên thẻ `motion.span` để không can thiệp hoặc ngắt quãng các sự kiện `onMouseEnter` / `onMouseLeave` của thẻ `<Link>`.
+    - Phân tách rõ rệt giữa `header-active-pill` (trang hiện tại) và `header-hover-pill` (mục đang hover), khi rê chuột vào trang đang active thì hover pill tự tắt sạch sẽ, tránh đè 2 lớp nền.
+    - Duy trì hỗ trợ `shouldReduceMotion` cho người dùng cấu hình giảm tải chuyển động.
+- File tạo/sửa:
+  - `src/components/layout/site-header.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi typescript.
+  - `npm test`: 32/32 test files passed (319/319 tests passed).
+  - `npm run build`: Build Next.js thành công 35/35 routes.
+- PROGRESS: Tinh chỉnh chuyển động Navbar Header hoàn tất 100%.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-24] — Khắc phục lỗi tràn viền phải & lệch trang khi mở popup menu trên Header
+
+- Mục tiêu: Khắc phục hiện tượng khi người dùng click vào popup mở menu điều hướng (Avatar hồ sơ cá nhân hoặc Chuông thông báo trên Header) thì giao diện bị giật, lệch và tràn viền sang bên phải làm mất góc nhìn bên trái và hở viền trắng bên phải.
+- Đã làm:
+  - **Phân tích nguyên nhân**:
+    1. DropdownMenu của Radix UI mặc định kích hoạt `modal={true}`, sử dụng `react-remove-scroll` để khóa cuộn `body`. Khi khóa, thư viện tự động thêm `padding-right: 17px` (độ rộng scrollbar Windows) và ẩn scrollbar, gây layout shift dịch chuyển toàn bộ trang web.
+    2. Trong `globals.css`, cấu hình `max-width: 100vw` tính cả bề rộng scrollbar (vốn rộng hơn `clientWidth` 17px), khi kết hợp với `padding-right` của Radix khiến popper vượt quá màn hình, làm trình duyệt tự động cuộn ngang cửa sổ sang phải (`window.scrollX > 0`).
+  - **Giải pháp xử lý**:
+    - **Cấu hình `modal={false}` cho Header Dropdown**: Thiết lập `modal = false` mặc định cho `DropdownMenu` trong `src/components/ui/dropdown-menu.tsx` và cụ thể tại `SiteHeader` (Avatar menu) và `NotificationBell`. Menu hoạt động như một popover điều hướng tự nhiên: không khóa scroll body, không thêm `padding-right`, không làm nhảy khung hình và không gây cuộn ngang.
+    - **Thêm `collisionPadding = 8`**: Đảm bảo Popper của Radix luôn giữ khoảng cách an toàn ít nhất 8px so với mép phải màn hình, không bao giờ tì sát hay cấn viền.
+    - **Chỉnh `max-width: 100%` trong `globals.css`**: Thay thế `100vw` bằng `width: 100%; max-width: 100%;` để giới hạn chính xác theo `clientWidth`, triệt tiêu hoàn toàn khả năng tính dư pixel của scrollbar.
+    - **Responsive max-width cho DropdownContent**: Đặt `max-w-[calc(100vw-2rem)]` cho menu Avatar và `w-[calc(100vw-2rem)] max-w-sm sm:w-90` cho Notification panel để đảm bảo hiển thị hoàn hảo trên mọi kích cỡ màn hình.
+- File tạo/sửa:
+  - `src/components/ui/dropdown-menu.tsx`
+  - `src/components/layout/site-header.tsx`
+  - `src/features/notification/components/notification-bell.tsx`
+  - `src/app/globals.css`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi typescript.
+  - `npm test`: 32/32 test files passed (319/319 tests passed).
+  - `npm run build`: Build Next.js thành công 35/35 routes.
+- PROGRESS: Tinh chỉnh UI Header Dropdowns hoàn tất 100%.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-24] — Tối ưu thanh công cụ Tab trang Hồ sơ (Profile) hiển thị 1 hàng & bổ sung thanh cuộn / nút báo hiệu nội dung
+
+- Mục tiêu:
+  - Khắc phục tình trạng văn bản trên các nút tab của trang Hồ sơ (`/profile`) bị bẻ dòng thành nhiều hàng.
+  - Bổ sung thanh scrollbar thanh mảnh tinh tế và các nút điều hướng / báo hiệu trực quan để người dùng nhận biết ngay khi phía sau còn nhiều tab nội dung.
+- Đã làm:
+  - **Hiển thị 1 hàng duy nhất**: Bổ sung `whitespace-nowrap` cho toàn bộ nút tab, nhãn text và các badge (`AI Phân tích`, `NĐ 13/2023`).
+  - **Thanh cuộn tùy biến (`custom-scrollbar`)**: Khai báo utility `.custom-scrollbar` trong `src/app/globals.css` với chiều cao 4px, thumb bo tròn thanh mảnh theo màu theme, hiển thị tự nhiên khi danh sách bị tràn.
+  - **Nút báo hiệu & cuộn tự động (`ChevronLeft` / `ChevronRight`)**:
+    - Sử dụng `tabsContainerRef` và bộ lắng nghe sự kiện cuộn/resize để tính toán `canScrollLeft` và `canScrollRight`.
+    - Khi phía sau còn nội dung, nút mũi tên phải (`ChevronRight`) xuất hiện nổi bật với hiệu ứng nhịp thở nhẹ (`animate-pulse`) để thu hút sự chú ý của người dùng; khi click, thanh tab tự động cuộn mượt mà sang các mục tiếp theo.
+    - Khi đã cuộn, nút mũi tên trái (`ChevronLeft`) hỗ trợ quay về đầu trang nhanh chóng.
+- File tạo/sửa:
+  - `src/app/globals.css`
+  - `src/app/(site)/profile/page.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi typescript.
+  - `npm test`: 32/32 test files passed (319/319 tests passed).
+  - `npm run build`: Build Next.js thành công 35/35 routes.
+- PROGRESS: Tinh chỉnh UI Profile Tab Bar hoàn tất 100%.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-24] — Khắc phục triệt để lỗi tràn ngang (Horizontal Overflow) trên giao diện toàn trang
+
+- Mục tiêu: Điều chỉnh toàn bộ layout và header trang web VeggieConnect để nằm gọn trong 1 khung hình (1 viewport width), xóa bỏ hoàn toàn thanh cuộn ngang (horizontal scrollbar) và ngăn chặn việc icon/avatar người dùng bị cắt ở cạnh phải màn hình.
+- Đã làm:
+  - **Phân tích nguyên nhân**: Trên màn hình laptop (độ phân giải 1280px–1366px hoặc có tỷ lệ display scale 125%–150%), header có tổng chiều rộng cố định các phần tử (Logo 215px + 7 mục điều hướng chữ dài 744px + Search input 160px + Actions 215px + gaps = ~1390px) vượt quá bề ngang container 1232px, làm tràn 140px ra cạnh phải, đẩy avatar người dùng bị cắt đôi và kích hoạt thanh cuộn ngang trên trình duyệt.
+  - **Tối ưu SiteHeader (`src/components/layout/site-header.tsx`)**:
+    - Bổ sung `shortLabel` cho `NAV_ITEMS`: Hiển thị nhãn rút gọn tinh tế trên các màn hình vừa/laptop (`shortLabel`: "Khám phá", "Dinh dưỡng", "Video", "Thực đơn", "Bản đồ") và chỉ bung nhãn đầy đủ trên màn hình cực lớn (`2xl:` 1536px+).
+    - Tối ưu padding và font-size cho các link nav (`px-1.5 py-1 text-xs xl:px-2.5 2xl:px-3.5`).
+    - Nút "AI Trợ lý": Thu gọn về icon mầm lá + sao khi ở kích thước `lg`, hiển thị đầy đủ chữ trên `xl:` và `2xl:`.
+    - Thanh tìm kiếm: Điều chỉnh độ rộng co giãn thông minh `lg:w-28 xl:w-36 2xl:w-56`.
+    - Nút Đăng nhập / Avatar: Đồng bộ kích thước `h-8.5 w-8.5` (co giãn sang `2xl:h-9 2xl:w-9`) để vừa khít hoàn hảo.
+  - **Tối ưu BrandLogo (`src/components/layout/brand-logo.tsx`)**: Cho phép `imageClassName` kiểm soát chiều cao (`h-7 xl:h-8 2xl:h-9`) với `width: auto; maxWidth: 100%`, tránh cố định cứng pixel inline style.
+  - **Tối ưu CSS Toàn Cục & Khung Trang (`src/app/globals.css`, `src/app/(site)/layout.tsx`, `src/app/(site)/page.tsx`)**:
+    - Thiết lập `html, body { max-width: 100vw; overflow-x: clip; }` ngăn ngừa thanh cuộn ngang mà không gây ảnh hưởng đến `position: sticky`.
+    - Thêm `overflow-x-clip` và `w-full` cho wrapper layout trang `SiteLayout`.
+    - Thêm `overflow-hidden` và `pointer-events-none` cho phần tử Hero section và các vòng sáng ambient blur (`-left-24`) tại trang chủ.
+- File tạo/sửa:
+  - `src/components/layout/brand-logo.tsx`
+  - `src/components/layout/site-header.tsx`
+  - `src/app/globals.css`
+  - `src/app/(site)/layout.tsx`
+  - `src/app/(site)/page.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi typescript.
+  - `npm test`: 32/32 test files passed (319/319 tests passed).
+  - `npm run build`: Compiled successfully, sinh thành công 35/35 static/dynamic pages.
+- PROGRESS: Tối ưu UI/UX Responsive & Chống tràn layout ngang hoàn tất 100%.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-23] — Kiểm tra Response và Đồng bộ Swagger / API Catalog cho Phase 12 đến Phase 19
+
+- Mục tiêu: Kiểm tra toàn diện các thay đổi response, OpenAPI schema và tài liệu audit cho Phase 12 đến Phase 19 theo cập nhật mới nhất từ Backend; đồng bộ Swagger vào API Catalog frontend.
+- Đã làm:
+  - Rà soát tài liệu `phase12_19_response_audit.md` ghi nhận toàn bộ cấu trúc response, mapper và kiểm tra rò rỉ trường nội bộ (FKs, `reviewedById`, `importBatchId`...): tất cả endpoint client-facing đều sạch; các trường kiểm toán của Admin được giữ lại đúng thiết kế.
+  - Chạy `node scripts/sync-swagger.mjs ../backend/openapi.json`: Đồng bộ thành công 118 endpoints, 27 nhóm OpenAPI vào `docs/API-CATALOG.md` và `docs/api/*.md` (bao gồm `custom-meals.md`, `meal-analysis.md`, `meal-programs.md` mới).
+  - Cập nhật `frontend/docs/BACKEND_INTEGRATION.md`:
+    - Dọn dẹp bảng Section 6.12 bỏ các hàng trùng lặp / PLANNED cũ; cập nhật đúng các endpoint thật của Custom Meals (Phase 17 - `/photos` thay vì `/media`), Meal Analysis (Phase 18) và Meal Programs (Phase 19).
+    - Bổ sung chi tiết Section 6.13 (Meal Analysis - Phase 18) và 6.14 (Multi-Week Meal Programs - Phase 19) bao gồm business rules và bảng mã lỗi chi tiết.
+    - Cập nhật Changelog (v5.0 - 2026-09-23).
+- File tạo/sửa:
+  - `frontend/docs/API-CATALOG.md`
+  - `frontend/docs/api-catalog.json`
+  - `frontend/docs/api/*.md` (các file api docs sinh tự động)
+  - `frontend/docs/BACKEND_INTEGRATION.md`
+  - `frontend/docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi typescript.
+  - `npm test`: 32/32 test files passed (319 tests passed).
+- PROGRESS: Đồng bộ contract BE/FE Phase 12–19 hoàn tất 100%.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-23] — Triển khai hoàn tất Phase 14: Hợp nhất Quyền hạn & Căn cứ Xác minh Contributor (Unified Contributor Trust & Verification Parity)
+
+- Mục tiêu: Thực hiện breaking migration toàn diện phân hệ Contributor theo SRS §3.3 và IMPLEMENTATION_PLAN BL-01. Loại bỏ toàn bộ phân tầng subtype RBAC (ContributorType: EXPERIENCED_PRACTITIONER, NUTRITION_EXPERT). Thống nhất một vai trò CONTRIBUTOR duy nhất với 3 căn cứ phê duyệt chuẩn (ContributorApprovalBasis: ORGANIZATION_AFFILIATION, PLATFORM_TRACK_RECORD, ADMIN_INVITED). Căn cứ phê duyệt chỉ mang tính giải trình kiểm toán, không tạo ra nhánh phân quyền. Triển khai API và UI cho Admin mời trực tiếp (POST /api/v1/admin/contributor-invitations) và thu hồi tư cách Contributor kèm lý do kiểm toán bắt buộc (PATCH /api/v1/admin/contributors/:userId/revoke). Biểu mẫu nộp đơn công khai chỉ cho phép chọn ORGANIZATION_AFFILIATION hoặc PLATFORM_TRACK_RECORD (cấm tự chọn ADMIN_INVITED). Ngăn chặn tự duyệt đơn trong Review dialog. Tuân thủ 100% quy chuẩn kiến trúc 7 tầng scaffold, DTO/Model/BaseMapper, không sử dụng `any`, giao diện 100% tiếng Việt.
+- Đã làm:
+  - **Tầng Enums & Constants** (`src/common/enums/index.ts`, `src/common/constants/api-endpoints.ts`):
+    - Khai báo enum `ContributorApprovalBasis` (`ORGANIZATION_AFFILIATION`, `PLATFORM_TRACK_RECORD`, `ADMIN_INVITED`).
+    - Bổ sung `WITHDRAWN` vào `ContributorApplicationStatus`.
+    - Đánh dấu `@deprecated` enum `ContributorType`.
+    - Bổ sung endpoints `ADMIN_CONTRIBUTOR.INVITE` (`POST /admin/contributor-invitations`) và `ADMIN_CONTRIBUTOR.REVOKE(userId)` (`PATCH /admin/contributors/:userId/revoke`).
+  - **Tầng DTO & UI Model** (`src/features/contributor/types/contributor.dto.ts`, `src/features/contributor/types/contributor.model.ts`):
+    - Raw DTOs phản chiếu API backend: `claimedApprovalBasis`, `organizationClaim`, `reviewEvidence`, `invitedBy`, `invitationReason`, `InviteContributorRequestDto`, `RevokeContributorRequestDto`, `ContributorRevocationResponseDto`.
+    - Clean UI Models: `ContributorApplicationModel` (với `claimedApprovalBasis`, `organizationClaim`, `reviewEvidence`, `approvalBasis`, `isReapplyBlocked`), `ContributorRevocationResult`.
+    - Cập nhật `src/features/auth/types/auth.model.ts` và `src/features/auth/mappers/auth.mapper.ts` hỗ trợ trường `claimedApprovalBasis`.
+  - **Tầng Schema & Mapper & Unit Tests** (`contributor.schema.ts`, `contributor.mapper.ts`, `contributor.mapper.test.ts`):
+    - Zod schemas: `submitApplicationSchema` (superRefine bắt buộc `organizationClaim` khi chọn `ORGANIZATION_AFFILIATION`), `reviewApplicationSchema` (discriminatedUnion bắt buộc `approvalBasis` khi duyệt, bắt buộc `reviewNotes` >= 10 ký tự khi từ chối), `inviteContributorSchema`, `revokeContributorSchema` (lý do >= 10 ký tự).
+    - `ContributorMapper` kế thừa `BaseMapper`: mapping an toàn, format ngày tháng tiếng Việt, cắt ngắn snippet 160 ký tự, `APPROVAL_BASIS_LABELS`, phương thức chuyển đổi `toRevocationResult`, `toInviteDto`, `toRevokeDto`.
+    - 12/12 Vitest unit tests pass 100% (`contributor.mapper.test.ts`).
+  - **Tầng API Client & TanStack Queries** (`contributor.api.ts`, `contributor.queries.ts`):
+    - Centralized API methods: `submitApplication`, `getMyApplications`, `getQueue`, `reviewApplication`, `inviteContributorAdmin`, `revokeContributorAdmin`.
+    - Query Key Factory `CONTRIBUTOR_KEYS` và 6 hooks: `useMyApplicationsQuery`, `useSubmitApplicationMutation`, `useContributorQueueQuery`, `useReviewApplicationMutation`, `useInviteContributorAdminMutation`, `useRevokeContributorAdminMutation` với query invalidation tự động.
+  - **Tầng UI Components & Dialogs** (`src/features/contributor/components/`, `src/features/moderation/components/`):
+    - `application-form.tsx`: Cập nhật form nộp đơn theo 2 căn cứ hợp lệ (`ORGANIZATION_AFFILIATION`, `PLATFORM_TRACK_RECORD`), conditional input cho tổ chức/chứng nhận, cảnh báo thời gian cooldown khi bị từ chối.
+    - `review-application-dialog.tsx`: Hộp thoại thẩm định đơn cho Admin, chọn căn cứ phê duyệt cuối cùng, nhập ghi chú giải trình, kiểm tra bằng chứng / liên kết, chống tự duyệt đơn của chính mình.
+    - `contrib-queue-table.tsx`: Hàng đợi xét duyệt đơn có bộ lọc theo căn cứ và trạng thái, hiển thị tổ chức/bằng chứng, nút mở hộp thoại "Mời Contributor".
+    - `invite-contributor-dialog.tsx`: Hộp thoại Admin mời trực tiếp người dùng làm Contributor với lý do mời rõ ràng.
+    - `revoke-contributor-dialog.tsx`: Hộp thoại xác nhận thu hồi tư cách Contributor kèm cảnh báo hạ cấp về vai trò MEMBER và ô nhập lý do kiểm toán bắt buộc.
+    - `mod-users-table.tsx`: Tích hợp nút "Thu hồi quyền" cho Contributor và "Mời Contributor" cho Member trong bảng quản trị người dùng.
+    - `my-applications.tsx`: Hiển thị lịch sử nộp đơn của cá nhân với nhãn căn cứ tiếng Việt, thông tin tổ chức, lý do mời và mốc thời gian được nộp lại.
+    - `application-fixtures.ts`: Cập nhật fixtures chuẩn theo schema mới.
+- File tạo/sửa:
+  - `src/common/enums/index.ts`
+  - `src/common/constants/api-endpoints.ts`
+  - `src/features/contributor/types/contributor.dto.ts`
+  - `src/features/contributor/types/contributor.model.ts`
+  - `src/features/contributor/schemas/contributor.schema.ts`
+  - `src/features/auth/types/auth.model.ts`
+  - `src/features/auth/mappers/auth.mapper.ts`
+  - `src/features/contributor/mappers/contributor.mapper.ts`
+  - `src/features/contributor/mappers/contributor.mapper.test.ts`
+  - `src/features/contributor/api/contributor.api.ts`
+  - `src/features/contributor/queries/contributor.queries.ts`
+  - `src/features/contributor/components/application-form.tsx`
+  - `src/features/contributor/components/review-application-dialog.tsx`
+  - `src/features/contributor/components/contrib-queue-table.tsx`
+  - `src/features/contributor/components/invite-contributor-dialog.tsx`
+  - `src/features/contributor/components/revoke-contributor-dialog.tsx`
+  - `src/features/moderation/components/mod-users-table.tsx`
+  - `src/features/contributor/components/my-applications.tsx`
+  - `src/features/contributor/__fixtures__/application-fixtures.ts`
+  - `src/app/(site)/profile/page.tsx`
+  - `docs/PROGRESS.md`
+  - `docs/WORK-LOG.md`
+  - `specs/013-unified-contributors/tasks.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type trên toàn dự án.
+  - `npm test`: 319/319 tests pass (32 test files bao gồm 12/12 mapper tests mới).
+  - `npm run build`: Next.js 16 build thành công 35/35 routes tĩnh & động.
+- PROGRESS: Phase 14 Contributor Parity hoàn thành 100% (Row 10 trong bảng tổng đạt 95%, chờ verification live BE khi backend deploy).
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-23] — Triển khai hoàn tất Phase 13: Cooking-aware Recipe Nutrition (Đặc tả specs/012-recipe-nutrition)
+
+- Mục tiêu: Triển khai trọn vẹn mô hình 7 tầng scaffold cho tính năng Phân tích Dinh dưỡng Công thức Nấu nướng có tính đến hao hụt nhiệt và phương pháp chế biến (Cooking-aware), phân định rạch ròi giữa số liệu tính toán khoa học chuẩn và số liệu ước lượng bổ trợ từ AI; cảnh báo nguyên liệu chưa có dữ liệu thành phần; nhận diện dữ liệu cũ (STALE) và cung cấp tính năng xem trước (Preview) trong trình soạn thảo công thức.
+- Đã làm:
+  - **Tầng Constants & API Client** (`api-endpoints.ts`, `recipe-nutrition.api.ts`): Bổ sung nhánh `RECIPE_NUTRITION` gồm 5 endpoints (`PREVIEW`, `RECALCULATE`, `CURRENT`, `HISTORY`, `STATUS`).
+  - **Tầng DTO & UI Model** (`recipe-nutrition.dto.ts`, `recipe-nutrition.model.ts`):
+    - Đầy đủ DTOs từ OpenAPI: `RecipeNutritionEstimateDto`, `NutrientAmountDto`, `EstimateLineDto`, `UncoveredIngredientDto`, `RecipeNutritionStatusDto`, `RecipeNutritionPreviewRequestDto`, `RecipeNutritionRecalculateRequestDto`, `NutritionValueOriginDto`.
+    - Clean UI Models: `RecipeNutritionEstimateModel`, `NutrientItemModel`, `MacroDistributionModel`, `UncoveredIngredientModel`, `RecipeNutritionStatusModel`, `RecipeNutritionHistoryItemModel`.
+  - **Tầng Mapper & Unit Tests** (`recipe-nutrition.mapper.ts`, `recipe-nutrition.mapper.test.ts`):
+    - Kế thừa `BaseMapper`, bảo vệ null-safety 100% bằng `safeNumber`, `safeString`, `safeBoolean`, `safeArray`.
+    - Tính toán tỷ lệ % năng lượng calo đa lượng chất (Carb, Protein, Fat) chống chia cho 0.
+    - 12/12 Vitest unit tests pass 100%.
+  - **Tầng TanStack Queries** (`recipe-nutrition.queries.ts`):
+    - Query Key Factory `RECIPE_NUTRITION_KEYS`.
+    - 5 custom hooks: `useRecipeNutritionQuery`, `useRecipeNutritionStatusQuery`, `useRecipeNutritionHistoryQuery`, `usePreviewNutritionMutation`, `useRecalculateNutritionMutation` với tự động invalidate queries liên quan.
+  - **Tầng UI Components** (`components/*`):
+    - `NutritionOriginBadge`: Huy hiệu minh bạch nguồn gốc (Xanh ngọc: Tính toán khoa học, Tím: AI ước lượng, Xanh dương: Kiểm duyệt viên) kèm tooltip giải thích.
+    - `MacroDistributionBar`: Biểu đồ thanh tỷ lệ phân bổ năng lượng Macro (Protein, Carb, Fat) và calo per-serving tăng tốc GPU 60fps.
+    - `UncoveredIngredientsAlert`: Cảnh báo nguyên liệu chưa có dữ liệu trong cơ sở dữ liệu kèm tỷ lệ bao phủ dinh dưỡng.
+    - `NutrientListTable`: Bảng chi tiết vi chất trên mỗi khẩu phần với chế độ xem thu gọn / mở rộng.
+    - `RecipeNutritionCard`: Thẻ dinh dưỡng trung tâm xử lý 4 trạng thái Loading Skeleton, Empty State, Stale State (với nút tính toán lại ngay) và Success State.
+    - `RecipeNutritionPreviewDrawer`: Drawer xem trước dinh dưỡng khi tạo/sửa công thức.
+    - `RecipeNutritionHistoryDialog`: Hộp thoại phân trang tra cứu lịch sử các lần tính toán.
+  - **Tích hợp UI (No Orphan Pages)**:
+    - Nhúng `RecipeNutritionCard` vào trang chi tiết công thức `src/features/recipe/components/recipe-detail-view.tsx` (`/recipes/[id]`).
+    - Nhúng nút "Xem trước tính toán chi tiết" và Drawer vào Section 4 của `src/features/recipe/components/recipe-editor-form.tsx` (dùng chung cho `/recipes/new` và `/recipes/[id]/edit`).
+    - Truyền `postId={id}` từ `src/app/(site)/recipes/[id]/edit/page.tsx` vào editor form.
+- File tạo/sửa:
+  - `src/common/constants/api-endpoints.ts`
+  - `src/features/recipe-nutrition/types/recipe-nutrition.dto.ts`
+  - `src/features/recipe-nutrition/types/recipe-nutrition.model.ts`
+  - `src/features/recipe-nutrition/mappers/recipe-nutrition.mapper.ts`
+  - `src/features/recipe-nutrition/mappers/recipe-nutrition.mapper.test.ts`
+  - `src/features/recipe-nutrition/api/recipe-nutrition.api.ts`
+  - `src/features/recipe-nutrition/queries/recipe-nutrition.queries.ts`
+  - `src/features/recipe-nutrition/components/nutrition-origin-badge.tsx`
+  - `src/features/recipe-nutrition/components/macro-distribution-bar.tsx`
+  - `src/features/recipe-nutrition/components/uncovered-ingredients-alert.tsx`
+  - `src/features/recipe-nutrition/components/nutrient-list-table.tsx`
+  - `src/features/recipe-nutrition/components/recipe-nutrition-card.tsx`
+  - `src/features/recipe-nutrition/components/recipe-nutrition-preview-drawer.tsx`
+  - `src/features/recipe-nutrition/components/recipe-nutrition-history-dialog.tsx`
+  - `src/features/recipe/components/recipe-detail-view.tsx`
+  - `src/features/recipe/components/recipe-editor-form.tsx`
+  - `src/app/(site)/recipes/[id]/edit/page.tsx`
+  - `docs/PROGRESS.md`
+  - `docs/WORK-LOG.md`
+  - `specs/012-recipe-nutrition/tasks.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type trên toàn dự án.
+  - `npm test`: 319/319 tests pass (32 test files).
+  - `npm run build`: 35/35 routes compile & optimize thành công 100%.
+- PROGRESS: Phase 13 hoàn thành 100% FE Scaffold & Integration, sẵn sàng kết nối live backend khi backend hoàn tất build gate.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-23] — Tự động Gửi Duyệt Video sau khi Tạo & Đồng bộ Hàng đợi Kiểm duyệt Admin
+
+- Mục tiêu: Khắc phục trường hợp người dùng tạo video thành công nhưng không thấy xuất hiện trong bảng điều khiển Admin (`/admin/dashboard?tab=queue`).
+- Nguyên nhân:
+  - Khi gọi `POST /api/v1/posts`, backend lưu video ở trạng thái `DRAFT` (Bản nháp riêng tư của tác giả).
+  - Hàng đợi kiểm duyệt Admin (`/admin/dashboard?tab=queue`) theo đặc tả Phase 16 chỉ truy vấn các bản ghi có trạng thái `PENDING_REVIEW` (Chờ duyệt), `FLAGGED`, hoặc `QUARANTINED`. Bản nháp `DRAFT` không thuộc hàng đợi duyệt.
+  - Form tạo video trước đó chỉ dừng lại ở bước tạo post mà chưa kích hoạt `reviewApi.submitPost()` (`POST /api/v1/posts/:id/submit`).
+- Đã làm:
+  - Cập nhật hàm `onSubmit` trong `src/app/(site)/videos/new/page.tsx`: Sau khi tạo video thành công qua `createVideoMutation`, hệ thống tự động gọi `reviewApi.submitPost(created.id, { revisionId, expectedVersion })` để chuyển video sang `PENDING_REVIEW` và đưa thẳng vào hàng đợi duyệt của Admin.
+  - Tự động hủy cache query (`CONTENT_REVIEW_KEYS.all`) để Bảng điều khiển Admin tự cập nhật ngay lập tức.
+  - Bổ sung thông báo toast rõ ràng: báo thành công khi video đã gửi duyệt, hoặc hướng dẫn gửi duyệt từ trang chi tiết nếu có lỗi mạng.
+- File tạo/sửa:
+  - `src/app/(site)/videos/new/page.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 307/307 tests pass.
+- PROGRESS: Trải nghiệm đăng video liền mạch, tự động kết nối luồng tạo video với hàng đợi kiểm duyệt Phase 16.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-23] — Sửa lỗi Validation Error khi Tạo Video / Bài viết với Media Payload Phase 15
+
+- Mục tiêu: Khắc phục lỗi `400 Bad Request` (`VALIDATION_ERROR: media.0.assetId is required, Unrecognized keys: "publicId", "secureUrl", "mimeType", "bytes"`) khi người dùng tạo video (nhúng link YouTube hoặc tải tệp) hoặc tạo bài viết / công thức có ảnh bìa.
+- Nguyên nhân:
+  - Backend Phase 15 áp dụng `mediaInputSchema` với `.strict()`. Đối với Cloudinary media, backend yêu cầu định dạng `{ provider: 'CLOUDINARY', kind: 'COVER_IMAGE' | 'VIDEO', assetId: string }`.
+  - Frontend trước đó gửi định dạng legacy `{ provider: 'CLOUDINARY', kind: 'COVER_IMAGE', publicId, secureUrl, mimeType, bytes }` gây lỗi `Unrecognized keys` và thiếu `assetId`.
+- Đã làm:
+  - Cập nhật hàm `coverMediaInput()` trong `src/features/post/mappers/post.mapper.ts`: chỉ trả về `{ provider: 'CLOUDINARY', kind: 'COVER_IMAGE', assetId: meta.assetId }` khi có `assetId` hợp lệ, loại bỏ hoàn toàn các key dư thừa.
+  - Cập nhật hàm `toCreateDto()` trong `src/features/video/mappers/video.mapper.ts`: mapping Cloudinary video chuẩn `{ provider: 'CLOUDINARY', kind: 'VIDEO', assetId: domain.videoMedia.assetId }`.
+  - Cập nhật Zod schemas `videoFormSchema` (`video-form.schema.ts`) và `recipeFormSchema` (`recipe-form.schema.ts`) để hỗ trợ trường `assetId: z.string().optional()`.
+  - Cập nhật form state tại `src/app/(site)/videos/new/page.tsx`, `src/features/recipe/components/recipe-editor-form.tsx`, `src/features/post/components/post-editor-form.tsx`: bảo toàn `assetId: meta.assetId` từ `ImageUploader` / `VideoUploader` (lấy từ commit reservation của Phase 15).
+  - Bổ sung unit tests trong `post.mapper.test.ts` và `video.mapper.test.ts` kiểm thử 100% các case video YouTube + ảnh bìa reservation, video Cloudinary upload, và drop legacy mock data.
+- File tạo/sửa:
+  - `src/features/post/mappers/post.mapper.ts`
+  - `src/features/video/mappers/video.mapper.ts`
+  - `src/features/video/schemas/video-form.schema.ts`
+  - `src/features/recipe/schemas/recipe-form.schema.ts`
+  - `src/app/(site)/videos/new/page.tsx`
+  - `src/features/recipe/components/recipe-editor-form.tsx`
+  - `src/features/post/components/post-editor-form.tsx`
+  - `src/features/post/mappers/post.mapper.test.ts`
+  - `src/features/video/mappers/video.mapper.test.ts`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 307/307 tests pass (31 files).
+  - `npm run build`: 35/35 routes compile & optimize thành công 100%.
+- PROGRESS: Luồng tạo nội dung (Video, Bài viết, Công thức) hoàn toàn tương thích với Storage Quota & Media Asset Schema của Backend Phase 15.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-23] — Bổ sung Lối vào Điều hướng Tra cứu Dinh dưỡng (No Orphan Navigation Entry Points)
+
+- Mục tiêu: Khắc phục triệt để tình trạng thiếu lối vào tự nhiên (No Orphan Pages / No Orphan Sections) dẫn đến trang Tra cứu Dinh dưỡng & Nguyên liệu chuẩn (`/categories#tra-cuu`), giúp người dùng dễ dàng phát hiện và truy cập từ mọi màn hình chính.
+- Đã làm:
+  - **Thanh Điều hướng Chính (SiteHeader)** (`src/components/layout/site-header.tsx`):
+    - Bổ sung mục **"Tra cứu dinh dưỡng"** (`/categories#tra-cuu`) vào danh sách `NAV_ITEMS` trên cả màn hình Desktop và Mobile drawer menu.
+    - Cập nhật hàm `isActive` hỗ trợ nhận diện hash URL (`href.split('#')[0]`) để highlight tab đang chọn mượt mà.
+    - Thêm lối tắt **"Tra cứu dinh dưỡng 100g"** vào Menu hồ sơ cá nhân (User Dropdown Menu).
+  - **Chân trang (SiteFooter)** (`src/components/layout/site-footer.tsx`):
+    - Bổ sung các liên kết trực tiếp vào cột "Khám phá": **"Tra cứu dinh dưỡng 100g"** (`/categories#tra-cuu`), **"Kiêng kỵ thực phẩm"** (`/categories#kieng-ky`), **"Phương pháp chế biến"** (`/categories#phuong-phap-nau`).
+  - **Trang chủ (HomePage)** (`src/app/(site)/page.tsx`):
+    - Xây dựng phân đoạn Bento Card nổi bật **"Tra cứu Dinh dưỡng & Kiến thức Khoa học"**: 4 thẻ chức năng dẫn trực tiếp đến Dinh dưỡng 100g (`#tra-cuu`), Kiêng kỵ thực phẩm (`#kieng-ky`), Phương pháp nấu nướng (`#phuong-phap-nau`), và Nhu cầu khuyến nghị (`#nhu-cau-khuyen-nghi`).
+- File tạo/sửa:
+  - `src/components/layout/site-header.tsx`
+  - `src/components/layout/site-footer.tsx`
+  - `src/app/(site)/page.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 305/305 tests pass.
+  - `npm run build`: 35/35 routes pass thành công.
+- PROGRESS: Hoàn thiện 100% trải nghiệm điều hướng tự nhiên không trang mồ côi.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-23] — Triển khai hoàn tất Phase 18: Phân Tích Khẩu Phần & Tương Thích Thực Đơn (Meal Portion & Compatibility Analysis)
+
+- Mục tiêu: Triển khai toàn diện tính năng Phân tích Khẩu phần & Độ tương thích Thực đơn theo đặc tả `specs/010-meal-analysis` (Phase 18). Hỗ trợ kiểm tra cả công thức chuẩn và món cá nhân, phát hiện vượt ngưỡng an toàn vi chất hàng ngày (Natri, Sắt, Vitamin A) và khẩu phần lệch; kiểm tra tương thích nguyên liệu ở 3 phạm vi (`SAME_DISH`, `SAME_MEAL`, `SAME_DAY`) với cơ chế triệt tiêu cảnh báo trùng lặp; minh bạch cấp độ bằng chứng (Grade A–D) và tuân thủ an toàn y khoa D22 (ngôn ngữ giáo dục hỗ trợ, không chẩn đoán bệnh); cung cấp gợi ý đổi món an toàn bảo toàn 100% ràng buộc ăn kiêng/dị ứng; xử lý dữ liệu chưa hoàn thiện (không gán 0) và tự động vô hiệu hóa cache cũ (`isStale: true`) khi thực đơn thay đổi.
+- Đã làm:
+  - **Tầng Constants & API Client** (`api-endpoints.ts`, `meal-analysis.api.ts`): Bổ sung endpoint `MEAL_PLANS.ANALYZE(id)` -> `POST /api/v1/meal-plans/:id/analyze`.
+  - **Tầng DTO & UI Model** (`meal-analysis.dto.ts`, `meal-analysis.model.ts`):
+    - DTOs phản chiếu API backend: `MealPlanAnalysisResponseDto`, `MealWarningDto`, `AffectedPlanItemDto`, `SwapSuggestionDto`, `AnalysisSummaryDto`.
+    - Clean UI Models: `MealPlanAnalysis`, `MealWarning`, `AffectedPlanItem`, `SwapSuggestion`, `AnalysisSummary`, enums `MealWarningSeverity`, `MealWarningScope`, `EvidenceGrade`, `DishSourceType`.
+  - **Tầng Mapper & Unit Test** (`meal-analysis.mapper.ts`, `meal-analysis.mapper.test.ts`):
+    - Kế thừa `BaseMapper<MealPlanAnalysisResponseDto, MealPlanAnalysis>`, sử dụng `pickField` và `safe*`.
+    - Viết 12/12 Vitest unit tests bao phủ: mapping camelCase/snake_case, nested data envelope, tính toán `isStale` so khớp `planLockVersion`, fallback summary counts, 4 Evidence Grades, scopes, null-safety.
+  - **Tầng Queries & Mutations** (`meal-analysis.queries.ts`, `meal-plan.queries.ts`):
+    - `MEAL_ANALYSIS_KEYS` Key Factory tập trung.
+    - Hooks `useMealAnalysisQuery`, `useAnalyzeMealPlanMutation` với toast thông báo kết quả thân thiện.
+    - Tích hợp Stale Invalidation: tự động hủy cache phân tích khi mutation swap hoặc delete thực đơn thành công.
+  - **Tầng UI Components & Dialogs** (`src/features/meal-analysis/components/`):
+    - `meal-analysis-summary-bar.tsx`: Thanh tóm tắt chỉ số cảnh báo nguy cơ/chú ý, nút "Phân tích thực đơn" / "Phân tích lại", trạng thái `isStale`.
+    - `meal-analysis-card.tsx`: Thẻ chi tiết từng cảnh báo với màu sắc chuẩn mực (Đỏ `DANGER`, Vàng `WARNING`), thanh so sánh định lượng đo được vs ngưỡng an toàn tối đa (UL), danh sách món liên quan.
+    - `meal-analysis-alerts.tsx`: Danh sách cảnh báo gom nhóm có Tabs lọc phạm vi (`Tất cả`, `Cùng món`, `Cùng bữa`, `Cả ngày`).
+    - `evidence-grade-badge.tsx`: Huy hiệu trực quan cấp độ bằng chứng (Grade A đến D).
+    - `meal-analysis-badge.tsx`: Huy hiệu cảnh báo hiển thị trên ô bữa ăn trong `DayGrid` có Tooltip giải thích nhanh.
+    - `meal-analysis-detail-dialog.tsx`: Hộp thoại giải thích cơ chế khoa học, tài liệu trích dẫn, phiên bản quy tắc, độ tin cậy và khung tuyên bố miễn trừ y khoa D22.
+    - `meal-analysis-swap-dialog.tsx`: Hộp thoại gợi ý đổi món thay thế an toàn, hiển thị calo, lý do phù hợp, nút đổi món và tự động phân tích lại.
+    - `incomplete-data-banner.tsx`: Banner thông báo dữ liệu chưa hoàn thiện, điểm tin cậy và cam kết không gán 0 cho nguyên liệu tự do.
+  - **Tích hợp Màn hình Chi tiết Thực đơn** (`/meal-plans/[id]/page.tsx`, `day-grid.tsx`):
+    - Nhúng `MealAnalysisSummaryBar`, `IncompleteDataBanner`, `MealAnalysisAlerts` trên đầu trang chi tiết.
+    - Truyền `slotBadge` vào `DayGrid` hiển thị `MealAnalysisBadge` trên các ô bữa ăn có món vi phạm.
+    - Kết nối mở `MealAnalysisDetailDialog` và `MealAnalysisSwapDialog`.
+- File tạo/sửa:
+  - Tạo mới:
+    - `src/features/meal-analysis/types/meal-analysis.dto.ts`
+    - `src/features/meal-analysis/types/meal-analysis.model.ts`
+    - `src/features/meal-analysis/mappers/meal-analysis.mapper.ts`
+    - `src/features/meal-analysis/mappers/meal-analysis.mapper.test.ts`
+    - `src/features/meal-analysis/api/meal-analysis.api.ts`
+    - `src/features/meal-analysis/queries/meal-analysis.queries.ts`
+    - `src/features/meal-analysis/components/meal-analysis-summary-bar.tsx`
+    - `src/features/meal-analysis/components/meal-analysis-card.tsx`
+    - `src/features/meal-analysis/components/meal-analysis-alerts.tsx`
+    - `src/features/meal-analysis/components/evidence-grade-badge.tsx`
+    - `src/features/meal-analysis/components/meal-analysis-badge.tsx`
+    - `src/features/meal-analysis/components/meal-analysis-detail-dialog.tsx`
+    - `src/features/meal-analysis/components/meal-analysis-swap-dialog.tsx`
+    - `src/features/meal-analysis/components/incomplete-data-banner.tsx`
+    - `src/features/meal-analysis/index.ts`
+  - Sửa đổi:
+    - `src/common/constants/api-endpoints.ts` (thêm ANALYZE endpoint)
+    - `src/features/meal-plan/queries/meal-plan.queries.ts` (invalidation MEAL_ANALYSIS_KEYS)
+    - `src/features/meal-plan/components/day-grid.tsx` (thêm slotBadge)
+    - `src/app/(site)/meal-plans/[id]/page.tsx` (nhúng toàn bộ module phân tích)
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type toàn bộ dự án.
+  - `npm test`: 31/31 test files pass, 305/305 tests pass (bao gồm 12/12 mapper tests mới).
+  - `npm run build`: Next.js 16 build thành công 35 routes.
+- PROGRESS: Phase 18: 0% → 100% (Triển khai hoàn tất 25/25 tasks theo spec 010-meal-analysis).
+
+## [2026-09-23] — Triển khai hoàn tất Phase 19: Lộ trình Dinh dưỡng Nhiều tuần (Multi-week Meal Programs)
+
+- Mục tiêu: Triển khai toàn diện tính năng Lộ trình Dinh dưỡng Nhiều tuần theo đặc tả `specs/011-meal-programs` (Phase 19). Đảm bảo tuân thủ nghiêm ngặt quy tắc nghiệp vụ BL-11 trong `IMPLEMENTATION_PLAN.md` và hướng dẫn backend prompt `phase-19-meal-programs.md`:
+  - Ranh giới xác nhận người dùng: Lộ trình mới tạo là `DRAFT`, người dùng có thể xem trước, đổi món, sinh lại từng tuần trước khi bấm `Xác nhận tham gia` (`CONFIRMED`).
+  - Bản chụp bất biến: Khi xác nhận, hệ thống lưu `WeeklyPlanSnapshot` độc lập cho từng tuần để việc chỉnh sửa hoặc xóa công thức gốc sau này không làm thay đổi lịch sử đã chốt.
+  - Cơ chế vô hiệu hóa hạ lưu: Chỉnh sửa hoặc tạo lại Tuần $k$ sẽ tự động gắn cờ vô hiệu hóa (`isDownstreamInvalidated: true`) cho phân tích tích lũy và danh sách mua sắm từ Tuần $k+1$ trở đi, kèm nút "Cập nhật phân tích" để đồng bộ số liệu.
+  - Kiểm soát xung đột phiên bản: Áp dụng khóa lạc quan với trường `version`, bắt lỗi HTTP 409 `VERSION_CONFLICT` và hiển thị modal hướng dẫn người dùng làm mới trang.
+  - Phân tích tích lũy & Lặp món: Trực quan hóa năng lượng Kcal và vi chất trung bình hàng ngày qua `CumulativeNutritionChart`, phát hiện và cảnh báo món ăn lặp lại dày đặc qua `RepeatedPatternWarnings`.
+  - Dòng thời gian trực quan: `ProgramTimelineView` phân định các tuần `COMPLETED`, `ACTIVE`, `UPCOMING` với thanh tiến độ tuân thủ (%) theo thời gian thực.
+  - Không trang mồ côi: Tích hợp 4 lối vào tự nhiên tại Header Nav, User Dropdown, trang `/meal-plans` và Profile (`/profile`).
+- Đã làm:
+  - **Tầng Constants & API Client** (`api-endpoints.ts`, `meal-program.api.ts`): Bổ sung nhóm `MEAL_PROGRAMS` (7 endpoints: LIST, CREATE, DETAIL, UPDATE, REGENERATE_WEEK, REANALYZE, UPDATE_PROGRESS).
+  - **Tầng DTO & UI Model** (`meal-program.dto.ts`, `meal-program.model.ts`):
+    - DTOs phản chiếu API backend: `MealProgramDto`, `ProgramWeekDto`, `WeeklyPlanSnapshotDto`, `CumulativeAnalysisDto`, `RepeatedPatternWarningDto`, `CreateMealProgramRequestDto`, `UpdateMealProgramRequestDto`, `RegenerateWeekRequestDto`, `UpdateWeekProgressRequestDto`.
+    - UI Models sạch: `MealProgram`, `ProgramWeek`, `WeeklyPlanSnapshot`, `CumulativeAnalysis`, `RepeatedPatternWarning`, `MealItemSummary`, `ProgramDaySummary`, `MealProgramListItem`, `MealProgramListResult`.
+  - **Tầng Mapper & Unit Test** (`meal-program.mapper.ts`, `meal-program.mapper.test.ts`):
+    - Kế thừa `BaseMapper<MealProgramDto, MealProgram>`, sử dụng `pickField` với candidate keys array và `safe*`.
+    - Viết 10/10 Vitest tests kiểm thử toàn diện: mapping null/empty, status DRAFT/CONFIRMED/COMPLETED/ARCHIVED, snapshot days & meals, cumulative analysis & repeated patterns, calculation overall compliance rate, downstream invalidation flag; 100% tests pass.
+  - **Tầng Queries & Mutations** (`meal-program.queries.ts`):
+    - Query Key Factory `MEAL_PROGRAM_KEYS`.
+    - Hooks: `useMealProgramsQuery`, `useMealProgramDetailQuery`, `useCreateMealProgramMutation`, `useUpdateMealProgramMutation`, `useRegenerateProgramWeekMutation`, `useReanalyzeMealProgramMutation`, `useUpdateWeekProgressMutation`.
+  - **Tầng UI Components**:
+    - `program-card.tsx`: Card hiển thị lộ trình với ảnh bìa/gradient, badges trạng thái, ngày tháng và thanh tiến độ.
+    - `program-create-form.tsx`: Form tạo mới lộ trình với Zod validation, chọn thời lượng 2/4/8 tuần, phát hiện múi giờ tự động.
+    - `program-list.tsx`: Danh sách lộ trình hỗ trợ 2 tabs "Chương trình mẫu" và "Lộ trình của tôi", bộ lọc trạng thái và empty state thân thiện.
+    - `program-header.tsx`: Header hiển thị thông tin lộ trình, mốc ngày, múi giờ, version, nút xác nhận lộ trình và nút lưu trữ.
+    - `week-plan-view.tsx`: Lưới hiển thị 7 ngày ăn trong tuần từ bản chụp snapshot tĩnh, thanh tóm tắt macro và các bữa ăn chi tiết.
+    - `program-timeline-view.tsx`: Dòng thời gian trực quan hóa các tuần COMPLETED, ACTIVE, UPCOMING với animation GPU 60 FPS.
+    - `day-meal-checklist.tsx`: Checklist đánh dấu các bữa ăn đã hoàn thành và lưu tiến độ tuân thủ.
+    - `cumulative-nutrition-chart.tsx`: Biểu đồ trực quan hóa năng lượng Kcal trung bình ngày, phân bổ đa lượng AMDR và tiến độ các tuần.
+    - `repeated-pattern-warnings.tsx`: Danh sách cảnh báo các món ăn bị lặp lại nhiều lần trong chu kỳ.
+    - `program-analysis-tab.tsx`: Tab kết hợp biểu đồ dinh dưỡng tích lũy, cảnh báo lặp món và nút kích hoạt tái phân tích.
+    - `program-confirm-dialog.tsx`: Hộp thoại xác nhận lộ trình, chốt bản chụp snapshot tĩnh.
+    - `regenerate-week-dialog.tsx`: Hộp thoại tạo lại thực đơn một tuần lẻ và cảnh báo vô hiệu hóa hạ lưu.
+    - `downstream-invalidation-banner.tsx`: Thanh thông báo màu vàng cảnh báo dữ liệu phân tích cần cập nhật kèm nút đồng bộ số liệu.
+    - `version-conflict-modal.tsx`: Modal xử lý xung đột phiên bản đồng thời (HTTP 409).
+  - **Tầng Routes & No Orphan Pages**:
+    - Các route: `/meal-programs` (danh mục), `/meal-programs/new` (khởi tạo), `/meal-programs/[id]` (chi tiết).
+    - 4 lối vào tự nhiên: Header Navigation Bar, Header User Dropdown Menu, Trang Kế hoạch Bữa ăn (`/meal-plans`), Trang Hồ sơ cá nhân (`/profile`).
+  - **Tài liệu**: Cập nhật `PROGRESS.md` và đánh dấu 32/32 tasks trong `specs/011-meal-programs/tasks.md`.
+- File tạo/sửa:
+  - Tạo mới:
+    - `src/features/meal-program/types/meal-program.dto.ts`
+    - `src/features/meal-program/types/meal-program.model.ts`
+    - `src/features/meal-program/mappers/meal-program.mapper.ts`
+    - `src/features/meal-program/mappers/meal-program.mapper.test.ts`
+    - `src/features/meal-program/api/meal-program.api.ts`
+    - `src/features/meal-program/queries/meal-program.queries.ts`
+    - `src/features/meal-program/index.ts`
+    - `src/features/meal-program/components/program-card.tsx`
+    - `src/features/meal-program/components/program-create-form.tsx`
+    - `src/features/meal-program/components/program-list.tsx`
+    - `src/features/meal-program/components/program-header.tsx`
+    - `src/features/meal-program/components/week-plan-view.tsx`
+    - `src/features/meal-program/components/program-timeline-view.tsx`
+    - `src/features/meal-program/components/day-meal-checklist.tsx`
+    - `src/features/meal-program/components/cumulative-nutrition-chart.tsx`
+    - `src/features/meal-program/components/repeated-pattern-warnings.tsx`
+    - `src/features/meal-program/components/program-analysis-tab.tsx`
+    - `src/features/meal-program/components/program-confirm-dialog.tsx`
+    - `src/features/meal-program/components/regenerate-week-dialog.tsx`
+    - `src/features/meal-program/components/downstream-invalidation-banner.tsx`
+    - `src/features/meal-program/components/version-conflict-modal.tsx`
+    - `src/app/(site)/meal-programs/page.tsx`
+    - `src/app/(site)/meal-programs/new/page.tsx`
+    - `src/app/(site)/meal-programs/[id]/page.tsx`
+  - Chỉnh sửa:
+    - `src/common/constants/api-endpoints.ts`: Thêm nhóm `MEAL_PROGRAMS`
+    - `src/components/layout/site-header.tsx`: Thêm icon Target, link "Lộ trình nhiều tuần" ở Nav và User Dropdown
+    - `src/app/(site)/profile/page.tsx`: Thêm nút Lộ trình dinh dưỡng ở Header Profile
+    - `src/app/(site)/meal-plans/page.tsx`: Thêm nút Lộ trình nhiều tuần
+    - `docs/PROGRESS.md`: Cập nhật bảng backlog và thêm dòng lịch sử Phase 19
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 31 test suites, 305 tests passed (10/10 tests mới cho MealProgramMapper).
+  - `npm run build`: Build Next.js 16 thành công, sinh ra 35 routes tĩnh & động bao gồm `/meal-programs`, `/meal-programs/new`, `/meal-programs/[id]`.
+- PROGRESS: Phase 19: 0% → 100% (FE Scaffold).
+- Còn lại / rủi ro: Backend Phase 19 hiện đang `NOT_STARTED`. Khi Backend READY, chạy `npm run sync:swagger` và kết nối kiểm thử trực tiếp máy chủ.
+
+## [2026-09-23] — Triển khai hoàn tất Phase 17: Món Ăn Cá Nhân Hóa (Custom Meals, Photos & User Tags)
+
+- Mục tiêu: Triển khai toàn diện tính năng Món ăn cá nhân hóa theo đặc tả `specs/009-custom-meals` (Phase 17). Đảm bảo quyền riêng tư người dùng (owner-scoped, không catalog chung, không voting), quản lý nhiều hình ảnh tích hợp hạn mức lưu trữ Cloudinary (Phase 15 Storage Quota), hệ thống nhãn người dùng linh hoạt (`shopee`, etc. chỉ là plain metadata, không gọi external API), liên kết nguyên liệu chuẩn hóa (Phase 12 Food Data) với cơ chế cảnh báo chưa bao phủ đầy đủ (không coi nguyên liệu tự do là 0 kcal), và cơ chế chặn xóa an toàn khi món đang được sử dụng trong thực đơn tuần (409 Conflict).
+- Đã làm:
+  - **Tầng Constants & API Client** (`api-endpoints.ts`, `custom-meal.api.ts`): Bổ sung nhóm `CUSTOM_MEALS` (7 endpoints gồm CRUD, upload/delete photo, set cover).
+  - **Tầng DTO & UI Model** (`custom-meal.dto.ts`, `custom-meal.model.ts`):
+    - Khai báo DTOs tương thích hoàn toàn với schema backend: `CustomMealResponseDto`, `CustomMealListResponseDto`, `CreateCustomMealRequestDto`, `UpdateCustomMealRequestDto`, `CustomMealIngredientDto`, `CustomMealPhotoDto`, `CustomMealNutritionSummaryDto`.
+    - UI Models sạch (`CustomMeal`, `CustomMealIngredient`, `CustomMealPhoto`, `CustomMealNutritionSummary`, `CustomMealFilters`).
+  - **Tầng Mapper & Unit Test** (`custom-meal.mapper.ts`, `custom-meal.mapper.test.ts`):
+    - Kế thừa `BaseMapper<CustomMealResponseDto, CustomMeal>`, sử dụng `pickField` và `safe*`.
+    - Viết 11/11 Vitest tests kiểm thử toàn diện: mapping null/empty, chuẩn hóa photo/tag/nguyên liệu, tính toán coverage dinh dưỡng và fallback giá trị mặc định.
+  - **Tầng Queries & Mutations** (`custom-meal.queries.ts`):
+    - `CUSTOM_MEALS_KEYS` Query Key Factory tập trung.
+    - Hooks `useCustomMealsQuery`, `useCustomMealDetailQuery`, `useCreateCustomMealMutation`, `useUpdateCustomMealMutation`, `useDeleteCustomMealMutation`, `useUploadMealPhotoMutation`, `useDeleteMealPhotoMutation`, `useSetMealCoverPhotoMutation`.
+  - **Tầng UI Components & Utilities**:
+    - `tag-normalizer.ts`: Tiện ích chuẩn hóa và kiểm tra hợp lệ nhãn (lowercase, không khoảng trắng, 2-30 ký tự, max 10 tags).
+    - `custom-meal-tag-input.tsx`: Giao diện nhập nhãn dạng chip tag trực quan.
+    - `custom-meal-tag-filter-bar.tsx`: Thanh lọc danh sách món ăn theo nhãn.
+    - `custom-meal-nutrition-bar.tsx`: Hiển thị thanh tiến độ năng lượng (Kcal), Macros (Đạm/Béo/Tinh bột) và cảnh báo minh bạch khi có nguyên liệu chưa có dữ liệu dinh dưỡng.
+    - `custom-meal-ingredient-input.tsx`: Bảng nhập danh sách nguyên liệu động, tìm kiếm liên kết nguyên liệu chuẩn Phase 12 hoặc nhập tự do.
+    - `custom-meal-photo-manager.tsx`: Trình quản lý thư viện ảnh món ăn (chọn ảnh bìa, sắp xếp, xóa ảnh).
+    - `custom-meal-photo-uploader.tsx`: Tải ảnh lên với kiểm tra giới hạn dung lượng và kiểm tra quota bộ nhớ Phase 15.
+    - `custom-meal-delete-dialog.tsx`: Dialog xác nhận xóa an toàn, cảnh báo chi tiết và ngăn chặn xóa khi món đang nằm trong thực đơn tuần.
+    - `custom-meal-card.tsx`: Card hiển thị món ăn cá nhân trong danh sách với ảnh bìa, badges dinh dưỡng và tags.
+    - `custom-meal-form.tsx`: Form tạo/sửa món ăn toàn diện với validation Zod.
+    - `custom-meal-list.tsx`: Danh sách món ăn với tìm kiếm, lọc tags, phân trang và trạng thái trống (empty state).
+  - **Tầng Routes & No Orphan Pages**:
+    - Các route: `/custom-meals` (danh sách), `/custom-meals/new` (tạo món), `/custom-meals/[id]` (chi tiết), `/custom-meals/[id]/edit` (chỉnh sửa).
+    - Lối vào điều hướng tự nhiên: Menu người dùng (`SiteHeader`), Trang cá nhân (`/profile`), Modal chọn món cho thực đơn (`MealPlanItemSelector` & `/meal-plans`).
+  - **Tài liệu**: Cập nhật `BACKEND_INTEGRATION.md` (mục 6.12 và changelog v4.7), cập nhật `PROGRESS.md`, hoàn thành tất cả tasks trong `specs/009-custom-meals/tasks.md`.
+- File tạo/sửa:
+  - Tạo mới:
+    - `src/features/custom-meal/types/custom-meal.dto.ts`
+    - `src/features/custom-meal/types/custom-meal.model.ts`
+    - `src/features/custom-meal/mappers/custom-meal.mapper.ts`
+    - `src/features/custom-meal/mappers/custom-meal.mapper.test.ts`
+    - `src/features/custom-meal/api/custom-meal.api.ts`
+    - `src/features/custom-meal/queries/custom-meal.queries.ts`
+    - `src/features/custom-meal/utils/tag-normalizer.ts`
+    - `src/features/custom-meal/components/custom-meal-tag-input.tsx`
+    - `src/features/custom-meal/components/custom-meal-tag-filter-bar.tsx`
+    - `src/features/custom-meal/components/custom-meal-nutrition-bar.tsx`
+    - `src/features/custom-meal/components/custom-meal-ingredient-input.tsx`
+    - `src/features/custom-meal/components/custom-meal-photo-manager.tsx`
+    - `src/features/custom-meal/components/custom-meal-photo-uploader.tsx`
+    - `src/features/custom-meal/components/custom-meal-delete-dialog.tsx`
+    - `src/features/custom-meal/components/custom-meal-card.tsx`
+    - `src/features/custom-meal/components/custom-meal-form.tsx`
+    - `src/features/custom-meal/components/custom-meal-list.tsx`
+    - `src/features/custom-meal/index.ts`
+    - `src/app/(site)/custom-meals/page.tsx`
+    - `src/app/(site)/custom-meals/new/page.tsx`
+    - `src/app/(site)/custom-meals/[id]/page.tsx`
+    - `src/app/(site)/custom-meals/[id]/edit/page.tsx`
+  - Sửa đổi:
+    - `src/common/constants/api-endpoints.ts`
+    - `src/components/layout/site-header.tsx`
+    - `src/app/(site)/profile/page.tsx`
+    - `src/app/(site)/meal-plans/page.tsx`
+    - `src/features/meal-plan/components/meal-plan-item-selector.tsx`
+    - `frontend/docs/BACKEND_INTEGRATION.md`
+    - `frontend/docs/PROGRESS.md`
+    - `frontend/docs/WORK-LOG.md`
+    - `specs/009-custom-meals/tasks.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test -- src/features/custom-meal/mappers/custom-meal.mapper.test.ts --run`: 11/11 tests pass.
+  - `npm run build`: Build thành công tất cả route, bao gồm `/custom-meals`, `/custom-meals/new`, `/custom-meals/[id]`, `/custom-meals/[id]/edit`.
+- PROGRESS: Phase 17 Custom Meals: 0% → 100% (Hoàn thành đầy đủ 7 tầng kiến trúc, scaffold hoàn tất sẵn sàng kết nối live khi BE Phase 17 READY).
+- Còn lại / rủi ro: Backend Phase 17 hiện ở trạng thái `NOT_STARTED`. Khi backend hoàn tất triển khai và cung cấp live endpoints, chạy `npm run sync:swagger` để kiểm tra sai lệch contract nếu có.
+
+## [2026-09-23] — Triển khai hoàn tất Phase 12: Cơ sở Dữ liệu & Kiến thức Dinh dưỡng Thực phẩm (Food & Nutrient Knowledge Base)
+
+- Mục tiêu: Tích hợp đầy đủ 11 endpoints của Phase 12 Food Data (5 endpoints tra cứu công cộng + 6 endpoints quản trị và nạp dữ liệu chuẩn). Áp dụng quy tắc cốt lõi "Missing is NOT zero" (không gán 0 cho vi chất thiếu số liệu), minh bạch xuất xứ dữ liệu (provenance/license/version), tự động tính tỷ lệ % DV theo nhu cầu khuyến nghị (RDA/AI) và cảnh báo ngưỡng tối đa (UL), tra cứu phương pháp nấu nướng với hệ số hao hụt (yield factor) và hệ số bảo tồn vi chất (retention factor), bảng tra cứu kiêng kỵ thực phẩm theo 3 phạm vi (SAME_DISH, SAME_MEAL, SAME_DAY), bảng quản lý bản ghi đa dạng theo kind cho Admin và quy trình nạp dữ liệu chuẩn 2 bước Xem trước (Preview) & Cam kết (Commit) có tính chất chống lặp an toàn (idempotent replay).
+- Đã làm:
+  - **Tầng Constants & API Client** (`api-endpoints.ts`, `food-data.api.ts`): Bổ sung nhóm `FOOD_DATA` (5 endpoints) và `ADMIN_FOOD_DATA` (4 endpoints gồm CRUD polymorphic record và 2-step preview/commit import).
+  - **Tầng DTO & UI Model** (`food-data.dto.ts`, `food-data.model.ts`):
+    - Khai báo DTOs tương thích 100% với OpenAPI schema backend: `IngredientNutrientsResponseDto`, `NutrientReferenceIntakeDto`, `IngredientIntakeGuidelineDto`, `CookingMethodDto`, `IngredientInteractionRuleDto`, `AdminFoodDataRecordDto`, `PreviewFoodDataImportRequestDto`, `CommitFoodDataImportRequestDto`.
+    - Định nghĩa UI Models sạch (`IngredientNutrientsModel`, `NutrientItem`, `ReferenceIntakeItem`, `IngredientGuidelineItem`, `CookingMethodItem`, `FoodInteractionRuleItem`, `AdminRecordItem`, `FoodDataImportPreviewResult`).
+    - Phân tách nhóm vi chất (`macros`, `vitamins`, `minerals`, `otherNutrients`) và bảo toàn `isMissing: true` khi không có số liệu.
+  - **Tầng Mapper & Unit Test** (`food-data.mapper.ts`, `food-data.mapper.test.ts`):
+    - Kế thừa `BaseMapper`, chuẩn hóa nhãn tiếng Việt (`POPULATION_LABELS`, `SEVERITY_LABELS`, `SCOPE_LABELS`).
+    - Viết 13/13 Vitest tests kiểm thử toàn diện: mapping null/empty, missing nutrient preservation, phân loại vi chất, tính % DV, và phân giải polymorphic admin record.
+  - **Tầng Queries & Mutations** (`food-data.queries.ts`):
+    - `FOOD_DATA_KEYS` Query Key Factory tập trung.
+    - 5 public query hooks: `useIngredientNutrientsQuery`, `useReferenceIntakesQuery`, `useIngredientGuidelinesQuery`, `useCookingMethodsQuery`, `useInteractionRulesQuery` với staleTime 5 phút.
+    - 5 admin query/mutation hooks: `useAdminRecordsQuery`, `useCreateAdminRecordMutation`, `useReplaceAdminRecordMutation`, `useArchiveAdminRecordMutation`, `useAdminImportPreviewMutation`, `useAdminImportCommitMutation` tự động invalidate cache.
+  - **Tầng UI Components Tra cứu Người dùng**:
+    - `source-provenance-badge.tsx`: Huy hiệu xuất xứ hiển thị tên nguồn, tổ chức, phiên bản, giấy phép và liên kết mở tài liệu gốc.
+    - `nutrition-facts-panel.tsx`: Bảng thành phần dinh dưỡng 100g kiểu FDA chuẩn mực, tuân thủ luật "Missing is NOT zero", hiển thị thanh tiến độ % DV tính theo RDA/AI của nhóm nhân khẩu học được chọn và cảnh báo khi vượt ngưỡng an toàn (UL).
+    - `reference-intake-explorer.tsx`: Bộ công cụ tra cứu nhu cầu khuyến nghị (RDA/AI) và ngưỡng an toàn (UL) theo từng nhóm đối tượng (người trưởng thành, nam, nữ, phụ nữ mang thai, người cao tuổi).
+    - `cooking-method-cards.tsx`: Danh mục phương pháp chế biến với thẻ tỷ lệ hao hụt khối lượng và thanh phần trăm giữ lại các vi chất nhạy cảm sau nhiệt.
+    - `food-interaction-table.tsx`: Bảng tra cứu kiêng kỵ thực phẩm lọc theo 3 cấp phạm vi (`Cùng món`, `Cùng bữa`, `Cùng ngày`), 3 mức độ cảnh báo (`Cảnh báo`, `Lưu ý`, `Hợp khẩu vị`), giải thích cơ chế khoa học và gợi ý sơ chế giảm thiểu tương kỵ.
+  - **Tầng UI Quản trị Admin**:
+    - `admin-record-dialog.tsx`: Dialog tạo/sửa bản ghi dinh dưỡng hỗ trợ `react-hook-form` + `zod` cho các phân loại chính (`NUTRIENT`, `SOURCE`, `COOKING_METHOD`, `INTERACTION_RULE`) và chế độ chỉnh sửa JSON nâng cao.
+    - `admin-import-manager.tsx`: Bộ điều khiển nạp dữ liệu chuẩn 2 bước: Xem trước (Preview) kiểm tra hợp lệ, hiển thị báo cáo tóm tắt số liệu và lỗi; Cam kết (Commit) lưu vào CSDL với cơ chế xử lý idempotent replay an toàn.
+    - `admin-records-manager.tsx`: Giao diện quản trị bản ghi phân loại theo `kind`, phân trang, tìm kiếm, sửa đổi và lưu trữ mềm.
+  - **Tích hợp No Orphan Pages**:
+    - Tích hợp nút xem Dinh dưỡng 100g vào `IngredientSearch` tại `/categories#tra-cuu`.
+    - Tích hợp nút xem Dinh dưỡng 100g vào `RecipeDetailView` tại `/recipes/[id]`.
+    - Nhúng `FoodInteractionTable`, `CookingMethodCards` và `ReferenceIntakeExplorer` vào trang `/categories`.
+    - Thêm tab `Dữ liệu dinh dưỡng` (`food-data`) vào thanh điều hướng bên `admin/layout.tsx` và trang `admin/dashboard/page.tsx`.
+  - **Tài liệu**: Cập nhật `BACKEND_INTEGRATION.md` (chuyển 11 endpoints sang `FE integrated = Yes`, thêm changelog v4.6), cập nhật `PROGRESS.md` (Phase 12: 100%), hoàn thành toàn bộ tasks trong `specs/008-food-data/tasks.md`.
+- File tạo/sửa:
+  - Tạo mới:
+    - `src/features/food-data/types/food-data.dto.ts`
+    - `src/features/food-data/types/food-data.model.ts`
+    - `src/features/food-data/mappers/food-data.mapper.ts`
+    - `src/features/food-data/mappers/food-data.mapper.test.ts`
+    - `src/features/food-data/api/food-data.api.ts`
+    - `src/features/food-data/queries/food-data.queries.ts`
+    - `src/features/food-data/components/source-provenance-badge.tsx`
+    - `src/features/food-data/components/nutrition-facts-panel.tsx`
+    - `src/features/food-data/components/reference-intake-explorer.tsx`
+    - `src/features/food-data/components/cooking-method-cards.tsx`
+    - `src/features/food-data/components/food-interaction-table.tsx`
+    - `src/features/food-data/components/admin-record-dialog.tsx`
+    - `src/features/food-data/components/admin-import-manager.tsx`
+    - `src/features/food-data/components/admin-records-manager.tsx`
+  - Sửa đổi:
+    - `src/common/constants/api-endpoints.ts`
+    - `src/features/ingredient/components/ingredient-search.tsx`
+    - `src/features/recipe/components/recipe-detail-view.tsx`
+    - `src/app/(site)/categories/page.tsx`
+    - `src/app/(admin)/admin/layout.tsx`
+    - `src/app/(admin)/admin/dashboard/page.tsx`
+    - `docs/BACKEND_INTEGRATION.md`
+    - `docs/PROGRESS.md`
+    - `specs/008-food-data/tasks.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 272/272 tests pass (13/13 food-data mapper unit tests pass).
+  - `npm run build`: Build Next.js thành công 100%, 31 routes pass.
+- PROGRESS: Phase 12 (Food Data Knowledge Base) 0% → 100%.
+- Còn lại / rủi ro: Không có. Toàn bộ 11 endpoints đã READY trên Backend và tích hợp hoàn chỉnh.
+
+## [2026-09-23] — Triển khai hoàn tất Phase 16: Hợp nhất Vòng đời Đăng tải & Kiểm duyệt Video (Video Review Parity & Content Submission Lifecycle)
+
+- Mục tiêu: Hợp nhất vòng đời kiểm duyệt nội dung cho cả 3 định dạng: Công thức món chay (`RECIPE`), Bài viết (`BLOG`), và Video nấu ăn (`VIDEO`). Xóa bỏ cơ chế tự động xuất bản (bài mới tạo và chỉnh sửa đều bắt đầu từ `DRAFT`). Tích hợp luồng tác giả nộp duyệt chủ động (`POST /api/v1/posts/:id/submit`), xem lịch sử kiểm duyệt (`GET /api/v1/posts/:id/review-history`). Nâng cấp phân hệ hàng đợi kiểm duyệt Admin (`GET /api/v1/admin/content-review`), kiểm tra chi tiết bản sửa đổi bất biến kèm video preview player (`GET /api/v1/admin/content-review/:id`), quyết định duyệt/từ chối bắt buộc lý do giải trình (>= 10 ký tự khi từ chối) và chống tự duyệt (`PATCH /api/v1/admin/content-review/:id`). Triển khai hỗ trợ Dual-revision (giữ bài đã xuất bản công khai khi đang sửa bản thảo mới) và nộp lại sau khi bị từ chối.
+- Đã làm:
+  - **Tầng Constants & API Client** (`api-endpoints.ts`, `review.api.ts`): Bổ sung `CONTENT_REVIEW` (`/posts/:id/submit`, `/posts/:id/review-history`) và `ADMIN_CONTENT_REVIEW` (`/admin/content-review`, `/admin/content-review/:id`), đánh dấu `@deprecated` các endpoint cũ `/review-queue/posts*`.
+  - **Tầng DTO & UI Model** (`content-review.dto.ts`, `content-review.model.ts`): Khai báo đầy đủ raw DTOs và UI Models sạch (`AdminContentReviewListItemModel`, `AdminContentReviewDetailModel`, `ContentReviewHistoryModel`, `PostSubmitResultModel`), hỗ trợ cờ AI cảnh báo (`hasAiFlags`), phân loại video/recipe/article, thông tin dual-revision (`revisionId`, `revisionVersion`, `publishedRevisionVersion`).
+  - **Tầng Schema & Mapper** (`review-decision.schema.ts`, `content-review.mapper.ts`):
+    - Khai báo Zod schema `adminContentReviewDecisionSchema` bắt buộc `reason` (10–1000 ký tự) khi từ chối (`REJECTED`) và tùy chọn khi duyệt (`APPROVED`).
+    - Xây dựng mapper an toàn kế thừa `BaseMapper` với bộ unit test 11/11 tests pass 100%.
+  - **Tầng TanStack Query Key Factory & Hooks** (`review.queries.ts`):
+    - Cung cấp `CONTENT_REVIEW_KEYS` factory tập trung.
+    - Cung cấp 5 custom hooks: `useSubmitPostMutation`, `usePostReviewHistoryQuery`, `useAdminContentReviewQueueQuery`, `useAdminContentReviewDetailQuery`, `useAdminContentReviewDecisionMutation` tự động invalidate cache liên quan.
+  - **Tầng UI Tác giả (Author Lifecycle & Dual-revision)**:
+    - `review-status-banner.tsx`: Banner trạng thái nội dung đa năng gắn trên các trang chi tiết và chỉnh sửa (`DRAFT`, `PENDING_REVIEW`, `REJECTED`, `PUBLISHED`). Hỗ trợ hiển thị cảnh báo Dual-revision khi đang chỉnh sửa bài viết đã xuất bản, nút gửi duyệt / nộp lại, nút xem lịch sử kiểm duyệt.
+    - `submit-review-dialog.tsx`: Dialog xác nhận nộp kiểm duyệt có ô ghi chú tùy chọn cho kiểm duyệt viên, xử lý chuẩn xác các mã lỗi nghiệp vụ từ backend (`CONTENT_NOT_SUBMITTABLE`, `CONTENT_ALREADY_SUBMITTED`, `VERSION_CONFLICT`).
+    - `review-history-dialog.tsx` & `review-history-timeline.tsx`: Modal và timeline hiển thị lịch sử kiểm duyệt trực quan theo thời gian thực (trạng thái, người duyệt, thời gian, lý do giải trình).
+    - Tích hợp vào màn hình Bài viết (`/articles/[id]/edit`), Công thức (`/recipes/[id]/edit` và `/recipes/[id]`), Video (`/videos/[id]`). Cập nhật `post.model.ts`, `recipe.model.ts`, `video.model.ts` và các mapper tương ứng để trích xuất `revisionId`, `revisionVersion`, `publishedRevisionVersion`.
+    - Cập nhật `post-card.tsx` hiển thị badge trạng thái cho bài chưa xuất bản (`DRAFT`, `PENDING_REVIEW`, `REJECTED`).
+    - Nâng cấp `/profile`: Thêm tab/bộ lọc `Bị từ chối` (`REJECTED`), hiển thị badge trạng thái chuẩn màu, bổ sung nút Sửa trực tiếp cho công thức và bài viết.
+  - **Tầng Quản trị Admin (Moderation Parity & Inspection)**:
+    - `review-queue-table.tsx`: Nâng cấp bảng hàng đợi kiểm duyệt với bộ lọc loại nội dung (`Tất cả`, `Bài viết`, `Công thức`, `Video`), badge độ ưu tiên (`URGENT`, `HIGH`, `NORMAL`, `LOW`), cờ cảnh báo AI (`hasAiFlags`), nút mở chi tiết thẩm định.
+    - `review-detail-modal.tsx`: Modal thẩm định chi tiết bản sửa đổi bất biến (snapshot nội dung tại thời điểm nộp duyệt), hiển thị tiêu đề, tóm tắt, tag, nguyên liệu & bước làm của công thức, và cảnh báo AI nếu có vi phạm.
+    - `video-preview-player.tsx`: Trình phát video chuyên dụng trong modal duyệt, tự động nhận diện và phát video từ Cloudinary MP4/WebM hoặc YouTube iframe nhúng, kèm badge dung lượng/thời lượng.
+    - `review-decision-dialog.tsx`: Nâng cấp dialog phê duyệt/từ chối: ép buộc nhập lý do giải trình tối thiểu 10 ký tự khi từ chối, kiểm tra và chặn tự duyệt bài của chính mình (`SELF_REVIEW_PROHIBITED`), hiển thị toast lỗi chi tiết (`CONFLICT_RESOLVED`, `REVISION_NOT_PENDING`).
+    - Cập nhật `/admin/dashboard`: Đổi KPI hàng đợi sang sử dụng hook `useAdminContentReviewQueueQuery`.
+  - **Tài liệu & Hồ sơ**: Cập nhật `BACKEND_INTEGRATION.md` (đánh dấu `FE integrated = Yes` cho 4 endpoints Phase 16, thêm changelog v4.5), cập nhật `PROGRESS.md`, `specs/007-video-review-parity/tasks.md` (31/31 tasks hoàn thành).
+- File tạo/sửa:
+  - Tạo mới:
+    - `src/features/review/types/content-review.dto.ts`
+    - `src/features/review/types/content-review.model.ts`
+    - `src/features/review/mappers/content-review.mapper.ts`
+    - `src/features/review/mappers/content-review.mapper.test.ts`
+    - `src/features/review/components/review-status-banner.tsx`
+    - `src/features/review/components/submit-review-dialog.tsx`
+    - `src/features/review/components/review-history-timeline.tsx`
+    - `src/features/review/components/review-history-dialog.tsx`
+    - `src/features/review/components/review-detail-modal.tsx`
+    - `src/features/review/components/video-preview-player.tsx`
+    - `src/app/(site)/recipes/[id]/edit/page.tsx`
+  - Sửa đổi:
+    - `src/common/constants/api-endpoints.ts`
+    - `src/features/review/schemas/review-decision.schema.ts`
+    - `src/features/review/api/review.api.ts`
+    - `src/features/review/queries/review.queries.ts`
+    - `src/features/review/components/review-queue-table.tsx`
+    - `src/features/review/components/review-decision-dialog.tsx`
+    - `src/features/post/types/post.model.ts`
+    - `src/features/post/mappers/post.mapper.ts`
+    - `src/features/post/components/post-card.tsx`
+    - `src/features/recipe/types/recipe.model.ts`
+    - `src/features/recipe/mappers/recipe.mapper.ts`
+    - `src/features/recipe/components/recipe-detail-view.tsx`
+    - `src/features/video/types/video.model.ts`
+    - `src/features/video/mappers/video.mapper.ts`
+    - `src/features/video/components/video-detail-view.tsx`
+    - `src/app/(site)/articles/[id]/edit/page.tsx`
+    - `src/app/(site)/profile/page.tsx`
+    - `src/app/(admin)/admin/dashboard/page.tsx`
+    - `docs/BACKEND_INTEGRATION.md`
+    - `docs/PROGRESS.md`
+    - `docs/WORK-LOG.md`
+    - `specs/007-video-review-parity/tasks.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 27/27 test files passed, 259/259 unit tests passed (trong đó có 11/11 mapper tests mới của content-review).
+  - `npm run build`: Next.js 16 build thành công toàn bộ 31 routes (bao gồm các route edit mới).
+- PROGRESS: Phase 16 Video Review Parity & Content Submission Lifecycle: 0% → 100%.
+- Còn lại / rủi ro: Không có. Tất cả các endpoint Phase 16 đã READY và tích hợp trọn vẹn theo chuẩn kiến trúc dự án.
+
+---
+
+## [2026-09-23] — Triển khai hoàn tất Phase 15: Hạn mức lưu trữ & Kiểm toán tải lên (Storage Quota & Upload Accounting)
+
+- Mục tiêu: Khắc phục triệt để breaking change khi backend loại bỏ `POST /api/v1/uploads/signature` và áp dụng hạn ngạch lưu trữ 1 GiB/user. Triển khai trọn vẹn luồng upload reservation 3 bước với rollback tự động, migrate toàn bộ các uploader cũ, hiển thị thanh hạn mức lưu trữ trực quan cho người dùng, và xây dựng phân hệ quản trị lưu trữ hoàn chỉnh cho Admin (`/admin/storage`).
+- Đã làm:
+  - **Tầng Constants & API Client** (`api-endpoints.ts`, `storage.api.ts`): Bổ sung đầy đủ 10 endpoint theo Phase 15 contract (`GET /storage/me`, `POST /uploads/reservations`, `POST /uploads/reservations/:id/commit`, `DELETE /uploads/reservations/:id`, `DELETE /storage/assets/:id`, và 5 endpoint `/admin/storage/*`).
+  - **Tầng DTO & UI Model** (`storage.dto.ts`, `storage.model.ts`): Khai báo tường minh tất cả raw DTOs và UI Models sạch, không leak DTO ra UI layer, `MediaKind` chuẩn `'COVER_IMAGE' | 'VIDEO'`.
+  - **Tầng Format Utils & Mapper** (`format-bytes.ts`, `storage.mapper.ts`): Viết hàm chuyển đổi dung lượng (`formatBytes`, `calculateUsedPercent`, `formatDeltaBytes`), xây dựng mapper an toàn kế thừa `BaseMapper` với bộ unit test toàn diện 12/12 case pass 100%.
+  - **Tầng TanStack Query Key Factory & Hooks** (`storage.queries.ts`): Cung cấp query keys tập trung và đầy đủ 7 custom hooks cho cả Member và Admin (`useStorageUsageQuery`, `useDeleteMediaAssetMutation`, `useUploadWithReservationMutation`, `useAdminStorageAccountsQuery`, `useAdminStoragePoliciesQuery`, `useUpdateStoragePolicyMutation`, `useCreateStorageAdjustmentMutation`, `useAdminStorageAdjustmentsQuery`).
+  - **Tầng Helper Upload 3 Bước & Rollback** (`storage-upload.ts`): Triển khai `uploadWithReservation` tự động: Bước 1 (Tạo reservation) → Bước 2 (Upload trực tiếp lên Cloudinary) → Bước 3 (Commit reservation). Nếu có lỗi hoặc người dùng ấn Hủy (`AbortSignal`), tự động gọi `releaseReservation` giải phóng dung lượng.
+  - **Migrate 3 Uploader hiện hữu**:
+    - `image-uploader.tsx`: Đổi sang dùng `uploadWithReservation`, hiển thị widget hạn mức compact.
+    - `video-uploader.tsx`: Đổi sang dùng `uploadWithReservation`, hỗ trợ hủy upload giữa chừng với `AbortController`, hiển thị widget hạn mức compact.
+    - `avatar-uploader.tsx`: Đổi sang dùng `uploadWithReservation`.
+    - Đánh dấu `@deprecated` các hàm lấy signature cũ tại `src/features/post/api/upload.api.ts` và `src/features/profile/api/avatar-upload.api.ts`.
+  - **Tầng UI Member**:
+    - `storage-quota-widget.tsx`: Component hiển thị dung lượng 3 mức cảnh báo (Xanh ngọc <80%, Cam ≥80%, Đỏ 100%/vượt hạn ngạch), hỗ trợ 2 biến thể `compact` và `full`.
+    - `profile-storage-tab.tsx`: Tab quản lý dung lượng trong trang Hồ sơ cá nhân (`/profile?tab=storage`).
+    - `storage-delete-asset-dialog.tsx`: Dialog xác nhận xóa media asset vĩnh viễn, giải phóng dung lượng, xử lý lỗi `MEDIA_ASSET_IN_USE`.
+  - **Tầng Quản trị Admin (`/admin/storage`)**:
+    - `storage-account-list.tsx`: Bảng danh sách tài khoản, dung lượng đã dùng/hạn mức, trạng thái `overQuota`, tìm kiếm và lọc phân trang.
+    - `storage-adjustment-dialog.tsx`: Modal điều chỉnh hạn mức (+/-) kèm lý do giải trình bắt buộc (10–1000 ký tự) và `idempotencyKey` UUIDv4.
+    - `storage-adjustment-list.tsx`: Bảng lịch sử kiểm toán điều chỉnh dung lượng.
+    - `storage-policy-form.tsx`: Form xem và cập nhật chính sách hệ thống (`quotaBytes`, `reservationTtlSeconds`, `warningPercent`) kèm Optimistic Concurrency Control (`expectedVersion`).
+    - `src/app/(admin)/admin/storage/page.tsx`: Layout phân tab bảo vệ bởi `AuthGuard` role `ADMIN`.
+    - `src/app/(admin)/admin/layout.tsx`: Thêm mục "Lưu trữ & Quota" vào Sidebar Admin, đảm bảo không có trang mồ côi.
+  - **Tài liệu & Hồ sơ**: Cập nhật `BACKEND_INTEGRATION.md` (đánh dấu `FE integrated = Yes` cho 10 endpoints, thêm changelog v4.5), cập nhật `PROGRESS.md` và `tasks.md`.
+- File tạo/sửa:
+  - Tạo mới:
+    - `src/features/storage/types/storage.dto.ts`
+    - `src/features/storage/types/storage.model.ts`
+    - `src/features/storage/utils/format-bytes.ts`
+    - `src/features/storage/mappers/storage.mapper.ts`
+    - `src/features/storage/mappers/storage.mapper.test.ts`
+    - `src/features/storage/api/storage.api.ts`
+    - `src/features/storage/api/storage-upload.ts`
+    - `src/features/storage/queries/storage.queries.ts`
+    - `src/features/storage/components/storage-quota-widget.tsx`
+    - `src/features/storage/components/storage-delete-asset-dialog.tsx`
+    - `src/features/storage/components/storage-account-list.tsx`
+    - `src/features/storage/components/storage-adjustment-dialog.tsx`
+    - `src/features/storage/components/storage-adjustment-list.tsx`
+    - `src/features/storage/components/storage-policy-form.tsx`
+    - `src/features/profile/components/profile-storage-tab.tsx`
+    - `src/app/(admin)/admin/storage/page.tsx`
+  - Sửa đổi:
+    - `src/common/constants/api-endpoints.ts`
+    - `src/features/post/components/image-uploader.tsx`
+    - `src/features/video/components/video-uploader.tsx`
+    - `src/features/profile/components/avatar-uploader.tsx`
+    - `src/features/post/api/upload.api.ts`
+    - `src/features/profile/api/avatar-upload.api.ts`
+    - `src/app/(site)/profile/page.tsx`
+    - `src/app/(admin)/admin/layout.tsx`
+    - `docs/BACKEND_INTEGRATION.md`
+    - `docs/PROGRESS.md`
+    - `docs/WORK-LOG.md`
+    - `specs/006-storage-quota/tasks.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 26/26 test suites passed, 248/248 unit tests passed (trong đó có 12/12 mapper tests mới).
+  - `npm run build`: Next.js 16 build thành công toàn bộ 31 routes (bao gồm `/admin/storage`).
+- PROGRESS: Phase 15 Storage Quota & Upload Accounting: 0% → 100%.
+- Còn lại / rủi ro: Không có. Khi backend triển khai Phase 16 (Video Review Parity), tiếp tục migrate workflow submit bài viết video.
+
+---
+
 ## [2026-09-17] — Thiết kế mới cho thẻ Dinh dưỡng 385 kcal / 18g Protein & Khắc phục Autoplay Remotion Player
 
 - Mục tiêu: Nâng cấp thiết kế cho thẻ dinh dưỡng thực vật ("385 kcal", "18g Protein thực vật") tại Hoạt cảnh ẩm thực Hero (`HeroFoodAnimation`) với đường sáng neon chuyển động liên tục quanh viền; đồng thời khắc phục triệt để hiện tượng chiếc tô và 5 nguyên liệu bị khựng/không xoay do chính sách Browser Autoplay Policy & Strict Mode delayRender.
@@ -1221,3 +2029,273 @@
 - Verify: docs-only; kiểm tra link/prompt index, legacy-term audit, `git diff --check`. Không chạy frontend typecheck/test/build vì không sửa source hoặc runtime contract.
 - PROGRESS: không đổi % feature; thêm bảng backlog tích hợp Phases 12–27.
 - Còn lại: mỗi backend phase phải cập nhật OpenAPI/integration registry và frontend chỉ tích hợp khi endpoint thật sự `READY`.
+
+---
+
+## [2026-09-23] — Phân tích khoảng cách FE ↔ BE (Gap Analysis) & Đồng bộ OpenAPI Catalog
+
+- Mục tiêu: Thực thi phân tích khoảng cách toàn diện giữa tiến trình frontend (PROGRESS, WORK-LOG, BACKEND_INTEGRATION) và tiến trình backend (28 phase prompts, IMPLEMENTATION_PHASES.md, SRS.md, FOOD_DATA_SOURCES.md, ROADMAP_PHASE_2.md); giải quyết các mâu thuẫn trạng thái endpoint và đồng bộ tài nguyên tích hợp.
+- Đã làm:
+  - Khởi tạo đặc tả phân tích khoảng cách chuẩn `/speckit-specify` tại `specs/005-frontend-backend-gap-analysis/spec.md` kèm checklist chất lượng.
+  - Phân loại rõ ràng 4 nhóm khoảng cách (Gap Groups A, B, C, D) với thứ tự ưu tiên hành động.
+  - Chạy `sync:swagger` từ `../backend/openapi.json` (71 endpoints, 17 nhóm, 70 schemas), làm mới toàn bộ `API-CATALOG.md` và `docs/api/*.md`.
+  - Phát hiện quan trọng: Backend Phases 00–11 đã `COMPLETED`; `features/community` đã chạy ở chế độ live (`USE_FIXTURES = false`); Content (`/posts`), Review Queue (`/review-queue/posts`) và Community (`/comments`, `/posts/:id/vote`, `/posts/:id/rating`, `/posts/:id/bookmark`) đều đã sẵn sàng trên backend.
+  - Cập nhật `src/common/constants/api-endpoints.ts`: gỡ bỏ các chú thích `TODO(BE-READY)` lỗi thời cho Community, Moderation Admin, Contributors, Safety.
+  - Cập nhật `docs/BACKEND_INTEGRATION.md` (v4.1): chuyển trạng thái 20 endpoints của Content, Community và Review Queue từ `PLANNED` sang `READY` và `FE integrated = Yes`.
+  - Cập nhật `docs/PROGRESS.md`: đồng bộ % hoàn thành cho Task #2 (Blog/Post) 85% → 95%, Task #3 (Comment/Vote) 70% → 95%, Task #5 (Video) 80% → 95%, Task #13 (Trust-Safety) 70% → 95%.
+- File tạo/sửa:
+  - Tạo: `specs/005-frontend-backend-gap-analysis/{spec.md,checklists/requirements.md}`
+  - Sửa: `src/common/constants/api-endpoints.ts`, `docs/BACKEND_INTEGRATION.md`, `docs/PROGRESS.md`, `docs/API-CATALOG.md`, `docs/api-catalog.json`, `docs/api/*.md`, `docs/WORK-LOG.md`
+## [2026-09-16] — Scaffold Community live-shape + fixture (spec 010-community-integration, T001–T029)
+
+- Mục tiêu: đủ 7 tầng community theo đúng contract dù BE còn `PLANNED`; API đọc fixture, 0 request live; ngày nối live chỉ sửa 1 file api.
+- Đã làm:
+  - `sync:swagger` thành công (71 endpoints) — `docs/api/community.md` không lệch.
+  - `api-endpoints.ts` (+nhánh `COMMUNITY` 7 path kèm `TODO(BE-READY)`, chưa import ở đâu), `enums` (+`CommentStatus`).
+  - `features/community` mới: DTO đủ 11 ops/Model/Mapper/test (ép reply 1 tầng ở mapper, placeholder null-safe, rating/bookmark null-safe) + 12 tests; 3 fixtures bám contract; api fixture 11 hàm (kho trong bộ nhớ, delay 300ms, `USE_FIXTURES`, 0 axios/fetch — kiểm tra tĩnh); queries (Key Factory + 8 hooks, invalidate đúng key); zod comment/rating; 7 components (item/form/thread/vote/summary/rating/bookmark/list).
+  - Nâng cấp `comment-section` shared (xóa 404 dòng mock: bác sĩ Lan Anh, pravatar, setTimeout, rate-limit giả) thành wrapper `CommentThread`; gắn thread/summary/vote vào 3 detail (recipe/post/video) + rating/bookmark (recipe) + bookmark (video) + bookmarks list ở tab posts `/profile`.
+  - KHÔNG truyền `entityId` vào `VoteControl` mock (tránh event giả từ vote giả); cơ chế `entityId` optional sẵn cho ngày community live.
+  - Sự cố encoding: 1 lần dùng `Set-Content` qua shell làm hỏng UTF-8 file mapper — đã viết lại toàn bộ bằng Write tool, verify bytes + 12/12 tests; từ nay chỉ dùng Read/Edit/Write.
+- File tạo/sửa:
+  - Tạo: `src/features/community/{types,mappers,api,queries,schemas,components,__fixtures__}`, `specs/010-community-integration/**`
+  - Sửa: `common/constants/api-endpoints.ts`, `common/enums/index.ts`, `components/shared/comment-section.tsx`, `app/(site)/profile/page.tsx`, `features/{recipe,post,video}/components/*-detail-view.tsx`, `docs/{PROGRESS,WORK-LOG}.md` (+ `BACKEND_INTEGRATION.md` ghi chú scaffold)
+- Verify: `tsc --noEmit` sạch (0 lỗi); `npm test` 151/151 pass (community 12/12, không regress); `eslint` scope 0 errors (1 warning `itemTitle` có sẵn); `npm run build` pass; kiểm tra tĩnh 0 axios/fetch trong community api.
+- PROGRESS: task #3 (Comment/Vote UC-03) 20% → 70% (scaffold live-shape; test tay CM + BE READY còn lại).
+- Còn lại / rủi ro: (1) test tay CM-1..CM-4 + check Network 0 request; (2) nối live khi BE READY (task riêng: thay thân api, xóa fixtures khỏi bundle); (3) các file detail/profile đang có session khác sửa — phối hợp khi merge.
+
+---
+
+## [2026-09-16] — Scaffold Moderation-admin live-shape + fixture (spec 011-moderation-admin-integration, T001–T026)
+
+- Mục tiêu: đủ 7 tầng moderation-admin theo đúng contract dù BE còn `PLANNED`; API đọc fixture, 0 request live; 3 tabs mới trong `/admin/dashboard` hiện có.
+- Đã làm:
+  - `sync:swagger` thành công (71 endpoints) — `docs/api/moderation-admin.md` không lệch.
+  - `api-endpoints.ts` (+nhánh `MODERATION_ADMIN` 6 path kèm `TODO(BE-READY)`, chưa import ở đâu), `enums` (+`ModerationDecision`, `ReportStatus`, `ReportTargetType`).
+  - `features/moderation` mới: DTO đủ 6 ops/Model/Mapper/test (label Việt, audit entry, null-safe) + 12 tests; 3 fixtures bám contract; api fixture 6 hàm (kho bộ nhớ, delay 300ms, `USE_FIXTURES`, 0 axios/fetch — kiểm tra tĩnh); queries (Key Factory + 6 hooks, map sẵn `REPORT_REVIEW_CONFLICT`/`SELF_MODERATION_FORBIDDEN`/`PROTECTED_ADMIN_ACCOUNT`/`USER_STATUS_CONFLICT`/`COMMENT_NOT_MODERATABLE`); zod 3 schema (reason bắt buộc); 6 components (reports-table, resolve-dialog, mod-users-table, user-status-dialog, mod-comments-table, comment-status-dialog).
+  - Mở rộng `Tab` union + `parseTabParam` + mảng tabs dashboard (`reports`/`mod-users`/`mod-comments`, icon Flag/UserCog/MessagesSquare); KHÔNG đụng tab `users` sẵn có; giữ `Suspense`/`?tab=`/RBAC hiện có.
+  - Lỗi `eslint set-state-in-effect` ở dashboard là có sẵn (không thuộc diff) — không sửa, để session sở hữu xử lý.
+- File tạo/sửa:
+  - Tạo: `src/features/moderation/{types,mappers,api,queries,schemas,components,__fixtures__}`, `specs/011-moderation-admin-integration/**`
+  - Sửa: `common/constants/api-endpoints.ts`, `common/enums/index.ts`, `app/(admin)/admin/dashboard/page.tsx` (tabs only), `docs/{PROGRESS,WORK-LOG}.md` (+ `BACKEND_INTEGRATION.md` ghi chú scaffold)
+- Verify: `tsc --noEmit` sạch (0 lỗi); `npm test` 163/163 pass (moderation 12/12, không regress); `eslint` scope 0 errors (lỗi dashboard có sẵn, ngoài scope); `npm run build` pass; kiểm tra tĩnh 0 axios/fetch trong moderation api.
+- PROGRESS: task #10 (UC-11/16/17) 80% → 85% (scaffold moderation-admin; test tay MA + BE READY còn lại).
+- Còn lại / rủi ro: (1) test tay MA-1..MA-4 + check Network 0 request + verify MEMBER bị đá khỏi dashboard; (2) nối live khi BE READY; (3) dashboard đang có session khác sửa — phối hợp khi merge.
+
+---
+
+## [2026-09-16] — Scaffold Contributors live-shape + fixture (spec 012-contributor-applications, T001–T025)
+
+- Mục tiêu: đủ 7 tầng contributors theo đúng contract dù BE còn `PLANNED`; API đọc fixture, 0 request live; tuyệt đối không cấp quyền theo `requestedType`, không đụng luồng đăng ký của auth.
+- Đã làm:
+  - `sync:swagger` thành công (71 endpoints) — 2 file contract không lệch.
+  - `api-endpoints.ts` (+nhánh `CONTRIBUTOR`/`ADMIN_CONTRIBUTOR` kèm `TODO(BE-READY)`, chưa import ở đâu); dùng lại enum `ContributorType`/`ContributorApplicationStatus` (T003 rà soát, không tạo mới).
+  - `features/contributor` mới: DTO đủ 4 ops (review oneOf đúng BE)/Model/Mapper/test (label Việt, rút gọn experience, oneOf mapping) + 12 tests; fixtures (pending/history/cooldown/queue bám contract); api fixture 4 hàm (kho bộ nhớ, delay 300ms, `USE_FIXTURES`, 0 axios/fetch — kiểm tra tĩnh); queries (Key Factory + 4 hooks, map sẵn PENDING/REAPPLY/NOT_ALLOWED/TYPE_UNCHANGED/ALREADY_REVIEWED); zod (submit min 20 + links URI ≤5, review discriminatedUnion).
+  - US1: form nộp (chặn admin/PENDING/cooldown kèm ngày) + lịch sử + tab `contributor` ở `/profile` (query 1 lần truyền xuống, tránh setState-in-render).
+  - US2: queue-table (lọc/tìm kiếm) + review dialog (oneOf qua safeParse, không RHF vì discriminated union) + tab `contrib-apps` dashboard.
+  - US3: chặn đổi cùng nhóm (`CONTRIBUTOR_TYPE_UNCHANGED` ở form) + hiện người duyệt/ngày.
+  - Fix eslint `react-hooks/purity` (Date.now trong render → useState initializer).
+- File tạo/sửa:
+  - Tạo: `src/features/contributor/{types,mappers,api,queries,schemas,components,__fixtures__}`, `specs/012-contributor-applications/**`
+  - Sửa: `common/constants/api-endpoints.ts`, `app/(site)/profile/page.tsx` (tab only), `app/(admin)/admin/dashboard/page.tsx` (tab only), `docs/{PROGRESS,WORK-LOG}.md` (+ `BACKEND_INTEGRATION.md` ghi chú scaffold)
+- Verify: `tsc --noEmit` sạch (0 lỗi); `npm test` 175/175 pass (contributor 12/12, không regress); `eslint` scope 0 errors; `npm run build` pass; kiểm tra tĩnh 0 axios/fetch trong contributor api.
+- PROGRESS: task #10 (UC-11/16/17) 85% → 90% (scaffold contributors; test tay CA + BE READY còn lại).
+- Còn lại / rủi ro: (1) test tay CA-1..CA-4 + check Network 0 request; (2) nối live khi BE READY; (3) profile/dashboard đang có session khác sửa — phối hợp khi merge.
+
+---
+
+## [2026-09-17] — Scaffold Trust-safety leftovers (spec 013-trust-safety-leftovers, T001–T024)
+
+- Mục tiêu: quét sạch 2 endpoint còn sót (`POST /reports`, `DELETE behavior-history`) ở dạng scaffold fixture, 0 request live; thay nút toast giả ở privacy.
+- Đã làm:
+  - `sync:swagger` thành công (71 endpoints) — 2 file contract không lệch.
+  - `api-endpoints.ts` (+nhánh `SAFETY` kèm `TODO(BE-READY)`, chưa import ở đâu), `enums` (+`ReportReasonCode`, `ReportTargetKind` riêng, suýt ghi đè `CommentStatus` — đã khôi phục và kiểm kê đủ 37 enum).
+  - `features/safety` mới: DTO đủ 2 ops/Model/Mapper/test (6 nhãn Việt + fallback, UUID guard) + 12 tests; fixtures; api fixture 2 hàm (kho trùng, `USE_FIXTURES`, 0 axios/fetch — kiểm tra tĩnh); queries (2 hooks, map sẵn SELF/DUPLICATE, xóa xong invalidate home+consent cold-start); zod; 4 components (2 dialogs ở lại feature, nút báo cáo nâng lên `components/shared` để community dùng chéo đúng biên module).
+  - Gắn `ReportButton` vào 3 detail (authorId chặn tự báo cáo; video không có author id nên bỏ qua chặn) + `CommentItem`; thay nút toast giả privacy bằng `DeleteHistoryButton` (giữ nút download-data ngoài phạm vi).
+- File tạo/sửa:
+  - Tạo: `src/features/safety/{types,mappers,api,queries,schemas,components,__fixtures__}`, `src/components/shared/report-{button,dialog}.tsx`, `specs/013-trust-safety-leftovers/**`
+  - Sửa: `common/constants/api-endpoints.ts`, `common/enums/index.ts`, `features/{recipe,post,video}/components/*-detail-view.tsx`, `features/community/components/comment-item.tsx`, `app/(site)/profile/page.tsx` (nút xóa), `docs/{PROGRESS,WORK-LOG}.md` (+ `BACKEND_INTEGRATION.md` ghi chú scaffold)
+- Verify: `tsc --noEmit` sạch (0 lỗi); `npm test` 187/187 pass (safety 12/12, không regress); `eslint` scope 0 errors; `npm run build` pass; kiểm tra tĩnh 0 axios/fetch trong safety api; grep 0 chuỗi toast giả cũ.
+- PROGRESS: task #13 mới → 70% (scaffold; test tay TS + BE READY còn lại).
+- Còn lại / rủi ro: (1) test tay TS-1..TS-3 + check Network 0 request; (2) nối live khi BE READY; (3) detail/profile/comment đang có session khác sửa — phối hợp khi merge.
+
+---
+
+## [2026-09-17] — Scaffold Chat sharing/verification (spec 014-chat-sharing-verification, T001–T026)
+
+- Mục tiêu: quét sạch 3 endpoint chat còn sót (share/public/verify) ở dạng scaffold fixture, 0 request live; DTO suy luận vì không có schema swagger.
+- Đã làm:
+  - `sync:swagger` thành công (71 endpoints) — `docs/api/ai-chat.md` vẫn chỉ 5 private ops (3 endpoint mới vắng mặt, đúng PLANNED).
+  - `api-endpoints.ts` (+nhánh `CHAT_SHARING` kèm `TODO(BE-READY)`, chưa import ở đâu); dùng lại enum hiện có (T003 rà soát, không tạo mới).
+  - Mở rộng `features/chat`: DTO suy luận/Model/Mapper/test (shareUrl `?share=`, ẩn danh hóa, vai trò) + 12 tests; fixtures (share mở/thu hồi/public gồm 1 đã verify); api fixture 3 hàm (share lại sinh shareId mới, tìm kiếm client, `USE_FIXTURES`, 0 axios/fetch — kiểm tra tĩnh); queries (public KHÔNG gate auth, mutations + invalidate); zod (xác nhận phạm vi + note kiểm chứng).
+  - US1: nút chia sẻ qua slot `actions` có sẵn + dialog (xác nhận phạm vi bắt buộc, copy clipboard + fallback, thu hồi) + link Khám phá ở header.
+  - US2: route `/assistant/public` (list + view theo `?share=`, không AuthGuard, link 2 chiều).
+  - US3: huy hiệu + dialog kiểm chứng + nút gate theo role thật (ADMIN/đơn duyệt, không suy từ requestedType); mở rộng stream result `topicCodes` cho behavior event.
+  - Sự cố build giữa chừng: session khác refactor dashboard dở (mất const USERS/LOGS) — chờ họ sửa xong, build lại xanh; xác nhận tab wiring của mình còn nguyên (họ còn reuse moderation queries cho KPI).
+- File tạo/sửa:
+  - Tạo: `src/features/chat/{types/chat-sharing.*,mappers/chat-sharing.*,api/chat-sharing.api.ts,queries/chat-sharing.queries.ts,schemas/chat-sharing.schema.ts,components/share-*,public-*,verification-*,verify-* }`, `src/app/(site)/assistant/public/page.tsx`, `specs/014-chat-sharing-verification/**`
+  - Sửa: `common/constants/api-endpoints.ts`, `app/(site)/assistant/page.tsx` (nút share/verify + link Khám phá), `features/chat/{api/chat-stream.ts,queries/chat.queries.ts}` (topicCodes), `docs/{PROGRESS,WORK-LOG}.md` (+ `BACKEND_INTEGRATION.md` ghi chú scaffold)
+- Verify: `tsc --noEmit` sạch (0 lỗi); `npm test` 200/200 pass (sharing 12/12, không regress); `eslint` scope 0 errors; `npm run build` pass (gồm `/assistant/public`); kiểm tra tĩnh 0 axios/fetch trong sharing api.
+- PROGRESS: task #7 (UC-07) giữ 95% (scaffold sharing/verify; test tay CS + BE READY còn lại).
+- Còn lại / rủi ro: (1) test tay CS-1..CS-4 + check Network 0 request + 2 vai; (2) reconfirm shape 3 endpoint + nối live khi BE READY; (3) assistant page đang có session khác sửa — phối hợp khi merge.
+
+---
+
+## [2026-09-17] — Scaffold Notifications (spec 015-notifications, T001–T022)
+
+- Mục tiêu: đủ 7 tầng notifications theo suy luận contract dù BE còn `PLANNED` (không có schema swagger); chuông header + panel + đánh dấu, 0 request live.
+- Đã làm:
+  - `sync:swagger` thành công (71 endpoints) — xác nhận vẫn chưa có file tag notifications.
+  - `api-endpoints.ts` (+nhánh `NOTIFICATIONS` kèm `TODO(BE-READY)`, chưa import ở đâu); dùng string union + fallback, không tạo enum mới.
+  - `features/notification` mới: DTO suy luận/Model/Mapper/test (4 nhãn loại + fallback, `timeAgo` Việt, đếm capped `9+`, link ngoài → null) + 12 tests; fixtures đa loại/trạng thái; api fixture 3 hàm (kho bộ nhớ, delay 300ms, `USE_FIXTURES`, 0 axios/fetch — kiểm tra tĩnh); queries (Key Factory, list gate member + polling 60s dừng tab ẩn, mark-read lạc quan + rollback); 3 components (bell badge capped + dropdown panel, panel tìm điều hướng + mark-all, item).
+  - Khôi phục chuông ở `site-header.tsx` thay khối comment-out (xóa import `Bell` thừa, giữ style); khách không thấy chuông/không request.
+- File tạo/sửa:
+  - Tạo: `src/features/notification/{types,mappers,api,queries,components,__fixtures__}`, `specs/015-notifications/**`
+  - Sửa: `common/constants/api-endpoints.ts`, `components/layout/site-header.tsx` (chuông), `docs/{PROGRESS,WORK-LOG}.md` (+ `BACKEND_INTEGRATION.md` ghi chú scaffold)
+- Verify: `tsc --noEmit` sạch (0 lỗi); `npm test` 212/212 pass (notification 12/12, không regress); `eslint` scope 0 errors (xóa helper chết + unused); `npm run build` pass; kiểm tra tĩnh 0 axios/fetch trong notification api.
+- PROGRESS: task #14 mới → 70% (scaffold; test tay NT + BE READY còn lại).
+- Còn lại / rủi ro: (1) test tay NT-1..NT-3 + check Network 0 request + 2 vai; (2) reconfirm shape 3 endpoint + nối live khi BE READY; (3) header đang có session khác sửa — phối hợp khi merge.
+
+---
+
+## [2026-09-17] — Scaffold Restaurants location (spec 016-restaurants-location, T001–T030)
+
+- Mục tiêu: đủ 7 tầng restaurants/location theo suy luận contract dù BE còn `PLANNED` (không có schema swagger); API đọc fixture, 0 request live, 0 gọi maps ngoài.
+- Đã làm:
+  - `sync:swagger` thành công (71 endpoints) — xác nhận vẫn chưa có tag restaurants/location.
+  - `api-endpoints.ts` (+3 nhánh `RESTAURANTS`/`LOCATION`/`ADMIN_RESTAURANTS` kèm `TODO(BE-READY)`, chưa import ở đâu), `enums` (+`RestaurantStatus`; 1 lần ghi đè nhầm `ReportTargetKind` — đã khôi phục và kiểm kê đủ 38 enum).
+  - `features/restaurant` mới: DTO suy luận/Model/Mapper/test (format `850 m`/`2,3 km`, nhãn nguồn, `isStale` 30 ngày) + 12 tests; fixtures (3 PUBLISHED + 1 PENDING + geocode 2 địa chỉ mẫu); api fixture 7 hàm (haversine sort ở tầng api, lọc món không dấu, kho submit/queue, delay 300ms, `USE_FIXTURES`, 0 axios/fetch/maps — kiểm tra tĩnh); queries (Key Factory + 7 hooks); zod (tọa độ/bán kính/địa chỉ/submit/review); 10 components (location/address/filters/card/list/map-placeholder/detail/submit/queue/review-dialog).
+  - Viết lại `/restaurants` (vị trí + form fallback + filters + list + khung bản đồ CSS cùng tập kết quả) + `/restaurants/[id]`; tab `restaurants` dashboard (giữ `?tab=`/RBAC, không đụng tab khác).
+  - Fix eslint unused (`LoadingState` ở list); đơn giản hóa submit (bỏ 2-bước giả).
+- File tạo/sửa:
+  - Tạo: `src/features/restaurant/{types,mappers,api,queries,schemas,components,__fixtures__}`, `specs/016-restaurants-location/**`
+  - Sửa: `common/constants/api-endpoints.ts`, `common/enums/index.ts`, `app/(site)/restaurants/{page,[id]/page}.tsx`, `app/(admin)/admin/dashboard/page.tsx` (tab only), `docs/{PROGRESS,WORK-LOG}.md` (+ `BACKEND_INTEGRATION.md` ghi chú scaffold)
+- Verify: `tsc --noEmit` sạch (0 lỗi); `npm test` 224/224 pass (restaurant 12/12, không regress); `eslint` scope 0 errors; `npm run build` pass; kiểm tra tĩnh 0 axios/fetch/maps trong restaurant.
+- PROGRESS: task #8 (UC-12) 30% → 70% (scaffold; test tay RT + BE READY còn lại).
+- Còn lại / rủi ro: (1) test tay RT-1..RT-4 + check Network 0 request/maps + Sensors vị trí; (2) reconfirm shape 7 endpoint + SDK maps/key + nối live khi BE READY; (3) restaurants/dashboard đang có session khác sửa — phối hợp khi merge.
+
+---
+
+## [2026-09-17] — Scaffold AI governance (spec 017-ai-governance, T001–T024)
+
+- Mục tiêu: đủ 7 tầng AI governance theo suy luận contract dù BE còn `PLANNED` (không có schema swagger); tuyệt đối không render nội dung thô/bí mật.
+- Đã làm:
+  - `sync:swagger` thành công (71 endpoints) — xác nhận vẫn chưa có tag ai-governance.
+  - `api-endpoints.ts` (+nhánh `AI_GOVERNANCE` 5 path kèm `TODO(BE-READY)`, chưa import ở đâu); dùng string union + fallback, không tạo enum mới.
+  - `features/ai-governance` mới: DTO suy luận/Model/Mapper/test (CHỈ pick field cho phép — redaction phòng thủ sâu, hash rút gọn 12 ký tự) + 12 tests gồm redaction chuyên biệt; fixtures (metrics/log che mờ/flags/features, 0 nội dung thô); api fixture 5 hàm (lọc khoảng/tính năng/trạng thái, delay 300ms, `USE_FIXTURES`, 0 axios/fetch — kiểm tra tĩnh); queries (Key Factory + 5 hooks); zod (khoảng ngày from ≤ to + lý do toggle); 5 components (metrics-overview, flags-list, features-table, requests-table, feature-toggle-dialog).
+  - Tab `ai-governance` dashboard (tổng quan + log + cờ + công tắt, giữ `?tab=`/RBAC, không đụng tab khác); nút toggle trong bảng (dialog lý do bắt buộc).
+  - Fix eslint `react-hooks/purity` (Date trong render → useState initializer).
+- File tạo/sửa:
+  - Tạo: `src/features/ai-governance/{types,mappers,api,queries,schemas,components,__fixtures__}`, `specs/017-ai-governance/**`
+  - Sửa: `common/constants/api-endpoints.ts`, `app/(admin)/admin/dashboard/page.tsx` (tab only), `docs/{PROGRESS,WORK-LOG}.md` (+ `BACKEND_INTEGRATION.md` ghi chú scaffold)
+- Verify: `tsc --noEmit` sạch (0 lỗi); `npm test` 236/236 pass (ai-governance 12/12, không regress); `eslint` scope 0 errors; `npm run build` pass; kiểm tra tĩnh 0 axios/fetch trong api + quét components 0 nội dung thô.
+- PROGRESS: task #15 mới → 70% (scaffold; test tay AG + BE READY còn lại).
+- Còn lại / rủi ro: (1) test tay AG-1..AG-3 + check Network 0 request + quét DOM + 2 vai; (2) reconfirm shape 5 endpoint + nối live khi BE READY; (3) dashboard đang có session khác sửa — phối hợp khi merge.
+
+---
+
+## [2026-09-17] — Converge 5 đợt scaffold (013→017) + khôi phục chuông thông báo (T023)
+
+- Mục tiêu: kiểm tra lại toàn bộ 5 đợt theo `/speckit-converge`, append task còn thiếu, implement ngay.
+- Đã làm:
+  - Quét 5 `tasks.md` (013/014/015/016/017): 0 task mở — tất cả đã [X].
+  - Đối chiếu wiring thực tế: 013 (report/delete-history) ✓, 014 (share/verify/public) ✓, 016 (routes + dashboard tab) ✓, 017 (dashboard tab + toggle) ✓.
+  - Phát hiện 1 regression: `site-header.tsx` (session khác viết lại khi sửa navbar, 260 dòng) mất wiring `NotificationBell` của 015/T014 — bell/panel/item còn nguyên, chỉ mất import + mount.
+  - Append `Phase 6: Convergence` + T023 vào `specs/015-notifications/tasks.md`; implement ngay: import + mount `<NotificationBell />` sau `ThemeToggle` (bell tự gate member, khách trả null).
+- File tạo/sửa:
+  - Sửa: `src/components/layout/site-header.tsx` (chuông), `specs/015-notifications/tasks.md` (T023 [X]), `docs/WORK-LOG.md`
+- Verify: `tsc --noEmit` 0 lỗi; `npm test` 25 files, 236/236 pass (không regress).
+- PROGRESS: task #14 giữ 70% (scaffold + converge sạch; test tay NT + BE READY còn lại).
+- Còn lại / rủi ro: header vẫn là file tranh chấp giữa 2 session — phối hợp khi merge/commit.
+
+---
+
+## [2026-09-18] — Đồng bộ reviewed MVP, Backend Phases 12–27 và Roadmap Phase 2
+
+- Mục tiêu: hợp nhất quyết định sau review Phase 11 thành một nguồn yêu cầu chuẩn và không làm sai trạng thái runtime hiện tại.
+- Đã làm:
+  - Tạo `/docs/SRS.md` canonical và `/docs/ROADMAP_PHASE_2.md` đầy đủ.
+  - Viết lại `/docs/IMPLEMENTATION_PLAN.md` v4.0 với unified Contributor, canonical food data, cooking-aware nutrition, quota, video review parity, custom meals/tags, meal compatibility, multi-week, pantry, fridge multi-image, receipt và shopping gaps.
+  - Mở rộng backend plan từ Phase 12 tới 27 và thay prompts 12–16 cũ bằng 16 prompt độc lập cho Phases 12–27.
+  - Chuẩn hóa toàn bộ 28 prompt Phase 00–27 dùng “current repository root”/“thư mục gốc của repository hiện tại”; loại bỏ đường dẫn tuyệt đối của máy cá nhân để teammate có thể dùng trên mọi môi trường.
+  - Cập nhật `BACKEND_INTEGRATION.md` bằng target contract `PLANNED`; giữ endpoint runtime hiện tại trung thực và ghi Phase 14 là future breaking migration.
+  - Cập nhật UI plan/design prompt, `frontend/AGENTS.md`, PROGRESS; đánh dấu hai frontend SRS cũ là superseded/deprecated.
+  - Ghi rõ user tag `shopee` chỉ là metadata; certificate/payment/DMCA/STT/wearable/additional traditions và các ý tưởng khác được giữ trong Roadmap Phase 2.
+- Verify: docs-only; kiểm tra link/prompt index, legacy-term audit, `git diff --check`. Không chạy frontend typecheck/test/build vì không sửa source hoặc runtime contract.
+- PROGRESS: không đổi % feature; thêm bảng backlog tích hợp Phases 12–27.
+- Còn lại: mỗi backend phase phải cập nhật OpenAPI/integration registry và frontend chỉ tích hợp khi endpoint thật sự `READY`.
+
+---
+
+## [2026-09-23] — Phân tích khoảng cách FE ↔ BE (Gap Analysis) & Đồng bộ OpenAPI Catalog
+
+- Mục tiêu: Thực thi phân tích khoảng cách toàn diện giữa tiến trình frontend (PROGRESS, WORK-LOG, BACKEND_INTEGRATION) và tiến trình backend (28 phase prompts, IMPLEMENTATION_PHASES.md, SRS.md, FOOD_DATA_SOURCES.md, ROADMAP_PHASE_2.md); giải quyết các mâu thuẫn trạng thái endpoint và đồng bộ tài nguyên tích hợp.
+- Đã làm:
+  - Khởi tạo đặc tả phân tích khoảng cách chuẩn `/speckit-specify` tại `specs/005-frontend-backend-gap-analysis/spec.md` kèm checklist chất lượng.
+  - Phân loại rõ ràng 4 nhóm khoảng cách (Gap Groups A, B, C, D) với thứ tự ưu tiên hành động.
+  - Chạy `sync:swagger` từ `../backend/openapi.json` (71 endpoints, 17 nhóm, 70 schemas), làm mới toàn bộ `API-CATALOG.md` và `docs/api/*.md`.
+  - Phát hiện quan trọng: Backend Phases 00–11 đã `COMPLETED`; `features/community` đã chạy ở chế độ live (`USE_FIXTURES = false`); Content (`/posts`), Review Queue (`/review-queue/posts`) và Community (`/comments`, `/posts/:id/vote`, `/posts/:id/rating`, `/posts/:id/bookmark`) đều đã sẵn sàng trên backend.
+  - Cập nhật `src/common/constants/api-endpoints.ts`: gỡ bỏ các chú thích `TODO(BE-READY)` lỗi thời cho Community, Moderation Admin, Contributors, Safety.
+  - Cập nhật `docs/BACKEND_INTEGRATION.md` (v4.1): chuyển trạng thái 20 endpoints của Content, Community và Review Queue từ `PLANNED` sang `READY` và `FE integrated = Yes`.
+  - Cập nhật `docs/PROGRESS.md`: đồng bộ % hoàn thành cho Task #2 (Blog/Post) 85% → 95%, Task #3 (Comment/Vote) 70% → 95%, Task #5 (Video) 80% → 95%, Task #13 (Trust-Safety) 70% → 95%.
+- File tạo/sửa:
+  - Tạo: `specs/005-frontend-backend-gap-analysis/{spec.md,checklists/requirements.md}`
+  - Sửa: `src/common/constants/api-endpoints.ts`, `docs/BACKEND_INTEGRATION.md`, `docs/PROGRESS.md`, `docs/API-CATALOG.md`, `docs/api-catalog.json`, `docs/api/*.md`, `docs/WORK-LOG.md`
+- Verify:
+  - `node node_modules/typescript/bin/tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 25 test files, 236/236 unit tests pass 100%.
+  - `npm run build`: pass thành công toàn bộ 30 routes tĩnh và động.
+- PROGRESS: Task #2: 85% → 95%, Task #3: 70% → 95%, Task #5: 80% → 95%, Task #13: 70% → 95%.
+- Còn lại / rủi ro:
+  - Cần chạy kịch bản kiểm thử tích hợp thực tế (test tay) với Backend server local (`:4000`) cho các kịch bản VS, VP, VC, MP, AC, RC, CM, MA, CA, TS.
+  - Sẵn sàng đón đầu Backend Phase 12 (`Food & Nutrient Knowledge Base`) khi backend bắt đầu triển khai.
+
+---
+
+## [2026-09-23] — Rà soát toàn diện sau khi nhánh `dev` merge PR #19 `be-fix` (Phases 12–16)
+
+- Mục tiêu: Kiểm tra và đánh giá lại toàn bộ hệ thống sau khi user cập nhật code mới về nhánh `dev` từ PR #19 `be-fix`.
+- Đã làm:
+  - Kiểm tra `git log`: PR #19 mang về 5 commits lớn của backend (`feat: add food data and recipe nutrition`, `docs: update backend integration`, `refactor: unify contributor permissions`, `feat(storage): enforce user media quotas`, `feat(video): align review and moderation lifecycle`).
+  - Chạy `sync:swagger`: OpenAPI tăng từ 71 endpoints (17 nhóm) lên **103 endpoints (24 nhóm, 95 schemas)**. Đã làm mới toàn bộ `API-CATALOG.md` và `docs/api/*.md`.
+  - Phân tích trạng thái Backend:
+    - Phase 12 (`Food Data`): Đã `COMPLETED` (11 endpoints).
+    - Phase 13 (`Recipe Nutrition`): Đang `IN_PROGRESS` (5 endpoints).
+    - Phase 14 (`Unified Contributor`): Đang `IN_PROGRESS` / `CHANGING` (6 endpoints).
+    - Phase 15 (`Storage Quota`): Đã `COMPLETED` (10 endpoints) — **BREAKING**: Xóa `/uploads/signature`, thay bằng luồng reservation 3 bước.
+    - Phase 16 (`Video Review Parity`): Đã `COMPLETED` (5 endpoints) — **BREAKING**: Chuyển quy trình duyệt sang explicit submit & `/admin/content-review*`.
+  - Cập nhật tài liệu:
+    - `specs/005-frontend-backend-gap-analysis/spec.md`: Bổ sung phân tích chi tiết PR #19, phân loại 2 breaking changes và lập kế hoạch hành động 3 sprint.
+    - `docs/PROGRESS.md`: Cập nhật bảng backlog backend Phases 12–27 và nhật ký.
+- Verify:
+  - `node node_modules/typescript/bin/tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 25 test files, 236/236 unit tests pass 100%.
+  - `npm run build`: pass thành công toàn bộ 30 routes tĩnh và động (exit code 0).
+- PROGRESS: % giữ nguyên (đợt audit đồng bộ code dev).
+- Còn lại / rủi ro:
+  - Cần lên kế hoạch thực thi cho Sprint 1: Migrate luồng upload sang reservation (Phase 15) và submit bài (Phase 16).
+
+---
+
+## [2026-09-23] — Khởi tạo thư mục task chuẩn bị theo thứ tự 28 Phase của Backend
+
+- Mục tiêu: Tạo ra thư mục ghi nhận các task cần làm và checklist chuẩn bị trước khi vào làm từng task, bám sát thứ tự 28 phase trong `backend/docs/prompts/`.
+- Đã làm:
+  - Tạo thư mục `frontend/docs/tasks/`.
+  - Tạo `frontend/docs/tasks/README.md`: Bảng ma trận tiến độ 28 phases (BE ↔ FE), quy trình chuẩn bị bắt buộc 5 bước (Pre-flight Checklist) tuân thủ `ARCHITECTURE.md` và `AGENTS.md`.
+  - Tạo 28 file task chi tiết tương ứng 1:1 với 28 prompts của Backend:
+    - `phase-00-foundation.md` đến `phase-11-ai-chat.md`: Các phase đã live, bổ sung danh sách kịch bản test tay chi tiết (VS, VP, VC, MP, AC, RC, CM, MA, TS).
+    - `phase-12-food-data.md`: Kế hoạch scaffold 7 tầng cho 11 endpoints dinh dưỡng mới của Phase 12 READY.
+    - `phase-13-recipe-nutrition.md`: Kế hoạch chuẩn bị DTO/Model/Mapper cho ước tính dinh dưỡng nấu nướng.
+    - `phase-14-unified-contributors.md`: Kế hoạch chuẩn bị migration bỏ subtype RBAC sang `approvalBasis`.
+    - `phase-15-storage-quota.md`: Checklist cấp bách migrate luồng upload sang Reservation Flow 3 bước.
+    - `phase-16-video-review.md`: Checklist cấp bách migrate nộp duyệt `POST /posts/:id/submit` và `/admin/content-review*`.
+    - `phase-17-custom-meals.md` đến `phase-27-hardening.md`: Kế hoạch chuẩn bị cho các phase tương lai (Custom meals, Pantry, Fridge vision, Receipts, Maps, Notifications, AI governance, Hardening release gate).
+- File tạo/sửa:
+  - Tạo mới: `frontend/docs/tasks/{README.md, phase-00-foundation.md ... phase-27-hardening.md}` (tổng cộng 29 files).
+  - Sửa: `frontend/docs/WORK-LOG.md`.
+- Verify:
+  - `node node_modules/typescript/bin/tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 25 test files, 236/236 unit tests pass 100%.
+- PROGRESS: Giữ nguyên (tạo task guide & documentation scaffolding).
+- Còn lại: Lần lượt chọn task trong `frontend/docs/tasks/` để thực thi (ưu tiên Phase 15 và Phase 16).
+

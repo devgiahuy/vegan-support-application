@@ -324,16 +324,19 @@ Rotate refresh token và cấp access token mới
     "contributorRequest": {
       "type": "object",
       "required": [
-        "requestedType",
+        "claimedApprovalBasis",
         "experience"
       ],
       "properties": {
-        "requestedType": {
+        "claimedApprovalBasis": {
           "type": "string",
           "enum": [
-            "EXPERIENCED_PRACTITIONER",
-            "NUTRITION_EXPERT"
+            "ORGANIZATION_AFFILIATION",
+            "PLATFORM_TRACK_RECORD"
           ]
+        },
+        "organizationClaim": {
+          "type": "string"
         },
         "experience": {
           "type": "string"

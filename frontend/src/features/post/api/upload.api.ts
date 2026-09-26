@@ -30,6 +30,7 @@ export interface CloudinaryUploadResult {
 
 /** Metadata tối thiểu để ráp `media[]` khi tạo/sửa post (backend validate strict). */
 export interface UploadedMediaMeta {
+  assetId?: string;
   publicId: string;
   mimeType: string;
   bytes: number;
@@ -72,8 +73,7 @@ export function toUploadedMeta(
 
 export const uploadApi = {
   /**
-   * Yêu cầu chữ ký máy chủ để upload an toàn lên Cloudinary.
-   * Backend chỉ nhận `{ resourceType }` (strict) và tự quyết folder/giới hạn.
+   * @deprecated Backend Phase 15 removed signature endpoint. Use `uploadWithReservation` from `@/features/storage/api/storage-upload` instead.
    */
   getUploadSignature: async (params: {
     resourceType: 'image' | 'video';

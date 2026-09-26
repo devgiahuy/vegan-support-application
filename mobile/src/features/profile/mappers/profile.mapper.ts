@@ -67,7 +67,8 @@ export class ProfileMapper extends BaseMapper<ProfileResponseDto, DetailedProfil
   }
 }
 
-function toDietSummary(raw: Record<string, unknown> | null | undefined): DietPreferenceSummary | null {
+/** Dùng lại cho response `PUT /users/me/diet-preferences` — cùng shape `dietPreferenceSchema`. */
+export function toDietSummary(raw: Record<string, unknown> | null | undefined): DietPreferenceSummary | null {
   if (!raw || typeof raw !== 'object') return null;
 
   const pattern = safeEnum(

@@ -34,7 +34,14 @@ yarn-error.*
 .idea/
 
 # local env files
+.env
+.env.*
 .env*.local
+<<<<<<< HEAD
+.env
+=======
+!.env.example
+>>>>>>> 05d777b7fe390a6b5bc2c8dbc7dd24b6aa4955f4
 
 # typescript
 *.tsbuildinfo

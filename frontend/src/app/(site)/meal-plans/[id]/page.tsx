@@ -10,7 +10,10 @@ import { AuthGuard } from '@/components/shared/auth-guard';
 import { LoadingState } from '@/components/shared/loading-state';
 import { ErrorState } from '@/components/shared/error-state';
 import { getApiErrorStatus } from '@/lib/api-error';
-import { useMealPlanDetailQuery } from '@/features/meal-plan/queries/meal-plan.queries';
+import {
+  useMealPlanDetailQuery,
+  useSwapMealItemMutation,
+} from '@/features/meal-plan/queries/meal-plan.queries';
 import { DayGrid } from '@/features/meal-plan/components/day-grid';
 import { ShoppingList } from '@/features/meal-plan/components/shopping-list';
 import { WarningsBanner } from '@/features/meal-plan/components/warnings-banner';
@@ -18,11 +21,62 @@ import { SwapMealItemDialog } from '@/features/meal-plan/components/swap-dialog'
 import { DeleteMealPlanDialog } from '@/features/meal-plan/components/delete-dialog';
 import type { MealSlot } from '@/features/meal-plan/types/meal-plan.model';
 
-/** Chi tiết 1 phiên bản thực đơn: 21 ô + đi chợ + cảnh báo + dinh dưỡng. */
+import {
+  MealAnalysisSummaryBar,
+  MealAnalysisAlerts,
+  MealAnalysisDetailDialog,
+  MealAnalysisSwapDialog,
+  MealAnalysisBadge,
+  IncompleteDataBanner,
+  useMealAnalysisQuery,
+  useAnalyzeMealPlanMutation,
+  type MealWarning,
+  type SwapSuggestion,
+} from '@/features/meal-analysis';
+
+/** Chi tiết 1 phiên bản thực đơn: 21 ô + đi chợ + cảnh báo + dinh dưỡng + phân tích tương thích. */
 function MealPlanDetailContent({ id }: { id: string }) {
   const { data: plan, isLoading, isError, error, refetch } = useMealPlanDetailQuery(id);
   const [swapSlot, setSwapSlot] = React.useState<MealSlot | null>(null);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+
+  // States cho phân tích tương thích và vi chất (Phase 18)
+  const [selectedDetailWarning, setSelectedDetailWarning] = React.useState<MealWarning | null>(
+    null
+  );
+  const [selectedSwapWarning, setSelectedSwapWarning] = React.useState<MealWarning | null>(null);
+
+  const { data: analysis } = useMealAnalysisQuery(plan?.id);
+  const analyzeMutation = useAnalyzeMealPlanMutation(plan?.id ?? '', plan?.lockVersion);
+  const swapMutation = useSwapMealItemMutation();
+
+  // Bản đồ cảnh báo theo ô bữa ăn để hiển thị Badge trực quan trong DayGrid
+  const warningsBySlotId = React.useMemo(() => {
+    const map = new Map<string, MealWarning[]>();
+    if (!analysis || analysis.isStale) return map;
+    for (const warning of analysis.warnings) {
+      for (const item of warning.affectedItems) {
+        if (item.planItemId) {
+          const list = map.get(item.planItemId) ?? [];
+          list.push(warning);
+          map.set(item.planItemId, list);
+        }
+      }
+    }
+    return map;
+  }, [analysis]);
+
+  const handleApplySwap = async (planItemId: string, swap: SwapSuggestion) => {
+    if (!plan) return;
+    await swapMutation.mutateAsync({
+      planId: plan.id,
+      itemId: planItemId,
+      expectedVersion: plan.lockVersion,
+      idempotencyKey: `swap-suggestion-${planItemId}-${swap.suggestedDishId}-${Date.now()}`,
+    });
+    // Kích hoạt phân tích lại sau khi đổi món thành công
+    analyzeMutation.mutate();
+  };
 
   if (isError && getApiErrorStatus(error) === 404) notFound();
 
@@ -75,8 +129,32 @@ function MealPlanDetailContent({ id }: { id: string }) {
             </Button>
           </div>
 
+          {/* Banner cảnh báo phát sinh từ tạo thực đơn cơ bản */}
           <WarningsBanner warnings={plan.warnings} />
 
+          {/* Module Phân tích Khẩu phần & Tương thích Dinh dưỡng (Phase 18) */}
+          <MealAnalysisSummaryBar
+            analysis={analysis}
+            isLoading={analyzeMutation.isPending}
+            onAnalyze={() => analyzeMutation.mutate()}
+          />
+
+          {analysis?.hasIncompleteData && (
+            <IncompleteDataBanner
+              confidence={analysis.overallConfidence}
+              notes={analysis.incompleteDataNotes}
+            />
+          )}
+
+          {analysis && !analysis.isStale && (
+            <MealAnalysisAlerts
+              warnings={analysis.warnings}
+              onViewDetails={setSelectedDetailWarning}
+              onViewSwaps={setSelectedSwapWarning}
+            />
+          )}
+
+          {/* Lưới lịch tuần có nhúng Huy hiệu cảnh báo trên từng ô bữa ăn */}
           <DayGrid
             items={plan.items}
             actions={(slot) =>
@@ -87,6 +165,16 @@ function MealPlanDetailContent({ id }: { id: string }) {
                 </Button>
               ) : null
             }
+            slotBadge={(slot) => {
+              const warnings = warningsBySlotId.get(slot.id);
+              if (!warnings || warnings.length === 0) return null;
+              return (
+                <MealAnalysisBadge
+                  warnings={warnings}
+                  onClick={(ws) => setSelectedDetailWarning(ws[0])}
+                />
+              );
+            }}
           />
 
           <ShoppingList items={plan.shoppingList} />
@@ -106,12 +194,33 @@ function MealPlanDetailContent({ id }: { id: string }) {
               if (!open) setSwapSlot(null);
             }}
           />
+
           <DeleteMealPlanDialog
             planId={plan.id}
             weekLabel={plan.formattedWeekRange}
             expectedVersion={plan.lockVersion}
             open={deleteOpen}
             onOpenChange={setDeleteOpen}
+          />
+
+          {/* Hộp thoại xem chi tiết cơ sở khoa học & nguồn tài liệu */}
+          <MealAnalysisDetailDialog
+            warning={selectedDetailWarning}
+            open={selectedDetailWarning !== null}
+            onOpenChange={(open) => {
+              if (!open) setSelectedDetailWarning(null);
+            }}
+          />
+
+          {/* Hộp thoại gợi ý đổi món khắc phục cảnh báo */}
+          <MealAnalysisSwapDialog
+            warning={selectedSwapWarning}
+            open={selectedSwapWarning !== null}
+            onOpenChange={(open) => {
+              if (!open) setSelectedSwapWarning(null);
+            }}
+            onSelectSwap={handleApplySwap}
+            isSwapping={swapMutation.isPending}
           />
         </>
       )}

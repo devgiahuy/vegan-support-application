@@ -330,6 +330,7 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 ### BL-15 — Contributor verification
 
 - Every approved Contributor may verify an eligible AI artifact; approval basis does not matter.
+- Self-verification is prohibited; contributors cannot verify their own artifacts.
 - Verification records conclusion, evidence note, scope, actor, time, artifact version, and supersession.
 - Verification is a human opinion/audit event, not proof of scientific correctness.
 - Admin can review/revoke verification without deleting the original audit event.

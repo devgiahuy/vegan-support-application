@@ -10,11 +10,18 @@ export interface Video {
   statusLabel: string;
   /** Version optimistic-concurrency của backend (dùng cho update/delete). */
   version: number;
+  /** ID của bản revision đang được biên tập hoặc gửi duyệt */
+  revisionId?: string;
+  /** Số thứ tự phiên bản của revision (v1, v2,...) */
+  revisionVersion?: number;
+  /** Phiên bản revision đã xuất bản công khai (nếu có, dùng cho luồng song song dual-revision) */
+  publishedRevisionVersion?: number | null;
   author: PostAuthorModel;
   category: PostCategoryModel;
   coverImageUrl: string;
   /** Metadata ảnh bìa để ráp `media[]` khi tạo/sửa. */
   coverMedia?: {
+    assetId?: string;
     publicId?: string;
     mimeType?: string;
     bytes?: number;
@@ -23,6 +30,7 @@ export interface Video {
   videoSource: VideoSource;
   /** Metadata video Cloudinary để ráp `media[]` khi tạo/sửa (YouTube không cần). */
   videoMedia?: {
+    assetId?: string;
     publicId?: string;
     mimeType?: string;
     bytes?: number;

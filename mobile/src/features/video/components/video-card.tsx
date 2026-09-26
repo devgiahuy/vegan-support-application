@@ -27,8 +27,10 @@ export function VideoCard({ video }: { video: CookingVideo }) {
               <Play size={20} color={colors.primaryForeground} fill={colors.primaryForeground} />
             </View>
           </View>
-          <View className="absolute left-2.5 top-2.5 rounded-full bg-background/90 px-2.5 py-1">
-            <Text className="text-xs font-medium text-foreground">{video.category.name}</Text>
+          {/* Màu cố định (không theo theme) — nền là ảnh thumbnail, độ sáng thay đổi tuỳ
+              ảnh, không thể dựa vào token sáng/tối để đảm bảo tương phản. */}
+          <View className="absolute left-2.5 top-2.5 rounded-full bg-black/70 px-2.5 py-1">
+            <Text className="text-xs font-medium text-white">{video.category.name}</Text>
           </View>
           {duration ? (
             <View className="absolute bottom-2.5 right-2.5 rounded-md bg-black/75 px-2 py-1">

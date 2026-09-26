@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Utensils, Target } from 'lucide-react';
 import { AuthGuard } from '@/components/shared/auth-guard';
 import { LoadingState } from '@/components/shared/loading-state';
 import { ErrorState } from '@/components/shared/error-state';
@@ -43,14 +43,26 @@ function MealPlansContent() {
         <section className="space-y-3 lg:col-span-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold tracking-tight">Phiên bản gần đây</h2>
-            {plans.length > 0 && (
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/meal-plans/saved">
-                  Xem tất cả
-                  <ArrowRight data-icon="inline-end" />
+            <div className="flex items-center gap-2">
+              <Button asChild variant="outline" size="sm" className="text-xs gap-1.5 h-8">
+                <Link href="/custom-meals">
+                  <Utensils className="h-3.5 w-3.5 text-primary" /> Món ăn của tôi
                 </Link>
               </Button>
-            )}
+              <Button asChild variant="outline" size="sm" className="text-xs gap-1.5 h-8">
+                <Link href="/meal-programs">
+                  <Target className="h-3.5 w-3.5 text-primary" /> Lộ trình nhiều tuần
+                </Link>
+              </Button>
+              {plans.length > 0 && (
+                <Button asChild variant="ghost" size="sm" className="h-8 text-xs">
+                  <Link href="/meal-plans/saved">
+                    Xem tất cả
+                    <ArrowRight data-icon="inline-end" />
+                  </Link>
+                </Button>
+              )}
+            </div>
           </div>
 
           {isLoading && <LoadingState message="Đang tải thực đơn..." />}

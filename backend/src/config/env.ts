@@ -53,9 +53,20 @@ const environmentSchema = z
       .default('vegan-support/posts'),
     MAX_UPLOAD_IMAGE_BYTES: z.coerce.number().int().min(1).max(25_000_000).default(10_000_000),
     MAX_UPLOAD_VIDEO_BYTES: z.coerce.number().int().min(1).max(250_000_000).default(100_000_000),
+    STORAGE_DEFAULT_QUOTA_BYTES: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(10_000_000_000_000)
+      .default(1_073_741_824),
+    UPLOAD_RESERVATION_TTL_SECONDS: z.coerce.number().int().min(60).max(86_400).default(900),
+    CLOUDINARY_API_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(60_000).default(10_000),
     MEAL_PLAN_MAINTAIN_FACTOR: z.coerce.number().min(0.8).max(1.2).default(1),
     MEAL_PLAN_LOSE_FACTOR: z.coerce.number().min(0.8).max(1).default(0.9),
     MEAL_PLAN_GAIN_FACTOR: z.coerce.number().min(1).max(1.2).default(1.1),
+    MEAL_PROGRAM_MAX_WEEKS: z.coerce.number().int().min(2).max(12).default(12),
+    MEAL_PROGRAM_MAX_ALTERNATIVES_PER_WEEK: z.coerce.number().int().min(1).max(3).default(3),
+    MEAL_PROGRAM_MAX_REGENERATIONS_PER_WEEK: z.coerce.number().int().min(1).max(4).default(2),
     AI_CHAT_ENABLED: z.stringbool().default(true),
     AI_PROVIDER: z.enum(['openai', 'fake']).default('openai'),
     OPENAI_API_KEY: z.preprocess(
@@ -72,6 +83,18 @@ const environmentSchema = z
     AI_GUEST_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(60).default(10),
     CHAT_GUEST_COOKIE_SECRET: z.string().min(32).optional(),
     CHAT_GUEST_COOKIE_TTL_DAYS: z.coerce.number().int().min(1).max(30).default(7),
+    VISION_ENABLED: z.stringbool().default(true),
+    VISION_PROVIDER: z.enum(['fake']).default('fake'),
+    VISION_MODEL: z.string().trim().min(1).max(100).default('local-fridge-vision-v1'),
+    VISION_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('fridge-v1'),
+    VISION_MAX_IMAGES: z.coerce.number().int().min(2).max(12).default(6),
+    VISION_MAX_IMAGE_BYTES: z.coerce.number().int().min(1).max(25_000_000).default(10_000_000),
+    RECEIPT_ENABLED: z.stringbool().default(true),
+    RECEIPT_PROVIDER: z.enum(['fake']).default('fake'),
+    RECEIPT_MODEL: z.string().trim().min(1).max(100).default('local-receipt-ocr-v1'),
+    RECEIPT_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('receipt-v1'),
+    RECEIPT_MAX_IMAGES: z.coerce.number().int().min(1).max(8).default(4),
+    RECEIPT_MAX_IMAGE_BYTES: z.coerce.number().int().min(1).max(25_000_000).default(10_000_000),
   })
   .transform((environment) => ({
     nodeEnv: environment.NODE_ENV,
@@ -97,10 +120,19 @@ const environmentSchema = z
     cloudinaryUploadFolder: environment.CLOUDINARY_UPLOAD_FOLDER,
     maxUploadImageBytes: environment.MAX_UPLOAD_IMAGE_BYTES,
     maxUploadVideoBytes: environment.MAX_UPLOAD_VIDEO_BYTES,
+    storageDefaultQuotaBytes: environment.STORAGE_DEFAULT_QUOTA_BYTES,
+    uploadReservationTtlSeconds: environment.UPLOAD_RESERVATION_TTL_SECONDS,
+    cloudinaryApiTimeoutMs: environment.CLOUDINARY_API_TIMEOUT_MS,
     mealPlanGoalFactors: {
       MAINTAIN: environment.MEAL_PLAN_MAINTAIN_FACTOR,
       LOSE: environment.MEAL_PLAN_LOSE_FACTOR,
       GAIN: environment.MEAL_PLAN_GAIN_FACTOR,
+    },
+    mealProgramLimits: {
+      minWeeks: 2,
+      maxWeeks: environment.MEAL_PROGRAM_MAX_WEEKS,
+      maxAlternativesPerWeek: environment.MEAL_PROGRAM_MAX_ALTERNATIVES_PER_WEEK,
+      maxRegenerationsPerWeek: environment.MEAL_PROGRAM_MAX_REGENERATIONS_PER_WEEK,
     },
     ai: {
       chatEnabled: environment.AI_CHAT_ENABLED,
@@ -116,6 +148,22 @@ const environmentSchema = z
       guestRateLimitPerMinute: environment.AI_GUEST_RATE_LIMIT_PER_MINUTE,
       guestCookieSecret: environment.CHAT_GUEST_COOKIE_SECRET ?? environment.JWT_ACCESS_SECRET,
       guestCookieTtlDays: environment.CHAT_GUEST_COOKIE_TTL_DAYS,
+    },
+    vision: {
+      enabled: environment.VISION_ENABLED,
+      provider: environment.VISION_PROVIDER,
+      model: environment.VISION_MODEL,
+      templateVersion: environment.VISION_TEMPLATE_VERSION,
+      maxImages: environment.VISION_MAX_IMAGES,
+      maxImageBytes: environment.VISION_MAX_IMAGE_BYTES,
+    },
+    receipt: {
+      enabled: environment.RECEIPT_ENABLED,
+      provider: environment.RECEIPT_PROVIDER,
+      model: environment.RECEIPT_MODEL,
+      templateVersion: environment.RECEIPT_TEMPLATE_VERSION,
+      maxImages: environment.RECEIPT_MAX_IMAGES,
+      maxImageBytes: environment.RECEIPT_MAX_IMAGE_BYTES,
     },
     cookieSecure: environment.NODE_ENV === 'production',
   }));

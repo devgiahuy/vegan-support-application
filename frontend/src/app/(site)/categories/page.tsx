@@ -9,6 +9,9 @@ import { useCategoryTreeQuery } from '@/features/category/queries/category.queri
 import { CategoryTree } from '@/features/category/components/category-tree';
 import { IngredientSearch } from '@/features/ingredient/components/ingredient-search';
 import { IngredientResolveSearch } from '@/features/ingredient/components/ingredient-resolve-search';
+import { FoodInteractionTable } from '@/features/food-data/components/food-interaction-table';
+import { CookingMethodCards } from '@/features/food-data/components/cooking-method-cards';
+import { ReferenceIntakeExplorer } from '@/features/food-data/components/reference-intake-explorer';
 import { CategoryType } from '@/common/enums';
 
 function parseTypeParam(value: string | null): CategoryType | 'ALL' {
@@ -36,11 +39,11 @@ function CategoriesContent() {
   );
 
   return (
-    <div className="mx-auto max-w-6xl space-y-4 px-4 py-8 lg:px-6">
+    <div className="mx-auto max-w-6xl space-y-8 px-4 py-8 lg:px-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Danh mục</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Danh mục & Cơ sở dữ liệu thực phẩm</h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Khám phá món ăn, công thức và bài viết theo từng nhóm danh mục.
+          Khám phá món ăn, dinh dưỡng chuẩn 100g, quy tắc kiêng kỵ và phương pháp chế biến khoa học.
         </p>
       </div>
 
@@ -52,12 +55,45 @@ function CategoriesContent() {
 
       <section id="tra-cuu" className="space-y-3 border-t pt-6">
         <div>
-          <h2 className="text-lg font-bold tracking-tight">Tra cứu nguyên liệu</h2>
+          <h2 className="text-lg font-bold tracking-tight">
+            Tra cứu nguyên liệu & Dinh dưỡng 100g
+          </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Tìm trong danh sách chuẩn theo từ khóa có hoặc không dấu, lọc theo nhóm thực phẩm.
+            Tìm trong danh sách chuẩn theo từ khóa có hoặc không dấu, xem giá trị dinh dưỡng 100g có
+            kiểm định nguồn gốc.
           </p>
         </div>
         <IngredientSearch />
+      </section>
+
+      <section id="kieng-ky" className="space-y-3 border-t pt-6">
+        <FoodInteractionTable />
+      </section>
+
+      <section id="phuong-phap-nau" className="space-y-3 border-t pt-6">
+        <div>
+          <h2 className="text-lg font-bold tracking-tight">
+            Phương pháp chế biến & Bảo tồn dinh dưỡng
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Tỷ lệ hao hụt khối lượng và hệ số giữ lại các vi chất nhạy cảm (Vitamin C, B-group...)
+            sau khi nấu.
+          </p>
+        </div>
+        <CookingMethodCards />
+      </section>
+
+      <section id="nhu-cau-khuyen-nghi" className="space-y-3 border-t pt-6">
+        <div>
+          <h2 className="text-lg font-bold tracking-tight">
+            Nhu cầu dinh dưỡng khuyến nghị (RDA/AI & UL)
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Tra cứu mức tiêu thụ dinh dưỡng hàng ngày khuyến nghị theo từng nhóm đối tượng nhân khẩu
+            học.
+          </p>
+        </div>
+        <ReferenceIntakeExplorer />
       </section>
 
       <section id="phan-giai" className="space-y-3 border-t pt-6">

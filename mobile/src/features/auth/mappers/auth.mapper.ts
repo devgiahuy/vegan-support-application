@@ -2,6 +2,7 @@ import { BaseMapper, pickField, safeBoolean, safeDate, safeEnum, safeString } fr
 import {
   AuthSessionResponseDto,
   ContributorApplicationDto,
+  ContributorProfileDto,
   LogoutResponseDto,
   ProfileResponseDto,
   RefreshResponseDto,
@@ -11,6 +12,7 @@ import {
 import {
   AuthSession,
   ContributorApplication,
+  ContributorProfile,
   LogoutResult,
   RefreshedToken,
   User,
@@ -18,15 +20,18 @@ import {
 import type { RegisterFormValues } from '../schemas/auth.schema';
 import {
   ContributorApplicationStatus,
-  ContributorType,
+  ContributorApprovalBasis,
   LogoutScope,
   MemberStatus,
   UserRole,
 } from '@/common/enums';
 
-const CONTRIBUTOR_TYPE_LABELS: Record<ContributorType, string> = {
-  [ContributorType.EXPERIENCED_PRACTITIONER]: 'Người thực hành có kinh nghiệm',
-  [ContributorType.NUTRITION_EXPERT]: 'Chuyên gia dinh dưỡng',
+/** Nhãn hiển thị mặc định khi backend không gửi kèm `approvalBasisLabel` — chỉ để hiển thị,
+ * không phải căn cứ cấp quyền (mọi basis có cùng quyền hạn, xem BL-01). */
+const APPROVAL_BASIS_LABELS: Record<ContributorApprovalBasis, string> = {
+  [ContributorApprovalBasis.ORGANIZATION_AFFILIATION]: 'Tổ chức liên kết',
+  [ContributorApprovalBasis.PLATFORM_TRACK_RECORD]: 'Kinh nghiệm trên nền tảng',
+  [ContributorApprovalBasis.ADMIN_INVITED]: 'Được Admin mời',
 };
 
 /**
@@ -52,6 +57,13 @@ export class AuthMapper extends BaseMapper<UserDto, User> {
           null
         )
       ),
+      contributorProfile: this.toContributorProfile(
+        pickField<ContributorProfileDto | null>(
+          dto,
+          ['contributorProfile', 'contributor_profile'],
+          null
+        )
+      ),
       initials: toInitials(displayName),
     };
   }
@@ -62,10 +74,10 @@ export class AuthMapper extends BaseMapper<UserDto, User> {
   ): ContributorApplication | null {
     if (!dto || typeof dto !== 'object') return null;
     const rawStatus = safeString(pickField(dto, ['status'], 'PENDING'));
-    const requestedType = safeEnum(
-      pickField(dto, ['requestedType', 'requested_type'], null),
-      ContributorType,
-      null as unknown as ContributorType
+    const claimedApprovalBasis = safeEnum(
+      pickField(dto, ['claimedApprovalBasis', 'claimed_approval_basis'], null),
+      ContributorApprovalBasis,
+      null as unknown as ContributorApprovalBasis
     );
     return {
       status: safeEnum(
@@ -74,11 +86,29 @@ export class AuthMapper extends BaseMapper<UserDto, User> {
         ContributorApplicationStatus.PENDING
       ),
       rawStatus,
-      requestedType: requestedType ?? null,
-      requestedTypeLabel:
-        requestedType && requestedType in CONTRIBUTOR_TYPE_LABELS
-          ? CONTRIBUTOR_TYPE_LABELS[requestedType as ContributorType]
-          : '',
+      claimedApprovalBasis: claimedApprovalBasis ?? null,
+      claimedApprovalBasisLabel: claimedApprovalBasis
+        ? APPROVAL_BASIS_LABELS[claimedApprovalBasis]
+        : '',
+    };
+  }
+
+  /** Hồ sơ Contributor đã duyệt — mọi basis có cùng quyền hạn, chỉ khác nhãn hiển thị. */
+  toContributorProfile(
+    dto: ContributorProfileDto | null | undefined
+  ): ContributorProfile | null {
+    if (!dto || typeof dto !== 'object') return null;
+    const approvalBasis = safeEnum(
+      pickField(dto, ['approvalBasis', 'approval_basis'], null),
+      ContributorApprovalBasis,
+      null as unknown as ContributorApprovalBasis
+    );
+    if (!approvalBasis) return null;
+    const label = safeString(pickField(dto, ['approvalBasisLabel', 'approval_basis_label'], ''));
+    return {
+      approvalBasis,
+      approvalBasisLabel: label || APPROVAL_BASIS_LABELS[approvalBasis],
+      approvedAt: safeDate(pickField(dto, ['approvedAt', 'approved_at'], null)),
     };
   }
 
@@ -134,9 +164,9 @@ export class AuthMapper extends BaseMapper<UserDto, User> {
       password: safeString(values.password, ''),
       displayName: safeString(values.displayName),
     };
-    if (values.wantsContributor) {
+    if (values.wantsContributor && values.claimedApprovalBasis) {
       payload.contributorRequest = {
-        requestedType: safeString(values.requestedType),
+        claimedApprovalBasis: values.claimedApprovalBasis,
         experience: safeString(values.experience),
         referenceLinks:
           values.referenceLinks
@@ -144,6 +174,11 @@ export class AuthMapper extends BaseMapper<UserDto, User> {
             .map((l) => l.trim())
             .filter((l) => l.length > 0) ?? [],
       };
+      // Backend `.strict()`: organizationClaim chỉ được gửi cho ORGANIZATION_AFFILIATION,
+      // tuyệt đối không gửi key này (kể cả rỗng) cho basis khác.
+      if (values.claimedApprovalBasis === 'ORGANIZATION_AFFILIATION') {
+        payload.contributorRequest.organizationClaim = safeString(values.organizationClaim);
+      }
     }
     return payload;
   }

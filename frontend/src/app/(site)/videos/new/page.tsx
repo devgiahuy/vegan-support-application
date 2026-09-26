@@ -22,13 +22,18 @@ import { AuthGuard } from '@/components/shared/auth-guard';
 import { CategoryType, VideoSource } from '@/common/enums';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
 import { flattenCategories } from '@/features/category/utils/flatten-categories';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { VideoUploader } from '@/features/video/components/video-uploader';
 import { ImageUploader } from '@/features/post/components/image-uploader';
 import { useCreateVideoMutation } from '@/features/video/queries/video.queries';
+import { reviewApi } from '@/features/review/api/review.api';
+import { CONTENT_REVIEW_KEYS } from '@/features/review/queries/review.queries';
 import { videoFormSchema, type VideoFormValues } from '@/features/video/schemas/video-form.schema';
 
 export default function UploadVideoPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const createVideoMutation = useCreateVideoMutation();
   const { data: categoryTree = [] } = useCategoryTreeQuery(CategoryType.CONTENT_TOPIC);
   const flatCategories = React.useMemo(() => flattenCategories(categoryTree), [categoryTree]);
@@ -71,6 +76,25 @@ export default function UploadVideoPage() {
         durationSeconds: values.durationSeconds ?? 0,
         description: values.description ?? '',
       });
+
+      if (created?.id && created?.revisionId) {
+        try {
+          await reviewApi.submitPost(created.id, {
+            revisionId: created.revisionId,
+            expectedVersion: created.version || 1,
+          });
+          queryClient.invalidateQueries({ queryKey: CONTENT_REVIEW_KEYS.all });
+          queryClient.invalidateQueries({ queryKey: ['videos'] });
+          toast.success('Đăng tải video thành công!', {
+            description: 'Video đã được gửi vào hàng chờ kiểm duyệt của Quản trị viên.',
+          });
+        } catch {
+          toast.info('Video đã được lưu nháp.', {
+            description: 'Bạn có thể bấm "Gửi kiểm duyệt" từ trang chi tiết video.',
+          });
+        }
+      }
+
       if (created?.id) {
         router.push(`/videos/${created.id}`);
       } else {
@@ -137,8 +161,13 @@ export default function UploadVideoPage() {
                       setValue('videoSource', source, { shouldValidate: true });
                       setValue(
                         'videoMedia',
-                        meta?.publicId && meta?.mimeType && meta?.bytes
-                          ? { publicId: meta.publicId, mimeType: meta.mimeType, bytes: meta.bytes }
+                        meta?.assetId || (meta?.publicId && meta?.mimeType && meta?.bytes)
+                          ? {
+                              assetId: meta?.assetId,
+                              publicId: meta?.publicId,
+                              mimeType: meta?.mimeType,
+                              bytes: meta?.bytes,
+                            }
                           : null,
                         { shouldValidate: true }
                       );
@@ -216,11 +245,12 @@ export default function UploadVideoPage() {
                         setValue('coverImageUrl', url, { shouldValidate: true });
                         setValue(
                           'coverMedia',
-                          meta?.publicId && meta?.mimeType && meta?.bytes
+                          meta?.assetId || (meta?.publicId && meta?.mimeType && meta?.bytes)
                             ? {
-                                publicId: meta.publicId,
-                                mimeType: meta.mimeType,
-                                bytes: meta.bytes,
+                                assetId: meta?.assetId,
+                                publicId: meta?.publicId,
+                                mimeType: meta?.mimeType,
+                                bytes: meta?.bytes,
                               }
                             : null,
                           { shouldValidate: true }

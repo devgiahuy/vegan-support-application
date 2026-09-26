@@ -13,7 +13,17 @@ import { registerContributorOpenApi } from '../modules/contributors/contributor.
 import { registerModerationOpenApi } from '../modules/moderation/moderation.openapi.js';
 import { registerRecommendationOpenApi } from '../modules/recommendations/recommendation.openapi.js';
 import { registerMealPlanOpenApi } from '../modules/meal-plans/meal-plan.openapi.js';
+import { registerMealAnalysisOpenApi } from '../modules/meal-analysis/meal-analysis.openapi.js';
+import { registerMealProgramOpenApi } from '../modules/meal-programs/meal-program.openapi.js';
 import { registerChatOpenApi } from '../modules/chat/chat.openapi.js';
+import { registerFoodDataOpenApi } from '../modules/food-data/food-data.openapi.js';
+import { registerRecipeNutritionOpenApi } from '../modules/recipe-nutrition/recipe-nutrition.openapi.js';
+import { registerStorageOpenApi } from '../modules/storage/storage.openapi.js';
+import { registerCustomMealOpenApi } from '../modules/custom-meals/custom-meal.openapi.js';
+import { registerPantryOpenApi } from '../modules/pantry/pantry.openapi.js';
+import { registerIngredientRecognitionOpenApi } from '../modules/ingredient-recognition/ingredient-recognition.openapi.js';
+import { registerReceiptOpenApi } from '../modules/receipts/receipt.openapi.js';
+import { registerAiReviewOpenApi } from '../modules/ai-review/ai-review.openapi.js';
 
 const registry = new OpenAPIRegistry();
 
@@ -51,7 +61,17 @@ registerContributorOpenApi(registry, registeredErrorResponse);
 registerModerationOpenApi(registry, registeredErrorResponse);
 registerRecommendationOpenApi(registry, registeredErrorResponse);
 registerMealPlanOpenApi(registry, registeredErrorResponse);
+registerMealAnalysisOpenApi(registry, registeredErrorResponse);
+registerMealProgramOpenApi(registry, registeredErrorResponse);
 registerChatOpenApi(registry, registeredErrorResponse);
+registerFoodDataOpenApi(registry, registeredErrorResponse);
+registerRecipeNutritionOpenApi(registry, registeredErrorResponse);
+registerStorageOpenApi(registry, registeredErrorResponse);
+registerCustomMealOpenApi(registry, registeredErrorResponse);
+registerPantryOpenApi(registry, registeredErrorResponse);
+registerIngredientRecognitionOpenApi(registry, registeredErrorResponse);
+registerReceiptOpenApi(registry, registeredErrorResponse);
+registerAiReviewOpenApi(registry, registeredErrorResponse);
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
@@ -70,23 +90,53 @@ const generatedDocument = generator.generateDocument({
     { name: 'Diet Rules', description: 'Versioned diet and tradition rule confirmation' },
     { name: 'Categories', description: 'Public active category tree' },
     { name: 'Ingredients', description: 'Canonical ingredient discovery and alias resolution' },
+    { name: 'Food Data', description: 'Reviewed nutrient knowledge with provenance and versions' },
+    {
+      name: 'Recipe Nutrition',
+      description: 'Cooking-aware recipe nutrition estimates with provenance',
+    },
+    { name: 'Food Data Admin', description: 'Admin curation and provider-neutral imports' },
     { name: 'Catalog Admin', description: 'Admin-only category and ingredient management' },
     { name: 'Content', description: 'Revisioned Recipe, Blog, and Video content' },
     { name: 'Community', description: 'Comments, votes, ratings, and bookmarks' },
     { name: 'Recommendations', description: 'Consent-aware behavior events and recipe ranking' },
     { name: 'Meal Plans', description: 'Deterministic weekly plans, swaps and shopping lists' },
+    { name: 'Meal Programs', description: 'Versioned multi-week meal programs and analysis' },
     {
       name: 'AI Chat',
       description: 'OpenAI-backed private nutrition chat, quota, SSE and feedback',
     },
     {
       name: 'Contributors',
-      description: 'Contributor applications and approved subtype status',
+      description: 'Unified Contributor applications and approval-basis evidence',
     },
-    { name: 'Contributor Admin', description: 'Admin-only Contributor application review' },
+    {
+      name: 'Contributor Admin',
+      description: 'Admin-only Contributor invitations, decisions, and revocation',
+    },
     { name: 'Moderation', description: 'Content review queue and user reports' },
     { name: 'Moderation Admin', description: 'Admin decisions, user and comment moderation' },
-    { name: 'Uploads', description: 'Safe Cloudinary signed-upload configuration' },
+    { name: 'Uploads', description: 'Quota-reserved and provider-verified uploads' },
+    { name: 'Storage', description: 'Owned storage usage and durable media deletion' },
+    { name: 'Storage Admin', description: 'Storage policy, account usage, and adjustment audit' },
+    {
+      name: 'Custom Meals',
+      description: 'Private owner-scoped custom meals usable in meal planning',
+    },
+    {
+      name: 'Pantry',
+      description:
+        'Confirmed owner-scoped inventory, conversions, ledger, duplicate merge, and expiry observations',
+    },
+    {
+      name: 'Ingredient Recognition',
+      description: 'Owner-scoped multi-image recognition with explicit pantry confirmation',
+    },
+    { name: 'Receipts', description: 'Receipt image extraction with explicit pantry confirmation' },
+    { name: 'Shopping Lists', description: 'Pantry-aware explainable shopping-gap previews' },
+    { name: 'AI Artifacts', description: 'Versioned privacy-safe sharing of eligible AI outputs' },
+    { name: 'AI Verification', description: 'Unified Contributor verification and immutable audit history' },
+    { name: 'AI Verification Admin', description: 'Admin override and revocation audit actions' },
   ],
 });
 

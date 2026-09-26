@@ -1,6 +1,7 @@
 import {
   AiFlagRiskLevel,
   ModerationPriority,
+  PostStatus,
   PostRevisionStatus,
   Prisma,
   ReportTargetType,
@@ -17,6 +18,7 @@ import type {
 } from './moderation.repository.js';
 import type {
   AdminCommentsQuery,
+  AdminContentReviewDecisionInput,
   AdminReportsQuery,
   AdminUsersQuery,
   CreateReportInput,
@@ -64,6 +66,46 @@ export class ModerationService {
           statusCode: 409,
           code: 'REVIEW_CONFLICT',
           message: 'Revision đã được reviewer khác xử lý',
+        });
+      }
+      throw error;
+    }
+  }
+
+  async getContentReviewDetail(actor: ModerationActor, revisionId: string) {
+    const revision = await this.repository.findReviewRevision(revisionId);
+    if (!revision) {
+      throw new AppError({
+        statusCode: 404,
+        code: 'NOT_FOUND',
+        message: 'Không tìm thấy revision review target',
+      });
+    }
+    return this.reviewDetailOutput(revision, actor);
+  }
+
+  async reviewContent(
+    actor: ModerationActor,
+    revisionId: string,
+    input: AdminContentReviewDecisionInput,
+  ) {
+    try {
+      const revision = await this.repository.reviewRevisionAdmin(
+        actor,
+        revisionId,
+        input.decision,
+        { reason: input.reason },
+      );
+      return this.reviewDetailOutput(revision, actor);
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        (error.code === 'P2034' || error.code === 'P2025')
+      ) {
+        throw new AppError({
+          statusCode: 409,
+          code: 'REVIEW_CONFLICT',
+          message: 'Revision đã được Admin khác xử lý',
         });
       }
       throw error;
@@ -146,6 +188,8 @@ export class ModerationService {
       (flag) => flag.riskLevel === AiFlagRiskLevel.HIGH && flag.status === 'OPEN',
     );
     const canDecide =
+      record.post.status === PostStatus.HIDDEN ||
+      record.post.status === PostStatus.DELETED ||
       record.status === PostRevisionStatus.PUBLISHED ||
       record.status === PostRevisionStatus.REJECTED
         ? false
@@ -169,7 +213,11 @@ export class ModerationService {
         id: record.post.author.id,
         displayName: record.post.author.displayName,
         role: record.post.author.role,
-        contributorType: record.post.author.contributorProfile?.contributorType ?? null,
+        contributorApprovalBasis:
+          record.post.author.role === Role.CONTRIBUTOR &&
+          record.post.author.contributorProfile?.revokedAt === null
+            ? record.post.author.contributorProfile.approvalBasis
+            : null,
       },
       aiFlags,
       priority:
@@ -178,7 +226,47 @@ export class ModerationService {
           : ModerationPriority.NORMAL,
       activeReporterCount,
       canDecide,
+      submittedAt: record.submittedAt?.toISOString() ?? null,
       createdAt: record.createdAt.toISOString(),
+    };
+  }
+
+  private async reviewDetailOutput(record: ReviewRevisionRecord, actor: ModerationActor) {
+    const summary = await this.reviewOutput(record, actor);
+    return {
+      ...summary,
+      body: record.body,
+      tags: record.tags.map((item) => item.tag),
+      categories: record.categories.map(({ category }) => ({
+        id: category.id,
+        name: category.name,
+        slug: category.slug,
+      })),
+      media: record.media.map((media) => ({
+        id: media.id,
+        kind: media.kind,
+        provider: media.provider,
+        publicId: media.publicId,
+        secureUrl: media.secureUrl,
+        mimeType: media.mimeType,
+        bytes: media.bytes,
+        durationSeconds: media.durationSeconds ? Number(media.durationSeconds) : null,
+      })),
+      reviewNote: record.reviewNote,
+      reviewedBy: record.reviewedBy
+        ? {
+            id: record.reviewedBy.id,
+            displayName: record.reviewedBy.displayName,
+            role: record.reviewedBy.role,
+            contributorApprovalBasis:
+              record.reviewedBy.role === Role.CONTRIBUTOR &&
+              record.reviewedBy.contributorProfile?.revokedAt === null
+                ? record.reviewedBy.contributorProfile.approvalBasis
+                : null,
+          }
+        : null,
+      reviewedAt: record.reviewedAt?.toISOString() ?? null,
+      isPublishedRevision: record.post.publishedRevisionId === record.id,
     };
   }
 
@@ -212,7 +300,10 @@ export class ModerationService {
       displayName: record.displayName,
       role: record.role,
       status: record.status,
-      contributorType: record.contributorProfile?.contributorType ?? null,
+      contributorApprovalBasis:
+        record.role === Role.CONTRIBUTOR && record.contributorProfile?.revokedAt === null
+          ? record.contributorProfile.approvalBasis
+          : null,
       createdAt: record.createdAt.toISOString(),
       updatedAt: record.updatedAt.toISOString(),
       deletedAt: record.deletedAt?.toISOString() ?? null,
@@ -231,7 +322,11 @@ export class ModerationService {
         id: record.author.id,
         displayName: record.author.displayName,
         role: record.author.role,
-        contributorType: record.author.contributorProfile?.contributorType ?? null,
+        contributorApprovalBasis:
+          record.author.role === Role.CONTRIBUTOR &&
+          record.author.contributorProfile?.revokedAt === null
+            ? record.author.contributorProfile.approvalBasis
+            : null,
       },
       hiddenReason: record.hiddenReason,
       hiddenById: record.hiddenById,

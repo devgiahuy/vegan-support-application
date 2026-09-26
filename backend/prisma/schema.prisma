@@ -24,11 +24,12 @@ enum UserStatus {
   @@map("user_status")
 }
 
-enum ContributorType {
-  EXPERIENCED_PRACTITIONER
-  NUTRITION_EXPERT
+enum ContributorApprovalBasis {
+  ORGANIZATION_AFFILIATION
+  PLATFORM_TRACK_RECORD
+  ADMIN_INVITED
 
-  @@map("contributor_type")
+  @@map("contributor_approval_basis")
 }
 
 enum ContributorApplicationStatus {
@@ -42,8 +43,17 @@ enum ContributorApplicationStatus {
 enum ContributorApplicationSource {
   REGISTRATION
   PROFILE
+  ADMIN_INVITATION
 
   @@map("contributor_application_source")
+}
+
+enum ContributorDecisionType {
+  APPROVED
+  REJECTED
+  REVOKED
+
+  @@map("contributor_decision_type")
 }
 
 enum HealthSex {
@@ -194,6 +204,8 @@ enum IngredientResolutionStatus {
 enum MediaKind {
   COVER_IMAGE
   VIDEO
+  FRIDGE_IMAGE
+  RECEIPT_IMAGE
 
   @@map("media_kind")
 }
@@ -203,6 +215,31 @@ enum MediaProvider {
   YOUTUBE
 
   @@map("media_provider")
+}
+
+enum StorageReservationStatus {
+  RESERVED
+  COMMITTED
+  RELEASED
+  EXPIRED
+
+  @@map("storage_reservation_status")
+}
+
+enum MediaAssetStatus {
+  ACTIVE
+  DELETING
+  DELETED
+  PROVIDER_MISSING
+
+  @@map("media_asset_status")
+}
+
+enum MediaResourceType {
+  IMAGE
+  VIDEO
+
+  @@map("media_resource_type")
 }
 
 enum CommentStatus {
@@ -332,8 +369,58 @@ enum NutritionDataQuality {
 
 enum MealPlanMutationType {
   SWAP
+  MANUAL_ADD
 
   @@map("meal_plan_mutation_type")
+}
+
+enum MealAnalysisStatus {
+  CURRENT
+  STALE
+
+  @@map("meal_analysis_status")
+}
+
+enum MealProgramStatus {
+  GENERATING
+  DRAFT
+  PARTIAL
+  FAILED
+  CONFIRMED
+
+  @@map("meal_program_status")
+}
+
+enum MealProgramWeekStatus {
+  PENDING
+  READY
+  FAILED
+
+  @@map("meal_program_week_status")
+}
+
+enum MealProgramProjectionStatus {
+  CURRENT
+  STALE
+
+  @@map("meal_program_projection_status")
+}
+
+enum MealProgramAnalysisStatus {
+  CURRENT
+  STALE
+
+  @@map("meal_program_analysis_status")
+}
+
+enum MealProgramMutationType {
+  UPDATE_METADATA
+  SELECT_ALTERNATIVE
+  REGENERATE_WEEK
+  REANALYZE
+  CONFIRM
+
+  @@map("meal_program_mutation_type")
 }
 
 enum ChatMessageRole {
@@ -369,55 +456,361 @@ enum AiRequestStatus {
   @@map("ai_request_status")
 }
 
+enum FoodDataProvider {
+  USDA_FDC
+  VIETNAM_CURATED
+  OPEN_FOOD_FACTS
+  MANUAL
+  AI_SUGGESTION
+
+  @@map("food_data_provider")
+}
+
+enum FoodDataReviewStatus {
+  STAGED
+  APPROVED
+  REJECTED
+  SUPERSEDED
+
+  @@map("food_data_review_status")
+}
+
+enum FoodDataQuality {
+  VERIFIED
+  REVIEWED
+  ESTIMATED
+  INCOMPLETE
+
+  @@map("food_data_quality")
+}
+
+enum FoodDataImportStatus {
+  PREVIEWED
+  COMMITTED
+  FAILED
+
+  @@map("food_data_import_status")
+}
+
+enum UnitDimension {
+  MASS
+  VOLUME
+  ENERGY
+  COUNT
+  PROPORTION
+
+  @@map("unit_dimension")
+}
+
+enum NutrientReferenceType {
+  RDA
+  AI
+  UL
+  DV
+  OTHER
+
+  @@map("nutrient_reference_type")
+}
+
+enum EvidenceGrade {
+  HIGH
+  MODERATE
+  LOW
+  INSUFFICIENT
+
+  @@map("evidence_grade")
+}
+
+enum FoodRuleSeverity {
+  INFO
+  CAUTION
+  HIGH
+
+  @@map("food_rule_severity")
+}
+
+enum GuidelinePeriod {
+  MEAL
+  DAY
+  WEEK
+
+  @@map("guideline_period")
+}
+
+enum InteractionScope {
+  SAME_DISH
+  SAME_MEAL
+  SAME_DAY
+
+  @@map("interaction_scope")
+}
+
+enum InteractionDirection {
+  BENEFICIAL
+  ADVERSE
+
+  @@map("interaction_direction")
+}
+
+enum FoodDataSuggestionType {
+  INGREDIENT_MAPPING
+  NUTRIENT_VALUE
+  REFERENCE_INTAKE
+  HOUSEHOLD_CONVERSION
+  RETENTION_FACTOR
+  YIELD_FACTOR
+  INTERACTION_RULE
+
+  @@map("food_data_suggestion_type")
+}
+
+enum NutritionValueOrigin {
+  CANONICAL_CALCULATED
+  AI_ESTIMATED
+  USER_PROVIDED
+  VERIFIED_OVERRIDE
+
+  @@map("nutrition_value_origin")
+}
+
+enum RecipeNutritionEstimateStatus {
+  CURRENT
+  HISTORICAL
+  STALE
+
+  @@map("recipe_nutrition_estimate_status")
+}
+
+enum MealPlanItemSourceType {
+  RECIPE
+  CUSTOM_MEAL
+
+  @@map("meal_plan_item_source_type")
+}
+
+enum CustomMealDeletePolicy {
+  BLOCK
+  RETAIN_SNAPSHOT
+
+  @@map("custom_meal_delete_policy")
+}
+
+enum NutritionCoverage {
+  COMPLETE
+  PARTIAL
+  UNAVAILABLE
+
+  @@map("nutrition_coverage")
+}
+
+enum PantryItemSource {
+  MANUAL
+  FRIDGE_RECOGNITION
+  RECEIPT
+
+  @@map("pantry_item_source")
+}
+
+enum PantryConfirmationStatus {
+  PENDING
+  CONFIRMED
+
+  @@map("pantry_confirmation_status")
+}
+
+enum PantryConversionStatus {
+  CONVERTED
+  UNKNOWN
+
+  @@map("pantry_conversion_status")
+}
+
+enum PantryAdjustmentType {
+  CREATE
+  UPDATE
+  CONSUME
+  RESTORE
+  ADJUST
+  MERGE_IN
+  MERGE_OUT
+  DELETE
+
+  @@map("pantry_adjustment_type")
+}
+
+enum RecognitionJobStatus {
+  QUEUED
+  PROCESSING
+  READY
+  PARTIAL_FAILED
+  FAILED
+  CONFIRMED
+  CANCELLED
+
+  @@map("recognition_job_status")
+}
+
+enum RecognitionInputStatus {
+  PENDING
+  PROCESSED
+  FAILED
+
+  @@map("recognition_input_status")
+}
+
+enum RecognitionCandidateStatus {
+  PROPOSED
+  EDITED
+  REJECTED
+  CONFIRMED
+
+  @@map("recognition_candidate_status")
+}
+
+enum ReceiptJobStatus {
+  QUEUED
+  PROCESSING
+  READY
+  PARTIAL_FAILED
+  FAILED
+  CONFIRMED
+  CANCELLED
+
+  @@map("receipt_job_status")
+}
+
+enum ReceiptInputStatus {
+  PENDING
+  PROCESSED
+  FAILED
+
+  @@map("receipt_input_status")
+}
+
+enum ReceiptCandidateStatus {
+  PROPOSED
+  EDITED
+  REJECTED
+  CONFIRMED
+
+  @@map("receipt_candidate_status")
+}
+
+enum AiArtifactType {
+  CHAT_ANSWER
+  RECIPE_NUTRITION
+  FRIDGE_RECOGNITION
+  RECEIPT_EXTRACTION
+
+  @@map("ai_artifact_type")
+}
+
+enum AiArtifactStatus {
+  DRAFT
+  SUBMITTED
+
+  @@map("ai_artifact_status")
+}
+
+enum AiArtifactVisibility {
+  PRIVATE
+  PUBLIC
+
+  @@map("ai_artifact_visibility")
+}
+
+enum AiVerificationConclusion {
+  VERIFIED
+  CORRECTION_NEEDED
+  REJECTED
+
+  @@map("ai_verification_conclusion")
+}
+
+enum AiVerificationStatus {
+  ACTIVE
+  SUPERSEDED
+  REVOKED
+
+  @@map("ai_verification_status")
+}
+
+enum AiVerificationAdminActionType {
+  OVERRIDE
+  REVOKE
+
+  @@map("ai_verification_admin_action_type")
+}
+
 model User {
-  id                          String                     @id @default(uuid()) @db.Uuid
-  email                       String                     @unique @db.VarChar(320)
-  passwordHash                String                     @map("password_hash")
-  displayName                 String                     @map("display_name") @db.VarChar(100)
-  avatarUrl                   String?                    @map("avatar_url") @db.VarChar(2048)
-  role                        Role                       @default(MEMBER)
-  status                      UserStatus                 @default(ACTIVE)
-  failedLoginAttempts         Int                        @default(0) @map("failed_login_attempts")
-  lockedUntil                 DateTime?                  @map("locked_until") @db.Timestamptz(3)
-  lastLoginAt                 DateTime?                  @map("last_login_at") @db.Timestamptz(3)
-  createdAt                   DateTime                   @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt                   DateTime                   @updatedAt @map("updated_at") @db.Timestamptz(3)
-  deletedAt                   DateTime?                  @map("deleted_at") @db.Timestamptz(3)
-  privateDataPurgeAt          DateTime?                  @map("private_data_purge_at") @db.Timestamptz(3)
-  refreshSessions             RefreshSession[]
-  applications                ContributorApplication[]
-  reviewedApplications        ContributorApplication[]   @relation("ContributorApplicationReviewer")
-  contributorProfile          ContributorProfile?        @relation("ContributorProfileUser")
-  approvedContributorProfiles ContributorProfile[]       @relation("ContributorProfileApprover")
-  healthProfile               HealthProfile?
-  dietPreference              DietPreference?
-  dietPreferenceRules         DietPreferenceRule[]
-  dietScheduleDates           DietScheduleDate[]
-  allergies                   UserAllergy[]
-  ingredientExclusions        UserIngredientExclusion[]
-  categoryProposals           CategoryProposal[]         @relation("CategoryProposalAuthor")
-  reviewedCategoryProposals   CategoryProposal[]         @relation("CategoryProposalReviewer")
-  posts                       Post[]                     @relation("PostAuthor")
-  deletedPosts                Post[]                     @relation("PostDeletedBy")
-  postRevisions               PostRevision[]             @relation("PostRevisionAuthor")
-  comments                    Comment[]                  @relation("CommentAuthor")
-  hiddenComments              Comment[]                  @relation("CommentHiddenBy")
-  postVotes                   PostVote[]
-  postRatings                 PostRating[]
-  postBookmarks               PostBookmark[]
-  communityRateLimits         CommunityRateLimitBucket[]
-  reports                     Report[]                   @relation("ReportReporter")
-  resolvedReports             Report[]                   @relation("ReportResolver")
-  reviewedAiFlags             AiFlag[]                   @relation("AiFlagReviewer")
-  moderationActions           ModerationAction[]         @relation("ModerationActor")
-  reviewedPostRevisions       PostRevision[]             @relation("PostRevisionReviewer")
-  hiddenPosts                 Post[]                     @relation("PostHiddenBy")
-  personalizationPreference   PersonalizationPreference?
-  behaviorEvents              BehaviorEvent[]
-  mealPlans                   MealPlan[]
-  mealPlanMutations           MealPlanMutation[]
-  chatSessions                ChatSession[]
-  aiRequestLogs               AiRequestLog[]
+  id                             String                      @id @default(uuid()) @db.Uuid
+  email                          String                      @unique @db.VarChar(320)
+  passwordHash                   String                      @map("password_hash")
+  displayName                    String                      @map("display_name") @db.VarChar(100)
+  avatarUrl                      String?                     @map("avatar_url") @db.VarChar(2048)
+  role                           Role                        @default(MEMBER)
+  status                         UserStatus                  @default(ACTIVE)
+  failedLoginAttempts            Int                         @default(0) @map("failed_login_attempts")
+  lockedUntil                    DateTime?                   @map("locked_until") @db.Timestamptz(3)
+  lastLoginAt                    DateTime?                   @map("last_login_at") @db.Timestamptz(3)
+  createdAt                      DateTime                    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                      DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(3)
+  deletedAt                      DateTime?                   @map("deleted_at") @db.Timestamptz(3)
+  privateDataPurgeAt             DateTime?                   @map("private_data_purge_at") @db.Timestamptz(3)
+  refreshSessions                RefreshSession[]
+  applications                   ContributorApplication[]
+  reviewedApplications           ContributorApplication[]    @relation("ContributorApplicationReviewer")
+  invitedContributorApplications ContributorApplication[]    @relation("ContributorApplicationInviter")
+  contributorProfile             ContributorProfile?         @relation("ContributorProfileUser")
+  approvedContributorProfiles    ContributorProfile[]        @relation("ContributorProfileApprover")
+  revokedContributorProfiles     ContributorProfile[]        @relation("ContributorProfileRevoker")
+  contributorDecisions           ContributorDecision[]       @relation("ContributorDecisionSubject")
+  madeContributorDecisions       ContributorDecision[]       @relation("ContributorDecisionActor")
+  healthProfile                  HealthProfile?
+  dietPreference                 DietPreference?
+  dietPreferenceRules            DietPreferenceRule[]
+  dietScheduleDates              DietScheduleDate[]
+  allergies                      UserAllergy[]
+  ingredientExclusions           UserIngredientExclusion[]
+  categoryProposals              CategoryProposal[]          @relation("CategoryProposalAuthor")
+  reviewedCategoryProposals      CategoryProposal[]          @relation("CategoryProposalReviewer")
+  posts                          Post[]                      @relation("PostAuthor")
+  deletedPosts                   Post[]                      @relation("PostDeletedBy")
+  postRevisions                  PostRevision[]              @relation("PostRevisionAuthor")
+  comments                       Comment[]                   @relation("CommentAuthor")
+  hiddenComments                 Comment[]                   @relation("CommentHiddenBy")
+  postVotes                      PostVote[]
+  postRatings                    PostRating[]
+  postBookmarks                  PostBookmark[]
+  communityRateLimits            CommunityRateLimitBucket[]
+  reports                        Report[]                    @relation("ReportReporter")
+  resolvedReports                Report[]                    @relation("ReportResolver")
+  reviewedAiFlags                AiFlag[]                    @relation("AiFlagReviewer")
+  moderationActions              ModerationAction[]          @relation("ModerationActor")
+  reviewedPostRevisions          PostRevision[]              @relation("PostRevisionReviewer")
+  hiddenPosts                    Post[]                      @relation("PostHiddenBy")
+  personalizationPreference      PersonalizationPreference?
+  behaviorEvents                 BehaviorEvent[]
+  mealPlans                      MealPlan[]
+  mealPlanMutations              MealPlanMutation[]
+  chatSessions                   ChatSession[]
+  aiRequestLogs                  AiRequestLog[]
+  storageAccount                 StorageAccount?
+  mediaAssets                    MediaAsset[]                @relation("MediaAssetOwner")
+  deletedMediaAssets             MediaAsset[]                @relation("MediaAssetDeletedBy")
+  storageAdjustments             StorageAdjustment[]         @relation("StorageAdjustmentSubject")
+  madeStorageAdjustments         StorageAdjustment[]         @relation("StorageAdjustmentActor")
+  updatedStoragePolicies         StoragePolicy[]             @relation("StoragePolicyUpdater")
+  customMeals                    CustomMeal[]
+  mealPrograms                   MealProgram[]
+  mealProgramMutations           MealProgramMutation[]
+  pantryItems                    PantryItem[]
+  pantryAdjustments              PantryAdjustment[]
+  recognitionJobs                RecognitionJob[]
+  receiptJobs                    ReceiptJob[]
+  aiArtifacts                    AiArtifact[]                @relation("AiArtifactOwner")
+  aiVerifications                AiVerification[]            @relation("AiVerificationReviewer")
+  aiVerificationAdminActions     AiVerificationAdminAction[] @relation("AiVerificationAdminActor")
 
   @@map("users")
 }
@@ -480,9 +873,351 @@ model Ingredient {
   userExclusions        UserIngredientExclusion[]
   recipeIngredients     RecipeIngredient[]
   mealPlanShoppingItems MealPlanShoppingItem[]
+  foodProfiles          IngredientFoodProfile[]
+  intakeGuidelines      IngredientIntakeGuideline[]
+  cookingYieldFactors   CookingYieldFactor[]
+  interactionRulesA     IngredientInteractionRule[]   @relation("InteractionIngredientA")
+  interactionRulesB     IngredientInteractionRule[]   @relation("InteractionIngredientB")
+  nutritionLines        RecipeNutritionEstimateLine[]
+  customMealIngredients CustomMealIngredient[]
+  pantryItems           PantryItem[]
+  recognitionCandidates RecognitionCandidate[]
+  receiptCandidates     ReceiptCandidate[]
 
   @@index([status, foodGroup, canonicalName])
   @@map("ingredients")
+}
+
+model PantryItem {
+  id                      String                   @id @default(uuid()) @db.Uuid
+  ownerId                 String                   @map("owner_id") @db.Uuid
+  ingredientId            String?                  @map("ingredient_id") @db.Uuid
+  unmatchedText           String?                  @map("unmatched_text") @db.VarChar(160)
+  normalizedUnmatchedText String?                  @map("normalized_unmatched_text") @db.VarChar(160)
+  quantity                Decimal                  @db.Decimal(14, 4)
+  unit                    String                   @db.VarChar(40)
+  normalizedGrams         Decimal?                 @map("normalized_grams") @db.Decimal(16, 4)
+  conversionStatus        PantryConversionStatus   @map("conversion_status")
+  conversionSource        String?                  @map("conversion_source") @db.VarChar(80)
+  conversionVersion       String?                  @map("conversion_version") @db.VarChar(120)
+  conversionConfidence    Decimal?                 @map("conversion_confidence") @db.Decimal(5, 4)
+  source                  PantryItemSource
+  sourceReferenceId       String?                  @map("source_reference_id") @db.Uuid
+  confidence              Decimal                  @default(1) @db.Decimal(5, 4)
+  confirmationStatus      PantryConfirmationStatus @default(CONFIRMED) @map("confirmation_status")
+  purchasedAt             DateTime?                @map("purchased_at") @db.Date
+  openedAt                DateTime?                @map("opened_at") @db.Date
+  expiresAt               DateTime?                @map("expires_at") @db.Date
+  freshnessNote           String?                  @map("freshness_note") @db.VarChar(1000)
+  version                 Int                      @default(1)
+  deletedAt               DateTime?                @map("deleted_at") @db.Timestamptz(3)
+  createdAt               DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
+  owner                   User                     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ingredient              Ingredient?              @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  adjustments             PantryAdjustment[]       @relation("PantryItemAdjustments")
+  mergedIntoAdjustments   PantryAdjustment[]       @relation("PantryMergedIntoAdjustments")
+  recognitionCandidates   RecognitionCandidate[]
+  receiptCandidates       ReceiptCandidate[]
+
+  @@index([ownerId, deletedAt, confirmationStatus, updatedAt])
+  @@index([ownerId, ingredientId, deletedAt])
+  @@index([ownerId, normalizedUnmatchedText, deletedAt])
+  @@index([ownerId, expiresAt, deletedAt])
+  @@map("pantry_items")
+}
+
+model PantryAdjustment {
+  id                   String               @id @default(uuid()) @db.Uuid
+  ownerId              String               @map("owner_id") @db.Uuid
+  pantryItemId         String               @map("pantry_item_id") @db.Uuid
+  type                 PantryAdjustmentType
+  idempotencyKey       String               @map("idempotency_key") @db.VarChar(160)
+  requestHash          String               @map("request_hash") @db.Char(64)
+  inputQuantity        Decimal              @map("input_quantity") @db.Decimal(14, 4)
+  inputUnit            String               @map("input_unit") @db.VarChar(40)
+  appliedDeltaQuantity Decimal              @map("applied_delta_quantity") @db.Decimal(14, 4)
+  normalizedDeltaGrams Decimal?             @map("normalized_delta_grams") @db.Decimal(16, 4)
+  beforeQuantity       Decimal              @map("before_quantity") @db.Decimal(14, 4)
+  afterQuantity        Decimal              @map("after_quantity") @db.Decimal(14, 4)
+  beforeGrams          Decimal?             @map("before_grams") @db.Decimal(16, 4)
+  afterGrams           Decimal?             @map("after_grams") @db.Decimal(16, 4)
+  versionBefore        Int                  @map("version_before")
+  versionAfter         Int                  @map("version_after")
+  reason               String?              @db.VarChar(1000)
+  mergedFromItemId     String?              @map("merged_from_item_id") @db.Uuid
+  createdAt            DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  owner                User                 @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  pantryItem           PantryItem           @relation("PantryItemAdjustments", fields: [pantryItemId], references: [id], onDelete: Restrict)
+  mergedFromItem       PantryItem?          @relation("PantryMergedIntoAdjustments", fields: [mergedFromItemId], references: [id], onDelete: Restrict)
+
+  @@unique([ownerId, idempotencyKey])
+  @@index([pantryItemId, createdAt, id])
+  @@index([ownerId, createdAt, id])
+  @@map("pantry_adjustments")
+}
+
+model RecognitionJob {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  ownerId               String                 @map("owner_id") @db.Uuid
+  status                RecognitionJobStatus   @default(QUEUED)
+  provider              String                 @db.VarChar(40)
+  modelId               String                 @map("model_id") @db.VarChar(100)
+  templateVersion       String                 @map("template_version") @db.VarChar(80)
+  idempotencyKey        String                 @map("idempotency_key") @db.VarChar(160)
+  requestHash           String                 @map("request_hash") @db.Char(64)
+  attemptCount          Int                    @default(0) @map("attempt_count")
+  errorCode             String?                @map("error_code") @db.VarChar(100)
+  errorMessage          String?                @map("error_message") @db.VarChar(500)
+  confirmationKey       String?                @map("confirmation_key") @db.VarChar(160)
+  confirmationHash      String?                @map("confirmation_hash") @db.Char(64)
+  lastRetryKey          String?                @map("last_retry_key") @db.VarChar(160)
+  lastRetryHash         String?                @map("last_retry_hash") @db.Char(64)
+  processingStartedAt   DateTime?              @map("processing_started_at") @db.Timestamptz(3)
+  processingCompletedAt DateTime?              @map("processing_completed_at") @db.Timestamptz(3)
+  confirmedAt           DateTime?              @map("confirmed_at") @db.Timestamptz(3)
+  cancelledAt           DateTime?              @map("cancelled_at") @db.Timestamptz(3)
+  createdAt             DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  owner                 User                   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  inputs                RecognitionInput[]
+  candidates            RecognitionCandidate[]
+
+  @@unique([ownerId, idempotencyKey])
+  @@unique([ownerId, confirmationKey])
+  @@index([ownerId, status, createdAt])
+  @@index([status, updatedAt])
+  @@map("recognition_jobs")
+}
+
+model RecognitionInput {
+  id           String                         @id @default(uuid()) @db.Uuid
+  jobId        String                         @map("job_id") @db.Uuid
+  assetId      String                         @map("asset_id") @db.Uuid
+  position     Int
+  status       RecognitionInputStatus         @default(PENDING)
+  errorCode    String?                        @map("error_code") @db.VarChar(100)
+  errorMessage String?                        @map("error_message") @db.VarChar(500)
+  createdAt    DateTime                       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime                       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  job          RecognitionJob                 @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  asset        MediaAsset                     @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  evidence     RecognitionCandidateEvidence[]
+
+  @@unique([jobId, position])
+  @@unique([jobId, assetId])
+  @@index([assetId])
+  @@map("recognition_inputs")
+}
+
+model RecognitionCandidate {
+  id                   String                         @id @default(uuid()) @db.Uuid
+  jobId                String                         @map("job_id") @db.Uuid
+  ingredientId         String?                        @map("ingredient_id") @db.Uuid
+  detectedName         String                         @map("detected_name") @db.VarChar(160)
+  normalizedName       String                         @map("normalized_name") @db.VarChar(160)
+  quantity             Decimal?                       @db.Decimal(14, 4)
+  unit                 String?                        @db.VarChar(40)
+  freshnessObservation String?                        @map("freshness_observation") @db.VarChar(1000)
+  confidence           Decimal                        @db.Decimal(5, 4)
+  matchConfidence      Decimal?                       @map("match_confidence") @db.Decimal(5, 4)
+  uncertaintyNote      String?                        @map("uncertainty_note") @db.VarChar(500)
+  status               RecognitionCandidateStatus     @default(PROPOSED)
+  version              Int                            @default(1)
+  pantryItemId         String?                        @map("pantry_item_id") @db.Uuid
+  pantryAction         String?                        @map("pantry_action") @db.VarChar(20)
+  createdAt            DateTime                       @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime                       @updatedAt @map("updated_at") @db.Timestamptz(3)
+  job                  RecognitionJob                 @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  ingredient           Ingredient?                    @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  pantryItem           PantryItem?                    @relation(fields: [pantryItemId], references: [id], onDelete: Restrict)
+  evidence             RecognitionCandidateEvidence[]
+
+  @@index([jobId, status, createdAt])
+  @@index([ingredientId])
+  @@index([pantryItemId])
+  @@map("recognition_candidates")
+}
+
+model RecognitionCandidateEvidence {
+  candidateId String               @map("candidate_id") @db.Uuid
+  inputId     String               @map("input_id") @db.Uuid
+  observation String?              @db.VarChar(500)
+  confidence  Decimal              @db.Decimal(5, 4)
+  candidate   RecognitionCandidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  input       RecognitionInput     @relation(fields: [inputId], references: [id], onDelete: Cascade)
+
+  @@id([candidateId, inputId])
+  @@index([inputId])
+  @@map("recognition_candidate_evidence")
+}
+
+model ReceiptJob {
+  id                    String             @id @default(uuid()) @db.Uuid
+  ownerId               String             @map("owner_id") @db.Uuid
+  status                ReceiptJobStatus   @default(QUEUED)
+  provider              String             @db.VarChar(40)
+  modelId               String             @map("model_id") @db.VarChar(100)
+  templateVersion       String             @map("template_version") @db.VarChar(80)
+  idempotencyKey        String             @map("idempotency_key") @db.VarChar(160)
+  requestHash           String             @map("request_hash") @db.Char(64)
+  attemptCount          Int                @default(0) @map("attempt_count")
+  merchantName          String?            @map("merchant_name") @db.VarChar(200)
+  purchasedAt           DateTime?          @map("purchased_at") @db.Date
+  currency              String?            @db.Char(3)
+  totalAmount           Decimal?           @map("total_amount") @db.Decimal(14, 2)
+  metadataConfidence    Decimal?           @map("metadata_confidence") @db.Decimal(5, 4)
+  errorCode             String?            @map("error_code") @db.VarChar(100)
+  errorMessage          String?            @map("error_message") @db.VarChar(500)
+  confirmationKey       String?            @map("confirmation_key") @db.VarChar(160)
+  confirmationHash      String?            @map("confirmation_hash") @db.Char(64)
+  lastRetryKey          String?            @map("last_retry_key") @db.VarChar(160)
+  lastRetryHash         String?            @map("last_retry_hash") @db.Char(64)
+  processingStartedAt   DateTime?          @map("processing_started_at") @db.Timestamptz(3)
+  processingCompletedAt DateTime?          @map("processing_completed_at") @db.Timestamptz(3)
+  confirmedAt           DateTime?          @map("confirmed_at") @db.Timestamptz(3)
+  cancelledAt           DateTime?          @map("cancelled_at") @db.Timestamptz(3)
+  createdAt             DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  owner                 User               @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  inputs                ReceiptInput[]
+  candidates            ReceiptCandidate[]
+
+  @@unique([ownerId, idempotencyKey])
+  @@unique([ownerId, confirmationKey])
+  @@index([ownerId, status, createdAt])
+  @@index([status, updatedAt])
+  @@map("receipt_jobs")
+}
+
+model ReceiptInput {
+  id           String             @id @default(uuid()) @db.Uuid
+  jobId        String             @map("job_id") @db.Uuid
+  assetId      String             @map("asset_id") @db.Uuid
+  position     Int
+  status       ReceiptInputStatus @default(PENDING)
+  errorCode    String?            @map("error_code") @db.VarChar(100)
+  errorMessage String?            @map("error_message") @db.VarChar(500)
+  createdAt    DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  job          ReceiptJob         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  asset        MediaAsset         @relation(fields: [assetId], references: [id], onDelete: Restrict)
+  candidates   ReceiptCandidate[]
+
+  @@unique([jobId, position])
+  @@unique([jobId, assetId])
+  @@index([assetId])
+  @@map("receipt_inputs")
+}
+
+model ReceiptCandidate {
+  id              String                 @id @default(uuid()) @db.Uuid
+  jobId           String                 @map("job_id") @db.Uuid
+  inputId         String                 @map("input_id") @db.Uuid
+  ingredientId    String?                @map("ingredient_id") @db.Uuid
+  lineText        String                 @map("line_text") @db.VarChar(300)
+  detectedName    String                 @map("detected_name") @db.VarChar(160)
+  normalizedName  String                 @map("normalized_name") @db.VarChar(160)
+  quantity        Decimal?               @db.Decimal(14, 4)
+  unit            String?                @db.VarChar(40)
+  unitPrice       Decimal?               @map("unit_price") @db.Decimal(14, 2)
+  lineTotal       Decimal?               @map("line_total") @db.Decimal(14, 2)
+  currency        String?                @db.Char(3)
+  confidence      Decimal                @db.Decimal(5, 4)
+  matchConfidence Decimal?               @map("match_confidence") @db.Decimal(5, 4)
+  uncertaintyNote String?                @map("uncertainty_note") @db.VarChar(500)
+  status          ReceiptCandidateStatus @default(PROPOSED)
+  version         Int                    @default(1)
+  pantryItemId    String?                @map("pantry_item_id") @db.Uuid
+  pantryAction    String?                @map("pantry_action") @db.VarChar(20)
+  createdAt       DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  job             ReceiptJob             @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  input           ReceiptInput           @relation(fields: [inputId], references: [id], onDelete: Cascade)
+  ingredient      Ingredient?            @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  pantryItem      PantryItem?            @relation(fields: [pantryItemId], references: [id], onDelete: Restrict)
+
+  @@index([jobId, status, createdAt])
+  @@index([inputId])
+  @@index([ingredientId])
+  @@index([pantryItemId])
+  @@map("receipt_candidates")
+}
+
+model AiArtifact {
+  id               String               @id @default(uuid()) @db.Uuid
+  ownerId          String               @map("owner_id") @db.Uuid
+  type             AiArtifactType
+  sourceId         String               @map("source_id") @db.Uuid
+  sourceVersion    Int                  @map("source_version")
+  snapshot         Json
+  snapshotHash     String               @map("snapshot_hash") @db.Char(64)
+  title            String               @db.VarChar(160)
+  summary          String               @db.VarChar(1000)
+  authorAnonymous  Boolean              @default(true) @map("author_anonymous")
+  status           AiArtifactStatus     @default(DRAFT)
+  visibility       AiArtifactVisibility @default(PRIVATE)
+  version          Int                  @default(1)
+  lifecycleVersion Int                  @default(1) @map("lifecycle_version")
+  submittedAt      DateTime?            @map("submitted_at") @db.Timestamptz(3)
+  sharedAt         DateTime?            @map("shared_at") @db.Timestamptz(3)
+  createdAt        DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt        DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  owner            User                 @relation("AiArtifactOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  verifications    AiVerification[]
+
+  @@unique([ownerId, type, sourceId, sourceVersion])
+  @@index([ownerId, createdAt, id])
+  @@index([visibility, status, sharedAt, id])
+  @@map("ai_artifacts")
+}
+
+model AiVerification {
+  id                 String                      @id @default(uuid()) @db.Uuid
+  artifactId         String                      @map("artifact_id") @db.Uuid
+  artifactVersion    Int                         @map("artifact_version")
+  reviewerId         String                      @map("reviewer_id") @db.Uuid
+  reviewerRole       Role                        @map("reviewer_role")
+  conclusion         AiVerificationConclusion
+  scope              String                      @db.VarChar(500)
+  evidenceNote       String                      @map("evidence_note") @db.VarChar(2000)
+  correction         String?                     @db.VarChar(2000)
+  status             AiVerificationStatus        @default(ACTIVE)
+  supersedesId       String?                     @map("supersedes_id") @db.Uuid
+  version            Int                         @default(1)
+  createdAt          DateTime                    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(3)
+  artifact           AiArtifact                  @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+  reviewer           User                        @relation("AiVerificationReviewer", fields: [reviewerId], references: [id], onDelete: Restrict)
+  supersedes         AiVerification?             @relation("AiVerificationSupersession", fields: [supersedesId], references: [id], onDelete: Restrict)
+  supersededBy       AiVerification[]            @relation("AiVerificationSupersession")
+  adminActions       AiVerificationAdminAction[] @relation("AiVerificationActionTarget")
+  replacementActions AiVerificationAdminAction[] @relation("AiVerificationActionReplacement")
+
+  @@index([artifactId, createdAt, id])
+  @@index([reviewerId, createdAt])
+  @@index([supersedesId])
+  @@map("ai_verifications")
+}
+
+model AiVerificationAdminAction {
+  id                        String                        @id @default(uuid()) @db.Uuid
+  verificationId            String                        @map("verification_id") @db.Uuid
+  actorId                   String                        @map("actor_id") @db.Uuid
+  action                    AiVerificationAdminActionType
+  reason                    String                        @db.VarChar(2000)
+  expectedVersion           Int                           @map("expected_version")
+  resultingVersion          Int                           @map("resulting_version")
+  replacementVerificationId String?                       @map("replacement_verification_id") @db.Uuid
+  createdAt                 DateTime                      @default(now()) @map("created_at") @db.Timestamptz(3)
+  verification              AiVerification                @relation("AiVerificationActionTarget", fields: [verificationId], references: [id], onDelete: Restrict)
+  actor                     User                          @relation("AiVerificationAdminActor", fields: [actorId], references: [id], onDelete: Restrict)
+  replacementVerification   AiVerification?               @relation("AiVerificationActionReplacement", fields: [replacementVerificationId], references: [id], onDelete: Restrict)
+
+  @@index([verificationId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([replacementVerificationId])
+  @@map("ai_verification_admin_actions")
 }
 
 model Post {
@@ -490,7 +1225,7 @@ model Post {
   authorId            String         @map("author_id") @db.Uuid
   type                PostType
   slug                String         @unique @db.VarChar(220)
-  status              PostStatus     @default(PENDING_REVIEW)
+  status              PostStatus     @default(DRAFT)
   version             Int            @default(1)
   publishedRevisionId String?        @unique @map("published_revision_id") @db.Uuid
   publishedAt         DateTime?      @map("published_at") @db.Timestamptz(3)
@@ -597,33 +1332,37 @@ model CommunityRateLimitBucket {
 }
 
 model PostRevision {
-  id                String                    @id @default(uuid()) @db.Uuid
-  postId            String                    @map("post_id") @db.Uuid
-  version           Int
-  status            PostRevisionStatus        @default(PENDING_REVIEW)
-  title             String                    @db.VarChar(200)
-  normalizedTitle   String                    @map("normalized_title") @db.VarChar(200)
-  excerpt           String?                   @db.VarChar(500)
-  normalizedExcerpt String?                   @map("normalized_excerpt") @db.VarChar(500)
-  body              String
-  normalizedBody    String                    @map("normalized_body")
-  createdById       String                    @map("created_by_id") @db.Uuid
-  reviewNote        String?                   @map("review_note") @db.VarChar(2000)
-  reviewedById      String?                   @map("reviewed_by_id") @db.Uuid
-  reviewedAt        DateTime?                 @map("reviewed_at") @db.Timestamptz(3)
-  createdAt         DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
-  post              Post                      @relation("PostRevisions", fields: [postId], references: [id], onDelete: Cascade)
-  createdBy         User                      @relation("PostRevisionAuthor", fields: [createdById], references: [id], onDelete: Restrict)
-  reviewedBy        User?                     @relation("PostRevisionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
-  aiFlags           AiFlag[]
-  publishedFor      Post?                     @relation("PublishedRevision")
-  recipeDetail      RecipeDetail?
-  ingredients       RecipeIngredient[]
-  dietCompatibility RecipeDietCompatibility[]
-  categories        PostCategory[]
-  tags              PostTag[]
-  media             PostMedia[]
-  mealPlanItems     MealPlanItem[]
+  id                 String                    @id @default(uuid()) @db.Uuid
+  postId             String                    @map("post_id") @db.Uuid
+  version            Int
+  status             PostRevisionStatus        @default(DRAFT)
+  title              String                    @db.VarChar(200)
+  normalizedTitle    String                    @map("normalized_title") @db.VarChar(200)
+  excerpt            String?                   @db.VarChar(500)
+  normalizedExcerpt  String?                   @map("normalized_excerpt") @db.VarChar(500)
+  body               String
+  normalizedBody     String                    @map("normalized_body")
+  createdById        String                    @map("created_by_id") @db.Uuid
+  reviewNote         String?                   @map("review_note") @db.VarChar(2000)
+  reviewedById       String?                   @map("reviewed_by_id") @db.Uuid
+  reviewedAt         DateTime?                 @map("reviewed_at") @db.Timestamptz(3)
+  submittedAt        DateTime?                 @map("submitted_at") @db.Timestamptz(3)
+  createdAt          DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
+  post               Post                      @relation("PostRevisions", fields: [postId], references: [id], onDelete: Cascade)
+  createdBy          User                      @relation("PostRevisionAuthor", fields: [createdById], references: [id], onDelete: Restrict)
+  reviewedBy         User?                     @relation("PostRevisionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  aiFlags            AiFlag[]
+  publishedFor       Post?                     @relation("PublishedRevision")
+  recipeDetail       RecipeDetail?
+  ingredients        RecipeIngredient[]
+  recipeSteps        RecipeStep[]
+  nutritionEstimates RecipeNutritionEstimate[]
+  nutritionAiJobs    RecipeNutritionAiJob[]
+  dietCompatibility  RecipeDietCompatibility[]
+  categories         PostCategory[]
+  tags               PostTag[]
+  media              PostMedia[]
+  mealPlanItems      MealPlanItem[]
 
   @@unique([postId, version])
   @@index([postId, status, createdAt])
@@ -733,33 +1472,35 @@ model BehaviorEvent {
 }
 
 model MealPlan {
-  id                    String                 @id @default(uuid()) @db.Uuid
-  userId                String                 @map("user_id") @db.Uuid
-  weekStart             DateTime               @map("week_start") @db.Date
+  id                    String                       @id @default(uuid()) @db.Uuid
+  userId                String                       @map("user_id") @db.Uuid
+  weekStart             DateTime                     @map("week_start") @db.Date
   goal                  MealGoal
-  targetCalories        Int                    @map("target_calories")
+  targetCalories        Int                          @map("target_calories")
   version               Int
-  lockVersion           Int                    @default(1) @map("lock_version")
-  supersedesMealPlanId  String?                @map("supersedes_meal_plan_id") @db.Uuid
-  idempotencyKey        String                 @map("idempotency_key") @db.VarChar(120)
-  payloadHash           String                 @map("payload_hash") @db.Char(64)
-  seedHash              String                 @map("seed_hash") @db.Char(64)
-  algorithmVersion      String                 @map("algorithm_version") @db.VarChar(80)
-  recommendationVersion String                 @map("recommendation_version") @db.VarChar(80)
-  constraintSnapshot    Json                   @map("constraint_snapshot")
-  warnings              Json                   @default("[]")
-  nutritionDataQuality  NutritionDataQuality   @map("nutrition_data_quality")
-  micronutrientSummary  Json                   @map("micronutrient_summary")
+  lockVersion           Int                          @default(1) @map("lock_version")
+  supersedesMealPlanId  String?                      @map("supersedes_meal_plan_id") @db.Uuid
+  idempotencyKey        String                       @map("idempotency_key") @db.VarChar(120)
+  payloadHash           String                       @map("payload_hash") @db.Char(64)
+  seedHash              String                       @map("seed_hash") @db.Char(64)
+  algorithmVersion      String                       @map("algorithm_version") @db.VarChar(80)
+  recommendationVersion String                       @map("recommendation_version") @db.VarChar(80)
+  constraintSnapshot    Json                         @map("constraint_snapshot")
+  warnings              Json                         @default("[]")
+  nutritionDataQuality  NutritionDataQuality         @map("nutrition_data_quality")
+  micronutrientSummary  Json                         @map("micronutrient_summary")
   explanation           String?
-  deletedAt             DateTime?              @map("deleted_at") @db.Timestamptz(3)
-  createdAt             DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt             DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
-  user                  User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
-  supersedes            MealPlan?              @relation("MealPlanVersions", fields: [supersedesMealPlanId], references: [id], onDelete: SetNull)
-  supersededBy          MealPlan[]             @relation("MealPlanVersions")
+  deletedAt             DateTime?                    @map("deleted_at") @db.Timestamptz(3)
+  createdAt             DateTime                     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user                  User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  supersedes            MealPlan?                    @relation("MealPlanVersions", fields: [supersedesMealPlanId], references: [id], onDelete: SetNull)
+  supersededBy          MealPlan[]                   @relation("MealPlanVersions")
   items                 MealPlanItem[]
   shoppingItems         MealPlanShoppingItem[]
   mutations             MealPlanMutation[]
+  analyses              MealAnalysis[]
+  programAlternatives   MealProgramWeekAlternative[]
 
   @@unique([userId, idempotencyKey])
   @@unique([userId, weekStart, version])
@@ -768,30 +1509,162 @@ model MealPlan {
   @@map("meal_plans")
 }
 
-model MealPlanItem {
+model MealAnalysis {
   id               String             @id @default(uuid()) @db.Uuid
   mealPlanId       String             @map("meal_plan_id") @db.Uuid
-  date             DateTime           @db.Date
-  mealType         MealType           @map("meal_type")
-  position         Int
-  status           MealSlotStatus
-  recipeId         String?            @map("recipe_id") @db.Uuid
-  recipeRevisionId String?            @map("recipe_revision_id") @db.Uuid
-  targetCalories   Int                @map("target_calories")
-  calories         Int?
-  tolerancePercent Decimal?           @map("tolerance_percent") @db.Decimal(5, 2)
-  reasonCodes      Json               @default("[]") @map("reason_codes")
-  warningCodes     Json               @default("[]") @map("warning_codes")
+  version          Int
+  status           MealAnalysisStatus @default(CURRENT)
+  algorithmVersion String             @map("algorithm_version") @db.VarChar(80)
+  inputFingerprint String             @map("input_fingerprint") @db.Char(64)
+  requestSnapshot  Json               @map("request_snapshot")
+  profileSnapshot  Json               @map("profile_snapshot")
+  ruleVersions     Json               @map("rule_versions")
+  warnings         Json               @default("[]")
+  incompleteData   Json               @default("[]") @map("incomplete_data")
+  summary          Json
+  confidence       Decimal            @db.Decimal(5, 4)
+  disclaimer       String             @db.VarChar(1000)
   createdAt        DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt        DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
   mealPlan         MealPlan           @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
-  recipe           Post?              @relation(fields: [recipeId], references: [id], onDelete: Restrict)
-  recipeRevision   PostRevision?      @relation(fields: [recipeRevisionId], references: [id], onDelete: Restrict)
-  mutations        MealPlanMutation[]
+
+  @@unique([mealPlanId, version])
+  @@index([mealPlanId, status, createdAt])
+  @@index([inputFingerprint])
+  @@map("meal_analyses")
+}
+
+model MealProgram {
+  id                   String                @id @default(uuid()) @db.Uuid
+  userId               String                @map("user_id") @db.Uuid
+  title                String                @db.VarChar(200)
+  goal                 MealGoal
+  startDate            DateTime              @map("start_date") @db.Date
+  timezone             String                @db.VarChar(64)
+  horizonWeeks         Int                   @map("horizon_weeks")
+  status               MealProgramStatus     @default(GENERATING)
+  version              Int                   @default(1)
+  idempotencyKey       String                @map("idempotency_key") @db.VarChar(120)
+  payloadHash          String                @map("payload_hash") @db.Char(64)
+  generationParameters Json                  @map("generation_parameters")
+  failureSummary       Json?                 @map("failure_summary")
+  confirmedAt          DateTime?             @map("confirmed_at") @db.Timestamptz(3)
+  createdAt            DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user                 User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  weeks                MealProgramWeek[]
+  analyses             MealProgramAnalysis[]
+  mutations            MealProgramMutation[]
+
+  @@unique([userId, idempotencyKey])
+  @@index([userId, status, startDate, createdAt])
+  @@map("meal_programs")
+}
+
+model MealProgramWeek {
+  id                      String                       @id @default(uuid()) @db.Uuid
+  mealProgramId           String                       @map("meal_program_id") @db.Uuid
+  weekIndex               Int                          @map("week_index")
+  weekStart               DateTime                     @map("week_start") @db.Date
+  status                  MealProgramWeekStatus        @default(PENDING)
+  selectedAlternativeRank Int?                         @map("selected_alternative_rank")
+  projectionStatus        MealProgramProjectionStatus  @default(CURRENT) @map("projection_status")
+  failure                 Json?
+  createdAt               DateTime                     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt               DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  mealProgram             MealProgram                  @relation(fields: [mealProgramId], references: [id], onDelete: Cascade)
+  alternatives            MealProgramWeekAlternative[]
+
+  @@unique([mealProgramId, weekIndex])
+  @@unique([mealProgramId, weekStart])
+  @@index([mealProgramId, status, weekIndex])
+  @@map("meal_program_weeks")
+}
+
+model MealProgramWeekAlternative {
+  id         String          @id @default(uuid()) @db.Uuid
+  weekId     String          @map("week_id") @db.Uuid
+  mealPlanId String          @map("meal_plan_id") @db.Uuid
+  rank       Int
+  seed       String          @db.VarChar(120)
+  snapshot   Json
+  createdAt  DateTime        @default(now()) @map("created_at") @db.Timestamptz(3)
+  week       MealProgramWeek @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  mealPlan   MealPlan        @relation(fields: [mealPlanId], references: [id], onDelete: Restrict)
+
+  @@unique([weekId, rank])
+  @@unique([weekId, mealPlanId])
+  @@index([mealPlanId])
+  @@map("meal_program_week_alternatives")
+}
+
+model MealProgramAnalysis {
+  id                       String                    @id @default(uuid()) @db.Uuid
+  mealProgramId            String                    @map("meal_program_id") @db.Uuid
+  version                  Int
+  status                   MealProgramAnalysisStatus @default(CURRENT)
+  inputFingerprint         String                    @map("input_fingerprint") @db.Char(64)
+  invalidatedFromWeekIndex Int?                      @map("invalidated_from_week_index")
+  warnings                 Json                      @default("[]")
+  nutritionSummary         Json                      @map("nutrition_summary")
+  weeklyAnalyses           Json                      @map("weekly_analyses")
+  createdAt                DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt                DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  mealProgram              MealProgram               @relation(fields: [mealProgramId], references: [id], onDelete: Cascade)
+
+  @@unique([mealProgramId, version])
+  @@index([mealProgramId, status, createdAt])
+  @@index([inputFingerprint])
+  @@map("meal_program_analyses")
+}
+
+model MealProgramMutation {
+  id               String                  @id @default(uuid()) @db.Uuid
+  userId           String                  @map("user_id") @db.Uuid
+  mealProgramId    String                  @map("meal_program_id") @db.Uuid
+  type             MealProgramMutationType
+  idempotencyKey   String                  @map("idempotency_key") @db.VarChar(120)
+  payloadHash      String                  @map("payload_hash") @db.Char(64)
+  resultingVersion Int                     @map("resulting_version")
+  createdAt        DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  user             User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mealProgram      MealProgram             @relation(fields: [mealProgramId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, idempotencyKey])
+  @@index([mealProgramId, createdAt])
+  @@map("meal_program_mutations")
+}
+
+model MealPlanItem {
+  id                 String                 @id @default(uuid()) @db.Uuid
+  mealPlanId         String                 @map("meal_plan_id") @db.Uuid
+  date               DateTime               @db.Date
+  mealType           MealType               @map("meal_type")
+  position           Int
+  status             MealSlotStatus
+  sourceType         MealPlanItemSourceType @default(RECIPE) @map("source_type")
+  recipeId           String?                @map("recipe_id") @db.Uuid
+  recipeRevisionId   String?                @map("recipe_revision_id") @db.Uuid
+  customMealId       String?                @map("custom_meal_id") @db.Uuid
+  customMealSnapshot Json?                  @map("custom_meal_snapshot")
+  servings           Decimal                @default(1) @db.Decimal(6, 2)
+  targetCalories     Int                    @map("target_calories")
+  calories           Int?
+  tolerancePercent   Decimal?               @map("tolerance_percent") @db.Decimal(5, 2)
+  reasonCodes        Json                   @default("[]") @map("reason_codes")
+  warningCodes       Json                   @default("[]") @map("warning_codes")
+  createdAt          DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  mealPlan           MealPlan               @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  recipe             Post?                  @relation(fields: [recipeId], references: [id], onDelete: Restrict)
+  recipeRevision     PostRevision?          @relation(fields: [recipeRevisionId], references: [id], onDelete: Restrict)
+  customMeal         CustomMeal?            @relation(fields: [customMealId], references: [id], onDelete: Restrict)
+  mutations          MealPlanMutation[]
 
   @@unique([mealPlanId, date, mealType])
   @@index([mealPlanId, position])
   @@index([recipeId, date])
+  @@index([customMealId])
   @@map("meal_plan_items")
 }
 
@@ -971,18 +1844,19 @@ model RecipeDetail {
 }
 
 model RecipeIngredient {
-  id               String                     @id @default(uuid()) @db.Uuid
-  revisionId       String                     @map("revision_id") @db.Uuid
-  ingredientId     String?                    @map("ingredient_id") @db.Uuid
+  id               String                        @id @default(uuid()) @db.Uuid
+  revisionId       String                        @map("revision_id") @db.Uuid
+  ingredientId     String?                       @map("ingredient_id") @db.Uuid
   position         Int
-  displayName      String                     @map("display_name") @db.VarChar(160)
-  normalizedName   String                     @map("normalized_name") @db.VarChar(160)
-  amount           Decimal                    @db.Decimal(10, 2)
-  unit             String                     @db.VarChar(40)
-  optional         Boolean                    @default(false)
-  resolutionStatus IngredientResolutionStatus @map("resolution_status")
-  revision         PostRevision               @relation(fields: [revisionId], references: [id], onDelete: Cascade)
-  ingredient       Ingredient?                @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  displayName      String                        @map("display_name") @db.VarChar(160)
+  normalizedName   String                        @map("normalized_name") @db.VarChar(160)
+  amount           Decimal                       @db.Decimal(10, 2)
+  unit             String                        @db.VarChar(40)
+  optional         Boolean                       @default(false)
+  resolutionStatus IngredientResolutionStatus    @map("resolution_status")
+  revision         PostRevision                  @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  ingredient       Ingredient?                   @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  nutritionLines   RecipeNutritionEstimateLine[]
 
   @@unique([revisionId, position])
   @@index([ingredientId])
@@ -990,6 +1864,24 @@ model RecipeIngredient {
   @@index([normalizedName(ops: raw("gin_trgm_ops"))], type: Gin, map: "recipe_ingredients_normalized_name_trgm_idx")
   @@index([ingredientId, revisionId], map: "recipe_ingredients_search_ingredient_revision_idx")
   @@map("recipe_ingredients")
+}
+
+model RecipeStep {
+  id                          String         @id @default(uuid()) @db.Uuid
+  revisionId                  String         @map("revision_id") @db.Uuid
+  position                    Int
+  instruction                 String         @db.VarChar(2000)
+  cookingMethodId             String?        @map("cooking_method_id") @db.Uuid
+  durationMinutes             Int?           @map("duration_minutes")
+  temperatureCelsius          Decimal?       @map("temperature_celsius") @db.Decimal(6, 2)
+  affectedIngredientPositions Json           @default("[]") @map("affected_ingredient_positions")
+  createdAt                   DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  revision                    PostRevision   @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  cookingMethod               CookingMethod? @relation(fields: [cookingMethodId], references: [id], onDelete: Restrict)
+
+  @@unique([revisionId, position])
+  @@index([cookingMethodId])
+  @@map("recipe_steps")
 }
 
 model RecipeDietCompatibility {
@@ -1002,6 +1894,87 @@ model RecipeDietCompatibility {
   @@id([revisionId, dietPattern])
   @@index([dietPattern, compatible])
   @@map("recipe_diet_compatibilities")
+}
+
+model RecipeNutritionEstimate {
+  id                   String                        @id @default(uuid()) @db.Uuid
+  revisionId           String                        @map("revision_id") @db.Uuid
+  version              Int
+  status               RecipeNutritionEstimateStatus @default(CURRENT)
+  calculationVersion   String                        @map("calculation_version") @db.VarChar(40)
+  recipeFingerprint    String                        @map("recipe_fingerprint") @db.Char(64)
+  servings             Int
+  totalRawGrams        Decimal                       @default(0) @map("total_raw_grams") @db.Decimal(18, 6)
+  totalCookedGrams     Decimal                       @default(0) @map("total_cooked_grams") @db.Decimal(18, 6)
+  totalNutrients       Json                          @map("total_nutrients")
+  perServingNutrients  Json                          @map("per_serving_nutrients")
+  sourceVersions       Json                          @default("[]") @map("source_versions")
+  assumptions          Json                          @default("[]")
+  uncoveredIngredients Json                          @default("[]") @map("uncovered_ingredients")
+  confidence           Decimal                       @db.Decimal(5, 4)
+  uncertainty          Json                          @default("{}")
+  aiUsed               Boolean                       @default(false) @map("ai_used")
+  providerDown         Boolean                       @default(false) @map("provider_down")
+  disclaimer           String                        @db.VarChar(1000)
+  createdAt            DateTime                      @default(now()) @map("created_at") @db.Timestamptz(3)
+  revision             PostRevision                  @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  lines                RecipeNutritionEstimateLine[]
+  aiJobs               RecipeNutritionAiJob[]
+
+  @@unique([revisionId, version])
+  @@index([revisionId, status, createdAt])
+  @@index([recipeFingerprint])
+  @@map("recipe_nutrition_estimates")
+}
+
+model RecipeNutritionEstimateLine {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  estimateId         String                  @map("estimate_id") @db.Uuid
+  recipeIngredientId String?                 @map("recipe_ingredient_id") @db.Uuid
+  ingredientId       String?                 @map("ingredient_id") @db.Uuid
+  position           Int
+  displayName        String                  @map("display_name") @db.VarChar(160)
+  origin             NutritionValueOrigin
+  normalizedRawGrams Decimal?                @map("normalized_raw_grams") @db.Decimal(18, 6)
+  edibleRawGrams     Decimal?                @map("edible_raw_grams") @db.Decimal(18, 6)
+  yieldFactor        Decimal?                @map("yield_factor") @db.Decimal(9, 6)
+  cookedGrams        Decimal?                @map("cooked_grams") @db.Decimal(18, 6)
+  nutrientCoverage   Json                    @default("[]") @map("nutrient_coverage")
+  sourceVersions     Json                    @default("[]") @map("source_versions")
+  assumptions        Json                    @default("[]")
+  confidence         Decimal                 @db.Decimal(5, 4)
+  uncertainty        Json                    @default("{}")
+  uncoveredReason    String?                 @map("uncovered_reason") @db.VarChar(160)
+  estimate           RecipeNutritionEstimate @relation(fields: [estimateId], references: [id], onDelete: Cascade)
+  recipeIngredient   RecipeIngredient?       @relation(fields: [recipeIngredientId], references: [id], onDelete: SetNull)
+  ingredient         Ingredient?             @relation(fields: [ingredientId], references: [id], onDelete: SetNull)
+
+  @@unique([estimateId, position])
+  @@index([recipeIngredientId])
+  @@index([ingredientId])
+  @@map("recipe_nutrition_estimate_lines")
+}
+
+model RecipeNutritionAiJob {
+  id                 String                   @id @default(uuid()) @db.Uuid
+  revisionId         String                   @map("revision_id") @db.Uuid
+  estimateId         String?                  @map("estimate_id") @db.Uuid
+  provider           String                   @db.VarChar(40)
+  modelId            String                   @map("model_id") @db.VarChar(100)
+  status             AiRequestStatus
+  requestPayloadHash String                   @map("request_payload_hash") @db.Char(64)
+  resultPayload      Json?                    @map("result_payload")
+  errorCode          String?                  @map("error_code") @db.VarChar(100)
+  startedAt          DateTime                 @map("started_at") @db.Timestamptz(3)
+  completedAt        DateTime?                @map("completed_at") @db.Timestamptz(3)
+  createdAt          DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
+  revision           PostRevision             @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  estimate           RecipeNutritionEstimate? @relation(fields: [estimateId], references: [id], onDelete: SetNull)
+
+  @@index([revisionId, createdAt])
+  @@index([status, createdAt])
+  @@map("recipe_nutrition_ai_jobs")
 }
 
 model PostCategory {
@@ -1030,6 +2003,7 @@ model PostTag {
 model PostMedia {
   id              String        @id @default(uuid()) @db.Uuid
   revisionId      String        @map("revision_id") @db.Uuid
+  assetId         String?       @map("asset_id") @db.Uuid
   kind            MediaKind
   provider        MediaProvider
   publicId        String?       @map("public_id") @db.VarChar(255)
@@ -1041,23 +2015,489 @@ model PostMedia {
   durationSeconds Decimal?      @map("duration_seconds") @db.Decimal(10, 2)
   position        Int           @default(0)
   revision        PostRevision  @relation(fields: [revisionId], references: [id], onDelete: Cascade)
+  asset           MediaAsset?   @relation(fields: [assetId], references: [id], onDelete: Restrict)
 
   @@unique([revisionId, kind])
   @@index([publicId])
+  @@index([assetId])
   @@map("post_media")
 }
 
+model StoragePolicy {
+  id                    String           @id @default(uuid()) @db.Uuid
+  code                  String           @unique @db.VarChar(80)
+  name                  String           @db.VarChar(160)
+  quotaBytes            BigInt           @map("quota_bytes")
+  reservationTtlSeconds Int              @map("reservation_ttl_seconds")
+  warningPercent        Int              @default(80) @map("warning_percent")
+  active                Boolean          @default(true)
+  isDefault             Boolean          @default(false) @map("is_default")
+  version               Int              @default(1)
+  updatedById           String?          @map("updated_by_id") @db.Uuid
+  createdAt             DateTime         @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt             DateTime         @updatedAt @map("updated_at") @db.Timestamptz(3)
+  updatedBy             User?            @relation("StoragePolicyUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+  accounts              StorageAccount[]
+
+  @@index([active, isDefault, code])
+  @@map("storage_policies")
+}
+
+model StorageAccount {
+  userId               String               @id @map("user_id") @db.Uuid
+  policyId             String               @map("policy_id") @db.Uuid
+  usedBytes            BigInt               @default(0) @map("used_bytes")
+  reservedBytes        BigInt               @default(0) @map("reserved_bytes")
+  quotaAdjustmentBytes BigInt               @default(0) @map("quota_adjustment_bytes")
+  createdAt            DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user                 User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  policy               StoragePolicy        @relation(fields: [policyId], references: [id], onDelete: Restrict)
+  reservations         StorageReservation[]
+  assets               MediaAsset[]
+  adjustments          StorageAdjustment[]
+
+  @@index([policyId, usedBytes])
+  @@map("storage_accounts")
+}
+
+model StorageReservation {
+  id                String                   @id @default(uuid()) @db.Uuid
+  userId            String                   @map("user_id") @db.Uuid
+  idempotencyKey    String                   @map("idempotency_key") @db.VarChar(120)
+  requestHash       String                   @map("request_hash") @db.Char(64)
+  commitHash        String?                  @map("commit_hash") @db.Char(64)
+  resourceType      MediaResourceType        @map("resource_type")
+  kind              MediaKind
+  declaredMimeType  String                   @map("declared_mime_type") @db.VarChar(100)
+  declaredExtension String                   @map("declared_extension") @db.VarChar(16)
+  declaredBytes     BigInt                   @map("declared_bytes")
+  actualBytes       BigInt?                  @map("actual_bytes")
+  status            StorageReservationStatus @default(RESERVED)
+  expiresAt         DateTime                 @map("expires_at") @db.Timestamptz(3)
+  committedAt       DateTime?                @map("committed_at") @db.Timestamptz(3)
+  releasedAt        DateTime?                @map("released_at") @db.Timestamptz(3)
+  releaseReason     String?                  @map("release_reason") @db.VarChar(120)
+  createdAt         DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
+  account           StorageAccount           @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  asset             MediaAsset?
+
+  @@unique([userId, idempotencyKey])
+  @@index([status, expiresAt])
+  @@index([userId, status, createdAt])
+  @@map("storage_reservations")
+}
+
+model MediaAsset {
+  id                     String              @id @default(uuid()) @db.Uuid
+  ownerId                String              @map("owner_id") @db.Uuid
+  reservationId          String?             @unique @map("reservation_id") @db.Uuid
+  provider               MediaProvider       @default(CLOUDINARY)
+  resourceType           MediaResourceType   @map("resource_type")
+  kind                   MediaKind
+  publicId               String              @unique @map("public_id") @db.VarChar(255)
+  secureUrl              String              @map("secure_url") @db.VarChar(2048)
+  mimeType               String?             @map("mime_type") @db.VarChar(100)
+  extension              String?             @db.VarChar(16)
+  bytes                  BigInt
+  width                  Int?
+  height                 Int?
+  durationSeconds        Decimal?            @map("duration_seconds") @db.Decimal(10, 2)
+  providerVersion        BigInt?             @map("provider_version")
+  providerEtag           String?             @map("provider_etag") @db.VarChar(128)
+  status                 MediaAssetStatus    @default(ACTIVE)
+  backfilled             Boolean             @default(false)
+  reconciledAt           DateTime?           @map("reconciled_at") @db.Timestamptz(3)
+  deletedAt              DateTime?           @map("deleted_at") @db.Timestamptz(3)
+  deletedById            String?             @map("deleted_by_id") @db.Uuid
+  deletionIdempotencyKey String?             @map("deletion_idempotency_key") @db.VarChar(120)
+  createdAt              DateTime            @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt              DateTime            @updatedAt @map("updated_at") @db.Timestamptz(3)
+  owner                  User                @relation("MediaAssetOwner", fields: [ownerId], references: [id], onDelete: Restrict, map: "media_assets_owner_id_user_fkey")
+  deletedBy              User?               @relation("MediaAssetDeletedBy", fields: [deletedById], references: [id], onDelete: SetNull)
+  account                StorageAccount      @relation(fields: [ownerId], references: [userId], onDelete: Restrict, map: "media_assets_owner_id_account_fkey")
+  reservation            StorageReservation? @relation(fields: [reservationId], references: [id], onDelete: SetNull)
+  postMedia              PostMedia[]
+  customMealPhotos       CustomMealPhoto[]
+  recognitionInputs      RecognitionInput[]
+  receiptInputs          ReceiptInput[]
+
+  @@index([ownerId, status, createdAt])
+  @@index([status, reconciledAt])
+  @@map("media_assets")
+}
+
+model StorageAdjustment {
+  id             String         @id @default(uuid()) @db.Uuid
+  userId         String         @map("user_id") @db.Uuid
+  actorId        String         @map("actor_id") @db.Uuid
+  idempotencyKey String         @map("idempotency_key") @db.VarChar(120)
+  requestHash    String         @map("request_hash") @db.Char(64)
+  deltaBytes     BigInt         @map("delta_bytes")
+  beforeBytes    BigInt         @map("before_bytes")
+  afterBytes     BigInt         @map("after_bytes")
+  reason         String         @db.VarChar(1000)
+  createdAt      DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
+  account        StorageAccount @relation(fields: [userId], references: [userId], onDelete: Restrict, map: "storage_adjustments_user_id_account_fkey")
+  user           User           @relation("StorageAdjustmentSubject", fields: [userId], references: [id], onDelete: Restrict, map: "storage_adjustments_user_id_user_fkey")
+  actor          User           @relation("StorageAdjustmentActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@unique([actorId, idempotencyKey])
+  @@index([userId, createdAt, id])
+  @@index([actorId, createdAt])
+  @@map("storage_adjustments")
+}
+
 model IngredientAlias {
-  id              String     @id @default(uuid()) @db.Uuid
-  ingredientId    String     @map("ingredient_id") @db.Uuid
-  alias           String     @db.VarChar(160)
-  normalizedAlias String     @map("normalized_alias") @db.VarChar(160)
-  createdAt       DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
-  ingredient      Ingredient @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  id              String               @id @default(uuid()) @db.Uuid
+  ingredientId    String               @map("ingredient_id") @db.Uuid
+  alias           String               @db.VarChar(160)
+  normalizedAlias String               @map("normalized_alias") @db.VarChar(160)
+  locale          String               @default("vi-VN") @db.VarChar(20)
+  sourceId        String?              @map("source_id") @db.Uuid
+  sourceRecordId  String?              @map("source_record_id") @db.VarChar(160)
+  reviewStatus    FoodDataReviewStatus @default(APPROVED) @map("review_status")
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  ingredient      Ingredient           @relation(fields: [ingredientId], references: [id], onDelete: Cascade)
+  source          FoodDataSource?      @relation(fields: [sourceId], references: [id], onDelete: Restrict)
 
   @@unique([ingredientId, normalizedAlias])
   @@index([normalizedAlias])
+  @@index([normalizedAlias, locale, reviewStatus])
+  @@index([sourceId, sourceRecordId])
   @@map("ingredient_aliases")
+}
+
+model FoodDataSource {
+  id                 String                      @id @default(uuid()) @db.Uuid
+  code               String                      @unique @db.VarChar(80)
+  name               String                      @db.VarChar(200)
+  provider           FoodDataProvider
+  sourceUrl          String?                     @map("source_url") @db.VarChar(2048)
+  licenseName        String                      @map("license_name") @db.VarChar(200)
+  licenseUrl         String?                     @map("license_url") @db.VarChar(2048)
+  attribution        String                      @db.VarChar(1000)
+  defaultLocale      String                      @default("en-US") @map("default_locale") @db.VarChar(20)
+  active             Boolean                     @default(true)
+  createdAt          DateTime                    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime                    @updatedAt @map("updated_at") @db.Timestamptz(3)
+  imports            FoodDataImportBatch[]
+  aliases            IngredientAlias[]
+  ingredientProfiles IngredientFoodProfile[]
+  referenceIntakes   NutrientReferenceIntake[]
+  intakeGuidelines   IngredientIntakeGuideline[]
+  retentionFactors   NutrientRetentionFactor[]
+  yieldFactors       CookingYieldFactor[]
+  interactionRules   IngredientInteractionRule[]
+
+  @@index([provider, active])
+  @@map("food_data_sources")
+}
+
+model FoodDataImportBatch {
+  id             String                  @id @default(uuid()) @db.Uuid
+  sourceId       String                  @map("source_id") @db.Uuid
+  idempotencyKey String                  @map("idempotency_key") @db.VarChar(160)
+  sourceVersion  String                  @map("source_version") @db.VarChar(120)
+  sourceDate     DateTime?               @map("source_date") @db.Date
+  payloadHash    String                  @map("payload_hash") @db.VarChar(64)
+  status         FoodDataImportStatus    @default(PREVIEWED)
+  stagedPayload  Json                    @map("staged_payload")
+  summary        Json
+  committedAt    DateTime?               @map("committed_at") @db.Timestamptz(3)
+  createdById    String                  @map("created_by_id") @db.Uuid
+  createdAt      DateTime                @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime                @updatedAt @map("updated_at") @db.Timestamptz(3)
+  source         FoodDataSource          @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  profiles       IngredientFoodProfile[]
+
+  @@unique([sourceId, idempotencyKey])
+  @@index([sourceId, sourceVersion, status, createdAt])
+  @@map("food_data_import_batches")
+}
+
+model IngredientFoodProfile {
+  id                   String                    @id @default(uuid()) @db.Uuid
+  ingredientId         String                    @map("ingredient_id") @db.Uuid
+  sourceId             String                    @map("source_id") @db.Uuid
+  importBatchId        String?                   @map("import_batch_id") @db.Uuid
+  sourceRecordId       String                    @map("source_record_id") @db.VarChar(160)
+  sourceVersion        String                    @map("source_version") @db.VarChar(120)
+  sourceDate           DateTime?                 @map("source_date") @db.Date
+  preparation          String                    @default("raw") @db.VarChar(120)
+  locale               String                    @default("en-US") @db.VarChar(20)
+  ediblePortionPercent Decimal                   @default(100) @map("edible_portion_percent") @db.Decimal(5, 2)
+  servingGrams         Decimal?                  @map("serving_grams") @db.Decimal(12, 4)
+  quality              FoodDataQuality
+  reviewStatus         FoodDataReviewStatus      @default(STAGED) @map("review_status")
+  reviewedById         String?                   @map("reviewed_by_id") @db.Uuid
+  reviewedAt           DateTime?                 @map("reviewed_at") @db.Timestamptz(3)
+  effectiveFrom        DateTime                  @map("effective_from") @db.Date
+  effectiveTo          DateTime?                 @map("effective_to") @db.Date
+  createdAt            DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  ingredient           Ingredient                @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  source               FoodDataSource            @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+  importBatch          FoodDataImportBatch?      @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  householdConversions HouseholdConversion[]
+  nutrientValues       IngredientNutrientValue[]
+
+  @@unique([sourceId, sourceRecordId, sourceVersion])
+  @@unique([sourceId, sourceRecordId, effectiveFrom])
+  @@index([ingredientId, preparation, reviewStatus, effectiveFrom])
+  @@index([sourceId, sourceRecordId])
+  @@index([importBatchId])
+  @@map("ingredient_food_profiles")
+}
+
+model HouseholdConversion {
+  id            String                @id @default(uuid()) @db.Uuid
+  profileId     String                @map("profile_id") @db.Uuid
+  unitName      String                @map("unit_name") @db.VarChar(100)
+  unitSymbol    String?               @map("unit_symbol") @db.VarChar(30)
+  quantity      Decimal               @db.Decimal(12, 4)
+  unitDimension UnitDimension         @map("unit_dimension")
+  grams         Decimal               @db.Decimal(12, 4)
+  quality       FoodDataQuality
+  reviewStatus  FoodDataReviewStatus  @default(STAGED) @map("review_status")
+  reviewedById  String?               @map("reviewed_by_id") @db.Uuid
+  reviewedAt    DateTime?             @map("reviewed_at") @db.Timestamptz(3)
+  createdAt     DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  profile       IngredientFoodProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, unitName, quantity])
+  @@index([profileId, reviewStatus])
+  @@map("household_conversions")
+}
+
+model Nutrient {
+  id            String                    @id @default(uuid()) @db.Uuid
+  code          String                    @unique @db.VarChar(80)
+  name          String                    @db.VarChar(160)
+  defaultUnit   String                    @map("default_unit") @db.VarChar(20)
+  unitDimension UnitDimension             @map("unit_dimension")
+  description   String?                   @db.VarChar(1000)
+  active        Boolean                   @default(true)
+  createdAt     DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  values        IngredientNutrientValue[]
+  references    NutrientReferenceIntake[]
+  retentions    NutrientRetentionFactor[]
+
+  @@index([active, name])
+  @@map("nutrients")
+}
+
+model IngredientNutrientValue {
+  id            String                @id @default(uuid()) @db.Uuid
+  profileId     String                @map("profile_id") @db.Uuid
+  nutrientId    String                @map("nutrient_id") @db.Uuid
+  valuePer100g  Decimal               @map("value_per_100g") @db.Decimal(18, 8)
+  unit          String                @db.VarChar(20)
+  minValue      Decimal?              @map("min_value") @db.Decimal(18, 8)
+  maxValue      Decimal?              @map("max_value") @db.Decimal(18, 8)
+  quality       FoodDataQuality
+  reviewStatus  FoodDataReviewStatus  @default(STAGED) @map("review_status")
+  reviewedById  String?               @map("reviewed_by_id") @db.Uuid
+  reviewedAt    DateTime?             @map("reviewed_at") @db.Timestamptz(3)
+  effectiveFrom DateTime              @map("effective_from") @db.Date
+  effectiveTo   DateTime?             @map("effective_to") @db.Date
+  createdAt     DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  profile       IngredientFoodProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  nutrient      Nutrient              @relation(fields: [nutrientId], references: [id], onDelete: Restrict)
+
+  @@unique([profileId, nutrientId, effectiveFrom])
+  @@index([nutrientId, reviewStatus, effectiveFrom])
+  @@map("ingredient_nutrient_values")
+}
+
+model NutrientReferenceIntake {
+  id              String                @id @default(uuid()) @db.Uuid
+  nutrientId      String                @map("nutrient_id") @db.Uuid
+  sourceId        String                @map("source_id") @db.Uuid
+  referenceType   NutrientReferenceType @map("reference_type")
+  populationCode  String                @map("population_code") @db.VarChar(120)
+  applicability   Json
+  value           Decimal               @db.Decimal(18, 8)
+  unit            String                @db.VarChar(20)
+  warningEligible Boolean               @default(false) @map("warning_eligible")
+  sourceRecordId  String                @map("source_record_id") @db.VarChar(160)
+  sourceVersion   String                @map("source_version") @db.VarChar(120)
+  locale          String                @default("en-US") @db.VarChar(20)
+  reviewStatus    FoodDataReviewStatus  @default(STAGED) @map("review_status")
+  reviewedById    String?               @map("reviewed_by_id") @db.Uuid
+  reviewedAt      DateTime?             @map("reviewed_at") @db.Timestamptz(3)
+  effectiveFrom   DateTime              @map("effective_from") @db.Date
+  effectiveTo     DateTime?             @map("effective_to") @db.Date
+  createdAt       DateTime              @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime              @updatedAt @map("updated_at") @db.Timestamptz(3)
+  nutrient        Nutrient              @relation(fields: [nutrientId], references: [id], onDelete: Restrict)
+  source          FoodDataSource        @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@unique([nutrientId, referenceType, populationCode, sourceId, sourceVersion, effectiveFrom])
+  @@unique([sourceId, sourceRecordId, effectiveFrom])
+  @@index([populationCode, reviewStatus, effectiveFrom])
+  @@map("nutrient_reference_intakes")
+}
+
+model IngredientIntakeGuideline {
+  id             String               @id @default(uuid()) @db.Uuid
+  ingredientId   String               @map("ingredient_id") @db.Uuid
+  sourceId       String               @map("source_id") @db.Uuid
+  populationCode String               @map("population_code") @db.VarChar(120)
+  applicability  Json
+  amount         Decimal              @db.Decimal(18, 8)
+  unit           String               @db.VarChar(30)
+  frequency      Decimal              @default(1) @db.Decimal(10, 4)
+  period         GuidelinePeriod
+  advisoryOnly   Boolean              @default(true) @map("advisory_only")
+  evidenceGrade  EvidenceGrade        @map("evidence_grade")
+  severity       FoodRuleSeverity
+  explanation    String               @db.VarChar(2000)
+  sourceRecordId String               @map("source_record_id") @db.VarChar(160)
+  sourceVersion  String               @map("source_version") @db.VarChar(120)
+  locale         String               @default("en-US") @db.VarChar(20)
+  reviewStatus   FoodDataReviewStatus @default(STAGED) @map("review_status")
+  reviewedById   String?              @map("reviewed_by_id") @db.Uuid
+  reviewedAt     DateTime?            @map("reviewed_at") @db.Timestamptz(3)
+  effectiveFrom  DateTime             @map("effective_from") @db.Date
+  effectiveTo    DateTime?            @map("effective_to") @db.Date
+  createdAt      DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  ingredient     Ingredient           @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  source         FoodDataSource       @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@unique([ingredientId, populationCode, period, sourceId, sourceVersion, effectiveFrom])
+  @@unique([sourceId, sourceRecordId, effectiveFrom])
+  @@index([ingredientId, reviewStatus, effectiveFrom])
+  @@map("ingredient_intake_guidelines")
+}
+
+model CookingMethod {
+  id          String                    @id @default(uuid()) @db.Uuid
+  code        String                    @unique @db.VarChar(80)
+  name        String                    @db.VarChar(160)
+  description String?                   @db.VarChar(1000)
+  active      Boolean                   @default(true)
+  createdAt   DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt   DateTime                  @updatedAt @map("updated_at") @db.Timestamptz(3)
+  retentions  NutrientRetentionFactor[]
+  yields      CookingYieldFactor[]
+  recipeSteps RecipeStep[]
+
+  @@index([active, name])
+  @@map("cooking_methods")
+}
+
+model NutrientRetentionFactor {
+  id              String               @id @default(uuid()) @db.Uuid
+  cookingMethodId String               @map("cooking_method_id") @db.Uuid
+  nutrientId      String               @map("nutrient_id") @db.Uuid
+  sourceId        String               @map("source_id") @db.Uuid
+  factor          Decimal              @db.Decimal(7, 6)
+  applicability   Json
+  sourceRecordId  String               @map("source_record_id") @db.VarChar(160)
+  sourceVersion   String               @map("source_version") @db.VarChar(120)
+  quality         FoodDataQuality
+  reviewStatus    FoodDataReviewStatus @default(STAGED) @map("review_status")
+  reviewedById    String?              @map("reviewed_by_id") @db.Uuid
+  reviewedAt      DateTime?            @map("reviewed_at") @db.Timestamptz(3)
+  effectiveFrom   DateTime             @map("effective_from") @db.Date
+  effectiveTo     DateTime?            @map("effective_to") @db.Date
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  cookingMethod   CookingMethod        @relation(fields: [cookingMethodId], references: [id], onDelete: Restrict)
+  nutrient        Nutrient             @relation(fields: [nutrientId], references: [id], onDelete: Restrict)
+  source          FoodDataSource       @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@unique([cookingMethodId, nutrientId, sourceId, sourceVersion, effectiveFrom])
+  @@unique([sourceId, sourceRecordId, effectiveFrom])
+  @@index([cookingMethodId, reviewStatus, effectiveFrom])
+  @@map("nutrient_retention_factors")
+}
+
+model CookingYieldFactor {
+  id              String               @id @default(uuid()) @db.Uuid
+  cookingMethodId String               @map("cooking_method_id") @db.Uuid
+  ingredientId    String?              @map("ingredient_id") @db.Uuid
+  sourceId        String               @map("source_id") @db.Uuid
+  factor          Decimal              @db.Decimal(7, 6)
+  applicability   Json
+  sourceRecordId  String               @map("source_record_id") @db.VarChar(160)
+  sourceVersion   String               @map("source_version") @db.VarChar(120)
+  quality         FoodDataQuality
+  reviewStatus    FoodDataReviewStatus @default(STAGED) @map("review_status")
+  reviewedById    String?              @map("reviewed_by_id") @db.Uuid
+  reviewedAt      DateTime?            @map("reviewed_at") @db.Timestamptz(3)
+  effectiveFrom   DateTime             @map("effective_from") @db.Date
+  effectiveTo     DateTime?            @map("effective_to") @db.Date
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  cookingMethod   CookingMethod        @relation(fields: [cookingMethodId], references: [id], onDelete: Restrict)
+  ingredient      Ingredient?          @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  source          FoodDataSource       @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@unique([sourceId, sourceRecordId, effectiveFrom])
+  @@unique([cookingMethodId, ingredientId, sourceId, sourceVersion, effectiveFrom])
+  @@index([cookingMethodId, ingredientId, reviewStatus, effectiveFrom])
+  @@index([sourceId, sourceRecordId, sourceVersion])
+  @@map("cooking_yield_factors")
+}
+
+model IngredientInteractionRule {
+  id              String               @id @default(uuid()) @db.Uuid
+  ingredientAId   String               @map("ingredient_a_id") @db.Uuid
+  ingredientBId   String               @map("ingredient_b_id") @db.Uuid
+  sourceId        String               @map("source_id") @db.Uuid
+  scope           InteractionScope
+  direction       InteractionDirection
+  severity        FoodRuleSeverity
+  evidenceGrade   EvidenceGrade        @map("evidence_grade")
+  applicability   Json
+  explanation     String               @db.VarChar(2000)
+  suggestedAction String?              @map("suggested_action") @db.VarChar(1000)
+  hardRule        Boolean              @default(false) @map("hard_rule")
+  sourceRecordId  String               @map("source_record_id") @db.VarChar(160)
+  sourceVersion   String               @map("source_version") @db.VarChar(120)
+  locale          String               @default("en-US") @db.VarChar(20)
+  reviewStatus    FoodDataReviewStatus @default(STAGED) @map("review_status")
+  reviewedById    String?              @map("reviewed_by_id") @db.Uuid
+  reviewedAt      DateTime?            @map("reviewed_at") @db.Timestamptz(3)
+  effectiveFrom   DateTime             @map("effective_from") @db.Date
+  effectiveTo     DateTime?            @map("effective_to") @db.Date
+  createdAt       DateTime             @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime             @updatedAt @map("updated_at") @db.Timestamptz(3)
+  ingredientA     Ingredient           @relation("InteractionIngredientA", fields: [ingredientAId], references: [id], onDelete: Restrict)
+  ingredientB     Ingredient           @relation("InteractionIngredientB", fields: [ingredientBId], references: [id], onDelete: Restrict)
+  source          FoodDataSource       @relation(fields: [sourceId], references: [id], onDelete: Restrict)
+
+  @@unique([ingredientAId, ingredientBId, scope, sourceId, sourceVersion, effectiveFrom])
+  @@unique([sourceId, sourceRecordId, effectiveFrom])
+  @@index([scope, reviewStatus, effectiveFrom])
+  @@index([ingredientAId, ingredientBId])
+  @@map("ingredient_interaction_rules")
+}
+
+model FoodDataSuggestion {
+  id             String                 @id @default(uuid()) @db.Uuid
+  suggestionType FoodDataSuggestionType @map("suggestion_type")
+  provider       FoodDataProvider       @default(AI_SUGGESTION)
+  payload        Json
+  rationale      String?                @db.VarChar(2000)
+  confidence     Decimal?               @db.Decimal(5, 4)
+  reviewStatus   FoodDataReviewStatus   @default(STAGED) @map("review_status")
+  reviewedById   String?                @map("reviewed_by_id") @db.Uuid
+  reviewedAt     DateTime?              @map("reviewed_at") @db.Timestamptz(3)
+  reviewNote     String?                @map("review_note") @db.VarChar(2000)
+  createdAt      DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([suggestionType, reviewStatus, createdAt])
+  @@map("food_data_suggestions")
 }
 
 model AllergenDefinition {
@@ -1128,48 +2568,80 @@ model RefreshSession {
 }
 
 model ContributorApplication {
-  id                 String                       @id @default(uuid()) @db.Uuid
-  userId             String                       @map("user_id") @db.Uuid
-  requestedType      ContributorType              @map("requested_type")
-  experience         String
-  referenceLinks     Json                         @default("[]") @map("reference_links")
-  source             ContributorApplicationSource @default(REGISTRATION)
-  status             ContributorApplicationStatus @default(PENDING)
-  approvedType       ContributorType?             @map("approved_type")
-  approvalBasis      String?                      @map("approval_basis") @db.VarChar(2000)
-  reviewNote         String?                      @map("review_note") @db.VarChar(2000)
-  reviewedById       String?                      @map("reviewed_by_id") @db.Uuid
-  reviewedAt         DateTime?                    @map("reviewed_at") @db.Timestamptz(3)
-  reapplyEligibleAt  DateTime?                    @map("reapply_eligible_at") @db.Timestamptz(3)
-  createdAt          DateTime                     @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt          DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(3)
-  user               User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  reviewedBy         User?                        @relation("ContributorApplicationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
-  contributorProfile ContributorProfile?
+  id                   String                       @id @default(uuid()) @db.Uuid
+  userId               String                       @map("user_id") @db.Uuid
+  claimedApprovalBasis ContributorApprovalBasis     @map("claimed_approval_basis")
+  organizationClaim    String?                      @map("organization_claim") @db.VarChar(500)
+  experience           String
+  referenceLinks       Json                         @default("[]") @map("reference_links")
+  source               ContributorApplicationSource @default(REGISTRATION)
+  invitedById          String?                      @map("invited_by_id") @db.Uuid
+  invitationReason     String?                      @map("invitation_reason") @db.VarChar(2000)
+  status               ContributorApplicationStatus @default(PENDING)
+  approvalBasis        ContributorApprovalBasis?    @map("approval_basis")
+  reviewEvidence       Json?                        @map("review_evidence")
+  reviewNote           String?                      @map("review_note") @db.VarChar(2000)
+  reviewedById         String?                      @map("reviewed_by_id") @db.Uuid
+  reviewedAt           DateTime?                    @map("reviewed_at") @db.Timestamptz(3)
+  reapplyEligibleAt    DateTime?                    @map("reapply_eligible_at") @db.Timestamptz(3)
+  createdAt            DateTime                     @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt            DateTime                     @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user                 User                         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy            User?                        @relation("ContributorApplicationInviter", fields: [invitedById], references: [id], onDelete: Restrict)
+  reviewedBy           User?                        @relation("ContributorApplicationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  contributorProfile   ContributorProfile?
+  decisions            ContributorDecision[]
 
   @@index([status, createdAt, id])
-  @@index([requestedType, status, createdAt])
+  @@index([claimedApprovalBasis, status, createdAt])
   @@index([userId, createdAt])
+  @@index([invitedById, createdAt])
   @@index([reviewedById, reviewedAt])
   @@map("contributor_applications")
 }
 
 model ContributorProfile {
-  userId              String                 @id @map("user_id") @db.Uuid
-  contributorType     ContributorType        @map("contributor_type")
-  approvalBasis       String                 @map("approval_basis") @db.VarChar(2000)
-  approvedAt          DateTime               @map("approved_at") @db.Timestamptz(3)
-  approvedById        String                 @map("approved_by_id") @db.Uuid
-  sourceApplicationId String                 @unique @map("source_application_id") @db.Uuid
-  createdAt           DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
-  updatedAt           DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
-  user                User                   @relation("ContributorProfileUser", fields: [userId], references: [id], onDelete: Cascade)
-  approvedBy          User                   @relation("ContributorProfileApprover", fields: [approvedById], references: [id], onDelete: Restrict)
-  sourceApplication   ContributorApplication @relation(fields: [sourceApplicationId], references: [id], onDelete: Restrict)
+  userId              String                   @id @map("user_id") @db.Uuid
+  approvalBasis       ContributorApprovalBasis @map("approval_basis")
+  approvalEvidence    Json                     @map("approval_evidence")
+  approvedAt          DateTime                 @map("approved_at") @db.Timestamptz(3)
+  approvedById        String                   @map("approved_by_id") @db.Uuid
+  sourceApplicationId String                   @unique @map("source_application_id") @db.Uuid
+  revokedAt           DateTime?                @map("revoked_at") @db.Timestamptz(3)
+  revokedById         String?                  @map("revoked_by_id") @db.Uuid
+  revocationReason    String?                  @map("revocation_reason") @db.VarChar(2000)
+  createdAt           DateTime                 @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt           DateTime                 @updatedAt @map("updated_at") @db.Timestamptz(3)
+  user                User                     @relation("ContributorProfileUser", fields: [userId], references: [id], onDelete: Cascade)
+  approvedBy          User                     @relation("ContributorProfileApprover", fields: [approvedById], references: [id], onDelete: Restrict)
+  revokedBy           User?                    @relation("ContributorProfileRevoker", fields: [revokedById], references: [id], onDelete: Restrict)
+  sourceApplication   ContributorApplication   @relation(fields: [sourceApplicationId], references: [id], onDelete: Restrict)
 
-  @@index([contributorType, approvedAt])
+  @@index([approvalBasis, approvedAt])
   @@index([approvedById, approvedAt])
+  @@index([revokedById, revokedAt])
   @@map("contributor_profiles")
+}
+
+model ContributorDecision {
+  id            String                    @id @default(uuid()) @db.Uuid
+  userId        String                    @map("user_id") @db.Uuid
+  applicationId String?                   @map("application_id") @db.Uuid
+  actorId       String                    @map("actor_id") @db.Uuid
+  decision      ContributorDecisionType
+  approvalBasis ContributorApprovalBasis? @map("approval_basis")
+  evidence      Json?
+  reason        String                    @db.VarChar(2000)
+  createdAt     DateTime                  @default(now()) @map("created_at") @db.Timestamptz(3)
+  user          User                      @relation("ContributorDecisionSubject", fields: [userId], references: [id], onDelete: Restrict)
+  application   ContributorApplication?   @relation(fields: [applicationId], references: [id], onDelete: Restrict)
+  actor         User                      @relation("ContributorDecisionActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([userId, createdAt])
+  @@index([applicationId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([decision, createdAt])
+  @@map("contributor_decisions")
 }
 
 model HealthProfile {
@@ -1286,4 +2758,73 @@ model UserIngredientExclusion {
   @@index([userId, active])
   @@index([ingredientId])
   @@map("user_ingredient_exclusions")
+}
+
+model CustomMeal {
+  id                String                 @id @default(uuid()) @db.Uuid
+  ownerId           String                 @map("owner_id") @db.Uuid
+  name              String                 @db.VarChar(200)
+  notes             String?
+  servings          Int                    @default(1)
+  sourceNote        String?                @map("source_note") @db.VarChar(500)
+  userCalories      Int?                   @map("user_calories")
+  userProteinGrams  Decimal?               @map("user_protein_grams") @db.Decimal(8, 2)
+  userCarbsGrams    Decimal?               @map("user_carbs_grams") @db.Decimal(8, 2)
+  userFatGrams      Decimal?               @map("user_fat_grams") @db.Decimal(8, 2)
+  nutritionCoverage NutritionCoverage      @default(UNAVAILABLE) @map("nutrition_coverage")
+  deletePolicy      CustomMealDeletePolicy @default(BLOCK) @map("delete_policy")
+  deletedAt         DateTime?              @map("deleted_at") @db.Timestamptz(3)
+  createdAt         DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt         DateTime               @updatedAt @map("updated_at") @db.Timestamptz(3)
+  owner             User                   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ingredients       CustomMealIngredient[]
+  photos            CustomMealPhoto[]
+  tags              CustomMealTag[]
+  mealPlanItems     MealPlanItem[]
+
+  @@index([ownerId, deletedAt, createdAt])
+  @@map("custom_meals")
+}
+
+model CustomMealIngredient {
+  id               String                     @id @default(uuid()) @db.Uuid
+  customMealId     String                     @map("custom_meal_id") @db.Uuid
+  ingredientId     String?                    @map("ingredient_id") @db.Uuid
+  position         Int
+  displayName      String                     @map("display_name") @db.VarChar(160)
+  normalizedName   String                     @map("normalized_name") @db.VarChar(160)
+  amount           Decimal                    @db.Decimal(10, 2)
+  unit             String                     @db.VarChar(40)
+  resolutionStatus IngredientResolutionStatus @map("resolution_status")
+  customMeal       CustomMeal                 @relation(fields: [customMealId], references: [id], onDelete: Cascade)
+  ingredient       Ingredient?                @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@unique([customMealId, position])
+  @@index([customMealId, resolutionStatus])
+  @@map("custom_meal_ingredients")
+}
+
+model CustomMealPhoto {
+  id           String     @id @default(uuid()) @db.Uuid
+  customMealId String     @map("custom_meal_id") @db.Uuid
+  assetId      String     @map("asset_id") @db.Uuid
+  position     Int        @default(0)
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  customMeal   CustomMeal @relation(fields: [customMealId], references: [id], onDelete: Cascade)
+  asset        MediaAsset @relation(fields: [assetId], references: [id], onDelete: Restrict)
+
+  @@unique([customMealId, assetId])
+  @@index([customMealId, position])
+  @@map("custom_meal_photos")
+}
+
+model CustomMealTag {
+  customMealId  String     @map("custom_meal_id") @db.Uuid
+  tag           String     @db.VarChar(80)
+  normalizedTag String     @map("normalized_tag") @db.VarChar(80)
+  customMeal    CustomMeal @relation(fields: [customMealId], references: [id], onDelete: Cascade)
+
+  @@id([customMealId, normalizedTag])
+  @@index([normalizedTag])
+  @@map("custom_meal_tags")
 }

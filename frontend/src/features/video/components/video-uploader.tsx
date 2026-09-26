@@ -10,7 +10,9 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { VideoSource } from '@/common/enums';
 import { validateVideoFile } from '@/features/post/utils/media-validator';
-import { uploadApi, toUploadedMeta, type UploadedMediaMeta } from '@/features/post/api/upload.api';
+import type { UploadedMediaMeta } from '@/features/post/api/upload.api';
+import { uploadWithReservation } from '@/features/storage/api/storage-upload';
+import { StorageQuotaWidget } from '@/features/storage/components/storage-quota-widget';
 import { VideoPlayer } from './video-player';
 
 interface VideoUploaderProps {
@@ -37,6 +39,14 @@ export function VideoUploader({
   const [isUploading, setIsUploading] = React.useState<boolean>(false);
   const [uploadPercent, setUploadPercent] = React.useState<number>(0);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+
+  const handleCancelUpload = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+  };
 
   const handleFileSelect = async (file: File) => {
     const validation = validateVideoFile(file);
@@ -47,27 +57,31 @@ export function VideoUploader({
       return;
     }
 
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       setIsUploading(true);
       setUploadPercent(0);
 
-      const signatureData = await uploadApi.getUploadSignature({
-        resourceType: 'video',
+      const asset = await uploadWithReservation(file, {
+        kind: 'VIDEO',
+        onProgress: (pct) => setUploadPercent(pct.percent),
+        signal: controller.signal,
       });
 
-      const res = await uploadApi.uploadToCloudinary(file, signatureData, (pct) => {
-        setUploadPercent(pct);
-      });
+      const uploadedMeta: UploadedMediaMeta = {
+        assetId: asset.id,
+        publicId: asset.publicId,
+        mimeType: asset.mimeType,
+        bytes: asset.bytes,
+        width: asset.width || undefined,
+        height: asset.height || undefined,
+        durationSeconds: asset.durationSeconds || undefined,
+      };
 
-      onChange(res.secure_url || res.url, VideoSource.CLOUDINARY, toUploadedMeta(res, file.type));
-      if (signatureData.apiKey === 'mock_api_key') {
-        toast.warning('Máy chủ upload chưa phản hồi — video chỉ xem trước tạm thời.', {
-          description:
-            'Bài viết dùng video này sẽ bị từ chối khi gửi. Hãy thử lại khi backend sẵn sàng.',
-        });
-      } else {
-        toast.success('Đã tải video lên thành công!');
-      }
+      onChange(asset.secureUrl, VideoSource.CLOUDINARY, uploadedMeta);
+      toast.success('Đã tải video lên thành công!');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Không thể tải video lên';
       toast.error('Lỗi khi tải video', {
@@ -76,6 +90,7 @@ export function VideoUploader({
     } finally {
       setIsUploading(false);
       setUploadPercent(0);
+      abortControllerRef.current = null;
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
@@ -164,6 +179,18 @@ export function VideoUploader({
                     Đang xử lý tải video lên... {uploadPercent}%
                   </p>
                   <Progress value={uploadPercent} className="h-2" />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="text-xs text-rose-500 hover:text-rose-600 rounded-full"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCancelUpload();
+                    }}
+                  >
+                    Hủy tải lên
+                  </Button>
                 </div>
               ) : (
                 <div className="space-y-2">
@@ -208,6 +235,9 @@ export function VideoUploader({
           </TabsContent>
         </Tabs>
       )}
+
+      {/* Thông tin hạn ngạch lưu trữ rút gọn */}
+      <StorageQuotaWidget variant="compact" className="pt-2" />
     </div>
   );
 }

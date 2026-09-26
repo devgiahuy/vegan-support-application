@@ -37,6 +37,19 @@ export const API_ENDPOINTS = {
       ALIAS: (id: string, aliasId: string) => `/admin/ingredients/${id}/aliases/${aliasId}`,
     },
   },
+  FOOD_DATA: {
+    NUTRIENTS: (ingredientId: string) => `/food-data/ingredients/${ingredientId}/nutrients`,
+    REFERENCE_INTAKES: '/food-data/reference-intakes',
+    GUIDELINES: '/food-data/ingredient-guidelines',
+    COOKING_METHODS: '/food-data/cooking-methods',
+    INTERACTIONS: '/food-data/interaction-rules',
+  },
+  ADMIN_FOOD_DATA: {
+    RECORDS: '/admin/food-data/records',
+    RECORD: (id: string) => `/admin/food-data/records/${id}`,
+    IMPORT_PREVIEW: '/admin/food-data/imports/preview',
+    IMPORT_COMMIT: '/admin/food-data/imports',
+  },
   POSTS: {
     LIST: '/posts',
     DETAIL: (idOrSlug: string) => `/posts/${idOrSlug}`,
@@ -46,8 +59,33 @@ export const API_ENDPOINTS = {
     RELATED: (id: string) => `/posts/${id}/related`,
   },
   UPLOADS: {
+    /** @deprecated Backend Phase 15 removed signature in favor of reservations */
     SIGNATURE: '/uploads/signature',
+    RESERVATIONS: '/uploads/reservations',
+    COMMIT: (id: string) => `/uploads/reservations/${id}/commit`,
+    RELEASE: (id: string) => `/uploads/reservations/${id}`,
   },
+  STORAGE: {
+    ME: '/storage/me',
+    ASSET: (id: string) => `/storage/assets/${id}`,
+  },
+  ADMIN_STORAGE: {
+    ACCOUNTS: '/admin/storage/accounts',
+    POLICIES: '/admin/storage/policies',
+    POLICY: (id: string) => `/admin/storage/policies/${id}`,
+    ADJUSTMENTS: '/admin/storage/adjustments',
+    ACCOUNT_ADJUSTMENTS: (userId: string) => `/admin/storage/accounts/${userId}/adjustments`,
+  },
+  CONTENT_REVIEW: {
+    SUBMIT: (postId: string) => `/posts/${postId}/submit`,
+    HISTORY: (postId: string) => `/posts/${postId}/review-history`,
+  },
+  ADMIN_CONTENT_REVIEW: {
+    LIST: '/admin/content-review',
+    DETAIL: (revisionId: string) => `/admin/content-review/${revisionId}`,
+    DECISION: (revisionId: string) => `/admin/content-review/${revisionId}`,
+  },
+  /** @deprecated Backend Phase 16 deprecated in favor of ADMIN_CONTENT_REVIEW */
   REVIEW_QUEUE: {
     LIST: '/review-queue/posts',
     APPROVE: (id: string) => `/review-queue/posts/${id}/approve`,
@@ -59,6 +97,7 @@ export const API_ENDPOINTS = {
     DETAIL: (id: string) => `/meal-plans/${id}`,
     SWAP: (id: string, itemId: string) => `/meal-plans/${id}/items/${itemId}/swap`,
     DELETE: (id: string) => `/meal-plans/${id}`,
+    ANALYZE: (id: string) => `/meal-plans/${id}/analyze`,
   },
   CHAT: {
     SESSIONS: '/chat/sessions',
@@ -70,7 +109,7 @@ export const API_ENDPOINTS = {
     CONSENT: '/users/me/personalization',
     HOME: '/recommendations/home',
   },
-  // TODO(BE-READY): Community còn PLANNED — nhánh dưới CHƯA được import ở đâu.
+  // BE Phase 06 COMPLETED — Community interactions live (comments, votes, ratings, bookmarks)
   COMMUNITY: {
     COMMENTS: (postId: string) => `/posts/${postId}/comments`,
     COMMENT: (id: string) => `/comments/${id}`,
@@ -80,7 +119,7 @@ export const API_ENDPOINTS = {
     BOOKMARK: (postId: string) => `/posts/${postId}/bookmark`,
     MY_BOOKMARKS: '/users/me/bookmarks',
   },
-  // TODO(BE-READY): Moderation-admin còn PLANNED — nhánh dưới CHƯA được import ở đâu.
+  // BE Phase 08 COMPLETED — Moderation admin live (reports, users, comments)
   MODERATION_ADMIN: {
     REPORTS: '/admin/reports',
     REPORT_RESOLVE: (id: string) => `/admin/reports/${id}/resolve`,
@@ -89,7 +128,7 @@ export const API_ENDPOINTS = {
     COMMENTS: '/admin/comments',
     COMMENT_STATUS: (id: string) => `/admin/comments/${id}/status`,
   },
-  // TODO(BE-READY): Contributors còn PLANNED — 2 nhánh dưới CHƯA được import ở đâu.
+  // BE Phase 07 COMPLETED — Contributor applications live
   CONTRIBUTOR: {
     APPLY: '/contributor-applications',
     MY_APPLICATIONS: '/contributor-applications/me',
@@ -97,8 +136,10 @@ export const API_ENDPOINTS = {
   ADMIN_CONTRIBUTOR: {
     LIST: '/admin/contributor-applications',
     REVIEW: (id: string) => `/admin/contributor-applications/${id}/review`,
+    INVITE: '/admin/contributor-invitations',
+    REVOKE: (userId: string) => `/admin/contributors/${userId}/revoke`,
   },
-  // TODO(BE-READY): Trust-safety leftovers còn PLANNED — nhánh dưới CHƯA được import ở đâu.
+  // BE Phase 08 COMPLETED — Trust-safety live (reports, behavior history)
   SAFETY: {
     REPORTS: '/reports',
     BEHAVIOR_HISTORY: '/users/me/behavior-history',
@@ -136,5 +177,35 @@ export const API_ENDPOINTS = {
     FLAGS: '/admin/ai/flags',
     FEATURES: '/admin/ai/features',
     FEATURE_TOGGLE: (feature: string) => `/admin/ai/features/${feature}`,
+  },
+  // TODO(BE-READY): Custom meals Phase 17 — phục vụ món ăn cá nhân (Owner-scoped)
+  CUSTOM_MEALS: {
+    LIST: '/custom-meals',
+    CREATE: '/custom-meals',
+    DETAIL: (id: string) => `/custom-meals/${id}`,
+    UPDATE: (id: string) => `/custom-meals/${id}`,
+    DELETE: (id: string) => `/custom-meals/${id}`,
+    ATTACH_MEDIA: (id: string) => `/custom-meals/${id}/media`,
+    DELETE_MEDIA: (id: string, photoId: string) => `/custom-meals/${id}/media/${photoId}`,
+  },
+  // TODO(BE-READY): Multi-week Meal Programs Phase 19 — Lộ trình dinh dưỡng nhiều tuần
+  MEAL_PROGRAMS: {
+    LIST: '/meal-programs',
+    CREATE: '/meal-programs',
+    DETAIL: (id: string) => `/meal-programs/${id}`,
+    UPDATE: (id: string) => `/meal-programs/${id}`,
+    REGENERATE_WEEK: (id: string, weekNumber: number) =>
+      `/meal-programs/${id}/weeks/${weekNumber}/regenerate`,
+    REANALYZE: (id: string) => `/meal-programs/${id}/reanalyze`,
+    UPDATE_PROGRESS: (id: string, weekNumber: number) =>
+      `/meal-programs/${id}/weeks/${weekNumber}/progress`,
+  },
+  // Phase 13: Cooking-aware Recipe Nutrition
+  RECIPE_NUTRITION: {
+    PREVIEW: (id: string) => `/posts/${id}/nutrition/preview`,
+    RECALCULATE: (id: string) => `/posts/${id}/nutrition/recalculate`,
+    CURRENT: (id: string) => `/posts/${id}/nutrition/current`,
+    HISTORY: (id: string) => `/posts/${id}/nutrition/history`,
+    STATUS: (id: string) => `/posts/${id}/nutrition/status`,
   },
 } as const;

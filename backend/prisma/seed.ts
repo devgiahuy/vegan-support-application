@@ -9,15 +9,27 @@ import {
   CommentStatus,
   ContributorApplicationSource,
   ContributorApplicationStatus,
-  ContributorType,
+  ContributorApprovalBasis,
+  ContributorDecisionType,
   DietPattern,
   DietRuleSource,
   FoodGroup,
+  EvidenceGrade,
+  FoodDataProvider,
+  FoodDataQuality,
+  FoodDataReviewStatus,
+  FoodDataSuggestionType,
+  FoodRuleSeverity,
+  GuidelinePeriod,
   HealthDataSource,
   HealthSex,
   IngredientResolutionStatus,
+  InteractionDirection,
+  InteractionScope,
   MediaKind,
+  MediaAssetStatus,
   MediaProvider,
+  MediaResourceType,
   ModerationPriority,
   PostRevisionStatus,
   PostStatus,
@@ -25,11 +37,18 @@ import {
   PracticeSchedule,
   PrismaClient,
   RecipeDifficulty,
+  NutrientReferenceType,
+  NutritionCoverage,
+  PantryAdjustmentType,
+  PantryConfirmationStatus,
+  PantryConversionStatus,
+  PantryItemSource,
   ReportStatus,
   ReportTargetType,
   Role,
   Tradition,
   UserStatus,
+  UnitDimension,
 } from '@prisma/client';
 import { z } from 'zod';
 import { PasswordService } from '../src/modules/auth/password.service.js';
@@ -204,6 +223,486 @@ const ingredientDefinitions = [
   },
 ] as const;
 
+async function seedFoodData(adminId: string): Promise<void> {
+  const effectiveFrom = new Date('2026-01-01');
+  const projectSource = await prisma.foodDataSource.upsert({
+    where: { code: 'PROJECT_DEMO_V1' },
+    update: {
+      name: 'Project-authored demo food data',
+      provider: FoodDataProvider.MANUAL,
+      licenseName: 'CC0-1.0',
+      licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+      attribution: 'Vegan Support Application demo fixtures; illustrative, not clinical advice.',
+      defaultLocale: 'vi-VN',
+      active: true,
+    },
+    create: {
+      code: 'PROJECT_DEMO_V1',
+      name: 'Project-authored demo food data',
+      provider: FoodDataProvider.MANUAL,
+      licenseName: 'CC0-1.0',
+      licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
+      attribution: 'Vegan Support Application demo fixtures; illustrative, not clinical advice.',
+      defaultLocale: 'vi-VN',
+    },
+  });
+  await prisma.foodDataSource.upsert({
+    where: { code: 'USDA_FDC' },
+    update: { active: true },
+    create: {
+      code: 'USDA_FDC',
+      name: 'USDA FoodData Central',
+      provider: FoodDataProvider.USDA_FDC,
+      sourceUrl: 'https://fdc.nal.usda.gov/',
+      licenseName: 'U.S. public domain / CC0',
+      licenseUrl: 'https://www.usa.gov/government-copyright',
+      attribution: 'U.S. Department of Agriculture, Agricultural Research Service.',
+      defaultLocale: 'en-US',
+    },
+  });
+  await prisma.foodDataSource.upsert({
+    where: { code: 'VIETNAM_FCT_2017_METADATA' },
+    update: { active: false },
+    create: {
+      code: 'VIETNAM_FCT_2017_METADATA',
+      name: 'Vietnamese Food Composition Table 2017 (metadata only)',
+      provider: FoodDataProvider.VIETNAM_CURATED,
+      sourceUrl: 'https://www.fao.org/food-composition/tables-and-databases/',
+      licenseName: 'Digital import rights not confirmed',
+      attribution: 'Metadata reference only; no table values redistributed.',
+      defaultLocale: 'vi-VN',
+      active: false,
+    },
+  });
+
+  const nutrientDefinitions = [
+    {
+      code: 'ENERGY_KCAL',
+      name: 'Năng lượng',
+      defaultUnit: 'kcal',
+      unitDimension: UnitDimension.ENERGY,
+    },
+    { code: 'PROTEIN', name: 'Protein', defaultUnit: 'g', unitDimension: UnitDimension.MASS },
+    { code: 'VITAMIN_C', name: 'Vitamin C', defaultUnit: 'mg', unitDimension: UnitDimension.MASS },
+    { code: 'IRON', name: 'Sắt', defaultUnit: 'mg', unitDimension: UnitDimension.MASS },
+  ] as const;
+  const nutrients = new Map<string, { id: string }>();
+  for (const definition of nutrientDefinitions) {
+    const nutrient = await prisma.nutrient.upsert({
+      where: { code: definition.code },
+      update: { ...definition, active: true },
+      create: definition,
+    });
+    nutrients.set(definition.code, nutrient);
+  }
+
+  const tofu = await prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'dau hu' } });
+  const broccoli = await prisma.ingredient.findUniqueOrThrow({
+    where: { normalizedName: 'bong cai xanh' },
+  });
+  const tofuProfile = await prisma.ingredientFoodProfile.upsert({
+    where: {
+      sourceId_sourceRecordId_sourceVersion: {
+        sourceId: projectSource.id,
+        sourceRecordId: 'demo-tofu-raw',
+        sourceVersion: '1.0',
+      },
+    },
+    update: {
+      ingredientId: tofu.id,
+      ediblePortionPercent: 100,
+      servingGrams: 100,
+      quality: FoodDataQuality.INCOMPLETE,
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+      effectiveFrom,
+    },
+    create: {
+      ingredientId: tofu.id,
+      sourceId: projectSource.id,
+      sourceRecordId: 'demo-tofu-raw',
+      sourceVersion: '1.0',
+      preparation: 'raw',
+      locale: 'vi-VN',
+      ediblePortionPercent: 100,
+      servingGrams: 100,
+      quality: FoodDataQuality.INCOMPLETE,
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+      effectiveFrom,
+    },
+  });
+  await prisma.householdConversion.upsert({
+    where: {
+      profileId_unitName_quantity: { profileId: tofuProfile.id, unitName: 'miếng', quantity: 1 },
+    },
+    update: { grams: 100, quality: FoodDataQuality.ESTIMATED },
+    create: {
+      profileId: tofuProfile.id,
+      unitName: 'miếng',
+      quantity: 1,
+      unitDimension: UnitDimension.COUNT,
+      grams: 100,
+      quality: FoodDataQuality.ESTIMATED,
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+    },
+  });
+  const demoValues = [
+    { code: 'ENERGY_KCAL', value: 76 },
+    { code: 'PROTEIN', value: 8.08 },
+    { code: 'IRON', value: 5.36 },
+  ] as const;
+  for (const value of demoValues) {
+    const nutrient = nutrients.get(value.code);
+    if (!nutrient) continue;
+    const definition = nutrientDefinitions.find((item) => item.code === value.code);
+    if (!definition) continue;
+    await prisma.ingredientNutrientValue.upsert({
+      where: {
+        profileId_nutrientId_effectiveFrom: {
+          profileId: tofuProfile.id,
+          nutrientId: nutrient.id,
+          effectiveFrom,
+        },
+      },
+      update: { valuePer100g: value.value, unit: definition.defaultUnit },
+      create: {
+        profileId: tofuProfile.id,
+        nutrientId: nutrient.id,
+        valuePer100g: value.value,
+        unit: definition.defaultUnit,
+        quality: FoodDataQuality.INCOMPLETE,
+        reviewStatus: FoodDataReviewStatus.APPROVED,
+        reviewedById: adminId,
+        reviewedAt: new Date(),
+        effectiveFrom,
+      },
+    });
+  }
+
+  const broccoliProfile = await prisma.ingredientFoodProfile.upsert({
+    where: {
+      sourceId_sourceRecordId_sourceVersion: {
+        sourceId: projectSource.id,
+        sourceRecordId: 'demo-broccoli-raw',
+        sourceVersion: '1.0',
+      },
+    },
+    update: {
+      ingredientId: broccoli.id,
+      ediblePortionPercent: 100,
+      servingGrams: 90,
+      quality: FoodDataQuality.INCOMPLETE,
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+      effectiveFrom,
+    },
+    create: {
+      ingredientId: broccoli.id,
+      sourceId: projectSource.id,
+      sourceRecordId: 'demo-broccoli-raw',
+      sourceVersion: '1.0',
+      preparation: 'raw',
+      locale: 'vi-VN',
+      ediblePortionPercent: 100,
+      servingGrams: 90,
+      quality: FoodDataQuality.INCOMPLETE,
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+      effectiveFrom,
+    },
+  });
+  const broccoliValues = [
+    { code: 'ENERGY_KCAL', value: 34 },
+    { code: 'PROTEIN', value: 2.82 },
+    { code: 'VITAMIN_C', value: 89.2 },
+    { code: 'IRON', value: 0.73 },
+  ] as const;
+  for (const value of broccoliValues) {
+    const nutrient = nutrients.get(value.code);
+    const definition = nutrientDefinitions.find((item) => item.code === value.code);
+    if (!nutrient || !definition) continue;
+    await prisma.ingredientNutrientValue.upsert({
+      where: {
+        profileId_nutrientId_effectiveFrom: {
+          profileId: broccoliProfile.id,
+          nutrientId: nutrient.id,
+          effectiveFrom,
+        },
+      },
+      update: { valuePer100g: value.value, unit: definition.defaultUnit },
+      create: {
+        profileId: broccoliProfile.id,
+        nutrientId: nutrient.id,
+        valuePer100g: value.value,
+        unit: definition.defaultUnit,
+        quality: FoodDataQuality.INCOMPLETE,
+        reviewStatus: FoodDataReviewStatus.APPROVED,
+        reviewedById: adminId,
+        reviewedAt: new Date(),
+        effectiveFrom,
+      },
+    });
+  }
+
+  const vitaminC = nutrients.get('VITAMIN_C');
+  if (!vitaminC) throw new Error('Seed nutrient VITAMIN_C missing');
+  await prisma.nutrientReferenceIntake.upsert({
+    where: {
+      nutrientId_referenceType_populationCode_sourceId_sourceVersion_effectiveFrom: {
+        nutrientId: vitaminC.id,
+        referenceType: NutrientReferenceType.OTHER,
+        populationCode: 'DEMO_ADULT_DISPLAY_ONLY',
+        sourceId: projectSource.id,
+        sourceVersion: '1.0',
+        effectiveFrom,
+      },
+    },
+    update: { value: 75, unit: 'mg' },
+    create: {
+      nutrientId: vitaminC.id,
+      sourceId: projectSource.id,
+      referenceType: NutrientReferenceType.OTHER,
+      populationCode: 'DEMO_ADULT_DISPLAY_ONLY',
+      applicability: { note: 'Illustrative fixture only' },
+      value: 75,
+      unit: 'mg',
+      warningEligible: false,
+      sourceRecordId: 'demo-vitamin-c-display-reference',
+      sourceVersion: '1.0',
+      locale: 'vi-VN',
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+      effectiveFrom,
+    },
+  });
+  await prisma.nutrientReferenceIntake.upsert({
+    where: {
+      nutrientId_referenceType_populationCode_sourceId_sourceVersion_effectiveFrom: {
+        nutrientId: vitaminC.id,
+        referenceType: NutrientReferenceType.OTHER,
+        populationCode: 'DEMO_ADULT_EDUCATIONAL_WARNING',
+        sourceId: projectSource.id,
+        sourceVersion: '1.0',
+        effectiveFrom,
+      },
+    },
+    update: { value: 120, unit: 'mg', warningEligible: true },
+    create: {
+      nutrientId: vitaminC.id,
+      sourceId: projectSource.id,
+      referenceType: NutrientReferenceType.OTHER,
+      populationCode: 'DEMO_ADULT_EDUCATIONAL_WARNING',
+      applicability: {
+        minAge: 18,
+        note: 'Illustrative Phase 18 fixture only; not a clinical limit',
+      },
+      value: 120,
+      unit: 'mg',
+      warningEligible: true,
+      sourceRecordId: 'demo-vitamin-c-educational-warning',
+      sourceVersion: '1.0',
+      locale: 'vi-VN',
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+      effectiveFrom,
+    },
+  });
+  await prisma.ingredientIntakeGuideline.upsert({
+    where: {
+      ingredientId_populationCode_period_sourceId_sourceVersion_effectiveFrom: {
+        ingredientId: tofu.id,
+        populationCode: 'DEMO_GENERAL',
+        period: GuidelinePeriod.DAY,
+        sourceId: projectSource.id,
+        sourceVersion: '1.0',
+        effectiveFrom,
+      },
+    },
+    update: { amount: 100 },
+    create: {
+      ingredientId: tofu.id,
+      sourceId: projectSource.id,
+      populationCode: 'DEMO_GENERAL',
+      applicability: { note: 'Illustrative fixture only' },
+      amount: 100,
+      unit: 'g',
+      frequency: 1,
+      period: GuidelinePeriod.DAY,
+      advisoryOnly: true,
+      evidenceGrade: EvidenceGrade.INSUFFICIENT,
+      severity: FoodRuleSeverity.INFO,
+      explanation: 'Khẩu phần minh họa cho giao diện; không phải giới hạn dinh dưỡng.',
+      sourceRecordId: 'demo-tofu-guideline',
+      sourceVersion: '1.0',
+      locale: 'vi-VN',
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+      effectiveFrom,
+    },
+  });
+
+  const boiling = await prisma.cookingMethod.upsert({
+    where: { code: 'BOILING' },
+    update: { name: 'Luộc', active: true },
+    create: { code: 'BOILING', name: 'Luộc', description: 'Nấu thực phẩm trong nước sôi.' },
+  });
+  await prisma.nutrientRetentionFactor.upsert({
+    where: {
+      cookingMethodId_nutrientId_sourceId_sourceVersion_effectiveFrom: {
+        cookingMethodId: boiling.id,
+        nutrientId: vitaminC.id,
+        sourceId: projectSource.id,
+        sourceVersion: '1.0',
+        effectiveFrom,
+      },
+    },
+    update: { factor: 0.55 },
+    create: {
+      cookingMethodId: boiling.id,
+      nutrientId: vitaminC.id,
+      sourceId: projectSource.id,
+      factor: 0.55,
+      applicability: { note: 'Illustrative fixture; cooking conditions vary' },
+      sourceRecordId: 'demo-boiling-vitamin-c',
+      sourceVersion: '1.0',
+      quality: FoodDataQuality.ESTIMATED,
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+      effectiveFrom,
+    },
+  });
+  const existingYield = await prisma.cookingYieldFactor.findFirst({
+    where: {
+      cookingMethodId: boiling.id,
+      ingredientId: broccoli.id,
+      sourceId: projectSource.id,
+      sourceVersion: '1.0',
+      effectiveFrom,
+    },
+  });
+  if (existingYield) {
+    await prisma.cookingYieldFactor.update({
+      where: { id: existingYield.id },
+      data: { factor: 0.9 },
+    });
+  } else {
+    await prisma.cookingYieldFactor.create({
+      data: {
+        cookingMethodId: boiling.id,
+        ingredientId: broccoli.id,
+        sourceId: projectSource.id,
+        factor: 0.9,
+        applicability: { note: 'Illustrative fixture; water loss varies' },
+        sourceRecordId: 'demo-broccoli-boiling-yield',
+        sourceVersion: '1.0',
+        quality: FoodDataQuality.ESTIMATED,
+        reviewStatus: FoodDataReviewStatus.APPROVED,
+        reviewedById: adminId,
+        reviewedAt: new Date(),
+        effectiveFrom,
+      },
+    });
+  }
+  const ingredientAId = tofu.id < broccoli.id ? tofu.id : broccoli.id;
+  const ingredientBId = tofu.id < broccoli.id ? broccoli.id : tofu.id;
+  await prisma.ingredientInteractionRule.upsert({
+    where: {
+      ingredientAId_ingredientBId_scope_sourceId_sourceVersion_effectiveFrom: {
+        ingredientAId,
+        ingredientBId,
+        scope: InteractionScope.SAME_MEAL,
+        sourceId: projectSource.id,
+        sourceVersion: '1.0',
+        effectiveFrom,
+      },
+    },
+    update: { hardRule: false },
+    create: {
+      ingredientAId,
+      ingredientBId,
+      sourceId: projectSource.id,
+      scope: InteractionScope.SAME_MEAL,
+      direction: InteractionDirection.BENEFICIAL,
+      severity: FoodRuleSeverity.INFO,
+      evidenceGrade: EvidenceGrade.LOW,
+      applicability: { note: 'Educational demo rule' },
+      explanation: 'Ví dụ quy tắc tương tác mang tính giáo dục; không phải khuyến cáo lâm sàng.',
+      hardRule: false,
+      sourceRecordId: 'demo-tofu-broccoli-meal',
+      sourceVersion: '1.0',
+      locale: 'vi-VN',
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+      effectiveFrom,
+    },
+  });
+  for (const scope of [InteractionScope.SAME_DISH, InteractionScope.SAME_DAY]) {
+    const scopeCode = scope.toLowerCase().replace('_', '-');
+    await prisma.ingredientInteractionRule.upsert({
+      where: {
+        ingredientAId_ingredientBId_scope_sourceId_sourceVersion_effectiveFrom: {
+          ingredientAId,
+          ingredientBId,
+          scope,
+          sourceId: projectSource.id,
+          sourceVersion: '1.0',
+          effectiveFrom,
+        },
+      },
+      update: { hardRule: false },
+      create: {
+        ingredientAId,
+        ingredientBId,
+        sourceId: projectSource.id,
+        scope,
+        direction: InteractionDirection.ADVERSE,
+        severity: FoodRuleSeverity.CAUTION,
+        evidenceGrade: EvidenceGrade.INSUFFICIENT,
+        applicability: { note: 'Illustrative Phase 18 fixture only' },
+        explanation: `Ví dụ cảnh báo ${scope}; chỉ dùng kiểm tra giao diện và không phải khuyến cáo lâm sàng.`,
+        suggestedAction: 'Điều chỉnh cách kết hợp nếu phù hợp và phân tích lại.',
+        hardRule: false,
+        sourceRecordId: `demo-tofu-broccoli-${scopeCode}`,
+        sourceVersion: '1.0',
+        locale: 'vi-VN',
+        reviewStatus: FoodDataReviewStatus.APPROVED,
+        reviewedById: adminId,
+        reviewedAt: new Date(),
+        effectiveFrom,
+      },
+    });
+  }
+  const existingSuggestion = await prisma.foodDataSuggestion.findFirst({
+    where: {
+      suggestionType: FoodDataSuggestionType.INGREDIENT_MAPPING,
+      reviewStatus: FoodDataReviewStatus.STAGED,
+    },
+  });
+  if (!existingSuggestion) {
+    await prisma.foodDataSuggestion.create({
+      data: {
+        suggestionType: FoodDataSuggestionType.INGREDIENT_MAPPING,
+        provider: FoodDataProvider.AI_SUGGESTION,
+        payload: { input: 'tofu mềm', candidateIngredientId: tofu.id },
+        rationale: 'Demo staged suggestion; cannot publish canonical facts.',
+        confidence: 0.8,
+      },
+    });
+  }
+}
+
 const dietRuleDefinitions = [
   {
     code: 'DIET_VEGAN_EXCLUDE_ANIMAL_PRODUCTS',
@@ -249,10 +748,13 @@ const seedEnvironment = z
   .object({
     SEED_MEMBER_EMAIL: z.string().email().default('member@example.com'),
     SEED_MEMBER_PASSWORD: z.string().min(8),
-    SEED_EXPERIENCED_CONTRIBUTOR_EMAIL: z.string().email().default('contributor@example.com'),
-    SEED_NUTRITION_EXPERT_EMAIL: z.string().email().default('expert@example.com'),
+    SEED_PLATFORM_CONTRIBUTOR_EMAIL: z.string().email().default('contributor@example.com'),
+    SEED_ORGANIZATION_CONTRIBUTOR_EMAIL: z.string().email().default('expert@example.com'),
+    SEED_INVITED_CONTRIBUTOR_EMAIL: z.string().email().default('invited@example.com'),
     SEED_ADMIN_EMAIL: z.string().email().default('admin@example.com'),
     SEED_ADMIN_PASSWORD: z.string().min(8),
+    STORAGE_DEFAULT_QUOTA_BYTES: z.coerce.number().int().positive().default(1_073_741_824),
+    UPLOAD_RESERVATION_TTL_SECONDS: z.coerce.number().int().min(60).max(86_400).default(900),
   })
   .parse(process.env);
 
@@ -415,26 +917,72 @@ async function main(): Promise<void> {
   const admin = await prisma.user.findUniqueOrThrow({
     where: { email: seedEnvironment.SEED_ADMIN_EMAIL.toLowerCase() },
   });
+  await seedFoodData(admin.id);
   const contributorSeedDefinitions = [
     {
       applicationId: '70000000-0000-4000-8000-000000000001',
-      email: seedEnvironment.SEED_EXPERIENCED_CONTRIBUTOR_EMAIL.toLowerCase(),
-      displayName: 'Demo Experienced Contributor',
-      contributorType: ContributorType.EXPERIENCED_PRACTITIONER,
+      email: seedEnvironment.SEED_PLATFORM_CONTRIBUTOR_EMAIL.toLowerCase(),
+      displayName: 'Demo Platform Contributor',
+      source: ContributorApplicationSource.REGISTRATION,
+      invitationReason: null,
+      claimedApprovalBasis: ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
+      approvalBasis: ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
+      organizationClaim: null,
+      referenceLinks: [] as string[],
       experience:
         'Có kinh nghiệm thực hành chế độ ăn thực vật và chia sẻ công thức trong cộng đồng.',
-      approvalBasis:
-        'Admin duyệt thủ công dựa trên mô tả kinh nghiệm và lịch sử đóng góp demo trong hệ thống.',
+      approvalEvidence: {
+        kind: ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
+        capturedAt: '2026-09-15T00:00:00.000Z',
+        snapshotVersion: 'seed-platform-track-record-v1',
+        posts: { total: 0, published: 0, pendingReview: 0, rejected: 0 },
+        interactions: {
+          commentsReceived: 0,
+          votesReceived: 0,
+          ratingsReceived: 0,
+          bookmarksReceived: 0,
+          averageTasteRating: null,
+        },
+      },
     },
     {
       applicationId: '70000000-0000-4000-8000-000000000002',
-      email: seedEnvironment.SEED_NUTRITION_EXPERT_EMAIL.toLowerCase(),
-      displayName: 'Demo Nutrition Expert',
-      contributorType: ContributorType.NUTRITION_EXPERT,
+      email: seedEnvironment.SEED_ORGANIZATION_CONTRIBUTOR_EMAIL.toLowerCase(),
+      displayName: 'Demo Organization Contributor',
+      source: ContributorApplicationSource.REGISTRATION,
+      invitationReason: null,
+      claimedApprovalBasis: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
+      approvalBasis: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
+      organizationClaim: 'Demo Plant Nutrition Community',
+      referenceLinks: ['https://example.com/demo-organization'],
       experience:
-        'Có kinh nghiệm chuyên môn dinh dưỡng thực vật và đánh giá nội dung giáo dục dinh dưỡng.',
-      approvalBasis:
-        'Admin duyệt thủ công dựa trên thông tin chuyên môn demo; không phải xác minh chứng chỉ.',
+        'Đại diện cộng đồng demo chia sẻ kiến thức dinh dưỡng thực vật; không có xác minh chứng chỉ.',
+      approvalEvidence: {
+        kind: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
+        capturedAt: '2026-09-15T00:00:00.000Z',
+        snapshotVersion: 'seed-organization-claim-v1',
+        organizationClaim: 'Demo Plant Nutrition Community',
+        referenceLinks: ['https://example.com/demo-organization'],
+        verificationStatus: 'CLAIM_RETAINED_NOT_VERIFIED',
+      },
+    },
+    {
+      applicationId: '70000000-0000-4000-8000-000000000003',
+      email: seedEnvironment.SEED_INVITED_CONTRIBUTOR_EMAIL.toLowerCase(),
+      displayName: 'Demo Invited Contributor',
+      source: ContributorApplicationSource.ADMIN_INVITATION,
+      claimedApprovalBasis: ContributorApprovalBasis.ADMIN_INVITED,
+      approvalBasis: ContributorApprovalBasis.ADMIN_INVITED,
+      organizationClaim: null,
+      referenceLinks: [] as string[],
+      experience: 'Admin-invited demo Contributor for unified permission validation.',
+      invitationReason: 'Seed profile for equal-permission verification acceptance.',
+      approvalEvidence: {
+        kind: ContributorApprovalBasis.ADMIN_INVITED,
+        capturedAt: '2026-09-15T00:00:00.000Z',
+        snapshotVersion: 'seed-admin-invitation-v1',
+        invitationReason: 'Seed profile for equal-permission verification acceptance.',
+      },
     },
   ] as const;
   const seededApprovalAt = new Date('2026-09-15T00:00:00.000Z');
@@ -460,13 +1008,16 @@ async function main(): Promise<void> {
         where: { id: definition.applicationId },
         update: {
           userId: user.id,
-          requestedType: definition.contributorType,
+          claimedApprovalBasis: definition.claimedApprovalBasis,
+          organizationClaim: definition.organizationClaim,
           experience: definition.experience,
-          referenceLinks: [],
-          source: ContributorApplicationSource.REGISTRATION,
+          referenceLinks: definition.referenceLinks,
+          source: definition.source,
+          invitedById: definition.source === ContributorApplicationSource.ADMIN_INVITATION ? admin.id : null,
+          invitationReason: definition.invitationReason,
           status: ContributorApplicationStatus.APPROVED,
-          approvedType: definition.contributorType,
           approvalBasis: definition.approvalBasis,
+          reviewEvidence: definition.approvalEvidence,
           reviewNote: 'Approved seed profile for local role and permission validation.',
           reviewedById: admin.id,
           reviewedAt: seededApprovalAt,
@@ -475,13 +1026,18 @@ async function main(): Promise<void> {
         create: {
           id: definition.applicationId,
           userId: user.id,
-          requestedType: definition.contributorType,
+          claimedApprovalBasis: definition.claimedApprovalBasis,
+          organizationClaim: definition.organizationClaim,
           experience: definition.experience,
-          referenceLinks: [],
-          source: ContributorApplicationSource.REGISTRATION,
+          referenceLinks: definition.referenceLinks,
+          source: definition.source,
+          ...(definition.source === ContributorApplicationSource.ADMIN_INVITATION
+            ? { invitedById: admin.id }
+            : {}),
+          invitationReason: definition.invitationReason,
           status: ContributorApplicationStatus.APPROVED,
-          approvedType: definition.contributorType,
           approvalBasis: definition.approvalBasis,
+          reviewEvidence: definition.approvalEvidence,
           reviewNote: 'Approved seed profile for local role and permission validation.',
           reviewedById: admin.id,
           reviewedAt: seededApprovalAt,
@@ -490,35 +1046,63 @@ async function main(): Promise<void> {
       await transaction.contributorProfile.upsert({
         where: { userId: user.id },
         update: {
-          contributorType: definition.contributorType,
           approvalBasis: definition.approvalBasis,
+          approvalEvidence: definition.approvalEvidence,
           approvedAt: seededApprovalAt,
           approvedById: admin.id,
           sourceApplicationId: application.id,
+          revokedAt: null,
+          revokedById: null,
+          revocationReason: null,
         },
         create: {
           userId: user.id,
-          contributorType: definition.contributorType,
           approvalBasis: definition.approvalBasis,
+          approvalEvidence: definition.approvalEvidence,
           approvedAt: seededApprovalAt,
           approvedById: admin.id,
           sourceApplicationId: application.id,
         },
       });
+      await transaction.contributorDecision.deleteMany({
+        where: { applicationId: application.id, decision: ContributorDecisionType.APPROVED },
+      });
+      await transaction.contributorDecision.create({
+        data: {
+          userId: user.id,
+          applicationId: application.id,
+          actorId: admin.id,
+          decision: ContributorDecisionType.APPROVED,
+          approvalBasis: definition.approvalBasis,
+          evidence: definition.approvalEvidence,
+          reason: 'Approved seed profile for unified Contributor permission validation.',
+          createdAt: seededApprovalAt,
+        },
+      });
     });
   }
-  const [recipeCategory, topicCategory, tofu, broccoli, brownRice, mushroom] = await Promise.all([
-    prisma.category.findFirstOrThrow({
-      where: { type: CategoryType.FOOD_TYPE, slug: 'com-va-ngu-coc', status: CatalogStatus.ACTIVE },
-    }),
-    prisma.category.findFirstOrThrow({
-      where: { type: CategoryType.CONTENT_TOPIC, slug: 'dinh-duong', status: CatalogStatus.ACTIVE },
-    }),
-    prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'dau hu' } }),
-    prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'bong cai xanh' } }),
-    prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'gao lut' } }),
-    prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'nam huong' } }),
-  ]);
+  const [recipeCategory, topicCategory, tofu, broccoli, brownRice, mushroom, boilingMethod] =
+    await Promise.all([
+      prisma.category.findFirstOrThrow({
+        where: {
+          type: CategoryType.FOOD_TYPE,
+          slug: 'com-va-ngu-coc',
+          status: CatalogStatus.ACTIVE,
+        },
+      }),
+      prisma.category.findFirstOrThrow({
+        where: {
+          type: CategoryType.CONTENT_TOPIC,
+          slug: 'dinh-duong',
+          status: CatalogStatus.ACTIVE,
+        },
+      }),
+      prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'dau hu' } }),
+      prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'bong cai xanh' } }),
+      prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'gao lut' } }),
+      prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'nam huong' } }),
+      prisma.cookingMethod.findUniqueOrThrow({ where: { code: 'BOILING' } }),
+    ]);
 
   if (!(await prisma.post.findUnique({ where: { slug: 'dau-hu-xao-bong-cai-demo' } }))) {
     await prisma.$transaction(async (transaction) => {
@@ -584,6 +1168,23 @@ async function main(): Promise<void> {
                 amount: 200,
                 unit: 'g',
                 resolutionStatus: IngredientResolutionStatus.EXACT,
+              },
+            ],
+          },
+          recipeSteps: {
+            create: [
+              {
+                position: 0,
+                instruction: 'Luoc bong cai trong nuoc soi den khi vua mem roi de rao.',
+                cookingMethodId: boilingMethod.id,
+                durationMinutes: 4,
+                affectedIngredientPositions: [1],
+              },
+              {
+                position: 1,
+                instruction: 'Ap chao dau hu va tron nhanh voi bong cai cung sot gia vi.',
+                durationMinutes: 8,
+                affectedIngredientPositions: [0, 1],
               },
             ],
           },
@@ -977,6 +1578,71 @@ async function main(): Promise<void> {
     prisma.post.findUniqueOrThrow({ where: { slug: 'dau-hu-xao-bong-cai-demo' } }),
     prisma.post.findUniqueOrThrow({ where: { slug: 'video-bua-an-xanh-demo' } }),
   ]);
+  const [customTofu, customBroccoli] = await Promise.all([
+    prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'dau hu' } }),
+    prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'bong cai xanh' } }),
+  ]);
+  await prisma.$transaction(async (transaction) => {
+    const customMeal = await transaction.customMeal.upsert({
+      where: { id: '18000000-0000-4000-8000-000000000001' },
+      update: {
+        ownerId: member.id,
+        name: 'Bữa đậu hũ và bông cải tùy chỉnh',
+        servings: 2,
+        userCalories: 320,
+        userProteinGrams: 20,
+        userCarbsGrams: 24,
+        userFatGrams: 14,
+        nutritionCoverage: NutritionCoverage.PARTIAL,
+        deletedAt: null,
+      },
+      create: {
+        id: '18000000-0000-4000-8000-000000000001',
+        ownerId: member.id,
+        name: 'Bữa đậu hũ và bông cải tùy chỉnh',
+        notes: 'Fixture Phase 18 cho custom-meal analysis.',
+        servings: 2,
+        sourceNote: 'Project demo fixture',
+        userCalories: 320,
+        userProteinGrams: 20,
+        userCarbsGrams: 24,
+        userFatGrams: 14,
+        nutritionCoverage: NutritionCoverage.PARTIAL,
+      },
+    });
+    await transaction.customMealIngredient.deleteMany({ where: { customMealId: customMeal.id } });
+    await transaction.customMealIngredient.createMany({
+      data: [
+        {
+          customMealId: customMeal.id,
+          ingredientId: customTofu.id,
+          position: 0,
+          displayName: customTofu.canonicalName,
+          normalizedName: customTofu.normalizedName,
+          amount: 200,
+          unit: 'g',
+          resolutionStatus: IngredientResolutionStatus.EXACT,
+        },
+        {
+          customMealId: customMeal.id,
+          ingredientId: customBroccoli.id,
+          position: 1,
+          displayName: customBroccoli.canonicalName,
+          normalizedName: customBroccoli.normalizedName,
+          amount: 180,
+          unit: 'g',
+          resolutionStatus: IngredientResolutionStatus.EXACT,
+        },
+      ],
+    });
+    await transaction.customMealTag.upsert({
+      where: {
+        customMealId_normalizedTag: { customMealId: customMeal.id, normalizedTag: 'phase-18-demo' },
+      },
+      update: { tag: 'phase-18-demo' },
+      create: { customMealId: customMeal.id, tag: 'phase-18-demo', normalizedTag: 'phase-18-demo' },
+    });
+  });
   await prisma.healthProfile.upsert({
     where: { userId: member.id },
     update: {
@@ -1006,10 +1672,10 @@ async function main(): Promise<void> {
 
   const [constraintsMember, periodicMember] = await Promise.all([
     prisma.user.findUniqueOrThrow({
-      where: { email: seedEnvironment.SEED_EXPERIENCED_CONTRIBUTOR_EMAIL.toLowerCase() },
+      where: { email: seedEnvironment.SEED_PLATFORM_CONTRIBUTOR_EMAIL.toLowerCase() },
     }),
     prisma.user.findUniqueOrThrow({
-      where: { email: seedEnvironment.SEED_NUTRITION_EXPERT_EMAIL.toLowerCase() },
+      where: { email: seedEnvironment.SEED_ORGANIZATION_CONTRIBUTOR_EMAIL.toLowerCase() },
     }),
   ]);
   const scenarioHealthProfile = {
@@ -1201,15 +1867,15 @@ async function main(): Promise<void> {
     }
   });
 
-  const experiencedContributor = await prisma.user.findUniqueOrThrow({
-    where: { email: seedEnvironment.SEED_EXPERIENCED_CONTRIBUTOR_EMAIL.toLowerCase() },
+  const platformContributor = await prisma.user.findUniqueOrThrow({
+    where: { email: seedEnvironment.SEED_PLATFORM_CONTRIBUTOR_EMAIL.toLowerCase() },
   });
   const mushroomRecipe = await prisma.post.findUniqueOrThrow({
     where: { slug: 'chao-nam-gao-lut-demo' },
   });
   const behaviorSeededAt = new Date(Date.now() - 30 * 60 * 1_000);
   await prisma.$transaction(async (transaction) => {
-    for (const user of [member, experiencedContributor]) {
+    for (const user of [member, platformContributor]) {
       await transaction.personalizationPreference.upsert({
         where: { userId: user.id },
         update: {
@@ -1261,7 +1927,7 @@ async function main(): Promise<void> {
       },
       {
         id: '90000000-0000-4000-8000-000000000004',
-        userId: experiencedContributor.id,
+        userId: platformContributor.id,
         type: BehaviorEventType.CHAT_TOPIC,
         idempotencyKey: 'seed-contributor-topic-mushroom',
         dedupeKey: 'seed-contributor-topic-mushroom-bucket',
@@ -1271,7 +1937,7 @@ async function main(): Promise<void> {
       },
       {
         id: '90000000-0000-4000-8000-000000000005',
-        userId: experiencedContributor.id,
+        userId: platformContributor.id,
         type: BehaviorEventType.VIEW_RECIPE,
         entityId: mushroomRecipe.id,
         idempotencyKey: 'seed-contributor-view-mushroom-1',
@@ -1282,7 +1948,7 @@ async function main(): Promise<void> {
       },
       {
         id: '90000000-0000-4000-8000-000000000006',
-        userId: experiencedContributor.id,
+        userId: platformContributor.id,
         type: BehaviorEventType.VIEW_RECIPE,
         entityId: mushroomRecipe.id,
         idempotencyKey: 'seed-contributor-view-mushroom-2',
@@ -1307,7 +1973,7 @@ async function main(): Promise<void> {
     await transaction.post.upsert({
       where: { id: quarantinePostId },
       update: {
-        authorId: experiencedContributor.id,
+        authorId: platformContributor.id,
         type: PostType.BLOG,
         slug: 'moderation-quarantine-demo',
         status: PostStatus.QUARANTINED,
@@ -1317,7 +1983,7 @@ async function main(): Promise<void> {
       },
       create: {
         id: quarantinePostId,
-        authorId: experiencedContributor.id,
+        authorId: platformContributor.id,
         type: PostType.BLOG,
         slug: 'moderation-quarantine-demo',
         status: PostStatus.QUARANTINED,
@@ -1328,7 +1994,7 @@ async function main(): Promise<void> {
       where: { id: quarantineRevisionId },
       update: {
         postId: quarantinePostId,
-        createdById: experiencedContributor.id,
+        createdById: platformContributor.id,
         version: 1,
         status: PostRevisionStatus.QUARANTINED,
         title: 'Demo nội dung health claim rủi ro cao',
@@ -1341,7 +2007,7 @@ async function main(): Promise<void> {
       create: {
         id: quarantineRevisionId,
         postId: quarantinePostId,
-        createdById: experiencedContributor.id,
+        createdById: platformContributor.id,
         version: 1,
         status: PostRevisionStatus.QUARANTINED,
         title: 'Demo nội dung health claim rủi ro cao',
@@ -1415,12 +2081,277 @@ async function main(): Promise<void> {
     memberEmail: seedEnvironment.SEED_MEMBER_EMAIL.toLowerCase(),
     memberPasswordHash,
     adminEmail: seedEnvironment.SEED_ADMIN_EMAIL.toLowerCase(),
-    experiencedContributorEmail: seedEnvironment.SEED_EXPERIENCED_CONTRIBUTOR_EMAIL.toLowerCase(),
-    nutritionExpertEmail: seedEnvironment.SEED_NUTRITION_EXPERT_EMAIL.toLowerCase(),
+    platformContributorEmail: seedEnvironment.SEED_PLATFORM_CONTRIBUTOR_EMAIL.toLowerCase(),
+    organizationContributorEmail: seedEnvironment.SEED_ORGANIZATION_CONTRIBUTOR_EMAIL.toLowerCase(),
     nextMonday,
   });
+  const pantryMember = await prisma.user.findUniqueOrThrow({
+    where: { email: seedEnvironment.SEED_MEMBER_EMAIL.toLowerCase() },
+  });
+  const pantryTofu = await prisma.ingredient.findUniqueOrThrow({
+    where: { normalizedName: 'dau hu' },
+  });
+  const pantrySeeds = [
+    {
+      id: '20000000-0000-4000-8000-000000000001',
+      quantity: 2,
+      unit: 'miếng',
+      normalizedGrams: 200,
+      conversionSource: 'PROJECT_CURATED',
+      conversionVersion: '1.0',
+      conversionConfidence: 0.7,
+      expiresAt: new Date('2026-09-27T00:00:00.000Z'),
+      idempotencyKey: 'seed-phase-20-pantry-tofu-pieces',
+    },
+    {
+      id: '20000000-0000-4000-8000-000000000002',
+      quantity: 50,
+      unit: 'g',
+      normalizedGrams: 50,
+      conversionSource: 'SYSTEM_MASS',
+      conversionVersion: 'UCUM-MASS-V1',
+      conversionConfidence: 1,
+      expiresAt: new Date('2026-09-28T00:00:00.000Z'),
+      idempotencyKey: 'seed-phase-20-pantry-tofu-grams',
+    },
+  ] as const;
+  for (const fixture of pantrySeeds) {
+    const pantryItem = await prisma.pantryItem.upsert({
+      where: { id: fixture.id },
+      update: {},
+      create: {
+        id: fixture.id,
+        ownerId: pantryMember.id,
+        ingredientId: pantryTofu.id,
+        quantity: fixture.quantity,
+        unit: fixture.unit,
+        normalizedGrams: fixture.normalizedGrams,
+        conversionStatus: PantryConversionStatus.CONVERTED,
+        conversionSource: fixture.conversionSource,
+        conversionVersion: fixture.conversionVersion,
+        conversionConfidence: fixture.conversionConfidence,
+        source: PantryItemSource.MANUAL,
+        confidence: 1,
+        confirmationStatus: PantryConfirmationStatus.CONFIRMED,
+        expiresAt: fixture.expiresAt,
+      },
+    });
+    await prisma.pantryAdjustment.upsert({
+      where: {
+        ownerId_idempotencyKey: {
+          ownerId: pantryMember.id,
+          idempotencyKey: fixture.idempotencyKey,
+        },
+      },
+      update: {},
+      create: {
+        ownerId: pantryMember.id,
+        pantryItemId: pantryItem.id,
+        type: PantryAdjustmentType.CREATE,
+        idempotencyKey: fixture.idempotencyKey,
+        requestHash: '0'.repeat(64),
+        inputQuantity: fixture.quantity,
+        inputUnit: fixture.unit,
+        appliedDeltaQuantity: fixture.quantity,
+        normalizedDeltaGrams: fixture.normalizedGrams,
+        beforeQuantity: 0,
+        afterQuantity: fixture.quantity,
+        beforeGrams: 0,
+        afterGrams: fixture.normalizedGrams,
+        versionBefore: 0,
+        versionAfter: 1,
+      },
+    });
+  }
+  const storagePolicy = await prisma.storagePolicy.upsert({
+    where: { code: 'MVP_DEFAULT' },
+    update: {
+      name: 'MVP default storage',
+      quotaBytes: seedEnvironment.STORAGE_DEFAULT_QUOTA_BYTES,
+      reservationTtlSeconds: seedEnvironment.UPLOAD_RESERVATION_TTL_SECONDS,
+      warningPercent: 80,
+      active: true,
+      isDefault: true,
+    },
+    create: {
+      id: '15000000-0000-4000-8000-000000000001',
+      code: 'MVP_DEFAULT',
+      name: 'MVP default storage',
+      quotaBytes: seedEnvironment.STORAGE_DEFAULT_QUOTA_BYTES,
+      reservationTtlSeconds: seedEnvironment.UPLOAD_RESERVATION_TTL_SECONDS,
+      warningPercent: 80,
+      active: true,
+      isDefault: true,
+    },
+  });
+  const seededUsers = await prisma.user.findMany({ select: { id: true } });
+  for (const user of seededUsers) {
+    await prisma.storageAccount.upsert({
+      where: { userId: user.id },
+      update: { policyId: storagePolicy.id },
+      create: { userId: user.id, policyId: storagePolicy.id },
+    });
+  }
+  const seededCoverReference = await prisma.postMedia.findFirst({
+    where: { provider: MediaProvider.CLOUDINARY, publicId: 'seed/frontend-food-cover' },
+    include: { revision: { include: { post: true } } },
+    orderBy: { id: 'asc' },
+  });
+  if (seededCoverReference) {
+    const asset = await prisma.mediaAsset.upsert({
+      where: { publicId: 'seed/frontend-food-cover' },
+      update: {
+        ownerId: seededCoverReference.revision.post.authorId,
+        resourceType: MediaResourceType.IMAGE,
+        kind: MediaKind.COVER_IMAGE,
+        secureUrl: seededCoverReference.secureUrl,
+        mimeType: 'image/jpeg',
+        extension: '.jpg',
+        bytes: 120_253,
+        status: MediaAssetStatus.ACTIVE,
+        backfilled: true,
+        deletedAt: null,
+        deletedById: null,
+      },
+      create: {
+        ownerId: seededCoverReference.revision.post.authorId,
+        resourceType: MediaResourceType.IMAGE,
+        kind: MediaKind.COVER_IMAGE,
+        publicId: 'seed/frontend-food-cover',
+        secureUrl: seededCoverReference.secureUrl,
+        mimeType: 'image/jpeg',
+        extension: '.jpg',
+        bytes: 120_253,
+        status: MediaAssetStatus.ACTIVE,
+        backfilled: true,
+      },
+    });
+    await prisma.postMedia.updateMany({
+      where: { provider: MediaProvider.CLOUDINARY, publicId: asset.publicId },
+      data: { assetId: asset.id },
+    });
+  }
+  const fridgeVisionFixtures = [
+    {
+      id: '21000000-0000-4000-8000-000000000001',
+      publicId: 'seed/vision/fridge-primary',
+      secureUrl: 'https://res.cloudinary.com/demo/image/upload/seed/vision/fridge-primary.jpg',
+      bytes: 180_000,
+    },
+    {
+      id: '21000000-0000-4000-8000-000000000002',
+      publicId: 'seed/vision/fridge-secondary',
+      secureUrl: 'https://res.cloudinary.com/demo/image/upload/seed/vision/fridge-secondary.jpg',
+      bytes: 165_000,
+    },
+    {
+      id: '21000000-0000-4000-8000-000000000003',
+      publicId: 'seed/vision/partial-failure',
+      secureUrl: 'https://res.cloudinary.com/demo/image/upload/seed/vision/partial-failure.jpg',
+      bytes: 140_000,
+    },
+  ] as const;
+  for (const fixture of fridgeVisionFixtures) {
+    await prisma.mediaAsset.upsert({
+      where: { id: fixture.id },
+      update: {
+        ownerId: pantryMember.id,
+        kind: MediaKind.FRIDGE_IMAGE,
+        resourceType: MediaResourceType.IMAGE,
+        publicId: fixture.publicId,
+        secureUrl: fixture.secureUrl,
+        mimeType: 'image/jpeg',
+        extension: '.jpg',
+        bytes: fixture.bytes,
+        width: 1280,
+        height: 960,
+        status: MediaAssetStatus.ACTIVE,
+        backfilled: true,
+        deletedAt: null,
+        deletedById: null,
+      },
+      create: {
+        id: fixture.id,
+        ownerId: pantryMember.id,
+        kind: MediaKind.FRIDGE_IMAGE,
+        resourceType: MediaResourceType.IMAGE,
+        publicId: fixture.publicId,
+        secureUrl: fixture.secureUrl,
+        mimeType: 'image/jpeg',
+        extension: '.jpg',
+        bytes: fixture.bytes,
+        width: 1280,
+        height: 960,
+        status: MediaAssetStatus.ACTIVE,
+        backfilled: true,
+      },
+    });
+  }
+  const receiptFixtures = [
+    {
+      id: '22000000-0000-4000-8000-000000000001',
+      publicId: 'seed/receipts/market-primary',
+      secureUrl: 'https://res.cloudinary.com/demo/image/upload/seed/receipts/market-primary.jpg',
+      bytes: 125_000,
+    },
+    {
+      id: '22000000-0000-4000-8000-000000000002',
+      publicId: 'seed/receipts/partial-failure',
+      secureUrl: 'https://res.cloudinary.com/demo/image/upload/seed/receipts/partial-failure.jpg',
+      bytes: 110_000,
+    },
+  ] as const;
+  for (const fixture of receiptFixtures) {
+    await prisma.mediaAsset.upsert({
+      where: { id: fixture.id },
+      update: {
+        ownerId: pantryMember.id,
+        kind: MediaKind.RECEIPT_IMAGE,
+        resourceType: MediaResourceType.IMAGE,
+        publicId: fixture.publicId,
+        secureUrl: fixture.secureUrl,
+        mimeType: 'image/jpeg',
+        extension: '.jpg',
+        bytes: fixture.bytes,
+        width: 1024,
+        height: 1600,
+        status: MediaAssetStatus.ACTIVE,
+        backfilled: true,
+        deletedAt: null,
+        deletedById: null,
+      },
+      create: {
+        id: fixture.id,
+        ownerId: pantryMember.id,
+        kind: MediaKind.RECEIPT_IMAGE,
+        resourceType: MediaResourceType.IMAGE,
+        publicId: fixture.publicId,
+        secureUrl: fixture.secureUrl,
+        mimeType: 'image/jpeg',
+        extension: '.jpg',
+        bytes: fixture.bytes,
+        width: 1024,
+        height: 1600,
+        status: MediaAssetStatus.ACTIVE,
+        backfilled: true,
+      },
+    });
+  }
+  for (const user of seededUsers) {
+    const aggregate = await prisma.mediaAsset.aggregate({
+      where: {
+        ownerId: user.id,
+        status: { in: [MediaAssetStatus.ACTIVE, MediaAssetStatus.DELETING] },
+      },
+      _sum: { bytes: true },
+    });
+    await prisma.storageAccount.update({
+      where: { userId: user.id },
+      data: { usedBytes: aggregate._sum.bytes ?? 0 },
+    });
+  }
   console.info(
-    `Seeded local Member, two approved Contributor subtypes, Admin, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
+    `Seeded local Member, unified Contributors with all three approval bases, Admin, storage policy/accounting, pantry inventory, fridge-vision and receipt fake fixtures, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
   );
 }
 

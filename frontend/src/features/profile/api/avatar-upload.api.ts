@@ -40,8 +40,7 @@ export interface AvatarUploadResult {
 }
 
 /**
- * Xin chữ ký upload avatar (image). Giữ đúng workflow BACKEND_INTEGRATION 7.3:
- * FE xin signature → upload trực tiếp Cloudinary → nhận secure URL → PATCH /users/me.
+ * @deprecated Backend Phase 15 removed signature endpoint. Use `uploadWithReservation` from `@/features/storage/api/storage-upload` instead.
  */
 export const avatarUploadApi = {
   getSignature: async (): Promise<AvatarUploadSignature> => {

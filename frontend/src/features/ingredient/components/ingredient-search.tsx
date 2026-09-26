@@ -1,10 +1,13 @@
 'use client';
 
 import * as React from 'react';
-import { Search } from 'lucide-react';
+import { Search, Flame } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { NutritionFactsPanel } from '@/features/food-data/components/nutrition-facts-panel';
 import {
   Select,
   SelectContent,
@@ -41,6 +44,10 @@ export function IngredientSearch() {
   const [keyword, setKeyword] = React.useState('');
   const [foodGroup, setFoodGroup] = React.useState<FoodGroup | 'ALL'>('ALL');
   const [page, setPage] = React.useState(1);
+  const [selectedIngredient, setSelectedIngredient] = React.useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const debouncedKeyword = useDebounce(keyword.trim(), 400);
 
   const { data, isLoading, isError, refetch } = useIngredientsQuery({
@@ -126,9 +133,34 @@ export function IngredientSearch() {
                     ))}
                   </div>
                 )}
+                <div className="mt-3 flex items-center justify-end border-t border-muted/60 pt-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedIngredient({ id: item.id, name: item.canonicalName })}
+                    className="h-8 gap-1.5 text-xs text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
+                  >
+                    <Flame className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                    <span>Dinh dưỡng (100g)</span>
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
+          <Dialog
+            open={Boolean(selectedIngredient)}
+            onOpenChange={(open) => !open && setSelectedIngredient(null)}
+          >
+            <DialogContent className="max-w-md p-4 sm:p-6 overflow-y-auto max-h-[90vh]">
+              <DialogTitle className="sr-only">Dinh dưỡng {selectedIngredient?.name}</DialogTitle>
+              {selectedIngredient && (
+                <NutritionFactsPanel
+                  ingredientId={selectedIngredient.id}
+                  className="w-full max-w-none border-0 shadow-none p-0"
+                />
+              )}
+            </DialogContent>
+          </Dialog>
           {data.metadata.totalPages > 1 && (
             <Pagination
               page={data.metadata.page}

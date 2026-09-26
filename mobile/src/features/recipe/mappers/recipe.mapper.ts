@@ -129,6 +129,7 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       nutrition,
       ingredients,
       body,
+      tags: safeArray<string>(revision?.tags),
       publishedAt,
       formattedPublishedAt: formatDate(publishedAt),
       description: safeString(revision?.excerpt, ''),

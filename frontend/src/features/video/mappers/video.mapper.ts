@@ -66,13 +66,25 @@ export class VideoMapper extends BaseMapper<VideoDetailDto, Video> {
     const rawCover = coverUrlFromMedia(pickField<PostMediaDto[]>(dto, ['media'], []), '');
     const coverImageUrl = rawCover || youtubeThumbnailFromUrl(videoUrl) || VIDEO_FALLBACK_COVER;
 
+    const revisionId = safeString(revision?.id);
+    const version = safeNumber(pickField(dto, ['version'], 1));
+    const revisionVersion = safeNumber(revision?.version, version);
+    const publishedRevisionVersion = pickField<number | null>(
+      dto,
+      ['publishedRevisionVersion'],
+      null
+    );
+
     return {
       id: safeString(pickField(dto, ['id'], '')),
       title: safeString(revision?.title, 'Video chưa có tiêu đề'),
       slug: safeString(pickField(dto, ['slug'], '')),
       status,
       statusLabel: getPostStatusLabel(status),
-      version: safeNumber(pickField(dto, ['version'], 1)),
+      version,
+      revisionId: revisionId || undefined,
+      revisionVersion,
+      publishedRevisionVersion,
       author,
       category: firstCategory(dto),
       coverImageUrl,
@@ -124,19 +136,11 @@ export class VideoMapper extends BaseMapper<VideoDetailDto, Video> {
           kind: 'VIDEO',
           secureUrl: domain.videoUrl,
         });
-      } else if (
-        domain.videoMedia?.publicId &&
-        !domain.videoMedia.publicId.startsWith('mock_') &&
-        domain.videoMedia?.mimeType &&
-        domain.videoMedia?.bytes
-      ) {
+      } else if (domain.videoMedia?.assetId) {
         media.push({
           provider: 'CLOUDINARY',
           kind: 'VIDEO',
-          publicId: domain.videoMedia.publicId,
-          secureUrl: domain.videoUrl,
-          mimeType: domain.videoMedia.mimeType,
-          bytes: domain.videoMedia.bytes,
+          assetId: domain.videoMedia.assetId,
         });
       }
     }

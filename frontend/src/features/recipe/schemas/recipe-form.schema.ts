@@ -34,9 +34,10 @@ export const recipeFormSchema = z.object({
   coverImageUrl: z.string().url('Đường dẫn ảnh bìa không hợp lệ').or(z.literal('')).optional(),
   coverMedia: z
     .object({
-      publicId: z.string(),
-      mimeType: z.string(),
-      bytes: z.number(),
+      assetId: z.string().optional(),
+      publicId: z.string().optional(),
+      mimeType: z.string().optional(),
+      bytes: z.number().optional(),
     })
     .nullable()
     .optional(),

@@ -2,10 +2,6 @@ import { Role } from '@prisma/client';
 import { Router } from 'express';
 import { requireRole } from '../../common/auth/authorization.js';
 import {
-  ContributorPermission,
-  requireContributorPermission,
-} from '../../common/auth/contributor-permissions.js';
-import {
   validateBody,
   validateParams,
   validateQuery,
@@ -14,6 +10,7 @@ import type { AuthenticationMiddleware } from '../auth/authentication.middleware
 import type { ModerationController } from './moderation.controller.js';
 import {
   adminCommentsQuerySchema,
+  adminContentReviewDecisionRequestSchema,
   adminReportsQuerySchema,
   adminUsersQuerySchema,
   createReportRequestSchema,
@@ -42,7 +39,7 @@ export function createReviewQueueRouter(
   const router = Router();
   router.use(
     authentication.authenticate,
-    requireContributorPermission(ContributorPermission.REVIEW_MEMBER_CONTENT),
+    requireRole(Role.ADMIN),
   );
   router.get('/posts', validateQuery(reviewQueueQuerySchema), controller.listReviewQueue);
   router.patch(
@@ -66,6 +63,18 @@ export function createModerationAdminRouter(
 ): Router {
   const router = Router();
   router.use(authentication.authenticate, requireRole(Role.ADMIN));
+  router.get('/content-review', validateQuery(reviewQueueQuerySchema), controller.listReviewQueue);
+  router.get(
+    '/content-review/:id',
+    validateParams(moderationIdParamsSchema),
+    controller.getContentReviewDetail,
+  );
+  router.patch(
+    '/content-review/:id',
+    validateParams(moderationIdParamsSchema),
+    validateBody(adminContentReviewDecisionRequestSchema),
+    controller.reviewContent,
+  );
   router.get('/reports', validateQuery(adminReportsQuerySchema), controller.listReports);
   router.patch(
     '/reports/:id/resolve',

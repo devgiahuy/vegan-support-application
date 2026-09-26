@@ -11,6 +11,14 @@ export interface CookingVideo {
   author: PostAuthorModel;
   category: PostCategoryModel;
   thumbnailUrl: string;
+  coverMedia: {
+    publicId: string;
+    secureUrl: string;
+    mimeType: string;
+    bytes: number;
+    width?: number;
+    height?: number;
+  } | null;
   videoUrl: string;
   provider: string;
   durationSeconds: number | null;

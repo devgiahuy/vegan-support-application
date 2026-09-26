@@ -18,6 +18,7 @@ import {
 import type { RegisterFormValues } from '../schemas/auth.schema';
 import {
   ContributorApplicationStatus,
+  ContributorApprovalBasis,
   ContributorType,
   LogoutScope,
   MemberStatus,
@@ -27,6 +28,12 @@ import {
 const CONTRIBUTOR_TYPE_LABELS: Record<ContributorType, string> = {
   [ContributorType.EXPERIENCED_PRACTITIONER]: 'Người thực hành có kinh nghiệm',
   [ContributorType.NUTRITION_EXPERT]: 'Chuyên gia dinh dưỡng',
+};
+
+const APPROVAL_BASIS_LABELS: Record<ContributorApprovalBasis, string> = {
+  [ContributorApprovalBasis.ORGANIZATION_AFFILIATION]: 'Tổ chức đối tác / Viện ẩm thực',
+  [ContributorApprovalBasis.PLATFORM_TRACK_RECORD]: 'Thành viên uy tín trên nền tảng',
+  [ContributorApprovalBasis.ADMIN_INVITED]: 'Được Quản trị viên mời',
 };
 
 /**
@@ -62,11 +69,19 @@ export class AuthMapper extends BaseMapper<UserDto, User> {
   ): ContributorApplication | null {
     if (!dto || typeof dto !== 'object') return null;
     const rawStatus = safeString(pickField(dto, ['status'], 'PENDING'));
+    const rawBasis = pickField(dto, ['claimedApprovalBasis', 'claimed_approval_basis'], null);
+    const claimedApprovalBasis = safeEnum(
+      rawBasis,
+      ContributorApprovalBasis,
+      null as unknown as ContributorApprovalBasis
+    );
+
     const requestedType = safeEnum(
       pickField(dto, ['requestedType', 'requested_type'], null),
       ContributorType,
       null as unknown as ContributorType
     );
+
     return {
       status: safeEnum(
         rawStatus,
@@ -74,6 +89,11 @@ export class AuthMapper extends BaseMapper<UserDto, User> {
         ContributorApplicationStatus.PENDING
       ),
       rawStatus,
+      claimedApprovalBasis: claimedApprovalBasis ?? null,
+      claimedApprovalBasisLabel:
+        claimedApprovalBasis && claimedApprovalBasis in APPROVAL_BASIS_LABELS
+          ? APPROVAL_BASIS_LABELS[claimedApprovalBasis as ContributorApprovalBasis]
+          : '',
       requestedType: requestedType ?? null,
       requestedTypeLabel:
         requestedType && requestedType in CONTRIBUTOR_TYPE_LABELS

@@ -9,6 +9,7 @@ import {
   mealPlanListResponseSchema,
   mealPlanParamsSchema,
   mealPlanResponseSchema,
+  manualAddMealPlanItemRequestSchema,
   swapMealPlanItemRequestSchema,
 } from './meal-plan.schemas.js';
 
@@ -51,6 +52,10 @@ export function registerMealPlanOpenApi(registry: OpenAPIRegistry, errorSchema: 
     generateMealPlanRequestSchema,
   );
   const swapRequest = registry.register('SwapMealPlanItemRequest', swapMealPlanItemRequestSchema);
+  const manualAddRequest = registry.register(
+    'ManualAddMealPlanItemRequest',
+    manualAddMealPlanItemRequestSchema,
+  );
   const planResponse = registry.register('MealPlanResponse', mealPlanResponseSchema);
   const listResponse = registry.register('MealPlanListResponse', mealPlanListResponseSchema);
   const deleteResponse = registry.register('DeleteMealPlanResponse', deleteMealPlanResponseSchema);
@@ -159,6 +164,35 @@ export function registerMealPlanOpenApi(registry: OpenAPIRegistry, errorSchema: 
       404: errorResponse(errorSchema, 'Không tìm thấy plan hoặc item thuộc user', ['NOT_FOUND']),
       409: errorResponse(errorSchema, 'Không có candidate hoặc version/idempotency conflict', [
         'NO_ELIGIBLE_RECIPE',
+        'MEAL_PLAN_VERSION_CONFLICT',
+        'MEAL_PLAN_IDEMPOTENCY_CONFLICT',
+      ]),
+    },
+  });
+
+  registry.registerPath({
+    method: 'patch',
+    path: '/api/v1/meal-plans/{id}/items/{itemId}/manual-add',
+    tags: ['Meal Plans'],
+    summary: 'Thêm recipe hoặc private custom meal vào slot',
+    description:
+      'Backend kiểm tra allergy, explicit exclusion, diet pattern và enabled tradition constraints trước khi ghi. Món hợp lệ được thêm với servings đã chọn, plan version tăng và Phase 18 analysis được tính lại. Compatibility evidence-graded không tự biến thành hard prohibition.',
+    operationId: 'manualAddMealPlanItem',
+    security: authenticated,
+    request: {
+      params: mealPlanItemParamsSchema,
+      body: { required: true, content: { 'application/json': { schema: manualAddRequest } } },
+    },
+    responses: {
+      200: {
+        description: 'Meal plan và analysis đã cập nhật',
+        content: { 'application/json': { schema: planResponse } },
+      },
+      400: errorResponse(errorSchema, 'Payload manual-add không hợp lệ', ['VALIDATION_ERROR']),
+      ...authErrors(errorSchema),
+      404: errorResponse(errorSchema, 'Không tìm thấy owned plan, slot hoặc source', ['NOT_FOUND']),
+      409: errorResponse(errorSchema, 'Hard constraint, version hoặc idempotency conflict', [
+        'MEAL_PLAN_HARD_CONSTRAINT_VIOLATION',
         'MEAL_PLAN_VERSION_CONFLICT',
         'MEAL_PLAN_IDEMPOTENCY_CONFLICT',
       ]),

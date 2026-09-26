@@ -124,6 +124,28 @@ describe('PostMapper', () => {
     ).toEqual([]);
   });
 
+  it('maps cover media with assetId strictly per backend Phase 15 schema', () => {
+    expect(
+      postMapper.toCreateDto({
+        title: 'T',
+        content: 'Nội dung đủ dài để qua validate backend phía tạo bài viết.',
+        coverImageUrl: 'https://cloudinary.com/image.jpg',
+        coverMedia: {
+          assetId: 'd87b26b8-4339-41f3-8bfc-d465462e1f5f',
+          publicId: 'x',
+          mimeType: 'image/jpeg',
+          bytes: 10,
+        },
+      }).media
+    ).toEqual([
+      {
+        provider: 'CLOUDINARY',
+        kind: 'COVER_IMAGE',
+        assetId: 'd87b26b8-4339-41f3-8bfc-d465462e1f5f',
+      },
+    ]);
+  });
+
   it('maps UpdateDto with expectedVersion', () => {
     const updateDto = postMapper.toUpdateDto({ title: 'Sửa', version: 4 });
 

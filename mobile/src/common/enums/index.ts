@@ -23,10 +23,17 @@ export enum MemberStatus {
   DELETED = 'DELETED',
 }
 
-/** Loại nguyện vọng contributor khi đăng ký (BL-01). Chỉ mô tả nguyện vọng, không cấp quyền. */
-export enum ContributorType {
-  EXPERIENCED_PRACTITIONER = 'EXPERIENCED_PRACTITIONER',
-  NUTRITION_EXPERT = 'NUTRITION_EXPERT',
+/**
+ * Cơ sở nguyện vọng/xét duyệt Contributor hợp nhất (Phase 14, thay cho `ContributorType`
+ * cũ đã bị backend loại bỏ). Chỉ mô tả căn cứ xét duyệt — mọi Contributor đã duyệt có
+ * CÙNG một quyền hạn, KHÔNG dùng basis để phân cấp quyền (BL-01).
+ * - `ORGANIZATION_AFFILIATION` / `PLATFORM_TRACK_RECORD`: người dùng tự khai khi đăng ký.
+ * - `ADMIN_INVITED`: chỉ do Admin gán, không chọn được ở form đăng ký.
+ */
+export enum ContributorApprovalBasis {
+  ORGANIZATION_AFFILIATION = 'ORGANIZATION_AFFILIATION',
+  PLATFORM_TRACK_RECORD = 'PLATFORM_TRACK_RECORD',
+  ADMIN_INVITED = 'ADMIN_INVITED',
 }
 
 /** Trạng thái đơn nguyện vọng contributor. */
@@ -59,6 +66,13 @@ export enum Tradition {
   NONE = 'NONE',
   BUDDHIST = 'BUDDHIST',
   CHRISTIAN = 'CHRISTIAN',
+}
+
+/** Mức độ nghiêm trọng của dị ứng (`AllergyInput.severity`). */
+export enum AllergySeverity {
+  MILD = 'MILD',
+  MODERATE = 'MODERATE',
+  SEVERE = 'SEVERE',
 }
 
 /** Giới tính sinh học (`HealthProfileRequest.sex`). */

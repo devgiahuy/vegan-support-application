@@ -64,6 +64,7 @@ export interface Recipe {
   ingredients: RecipeIngredient[];
   /** Hướng dẫn nấu dạng văn bản — backend chưa trả steps có cấu trúc, chỉ có `revision.body`. */
   body: string;
+  tags: string[];
   publishedAt: Date | null;
   formattedPublishedAt: string;
   description: string;

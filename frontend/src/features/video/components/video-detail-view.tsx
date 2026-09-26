@@ -30,6 +30,10 @@ import { BookmarkButton } from '@/features/community/components/bookmark-button'
 import { ReportButton } from '@/components/shared/report-button';
 import { ReportTargetKind } from '@/common/enums';
 import type { Video } from '../types/video.model';
+import { ReviewStatusBanner } from '@/features/review/components/review-status-banner';
+import { ReviewHistoryDialog } from '@/features/review/components/review-history-dialog';
+import { useAuthStore } from '@/store/useAuthStore';
+import { useRouter } from 'next/navigation';
 
 interface VideoDetailViewProps {
   video: Video;
@@ -37,6 +41,10 @@ interface VideoDetailViewProps {
 }
 
 export function VideoDetailView({ video, relatedVideos }: VideoDetailViewProps) {
+  const router = useRouter();
+  const user = useAuthStore((s) => s.user);
+  const [historyDialogOpen, setHistoryDialogOpen] = React.useState(false);
+  const isAuthor = Boolean(user && video.author?.id && user.id === video.author.id);
   const [isSaved, setIsSaved] = React.useState<boolean>(false);
 
   const handleSave = () => {
@@ -81,6 +89,29 @@ export function VideoDetailView({ video, relatedVideos }: VideoDetailViewProps) 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
         {/* LEFT COLUMN: Video Player & Recipe Info */}
         <div className="space-y-6 lg:col-span-8">
+          {/* Review Status Banner (hiển thị cho tác giả hoặc khi video chưa xuất bản) */}
+          {(isAuthor || video.status !== 'PUBLISHED') && (
+            <ReviewStatusBanner
+              postId={video.id}
+              postTitle={video.title}
+              postStatus={video.status}
+              revisionId={video.revisionId}
+              revisionVersion={video.revisionVersion ?? video.version}
+              publishedRevisionVersion={video.publishedRevisionVersion}
+              isAuthor={isAuthor}
+              onOpenHistory={() => setHistoryDialogOpen(true)}
+              onSuccess={() => router.refresh()}
+            />
+          )}
+
+          {/* History Dialog */}
+          <ReviewHistoryDialog
+            open={historyDialogOpen}
+            onOpenChange={setHistoryDialogOpen}
+            postId={video.id}
+            postTitle={video.title}
+          />
+
           {/* Main Dual Player (YouTube / HTML5) */}
           <VideoPlayer
             videoUrl={video.videoUrl}

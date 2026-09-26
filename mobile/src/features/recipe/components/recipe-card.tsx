@@ -26,9 +26,11 @@ export function RecipeCard({ recipe, className }: { recipe: Recipe; className?: 
             style={{ width: '100%', height: '100%' }}
             contentFit="cover"
           />
-          <View className="absolute left-2.5 top-2.5 flex-row items-center gap-1 rounded-full bg-background/90 px-2.5 py-1">
-            <Clock size={12} color={colors.foreground} />
-            <Text className="text-xs font-medium text-foreground">{minutes} phút</Text>
+          {/* Màu cố định (không theo theme) — nền là ảnh món ăn, độ sáng thay đổi tuỳ ảnh,
+              nên không thể dựa vào token sáng/tối để đảm bảo tương phản. */}
+          <View className="absolute left-2.5 top-2.5 flex-row items-center gap-1 rounded-full bg-black/70 px-2.5 py-1">
+            <Clock size={12} color="#ffffff" />
+            <Text className="text-xs font-medium text-white">{minutes} phút</Text>
           </View>
         </View>
 

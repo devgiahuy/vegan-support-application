@@ -18,13 +18,25 @@ export interface UserDto {
   created_at?: string;
   contributorApplication?: ContributorApplicationDto | null;
   contributor_application?: ContributorApplicationDto | null;
+  contributorProfile?: ContributorProfileDto | null;
+  contributor_profile?: ContributorProfileDto | null;
 }
 
-/** Đơn nguyện vọng contributor thô (chỉ để hiển thị, không cấp quyền). */
+/** Đơn nguyện vọng contributor thô (chỉ để hiển thị, không cấp quyền). Phase 14 contract. */
 export interface ContributorApplicationDto {
   status?: string;
-  requestedType?: string;
-  requested_type?: string;
+  claimedApprovalBasis?: string;
+  claimed_approval_basis?: string;
+}
+
+/** Hồ sơ Contributor đã được duyệt (chỉ hiển thị căn cứ duyệt, không phải cấp quyền). */
+export interface ContributorProfileDto {
+  approvalBasis?: string;
+  approval_basis?: string;
+  approvalBasisLabel?: string;
+  approval_basis_label?: string;
+  approvedAt?: string;
+  approved_at?: string;
 }
 
 /** `POST /auth/register` + `POST /auth/login` → `201/200 AuthSessionResponse`. */
@@ -70,9 +82,12 @@ export interface ProfileResponseDto {
   meta?: null;
 }
 
-/** Nguyện vọng contributor gửi kèm khi đăng ký (optional). */
+/** Nguyện vọng contributor gửi kèm khi đăng ký (optional). Phase 14 contract:
+ * body `.strict()` phía backend — chỉ gửi `organizationClaim` khi basis là
+ * `ORGANIZATION_AFFILIATION`, tuyệt đối không gửi field lạ. */
 export interface ContributorRequestDto {
-  requestedType: string;
+  claimedApprovalBasis: string;
+  organizationClaim?: string;
   experience: string;
   referenceLinks?: string[];
 }
