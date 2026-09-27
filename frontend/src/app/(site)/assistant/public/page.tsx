@@ -3,43 +3,50 @@
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LoadingState } from '@/components/shared/loading-state';
-import { PublicAnswersList } from '@/features/chat/components/public-answers-list';
-import { PublicAnswerView } from '@/features/chat/components/public-answer-view';
+import { PublicArtifactsList, PublicArtifactView } from '@/features/ai-artifacts';
 
 /**
- * Khám phá câu trả lời công khai — mở được không cần đăng nhập (KHÔNG AuthGuard).
- * `?share=<shareId>` mở thẳng 1 mục; link 2 chiều với `/assistant`.
+ * Khám phá tri thức AI công khai — mở được không cần đăng nhập (KHÔNG AuthGuard).
+ * `?share=<shareId>` mở thẳng 1 mục; liên kết 2 chiều với `/assistant`.
  */
 function PublicAssistantContent() {
   const searchParams = useSearchParams();
   const shareId = searchParams.get('share') ?? '';
 
   return (
-    <div className="mx-auto max-w-4xl space-y-4 px-4 py-8 lg:px-6">
-      <div>
-        <Button asChild variant="ghost" size="sm">
+    <div className="mx-auto max-w-5xl space-y-6 px-4 py-8 lg:px-6">
+      <div className="space-y-1">
+        <Button asChild variant="ghost" size="sm" className="gap-1.5 -ml-2">
           <Link href="/assistant">
-            <ArrowLeft data-icon="inline-start" />
-            Trợ lý
+            <ArrowLeft className="size-4" />
+            <span>Trợ lý AI</span>
           </Link>
         </Button>
-        <h1 className="mt-2 text-2xl font-bold tracking-tight">Khám phá công khai</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Những câu trả lời hữu ích được cộng đồng chia sẻ.
+        <div className="flex items-center gap-2">
+          <div className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Sparkles className="size-4" />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Khám phá Tri thức AI Công khai
+          </h1>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Tổng hợp các giải đáp, phân tích dinh dưỡng và nhận diện thực phẩm hữu ích đã được cộng
+          đồng và chuyên gia kiểm chứng.
         </p>
       </div>
 
-      {shareId ? <PublicAnswerView shareId={shareId} /> : <PublicAnswersList />}
+      {shareId ? <PublicArtifactView shareId={shareId} /> : <PublicArtifactsList />}
     </div>
   );
 }
 
 export default function PublicAssistantPage() {
   return (
-    <Suspense fallback={<LoadingState message="Đang tải khám phá..." />}>
+    <Suspense fallback={<LoadingState message="Đang tải tri thức AI..." />}>
       <PublicAssistantContent />
     </Suspense>
   );
