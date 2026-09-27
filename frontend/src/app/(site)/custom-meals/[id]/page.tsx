@@ -107,51 +107,51 @@ export default function CustomMealDetailPage() {
         <div className="flex items-center gap-3">
           <Button
             variant="ghost"
-            size="sm"
+            size="default"
             onClick={() => router.push('/custom-meals')}
-            className="text-xs gap-1.5"
+            className="text-sm gap-2 h-9 px-3 text-muted-foreground hover:text-foreground font-medium"
           >
-            <ArrowLeft className="w-3.5 h-3.5" />
+            <ArrowLeft className="w-4 h-4" />
             Tất cả món ăn
           </Button>
-          <Badge className="bg-primary/90 text-primary-foreground text-xs shadow-sm">
+          <Badge className="bg-primary/90 text-primary-foreground text-xs shadow-sm py-1 px-2.5">
             Món ăn cá nhân
           </Badge>
         </div>
 
         <div className="flex items-center gap-2 self-end sm:self-auto">
           <Link href="/meal-plans">
-            <Button variant="outline" size="sm" className="text-xs gap-1.5 h-8">
-              <CalendarPlus className="w-3.5 h-3.5 text-primary" />
+            <Button variant="outline" size="default" className="text-sm gap-2 h-9 px-3 font-medium">
+              <CalendarPlus className="w-4 h-4 text-primary" />
               Thực đơn tuần
             </Button>
           </Link>
 
           <Link href={`/custom-meals/${meal.id}/edit`}>
-            <Button variant="outline" size="sm" className="text-xs gap-1.5 h-8">
-              <Edit className="w-3.5 h-3.5" />
+            <Button variant="outline" size="default" className="text-sm gap-2 h-9 px-3 font-medium">
+              <Edit className="w-4 h-4" />
               Chỉnh sửa
             </Button>
           </Link>
 
           <Button
             variant="ghost"
-            size="sm"
+            size="default"
             onClick={() => setIsDeleteDialogOpen(true)}
-            className="text-xs gap-1.5 h-8 text-destructive hover:bg-destructive/10"
+            className="text-sm gap-2 h-9 px-3 text-destructive hover:bg-destructive/10 font-medium"
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="w-4 h-4" />
             Xóa
           </Button>
         </div>
       </div>
 
       {/* Thông tin tiêu đề chính */}
-      <div className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight text-foreground">{meal.name}</h1>
-        <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1">
-            <Users className="w-3.5 h-3.5 text-primary" />
+      <div className="space-y-2.5">
+        <h1 className="text-3xl font-bold tracking-tight text-foreground">{meal.name}</h1>
+        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+          <span className="flex items-center gap-1.5 font-medium text-foreground">
+            <Users className="w-4 h-4 text-primary" />
             {meal.servings} khẩu phần
           </span>
           {meal.sourceNote && <span>• Nguồn: {meal.sourceNote}</span>}
@@ -160,12 +160,12 @@ export default function CustomMealDetailPage() {
 
         {/* Thẻ tags */}
         {meal.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 pt-1">
+          <div className="flex flex-wrap gap-2 pt-1">
             {meal.tags.map((tag) => (
               <Badge
                 key={tag}
                 variant="secondary"
-                className="text-xs font-normal bg-primary/10 text-primary px-2.5 py-0.5"
+                className="text-xs sm:text-sm font-normal bg-primary/10 text-primary border border-primary/20 px-3 py-1"
               >
                 #{tag}
               </Badge>
@@ -196,13 +196,13 @@ export default function CustomMealDetailPage() {
           {meal.notes && (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
+                <CardTitle className="text-base font-semibold flex items-center gap-2">
                   <Info className="w-4 h-4 text-primary" />
                   Hướng dẫn & Ghi chú cách làm
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-xs leading-relaxed text-foreground whitespace-pre-line">
+                <p className="text-sm leading-relaxed text-foreground whitespace-pre-line">
                   {meal.notes}
                 </p>
               </CardContent>
@@ -212,34 +212,34 @@ export default function CustomMealDetailPage() {
           {/* Danh sách nguyên liệu */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
                 <Utensils className="w-4 h-4 text-primary" />
                 Nguyên liệu chuẩn bị ({meal.ingredients.length})
               </CardTitle>
             </CardHeader>
             <CardContent>
               {meal.ingredients.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Chưa có nguyên liệu nào.</p>
+                <p className="text-sm text-muted-foreground">Chưa có nguyên liệu nào.</p>
               ) : (
                 <div className="divide-y divide-border/60">
                   {meal.ingredients.map((ing, idx) => (
                     <div
                       key={ing.id || idx}
-                      className="py-2.5 flex items-center justify-between text-xs"
+                      className="py-3 flex items-center justify-between text-sm"
                     >
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-foreground">{ing.name}</span>
                         {ing.isCustom ? (
                           <Badge
                             variant="outline"
-                            className="text-[10px] text-amber-600 dark:text-amber-400 border-amber-500/30 px-1 py-0"
+                            className="text-xs text-amber-600 dark:text-amber-400 border-amber-500/30 px-1.5 py-0.5"
                           >
                             Tự do
                           </Badge>
                         ) : (
                           <Badge
                             variant="outline"
-                            className="text-[10px] text-emerald-600 dark:text-emerald-400 border-emerald-500/30 px-1 py-0"
+                            className="text-xs text-emerald-600 dark:text-emerald-400 border-emerald-500/30 px-1.5 py-0.5"
                           >
                             Chuẩn
                           </Badge>
@@ -251,7 +251,7 @@ export default function CustomMealDetailPage() {
                           {ing.quantity} {ing.unit}
                         </span>
                         {ing.calculatedNutrients && (
-                          <span className="text-[11px] text-orange-600 dark:text-orange-400">
+                          <span className="text-xs text-orange-600 dark:text-orange-400 font-medium">
                             (~{Math.round(ing.calculatedNutrients.calories)} kcal)
                           </span>
                         )}

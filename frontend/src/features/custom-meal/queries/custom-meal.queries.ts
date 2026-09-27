@@ -90,8 +90,9 @@ export const useDeleteCustomMealMutation = () => {
 export const useAttachCustomMealMediaMutation = (mealId: string) => {
   const queryClient = useQueryClient();
 
-  return useMutation<CustomMealPhoto, Error, { file: File; isCover?: boolean }>({
-    mutationFn: ({ file, isCover }) => customMealApi.attachCustomMealMedia(mealId, file, isCover),
+  return useMutation<CustomMealPhoto, Error, { file: File; isCover?: boolean; position?: number }>({
+    mutationFn: ({ file, isCover, position }) =>
+      customMealApi.attachCustomMealMedia(mealId, file, { isCover, position }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: CUSTOM_MEAL_KEYS.detail(mealId) });
       queryClient.invalidateQueries({ queryKey: CUSTOM_MEAL_KEYS.lists() });

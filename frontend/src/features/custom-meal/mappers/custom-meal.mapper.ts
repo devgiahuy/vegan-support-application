@@ -15,6 +15,7 @@ import type {
   CustomMealPhotoDto,
   CustomMealPlanUsageDto,
   CustomMealResponseDto,
+  CustomMealTagDto,
   CustomMealTagStatDto,
 } from '../types/custom-meal.dto';
 import type {
@@ -65,11 +66,24 @@ export class CustomMealMapper extends BaseMapper<CustomMealResponseDto, CustomMe
    * Chuyển đổi DTO ảnh sang UI Model
    */
   public static toPhotoModel(dto?: CustomMealPhotoDto | null): CustomMealPhoto {
+    const assetId = pickField<string>(dto, ['assetId', 'id'], '');
+    const position = safeNumber(pickField(dto, ['position', 'sortOrder', 'sort_order'], 0), 0);
+    const explicitCover = pickField<boolean | undefined>(dto, ['isCover', 'is_cover'], undefined);
+    const hasExplicitPosition =
+      dto !== null &&
+      dto !== undefined &&
+      (dto.position !== undefined || dto.sortOrder !== undefined);
+
+    const isCover =
+      explicitCover !== undefined
+        ? safeBoolean(explicitCover, false)
+        : hasExplicitPosition && position === 0;
+
     return {
-      id: safeString(pickField(dto, ['id'], ''), ''),
-      url: safeString(pickField(dto, ['url'], ''), ''),
-      sortOrder: safeNumber(pickField(dto, ['sortOrder', 'sort_order'], 0), 0),
-      isCover: safeBoolean(pickField(dto, ['isCover', 'is_cover'], false), false),
+      id: safeString(assetId, ''),
+      url: safeString(pickField(dto, ['secureUrl', 'url'], ''), ''),
+      sortOrder: position,
+      isCover,
       fileSizeBytes: safeNumber(pickField(dto, ['fileSizeBytes', 'file_size_bytes', 'size'], 0), 0),
       mimeType: safeString(pickField(dto, ['mimeType', 'mime_type'], 'image/jpeg'), 'image/jpeg'),
       createdAt: safeString(pickField(dto, ['createdAt', 'created_at'], ''), ''),
@@ -98,16 +112,19 @@ export class CustomMealMapper extends BaseMapper<CustomMealResponseDto, CustomMe
    */
   public static toIngredientModel(dto?: CustomMealIngredientDto | null): CustomMealIngredient {
     const ingredientId = pickField<string | null>(dto, ['ingredientId', 'ingredient_id'], null);
-    const isCustom = safeBoolean(
-      pickField(dto, ['isCustom', 'is_custom'], !ingredientId),
-      !ingredientId
-    );
+    const resolutionStatus = pickField<string>(dto, ['resolutionStatus'], '');
+    const isCustom =
+      resolutionStatus === 'UNRESOLVED' ||
+      safeBoolean(pickField(dto, ['isCustom', 'is_custom'], !ingredientId), !ingredientId);
+
+    const name = safeString(pickField(dto, ['displayName', 'name'], ''), '');
+    const quantity = safeNumber(pickField(dto, ['amount', 'quantity'], 0), 0);
 
     return {
       id: safeString(pickField(dto, ['id'], ''), ''),
       ingredientId: ingredientId ? safeString(ingredientId, '') : null,
-      name: safeString(pickField(dto, ['name'], ''), ''),
-      quantity: safeNumber(pickField(dto, ['quantity', 'amount'], 0), 0),
+      name,
+      quantity,
       unit: safeString(pickField(dto, ['unit'], 'g'), 'g'),
       isCustom,
       calculatedNutrients: this.toIngredientNutrientsModel(
@@ -147,14 +164,28 @@ export class CustomMealMapper extends BaseMapper<CustomMealResponseDto, CustomMe
       defaultCoverage
     );
 
-    const tags = safeArray<string>(pickField(dto, ['tags'], []))
+    const rawTags = safeArray<string | CustomMealTagDto>(pickField(dto, ['tags'], []));
+    const tags = rawTags
+      .map((t) => (typeof t === 'string' ? t : (t?.tag ?? t?.normalizedTag ?? '')))
       .map((t) => safeString(t, '').trim().toLowerCase())
       .filter(Boolean);
 
     const userCalories = pickField<number | null>(dto, ['userCalories', 'user_calories'], null);
-    const userProtein = pickField<number | null>(dto, ['userProtein', 'user_protein'], null);
-    const userCarbs = pickField<number | null>(dto, ['userCarbs', 'user_carbs'], null);
-    const userFat = pickField<number | null>(dto, ['userFat', 'user_fat'], null);
+    const userProtein = pickField<number | null>(
+      dto,
+      ['userProteinGrams', 'userProtein', 'user_protein_grams', 'user_protein'],
+      null
+    );
+    const userCarbs = pickField<number | null>(
+      dto,
+      ['userCarbsGrams', 'userCarbs', 'user_carbs_grams', 'user_carbs'],
+      null
+    );
+    const userFat = pickField<number | null>(
+      dto,
+      ['userFatGrams', 'userFat', 'user_fat_grams', 'user_fat'],
+      null
+    );
 
     const calculatedCalories = pickField<number | null>(
       dto,
@@ -172,6 +203,18 @@ export class CustomMealMapper extends BaseMapper<CustomMealResponseDto, CustomMe
       null
     );
     const calculatedFat = pickField<number | null>(dto, ['calculatedFat', 'calculated_fat'], null);
+
+    const nutritionCoverage = pickField<string>(
+      dto,
+      ['nutritionCoverage', 'nutrition_coverage'],
+      ''
+    );
+    const isFullyCovered =
+      nutritionCoverage === 'FULL' ||
+      safeBoolean(
+        pickField(dto, ['isFullyCovered', 'is_fully_covered'], unmatchedIngredientCount === 0),
+        unmatchedIngredientCount === 0
+      );
 
     return {
       id: safeString(pickField(dto, ['id'], ''), ''),
@@ -193,10 +236,7 @@ export class CustomMealMapper extends BaseMapper<CustomMealResponseDto, CustomMe
       calculatedCarbs: calculatedCarbs !== null ? safeNumber(calculatedCarbs, 0) : null,
       calculatedFat: calculatedFat !== null ? safeNumber(calculatedFat, 0) : null,
       coverageRatio,
-      isFullyCovered: safeBoolean(
-        pickField(dto, ['isFullyCovered', 'is_fully_covered'], unmatchedIngredientCount === 0),
-        unmatchedIngredientCount === 0
-      ),
+      isFullyCovered,
       unmatchedIngredientCount,
       tags,
       photos,
@@ -210,18 +250,60 @@ export class CustomMealMapper extends BaseMapper<CustomMealResponseDto, CustomMe
   /**
    * Chuyển đổi DTO phần tử danh sách sang UI Model
    */
-  public static toListItemModel(dto: CustomMealListItemDto): CustomMealListItem {
-    const tags = safeArray<string>(pickField(dto, ['tags'], []))
+  public static toListItemModel(
+    dto: CustomMealListItemDto | CustomMealResponseDto
+  ): CustomMealListItem {
+    const rawTags = safeArray<string | CustomMealTagDto>(pickField(dto, ['tags'], []));
+    const tags = rawTags
+      .map((t) => (typeof t === 'string' ? t : (t?.tag ?? t?.normalizedTag ?? '')))
       .map((t) => safeString(t, '').trim().toLowerCase())
       .filter(Boolean);
 
     const userCalories = pickField<number | null>(dto, ['userCalories', 'user_calories'], null);
+    const userProtein = pickField<number | null>(
+      dto,
+      ['userProteinGrams', 'userProtein', 'user_protein_grams', 'user_protein'],
+      null
+    );
+    const userCarbs = pickField<number | null>(
+      dto,
+      ['userCarbsGrams', 'userCarbs', 'user_carbs_grams', 'user_carbs'],
+      null
+    );
+    const userFat = pickField<number | null>(
+      dto,
+      ['userFatGrams', 'userFat', 'user_fat_grams', 'user_fat'],
+      null
+    );
+
     const calculatedCalories = pickField<number | null>(
       dto,
       ['calculatedCalories', 'calculated_calories'],
       null
     );
-    const coverPhotoUrl = pickField<string | null>(dto, ['coverPhotoUrl', 'cover_photo_url'], null);
+
+    const rawPhotos = safeArray<CustomMealPhotoDto>(pickField(dto, ['photos'], []));
+    const coverPhoto = rawPhotos.find((p) => p.position === 0 || p.isCover) || rawPhotos[0];
+    const coverPhotoUrl = pickField<string | null>(
+      dto,
+      ['coverPhotoUrl', 'cover_photo_url'],
+      coverPhoto?.secureUrl ?? coverPhoto?.url ?? null
+    );
+
+    const rawIngredients = safeArray<CustomMealIngredientDto>(pickField(dto, ['ingredients'], []));
+    const ingredientCount = safeNumber(
+      pickField(dto, ['ingredientCount', 'ingredient_count'], rawIngredients.length),
+      rawIngredients.length
+    );
+
+    const nutritionCoverage = pickField<string>(
+      dto,
+      ['nutritionCoverage', 'nutrition_coverage'],
+      ''
+    );
+    const isFullyCovered =
+      nutritionCoverage === 'FULL' ||
+      safeBoolean(pickField(dto, ['isFullyCovered', 'is_fully_covered'], true), true);
 
     return {
       id: safeString(pickField(dto, ['id'], ''), ''),
@@ -236,14 +318,14 @@ export class CustomMealMapper extends BaseMapper<CustomMealResponseDto, CustomMe
       userCalories: userCalories !== null ? safeNumber(userCalories, 0) : null,
       calculatedCalories: calculatedCalories !== null ? safeNumber(calculatedCalories, 0) : null,
       coverageRatio: safeNumber(pickField(dto, ['coverageRatio', 'coverage_ratio'], 1.0), 1.0),
-      isFullyCovered: safeBoolean(
-        pickField(dto, ['isFullyCovered', 'is_fully_covered'], true),
-        true
-      ),
+      isFullyCovered,
       tags,
       coverPhotoUrl: coverPhotoUrl ? safeString(coverPhotoUrl, '') : null,
-      photoCount: safeNumber(pickField(dto, ['photoCount', 'photo_count'], 0), 0),
-      ingredientCount: safeNumber(pickField(dto, ['ingredientCount', 'ingredient_count'], 0), 0),
+      photoCount: safeNumber(
+        pickField(dto, ['photoCount', 'photo_count'], rawPhotos.length),
+        rawPhotos.length
+      ),
+      ingredientCount,
       createdAt: safeString(pickField(dto, ['createdAt', 'created_at'], ''), ''),
       updatedAt: safeString(pickField(dto, ['updatedAt', 'updated_at'], ''), ''),
     };
@@ -252,19 +334,33 @@ export class CustomMealMapper extends BaseMapper<CustomMealResponseDto, CustomMe
   /**
    * Chuyển đổi DTO danh sách món ăn phân trang sang UI Model
    */
-  public static toListResultModel(dto: CustomMealListResponseDto): CustomMealListResult {
-    const rawItems = safeArray<CustomMealListItemDto>(pickField(dto, ['items'], []));
+  public static toListResultModel(
+    dto:
+      | CustomMealListResponseDto
+      | CustomMealListItemDto[]
+      | CustomMealResponseDto[]
+      | null
+      | undefined
+  ): CustomMealListResult {
+    let rawItems: any[] = [];
+    if (Array.isArray(dto)) {
+      rawItems = dto;
+    } else if (dto) {
+      rawItems = safeArray(pickField(dto, ['records', 'items'], []));
+    }
     const items = rawItems.map((item) => this.toListItemModel(item));
 
-    const rawTags = safeArray<CustomMealTagStatDto>(pickField(dto, ['availableTags', 'tags'], []));
+    const rawTags = Array.isArray(dto)
+      ? []
+      : safeArray<CustomMealTagStatDto>(pickField(dto, ['availableTags', 'tags'], []));
     const availableTags: UserTagItem[] = rawTags.map((tag) => ({
-      name: safeString(pickField(tag, ['name'], ''), '')
+      name: safeString(typeof tag === 'string' ? tag : pickField(tag, ['name', 'tag'], ''), '')
         .trim()
         .toLowerCase(),
       count: safeNumber(pickField(tag, ['count'], 0), 0),
     }));
 
-    const paginationDto = pickField(dto, ['pagination'], null);
+    const paginationDto = Array.isArray(dto) ? null : pickField(dto, ['pagination', 'meta'], null);
 
     return {
       items,
@@ -272,7 +368,7 @@ export class CustomMealMapper extends BaseMapper<CustomMealResponseDto, CustomMe
         page: safeNumber(pickField(paginationDto, ['page'], 1), 1),
         limit: safeNumber(pickField(paginationDto, ['limit'], 12), 12),
         totalItems: safeNumber(
-          pickField(paginationDto, ['totalItems', 'total'], items.length),
+          pickField(paginationDto, ['total', 'totalItems'], items.length),
           items.length
         ),
         totalPages: safeNumber(pickField(paginationDto, ['totalPages', 'total_pages'], 1), 1),

@@ -174,6 +174,75 @@ describe('CustomMealMapper', () => {
 
       expect(result.tags).toEqual(['món nhanh', 'shopee']);
     });
+
+    it('chuyển đổi chính xác các trường dữ liệu thực tế từ Backend: userProteinGrams, displayName, amount, secureUrl và tag objects', () => {
+      const dto = {
+        id: 'cm-be-detail',
+        ownerId: 'usr-1',
+        name: 'Bún bò chay Huế',
+        servings: 2,
+        sourceNote: 'Tự nấu',
+        notes: 'Hầm nước dùng với củ cải và bắp ngọt',
+        userCalories: 450,
+        userProteinGrams: 18.5,
+        userCarbsGrams: 60.0,
+        userFatGrams: 10.2,
+        nutritionCoverage: 'FULL',
+        tags: [
+          { tag: 'bua_trua', normalizedTag: 'bua trua' },
+          { tag: 'đậm đà', normalizedTag: 'dam da' },
+        ],
+        photos: [
+          {
+            id: 'photo-row-1',
+            assetId: 'asset-uuid-1',
+            position: 0,
+            secureUrl: 'https://cloudinary.com/bun-bo.webp',
+            mimeType: 'image/webp',
+          },
+        ],
+        ingredients: [
+          {
+            id: 'ing-1',
+            position: 0,
+            displayName: 'Bún sợi to',
+            amount: 300,
+            unit: 'g',
+            resolutionStatus: 'RESOLVED',
+            ingredientId: 'ing-bun-soi-to',
+          },
+          {
+            id: 'ing-2',
+            position: 1,
+            displayName: 'Nấm đùi gà',
+            amount: 100,
+            unit: 'g',
+            resolutionStatus: 'RESOLVED',
+            ingredientId: 'ing-nam-dui-ga',
+          },
+        ],
+        createdAt: '2026-09-27T08:00:00Z',
+        updatedAt: '2026-09-27T08:00:00Z',
+      } as unknown as CustomMealResponseDto;
+
+      const result = CustomMealMapper.toCustomMealModel(dto);
+
+      expect(result.id).toBe('cm-be-detail');
+      expect(result.name).toBe('Bún bò chay Huế');
+      expect(result.userProtein).toBe(18.5);
+      expect(result.userCarbs).toBe(60.0);
+      expect(result.userFat).toBe(10.2);
+      expect(result.userCalories).toBe(450);
+      expect(result.tags).toEqual(['bua_trua', 'đậm đà']);
+      expect(result.coverPhoto?.id).toBe('asset-uuid-1');
+      expect(result.coverPhoto?.url).toBe('https://cloudinary.com/bun-bo.webp');
+      expect(result.coverPhoto?.isCover).toBe(true);
+      expect(result.ingredients).toHaveLength(2);
+      expect(result.ingredients[0].name).toBe('Bún sợi to');
+      expect(result.ingredients[0].quantity).toBe(300);
+      expect(result.ingredients[0].isCustom).toBe(false);
+      expect(result.isFullyCovered).toBe(true);
+    });
   });
 
   describe('toListItemModel', () => {
@@ -238,6 +307,65 @@ describe('CustomMealMapper', () => {
         { name: 'ăn sáng', count: 3 },
         { name: 'shopee', count: 1 },
       ]);
+    });
+
+    it('chuyển đổi danh sách món ăn từ cấu trúc data.records chuẩn Backend', () => {
+      const backendDto = {
+        records: [
+          {
+            id: 'cm-be-1',
+            ownerId: 'usr-1',
+            name: 'Đậu hũ sốt cà chua',
+            servings: 2,
+            userCalories: 350,
+            userProteinGrams: 20.5,
+            userCarbsGrams: 15.2,
+            userFatGrams: 8.4,
+            nutritionCoverage: 'FULL',
+            tags: [{ tag: 'bua_trua', normalizedTag: 'bua trua' }],
+            photos: [
+              {
+                id: 'p-1',
+                assetId: 'asset-1',
+                position: 0,
+                secureUrl: 'https://cloudinary.com/meal.jpg',
+              },
+            ],
+            ingredients: [
+              {
+                id: 'ing-row-1',
+                position: 0,
+                displayName: 'Đậu hũ chiên',
+                amount: 200,
+                unit: 'g',
+                resolutionStatus: 'RESOLVED' as const,
+                ingredientId: 'ing-tofu',
+              },
+            ],
+            createdAt: '2026-09-27T08:00:00Z',
+            updatedAt: '2026-09-27T08:00:00Z',
+          },
+        ],
+        pagination: {
+          page: 1,
+          limit: 20,
+          total: 1,
+          totalPages: 1,
+        },
+      };
+
+      const result = CustomMealMapper.toListResultModel(backendDto);
+
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].id).toBe('cm-be-1');
+      expect(result.items[0].name).toBe('Đậu hũ sốt cà chua');
+      expect(result.items[0].userCalories).toBe(350);
+      expect(result.items[0].tags).toEqual(['bua_trua']);
+      expect(result.items[0].coverPhotoUrl).toBe('https://cloudinary.com/meal.jpg');
+      expect(result.items[0].ingredientCount).toBe(1);
+      expect(result.items[0].photoCount).toBe(1);
+      expect(result.items[0].isFullyCovered).toBe(true);
+      expect(result.pagination.totalItems).toBe(1);
     });
   });
 

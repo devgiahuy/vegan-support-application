@@ -77,10 +77,10 @@ export default function EditCustomMealPage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl space-y-6">
       <div className="border-b pb-4">
-        <h1 className="text-xl font-bold tracking-tight text-foreground">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
           Chỉnh sửa món ăn: {meal.name}
         </h1>
-        <p className="text-xs text-muted-foreground mt-0.5">
+        <p className="text-sm text-muted-foreground mt-1">
           Cập nhật thông tin định lượng, ảnh chụp thực tế hoặc thẻ phân loại.
         </p>
       </div>
