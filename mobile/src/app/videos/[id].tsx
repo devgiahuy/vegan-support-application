@@ -7,6 +7,7 @@ import { ExternalLink, Pencil, Share2, Sparkles, Trash2 } from 'lucide-react-nat
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { CommunityPanel } from '@/features/community/components/community-panel';
+import { ReportButton } from '@/features/safety/components/report-button';
 import { VideoCard } from '@/features/video/components/video-card';
 import { useRelatedVideosQuery, useVideoDetailQuery } from '@/features/video/queries/video.queries';
 import { useDeletePostMutation } from '@/features/post/queries/post.queries';
@@ -160,6 +161,8 @@ export default function VideoDetailScreen() {
             onPress={shareVideo}
           />
         </View>
+
+        {!isOwner ? <ReportButton targetType="POST" targetId={video.id} /> : null}
 
         <CommunityPanel postId={video.id} showBookmark commentPlaceholder="Chia sẻ cảm nhận hoặc câu hỏi về video..." />
 

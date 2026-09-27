@@ -5,6 +5,7 @@ import type { LocationQuery } from '../types/restaurant.model';
 export const RESTAURANT_KEYS = {
   all: ['restaurants'] as const,
   search: (query: LocationQuery) => [...RESTAURANT_KEYS.all, 'search', query] as const,
+  detail: (id: string) => [...RESTAURANT_KEYS.all, 'detail', id] as const,
 };
 
 /** Tìm quán theo vị trí + từ món (fixture ở phase scaffold, BE còn PLANNED). */
@@ -14,6 +15,15 @@ export function useRestaurantSearchQuery(query: LocationQuery, enabled = true) {
     queryFn: () => restaurantApi.search(query),
     staleTime: 2 * 60 * 1000,
     enabled,
+  });
+}
+
+export function useRestaurantDetailQuery(id: string) {
+  return useQuery({
+    queryKey: RESTAURANT_KEYS.detail(id),
+    queryFn: () => restaurantApi.getById(id),
+    staleTime: 2 * 60 * 1000,
+    enabled: id.length > 0,
   });
 }
 
