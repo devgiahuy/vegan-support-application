@@ -4,7 +4,7 @@ import {
   MediaResourceType,
   StorageReservationStatus,
 } from '@prisma/client';
-import { z } from '../../common/validation/zod.js';
+import { z, mediaUrlSchema } from '../../common/validation/zod.js';
 
 const paginationQueryFields = {
   page: z.coerce.number().int().min(1).default(1),
@@ -123,7 +123,7 @@ const assetSchema = z
     resourceType: z.enum(MediaResourceType),
     kind: z.enum(MediaKind),
     publicId: z.string(),
-    secureUrl: z.string().url(),
+    secureUrl: mediaUrlSchema,
     mimeType: z.string(),
     extension: z.string(),
     bytes: z.number().int().positive(),

@@ -54,6 +54,7 @@ import { z } from 'zod';
 import { PasswordService } from '../src/modules/auth/password.service.js';
 import { normalizeVietnameseText } from '../src/modules/catalog/catalog.normalization.js';
 import { seedScenarioData } from './seed-scenarios.js';
+import { seedComprehensiveData } from './seed-data/seeder.js';
 
 const prisma = new PrismaClient();
 const passwordService = new PasswordService();
@@ -2077,6 +2078,12 @@ async function main(): Promise<void> {
       activeKey: `${member.id}:${ReportTargetType.POST}:${communityRecipe.id}`,
     },
   });
+
+  await seedComprehensiveData(prisma, {
+    adminId: admin.id,
+    defaultPasswordHash: memberPasswordHash,
+  });
+
   await seedScenarioData(prisma, {
     memberEmail: seedEnvironment.SEED_MEMBER_EMAIL.toLowerCase(),
     memberPasswordHash,
@@ -2235,14 +2242,14 @@ async function main(): Promise<void> {
     {
       id: '21000000-0000-4000-8000-000000000001',
       publicId: 'seed/vision/fridge-primary',
-      secureUrl: 'https://res.cloudinary.com/demo/image/upload/seed/vision/fridge-primary.jpg',
-      bytes: 180_000,
+      secureUrl: '/seed/vision/fridge-scan-sample.jpg',
+      bytes: 40_800,
     },
     {
       id: '21000000-0000-4000-8000-000000000002',
       publicId: 'seed/vision/fridge-secondary',
-      secureUrl: 'https://res.cloudinary.com/demo/image/upload/seed/vision/fridge-secondary.jpg',
-      bytes: 165_000,
+      secureUrl: '/seed/vision/my-lunch-bowl.jpg',
+      bytes: 56_190,
     },
     {
       id: '21000000-0000-4000-8000-000000000003',
@@ -2291,8 +2298,8 @@ async function main(): Promise<void> {
     {
       id: '22000000-0000-4000-8000-000000000001',
       publicId: 'seed/receipts/market-primary',
-      secureUrl: 'https://res.cloudinary.com/demo/image/upload/seed/receipts/market-primary.jpg',
-      bytes: 125_000,
+      secureUrl: '/seed/vision/supermarket-receipt-sample.jpg',
+      bytes: 45_874,
     },
     {
       id: '22000000-0000-4000-8000-000000000002',

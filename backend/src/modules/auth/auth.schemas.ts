@@ -4,7 +4,7 @@ import {
   Role,
   UserStatus,
 } from '@prisma/client';
-import { z } from '../../common/validation/zod.js';
+import { z, mediaUrlSchema } from '../../common/validation/zod.js';
 
 export const contributorRequestSchema = z
   .object({
@@ -81,7 +81,7 @@ export const userResponseSchema = z
     id: z.string().uuid(),
     email: z.string().email(),
     displayName: z.string(),
-    avatarUrl: z.string().url().nullable(),
+    avatarUrl: mediaUrlSchema.nullable(),
     role: z.enum(Role),
     status: z.enum(UserStatus),
     createdAt: z.string().datetime(),

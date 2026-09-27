@@ -1,5 +1,5 @@
 import { PantryItemSource, RecognitionCandidateStatus, RecognitionJobStatus } from '@prisma/client';
-import { z } from '../../common/validation/zod.js';
+import { z, mediaUrlSchema } from '../../common/validation/zod.js';
 
 const idempotencyKeySchema = z.string().trim().min(8).max(160);
 const candidateIdentityFields = {
@@ -65,7 +65,7 @@ export const retryRecognitionJobSchema = z
 const imageSchema = z.object({
   id: z.string().uuid(),
   position: z.number().int().nonnegative(),
-  url: z.string().url(),
+  url: mediaUrlSchema,
   status: z.enum(['PENDING', 'PROCESSED', 'FAILED']),
   issue: z.string().nullable(),
 });

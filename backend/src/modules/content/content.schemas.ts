@@ -12,6 +12,7 @@ import {
   Tradition,
 } from '@prisma/client';
 import { z } from '../../common/validation/zod.js';
+import { mediaUrlSchema } from '../../common/validation/zod.js';
 
 const uniqueUuidList = (maximum: number) =>
   z
@@ -285,7 +286,7 @@ const mediaSchema = z
     kind: z.enum(MediaKind),
     provider: z.enum(MediaProvider),
     publicId: z.string().nullable(),
-    secureUrl: z.string().url(),
+    secureUrl: mediaUrlSchema,
     mimeType: z.string().nullable(),
     bytes: z.number().int().positive().nullable(),
     width: z.number().int().positive().nullable(),

@@ -1,5 +1,5 @@
 import { PantryItemSource, ReceiptCandidateStatus, ReceiptJobStatus } from '@prisma/client';
-import { z } from '../../common/validation/zod.js';
+import { z, mediaUrlSchema } from '../../common/validation/zod.js';
 
 const idempotencyKeySchema = z.string().trim().min(8).max(160);
 const currencySchema = z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/);
@@ -84,7 +84,7 @@ export const shoppingGapPreviewSchema = z
 const receiptImageSchema = z.object({
   id: z.string().uuid(),
   position: z.number().int().nonnegative(),
-  url: z.string().url(),
+  url: mediaUrlSchema,
   status: z.enum(['PENDING', 'PROCESSED', 'FAILED']),
   issue: z.string().nullable(),
 });

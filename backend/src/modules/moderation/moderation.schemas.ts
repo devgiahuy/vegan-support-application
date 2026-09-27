@@ -13,7 +13,7 @@ import {
   Role,
   UserStatus,
 } from '@prisma/client';
-import { z } from '../../common/validation/zod.js';
+import { z, mediaUrlSchema } from '../../common/validation/zod.js';
 
 const optionalQuery = z.preprocess(
   (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
@@ -168,7 +168,7 @@ const reviewMediaSchema = z
     kind: z.enum(['COVER_IMAGE', 'VIDEO']),
     provider: z.enum(['CLOUDINARY', 'YOUTUBE']),
     publicId: z.string().nullable(),
-    secureUrl: z.string().url(),
+    secureUrl: mediaUrlSchema,
     mimeType: z.string().nullable(),
     bytes: z.number().int().positive().nullable(),
     durationSeconds: z.number().positive().nullable(),

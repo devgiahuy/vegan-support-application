@@ -1,5 +1,5 @@
 import { BehaviorEventType, DietPattern, RecipeDifficulty, Tradition } from '@prisma/client';
-import { z } from '../../common/validation/zod.js';
+import { z, mediaUrlSchema } from '../../common/validation/zod.js';
 
 export const PERSONALIZATION_CONSENT_VERSION = 'behavior-personalization-v1' as const;
 export const RECOMMENDATION_SCORING_VERSION = 'behavioral-v1' as const;
@@ -113,7 +113,7 @@ const recommendationItemSchema = z
     slug: z.string(),
     title: z.string(),
     excerpt: z.string().nullable(),
-    coverImageUrl: z.string().url().nullable(),
+    coverImageUrl: mediaUrlSchema.nullable(),
     cookTimeMinutes: z.number().int().nonnegative(),
     difficulty: z.enum(RecipeDifficulty),
     calories: z.number().int().nonnegative().nullable(),

@@ -5,7 +5,7 @@ import {
   NutritionDataQuality,
   RecipeDifficulty,
 } from '@prisma/client';
-import { z } from '../../common/validation/zod.js';
+import { z, mediaUrlSchema } from '../../common/validation/zod.js';
 import { dateOnlySchema } from '../profile/profile.schemas.js';
 import { mealAnalysisDataSchema } from '../meal-analysis/meal-analysis.schemas.js';
 
@@ -91,7 +91,7 @@ const recipeSummarySchema = z
     revisionId: z.string().uuid(),
     slug: z.string(),
     title: z.string(),
-    coverImageUrl: z.string().url().nullable(),
+    coverImageUrl: mediaUrlSchema.nullable(),
     difficulty: z.enum(RecipeDifficulty),
   })
   .strict();
