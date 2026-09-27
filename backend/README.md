@@ -40,7 +40,8 @@ deterministic development fixture and cannot be enabled in production. Live Open
 has not yet been validated on representative Vietnamese photos/receipts; see the release checklist.
 Chat uses `AI_PROVIDER=openai` and needs an
 API key for live answers; without one it returns a documented static advisory fallback. Google
-Maps requires `MAPS_PROVIDER=google` and `GOOGLE_MAPS_API_KEY`.
+Maps can use the local fake provider, Google Places/Geocoding, or SerpApi's Google Maps engine. For SerpApi,
+set `MAPS_PROVIDER=serpapi`, `SERPAPI_API_KEY`, and optionally `SERPAPI_BASE_URL`.
 
 Local endpoints:
 
