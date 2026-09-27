@@ -55,10 +55,19 @@ const locationQuery = z
 export const nearbyQuerySchema = locationQuery;
 export const searchQuerySchema = locationQuery.safeExtend({
   q: z.string().trim().min(2).max(160),
+  minPrice: z.coerce.number().int().min(0).max(4).optional(),
+  maxPrice: z.coerce.number().int().min(0).max(4).optional(),
+  minRating: z.coerce.number().min(2).max(4.5).optional(),
+  openState: z.enum(['now', '24h']).optional(),
+  openOnDay: z.enum(['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun']).optional(),
+  openAtHour: z.coerce.number().int().min(0).max(23).optional(),
 });
 export const restaurantIdParamsSchema = z
   .object({
-    id: z.union([z.string().uuid(), z.string().regex(/^(google|fake):[A-Za-z0-9_-]{1,255}$/)]),
+    id: z.union([
+      z.string().uuid(),
+      z.string().regex(/^(google|serpapi|fake):[A-Za-z0-9_-]{1,255}$/),
+    ]),
   })
   .strict();
 export const internalRestaurantIdParamsSchema = z.object({ id: z.string().uuid() }).strict();

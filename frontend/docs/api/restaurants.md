@@ -11,7 +11,7 @@ Nearby approved internal and live provider places; hard diet filtering precedes 
 ## GET `/api/v1/restaurants/search`
 Search nearby restaurants and shops
 - operationId: `searchRestaurants`
-- Params: `query:lat (number,null)`, `query:lng (number,null)`, `query:north (number,null)`, `query:south (number,null)`, `query:east (number,null)`, `query:west (number,null)`, `query:radiusMeters (integer)`, `query:page (integer)`, `query:limit (integer)`, `query:dietPattern (string)`, `query:locationSource (string)`, `query:locationConsent (string)`, `query:q* (string)`
+- Params: `query:lat (number,null)`, `query:lng (number,null)`, `query:north (number,null)`, `query:south (number,null)`, `query:east (number,null)`, `query:west (number,null)`, `query:radiusMeters (integer)`, `query:page (integer)`, `query:limit (integer)`, `query:dietPattern (string)`, `query:locationSource (string)`, `query:locationConsent (string)`, `query:q* (string)`, `query:minPrice (integer,null)`, `query:maxPrice (integer,null)`, `query:minRating (number)`, `query:openState (string)`, `query:openOnDay (string)`, `query:openAtHour (integer,null)`
 - Request: —
 - Responses: `200` → RestaurantDiscoveryResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse
 
@@ -252,6 +252,15 @@ Submit an untrusted place for admin review
           "latitude",
           "longitude",
           "categories",
+          "rating",
+          "reviewCount",
+          "price",
+          "openState",
+          "operatingHours",
+          "phone",
+          "website",
+          "thumbnailUrl",
+          "mapsUrl",
           "dietTags",
           "source",
           "externalPlaceId",
@@ -286,6 +295,69 @@ Submit an untrusted place for admin review
             "type": "array",
             "_truncated": true
           },
+          "rating": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "_truncated": true
+          },
+          "reviewCount": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "_truncated": true
+          },
+          "price": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "_truncated": true
+          },
+          "openState": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "_truncated": true
+          },
+          "operatingHours": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "_truncated": true
+          },
+          "phone": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "_truncated": true
+          },
+          "website": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "_truncated": true
+          },
+          "thumbnailUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "_truncated": true
+          },
+          "mapsUrl": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "_truncated": true
+          },
           "dietTags": {
             "type": "array",
             "_truncated": true
@@ -294,78 +366,7 @@ Submit an untrusted place for admin review
             "type": "string",
             "_truncated": true
           },
-          "externalPlaceId": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "_truncated": true
-          },
-          "attribution": {
-            "type": "string",
-            "_truncated": true
-          },
-          "fetchedAt": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "_truncated": true
-          },
-          "distanceMeters": {
-            "type": [
-              "number",
-              "null"
-            ],
-            "_truncated": true
-          },
-          "matchReasons": {
-            "type": "array",
-            "_truncated": true
-          },
-          "dietaryReviewed": {
-            "type": "boolean",
-            "_truncated": true
-          }
-        }
-      }
-    },
-    "meta": {
-      "type": "object",
-      "required": [
-        "page",
-        "limit",
-        "total",
-        "resultsTruncated",
-        "externalDataUnavailable",
-        "provider",
-        "providerResultLimit",
-        "locationStored"
-      ],
-      "properties": {
-        "page": {
-          "type": "number"
-        },
-        "limit": {
-          "type": "number"
-        },
-        "total": {
-          "type": "number"
-        },
-        "resultsTruncated": {
-          "type": "boolean"
-        },
-        "externalDataUnavailable": {
-          "type": "boolean"
-        },
-        "provider": {
-          "type": "string"
-        },
-        "providerResultLimit": {
-          "type": "number"
-        },
-        "locationStored": {
-          "type": "boolean",
+          "externalPlaceI
   …(truncated — xem api-catalog.json)
 ```
 
@@ -393,6 +394,15 @@ Submit an untrusted place for admin review
         "latitude",
         "longitude",
         "categories",
+        "rating",
+        "reviewCount",
+        "price",
+        "openState",
+        "operatingHours",
+        "phone",
+        "website",
+        "thumbnailUrl",
+        "mapsUrl",
         "dietTags",
         "source",
         "externalPlaceId",
@@ -425,6 +435,63 @@ Submit an untrusted place for admin review
             "_truncated": true
           }
         },
+        "rating": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "reviewCount": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "price": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "openState": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "operatingHours": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "phone": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "website": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uri"
+        },
+        "thumbnailUrl": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uri"
+        },
+        "mapsUrl": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uri"
+        },
         "dietTags": {
           "type": "array",
           "items": {
@@ -437,6 +504,7 @@ Submit an untrusted place for admin review
           "enum": [
             "INTERNAL",
             "GOOGLE",
+            "SERPAPI",
             "FAKE"
           ]
         },
@@ -462,20 +530,8 @@ Submit an untrusted place for admin review
             "null"
           ]
         },
-        "matchReasons": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "_truncated": true
-          }
-        },
-        "dietaryReviewed": {
-          "type": "boolean"
-        }
-      }
-    }
-  }
-}
+        "ma
+  …(truncated — xem api-catalog.json)
 ```
 
 #### RestaurantRecordResponse

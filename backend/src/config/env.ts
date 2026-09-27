@@ -111,22 +111,35 @@ const environmentSchema = z
     RECEIPT_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(256).max(8192).default(4096),
     RECEIPT_MAX_IMAGES: z.coerce.number().int().min(1).max(8).default(4),
     RECEIPT_MAX_IMAGE_BYTES: z.coerce.number().int().min(1).max(25_000_000).default(10_000_000),
-    MAPS_PROVIDER: z.enum(['fake', 'google']).default('fake'),
+    MAPS_PROVIDER: z.enum(['fake', 'google', 'serpapi']).default('fake'),
     GOOGLE_MAPS_API_KEY: z.preprocess(
       (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
       z.string().trim().min(1).optional(),
     ),
+    SERPAPI_API_KEY: z.preprocess(
+      (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+      z.string().trim().min(1).optional(),
+    ),
+    SERPAPI_BASE_URL: z.string().trim().url().default('https://serpapi.com/search.json'),
     MAPS_TIMEOUT_MS: z.coerce.number().int().min(1000).max(30000).default(5000),
   })
   .superRefine((environment, context) => {
-    if (environment.NODE_ENV === 'production' && environment.VISION_ENABLED && environment.VISION_PROVIDER === 'fake') {
+    if (
+      environment.NODE_ENV === 'production' &&
+      environment.VISION_ENABLED &&
+      environment.VISION_PROVIDER === 'fake'
+    ) {
       context.addIssue({
         code: 'custom',
         path: ['VISION_ENABLED'],
         message: 'fake vision provider cannot be enabled in production',
       });
     }
-    if (environment.NODE_ENV === 'production' && environment.RECEIPT_ENABLED && environment.RECEIPT_PROVIDER === 'fake') {
+    if (
+      environment.NODE_ENV === 'production' &&
+      environment.RECEIPT_ENABLED &&
+      environment.RECEIPT_PROVIDER === 'fake'
+    ) {
       context.addIssue({
         code: 'custom',
         path: ['RECEIPT_ENABLED'],
@@ -140,11 +153,34 @@ const environmentSchema = z
         message: 'required when MAPS_PROVIDER=google',
       });
     }
-    if (environment.VISION_ENABLED && environment.VISION_PROVIDER === 'openai' && !environment.OPENAI_API_KEY) {
-      context.addIssue({ code: 'custom', path: ['OPENAI_API_KEY'], message: 'required when VISION_PROVIDER=openai is enabled' });
+    if (environment.MAPS_PROVIDER === 'serpapi' && !environment.SERPAPI_API_KEY) {
+      context.addIssue({
+        code: 'custom',
+        path: ['SERPAPI_API_KEY'],
+        message: 'required when MAPS_PROVIDER=serpapi',
+      });
     }
-    if (environment.RECEIPT_ENABLED && environment.RECEIPT_PROVIDER === 'openai' && !environment.OPENAI_API_KEY) {
-      context.addIssue({ code: 'custom', path: ['OPENAI_API_KEY'], message: 'required when RECEIPT_PROVIDER=openai is enabled' });
+    if (
+      environment.VISION_ENABLED &&
+      environment.VISION_PROVIDER === 'openai' &&
+      !environment.OPENAI_API_KEY
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['OPENAI_API_KEY'],
+        message: 'required when VISION_PROVIDER=openai is enabled',
+      });
+    }
+    if (
+      environment.RECEIPT_ENABLED &&
+      environment.RECEIPT_PROVIDER === 'openai' &&
+      !environment.OPENAI_API_KEY
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['OPENAI_API_KEY'],
+        message: 'required when RECEIPT_PROVIDER=openai is enabled',
+      });
     }
   })
   .transform((environment) => ({
@@ -208,7 +244,9 @@ const environmentSchema = z
     vision: {
       enabled: environment.VISION_ENABLED,
       provider: environment.VISION_PROVIDER,
-      model: environment.VISION_MODEL ?? (environment.VISION_PROVIDER === 'openai' ? 'gpt-5.6-terra' : 'local-fridge-vision-v1'),
+      model:
+        environment.VISION_MODEL ??
+        (environment.VISION_PROVIDER === 'openai' ? 'gpt-5.6-terra' : 'local-fridge-vision-v1'),
       templateVersion: environment.VISION_TEMPLATE_VERSION,
       maxOutputTokens: environment.VISION_MAX_OUTPUT_TOKENS,
       maxImages: environment.VISION_MAX_IMAGES,
@@ -217,7 +255,9 @@ const environmentSchema = z
     receipt: {
       enabled: environment.RECEIPT_ENABLED,
       provider: environment.RECEIPT_PROVIDER,
-      model: environment.RECEIPT_MODEL ?? (environment.RECEIPT_PROVIDER === 'openai' ? 'gpt-5.6-terra' : 'local-receipt-ocr-v1'),
+      model:
+        environment.RECEIPT_MODEL ??
+        (environment.RECEIPT_PROVIDER === 'openai' ? 'gpt-5.6-terra' : 'local-receipt-ocr-v1'),
       templateVersion: environment.RECEIPT_TEMPLATE_VERSION,
       maxOutputTokens: environment.RECEIPT_MAX_OUTPUT_TOKENS,
       maxImages: environment.RECEIPT_MAX_IMAGES,
@@ -226,6 +266,8 @@ const environmentSchema = z
     maps: {
       provider: environment.MAPS_PROVIDER,
       apiKey: environment.GOOGLE_MAPS_API_KEY,
+      serpApiKey: environment.SERPAPI_API_KEY,
+      serpApiBaseUrl: environment.SERPAPI_BASE_URL,
       timeoutMs: environment.MAPS_TIMEOUT_MS,
     },
     cookieSecure: environment.NODE_ENV === 'production',

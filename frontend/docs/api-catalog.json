@@ -1,7 +1,7 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
   "source": "../backend/openapi.json",
-  "generatedAt": "2026-09-27T05:15:57.082Z",
+  "generatedAt": "2026-09-27T07:27:12.283Z",
   "stats": {
     "operations": 168,
     "groups": 39,
@@ -7397,6 +7397,51 @@
           "name": "q",
           "required": true,
           "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "minPrice",
+          "required": false,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        {
+          "in": "query",
+          "name": "maxPrice",
+          "required": false,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        {
+          "in": "query",
+          "name": "minRating",
+          "required": false,
+          "type": "number"
+        },
+        {
+          "in": "query",
+          "name": "openState",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "openOnDay",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "openAtHour",
+          "required": false,
+          "type": [
+            "integer",
+            "null"
+          ]
         }
       ],
       "request": null,

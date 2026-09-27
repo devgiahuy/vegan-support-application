@@ -6,7 +6,12 @@ import {
   type Restaurant,
 } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
-import { distanceMeters, type ExternalPlace, type MapsProvider } from './maps.provider.js';
+import {
+  distanceMeters,
+  type ExternalPlace,
+  type MapsProvider,
+  type MapsSearchFilters,
+} from './maps.provider.js';
 import type {
   AdminEditInput,
   AdminListQuery,
@@ -34,8 +39,17 @@ interface ResultPlace {
   latitude: number;
   longitude: number;
   categories: string[];
+  rating: number | null;
+  reviewCount: number | null;
+  price: string | null;
+  openState: string | null;
+  operatingHours: Record<string, string> | null;
+  phone: string | null;
+  website: string | null;
+  thumbnailUrl: string | null;
+  mapsUrl: string | null;
   dietTags: string[];
-  source: 'INTERNAL' | 'GOOGLE' | 'FAKE';
+  source: 'INTERNAL' | 'GOOGLE' | 'SERPAPI' | 'FAKE';
   externalPlaceId: string | null;
   attribution: string;
   fetchedAt: string | null;
@@ -56,6 +70,15 @@ function fromInternal(
     latitude: Number(place.latitude),
     longitude: Number(place.longitude),
     categories: place.categories,
+    rating: null,
+    reviewCount: null,
+    price: null,
+    openState: null,
+    operatingHours: null,
+    phone: null,
+    website: null,
+    thumbnailUrl: null,
+    mapsUrl: null,
     dietTags: place.dietTags,
     source: 'INTERNAL',
     externalPlaceId: place.externalRefs.find((r) => r.provider === 'GOOGLE')?.placeId ?? null,
@@ -86,8 +109,17 @@ function fromExternal(
     latitude: place.latitude,
     longitude: place.longitude,
     categories: place.categories,
+    rating: place.rating ?? null,
+    reviewCount: place.reviewCount ?? null,
+    price: place.price ?? null,
+    openState: place.openState ?? null,
+    operatingHours: place.operatingHours ?? null,
+    phone: place.phone ?? null,
+    website: place.website ?? null,
+    thumbnailUrl: place.thumbnailUrl ?? null,
+    mapsUrl: place.mapsUrl ?? null,
     dietTags: [],
-    source: provider === 'GOOGLE' ? 'GOOGLE' : 'FAKE',
+    source: provider === 'GOOGLE' || provider === 'SERPAPI' ? provider : 'FAKE',
     externalPlaceId: place.placeId,
     attribution: place.attribution,
     fetchedAt: place.fetchedAt,
@@ -211,6 +243,20 @@ export class RestaurantService {
       .map((p) => fromInternal(p, lat, lng));
     let externalDataUnavailable = false;
     let external: ResultPlace[] = [];
+    const providerResultLimit = 200;
+    const mapsFilters: MapsSearchFilters =
+      'q' in query
+        ? Object.fromEntries(
+            Object.entries({
+              minPrice: query.minPrice,
+              maxPrice: query.maxPrice,
+              minRating: query.minRating,
+              openState: query.openState,
+              openOnDay: query.openOnDay,
+              openAtHour: query.openAtHour,
+            }).filter(([, value]) => value !== undefined),
+          )
+        : {};
     // Provider text/type labels are not evidence of allergy or diet compatibility.
     const hardConstraints = Boolean(
       constraints.pattern ||
@@ -226,6 +272,7 @@ export class RestaurantService {
             lat,
             lng,
             radiusMeters,
+            mapsFilters,
           )
         )
           .filter((p) => inArea(p.latitude, p.longitude))
@@ -249,26 +296,28 @@ export class RestaurantService {
       result.push(candidate);
     }
     result.sort((a, b) => {
+      const aRating = a.rating ?? -1;
+      const bRating = b.rating ?? -1;
       const q = text ? normalize(text) : '';
       const aScore = q && normalize(a.name).includes(q) ? 0 : 1;
       const bScore = q && normalize(b.name).includes(q) ? 0 : 1;
       return (
+        bRating - aRating ||
         aScore - bScore ||
         (a.distanceMeters ?? Infinity) - (b.distanceMeters ?? Infinity) ||
         a.id.localeCompare(b.id)
       );
     });
-    const start = (query.page - 1) * query.limit;
     return {
-      data: result.slice(start, start + query.limit),
+      data: result,
       meta: {
-        page: query.page,
-        limit: query.limit,
+        page: 1,
+        limit: result.length,
         total: result.length,
-        resultsTruncated,
+        resultsTruncated: resultsTruncated || external.length >= providerResultLimit,
         externalDataUnavailable,
         provider: this.provider.name,
-        providerResultLimit: 20,
+        providerResultLimit,
         locationStored: false,
       },
     };

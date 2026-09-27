@@ -23941,6 +23941,66 @@
                     "type": "string"
                   }
                 },
+                "rating": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "reviewCount": {
+                  "type": [
+                    "number",
+                    "null"
+                  ]
+                },
+                "price": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "openState": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "operatingHours": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "additionalProperties": {
+                    "type": "string"
+                  }
+                },
+                "phone": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "website": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uri"
+                },
+                "thumbnailUrl": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uri"
+                },
+                "mapsUrl": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "format": "uri"
+                },
                 "dietTags": {
                   "type": "array",
                   "items": {
@@ -23952,6 +24012,7 @@
                   "enum": [
                     "INTERNAL",
                     "GOOGLE",
+                    "SERPAPI",
                     "FAKE"
                   ]
                 },
@@ -23994,6 +24055,15 @@
                 "latitude",
                 "longitude",
                 "categories",
+                "rating",
+                "reviewCount",
+                "price",
+                "openState",
+                "operatingHours",
+                "phone",
+                "website",
+                "thumbnailUrl",
+                "mapsUrl",
                 "dietTags",
                 "source",
                 "externalPlaceId",
@@ -24087,6 +24157,66 @@
                   "type": "string"
                 }
               },
+              "rating": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "reviewCount": {
+                "type": [
+                  "number",
+                  "null"
+                ]
+              },
+              "price": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "openState": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "operatingHours": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "phone": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "website": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uri"
+              },
+              "thumbnailUrl": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uri"
+              },
+              "mapsUrl": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uri"
+              },
               "dietTags": {
                 "type": "array",
                 "items": {
@@ -24098,6 +24228,7 @@
                 "enum": [
                   "INTERNAL",
                   "GOOGLE",
+                  "SERPAPI",
                   "FAKE"
                 ]
               },
@@ -24140,6 +24271,15 @@
               "latitude",
               "longitude",
               "categories",
+              "rating",
+              "reviewCount",
+              "price",
+              "openState",
+              "operatingHours",
+              "phone",
+              "website",
+              "thumbnailUrl",
+              "mapsUrl",
               "dietTags",
               "source",
               "externalPlaceId",
@@ -54328,6 +54468,84 @@
             "required": true,
             "name": "q",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 4
+            },
+            "required": false,
+            "name": "minPrice",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 4
+            },
+            "required": false,
+            "name": "maxPrice",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "number",
+              "minimum": 2,
+              "maximum": 4.5
+            },
+            "required": false,
+            "name": "minRating",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "now",
+                "24h"
+              ]
+            },
+            "required": false,
+            "name": "openState",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "mon",
+                "tue",
+                "wed",
+                "thu",
+                "fri",
+                "sat",
+                "sun"
+              ]
+            },
+            "required": false,
+            "name": "openOnDay",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 23
+            },
+            "required": false,
+            "name": "openAtHour",
+            "in": "query"
           }
         ],
         "responses": {
@@ -54460,7 +54678,7 @@
                 },
                 {
                   "type": "string",
-                  "pattern": "^(google|fake):[A-Za-z0-9_-]{1,255}$"
+                  "pattern": "^(google|serpapi|fake):[A-Za-z0-9_-]{1,255}$"
                 }
               ]
             },
