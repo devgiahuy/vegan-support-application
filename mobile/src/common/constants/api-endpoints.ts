@@ -38,6 +38,8 @@ export const API_ENDPOINTS = {
     DETAIL: (id: string) => `/meal-plans/${id}`,
     SWAP: (planId: string, itemId: string) => `/meal-plans/${planId}/items/${itemId}/swap`,
     DELETE: (id: string) => `/meal-plans/${id}`,
+    ANALYZE: (id: string) => `/meal-plans/${id}/analyze`,
+    ANALYSIS: (id: string) => `/meal-plans/${id}/analysis`,
   },
   CHAT: {
     SESSIONS: '/chat/sessions',
