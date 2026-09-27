@@ -33,7 +33,6 @@ import { Disclaimer } from '@/features/chat/components/disclaimer';
 import { SessionList } from '@/features/chat/components/session-list';
 import { FeedbackButtons } from '@/features/chat/components/feedback-buttons';
 import { ShareAnswerButton } from '@/features/chat/components/share-answer-button';
-import { VerifyAnswerButton } from '@/features/chat/components/verify-answer-button';
 import { QuotaBanner } from '@/features/chat/components/quota-banner';
 import { FallbackNotice } from '@/features/chat/components/fallback-notice';
 import { ChatWelcome } from '@/features/chat/components/chat-welcome';
@@ -374,7 +373,6 @@ function AssistantContent() {
                   <div className="flex items-center">
                     <FeedbackButtons message={item} sessionId={sessionId} />
                     <ShareAnswerButton message={item} />
-                    <VerifyAnswerButton messageId={item.id} />
                   </div>
                 )}
               />

@@ -235,5 +235,43 @@ describe('StorageMapper & FormatUtils', () => {
       expect(model.reason).toBe('Thu hồi dung lượng thử nghiệm');
       expect(model.createdAt).toBeInstanceOf(Date);
     });
+
+    it('13. maps backend account schema with nested usage object correctly', () => {
+      const backendDto: StorageAccountDto = {
+        user: {
+          id: '992d6d2d-d610-4283-99fb-053424163900',
+          email: 'member@example.com',
+          displayName: 'Demo Member',
+        },
+        policy: {
+          id: '15000000-0000-4000-8000-000000000001',
+          code: 'MVP_DEFAULT',
+          name: 'MVP default storage',
+          quotaBytes: 1073741824,
+          reservationTtlSeconds: 900,
+          warningPercent: 80,
+          active: true,
+          isDefault: true,
+          version: 1,
+          updatedAt: '2026-09-26T14:20:14.398Z',
+        },
+        usage: {
+          usedBytes: 720000,
+          reservedBytes: 0,
+          limitBytes: 1073741824,
+          remainingBytes: 1073021824,
+          overQuota: false,
+        },
+      };
+
+      const model = storageMapper.toAccountModel(backendDto);
+      expect(model.userId).toBe('992d6d2d-d610-4283-99fb-053424163900');
+      expect(model.userEmail).toBe('member@example.com');
+      expect(model.userDisplayName).toBe('Demo Member');
+      expect(model.usedBytes).toBe(720000);
+      expect(model.limitBytes).toBe(1073741824);
+      expect(model.overQuota).toBe(false);
+      expect(model.warningPercent).toBe(80);
+    });
   });
 });

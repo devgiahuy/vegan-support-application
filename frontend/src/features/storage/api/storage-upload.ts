@@ -48,7 +48,7 @@ export function validateUploadFile(file: File, kind: MediaKind): FileValidationR
   const lastDot = name.lastIndexOf('.');
   const extension = lastDot !== -1 ? name.substring(lastDot) : '';
 
-  if (kind === 'COVER_IMAGE') {
+  if (kind === 'COVER_IMAGE' || kind === 'FRIDGE_IMAGE' || kind === 'RECEIPT_IMAGE') {
     if (file.size > MAX_IMAGE_BYTES) {
       return {
         valid: false,

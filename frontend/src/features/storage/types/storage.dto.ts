@@ -74,7 +74,7 @@ export interface UploadProviderParamsDto {
 }
 
 export interface CreateUploadReservationRequestDto {
-  kind: 'COVER_IMAGE' | 'VIDEO';
+  kind: 'COVER_IMAGE' | 'VIDEO' | 'FRIDGE_IMAGE' | 'RECEIPT_IMAGE';
   mimeType: string;
   extension: string;
   bytes: number;
@@ -108,54 +108,65 @@ export interface StorageAssetResponseDto {
 }
 
 export interface StorageAccountDto {
-  userId: string;
+  userId?: string;
   user?: {
     id: string;
     email: string;
     displayName: string;
-    avatarUrl: string | null;
+    avatarUrl?: string | null;
   };
-  usedBytes: number;
-  reservedBytes: number;
-  limitBytes: number;
-  remainingBytes: number;
-  overQuota: boolean;
-  warningPercent: number;
-  quotaAdjustmentBytes: number;
-  policy: StoragePolicyDto;
+  usedBytes?: number;
+  reservedBytes?: number;
+  limitBytes?: number;
+  remainingBytes?: number;
+  overQuota?: boolean;
+  warningPercent?: number;
+  quotaAdjustmentBytes?: number;
+  policy?: StoragePolicyDto;
+  usage?: {
+    usedBytes: number;
+    reservedBytes: number;
+    limitBytes: number;
+    remainingBytes: number;
+    overQuota: boolean;
+  };
+  updatedAt?: string;
 }
 
 export interface StorageAccountListResponseDto {
-  items: StorageAccountDto[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
+  items?: StorageAccountDto[];
+  total?: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
 }
 
 export interface StorageAdjustmentDto {
   id: string;
   userId: string;
-  adminUserId: string;
+  actorId?: string;
+  adminUserId?: string;
   deltaBytes: number;
+  beforeBytes?: number;
+  afterBytes?: number;
   reason: string;
   createdAt: string;
 }
 
 export interface StorageAdjustmentListResponseDto {
-  items: StorageAdjustmentDto[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
+  items?: StorageAdjustmentDto[];
+  total?: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
 }
 
 export interface StoragePolicyListResponseDto {
-  items: StoragePolicyDto[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
+  items?: StoragePolicyDto[];
+  total?: number;
+  page?: number;
+  limit?: number;
+  totalPages?: number;
 }
 
 export interface UpdateStoragePolicyRequestDto {

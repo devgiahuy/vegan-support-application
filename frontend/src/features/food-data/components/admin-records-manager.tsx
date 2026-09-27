@@ -23,6 +23,14 @@ import {
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   Plus,
   RotateCcw,
   Pencil,
@@ -65,6 +73,10 @@ export const AdminRecordsManager: React.FC = () => {
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
   const [editingRecord, setEditingRecord] = useState<AdminRecordItem | null>(null);
 
+  // Archive Dialog states (replaces window.confirm)
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState<boolean>(false);
+  const [recordToArchive, setRecordToArchive] = useState<AdminRecordItem | null>(null);
+
   const { data, isLoading, isError, error, refetch } = useAdminRecordsQuery({
     kind: selectedKind,
     page,
@@ -83,18 +95,22 @@ export const AdminRecordsManager: React.FC = () => {
     setDialogOpen(true);
   };
 
-  const handleArchive = async (record: AdminRecordItem) => {
-    const confirm = window.confirm(
-      `Bạn có chắc chắn muốn lưu trữ / đánh dấu thay thế bản ghi "${record.displayName || record.id}" không?`
-    );
-    if (!confirm) return;
+  const handleOpenArchive = (record: AdminRecordItem) => {
+    setRecordToArchive(record);
+    setArchiveDialogOpen(true);
+  };
+
+  const handleConfirmArchive = async () => {
+    if (!recordToArchive) return;
 
     try {
       await archiveMutation.mutateAsync({
-        id: record.id,
+        id: recordToArchive.id,
         kind: selectedKind,
       });
-      toast.success(`Đã lưu trữ bản ghi ${record.displayName || record.id}`);
+      toast.success(`Đã lưu trữ bản ghi ${recordToArchive.displayName || recordToArchive.id}`);
+      setArchiveDialogOpen(false);
+      setRecordToArchive(null);
       void refetch();
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Lưu trữ bản ghi thất bại.';
@@ -302,7 +318,7 @@ export const AdminRecordsManager: React.FC = () => {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                  onClick={() => handleArchive(record)}
+                                  onClick={() => handleOpenArchive(record)}
                                   title="Lưu trữ / Thay thế (Archive)"
                                 >
                                   <Archive className="h-3.5 w-3.5" />
@@ -368,6 +384,42 @@ export const AdminRecordsManager: React.FC = () => {
           void refetch();
         }}
       />
+
+      {/* Archive Confirmation Dialog */}
+      <Dialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Lưu trữ / Thay thế bản ghi</DialogTitle>
+            <DialogDescription>
+              Bạn có chắc chắn muốn lưu trữ bản ghi{' '}
+              <span className="font-semibold text-foreground">
+                "{recordToArchive?.displayName || recordToArchive?.id}"
+              </span>
+              ? Bản ghi sẽ được đánh dấu lưu trữ (ARCHIVED/SUPERSEDED) và giữ lại bằng chứng kiểm
+              toán, không bị xóa cứng khỏi cơ sở dữ liệu.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0 pt-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setArchiveDialogOpen(false);
+                setRecordToArchive(null);
+              }}
+              disabled={archiveMutation.isPending}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmArchive}
+              disabled={archiveMutation.isPending}
+            >
+              {archiveMutation.isPending ? 'Đang lưu trữ...' : 'Xác nhận lưu trữ'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

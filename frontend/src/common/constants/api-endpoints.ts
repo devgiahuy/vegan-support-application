@@ -96,8 +96,10 @@ export const API_ENDPOINTS = {
     LIST: '/meal-plans',
     DETAIL: (id: string) => `/meal-plans/${id}`,
     SWAP: (id: string, itemId: string) => `/meal-plans/${id}/items/${itemId}/swap`,
+    MANUAL_ADD: (id: string, itemId: string) => `/meal-plans/${id}/items/${itemId}/manual-add`,
     DELETE: (id: string) => `/meal-plans/${id}`,
     ANALYZE: (id: string) => `/meal-plans/${id}/analyze`,
+    ANALYSIS: (id: string) => `/meal-plans/${id}/analysis`,
   },
   CHAT: {
     SESSIONS: '/chat/sessions',
@@ -144,11 +146,23 @@ export const API_ENDPOINTS = {
     REPORTS: '/reports',
     BEHAVIOR_HISTORY: '/users/me/behavior-history',
   },
-  // TODO(BE-READY): Chat sharing/verification còn PLANNED — nhánh dưới CHƯA được import ở đâu.
+  // Phase 23 — AI Artifacts & Contributor Verification (BE COMPLETED)
+  AI_ARTIFACTS: {
+    BASE: '/ai-artifacts',
+    PUBLIC: '/ai-artifacts/public',
+    BY_ID: (id: string) => `/ai-artifacts/${id}`,
+    VISIBILITY: (id: string) => `/ai-artifacts/${id}/visibility`,
+    SUBMIT: (id: string) => `/ai-artifacts/${id}/submit`,
+    VERIFICATIONS: (id: string) => `/ai-artifacts/${id}/verifications`,
+  },
+  AI_VERIFICATIONS_ADMIN: {
+    ACTION: (id: string) => `/admin/ai-verifications/${id}`,
+  },
+  /** @deprecated Dùng `AI_ARTIFACTS` thay thế từ Phase 23 */
   CHAT_SHARING: {
-    SHARE: (id: string) => `/chat/messages/${id}/share`,
-    PUBLIC_LIST: '/chat/public',
-    VERIFY: (id: string) => `/chat/messages/${id}/verification`,
+    SHARE: (id: string) => `/ai-artifacts/${id}/visibility`,
+    PUBLIC_LIST: '/ai-artifacts/public',
+    VERIFY: (id: string) => `/ai-artifacts/${id}/verifications`,
   },
   // TODO(BE-READY): Notifications còn PLANNED — nhánh dưới CHƯA được import ở đâu.
   NOTIFICATIONS: {
@@ -178,15 +192,19 @@ export const API_ENDPOINTS = {
     FEATURES: '/admin/ai/features',
     FEATURE_TOGGLE: (feature: string) => `/admin/ai/features/${feature}`,
   },
-  // TODO(BE-READY): Custom meals Phase 17 — phục vụ món ăn cá nhân (Owner-scoped)
+  // Custom meals Phase 17 — phục vụ món ăn cá nhân (Owner-scoped)
   CUSTOM_MEALS: {
     LIST: '/custom-meals',
     CREATE: '/custom-meals',
     DETAIL: (id: string) => `/custom-meals/${id}`,
     UPDATE: (id: string) => `/custom-meals/${id}`,
     DELETE: (id: string) => `/custom-meals/${id}`,
-    ATTACH_MEDIA: (id: string) => `/custom-meals/${id}/media`,
-    DELETE_MEDIA: (id: string, photoId: string) => `/custom-meals/${id}/media/${photoId}`,
+    ATTACH_PHOTO: (id: string) => `/custom-meals/${id}/photos`,
+    REMOVE_PHOTO: (id: string, assetId: string) => `/custom-meals/${id}/photos/${assetId}`,
+    REORDER_PHOTOS: (id: string) => `/custom-meals/${id}/photos/order`,
+    // Backward compatibility
+    ATTACH_MEDIA: (id: string) => `/custom-meals/${id}/photos`,
+    DELETE_MEDIA: (id: string, photoId: string) => `/custom-meals/${id}/photos/${photoId}`,
   },
   // TODO(BE-READY): Multi-week Meal Programs Phase 19 — Lộ trình dinh dưỡng nhiều tuần
   MEAL_PROGRAMS: {
@@ -207,5 +225,37 @@ export const API_ENDPOINTS = {
     CURRENT: (id: string) => `/posts/${id}/nutrition/current`,
     HISTORY: (id: string) => `/posts/${id}/nutrition/history`,
     STATUS: (id: string) => `/posts/${id}/nutrition/status`,
+  },
+  // Phase 20: Pantry Inventory Management
+  PANTRY: {
+    ITEMS: '/pantry/items',
+    ITEM_DETAIL: (id: string) => `/pantry/items/${id}`,
+    EXPIRING_SOON: '/pantry/items/expiring-soon',
+    ADJUSTMENTS: (id: string) => `/pantry/items/${id}/adjustments`,
+    MERGE_PREVIEW: '/pantry/merge-preview',
+    MERGE: '/pantry/merge',
+  },
+  // Phase 21: Multi-image Fridge Recognition
+  INGREDIENT_RECOGNITION: {
+    JOBS: '/ingredient-recognition/jobs',
+    JOB_DETAIL: (id: string) => `/ingredient-recognition/jobs/${id}`,
+    UPDATE_CANDIDATE: (id: string, candidateId: string) =>
+      `/ingredient-recognition/jobs/${id}/candidates/${candidateId}`,
+    CONFIRM: (id: string) => `/ingredient-recognition/jobs/${id}/confirm`,
+    CANCEL: (id: string) => `/ingredient-recognition/jobs/${id}/cancel`,
+    RETRY: (id: string) => `/ingredient-recognition/jobs/${id}/retry`,
+  },
+  // Phase 22: Receipt Analysis & Shopping Gaps
+  RECEIPT_JOBS: {
+    JOBS: '/receipt-jobs',
+    JOB_DETAIL: (id: string) => `/receipt-jobs/${id}`,
+    UPDATE_CANDIDATE: (id: string, candidateId: string) =>
+      `/receipt-jobs/${id}/candidates/${candidateId}`,
+    CONFIRM: (id: string) => `/receipt-jobs/${id}/confirm`,
+    CANCEL: (id: string) => `/receipt-jobs/${id}/cancel`,
+    RETRY: (id: string) => `/receipt-jobs/${id}/retry`,
+  },
+  SHOPPING_LISTS: {
+    PREVIEW: '/shopping-lists/preview',
   },
 } as const;

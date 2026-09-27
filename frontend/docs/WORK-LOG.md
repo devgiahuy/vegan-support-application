@@ -16,6 +16,663 @@
 - Còn lại / rủi ro:
 ```
 
+## [2026-09-27] — Khắc phục 3 lỗi kiểm thử thủ công Phase 20 Pantry Inventory (Kịch bản 2, 3, 5)
+
+- Mục tiêu:
+  - Khắc phục lỗi `Invalid UUID` khi nhập nguyên liệu tự do (`unmatchedText`) ở Kịch bản 2.
+  - Sửa lỗi điều chỉnh số lượng ở Kịch bản 3: Các nút hình thức điều chỉnh không đổi màu rõ rệt và lỗi khi để trống lý do ghi nhận.
+  - Tối ưu trải nghiệm gộp nguyên liệu ở Kịch bản 5: Tự động tính toán xem trước (auto-preview), thêm nút gợi ý chọn nhóm trùng lặp 1 chạm, hiển thị badge "Có trùng lặp", và cho phép gộp trực tiếp từ thẻ nguyên liệu.
+- Đã làm:
+  - **Kịch bản 2 (Fix lỗi Invalid UUID)**:
+    - Sửa `pantryItemFormSchema` (`pantry.schema.ts`): cho phép `ingredientId: z.string().uuid().optional().or(z.literal(''))`, dùng `.superRefine` để gắn thông báo lỗi chính xác theo trường (`ingredientId` hoặc `unmatchedText`).
+    - Sửa `PantryItemDialog`: hiển thị đúng `errors.unmatchedText` và reset giá trị đối ứng khi chuyển đổi công tắc `isCanonical`.
+  - **Kịch bản 3 (Fix giao diện & lý do điều chỉnh)**:
+    - Sửa `PantryAdjustmentDialog`: Thay thế RadioGroup bằng 3 nút Segmented trực quan (Tiêu hao, Bổ sung, Bù sai lệch) với màu emerald active rõ rệt.
+    - Sửa `pantry.mapper.ts`: Hàm `toAdjustmentCreateDto` chỉ gửi `reason` khi có nội dung (không gửi chuỗi rỗng `""` tránh lỗi validation backend Zod `.min(1)`).
+  - **Kịch bản 5 (Tối ưu gộp nguyên liệu trùng lặp)**:
+    - Xây dựng tiện ích `pantry-helpers.ts` (`getPantryItemIdentityKey`, `findPantryDuplicateGroups`, `isDuplicatePantryItem`) kèm 5/5 unit tests.
+    - Cập nhật `PantryMergeDialog`: Tự động tính toán xem trước qua `useEffect` khi chọn >= 2 mục, hỗ trợ gợi ý 1 chạm các nhóm trùng lặp, tự động kích hoạt nút "Xác nhận gộp nguyên liệu" khi tính toán thành công.
+    - Cập nhật `PantryClientView` & `PantryHeader`: Hiển thị banner thông báo khi phát hiện nhóm trùng lặp và gắn số lượng nhóm trùng lên nút "Gộp trùng lặp".
+    - Cập nhật `PantryItemCard`: Thêm badge "Có trùng lặp" và tùy chọn "Gộp mục trùng lặp..." trong menu 3 chấm mở thẳng modal gộp với các mục cùng loại đã được tích chọn sẵn.
+- File tạo/sửa:
+  - `src/features/pantry/schemas/pantry.schema.ts`
+  - `src/features/pantry/components/pantry-item-dialog.tsx`
+  - `src/features/pantry/mappers/pantry.mapper.ts`
+  - `src/features/pantry/components/pantry-adjustment-dialog.tsx`
+  - `src/features/pantry/components/pantry-merge-dialog.tsx`
+  - `src/features/pantry/components/pantry-header.tsx`
+  - `src/features/pantry/components/pantry-item-card.tsx`
+  - `src/features/pantry/components/pantry-item-list.tsx`
+  - `src/features/pantry/utils/pantry-helpers.ts`
+  - `src/features/pantry/utils/__tests__/pantry-helpers.test.ts`
+  - `src/app/pantry/pantry-client-view.tsx`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi.
+  - `npm test`: 41 test files pass, 403/403 tests pass 100%.
+  - `npm run build`: 39/39 routes build thành công.
+- PROGRESS: Phase 20 hoàn thiện 100%, trải nghiệm người dùng đạt độ mượt mà cao.
+
+## [2026-09-27] — Khắc phục lỗi dữ liệu seed không hiển thị: Liên kết `publishedRevisionId` cho toàn bộ bài đăng mẫu
+
+- Mục tiêu:
+  - Khắc phục nguyên nhân khiến toàn bộ công thức, cẩm nang và video mới đã seed nhưng không hiển thị trên giao diện hoặc API discovery.
+  - Sửa logic trong `seeder.ts` để luôn cập nhật `publishedRevisionId` cho các bài viết có trạng thái `PUBLISHED`.
+- Đã làm:
+  - Phát hiện nguyên nhân gốc: Câu lệnh `await prisma.post.update({ data: { publishedRevisionId: revision.id } })` bị lồng bên trong khối `if (!revision)`. Khi revision đã tồn tại từ lần chạy trước, câu lệnh update bị bỏ qua dẫn đến `post.publishedRevisionId = null`. Backend query lọc `where: { publishedRevisionId: { not: null } }` nên đã loại bỏ toàn bộ dữ liệu mới.
+  - Cập nhật `backend/prisma/seed-data/seeder.ts`: Đưa logic cập nhật `publishedRevisionId` ra ngoài điều kiện `if (!revision)` cho cả Recipes, Handbooks và Videos.
+  - Bổ sung kiểm tra trùng lặp cho bình luận (`prisma.comment.findFirst`) để quá trình seed đạt tính idempotent 100%.
+  - Chạy lại `npm run seed`: Toàn bộ 28 công thức xuất bản (bao gồm 13 công thức mới), 4 cẩm nang, 3 video và 7 avatar người dùng đã liên kết chuẩn xác `publishedRevisionId`.
+  - Kiểm tra API trực tiếp: `GET /api/v1/posts?type=RECIPE`, `GET /api/v1/posts?type=BLOG`, `GET /api/v1/posts?type=VIDEO` và `POST /api/v1/auth/login` đều phản hồi thành công 200 OK với đầy đủ dữ liệu và ảnh bìa cục bộ.
+- File tạo/sửa:
+  - `backend/prisma/seed-data/seeder.ts`
+  - `backend/src/modules/auth/auth.schemas.ts`
+  - `backend/src/modules/community/community.schemas.ts`
+  - `frontend/docs/WORK-LOG.md`
+- Verify:
+  - `npm run seed`: Hoàn thành 100% không lỗi.
+  - `npm run typecheck` (backend): 0 lỗi.
+  - `npm run build` (backend): Build thành công `dist/`.
+  - `npm test` (frontend): 40 test files pass, 398 tests pass.
+  - `npx tsc --noEmit` (frontend): 0 lỗi.
+- PROGRESS: 100% dữ liệu seed đã hiển thị qua API và sẵn sàng trên giao diện người dùng.
+
+## [2026-09-27] — Fix lỗi VALIDATION_ERROR khi đăng nhập: Chuẩn hóa `mediaUrlSchema` hỗ trợ URI cục bộ tĩnh
+
+- Mục tiêu:
+  - Khắc phục lỗi `VALIDATION_ERROR: data.user.avatarUrl: Invalid URL` khi đăng nhập do Zod `.url()` chỉ chấp nhận URL tuyệt đối `http(s)://` mà từ chối đường dẫn cục bộ `/seed/avatars/...`.
+  - Đảm bảo toàn bộ các schema response backend (`auth`, `profile`, `content`, `community`, `meal-plans`, `recommendations`, `moderation`, `storage`, `ingredient-recognition`, `receipts`) hỗ trợ cả URL đầy đủ lẫn đường dẫn tương đối `/seed/...`.
+- Đã làm:
+  - Khởi tạo và export `mediaUrlSchema` trong `backend/src/common/validation/zod.ts` cho phép cả `https?://` và đường dẫn gốc `/...`.
+  - Thay thế `z.string().url()` bằng `mediaUrlSchema` tại:
+    - `backend/src/modules/auth/auth.schemas.ts` (`userResponseSchema.avatarUrl`)
+    - `backend/src/modules/profile/profile.schemas.ts` (`updateBasicProfileRequestSchema.avatarUrl`)
+    - `backend/src/modules/content/content.schemas.ts` (`mediaSchema.secureUrl`)
+    - `backend/src/modules/community/community.schemas.ts` (`bookmarkItemSchema.coverImageUrl`)
+    - `backend/src/modules/meal-plans/meal-plan.schemas.ts` (`recipeSummarySchema.coverImageUrl`)
+    - `backend/src/modules/recommendations/recommendation.schemas.ts` (`recommendationItemSchema.coverImageUrl`)
+    - `backend/src/modules/moderation/moderation.schemas.ts` (`reviewMediaSchema.secureUrl`)
+    - `backend/src/modules/storage/storage.schemas.ts` (`assetSchema.secureUrl`)
+    - `backend/src/modules/ingredient-recognition/ingredient-recognition.schemas.ts` (`imageSchema.url`)
+    - `backend/src/modules/receipts/receipt.schemas.ts` (`receiptImageSchema.url`)
+  - Chạy `npm run openapi:generate` và `node scripts/sync-swagger.mjs ../backend/openapi.json`.
+- Verify:
+  - Unit test parse `userResponseSchema` và `authSessionResponseSchema`: Passed.
+  - `npm run typecheck` & `npm run lint` & `npm run build` backend: 0 lỗi.
+  - `npm test` frontend: 40/40 test files pass, 398/398 tests pass (100%).
+  - `npx tsc --noEmit` frontend: 0 lỗi.
+
+## [2026-09-27] — Tích hợp trọn bộ dữ liệu mẫu (Sample Dataset), đồng bộ Media Assets từ Google Drive và tạo 7 User Avatars
+
+- Mục tiêu:
+  1. Tải và phân loại toàn bộ tài nguyên đa phương tiện thực tế từ Google Drive người dùng cung cấp (13 ảnh món ăn, 4 ảnh cẩm nang, 3 video clips, 3 ảnh thị giác AI tủ lạnh/hóa đơn).
+  2. Tạo 7 ảnh chân dung avatar theo đúng cá tính nhân vật bằng AI (`generate_image`) theo yêu cầu người dùng: Admin, Bếp trưởng Minh Tâm, Bác sĩ Hoài Thu, Nghệ nhân Diệu Hạnh, Vận động viên Hoàng Nam, Phật tử Diệu Tâm, Thành viên Thanh Mai.
+  3. Tổ chức và lưu trữ toàn bộ media vào `frontend/public/seed/` (`avatars/`, `recipes/`, `handbooks/`, `videos/`, `vision/`).
+  4. Chuẩn hóa đường dẫn cục bộ tĩnh, MIME types, đuôi mở rộng (`.png`, `.webp`, `.jpg`, `.mp4`) và dung lượng byte chính xác trong toàn bộ seed data backend (`users.data.ts`, `recipes.data.ts`, `handbooks.data.ts`, `videos.data.ts`, `media-assets.data.ts`, `seeder.ts`, `seed.ts`).
+  5. Chạy seed vào cơ sở dữ liệu PostgreSQL đảm bảo dữ liệu hiển thị mượt mà trên UI không phụ thuộc CDN bên ngoài.
+- Đã làm:
+  - Tải tài nguyên Google Drive và di chuyển vào `frontend/public/seed/`:
+    - 13 ảnh công thức: `banh-mi-chay-pate-nam.jpg`, `bun-bo-hue-chay.png`, `ca-ri-chay-khoai-nam.png`, `canh-chua-chay-nam-bo.jpg`, `chao-yen-mach-nam-huong.jpg`, `com-chien-trai-dua.jpg`, `goi-cuon-chay-ngu-sac.jpg`, `nam-dong-co-kho-tieu.png`, `pho-chay-ha-noi.png`, `salad-bo-dau-ga.webp`, `sinh-to-xanh-cai-bo-xoi.webp`, `sua-hat-sen-dau-do.jpg`, `sup-bi-do-kem-dua.jpg`.
+    - 4 ảnh cẩm nang: `b12-guide-cover.jpg`, `meal-prep-cover.jpg`, `protein-pairing-cover.webp`, `vegan-traditions-cover.jpg`.
+    - 3 video clips chất lượng cao: `video-pho-nuoc-dung.mp4` (13.5MB), `video-bua-toi-15-phut.mp4` (12.1MB), `video-sua-hat-sen.mp4` (9.18MB).
+    - 3 ảnh thị giác: `fridge-scan-sample.jpg`, `my-lunch-bowl.jpg`, `supermarket-receipt-sample.jpg`.
+  - Sinh 7 ảnh avatar chuyên nghiệp lưu vào `frontend/public/seed/avatars/`:
+    - `admin-avatar.jpg` (System Administrator), `chef-minh-tam.jpg` (Bếp trưởng Minh Tâm), `dr-hoai-thu.jpg` (Bác sĩ Hoài Thu), `dieu-hanh.jpg` (Nghệ nhân Diệu Hạnh), `hoang-nam.jpg` (Fitness Hoàng Nam), `dieu-tam.jpg` (Phật tử Diệu Tâm), `thanh-mai.jpg` (Thanh Mai).
+  - Cập nhật seed data backend:
+    - `backend/prisma/seed-data/users.data.ts`: Gán avatarUrl chuẩn `/seed/avatars/...` cho 7 tài khoản.
+    - `backend/prisma/seed-data/recipes.data.ts`: Đồng bộ `coverMedia` cho cả 13 công thức với dung lượng và URL chính xác.
+    - `backend/prisma/seed-data/handbooks.data.ts`: Đồng bộ `coverMedia` cho 4 cẩm nang.
+    - `backend/prisma/seed-data/videos.data.ts`: Gán URL video clip cục bộ `.mp4` và ảnh bìa món ăn.
+    - `backend/prisma/seed-data/media-assets.data.ts`: Khai báo chi tiết 25+ media assets chuẩn hóa với đúng dung lượng và metadata.
+    - `backend/prisma/seed-data/seeder.ts`: Bổ sung upsert `postMedia` trên từng revision để luôn tự động đồng bộ tài nguyên khi chạy seed.
+    - `backend/prisma/seed.ts`: Cập nhật fixtures tủ lạnh và hóa đơn trỏ về `/seed/vision/...`.
+  - Chạy `npm run seed`: Toàn bộ dữ liệu được nạp thành công vào PostgreSQL.
+- File tạo/sửa:
+  - `backend/prisma/seed-data/users.data.ts`
+  - `backend/prisma/seed-data/recipes.data.ts`
+  - `backend/prisma/seed-data/handbooks.data.ts`
+  - `backend/prisma/seed-data/videos.data.ts`
+  - `backend/prisma/seed-data/media-assets.data.ts`
+  - `backend/prisma/seed-data/seeder.ts`
+  - `backend/prisma/seed.ts`
+  - `frontend/public/seed/` (toàn bộ thư mục avatars, recipes, handbooks, videos, vision)
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npm run seed` backend: Thành công 100%, kiểm tra trực tiếp qua PostgreSQL client xác nhận 100% URL đã chuyển sang `/seed/...`.
+  - `npm run typecheck` backend: 0 lỗi.
+  - `npm run lint` backend: 0 lỗi.
+  - `npm test` frontend: 40/40 test files pass, 398/398 tests pass (100%).
+  - `npx tsc --noEmit` frontend: 0 lỗi.
+- PROGRESS: Toàn bộ bộ dữ liệu mẫu lớn hoàn chỉnh, đa phương tiện tĩnh sẵn sàng sử dụng lâu dài.
+
+## [2026-09-27] — Phase 18 Meal Portion & Compatibility Analysis: Tinh chỉnh UI/UX, gom gọn cảnh báo & đảo vị trí DayGrid
+
+- Mục tiêu:
+  1. Khắc phục lỗi rò rỉ mã UUID kỹ thuật trong banner dữ liệu dinh dưỡng chưa hoàn chỉnh (`IncompleteDataBanner`).
+  2. Đảo vị trí ưu tiên: đưa Lưới thực đơn tuần 7 ngày x 3 bữa (`DayGrid`) lên TRÊN khối cảnh báo chi tiết, giúp người dùng vào trang thấy ngay lịch ăn tuần.
+  3. Bổ sung cơ chế phân trang / thu gọn (chỉ hiển thị 3 cảnh báo đầu tiên + nút "Xem thêm cảnh báo khác") cho `MealAnalysisAlerts` để tránh 27 thẻ cảnh báo chiếm hết chiều dọc trang.
+  4. Đặt tiêu đề thẻ cảnh báo thông minh theo từng loại mã quy tắc (`NUTRIENT_LIMIT_EXCEEDED`, `INGREDIENT_INTERACTION`, `INGREDIENT_GUIDELINE_EXCEEDED`, `PORTION_MULTIPLIER_HIGH`) thay vì fallback một tiêu đề chung chung.
+  5. Thêm liên kết neo trỏ nhanh từ `MealAnalysisSummaryBar` xuống `#canh-bao-chi-tiet`.
+- Đã làm:
+  - Cập nhật `src/features/meal-analysis/mappers/meal-analysis.mapper.ts`:
+    - Ánh xạ tiêu đề thông minh theo mã `code` của backend: *Vượt ngưỡng khuyến nghị trong ngày*, *Vượt khuyến nghị tiêu thụ nguyên liệu*, *Tương tác thành phần thực phẩm*, *Khẩu phần món ăn vượt mức thông thường*.
+  - Cập nhật `src/features/meal-analysis/components/incomplete-data-banner.tsx`:
+    - Gom chuỗi danh sách Recipe item UUID thành thông điệp thân thiện: *"Thực đơn có X món ăn chưa có dữ liệu kiểm định vi chất hoặc phân tích nấu nướng chi tiết (cooking-aware)..."*.
+    - Bổ sung nút bấm thu gọn / mở rộng *"Chi tiết kỹ thuật (X món)"* với danh sách cuộn gọn gàng `max-h-36`.
+  - Cập nhật `src/features/meal-analysis/components/meal-analysis-alerts.tsx`:
+    - Thêm cơ chế giới hạn hiển thị ban đầu 3 cảnh báo + nút *"Xem thêm X cảnh báo khác"* / *"Thu gọn bớt cảnh báo"*.
+    - Gắn `id="canh-bao-chi-tiet"` hỗ trợ cuộn mượt mà từ thanh tóm tắt.
+  - Cập nhật `src/features/meal-analysis/components/meal-analysis-summary-bar.tsx`:
+    - Thêm liên kết *"Xem danh sách chi tiết ↓"* điều hướng ngay đến khối cảnh báo.
+  - Cập nhật `src/app/(site)/meal-plans/[id]/page.tsx`:
+    - Đổi vị trí: Đưa `DayGrid` lên ngay sau `IncompleteDataBanner` và trước `MealAnalysisAlerts`.
+- File tạo/sửa:
+  - `src/features/meal-analysis/mappers/meal-analysis.mapper.ts`
+  - `src/features/meal-analysis/components/incomplete-data-banner.tsx`
+  - `src/features/meal-analysis/components/meal-analysis-alerts.tsx`
+  - `src/features/meal-analysis/components/meal-analysis-summary-bar.tsx`
+  - `src/app/(site)/meal-plans/[id]/page.tsx`
+  - `docs/PROGRESS.md`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 40/40 test suites pass, 398/398 tests pass (100%).
+  - `npm run build`: Turbopack build Next.js 16 thành công, 39/39 static routes pass.
+- PROGRESS: Phase 18 UI/UX refinement hoàn tất.
+
+## [2026-09-27] — Phase 18 Meal Portion & Compatibility Analysis: Tích hợp trọn vẹn vào UI thực đơn tuần và DayGrid
+
+- Mục tiêu:
+  1. Tích hợp trọn vẹn Phase 18 vào UI thực đơn `/meal-plans/[id]` và lưới tuần `DayGrid`.
+  2. Kết nối API `POST /api/v1/meal-plans/:id/analyze` gửi đúng Zod schema backend `{ expectedPlanVersion, items? }` (không gửi `{}` rỗng).
+  3. Bổ sung endpoint `GET /api/v1/meal-plans/:id/analysis` và `PATCH /api/v1/meal-plans/:id/items/:itemId/manual-add` (cho phép thêm món cá nhân từ Phase 17 hoặc công thức cộng đồng vào ô thực đơn).
+  4. Nâng cấp selector `MealPlanItemSelector` cho phép chọn Món cá nhân / Công thức kèm số khẩu phần `servings`.
+  5. Đạt verification gates: `npx tsc --noEmit` (0 lỗi), `npm test` (100% pass), `npm run build` thành công.
+- Đã làm:
+  - Cập nhật constants `src/common/constants/api-endpoints.ts`:
+    - Thêm `MEAL_PLANS.MANUAL_ADD: (id, itemId) => /meal-plans/${id}/items/${itemId}/manual-add`
+    - Thêm `MEAL_PLANS.ANALYSIS: (id) => /meal-plans/${id}/analysis`
+  - Cập nhật Meal Plan types, model & mappers:
+    - `src/features/meal-plan/types/meal-plan.dto.ts`: Bổ sung `sourceType`, `customMeal`, `servings` vào `MealSlotDto`; thêm `ManualAddMealPlanItemRequestDto`.
+    - `src/features/meal-plan/types/meal-plan.model.ts`: Thêm `sourceType`, `isCustomMeal`, `customMealId`, `customMealName`, `customMealCoverage` vào `MealSlot`.
+    - `src/features/meal-plan/mappers/meal-plan.mapper.ts`: Cập nhật `toSlot` nhận diện `CUSTOM_MEAL`, hiển thị tên món cá nhân và badge cá nhân.
+    - `src/features/meal-plan/api/meal-plan.api.ts`: Thêm hàm `manualAddItem` gọi `PATCH /manual-add`.
+    - `src/features/meal-plan/queries/meal-plan.queries.ts`: Thêm hook `useManualAddMealItemMutation` (xử lý lỗi `MEAL_PLAN_HARD_CONSTRAINT_VIOLATION`, invalidate cả `MEAL_PLAN_QUERY_KEYS` và `MEAL_ANALYSIS_KEYS`).
+    - `src/features/meal-plan/mappers/meal-plan.mapper.test.ts`: Bổ sung unit test ánh xạ slot chứa `CUSTOM_MEAL` (15/15 tests pass).
+  - Cập nhật Meal Analysis types, API, mapper & queries:
+    - `src/features/meal-analysis/types/meal-analysis.dto.ts`: Chuẩn hóa DTO theo backend Zod schema (`AnalyzeMealPlanRequestDto`, `planVersion`, `version`, `status`, `incompleteData`, `confidence`, `ruleVersions`, `disclaimer`, `measured: { value, unit }`, `limit: { value, unit }`, `AffectedPlanItemDto` có `itemId`, `sourceType`, `name`).
+    - `src/features/meal-analysis/api/meal-analysis.api.ts`: Cập nhật `analyzeMealPlan` nhận `AnalyzeMealPlanRequestDto` (gửi `expectedPlanVersion`); bổ sung `getCurrentAnalysis` gọi `GET /analysis`.
+    - `src/features/meal-analysis/mappers/meal-analysis.mapper.ts`: Cập nhật ánh xạ `itemId`, `sourceType`, `name`, `highCount`/`cautionCount`, `confidence`, `incompleteData`.
+    - `src/features/meal-analysis/queries/meal-analysis.queries.ts`: Cập nhật `useMealAnalysisQuery` fetch từ API; cập nhật `useAnalyzeMealPlanMutation` nhận `expectedPlanVersion`.
+    - `src/features/meal-analysis/mappers/meal-analysis.mapper.test.ts`: Bổ sung 2 test cases kiểm thử live shape từ backend Phase 18 (14/14 tests pass).
+  - UI Components:
+    - `src/features/meal-plan/components/day-grid.tsx`: Hiển thị badge "Món cá nhân" khi `slot.isCustomMeal`; hiển thị chi tiết khẩu phần.
+    - `src/features/meal-plan/components/meal-plan-item-selector.tsx`: Nâng cấp giao diện với bộ đếm khẩu phần `servings` (1-20), Tab "Món ăn cá nhân" và Tab "Công thức cộng đồng", tìm kiếm phân trang.
+    - `src/app/(site)/meal-plans/[id]/page.tsx`: Tích hợp `MealPlanItemSelector`, nút "Đổi món" / "Chọn món" trên slot, tự động phân tích lại thực đơn (`analyzeMutation`) sau khi thêm/đổi món thành công.
+  - Cập nhật tài liệu:
+    - `docs/BACKEND_INTEGRATION.md`: Đánh dấu `FE integrated: Yes (2026-09-27)` cho cả 3 endpoints Phase 18, bổ sung changelog v5.2.
+    - `docs/PROGRESS.md`: Cập nhật Phase 18 lên 100% FE Integrated.
+- File tạo/sửa:
+  - `src/common/constants/api-endpoints.ts`
+  - `src/features/meal-plan/types/meal-plan.dto.ts`
+  - `src/features/meal-plan/types/meal-plan.model.ts`
+  - `src/features/meal-plan/mappers/meal-plan.mapper.ts`
+  - `src/features/meal-plan/mappers/meal-plan.mapper.test.ts`
+  - `src/features/meal-plan/api/meal-plan.api.ts`
+  - `src/features/meal-plan/queries/meal-plan.queries.ts`
+  - `src/features/meal-plan/components/day-grid.tsx`
+  - `src/features/meal-plan/components/meal-plan-item-selector.tsx`
+  - `src/features/meal-analysis/types/meal-analysis.dto.ts`
+  - `src/features/meal-analysis/api/meal-analysis.api.ts`
+  - `src/features/meal-analysis/mappers/meal-analysis.mapper.ts`
+  - `src/features/meal-analysis/mappers/meal-analysis.mapper.test.ts`
+  - `src/features/meal-analysis/queries/meal-analysis.queries.ts`
+  - `src/app/(site)/meal-plans/[id]/page.tsx`
+  - `docs/BACKEND_INTEGRATION.md`
+  - `docs/PROGRESS.md`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 40/40 test suites pass, 398/398 tests pass (100%).
+  - `npm run build`: Turbopack build Next.js 16 thành công, 39/39 static routes pass.
+- PROGRESS: Phase 18 0% → 100% (FE Integrated).
+- Còn lại: Sẵn sàng chuyển tiếp sang Phase tiếp theo (Phase 19 Multi-week Meal Programs hoặc kiểm thử end-to-end trên trình duyệt).
+
+## [2026-09-27] — Phase 17 Custom Meals: Khắc phục lỗi VALIDATION_ERROR khi gọi API tạo món ăn cá nhân
+
+- Mục tiêu: Sửa lỗi 400 VALIDATION_ERROR khi gửi yêu cầu `POST /api/v1/custom-meals`:
+  1. `_root`: `Unrecognized keys: "userProtein", "userCarbs", "userFat"`
+  2. `ingredients.x`: `Unrecognized keys: "name", "quantity"`
+  3. `ingredients.x.position`: `expected number, received undefined`
+  4. `ingredients.x.displayName`: `expected string, received undefined`
+  5. `ingredients.x.amount`: `expected number, received undefined`
+  6. `ingredients.x.ingredientId`: `expected string, received null`
+- Nguyên nhân:
+  1. Backend Zod schema `createCustomMealSchema` sử dụng `.strict()` nên từ chối các khóa không được định nghĩa. Tên trường chuẩn của backend là `userProteinGrams`, `userCarbsGrams`, `userFatGrams` thay vì `userProtein`, `userCarbs`, `userFat`.
+  2. Nguyên liệu trong backend schema yêu cầu các trường bắt buộc `position` (number >= 0), `displayName` (string min 1), `amount` (number > 0), `unit` (string min 1) thay vì `name` và `quantity`.
+  3. `ingredientId` trong backend schema là `z.string().uuid().optional()` (không chấp nhận `null`). Việc frontend gửi `ingredientId: null` đã gây lỗi `expected string, received null`.
+  4. Các trường tùy chọn (`notes`, `sourceNote`, macros) gửi `null` cũng vi phạm quy tắc validation khi backend chỉ chấp nhận kiểu `string`/`number` hoặc không gửi trường đó (`optional`).
+- Đã làm:
+  - Cập nhật `src/features/custom-meal/types/custom-meal.dto.ts`:
+    - Đồng bộ `CreateCustomMealIngredientRequestDto`: `position: number`, `displayName: string`, `amount: number`, `unit: string`, `ingredientId?: string`.
+    - Đồng bộ `CreateCustomMealRequestDto`: `userProteinGrams?: number`, `userCarbsGrams?: number`, `userFatGrams?: number`, `userCalories?: number`.
+    - Đồng bộ `CustomMealResponseDto` và `CustomMealListItemDto` hỗ trợ cả `records` array, `displayName`, `amount`, `secureUrl`, `position` và tags object (`{ tag, normalizedTag }`).
+  - Cập nhật `src/features/custom-meal/components/custom-meal-form.tsx`:
+    - Đóng gói payload tạo món chuẩn 100%: ánh xạ `position: index`, `displayName: ing.name.trim()`, `amount: Number(ing.quantity)`, chỉ đính kèm `ingredientId` nếu là chuỗi UUID hợp lệ (không gửi `null`).
+    - Các trường tùy chọn (`notes`, `sourceNote`, `userCalories`, `userProteinGrams`, `userCarbsGrams`, `userFatGrams`) chỉ được gắn vào payload nếu người dùng có nhập giá trị hợp lệ, loại bỏ hoàn toàn các trường rỗng hoặc `null`.
+    - Bổ sung validation kiểm tra từng nguyên liệu có số lượng lớn hơn 0 trước khi submit.
+  - Cập nhật `src/features/custom-meal/mappers/custom-meal.mapper.ts`:
+    - Ánh xạ linh hoạt từ DTO backend sang UI Model cho cả `userProteinGrams/CarbsGrams/FatGrams`, `displayName/amount`, `records` array và tags object.
+  - Cập nhật `src/features/custom-meal/api/custom-meal.api.ts`:
+    - Đồng bộ endpoint ảnh chuẩn `/photos` (thay vì `/media`) và kết hợp với `uploadWithReservation` (Phase 15 Storage Reservation) để upload ảnh lên Cloudinary trước khi gắn `assetId` vào món ăn.
+  - Cập nhật `src/common/constants/api-endpoints.ts`:
+    - Bổ sung `ATTACH_PHOTO`, `REMOVE_PHOTO`, `REORDER_PHOTOS` bám sát backend router.
+  - Thêm 2 unit test mới kiểm tra chuyển đổi payload `records` và chi tiết món từ backend trong `custom-meal.mapper.test.ts` (13/13 tests pass).
+- File tạo/sửa:
+  - `src/features/custom-meal/types/custom-meal.dto.ts`
+  - `src/features/custom-meal/components/custom-meal-form.tsx`
+  - `src/features/custom-meal/mappers/custom-meal.mapper.ts`
+  - `src/features/custom-meal/mappers/custom-meal.mapper.test.ts`
+  - `src/features/custom-meal/api/custom-meal.api.ts`
+  - `src/features/custom-meal/queries/custom-meal.queries.ts`
+  - `src/common/constants/api-endpoints.ts`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 40/40 test suites pass, 395/395 tests pass.
+- PROGRESS: Sửa dứt điểm lỗi tạo Custom Meal, đảm bảo 100% khớp schema Backend.
+
+## [2026-09-27] — Phase 17 Custom Meals: Sửa lỗi thẻ phân loại (Enter/gạch dưới) và Nâng cấp Sizing/Typography UI/UX
+
+- Mục tiêu: Khắc phục lỗi nhập thẻ phân loại cá nhân (User Tags) khi gõ phím Enter không nhận thẻ (như trường hợp gõ `bua_trua nhanh_gon`), và giải quyết tình trạng giao diện bị thu nhỏ (inputs/buttons h-8, typography text-xs/text-[10px], thiếu khoảng cách).
+- Nguyên nhân:
+  1. `tag-normalizer.ts`: `VALID_TAG_REGEX` chỉ cho phép chữ cái, số, khoảng trắng và dấu gạch nối (-), thiếu dấu gạch dưới (_), dẫn đến các thẻ như `bua_trua`, `nhanh_gon` bị loại bỏ và báo lỗi.
+  2. `custom-meal-tag-input.tsx`: Không có nút "Thêm thẻ" trực quan, người dùng chỉ phụ thuộc vào phím Enter trên bàn phím. Khi nhấn Enter không có `e.stopPropagation()`, và chưa hỗ trợ tách chuỗi nhập nhiều thẻ phân tách bằng dấu phẩy.
+  3. Kích thước giao diện: Toàn bộ form tạo/sửa món ăn sử dụng `h-8`, `text-xs`, `text-[10px]`, `text-[11px]`, tạo cảm giác chật chội và không đồng nhất với các trang khác trong ứng dụng.
+- Đã làm:
+  - Cập nhật `src/features/custom-meal/utils/tag-normalizer.ts`:
+    - Cập nhật `VALID_TAG_REGEX = /^[\p{L}\p{N}\s\-_]+$/u` hỗ trợ toàn bộ Unicode tiếng Việt có dấu, chữ số, khoảng trắng, gạch nối (-) và gạch dưới (_).
+    - Cập nhật `normalizeUserTag` tự động bóc tách ký tự `#` ở đầu chuỗi (phòng ngừa trường hợp người dùng gõ theo thói quen hashtag `#shopee`).
+  - Viết 14 unit tests mới tại `src/features/custom-meal/utils/tag-normalizer.test.ts` kiểm thử toàn diện các trường hợp gạch dưới, hashtag, tiếng Việt, deduplication và giới hạn thẻ (14/14 tests pass).
+  - Nâng cấp `src/features/custom-meal/components/custom-meal-tag-input.tsx`:
+    - Bổ sung nút "+ Thêm thẻ" rõ ràng bên cạnh input.
+    - Hỗ trợ phím Enter, phẩy (,) và click nút Thêm.
+    - Hỗ trợ nhập/paste hàng loạt thẻ phân tách bằng dấu phẩy hoặc chấm phẩy.
+    - Thêm `e.stopPropagation()` và kiểm tra `isComposing` ngăn chặn IME và form submit ngoài ý muốn.
+    - Nâng cấp thẻ badge lên `text-sm`, bo góc đẹp, có nút xóa rõ ràng.
+  - Nâng cấp Sizing & Spacing toàn diện theo chuẩn `baseline-ui`:
+    - `custom-meal-form.tsx`: Nâng cấp inputs từ `h-8 text-xs` lên `h-10 text-sm`, tên món ăn `h-11 text-base`, card padding `p-5 sm:p-6`, action buttons `h-10 text-sm px-5 font-medium`.
+    - `custom-meal-ingredient-input.tsx`: Nâng cấp inputs tên, số lượng, dropdown đơn vị và nút xóa lên `h-10 text-sm`, padding hàng `p-3 rounded-xl`.
+    - `custom-meal-nutrition-bar.tsx`: Nâng cấp card tóm tắt `p-5`, nhãn `text-xs font-medium`, chỉ số `text-base font-bold`, flame icon `w-5 h-5`.
+    - `custom-meal-list.tsx`: Nâng cấp search input `h-10 text-sm`, nút Tạo món mới `h-10 text-sm font-medium`, phân trang `h-9 text-sm`.
+    - `custom-meals/new/page.tsx`, `[id]/page.tsx`, `[id]/edit/page.tsx`: Nâng cấp header typography `text-2xl`/`text-3xl font-bold`, nút thao tác `h-9 text-sm font-medium`.
+- File tạo/sửa:
+  - `src/features/custom-meal/utils/tag-normalizer.ts`
+  - `src/features/custom-meal/utils/tag-normalizer.test.ts`
+  - `src/features/custom-meal/components/custom-meal-tag-input.tsx`
+  - `src/features/custom-meal/components/custom-meal-ingredient-input.tsx`
+  - `src/features/custom-meal/components/custom-meal-nutrition-bar.tsx`
+  - `src/features/custom-meal/components/custom-meal-form.tsx`
+  - `src/features/custom-meal/components/custom-meal-list.tsx`
+  - `src/app/(site)/custom-meals/new/page.tsx`
+  - `src/app/(site)/custom-meals/[id]/page.tsx`
+  - `src/app/(site)/custom-meals/[id]/edit/page.tsx`
+  - `docs/PROGRESS.md`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 40/40 test suites pass, 393/393 tests pass (14/14 tests tag-normalizer, 11/11 tests custom-meal mapper).
+  - `npm run build`: Next.js Turbopack build thành công 100%.
+- PROGRESS: Phase 17 Custom Meals hoàn thiện và nâng cấp UI/UX chuẩn mực.
+- Còn lại / rủi ro: Không.
+
+## [2026-09-26] — Phase 15 Storage Quota Bugfix (Sửa lỗi không hiển thị danh sách tài khoản lưu trữ Admin)
+
+- Mục tiêu: Khắc phục lỗi trang `http://localhost:3000/admin/storage?tab=accounts` gọi API 200 OK nhưng hiển thị "Không tìm thấy tài khoản nào".
+- Nguyên nhân:
+  1. Endpoint Backend `GET /api/v1/admin/storage/accounts` trả về cấu trúc `data: [ { user, policy, usage, updatedAt } ]` và metadata phân trang `meta: { page, limit, total, totalPages }`.
+  2. Frontend `storage.api.ts` trước đó giả định `res.data.data` là object `{ items: [...] }`, dẫn đến `data?.items` bị `undefined` và danh sách rỗng `[]`.
+  3. Mapper `StorageMapper.toAccountModel` trước đó đọc `dto.userId`, `dto.usedBytes` ở root của item thay vì bóc tách từ `dto.user.id` và `dto.usage.usedBytes`.
+- Đã làm:
+  - Cập nhật `src/features/storage/types/storage.dto.ts`: Bổ sung cấu trúc `user`, `usage`, `updatedAt`, `actorId` vào `StorageAccountDto` và `StorageAdjustmentDto`.
+  - Cập nhật `src/features/storage/api/storage.api.ts`: Hỗ trợ linh hoạt cả 2 định dạng (mảng `data` trực tiếp kèm top-level `meta`, hoặc object `{ items }`) cho `getAdminAccounts`, `getAdminPolicies`, và `getAdminAdjustments`.
+  - Cập nhật `src/features/storage/mappers/storage.mapper.ts`: Bóc tách an toàn các trường từ `dto.user` (`id`, `email`, `displayName`, `avatarUrl`) và `dto.usage` (`usedBytes`, `limitBytes`, `remainingBytes`, `overQuota`).
+  - Bổ sung unit test số 13 cho `storage.mapper.test.ts` kiểm thử chuẩn xác định dạng payload Backend.
+- File tạo/sửa:
+  - `src/features/storage/types/storage.dto.ts`
+  - `src/features/storage/api/storage.api.ts`
+  - `src/features/storage/mappers/storage.mapper.ts`
+  - `src/features/storage/mappers/storage.mapper.test.ts`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 39/39 test suites pass, 379/379 tests pass.
+  - `npm run build`: 39 routes compile thành công 100%.
+- PROGRESS: Bước 3 của Phase 15 đã được khắc phục hoàn toàn.
+- Còn lại / rủi ro: Không.
+
+## [2026-09-26] — Phase 13 Recipe Nutrition Bugfix (Sửa lỗi crash render sau khi tính toán dinh dưỡng)
+
+- Mục tiêu: Sửa lỗi crash trang (`src/app/error.tsx`: "Đã xảy ra sự cố!") khi hoàn tất tính toán dinh dưỡng cho công thức tại `/recipes/dau-hu-xao-bong-cai-demo`, đồng thời chuẩn hóa ánh xạ mã dinh dưỡng từ Backend (`ENERGY_KCAL`).
+- Nguyên nhân:
+  1. Thẻ `SaveArtifactButton` (Phase 23) được mount vào `RecipeNutritionCard` khi có `nutrition.id` hợp lệ. Component này sử dụng `<Tooltip>` từ Radix UI nhưng trong `src/app/layout.tsx` chưa được bọc `<TooltipProvider>`, dẫn đến lỗi runtime `Tooltip components must be used within TooltipProvider` làm crash toàn bộ route.
+  2. Mapper `RecipeNutritionMapper.calculateMacroDistribution` chỉ tìm `ENERC_KCAL` và `CALORIES`, trong khi Backend trả về mã chuẩn `ENERGY_KCAL`, dẫn đến lượng Calo hiển thị bằng 0.
+  3. Bảng vi chất `NutrientListTable` chưa có `ENERGY_KCAL` trong `EXCLUDED_CODES`.
+- Đã làm:
+  - Bọc `<TooltipProvider delayDuration={200}>` toàn cục trong `src/app/layout.tsx` và bọc phòng vệ nội bộ trong `SaveArtifactButton` và `VerificationBadge`.
+  - Cập nhật `RecipeNutritionMapper` nhận diện đầy đủ các alias mã dinh dưỡng: `ENERGY_KCAL`, `ENERC_KCAL`, `CALORIES`, `ENERGY`, `KCAL`, `PROTEIN`, `PROCNT`, `PRO`, `CARBS`, `CHOCDF`, `FAT`, `FAT_TOTAL`, `FATCE`.
+  - Cập nhật `EXCLUDED_CODES` trong `NutrientListTable` để ẩn năng lượng macro khỏi bảng vi chất.
+  - Bổ sung unit test số 13 cho `RecipeNutritionMapper` kiểm chứng dữ liệu Backend `ENERGY_KCAL`.
+- File tạo/sửa:
+  - `src/app/layout.tsx`
+  - `src/features/ai-artifacts/components/save-artifact-button.tsx`
+  - `src/features/chat/components/verification-badge.tsx`
+  - `src/features/recipe-nutrition/mappers/recipe-nutrition.mapper.ts`
+  - `src/features/recipe-nutrition/components/nutrient-list-table.tsx`
+  - `src/features/recipe-nutrition/mappers/recipe-nutrition.mapper.test.ts`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 39/39 test suites pass, 378/378 tests pass.
+  - `npm run build`: 39 routes compile thành công 100%.
+- PROGRESS: Phase 13 kiểm thử bước 1 sẵn sàng để tiếp tục flow test.
+- Còn lại / rủi ro: Không.
+
+## [2026-09-26] — Phase 23 AI Sharing & Unified Contributor Verification (Chia sẻ & Thẩm định Tri thức AI Hợp nhất)
+
+- Mục tiêu: Triển khai toàn diện 7 tầng scaffold cho Phase 23 Chia sẻ & Thẩm định Tri thức AI Hợp nhất theo spec `specs/024-ai-artifacts-verification/` và task `docs/tasks/phase-23-ai-review.md`. Đóng gói đầu ra từ 4 nguồn AI (Chat, Dinh dưỡng, Tủ lạnh, Hóa đơn) thành AI Artifact bất biến; quản lý chia sẻ công khai/riêng tư an toàn (bảo vệ quyền riêng tư, ẩn danh tác giả); quy trình thẩm định chuyên môn hợp nhất chỉ cho phép Contributor/Admin với kết luận khoa học quy chuẩn (VERIFIED, CORRECTION_NEEDED, REJECTED), cấm tự kiểm chứng; huy hiệu "Được kiểm chứng bởi Người đóng góp", tuyệt đối không dùng "chứng nhận khoa học"; và can thiệp kiểm toán của Admin (Override / Revoke).
+- Đã làm:
+  - **Tầng 1 (Endpoints)**: Thêm hằng số `AI_ARTIFACTS` (5 routes: `BASE`, `VISIBILITY`, `SUBMIT`, `PUBLIC`, `VERIFICATIONS`) và `AI_VERIFICATIONS_ADMIN` (`ACTION`) vào `src/common/constants/api-endpoints.ts`.
+  - **Tầng 2 (Enums, DTOs & Clean UI Models)**:
+    - Khai báo các enum nghiệp vụ: `AiArtifactType`, `AiArtifactStatus`, `AiArtifactVisibility`, `AiVerificationConclusion`, `AiVerificationStatus`, `AiVerificationAdminActionType` tại `src/common/enums/index.ts`.
+    - Xây dựng raw DTOs tại `src/features/ai-artifacts/types/ai-artifact.dto.ts` và `ai-verification.dto.ts`.
+    - Xây dựng Clean UI Models tại `src/features/ai-artifacts/types/ai-artifact.model.ts` (`AiArtifact`, `AiArtifactContent`, `AiArtifactAuthor`, `AiArtifactLifecycle`) và `ai-verification.model.ts` (`AiVerification`, `AiReviewer`, `AiVerificationAdminAction`).
+  - **Tầng 3 (Validation Schemas)**:
+    - Xây dựng Zod validation schemas tại `src/features/ai-artifacts/schemas/ai-artifact.schema.ts` (`createAiArtifactSchema`, `updateAiArtifactVisibilitySchema`, `submitAiArtifactSchema`, `publicAiArtifactsQuerySchema`).
+    - Xây dựng Zod validation schemas tại `src/features/ai-artifacts/schemas/ai-verification.schema.ts` (`createAiVerificationSchema`, `adminAiVerificationActionSchema`).
+  - **Tầng 4 (Mappers & Unit Tests)**:
+    - Xây dựng `AiArtifactMapper` và `AiVerificationMapper` kế thừa `BaseMapper` với `pickField` và `safe*`.
+    - Viết 6 unit tests cho `AiArtifactMapper` tại `src/features/ai-artifacts/mappers/__tests__/ai-artifact.mapper.test.ts` (100% pass).
+    - Viết 5 unit tests cho `AiVerificationMapper` tại `src/features/ai-artifacts/mappers/__tests__/ai-verification.mapper.test.ts` (100% pass).
+  - **Tầng 5 (API Clients & TanStack Query Hooks)**:
+    - Triển khai `aiArtifactApi` (`create`, `updateVisibility`, `submit`, `listPublic`) và `aiVerificationApi` (`verify`, `adminAction`).
+    - Tạo Query Key Factories `AI_ARTIFACT_QUERY_KEYS` và `AI_VERIFICATION_QUERY_KEYS` kèm các custom hooks (`usePublicAiArtifactsQuery`, `useCreateAiArtifactMutation`, `useUpdateAiArtifactVisibilityMutation`, `useSubmitAiArtifactMutation`, `useCreateAiVerificationMutation`, `useAdminAiVerificationActionMutation`).
+  - **Tầng 6 (UI Components)**:
+    - `MedicalDisclaimer`: Khuyến cáo miễn trừ trách nhiệm y tế chuẩn mực.
+    - `VerificationBadge`: Huy hiệu kiểm chứng hiển thị kết luận chuyên môn, cấm tuyệt đối chữ "chứng nhận khoa học", tooltip chi tiết phạm vi và bằng chứng.
+    - `ArtifactContentRenderer`: Hiển thị định dạng trực quan cho 4 loại nội dung AI (`CHAT_ANSWER`, `RECIPE_NUTRITION`, `FRIDGE_RECOGNITION`, `RECEIPT_EXTRACTION`).
+    - `SaveArtifactDialog` & `SaveArtifactButton`: Form đóng gói kết quả AI bất biến có nhập tiêu đề, tóm tắt và tùy chọn ẩn danh tác giả.
+    - `ShareArtifactDialog`: Quản lý bật/tắt chia sẻ công khai, sao chép liên kết, thu hồi riêng tư và chống xung đột phiên bản lạc quan.
+    - `SubmitArtifactDialog`: Gửi bài cho Contributor thẩm định.
+    - `VerifyDialog` & `VerifyArtifactButton`: Form thẩm định chuyên môn (Contributor/Admin), tự động ẩn/chặn nếu là chủ sở hữu (cấm tự kiểm chứng).
+    - `AdminVerificationDialog` & `AdminVerificationActionMenu`: Can thiệp quản trị viên ghi đè (Override) hoặc thu hồi (Revoke) có bắt buộc lý do kiểm toán.
+    - `PublicArtifactCard` & `PublicArtifactsList`: Thẻ hiển thị và danh sách tri thức công khai có tìm kiếm, bộ lọc tabs và phân trang.
+    - `PublicArtifactView`: Màn hình xem chi tiết tri thức công khai qua query `?share=[id]`.
+    - `AiVerificationTable`: Bảng quản trị danh sách kiểm chứng cho Admin.
+  - **Tầng 7 (Routes & Tích hợp vào hệ sinh thái)**:
+    - Nâng cấp trang `/assistant/public` với `PublicArtifactsList` và `PublicArtifactView`.
+    - Thay thế nút chia sẻ cũ trong Trợ lý Chat (`/assistant`) bằng `SaveArtifactButton`.
+    - Tích hợp `SaveArtifactButton` vào Dinh dưỡng công thức (`recipe-nutrition-card.tsx`), Quét tủ lạnh (`candidate-review-screen.tsx`), Bóc tách hóa đơn (`receipt-inspection-view.tsx`).
+    - Bổ sung tab "Kiểm chứng AI" (`ai-verifications`) vào trang `/admin/dashboard` và link trong layout sidebar `/admin/layout.tsx`.
+    - Bổ sung link "Khám phá Tri thức AI" vào menu dropdown Trợ lý Chat trên `SiteHeader` (No Orphan Pages).
+- File tạo/sửa:
+  - `src/common/constants/api-endpoints.ts`
+  - `src/common/enums/index.ts`
+  - `src/features/ai-artifacts/types/ai-artifact.dto.ts`
+  - `src/features/ai-artifacts/types/ai-verification.dto.ts`
+  - `src/features/ai-artifacts/types/ai-artifact.model.ts`
+  - `src/features/ai-artifacts/types/ai-verification.model.ts`
+  - `src/features/ai-artifacts/schemas/ai-artifact.schema.ts`
+  - `src/features/ai-artifacts/schemas/ai-verification.schema.ts`
+  - `src/features/ai-artifacts/mappers/ai-artifact.mapper.ts`
+  - `src/features/ai-artifacts/mappers/ai-verification.mapper.ts`
+  - `src/features/ai-artifacts/mappers/__tests__/ai-artifact.mapper.test.ts`
+  - `src/features/ai-artifacts/mappers/__tests__/ai-verification.mapper.test.ts`
+  - `src/features/ai-artifacts/api/ai-artifact.api.ts`
+  - `src/features/ai-artifacts/api/ai-verification.api.ts`
+  - `src/features/ai-artifacts/queries/ai-artifact.queries.ts`
+  - `src/features/ai-artifacts/queries/ai-verification.queries.ts`
+  - `src/features/ai-artifacts/components/medical-disclaimer.tsx`
+  - `src/features/ai-artifacts/components/verification-badge.tsx`
+  - `src/features/ai-artifacts/components/artifact-content-renderer.tsx`
+  - `src/features/ai-artifacts/components/save-artifact-button.tsx`
+  - `src/features/ai-artifacts/components/save-artifact-dialog.tsx`
+  - `src/features/ai-artifacts/components/share-artifact-dialog.tsx`
+  - `src/features/ai-artifacts/components/submit-artifact-dialog.tsx`
+  - `src/features/ai-artifacts/components/verify-artifact-button.tsx`
+  - `src/features/ai-artifacts/components/verify-dialog.tsx`
+  - `src/features/ai-artifacts/components/admin-verification-action-menu.tsx`
+  - `src/features/ai-artifacts/components/admin-verification-dialog.tsx`
+  - `src/features/ai-artifacts/components/public-artifact-card.tsx`
+  - `src/features/ai-artifacts/components/public-artifact-view.tsx`
+  - `src/features/ai-artifacts/components/public-artifacts-list.tsx`
+  - `src/features/ai-artifacts/components/ai-verification-table.tsx`
+  - `src/features/ai-artifacts/index.ts`
+  - `src/app/(site)/assistant/page.tsx`
+  - `src/app/(site)/assistant/public/page.tsx`
+  - `src/features/chat/components/share-answer-button.tsx`
+  - `src/features/recipe-nutrition/components/recipe-nutrition-card.tsx`
+  - `src/features/ingredient-vision/components/candidate-review-screen.tsx`
+  - `src/features/receipt/components/receipt-inspection-view.tsx`
+  - `src/app/(admin)/admin/dashboard/page.tsx`
+  - `src/app/(admin)/admin/layout.tsx`
+  - `src/components/layout/site-header.tsx`
+  - `docs/PROGRESS.md`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npx vitest run src/features/ai-artifacts/mappers/__tests__/`: 2 test files, 11 tests pass (100%).
+  - `npm test`: 39 test files, 377 tests pass (100% không hồi quy).
+  - `npm run build`: 39 static & dynamic routes build thành công mỹ mãn.
+- PROGRESS: Phase 23 0% → 100% (Hoàn thành tích hợp Phase 23 AI Artifacts & Unified Contributor Verification).
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-26] — Phase 22 Receipt Analysis & Pantry-aware Shopping Gaps (Bóc tách hóa đơn siêu thị & Tối ưu danh sách đi chợ)
+
+- Mục tiêu: Triển khai toàn diện 7 tầng scaffold cho Phase 22 Bóc tách hóa đơn siêu thị & Tối ưu danh sách đi chợ theo spec `specs/023-receipts-shopping/` và task `docs/tasks/phase-22-receipts-shopping.md`. Đảm bảo tích hợp trọn vẹn với Storage module (1–4 ảnh `kind: RECEIPT_IMAGE`), theo dõi tiến trình OCR real-time, giao diện đối chiếu kép 2 cột (Viewer ảnh hóa đơn tương tác zoom/pan/rotate và danh sách mặt hàng bóc tách), chỉnh sửa có khóa lạc quan (`expectedVersion`), tuân thủ quy tắc BL-12 (chỉ xác nhận tường minh mới nhập kho Tủ bếp), và tính năng Pantry-aware Shopping Gaps phân tách rành mạch lượng có sẵn, lượng còn thiếu và các món chưa quy đổi được.
+- Đã làm:
+  - **Tầng 1 (Endpoints)**: Thêm hằng số `RECEIPT_JOBS` (6 paths: `BASE`, `DETAIL`, `CANDIDATE`, `CONFIRM`, `CANCEL`, `RETRY`) và `SHOPPING_LISTS.PREVIEW` vào `src/common/constants/api-endpoints.ts`.
+  - **Tầng 2 (Storage Integration & DTOs)**:
+    - Xác nhận và hỗ trợ `RECEIPT_IMAGE` trong Storage model, DTO và hàm `validateUploadFile` (giới hạn 10MB, tối đa 4 ảnh).
+    - Xây dựng raw DTOs tại `src/features/receipt/types/receipt.dto.ts` và `src/features/receipt/types/shopping-gap.dto.ts`.
+  - **Tầng 3 (Clean UI Models)**:
+    - Xây dựng UI Models tại `src/features/receipt/types/receipt.model.ts` (`ReceiptJob`, `ReceiptCandidate`, `ReceiptImage`, `ReceiptConfirmationResult`, `ReceiptMetadata`, trạng thái helper `canConfirm`, `canRetry`, `canCancel`, format tiền tệ VNĐ).
+    - Xây dựng UI Models tại `src/features/receipt/types/shopping-gap.model.ts` (`ShoppingGapPreview`, `ShoppingGapItem`, `UnresolvedShoppingItem`, `ShoppingGapSummary`, helper `gapBadgeVariant`).
+  - **Tầng 4 (Validation Schemas)**:
+    - Xây dựng Zod validation schemas tại `src/features/receipt/schemas/receipt.schema.ts` (kiểm tra `expectedVersion`, `detectedName`, `quantity`, `unit`, `unitPrice`, `lineTotal`, `uncertaintyNote`).
+    - Xây dựng Zod validation schemas tại `src/features/receipt/schemas/shopping-gap.schema.ts` (validate payload `planMeals`).
+  - **Tầng 5 (Mappers & Unit Tests)**:
+    - Xây dựng `ReceiptMapper` kế thừa `BaseMapper` tại `src/features/receipt/mappers/receipt.mapper.ts`.
+    - Xây dựng `ShoppingGapMapper` kế thừa `BaseMapper` tại `src/features/receipt/mappers/shopping-gap.mapper.ts`.
+    - Viết 7 unit tests tại `src/features/receipt/mappers/__tests__/receipt.mapper.test.ts` (100% pass).
+    - Viết 4 unit tests tại `src/features/receipt/mappers/__tests__/shopping-gap.mapper.test.ts` (100% pass).
+  - **Tầng 6 (API Clients & TanStack Query Hooks)**:
+    - Triển khai `receiptApi` tại `src/features/receipt/api/receipt.api.ts` (6 endpoints) và `shoppingApi` tại `src/features/receipt/api/shopping.api.ts`.
+    - Tạo Query Key Factories `RECEIPT_QUERY_KEYS` và `SHOPPING_QUERY_KEYS` kèm các custom hooks (`useReceiptJobQuery` tự động polling 2s khi `QUEUED`/`PROCESSING`, `useConfirmReceiptJobMutation` tự động invalidate cache `PANTRY_QUERY_KEYS.all`, `useCancelReceiptJobMutation`, `useRetryReceiptJobMutation`, `useShoppingGapPreviewQuery`, `usePreviewShoppingGapsMutation`).
+  - **Tầng 7 (UI Components, Client Coordinators & Routes)**:
+    - `ReceiptUploadZone`: Kéo thả & chọn từ 1 đến 4 ảnh hóa đơn, xem trước thumbnail, tích hợp tải lên qua storage reservation.
+    - `ReceiptProgressTracker`: Thanh tiến trình bóc tách OCR 60 FPS GPU-composited, hiển thị tiến độ phân tích chi tiết.
+    - `ReceiptImageViewer`: Trình xem ảnh hóa đơn tương tác hỗ trợ Zoom (1x–3x), Pan kéo rê, Rotate xoay 90 độ, và chuyển đổi giữa các ảnh hóa đơn (1..4).
+    - `ReceiptMetadataHeader`: Thẻ thông tin siêu thị/cửa hàng, ngày mua, tổng tiền hóa đơn, và huy hiệu độ tin cậy trích xuất.
+    - `ReceiptCandidateRow`: Dòng sản phẩm trích xuất hiển thị tên nhận diện, dòng chữ gốc OCR, gợi ý nguyên liệu chuẩn, số lượng, đơn vị, giá cả, và thanh tin cậy màu sắc.
+    - `ReceiptCandidateEditDialog`: Hộp thoại modal chỉnh sửa sản phẩm có tìm kiếm nguyên liệu chuẩn từ từ điển, sửa số lượng/đơn vị, đơn giá và truyền `expectedVersion` chống xung đột.
+    - `ReceiptInspectionView`: Màn hình đối chiếu kép 2 cột (Viewer ảnh bên trái + Danh sách sản phẩm bên phải) với tabs "Cần duyệt" và "Đã loại bỏ", thanh sticky footer chốt xác nhận nhập kho Tủ bếp.
+    - `ReceiptConfirmationSummary`: Modal thông báo tóm tắt kết quả nhập kho (`CREATED` / `UPDATED`) sau khi xác nhận, kèm nút chuyển sang `/pantry`.
+    - `ShoppingGapItemRow`: Dòng nguyên liệu đi chợ thông minh hiển thị 4 cột khối lượng (Yêu cầu, Có sẵn trong tủ, Còn thiếu cần mua, Dư thừa) kèm badge trạng thái Đủ/Thiếu và ghi chú giả định quy đổi.
+    - `UnresolvedItemsCard`: Thẻ cảnh báo các nguyên liệu chưa quy đổi được khối lượng chuẩn (g) hoặc chưa tìm thấy trong từ điển để người dùng kiểm tra thủ công.
+    - `ShoppingGapView`: Bảng điều phối danh sách đi chợ thông minh gồm 4 thẻ chỉ số tóm tắt, bộ lọc (Tất cả, Cần mua, Đã đủ sẵn), danh sách dòng nguyên liệu và khối cảnh báo.
+    - Tích hợp ShoppingGapView vào component `ShoppingList` và trang thực đơn tuần `/meal-plans/[id]`.
+    - Tạo 3 trang Route Shell: `/receipts` (trung tâm quản lý và lịch sử hóa đơn), `/receipts/scan` (màn hình tải lên và theo dõi OCR), `/receipts/[id]` (màn hình đối chiếu và xác nhận hóa đơn).
+    - **No Orphan Pages**: Bổ sung nút "Quét hóa đơn" trên `PantryHeader` và mục "Hóa đơn mua sắm" trên dropdown menu người dùng tại `SiteHeader`.
+- File tạo/sửa:
+  - `src/common/constants/api-endpoints.ts`
+  - `src/features/receipt/types/receipt.dto.ts`
+  - `src/features/receipt/types/shopping-gap.dto.ts`
+  - `src/features/receipt/types/receipt.model.ts`
+  - `src/features/receipt/types/shopping-gap.model.ts`
+  - `src/features/receipt/schemas/receipt.schema.ts`
+  - `src/features/receipt/schemas/shopping-gap.schema.ts`
+  - `src/features/receipt/mappers/receipt.mapper.ts`
+  - `src/features/receipt/mappers/shopping-gap.mapper.ts`
+  - `src/features/receipt/mappers/__tests__/receipt.mapper.test.ts`
+  - `src/features/receipt/mappers/__tests__/shopping-gap.mapper.test.ts`
+  - `src/features/receipt/api/receipt.api.ts`
+  - `src/features/receipt/api/shopping.api.ts`
+  - `src/features/receipt/queries/receipt.queries.ts`
+  - `src/features/receipt/queries/shopping.queries.ts`
+  - `src/features/receipt/components/receipt-upload-zone.tsx`
+  - `src/features/receipt/components/receipt-progress-tracker.tsx`
+  - `src/features/receipt/components/receipt-image-viewer.tsx`
+  - `src/features/receipt/components/receipt-metadata-header.tsx`
+  - `src/features/receipt/components/receipt-candidate-row.tsx`
+  - `src/features/receipt/components/receipt-candidate-edit-dialog.tsx`
+  - `src/features/receipt/components/receipt-inspection-view.tsx`
+  - `src/features/receipt/components/receipt-confirmation-summary.tsx`
+  - `src/features/receipt/components/shopping-gap-item-row.tsx`
+  - `src/features/receipt/components/unresolved-items-card.tsx`
+  - `src/features/receipt/components/shopping-gap-view.tsx`
+  - `src/features/meal-plan/components/shopping-list.tsx`
+  - `src/app/(site)/meal-plans/[id]/page.tsx`
+  - `src/app/(site)/receipts/receipts-client-view.tsx`
+  - `src/app/(site)/receipts/page.tsx`
+  - `src/app/(site)/receipts/scan/receipt-scan-client-view.tsx`
+  - `src/app/(site)/receipts/scan/page.tsx`
+  - `src/app/(site)/receipts/[id]/receipt-job-client-view.tsx`
+  - `src/app/(site)/receipts/[id]/page.tsx`
+  - `src/features/pantry/components/pantry-header.tsx`
+  - `src/components/layout/site-header.tsx`
+  - `frontend/docs/BACKEND_INTEGRATION.md`
+  - `frontend/docs/PROGRESS.md`
+  - `specs/023-receipts-shopping/tasks.md`
+- Verify:
+  - `npx tsc --noEmit`: Đạt 0 lỗi type (hoàn toàn sạch sẽ).
+  - `npm test`: Đạt 37/37 test suites, 366/366 tests pass 100% (bao gồm 11 tests mới cho receipt và shopping gap mappers).
+  - `npm run build`: Next.js 16 build thành công 100%, 39 routes biên dịch tối ưu (bao gồm `/receipts`, `/receipts/scan`, `/receipts/[id]`).
+- PROGRESS: Phase 22: 0% → 100% (Hoàn thành trọn vẹn 7 tầng scaffold, kiểm thử và tích hợp lối vào tự nhiên).
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-26] — Phase 21 Multi-Image Fridge Recognition (Nhận diện thực phẩm trong tủ lạnh qua hình ảnh)
+
+- Mục tiêu: Triển khai toàn diện 7 tầng scaffold cho Phase 21 Nhận diện thực phẩm trong tủ lạnh qua nhiều ảnh (1–6 ảnh) theo spec `specs/022-fridge-vision/` và task `docs/tasks/phase-21-fridge-vision.md`. Đảm bảo tích hợp trọn vẹn với Storage module (reserve + commit với `kind: FRIDGE_IMAGE`), theo dõi tiến trình polling thời gian thực, giao diện chỉnh sửa ứng viên có khóa lạc quan (`expectedVersion`), và tuân thủ tuyệt đối quy tắc an toàn nghiệp vụ: chỉ có bước xác nhận (`POST /api/v1/ingredient-recognition/jobs/:id/confirm`) mới được phép đột biến số lượng tồn kho tủ bếp.
+- Đã làm:
+  - **Tầng 1 (Endpoints)**: Thêm hằng số `INGREDIENT_RECOGNITION` vào `src/common/constants/api-endpoints.ts` (`JOBS`, `JOB_DETAIL`, `JOB_CANDIDATE`, `JOB_CONFIRM`, `JOB_CANCEL`, `JOB_RETRY`).
+  - **Tầng 2 (Storage Integration & DTOs)**:
+    - Bổ sung `FRIDGE_IMAGE` và `RECEIPT_IMAGE` vào `MediaKind` trong `src/features/storage/types/storage.model.ts` và `storage.dto.ts`.
+    - Cập nhật hàm `validateUploadFile` trong `src/features/storage/api/storage-upload.ts` để kiểm tra kích thước tối đa (10MB) và định dạng hợp lệ (JPEG, PNG, WebP, AVIF) cho `FRIDGE_IMAGE`.
+    - Xây dựng bộ DTOs tại `src/features/ingredient-vision/types/ingredient-recognition.dto.ts` (`RecognitionJobDto`, `RecognitionCandidateDto`, `RecognitionInputDto`, `RecognitionPantryDiffDto`, `RecognitionConfirmResponseDto`, v.v.).
+  - **Tầng 3 (Clean UI Models)**: Tạo UI Models tại `src/features/ingredient-vision/types/ingredient-recognition.model.ts` (`RecognitionJob`, `RecognitionCandidate`, `RecognitionImageInput`, `RecognitionPantryDiff`, status helper enums, confidence score helpers, display badge helpers).
+  - **Tầng 4 (Validation Schemas)**: Xây dựng Zod validation schemas tại `src/features/ingredient-vision/schemas/ingredient-recognition.schema.ts` cho chỉnh sửa ứng viên (tên, số lượng, đơn vị, liên kết nguyên liệu chuẩn `ingredientId`, trạng thái từ chối `REJECTED`).
+  - **Tầng 5 (Mapper & Unit Tests)**:
+    - Xây dựng `IngredientRecognitionMapper` kế thừa `BaseMapper` tại `src/features/ingredient-vision/mappers/ingredient-recognition.mapper.ts`, sử dụng `pickField`, `safeNumber`, `safeString`, `safeEnum`, tính toán badge variants, nhãn tiếng Việt và tỉ lệ phần trăm tin cậy.
+    - Viết 15 unit tests toàn diện tại `src/features/ingredient-vision/mappers/__tests__/ingredient-recognition.mapper.test.ts` (100% pass) kiểm tra map job, candidate, pagination, diff, empty arrays, null/undefined fields, enum fallbacks.
+  - **Tầng 6 (API Client & TanStack Query Hooks)**:
+    - Triển khai `ingredientRecognitionApi` tại `src/features/ingredient-vision/api/ingredient-recognition.api.ts` (6 phương thức axios sạch sẽ).
+    - Tạo Query Key Factory `INGREDIENT_RECOGNITION_QUERY_KEYS` và custom hooks tại `src/features/ingredient-vision/queries/ingredient-recognition.queries.ts`: `useRecognitionJobQuery` (tự động polling 1500ms khi job đang chạy), `useCreateRecognitionJobMutation`, `useUpdateRecognitionCandidateMutation`, `useConfirmRecognitionJobMutation` (tự động làm mới cache pantry), `useCancelRecognitionJobMutation`, `useRetryRecognitionJobMutation`.
+  - **Tầng 7 (UI Components, Client Coordinator & Route Shell)**:
+    - `FridgeUploadZone`: Dropzone kéo thả tải lên từ 1 đến 6 ảnh thực tế, preview thumbnail, nút xóa từng ảnh, tích hợp trực tiếp `uploadWithReservation` của module Storage.
+    - `RecognitionProgressTracker`: Thanh tiến độ thời gian thực (0%..100%), hoạt cảnh 60 FPS GPU-composited (`transform` + `opacity`), hiển thị bước xử lý chi tiết (OCR, Phát hiện vật thể, Đối soát danh mục) và huy hiệu cảnh báo nếu có ảnh lỗi từng phần (`PARTIAL_FAILED`).
+    - `CandidateCard`: Thẻ hiển thị ứng viên nhận diện với điểm tin cậy (High/Medium/Low), liên kết nguyên liệu chuẩn/chưa chuẩn, bằng chứng ảnh thu nhỏ (crop/box), cảnh báo thiếu thông tin, và nút chỉnh sửa/từ chối.
+    - `CandidateEditDialog`: Modal chỉnh sửa chi tiết ứng viên với autocomplete nguyên liệu chuẩn từ `useIngredientsQuery`, chỉnh số lượng/đơn vị, nút loại bỏ ứng viên, và truyền `expectedVersion` chống xung đột chỉnh sửa.
+    - `FreshnessDisclaimerBanner`: Biểu ngữ cảnh báo an toàn thực phẩm hiển thị nguyên văn `freshnessDisclaimer` từ backend, tuân thủ nguyên tắc cẩn trọng, không khẳng định chất lượng vệ sinh hay an toàn vi sinh.
+    - `EvidenceImageModal`: Modal phóng to ảnh bằng chứng gốc với bounding box minh họa tọa độ vật thể phát hiện.
+    - `CandidateReviewScreen`: Màn hình duyệt toàn bộ ứng viên, lọc ứng viên hợp lệ/từ chối, hiển thị danh sách ảnh nguồn, nút "Hủy tác vụ", nút "Thử lại", và nút "Xác nhận & Thêm vào tủ bếp".
+    - `RecognitionConfirmationSummary`: Bảng tổng hợp đối soát thay đổi sau khi xác nhận (`POST /confirm`), hiển thị rõ ràng nguyên liệu tạo mới (`CREATED`) và nguyên liệu cập nhật tăng số lượng (`UPDATED`) kèm nút điều hướng về `/pantry`.
+    - `FridgeScanClientView`: Điều phối mượt mà 4 bước trải nghiệm (Upload -> Processing -> Review -> Summary).
+    - `src/app/pantry/scan/page.tsx`: Server Component Route Shell với SEO metadata tiếng Việt và `Suspense`.
+    - **No Orphan Pages**: Bổ sung nút hành động "Nhận diện từ ảnh" vào `PantryHeader` (`src/features/pantry/components/pantry-header.tsx`) trỏ trực tiếp đến `/pantry/scan`.
+- File tạo/sửa:
+  - `src/common/constants/api-endpoints.ts`
+  - `src/features/storage/types/storage.model.ts`
+  - `src/features/storage/types/storage.dto.ts`
+  - `src/features/storage/api/storage-upload.ts`
+  - `src/features/ingredient-vision/types/ingredient-recognition.dto.ts`
+  - `src/features/ingredient-vision/types/ingredient-recognition.model.ts`
+  - `src/features/ingredient-vision/schemas/ingredient-recognition.schema.ts`
+  - `src/features/ingredient-vision/mappers/ingredient-recognition.mapper.ts`
+  - `src/features/ingredient-vision/mappers/__tests__/ingredient-recognition.mapper.test.ts`
+  - `src/features/ingredient-vision/api/ingredient-recognition.api.ts`
+  - `src/features/ingredient-vision/queries/ingredient-recognition.queries.ts`
+  - `src/features/ingredient-vision/components/fridge-upload-zone.tsx`
+  - `src/features/ingredient-vision/components/recognition-progress-tracker.tsx`
+  - `src/features/ingredient-vision/components/candidate-card.tsx`
+  - `src/features/ingredient-vision/components/candidate-edit-dialog.tsx`
+  - `src/features/ingredient-vision/components/freshness-disclaimer-banner.tsx`
+  - `src/features/ingredient-vision/components/evidence-image-modal.tsx`
+  - `src/features/ingredient-vision/components/candidate-review-screen.tsx`
+  - `src/features/ingredient-vision/components/recognition-confirmation-summary.tsx`
+  - `src/app/pantry/scan/fridge-scan-client-view.tsx`
+  - `src/app/pantry/scan/page.tsx`
+  - `src/features/pantry/components/pantry-header.tsx`
+  - `frontend/docs/BACKEND_INTEGRATION.md`
+  - `frontend/docs/PROGRESS.md`
+  - `specs/022-fridge-vision/tasks.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 35/35 test suites pass, 355/355 tests pass (trong đó 15 mapper tests mới của Phase 21 pass 100%).
+  - `npm run build`: 37/37 routes biên dịch thành công, bao gồm `/pantry/scan`.
+- PROGRESS: Phase 21 Multi-image fridge candidate confirmation 0% → 100% (READY).
+- Còn lại / rủi ro: Không có rủi ro logic; tính năng sẵn sàng phục vụ người dùng. Khi backend bật provider AI thật, chỉ cần duy trì đúng API contract hiện hành.
+
+## [2026-09-26] — Phase 20 Pantry Inventory Management (Tủ bếp gia đình)
+
+- Mục tiêu: Triển khai toàn diện 7 tầng scaffold cho Phase 20 Quản lý Tủ bếp Gia đình (Pantry Inventory Management) theo spec `specs/021-pantry-inventory/`, kế thừa `BaseMapper`, hỗ trợ quản lý nguyên liệu (chuẩn hoặc tự do), cảnh báo sắp hết hạn, sổ cái điều chỉnh số lượng bất biến chống số dư âm, gộp trùng lặp nguyên tử, và trang bị khuyến cáo an toàn thực phẩm.
+- Đã làm:
+  - **Tầng 1 (Endpoints)**: Thêm hằng số `PANTRY` vào `src/common/constants/api-endpoints.ts` (`ITEMS`, `ITEM_DETAIL`, `EXPIRING_SOON`, `ADJUSTMENTS`, `MERGE_PREVIEW`, `MERGE`).
+  - **Tầng 2 (DTOs)**: Xây dựng bộ DTOs phản ánh chính xác schema từ backend OpenAPI tại `src/features/pantry/types/pantry.dto.ts` (`PantryItemDto`, `PantryAdjustmentDto`, `PantryMergePreviewDto`, `PantryMergeResponseDto`, envelopes và request payloads).
+  - **Tầng 3 (Clean UI Models)**: Tạo các Clean UI Models tại `src/features/pantry/types/pantry.model.ts` (`PantryItem`, `PantryAdjustment`, `PantryMergePreview`, `PantryFilter`, formatted fields `formattedQuantity`, `expiryStatus`, `expiryBadgeVariant`, `sourceLabel`, `actionLabel`).
+  - **Tầng 4 (Schemas & Validation)**: Xây dựng Zod validation schemas tại `src/features/pantry/schemas/pantry.schema.ts` cho thêm mới/chỉnh sửa nguyên liệu (hỗ trợ dual-identity: `ingredientId` hoặc `unmatchedText`), sổ cái điều chỉnh (`CONSUME`, `RESTORE`, `ADJUST`), và gộp nguyên liệu.
+  - **Tầng 5 (Mapper & Unit Tests)**:
+    - Xây dựng `PantryMapper` kế thừa `BaseMapper` tại `src/features/pantry/mappers/pantry.mapper.ts`, sử dụng triệt để `pickField`, `safeNumber`, `safeString`, `safeDateString` và xử lý envelope pagination `toPantryPaginationModel`.
+    - Viết 14 Vitest unit tests tại `src/features/pantry/mappers/__tests__/pantry.mapper.test.ts` kiểm thử toàn diện các trường hợp null/undefined, thiếu trường, tính toán trạng thái hết hạn (`EXPIRED`, `EXPIRING_SOON`, `SAFE`), format số lượng, sổ cái điều chỉnh và xem trước gộp (100% pass).
+  - **Tầng 6 (API Client & TanStack Query Hooks)**:
+    - Triển khai `pantryApi` tại `src/features/pantry/api/pantry.api.ts` (10 phương thức axios, chuyển đổi sạch sẽ qua mapper).
+    - Tạo Query Key Factory `PANTRY_QUERY_KEYS` và 10 custom query/mutation hooks tại `src/features/pantry/queries/pantry.queries.ts` với tính năng invalidation tự động và toast thông báo tiếng Việt.
+  - **Tầng 7 (UI Components & Route Shell)**:
+    - `PantrySafetyBanner`: Khuyến cáo an toàn thực phẩm trung thực, không tuyên bố chứng nhận chất lượng thực phẩm.
+    - `PantryHeader`: Thanh tìm kiếm và bộ lọc nguồn (Tất cả, Thủ công, Nhận diện tủ lạnh, Hóa đơn) và nút thao tác nhanh.
+    - `PantryTabs`: Chuyển đổi giữa "Tất cả tủ bếp" và "Sắp hết hạn" kèm badge đếm số lượng.
+    - `PantryItemCard`: Thẻ hiển thị nguyên liệu với badge hạn sử dụng, thông tin dinh dưỡng tham chiếu, menu hành động, và nút điều chỉnh nhanh (+ / -).
+    - `PantryItemList`: Xử lý triệt để 4 trạng thái Loading (Skeleton), Error, Empty, và Success.
+    - `PantryItemDialog`: Modal thêm/sửa nguyên liệu tích hợp tìm kiếm autocomplete nguyên liệu chuẩn từ `useIngredientsQuery` hoặc nhập tự do `unmatchedText`.
+    - `PantryAdjustmentDialog`: Modal điều chỉnh tồn kho hỗ trợ 3 loại `CONSUME`, `RESTORE`, `ADJUST` với cơ chế client-side chặn số dư âm và yêu cầu lý do kiểm toán.
+    - `PantryHistoryDialog`: Modal xem lịch sử sổ cái bất biến với biến động số lượng delta và số dư trước/sau.
+    - `PantryDeleteDialog`: Modal xác nhận xóa mềm kèm truyền `expectedVersion` chống xung đột đồng thời.
+    - `PantryMergeDialog`: Modal chọn nhiều nguyên liệu trùng lặp, xem trước số dư tính toán trước khi thực thi gộp nguyên tử.
+    - `PantryClientView` & `/pantry/page.tsx`: Giao diện tổng hợp với SEO metadata và React Suspense.
+    - **No Orphan Pages**: Bổ sung liên kết "Tủ bếp gia đình" vào User Dropdown Menu trên `SiteHeader`.
+- File tạo/sửa:
+  - `src/common/constants/api-endpoints.ts`
+  - `src/features/pantry/types/pantry.dto.ts`
+  - `src/features/pantry/types/pantry.model.ts`
+  - `src/features/pantry/schemas/pantry.schema.ts`
+  - `src/features/pantry/mappers/pantry.mapper.ts`
+  - `src/features/pantry/mappers/__tests__/pantry.mapper.test.ts`
+  - `src/features/pantry/api/pantry.api.ts`
+  - `src/features/pantry/queries/pantry.queries.ts`
+  - `src/features/pantry/components/pantry-safety-banner.tsx`
+  - `src/features/pantry/components/pantry-header.tsx`
+  - `src/features/pantry/components/pantry-tabs.tsx`
+  - `src/features/pantry/components/pantry-item-card.tsx`
+  - `src/features/pantry/components/pantry-item-list.tsx`
+  - `src/features/pantry/components/pantry-item-dialog.tsx`
+  - `src/features/pantry/components/pantry-adjustment-dialog.tsx`
+  - `src/features/pantry/components/pantry-history-dialog.tsx`
+  - `src/features/pantry/components/pantry-delete-dialog.tsx`
+  - `src/features/pantry/components/pantry-merge-dialog.tsx`
+  - `src/features/pantry/index.ts`
+  - `src/app/pantry/page.tsx`
+  - `src/app/pantry/pantry-client-view.tsx`
+  - `src/components/layout/site-header.tsx`
+  - `specs/021-pantry-inventory/tasks.md`
+  - `docs/tasks/phase-20-pantry.md`
+  - `docs/PROGRESS.md`
+  - `docs/BACKEND_INTEGRATION.md`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx vitest run src/features/pantry/mappers/__tests__/pantry.mapper.test.ts`: 14/14 unit tests pass 100%.
+  - `npx tsc --noEmit`: 0 lỗi typescript.
+  - `npm test`: 34/34 test files passed (340/340 tests passed, 0 regressions).
+  - `npm run build`: Next.js 16 build thành công 36/36 routes (bao gồm `/pantry`).
+- PROGRESS: Phase 20: 0% → 100% (Hoàn thành toàn diện 7 tầng scaffold và tích hợp 6 API endpoints READY).
+- Còn lại / rủi ro: Không có. Phase 21 (Nhận diện tủ lạnh bằng ảnh) vẫn giữ trạng thái PLANNED chờ backend.
+
 ## [2026-09-24] — Khắc phục lỗi gom toàn bộ món ăn vào ngày đầu tiên của tuần (Phase 19 Meal Program)
 
 - Mục tiêu: Phân bổ chính xác các món ăn trong tuần về đúng 7 ngày dựa trên trường `date` (YYYY-MM-DD) và phân loại trực quan theo `mealType` (Bữa sáng, Bữa trưa, Bữa tối, Bữa phụ) thay vì dồn tất cả 21 món vào Ngày thứ nhất.

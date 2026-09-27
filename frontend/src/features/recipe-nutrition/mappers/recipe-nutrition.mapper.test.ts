@@ -312,4 +312,61 @@ describe('RecipeNutritionMapper', () => {
     const kcalNutrient = model.perServingNutrients.find((n) => n.code === 'ENERC_KCAL');
     expect(kcalNutrient?.formattedAmount).toBe('400 kcal');
   });
+
+  it('13. correctly maps ENERGY_KCAL, PROTEIN, and backend nutrient aliases to macros', () => {
+    const backendDto: RecipeNutritionEstimateDto = {
+      ...mockValidEstimateDto,
+      perServingNutrients: [
+        {
+          nutrientCode: 'ENERGY_KCAL',
+          nutrientName: 'Năng lượng',
+          unit: 'kcal',
+          amount: 250,
+          origin: 'CANONICAL_CALCULATED',
+          confidence: 0.9,
+          min: null,
+          max: null,
+        },
+        {
+          nutrientCode: 'PROTEIN',
+          nutrientName: 'Chất đạm',
+          unit: 'g',
+          amount: 15,
+          origin: 'CANONICAL_CALCULATED',
+          confidence: 0.9,
+          min: null,
+          max: null,
+        },
+        {
+          nutrientCode: 'CARBS',
+          nutrientName: 'Tinh bột',
+          unit: 'g',
+          amount: 30,
+          origin: 'CANONICAL_CALCULATED',
+          confidence: 0.9,
+          min: null,
+          max: null,
+        },
+        {
+          nutrientCode: 'FAT',
+          nutrientName: 'Chất béo',
+          unit: 'g',
+          amount: 5,
+          origin: 'CANONICAL_CALCULATED',
+          confidence: 0.9,
+          min: null,
+          max: null,
+        },
+      ],
+    };
+
+    const model = recipeNutritionMapper.toModel(backendDto);
+    expect(model.macros.calories).toBe(250);
+    expect(model.macros.proteinGrams).toBe(15);
+    expect(model.macros.carbsGrams).toBe(30);
+    expect(model.macros.fatGrams).toBe(5);
+    expect(model.macros.proteinCaloriesPercent).toBe(24); // (15*4)/250 = 24%
+    expect(model.macros.carbsCaloriesPercent).toBe(48); // (30*4)/250 = 48%
+    expect(model.macros.fatCaloriesPercent).toBe(18); // (5*9)/250 = 18%
+  });
 });

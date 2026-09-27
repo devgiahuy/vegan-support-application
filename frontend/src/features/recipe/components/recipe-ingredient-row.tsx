@@ -146,7 +146,7 @@ export function RecipeIngredientRow({
           <Input
             type="number"
             step="any"
-            placeholder="Số lượng"
+            placeholder="Số lượng (vd: 150)"
             className="h-10 rounded-lg text-sm"
             {...form.register(`ingredients.${index}.amount` as const, { valueAsNumber: true })}
           />
@@ -155,7 +155,7 @@ export function RecipeIngredientRow({
         {/* Đơn vị */}
         <div className="col-span-4 sm:col-span-2">
           <Input
-            placeholder="Đơn vị (gram, ml...)"
+            placeholder="Đơn vị (g, ml, lát...)"
             className="h-10 rounded-lg text-sm"
             {...form.register(`ingredients.${index}.unit`)}
           />

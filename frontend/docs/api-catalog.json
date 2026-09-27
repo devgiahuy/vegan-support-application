@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
   "source": "..\\backend\\openapi.json",
-  "generatedAt": "2026-09-23T15:20:08.094Z",
+  "generatedAt": "2026-09-27T05:29:38.805Z",
   "stats": {
-    "operations": 118,
-    "groups": 27,
-    "schemas": 104
+    "operations": 147,
+    "groups": 34,
+    "schemas": 132
   },
   "operations": [
     {
@@ -6111,6 +6111,1081 @@
         "200": "object",
         "401": "ErrorResponse",
         "404": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/pantry/items",
+      "group": "Pantry",
+      "summary": "List and filter owned pantry items",
+      "operationId": "listPantryItems",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "ingredientId",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "source",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "confirmationStatus",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "conversionStatus",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "search",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "expiresFrom",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "expiresTo",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "includeZero",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "PantryListEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pantry/items",
+      "group": "Pantry",
+      "summary": "Create a confirmed manual pantry item",
+      "operationId": "createPantryItem",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "quantity",
+            "unit",
+            "idempotencyKey"
+          ],
+          "properties": {
+            "ingredientId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "unmatchedText": {
+              "type": "string"
+            },
+            "quantity": {
+              "type": "number"
+            },
+            "unit": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "purchasedAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "openedAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expiresAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "freshnessNote": {
+              "type": "string"
+            },
+            "idempotencyKey": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "201": "PantryAdjustmentEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/pantry/items/expiring-soon",
+      "group": "Pantry",
+      "summary": "List confirmed items expiring in an inclusive date window",
+      "operationId": "listExpiringPantryItems",
+      "params": [
+        {
+          "in": "query",
+          "name": "asOf",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "days",
+          "required": false,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "PantryListEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pantry/merge-preview",
+      "group": "Pantry",
+      "summary": "Preview duplicate pantry item merge",
+      "operationId": "previewPantryMerge",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "itemIds"
+          ],
+          "properties": {
+            "itemIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "PantryMergePreviewEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pantry/merge",
+      "group": "Pantry",
+      "summary": "Merge duplicate pantry items atomically",
+      "operationId": "mergePantryItems",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "targetItemId",
+            "items",
+            "idempotencyKey"
+          ],
+          "properties": {
+            "targetItemId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "expectedVersion"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "expectedVersion": {
+                    "type": "integer",
+                    "_truncated": true
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "idempotencyKey": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "object",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/pantry/items/{id}",
+      "group": "Pantry",
+      "summary": "Get an owned pantry item",
+      "operationId": "getPantryItem",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "PantryItemEnvelope",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/pantry/items/{id}",
+      "group": "Pantry",
+      "summary": "Update pantry observations with optimistic concurrency",
+      "operationId": "updatePantryItem",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "expectedVersion"
+          ],
+          "properties": {
+            "expectedVersion": {
+              "type": "integer"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "purchasedAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "openedAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expiresAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "freshnessNote": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "PantryItemEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/pantry/items/{id}",
+      "group": "Pantry",
+      "summary": "Soft-delete an owned pantry item",
+      "operationId": "deletePantryItem",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "expectedVersion",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "204": "Soft-deleted; history retained",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/pantry/items/{id}/adjustments",
+      "group": "Pantry",
+      "summary": "List immutable quantity ledger entries",
+      "operationId": "listPantryAdjustments",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "PantryAdjustmentListEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pantry/items/{id}/adjustments",
+      "group": "Pantry",
+      "summary": "Consume, restore, or adjust pantry quantity",
+      "operationId": "adjustPantryItem",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "type",
+                "quantity",
+                "unit",
+                "expectedVersion",
+                "idempotencyKey"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "CONSUME"
+                  ]
+                },
+                "quantity": {
+                  "type": "number"
+                },
+                "unit": {
+                  "type": "string"
+                },
+                "expectedVersion": {
+                  "type": "integer"
+                },
+                "idempotencyKey": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "type",
+                "quantity",
+                "unit",
+                "expectedVersion",
+                "idempotencyKey"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "RESTORE"
+                  ]
+                },
+                "quantity": {
+                  "type": "number"
+                },
+                "unit": {
+                  "type": "string"
+                },
+                "expectedVersion": {
+                  "type": "integer"
+                },
+                "idempotencyKey": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "type",
+                "deltaQuantity",
+                "unit",
+                "expectedVersion",
+                "idempotencyKey",
+                "reason"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "ADJUST"
+                  ]
+                },
+                "deltaQuantity": {
+                  "type": "number"
+                },
+                "unit": {
+                  "type": "string"
+                },
+                "expectedVersion": {
+                  "type": "integer"
+                },
+                "idempotencyKey": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "PantryAdjustmentEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ingredient-recognition/jobs",
+      "group": "Ingredient Recognition",
+      "summary": "Create an asynchronous multi-image fridge recognition job",
+      "operationId": "createIngredientRecognitionJob",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "CreateRecognitionJobRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "202": "RecognitionJobResponse",
+        "401": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ingredient-recognition/jobs/{id}",
+      "group": "Ingredient Recognition",
+      "summary": "Get recognition progress and editable candidates",
+      "operationId": "getIngredientRecognitionJob",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "RecognitionJobResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/ingredient-recognition/jobs/{id}/candidates/{candidateId}",
+      "group": "Ingredient Recognition",
+      "summary": "Correct or reject a recognition candidate",
+      "operationId": "updateIngredientRecognitionCandidate",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "path",
+          "name": "candidateId",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "UpdateRecognitionCandidateRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "RecognitionJobResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ingredient-recognition/jobs/{id}/confirm",
+      "group": "Ingredient Recognition",
+      "summary": "Confirm selected candidates and apply the pantry diff",
+      "operationId": "confirmIngredientRecognitionJob",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "ConfirmRecognitionJobRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "RecognitionConfirmationResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ingredient-recognition/jobs/{id}/cancel",
+      "group": "Ingredient Recognition",
+      "summary": "Cancel an unconfirmed recognition job",
+      "operationId": "cancelIngredientRecognitionJob",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "RecognitionJobResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ingredient-recognition/jobs/{id}/retry",
+      "group": "Ingredient Recognition",
+      "summary": "Retry a failed or partially failed recognition job",
+      "operationId": "retryIngredientRecognitionJob",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "RetryRecognitionJobRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "202": "RecognitionJobResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/receipt-jobs",
+      "group": "Receipts",
+      "summary": "Create an asynchronous receipt extraction job",
+      "operationId": "createReceiptJob",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "CreateReceiptJobRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "202": "ReceiptJobResponse",
+        "401": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/receipt-jobs/{id}",
+      "group": "Receipts",
+      "summary": "Get receipt metadata, progress, and editable candidate lines",
+      "operationId": "getReceiptJob",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "ReceiptJobResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/receipt-jobs/{id}/candidates/{candidateId}",
+      "group": "Receipts",
+      "summary": "Correct or reject a receipt candidate",
+      "operationId": "updateReceiptCandidate",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "path",
+          "name": "candidateId",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "UpdateReceiptCandidateRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "ReceiptJobResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/receipt-jobs/{id}/confirm",
+      "group": "Receipts",
+      "summary": "Confirm selected receipt candidates and apply the pantry diff",
+      "operationId": "confirmReceiptJob",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "ConfirmReceiptJobRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "ReceiptConfirmationResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/receipt-jobs/{id}/cancel",
+      "group": "Receipts",
+      "summary": "Cancel an unconfirmed receipt job",
+      "operationId": "cancelReceiptJob",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "ReceiptJobResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/receipt-jobs/{id}/retry",
+      "group": "Receipts",
+      "summary": "Retry failed or partially failed receipt extraction",
+      "operationId": "retryReceiptJob",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "RetryReceiptJobRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "202": "ReceiptJobResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shopping-lists/preview",
+      "group": "Shopping Lists",
+      "summary": "Preview pantry-aware shopping gaps for selected meals and servings",
+      "operationId": "previewShoppingGaps",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "ShoppingGapPreviewRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "ShoppingGapPreviewResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ai-artifacts",
+      "group": "AI Artifacts",
+      "summary": "Save an immutable eligible AI output as a private draft artifact",
+      "operationId": "createAiArtifact",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "CreateAiArtifactRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "201": "AiArtifactResponse",
+        "401": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/ai-artifacts/{id}/visibility",
+      "group": "AI Artifacts",
+      "summary": "Share or unshare an owned AI artifact",
+      "operationId": "updateAiArtifactVisibility",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "UpdateAiArtifactVisibilityRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "AiArtifactResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ai-artifacts/{id}/submit",
+      "group": "AI Artifacts",
+      "summary": "Submit an owned artifact for Contributor verification",
+      "operationId": "submitAiArtifact",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "SubmitAiArtifactRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "AiArtifactResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ai-artifacts/public",
+      "group": "AI Artifacts",
+      "summary": "List submitted public AI artifacts using a strict privacy-safe allowlist",
+      "operationId": "listPublicAiArtifacts",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "type",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "PublicAiArtifactListResponse",
+        "422": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ai-artifacts/{id}/verifications",
+      "group": "AI Verification",
+      "summary": "Verify a submitted public artifact",
+      "operationId": "createAiVerification",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "CreateAiVerificationRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "201": "AiVerificationResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/ai-verifications/{id}",
+      "group": "AI Verification Admin",
+      "summary": "Override or revoke an active verification with an audit reason",
+      "operationId": "adminUpdateAiVerification",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "AdminAiVerificationActionRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "AiVerificationResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
         "423": "ErrorResponse"
       }
     }

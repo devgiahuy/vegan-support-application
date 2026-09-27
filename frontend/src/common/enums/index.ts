@@ -290,3 +290,43 @@ export enum ReportTargetType {
   POST = 'POST',
   COMMENT = 'COMMENT',
 }
+
+/** Loại nguồn tạo bản ghi tri thức AI (Phase 23). */
+export enum AiArtifactType {
+  CHAT_ANSWER = 'CHAT_ANSWER',
+  RECIPE_NUTRITION = 'RECIPE_NUTRITION',
+  FRIDGE_RECOGNITION = 'FRIDGE_RECOGNITION',
+  RECEIPT_EXTRACTION = 'RECEIPT_EXTRACTION',
+}
+
+/** Trạng thái vòng đời của AI Artifact (Phase 23). */
+export enum AiArtifactStatus {
+  DRAFT = 'DRAFT',
+  SUBMITTED = 'SUBMITTED',
+}
+
+/** Chế độ hiển thị của AI Artifact (Phase 23). */
+export enum AiArtifactVisibility {
+  PRIVATE = 'PRIVATE',
+  PUBLIC = 'PUBLIC',
+}
+
+/** Kết luận thẩm định kiểm chứng của chuyên gia (Phase 23). */
+export enum AiVerificationConclusion {
+  VERIFIED = 'VERIFIED',
+  CORRECTION_NEEDED = 'CORRECTION_NEEDED',
+  REJECTED = 'REJECTED',
+}
+
+/** Trạng thái hiệu lực của bản kiểm chứng (Phase 23). */
+export enum AiVerificationStatus {
+  ACTIVE = 'ACTIVE',
+  SUPERSEDED = 'SUPERSEDED',
+  REVOKED = 'REVOKED',
+}
+
+/** Loại hành động can thiệp của Quản trị viên lên kiểm chứng (Phase 23). */
+export enum AiVerificationAdminActionType {
+  OVERRIDE = 'OVERRIDE',
+  REVOKE = 'REVOKE',
+}

@@ -35,6 +35,7 @@ const NAV_MAIN = [
 
 const NAV_MONITOR = [
   { label: 'Báo cáo vi phạm', href: '/admin/dashboard?tab=reports', icon: Flag, badge: '5' },
+  { label: 'Kiểm chứng AI', href: '/admin/dashboard?tab=ai-verifications', icon: ShieldCheck },
   { label: 'Nhật ký hệ thống', href: '/admin/dashboard?tab=logs', icon: ScrollText },
   { label: 'Lưu trữ & Quota', href: '/admin/storage', icon: HardDrive },
 ];
