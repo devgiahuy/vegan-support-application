@@ -1,12 +1,12 @@
 # Backend Implementation Phases
 
-**Version:** 3.7
+**Version:** 3.9
 
 **Updated:** 2026-09-27
 
 **Stack:** Node.js · Express · TypeScript · PostgreSQL · Prisma · Zod · OpenAPI
 
-**Current baseline:** Phases 00–12 and 15–25 completed; Phases 13–14 are in progress
+**Current baseline:** Phases 00–20 and 23–26 completed; Phases 21–22 and 27 are in progress. OpenAI image adapters are implemented for Phase 21/22, but live Vietnamese image and receipt validation remains before production readiness.
 
 This document splits the backend into independently implementable, verifiable, and committable phases. Every new session uses the matching prompt under `backend/docs/prompts/` and derives current state from the repository, not from previous chat history.
 
@@ -130,22 +130,22 @@ Regenerate/validate OpenAPI using the repository workflow. Live external-provide
 |    09 | `COMPLETED`   | 2026-09-16 | This phase commit                | Explainable ranking v1 ready                                                                                                                                                               |
 |    10 | `COMPLETED`   | 2026-09-16 | This phase commit                | Weekly planner/basic shopping ready                                                                                                                                                        |
 |    11 | `COMPLETED`   | 2026-09-16 | This phase commit                | AI chat gateway ready                                                                                                                                                                      |
-|    12 | `COMPLETED`   | 2026-09-19 | Not committed (review tree)      | Food/nutrient knowledge base, reviewed rules and idempotent imports ready; commit intentionally deferred by user                                                                           |
-|    13 | `IN_PROGRESS` | —          | Not committed (review tree)      | Source/OpenAPI/docs implemented; final READY gate blocked by Windows Prisma query-engine DLL `EPERM` during `npm run build`                                                                |
-|    14 | `IN_PROGRESS` | —          | Not committed (review tree)      | Source/migration/OpenAPI/docs implemented; breaking consumers remain `CHANGING` and final READY gate is blocked by Windows Prisma query-engine DLL `EPERM` during `npm run build`          |
+|    12 | `COMPLETED`   | 2026-09-19 | `724f903` | Food/nutrient knowledge base, reviewed rules and idempotent imports ready |
+|    13 | `COMPLETED` | 2026-09-27 | `724f903` | Source/migration/OpenAPI plus backend build and frontend consumer checks pass; former Windows DLL gate no longer applies |
+|    14 | `COMPLETED` | 2026-09-27 | `52eed40` | Unified Contributor migration and frontend subtype removal verified; backend/frontend gates pass and registration contract exercised over HTTP |
 |    15 | `COMPLETED`   | 2026-09-21 | `252b792`                        | Storage migration deployed locally; seed and reconciliation dry-run pass; source/OpenAPI gates pass                                                                                        |
 |    16 | `COMPLETED`   | 2026-09-21 | Not committed (user review tree) | Shared draft/submit/Admin review lifecycle, video storage validation, moderation signals, history/audit, OpenAPI and runtime acceptance checks pass; commit intentionally deferred by user |
 |    17 | `COMPLETED`   | 2026-09-21 | Not committed (user review tree) | Custom meals, photos (quota-checked MediaAsset ref), user tags, MealPlanItem sourceType/customMealId, delete-in-use guard, OpenAPI, lint/typecheck/build gates pass                        |
 |    18 | `COMPLETED`   | 2026-09-23 | Not committed (user instruction) | Versioned portion/nutrient/guideline/interaction analysis, stale fingerprints, custom-meal manual-add, OpenAPI/docs, migrations/seed, and all quality gates pass                           |
 |    19 | `COMPLETED`   | 2026-09-23 | Not committed (user instruction) | Bounded versioned multi-week programs, weekly alternatives/snapshots, partial retry, cross-week analysis/invalidation, confirmation, OpenAPI/docs, migration/seed, and quality gates pass  |
 |    20 | `COMPLETED`   | 2026-09-23 | Not committed (user instruction) | Owner-scoped confirmed inventory, reviewed conversion, immutable ledger, duplicate merge, expiry query, idempotency/concurrency, OpenAPI/docs, migration/seed, and all quality gates pass  |
-|    21 | `COMPLETED`   | 2026-09-24 | Not committed (user instruction) | Multi-image committed-asset recognition, validated fake/local provider, dedupe/evidence, correction/rejection, partial retry/cancel, idempotent confirmation-only pantry diff, OpenAPI/docs, migration/seed, and all quality gates pass                 |
-|    22 | `COMPLETED`   | 2026-09-24 | Not committed (user instruction) | Receipt-image extraction with validated fake/local provider, editable/rejectable candidates, partial retry/cancel, explicit idempotent pantry confirmation, explainable pantry-aware shopping gaps, OpenAPI/docs, migration/seed, and all quality gates pass |
+|    21 | `IN_PROGRESS` | — | `8f5d6dd` | OpenAI image adapter and fake-provider job/confirmation flows pass local acceptance; live fridge-photo accuracy and failure behavior remain unverified |
+|    22 | `IN_PROGRESS` | — | `9e1f39f` | OpenAI receipt adapter and fake-provider job/confirmation flows pass local acceptance; live Vietnamese receipt accuracy and failure behavior remain unverified |
 |    23 | `COMPLETED`   | 2026-09-24 | Not committed (user instruction) | Versioned privacy-safe sharing, unified contributor verification, Admin override, immutability, OpenAPI, migration, and quality gates pass |
 |    24 | `COMPLETED`   | 2026-09-27 | This phase commit | Internal reviewed places, append-only review audit, consent-aware radius/bounds search, hard diet filtering, live fake/optional Google adapter without durable Google content caching, migration/seed/OpenAPI and gates pass |
-|    25 | `COMPLETED` | 2026-09-27 | This phase commit | Transactional database event dispatcher, private owner-scoped API, 90-day cleanup, migration/OpenAPI/docs and verification gates pass; Phase 14 legacy frontend consumers remain `CHANGING` independently |
+|    25 | `COMPLETED` | 2026-09-27 | `82994e3` | Transactional database event dispatcher, private owner-scoped API, 90-day cleanup, migration/OpenAPI/docs and verification gates pass |
 |    26 | `COMPLETED` | 2026-09-27 | This phase commit | Admin-only redacted events/metrics/flags, versioned provider controls and audit, documented fallbacks and 90-day cleanup; migration, OpenAPI, runtime acceptance and quality gates pass |
-|    27 | `NOT_STARTED` | —          | —                                | —                                                                                                                                                                                          |
+|    27 | `IN_PROGRESS` | — | — | Release audit fixed first-upload reservation race, canonical ID/name mismatch, frontend registration, pagination, and production startup. OpenAI image adapters added; live representative-image validation and remaining release checks are open; no completion commit. |
 
 ## 7. Prompt index
 

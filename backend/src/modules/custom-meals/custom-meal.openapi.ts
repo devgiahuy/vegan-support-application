@@ -33,6 +33,27 @@ const successCreatedResponse = (description: string, schema: z.ZodTypeAny) => ({
   },
 });
 
+const ingredientReferenceError = (schema: z.ZodTypeAny) => ({
+  description: 'VALIDATION_ERROR, INVALID_INGREDIENT_REFERENCE, or INGREDIENT_ID_NAME_MISMATCH',
+  content: {
+    'application/json': {
+      schema,
+      examples: {
+        ingredientMismatch: {
+          value: {
+            success: false,
+            error: {
+              code: 'INGREDIENT_ID_NAME_MISMATCH',
+              message: 'Tên nguyên liệu không khớp với nguyên liệu chuẩn đã chọn',
+              requestId: '00000000-0000-4000-8000-000000000001',
+            },
+          },
+        },
+      },
+    },
+  },
+});
+
 export function registerCustomMealOpenApi(
   registry: OpenAPIRegistry,
   errorResponse: z.ZodTypeAny,
@@ -70,7 +91,7 @@ export function registerCustomMealOpenApi(
         'Bữa ăn tùy chỉnh được tạo',
         mealResponse,
       ),
-      400: { description: 'Dữ liệu không hợp lệ', content: { 'application/json': { schema: errorResponse } } },
+      400: ingredientReferenceError(errorResponse),
       401: { description: 'Chưa xác thực', content: { 'application/json': { schema: errorResponse } } },
     },
   });
@@ -109,7 +130,7 @@ export function registerCustomMealOpenApi(
         'Bữa ăn được cập nhật',
         z.object({ success: z.literal(true), data: mealResponse }),
       ),
-      400: { description: 'Dữ liệu không hợp lệ', content: { 'application/json': { schema: errorResponse } } },
+      400: ingredientReferenceError(errorResponse),
       401: { description: 'Chưa xác thực', content: { 'application/json': { schema: errorResponse } } },
       404: { description: 'Không tìm thấy', content: { 'application/json': { schema: errorResponse } } },
     },

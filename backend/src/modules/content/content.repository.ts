@@ -1,5 +1,6 @@
 import {
   CatalogStatus,
+  FoodDataReviewStatus,
   MediaAssetStatus,
   MediaKind,
   MediaProvider,
@@ -71,7 +72,7 @@ const searchProfileSelect = {
 } satisfies Prisma.UserSelect;
 
 const ingredientMetadataInclude = {
-  aliases: true,
+  aliases: { where: { reviewStatus: FoodDataReviewStatus.APPROVED } },
   allergens: true,
   dietCompatibilities: true,
   traditionWarnings: true,
@@ -638,7 +639,7 @@ export class ContentRepository {
           ...(normalizedNames.length
             ? [
                 { normalizedName: { in: normalizedNames } },
-                { aliases: { some: { normalizedAlias: { in: normalizedNames } } } },
+                { aliases: { some: { normalizedAlias: { in: normalizedNames }, reviewStatus: FoodDataReviewStatus.APPROVED } } },
               ]
             : []),
         ],

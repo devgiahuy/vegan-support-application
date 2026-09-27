@@ -91,16 +91,24 @@ const environmentSchema = z
     AI_GUEST_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(60).default(10),
     CHAT_GUEST_COOKIE_SECRET: z.string().min(32).optional(),
     CHAT_GUEST_COOKIE_TTL_DAYS: z.coerce.number().int().min(1).max(30).default(7),
-    VISION_ENABLED: z.stringbool().default(true),
-    VISION_PROVIDER: z.enum(['fake']).default('fake'),
-    VISION_MODEL: z.string().trim().min(1).max(100).default('local-fridge-vision-v1'),
+    VISION_ENABLED: z.stringbool().default(false),
+    VISION_PROVIDER: z.enum(['fake', 'openai']).default('openai'),
+    VISION_MODEL: z.preprocess(
+      (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+      z.string().trim().min(1).max(100).optional(),
+    ),
     VISION_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('fridge-v1'),
+    VISION_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(256).max(8192).default(2048),
     VISION_MAX_IMAGES: z.coerce.number().int().min(2).max(12).default(6),
     VISION_MAX_IMAGE_BYTES: z.coerce.number().int().min(1).max(25_000_000).default(10_000_000),
-    RECEIPT_ENABLED: z.stringbool().default(true),
-    RECEIPT_PROVIDER: z.enum(['fake']).default('fake'),
-    RECEIPT_MODEL: z.string().trim().min(1).max(100).default('local-receipt-ocr-v1'),
+    RECEIPT_ENABLED: z.stringbool().default(false),
+    RECEIPT_PROVIDER: z.enum(['fake', 'openai']).default('openai'),
+    RECEIPT_MODEL: z.preprocess(
+      (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+      z.string().trim().min(1).max(100).optional(),
+    ),
     RECEIPT_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('receipt-v1'),
+    RECEIPT_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(256).max(8192).default(4096),
     RECEIPT_MAX_IMAGES: z.coerce.number().int().min(1).max(8).default(4),
     RECEIPT_MAX_IMAGE_BYTES: z.coerce.number().int().min(1).max(25_000_000).default(10_000_000),
     MAPS_PROVIDER: z.enum(['fake', 'google']).default('fake'),
@@ -111,12 +119,32 @@ const environmentSchema = z
     MAPS_TIMEOUT_MS: z.coerce.number().int().min(1000).max(30000).default(5000),
   })
   .superRefine((environment, context) => {
+    if (environment.NODE_ENV === 'production' && environment.VISION_ENABLED && environment.VISION_PROVIDER === 'fake') {
+      context.addIssue({
+        code: 'custom',
+        path: ['VISION_ENABLED'],
+        message: 'fake vision provider cannot be enabled in production',
+      });
+    }
+    if (environment.NODE_ENV === 'production' && environment.RECEIPT_ENABLED && environment.RECEIPT_PROVIDER === 'fake') {
+      context.addIssue({
+        code: 'custom',
+        path: ['RECEIPT_ENABLED'],
+        message: 'fake receipt provider cannot be enabled in production',
+      });
+    }
     if (environment.MAPS_PROVIDER === 'google' && !environment.GOOGLE_MAPS_API_KEY) {
       context.addIssue({
         code: 'custom',
         path: ['GOOGLE_MAPS_API_KEY'],
         message: 'required when MAPS_PROVIDER=google',
       });
+    }
+    if (environment.VISION_ENABLED && environment.VISION_PROVIDER === 'openai' && !environment.OPENAI_API_KEY) {
+      context.addIssue({ code: 'custom', path: ['OPENAI_API_KEY'], message: 'required when VISION_PROVIDER=openai is enabled' });
+    }
+    if (environment.RECEIPT_ENABLED && environment.RECEIPT_PROVIDER === 'openai' && !environment.OPENAI_API_KEY) {
+      context.addIssue({ code: 'custom', path: ['OPENAI_API_KEY'], message: 'required when RECEIPT_PROVIDER=openai is enabled' });
     }
   })
   .transform((environment) => ({
@@ -180,16 +208,18 @@ const environmentSchema = z
     vision: {
       enabled: environment.VISION_ENABLED,
       provider: environment.VISION_PROVIDER,
-      model: environment.VISION_MODEL,
+      model: environment.VISION_MODEL ?? (environment.VISION_PROVIDER === 'openai' ? 'gpt-5.6-terra' : 'local-fridge-vision-v1'),
       templateVersion: environment.VISION_TEMPLATE_VERSION,
+      maxOutputTokens: environment.VISION_MAX_OUTPUT_TOKENS,
       maxImages: environment.VISION_MAX_IMAGES,
       maxImageBytes: environment.VISION_MAX_IMAGE_BYTES,
     },
     receipt: {
       enabled: environment.RECEIPT_ENABLED,
       provider: environment.RECEIPT_PROVIDER,
-      model: environment.RECEIPT_MODEL,
+      model: environment.RECEIPT_MODEL ?? (environment.RECEIPT_PROVIDER === 'openai' ? 'gpt-5.6-terra' : 'local-receipt-ocr-v1'),
       templateVersion: environment.RECEIPT_TEMPLATE_VERSION,
+      maxOutputTokens: environment.RECEIPT_MAX_OUTPUT_TOKENS,
       maxImages: environment.RECEIPT_MAX_IMAGES,
       maxImageBytes: environment.RECEIPT_MAX_IMAGE_BYTES,
     },

@@ -756,6 +756,15 @@
 - PROGRESS: Phase 16 Video Review Parity & Content Submission Lifecycle: 0% → 100%.
 - Còn lại / rủi ro: Không có. Tất cả các endpoint Phase 16 đã READY và tích hợp trọn vẹn theo chuẩn kiến trúc dự án.
 
+## [2026-09-27] — Phase 27 Contributor registration contract audit
+
+- Mục tiêu: Resolve the Phase 14 registration contract mismatch found during the backend release audit.
+- Đã làm: Synced all 168 OpenAPI operations; changed registration from removed Contributor subtypes to `claimedApprovalBasis`, conditional organization claim, and bounded evidence links; removed old subtype model/enum/UI references; refreshed endpoint statuses and documented the production-only fake-provider gap.
+- File tạo/sửa: `src/features/auth/{schemas,types,mappers,components}`, `src/features/profile/components/profile-view.tsx`, `src/features/review/types/content-review.dto.ts`, `src/common/enums/index.ts`, `docs/API-CATALOG.md`, `docs/api/*`, `docs/BACKEND_INTEGRATION.md`, `docs/PROGRESS.md`, `docs/WORK-LOG.md`.
+- Verify: `npx tsc --noEmit` passed after Next type generation; `npm test` passed 33 files / 326 tests; `npm run build` passed 35 routes. HTTP registration with Contributor intent returned 201, retained Member role, and denied Admin access with 403.
+- PROGRESS: Auth stays 95% because its manual/OAuth work remains; Phase 13 backend status becomes READY; Phase 27 is IN_PROGRESS.
+- Còn lại: Production image inference and receipt OCR are absent; the Phase 27 release gate remains open.
+
 ---
 
 ## [2026-09-23] — Triển khai hoàn tất Phase 15: Hạn mức lưu trữ & Kiểm toán tải lên (Storage Quota & Upload Accounting)
@@ -2298,4 +2307,3 @@
   - `npm test`: 25 test files, 236/236 unit tests pass 100%.
 - PROGRESS: Giữ nguyên (tạo task guide & documentation scaffolding).
 - Còn lại: Lần lượt chọn task trong `frontend/docs/tasks/` để thực thi (ưu tiên Phase 15 và Phase 16).
-

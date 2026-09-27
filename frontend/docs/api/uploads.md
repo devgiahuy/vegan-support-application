@@ -65,7 +65,9 @@ Release reservation chưa commit
       "type": "string",
       "enum": [
         "COVER_IMAGE",
-        "VIDEO"
+        "VIDEO",
+        "FRIDGE_IMAGE",
+        "RECEIPT_IMAGE"
       ]
     },
     "mimeType": {

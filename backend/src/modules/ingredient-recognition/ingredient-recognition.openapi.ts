@@ -48,7 +48,7 @@ export function registerIngredientRecognitionOpenApi(
     tags: ['Ingredient Recognition'],
     summary: 'Create an asynchronous multi-image fridge recognition job',
     description:
-      'Attach owned, committed FRIDGE_IMAGE assets. Recognition candidates never modify pantry until the confirm endpoint is called.',
+      'Attach owned, committed FRIDGE_IMAGE assets. The configured OpenAI adapter analyzes JPEG/PNG/WebP images; fake remains a development fixture and also accepts AVIF. Candidates and subjective confidence are advisory and never modify pantry until confirmation.',
     operationId: 'createIngredientRecognitionJob',
     security,
     request: { body: { content: { 'application/json': { schema: createRequest } } } },

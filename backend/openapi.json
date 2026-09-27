@@ -30577,6 +30577,16 @@
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
+                  },
+                  "INGREDIENT_ID_NAME_MISMATCH": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_ID_NAME_MISMATCH",
+                        "message": "Content hoặc reference không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
                   }
                 },
                 "schema": {
@@ -31076,6 +31086,16 @@
                       "success": false,
                       "error": {
                         "code": "INVALID_INGREDIENT_REFERENCE",
+                        "message": "Content hoặc reference không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INGREDIENT_ID_NAME_MISMATCH": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_ID_NAME_MISMATCH",
                         "message": "Content hoặc reference không hợp lệ",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
@@ -48927,7 +48947,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Paginated storage accounts",
+            "description": "Storage accounts filtered by overQuota before pagination; meta.total counts all matching accounts",
             "content": {
               "application/json": {
                 "schema": {
@@ -50023,9 +50043,21 @@
             }
           },
           "400": {
-            "description": "Dữ liệu không hợp lệ",
+            "description": "VALIDATION_ERROR, INVALID_INGREDIENT_REFERENCE, or INGREDIENT_ID_NAME_MISMATCH",
             "content": {
               "application/json": {
+                "examples": {
+                  "ingredientMismatch": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_ID_NAME_MISMATCH",
+                        "message": "Tên nguyên liệu không khớp với nguyên liệu chuẩn đã chọn",
+                        "requestId": "00000000-0000-4000-8000-000000000001"
+                      }
+                    }
+                  }
+                },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
@@ -50309,9 +50341,21 @@
             }
           },
           "400": {
-            "description": "Dữ liệu không hợp lệ",
+            "description": "VALIDATION_ERROR, INVALID_INGREDIENT_REFERENCE, or INGREDIENT_ID_NAME_MISMATCH",
             "content": {
               "application/json": {
+                "examples": {
+                  "ingredientMismatch": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INGREDIENT_ID_NAME_MISMATCH",
+                        "message": "Tên nguyên liệu không khớp với nguyên liệu chuẩn đã chọn",
+                        "requestId": "00000000-0000-4000-8000-000000000001"
+                      }
+                    }
+                  }
+                },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
@@ -52078,7 +52122,7 @@
           "Ingredient Recognition"
         ],
         "summary": "Create an asynchronous multi-image fridge recognition job",
-        "description": "Attach owned, committed FRIDGE_IMAGE assets. Recognition candidates never modify pantry until the confirm endpoint is called.",
+        "description": "Attach owned, committed FRIDGE_IMAGE assets. The configured OpenAI adapter analyzes JPEG/PNG/WebP images; fake remains a development fixture and also accepts AVIF. Candidates and subjective confidence are advisory and never modify pantry until confirmation.",
         "operationId": "createIngredientRecognitionJob",
         "security": [
           {
@@ -52654,7 +52698,7 @@
           "Receipts"
         ],
         "summary": "Create an asynchronous receipt extraction job",
-        "description": "Attaches owned committed RECEIPT_IMAGE assets. Extraction results never modify pantry.",
+        "description": "Attaches owned committed RECEIPT_IMAGE assets. The configured OpenAI adapter reads JPEG/PNG/WebP receipt images; fake remains a development fixture and also accepts AVIF. Lines and subjective confidence are editable candidates and never modify pantry before confirmation.",
         "operationId": "createReceiptJob",
         "security": [
           {

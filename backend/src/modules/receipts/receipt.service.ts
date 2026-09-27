@@ -25,6 +25,7 @@ import type {
 } from './receipt.schemas.js';
 
 const IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
+const OPENAI_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MASS_UNITS = new Map<string, number>([
   ['mg', 0.001],
   ['g', 1],
@@ -88,7 +89,7 @@ export class ReceiptService {
       const asset = byId.get(id);
       if (
         !asset?.mimeType ||
-        !IMAGE_MIME_TYPES.has(asset.mimeType) ||
+        !(this.config.receipt.provider === 'openai' ? OPENAI_IMAGE_MIME_TYPES : IMAGE_MIME_TYPES).has(asset.mimeType) ||
         asset.bytes > BigInt(this.config.receipt.maxImageBytes)
       ) {
         throw this.invalidImage();
@@ -263,6 +264,10 @@ export class ReceiptService {
   async process(ownerId: string, id: string): Promise<void> {
     const job = await this.repository.startProcessing(ownerId, id);
     if (!job) return;
+    if (job.provider !== this.provider.name || job.modelId !== this.provider.model || job.templateVersion !== this.provider.templateVersion) {
+      await this.repository.markFailed(job.id);
+      return;
+    }
     try {
       const results = await this.provider.extract(
         job.inputs.map((input) => ({ id: input.id, position: input.position, url: input.asset.secureUrl })),
