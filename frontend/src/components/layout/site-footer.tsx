@@ -3,6 +3,7 @@
 import * as React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Mail, ArrowRight, Sprout, ShieldCheck, Heart, Star, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -72,8 +73,15 @@ function GooglePlayIcon({ className }: { className?: string }) {
 }
 
 export function SiteFooter() {
+  const pathname = usePathname();
   const [email, setEmail] = React.useState('');
   const [isSubmitted, setIsSubmitted] = React.useState(false);
+
+  // Không hiển thị Footer trên trang canvas trò chuyện Trợ lý AI (/assistant)
+  // Các trang con khác như /assistant/public vẫn hiển thị footer bình thường
+  if (pathname === '/assistant') {
+    return null;
+  }
 
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();

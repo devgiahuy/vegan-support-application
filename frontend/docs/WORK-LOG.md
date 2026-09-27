@@ -16,6 +16,23 @@
 - Còn lại / rủi ro:
 ```
 
+## [2026-09-27] — Khắc phục lỗi Footer đè lên giao diện Trợ lý AI (/assistant)
+
+- Mục tiêu:
+  - Khắc phục triệt để lỗi giao diện khi vào trang Trợ lý AI (`/assistant`), `SiteFooter` hiển thị đè lên khung soạn thảo tin nhắn (composer) và thanh cuộn hội thoại.
+  - Đảm bảo trang `/assistant` có không gian làm việc hội thoại dạng canvas toàn màn hình chuẩn xác, trong khi các trang phụ như `/assistant/public` vẫn hiển thị Footer bình thường.
+- Đã làm:
+  - Kiểm tra `src/components/layout/site-footer.tsx`: Sử dụng `usePathname()` từ `next/navigation` để ẩn chân trang khi `pathname === '/assistant'`.
+  - Giữ nguyên cấu trúc Server Component của `SiteLayout` (`src/app/(site)/layout.tsx`), không gây tải thêm hoặc phá vỡ cơ chế streaming của Next.js App Router.
+  - Bảo toàn hiển thị chân trang đầy đủ trên toàn bộ các route còn lại bao gồm cả trang Khám phá tri thức AI (`/assistant/public`).
+- File tạo/sửa:
+  - `src/components/layout/site-footer.tsx`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 41 test suites pass, 403/403 tests pass 100%.
+  - `npm run build`: 39/39 static & dynamic routes compiled và build thành công không lỗi.
+- PROGRESS: Giao diện `/assistant` hoàn thiện hiển thị sạch đẹp, không còn xung đột layout.
+
 ## [2026-09-27] — Khắc phục 3 lỗi kiểm thử thủ công Phase 20 Pantry Inventory (Kịch bản 2, 3, 5)
 
 - Mục tiêu:
