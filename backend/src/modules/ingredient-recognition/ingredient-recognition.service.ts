@@ -19,6 +19,7 @@ import type {
 } from './ingredient-recognition.schemas.js';
 
 const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
+const OPENAI_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const FRESHNESS_DISCLAIMER =
   'Freshness observations are visual estimates only. Check the ingredient yourself before use; this is not a food-safety decision.';
 
@@ -55,7 +56,7 @@ export class IngredientRecognitionService {
       if (
         !asset ||
         !asset.mimeType ||
-        !ALLOWED_IMAGE_MIME_TYPES.has(asset.mimeType) ||
+        !(this.config.vision.provider === 'openai' ? OPENAI_IMAGE_MIME_TYPES : ALLOWED_IMAGE_MIME_TYPES).has(asset.mimeType) ||
         asset.bytes > BigInt(this.config.vision.maxImageBytes)
       ) {
         throw this.invalidImage();
@@ -148,6 +149,7 @@ export class IngredientRecognitionService {
         input.decision === 'REJECT'
           ? RecognitionCandidateStatus.REJECTED
           : RecognitionCandidateStatus.EDITED,
+      ...(input.decision === 'REJECT' ? {} : { editedByUser: true }),
       ...(input.freshnessObservation !== undefined
         ? { freshnessObservation: input.freshnessObservation }
         : {}),
@@ -235,6 +237,14 @@ export class IngredientRecognitionService {
   async process(ownerId: string, id: string): Promise<void> {
     const job = await this.repository.startProcessing(ownerId, id);
     if (!job) return;
+    if (job.provider !== this.provider.name || job.modelId !== this.provider.model || job.templateVersion !== this.provider.templateVersion) {
+      await this.repository.markFailed(
+        job.id,
+        'RECOGNITION_PROVIDER_UNAVAILABLE',
+        'The configured image provider changed. Create a new job with the committed images.',
+      );
+      return;
+    }
     try {
       const results = await this.provider.recognize(
         job.inputs.map((input) => ({

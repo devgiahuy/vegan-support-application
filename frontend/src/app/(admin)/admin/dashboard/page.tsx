@@ -58,6 +58,7 @@ import { ContribQueueTable } from '@/features/contributor/components/contrib-que
 import { RestaurantQueueTable } from '@/features/restaurant/components/queue-table';
 import { MetricsOverview } from '@/features/ai-governance/components/metrics-overview';
 import { FlagsList } from '@/features/ai-governance/components/flags-list';
+import { AiVerificationTable } from '@/features/ai-artifacts';
 import { FeaturesTable } from '@/features/ai-governance/components/features-table';
 import { RequestsTable } from '@/features/ai-governance/components/requests-table';
 
@@ -73,7 +74,8 @@ type Tab =
   | 'mod-comments'
   | 'contrib-apps'
   | 'restaurants'
-  | 'ai-governance';
+  | 'ai-governance'
+  | 'ai-verifications';
 
 export default function AdminDashboardPage() {
   return (
@@ -98,7 +100,8 @@ function parseTabParam(value: string | null): Tab {
     value === 'mod-comments' ||
     value === 'contrib-apps' ||
     value === 'restaurants' ||
-    value === 'ai-governance'
+    value === 'ai-governance' ||
+    value === 'ai-verifications'
   ) {
     return value;
   }
@@ -187,9 +190,9 @@ function AdminDashboardContent() {
     { id: 'users', label: 'Người dùng & Roles', icon: Users },
     { id: 'mod-users', label: 'Kiểm soát TK', icon: UserCog },
     { id: 'mod-comments', label: 'Kiểm duyệt BL', icon: MessagesSquare },
-    { id: 'contrib-apps', label: 'Đơn cộng tác', icon: UserCheck },
+    // { id: 'contrib-apps', label: 'Đơn cộng tác', icon: UserCheck },
     { id: 'ai-governance', label: 'Giám sát AI', icon: Bot },
-    { id: 'restaurants', label: 'Quán chờ duyệt', icon: Store },
+    // { id: 'restaurants', label: 'Quán chờ duyệt', icon: Store },
     { id: 'categories', label: 'Cây danh mục', icon: FolderTree },
     { id: 'ingredients', label: 'Nguyên liệu', icon: Leaf },
     { id: 'food-data', label: 'Dữ liệu dinh dưỡng', icon: Database },
@@ -321,6 +324,22 @@ function AdminDashboardContent() {
                   <FeaturesTable />
                 </div>
                 <RequestsTable />
+              </div>
+            )}
+
+            {/* TAB: AI-VERIFICATIONS — quản trị kiểm chứng AI (features/ai-artifacts, Phase 23) */}
+            {tab === 'ai-verifications' && (
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h2 className="font-semibold text-lg">Quản trị Kiểm chứng Tri thức AI</h2>
+                    <p className="text-xs text-muted-foreground">
+                      Theo dõi các bản kiểm chứng của Người đóng góp và thực hiện can thiệp kiểm
+                      toán (Ghi đè / Thu hồi).
+                    </p>
+                  </div>
+                </div>
+                <AiVerificationTable />
               </div>
             )}
 

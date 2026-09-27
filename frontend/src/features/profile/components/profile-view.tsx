@@ -57,7 +57,7 @@ export function ProfileView({
               <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
                 <ShieldCheck className="h-3.5 w-3.5" />
                 Đơn contributor: {user.contributorApplication.rawStatus} ·{' '}
-                {user.contributorApplication.requestedTypeLabel}
+                {user.contributorApplication.claimedApprovalBasisLabel}
               </p>
             )}
           </div>

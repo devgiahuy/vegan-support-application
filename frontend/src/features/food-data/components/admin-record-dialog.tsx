@@ -56,13 +56,21 @@ const nutrientSchema = z.object({
 });
 
 const sourceSchema = z.object({
-  code: z.string().min(2, 'Mã nguồn tối thiểu 2 ký tự').toUpperCase(),
-  name: z.string().min(2, 'Tên nguồn tối thiểu 2 ký tự'),
-  provider: z.string().min(2, 'Tên cơ quan / tổ chức cung cấp'),
-  sourceVersion: z.string().min(1, 'Phiên bản nguồn'),
-  licenseName: z.string().min(1, 'Giấy phép bản quyền'),
-  sourceUrl: z.string().url('URL không hợp lệ').or(z.literal('')).optional(),
-  effectiveFrom: z.string().min(4, 'Ngày hiệu lực (YYYY-MM-DD)'),
+  code: z
+    .string()
+    .trim()
+    .min(1, 'Mã nguồn không được để trống')
+    .max(80)
+    .regex(/^[A-Z0-9_]+$/, 'Mã nguồn chỉ gồm chữ in hoa, chữ số và dấu gạch dưới')
+    .toUpperCase(),
+  name: z.string().trim().min(1, 'Tên nguồn không được để trống').max(200),
+  provider: z.enum(['USDA_FDC', 'VIETNAM_CURATED', 'OPEN_FOOD_FACTS', 'MANUAL']),
+  attribution: z.string().trim().min(1, 'Vui lòng nhập nguồn trích dẫn / ghi công').max(1000),
+  licenseName: z.string().trim().min(1, 'Giấy phép bản quyền không được để trống').max(200),
+  sourceUrl: z.string().url('URL không hợp lệ').or(z.literal('')).optional().nullable(),
+  licenseUrl: z.string().url('URL không hợp lệ').or(z.literal('')).optional().nullable(),
+  defaultLocale: z.string().trim().min(2).max(20).default('vi-VN'),
+  active: z.boolean().default(true),
 });
 
 const cookingMethodSchema = z.object({
@@ -126,11 +134,13 @@ export const AdminRecordDialog: React.FC<AdminRecordDialogProps> = ({
     defaultValues: {
       code: '',
       name: '',
-      provider: '',
-      sourceVersion: 'v1.0',
-      licenseName: 'Public Domain',
+      provider: 'VIETNAM_CURATED' as const,
+      attribution: '',
+      licenseName: 'CC0-1.0',
       sourceUrl: '',
-      effectiveFrom: new Date().toISOString().split('T')[0],
+      licenseUrl: '',
+      defaultLocale: 'vi-VN',
+      active: true,
     },
   });
 
@@ -181,11 +191,13 @@ export const AdminRecordDialog: React.FC<AdminRecordDialogProps> = ({
           sourceForm.reset({
             code: (details.code as string) || record.codeOrId || '',
             name: (details.name as string) || record.displayName || '',
-            provider: (details.provider as string) || '',
-            sourceVersion: (details.sourceVersion as string) || 'v1.0',
-            licenseName: (details.licenseName as string) || 'Open Access',
+            provider: (details.provider as 'VIETNAM_CURATED') || 'VIETNAM_CURATED',
+            attribution: (details.attribution as string) || '',
+            licenseName: (details.licenseName as string) || 'CC0-1.0',
             sourceUrl: (details.sourceUrl as string) || '',
-            effectiveFrom: (details.effectiveFrom as string) || record.effectiveFrom || '',
+            licenseUrl: (details.licenseUrl as string) || '',
+            defaultLocale: (details.defaultLocale as string) || 'vi-VN',
+            active: details.active !== false,
           });
         } else if (record.kind === 'COOKING_METHOD') {
           cookingForm.reset({
@@ -231,7 +243,18 @@ export const AdminRecordDialog: React.FC<AdminRecordDialogProps> = ({
       } else if (kind === 'SOURCE') {
         const valid = await sourceForm.trigger();
         if (!valid) return;
-        payloadData = sourceForm.getValues();
+        const vals = sourceForm.getValues();
+        payloadData = {
+          code: vals.code,
+          name: vals.name,
+          provider: vals.provider,
+          attribution: vals.attribution,
+          licenseName: vals.licenseName,
+          sourceUrl: vals.sourceUrl ? vals.sourceUrl : null,
+          licenseUrl: vals.licenseUrl ? vals.licenseUrl : null,
+          defaultLocale: vals.defaultLocale || 'vi-VN',
+          active: vals.active,
+        };
       } else if (kind === 'COOKING_METHOD') {
         const valid = await cookingForm.trigger();
         if (!valid) return;
@@ -428,7 +451,7 @@ export const AdminRecordDialog: React.FC<AdminRecordDialogProps> = ({
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label>Mã nguồn (Code)</Label>
-                      <Input {...sourceForm.register('code')} placeholder="vd: USDA, NIN_VN" />
+                      <Input {...sourceForm.register('code')} placeholder="vd: USDA_FDC, VN_NIN" />
                       {sourceForm.formState.errors.code && (
                         <p className="text-xs text-destructive">
                           {sourceForm.formState.errors.code.message}
@@ -436,8 +459,30 @@ export const AdminRecordDialog: React.FC<AdminRecordDialogProps> = ({
                       )}
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Phiên bản (Version)</Label>
-                      <Input {...sourceForm.register('sourceVersion')} placeholder="vd: v2024.1" />
+                      <Label>Loại nhà cung cấp (Provider)</Label>
+                      <Controller
+                        control={sourceForm.control}
+                        name="provider"
+                        render={({ field }) => (
+                          <Select value={field.value} onValueChange={field.onChange}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Chọn nhà cung cấp" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="VIETNAM_CURATED">
+                                Dữ liệu Việt Nam tuyển chọn (VIETNAM_CURATED)
+                              </SelectItem>
+                              <SelectItem value="USDA_FDC">
+                                USDA FoodData Central (USDA_FDC)
+                              </SelectItem>
+                              <SelectItem value="OPEN_FOOD_FACTS">
+                                Open Food Facts (OPEN_FOOD_FACTS)
+                              </SelectItem>
+                              <SelectItem value="MANUAL">Nhập thủ công dự án (MANUAL)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
                     </div>
                   </div>
 
@@ -445,7 +490,7 @@ export const AdminRecordDialog: React.FC<AdminRecordDialogProps> = ({
                     <Label>Tên nguồn đầy đủ</Label>
                     <Input
                       {...sourceForm.register('name')}
-                      placeholder="vd: Viện Dinh Dưỡng Quốc Gia 2017"
+                      placeholder="vd: Bảng thành phần thực phẩm Việt Nam Viện Dinh Dưỡng"
                     />
                     {sourceForm.formState.errors.name && (
                       <p className="text-xs text-destructive">
@@ -454,26 +499,73 @@ export const AdminRecordDialog: React.FC<AdminRecordDialogProps> = ({
                     )}
                   </div>
 
+                  <div className="space-y-1.5">
+                    <Label>Trích dẫn nguồn / Ghi công (Attribution)</Label>
+                    <Textarea
+                      {...sourceForm.register('attribution')}
+                      placeholder="vd: Viện Dinh Dưỡng Quốc Gia - Bộ Y Tế, xuất bản 2017."
+                      rows={2}
+                    />
+                    {sourceForm.formState.errors.attribution && (
+                      <p className="text-xs text-destructive">
+                        {sourceForm.formState.errors.attribution.message}
+                      </p>
+                    )}
+                  </div>
+
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label>Cơ quan cung cấp</Label>
-                      <Input {...sourceForm.register('provider')} placeholder="vd: Bộ Y Tế / NIN" />
+                      <Label>Giấy phép bản quyền (License)</Label>
+                      <Input
+                        {...sourceForm.register('licenseName')}
+                        placeholder="vd: Open Data / CC0-1.0"
+                      />
+                      {sourceForm.formState.errors.licenseName && (
+                        <p className="text-xs text-destructive">
+                          {sourceForm.formState.errors.licenseName.message}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Giấy phép bản quyền</Label>
-                      <Input {...sourceForm.register('licenseName')} placeholder="vd: Open Data" />
+                      <Label>Ngôn ngữ mặc định (Locale)</Label>
+                      <Input {...sourceForm.register('defaultLocale')} placeholder="vi-VN" />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <Label>URL nguồn gốc</Label>
+                      <Label>URL nguồn gốc (Tùy chọn)</Label>
                       <Input {...sourceForm.register('sourceUrl')} placeholder="https://..." />
+                      {sourceForm.formState.errors.sourceUrl && (
+                        <p className="text-xs text-destructive">
+                          {sourceForm.formState.errors.sourceUrl.message}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-1.5">
-                      <Label>Ngày hiệu lực</Label>
-                      <Input {...sourceForm.register('effectiveFrom')} type="date" />
+                      <Label>URL giấy phép (Tùy chọn)</Label>
+                      <Input {...sourceForm.register('licenseUrl')} placeholder="https://..." />
+                      {sourceForm.formState.errors.licenseUrl && (
+                        <p className="text-xs text-destructive">
+                          {sourceForm.formState.errors.licenseUrl.message}
+                        </p>
+                      )}
                     </div>
+                  </div>
+
+                  <div className="flex items-center justify-between py-1">
+                    <Label htmlFor="source-active">Kích hoạt hoạt động</Label>
+                    <Controller
+                      control={sourceForm.control}
+                      name="active"
+                      render={({ field }) => (
+                        <Switch
+                          id="source-active"
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      )}
+                    />
                   </div>
                 </div>
               )}

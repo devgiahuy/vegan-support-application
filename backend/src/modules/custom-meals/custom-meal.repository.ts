@@ -1,10 +1,13 @@
 import {
+  CatalogStatus,
   CustomMealDeletePolicy,
+  FoodDataReviewStatus,
   IngredientResolutionStatus,
   NutritionCoverage,
   type Prisma,
   type PrismaClient,
 } from '@prisma/client';
+import { AppError } from '../../common/errors/app-error.js';
 import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 
 const customMealInclude = {
@@ -248,12 +251,41 @@ export class CustomMealRepository {
       ingredients.map(async (ing) => {
         let ingredientId = ing.ingredientId;
         let resolutionStatus: IngredientResolutionStatus = IngredientResolutionStatus.EXACT;
+        const normalizedName = normalizeVietnameseText(ing.displayName);
+
+        if (ingredientId) {
+          const selected = await this.prisma.ingredient.findFirst({
+            where: { id: ingredientId, status: CatalogStatus.ACTIVE },
+            select: {
+              normalizedName: true,
+              aliases: {
+                where: { reviewStatus: FoodDataReviewStatus.APPROVED },
+                select: { normalizedAlias: true },
+              },
+            },
+          });
+          if (!selected) {
+            throw new AppError({
+              statusCode: 400,
+              code: 'INVALID_INGREDIENT_REFERENCE',
+              message: 'Nguyên liệu chuẩn không tồn tại hoặc đã được lưu trữ',
+            });
+          }
+          if (
+            normalizedName !== selected.normalizedName &&
+            !selected.aliases.some((alias) => alias.normalizedAlias === normalizedName)
+          ) {
+            throw new AppError({
+              statusCode: 400,
+              code: 'INGREDIENT_ID_NAME_MISMATCH',
+              message: 'Tên nguyên liệu không khớp với nguyên liệu chuẩn đã chọn',
+            });
+          }
+        }
 
         if (!ingredientId) {
-          // Try fuzzy match
-          const normalizedName = normalizeVietnameseText(ing.displayName);
-          const found = await this.prisma.ingredient.findUnique({
-            where: { normalizedName },
+          const found = await this.prisma.ingredient.findFirst({
+            where: { normalizedName, status: CatalogStatus.ACTIVE },
             select: { id: true },
           });
           if (found) {
@@ -267,7 +299,7 @@ export class CustomMealRepository {
         return {
           position: ing.position,
           displayName: ing.displayName.trim(),
-          normalizedName: normalizeVietnameseText(ing.displayName),
+          normalizedName,
           amount: ing.amount,
           unit: ing.unit.trim(),
           resolutionStatus,

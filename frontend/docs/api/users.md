@@ -443,11 +443,7 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
           "type": "string"
         },
         "avatarUrl": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "uri"
+          "type": "string"
         },
         "role": {
           "type": "string",
@@ -539,7 +535,9 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
               "type": "number",
               "_truncated": true
             },
-            "weightKg":
+            "weightKg": {
+              "type": "number",
+              "_truncated": true
   …(truncated — xem api-catalog.json)
 ```
 
@@ -669,11 +667,7 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
       "type": "string"
     },
     "avatarUrl": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "format": "uri"
+      "type": "string"
     }
   },
   "additionalProperties": false

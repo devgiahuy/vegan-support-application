@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { getApiErrorCode, toastApiError } from '@/lib/api-error';
 import { mealPlanApi } from '../api/meal-plan.api';
 import type { GenerateMealPlanInput, MealPlanListQueryParams } from '../types/meal-plan.model';
+import type { ManualAddMealPlanItemRequestDto } from '../types/meal-plan.dto';
 import { MEAL_ANALYSIS_KEYS } from '@/features/meal-analysis/queries/meal-analysis.queries';
 
 export const MEAL_PLAN_QUERY_KEYS = {
@@ -92,6 +93,41 @@ export function useSwapMealItemMutation() {
         return;
       }
       toastApiError(err, 'Không thể đổi món');
+    },
+  });
+}
+
+/** Thêm món thủ công hoặc món cá nhân vào ô thực đơn (Phase 18). */
+export function useManualAddMealItemMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (vars: { planId: string; itemId: string; body: ManualAddMealPlanItemRequestDto }) =>
+      mealPlanApi.manualAddItem(vars.planId, vars.itemId, vars.body),
+    onSuccess: (plan, vars) => {
+      queryClient.invalidateQueries({ queryKey: MEAL_PLAN_QUERY_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: MEAL_ANALYSIS_KEYS.detail(vars.planId) });
+      toast.success('Đã cập nhật món vào thực đơn!', {
+        description: `Thực đơn đã cập nhật lên phiên bản ${plan.version}.`,
+      });
+    },
+    onError: (err: unknown) => {
+      const code = getApiErrorCode(err);
+      if (code === 'MEAL_PLAN_HARD_CONSTRAINT_VIOLATION') {
+        toast.error('Không thể chọn món này', {
+          description:
+            'Món ăn vi phạm quy tắc dị ứng, kiêng kỵ nghiêm ngặt hoặc chế độ ăn của bạn.',
+        });
+        return;
+      }
+      if (code === 'MEAL_PLAN_VERSION_CONFLICT') {
+        queryClient.invalidateQueries({ queryKey: MEAL_PLAN_QUERY_KEYS.all });
+        toast.error('Thực đơn đã thay đổi', {
+          description: 'Vui lòng tải lại chi tiết mới nhất rồi thử lại.',
+        });
+        return;
+      }
+      toastApiError(err, 'Không thể thêm món vào thực đơn');
     },
   });
 }

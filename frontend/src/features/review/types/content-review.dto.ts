@@ -10,7 +10,6 @@ export interface ReviewAuthorDto {
   id?: string;
   displayName?: string;
   role?: string;
-  contributorType?: string | null;
   contributorApprovalBasis?: string | null;
 }
 

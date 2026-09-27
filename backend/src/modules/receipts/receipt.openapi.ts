@@ -33,7 +33,7 @@ export function registerReceiptOpenApi(registry: OpenAPIRegistry, errorSchema: z
     path: '/api/v1/receipt-jobs',
     tags: ['Receipts'],
     summary: 'Create an asynchronous receipt extraction job',
-    description: 'Attaches owned committed RECEIPT_IMAGE assets. Extraction results never modify pantry.',
+    description: 'Attaches owned committed RECEIPT_IMAGE assets. The configured OpenAI adapter reads JPEG/PNG/WebP receipt images; fake remains a development fixture and also accepts AVIF. Lines and subjective confidence are editable candidates and never modify pantry before confirmation.',
     operationId: 'createReceiptJob',
     security,
     request: { body: { content: json(createRequest) } },

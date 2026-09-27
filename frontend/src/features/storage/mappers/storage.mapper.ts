@@ -151,22 +151,66 @@ export class StorageMapper {
   }
 
   toAccountModel(dto: StorageAccountDto | null | undefined): StorageAccount {
-    const usedBytes = safeNumber(pickField(dto, ['usedBytes', 'used_bytes'], 0));
-    const limitBytes = safeNumber(pickField(dto, ['limitBytes', 'limit_bytes'], 1073741824));
-    const remainingBytes = safeNumber(pickField(dto, ['remainingBytes', 'remaining_bytes'], 0));
+    const usageDto = dto?.usage;
+    const usedBytes = safeNumber(
+      pickField(
+        usageDto,
+        ['usedBytes', 'used_bytes'],
+        pickField(dto, ['usedBytes', 'used_bytes'], 0)
+      )
+    );
+    const limitBytes = safeNumber(
+      pickField(
+        usageDto,
+        ['limitBytes', 'limit_bytes'],
+        pickField(dto, ['limitBytes', 'limit_bytes'], 1073741824)
+      )
+    );
+    const remainingBytes = safeNumber(
+      pickField(
+        usageDto,
+        ['remainingBytes', 'remaining_bytes'],
+        pickField(dto, ['remainingBytes', 'remaining_bytes'], 0)
+      )
+    );
     const quotaAdjustmentBytes = safeNumber(
       pickField(dto, ['quotaAdjustmentBytes', 'quota_adjustment_bytes'], 0)
     );
-    const warningPercent = safeNumber(pickField(dto, ['warningPercent', 'warning_percent'], 80));
-    const overQuota = safeBoolean(pickField(dto, ['overQuota', 'over_quota'], false));
+    const warningPercent = safeNumber(
+      pickField(
+        dto?.policy,
+        ['warningPercent', 'warning_percent'],
+        pickField(dto, ['warningPercent', 'warning_percent'], 80)
+      )
+    );
+    const overQuota = safeBoolean(
+      pickField(
+        usageDto,
+        ['overQuota', 'over_quota'],
+        pickField(dto, ['overQuota', 'over_quota'], false)
+      )
+    );
+
+    const userId = safeString(
+      pickField(dto?.user, ['id'], pickField(dto, ['userId', 'user_id'], ''))
+    );
+    const userEmail = safeString(
+      pickField(dto?.user, ['email'], pickField(dto, ['userEmail', 'email'], 'Chưa cập nhật'))
+    );
+    const userDisplayName = safeString(
+      pickField(
+        dto?.user,
+        ['displayName', 'display_name'],
+        pickField(dto, ['userDisplayName', 'display_name', 'displayName'], 'Người dùng')
+      )
+    );
+    const userAvatarUrl = dto?.user?.avatarUrl ? safeString(dto.user.avatarUrl) : null;
 
     return {
-      userId: safeString(pickField(dto, ['userId', 'user_id'], '')),
-      userEmail: safeString(pickField(dto?.user, ['email'], 'Chưa cập nhật')),
-      userDisplayName: safeString(
-        pickField(dto?.user, ['displayName', 'display_name'], 'Người dùng')
-      ),
-      userAvatarUrl: dto?.user?.avatarUrl ? safeString(dto.user.avatarUrl) : null,
+      userId,
+      userEmail,
+      userDisplayName,
+      userAvatarUrl,
       usedBytes,
       usedFormatted: formatBytes(usedBytes),
       limitBytes,
@@ -184,11 +228,14 @@ export class StorageMapper {
 
   toAdjustmentModel(dto: StorageAdjustmentDto | null | undefined): StorageAdjustment {
     const deltaBytes = safeNumber(pickField(dto, ['deltaBytes', 'delta_bytes'], 0));
+    const adminUserId = safeString(
+      pickField(dto, ['actorId', 'actor_id', 'adminUserId', 'admin_user_id'], '')
+    );
 
     return {
       id: safeString(pickField(dto, ['id'], '')),
       userId: safeString(pickField(dto, ['userId', 'user_id'], '')),
-      adminUserId: safeString(pickField(dto, ['adminUserId', 'admin_user_id'], '')),
+      adminUserId,
       deltaBytes,
       deltaFormatted: formatDeltaBytes(deltaBytes),
       reason: safeString(pickField(dto, ['reason'], '')),

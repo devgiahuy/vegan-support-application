@@ -1,9 +1,9 @@
 import api from '@/lib/axios';
 import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { uploadWithReservation } from '@/features/storage/api/storage-upload';
 import type {
   CreateCustomMealRequestDto,
   CustomMealListResponseDto,
-  CustomMealPhotoDto,
   CustomMealResponseDto,
   UpdateCustomMealRequestDto,
 } from '../types/custom-meal.dto';
@@ -26,7 +26,8 @@ export const customMealApi = {
       API_ENDPOINTS.CUSTOM_MEALS.LIST,
       { params }
     );
-    return CustomMealMapper.toListResultModel(res.data.data);
+    const data = res.data?.data ?? res.data;
+    return CustomMealMapper.toListResultModel(data as CustomMealListResponseDto);
   },
 
   /**
@@ -36,7 +37,8 @@ export const customMealApi = {
     const res = await api.get<{ data: CustomMealResponseDto }>(
       API_ENDPOINTS.CUSTOM_MEALS.DETAIL(id)
     );
-    return CustomMealMapper.toCustomMealModel(res.data.data);
+    const data = res.data?.data ?? res.data;
+    return CustomMealMapper.toCustomMealModel(data as CustomMealResponseDto);
   },
 
   /**
@@ -47,7 +49,8 @@ export const customMealApi = {
       API_ENDPOINTS.CUSTOM_MEALS.CREATE,
       data
     );
-    return CustomMealMapper.toCustomMealModel(res.data.data);
+    const dataObj = res.data?.data ?? res.data;
+    return CustomMealMapper.toCustomMealModel(dataObj as CustomMealResponseDto);
   },
 
   /**
@@ -58,7 +61,8 @@ export const customMealApi = {
       API_ENDPOINTS.CUSTOM_MEALS.UPDATE(id),
       data
     );
-    return CustomMealMapper.toCustomMealModel(res.data.data);
+    const dataObj = res.data?.data ?? res.data;
+    return CustomMealMapper.toCustomMealModel(dataObj as CustomMealResponseDto);
   },
 
   /**
@@ -69,35 +73,59 @@ export const customMealApi = {
   },
 
   /**
-   * Đính kèm hình ảnh cho món ăn cá nhân (tuân thủ hạn ngạch Phase 15 Storage)
+   * Đính kèm hình ảnh cho món ăn cá nhân (tuân thủ hạn ngạch Phase 15 Storage Reservation)
    */
   attachCustomMealMedia: async (
     id: string,
     file: File,
-    isCover: boolean = false
+    positionOrOptions?: number | { position?: number; isCover?: boolean }
   ): Promise<CustomMealPhoto> => {
-    const formData = new FormData();
-    formData.append('file', file);
-    if (isCover) {
-      formData.append('isCover', 'true');
-    }
+    const position =
+      typeof positionOrOptions === 'number'
+        ? positionOrOptions
+        : (positionOrOptions?.position ?? 0);
+    // 1. Tải lên Cloudinary thông qua hạn ngạch lưu trữ Phase 15
+    const asset = await uploadWithReservation(file, {
+      kind: 'COVER_IMAGE',
+    });
 
-    const res = await api.post<{ data: CustomMealPhotoDto }>(
-      API_ENDPOINTS.CUSTOM_MEALS.ATTACH_MEDIA(id),
-      formData,
+    // 2. Gắn assetId vào món ăn cá nhân
+    const res = await api.post<{ data: CustomMealResponseDto }>(
+      API_ENDPOINTS.CUSTOM_MEALS.ATTACH_PHOTO(id),
       {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        assetId: asset.id,
+        position,
       }
     );
-    return CustomMealMapper.toPhotoModel(res.data.data);
+    const updatedMeal = CustomMealMapper.toCustomMealModel(res.data.data);
+    const attachedPhoto = updatedMeal.photos.find((p) => p.id === asset.id) ||
+      updatedMeal.photos[updatedMeal.photos.length - 1] || {
+        id: asset.id,
+        url: asset.secureUrl,
+        sortOrder: position,
+        isCover: position === 0,
+        fileSizeBytes: asset.bytes,
+        mimeType: asset.mimeType,
+        createdAt: new Date().toISOString(),
+      };
+    return attachedPhoto;
   },
 
   /**
-   * Xóa ảnh khỏi món ăn cá nhân và hoàn trả dung lượng lưu trữ
+   * Xóa ảnh khỏi món ăn cá nhân
    */
-  deleteCustomMealMedia: async (id: string, photoId: string): Promise<void> => {
-    await api.delete(API_ENDPOINTS.CUSTOM_MEALS.DELETE_MEDIA(id, photoId));
+  deleteCustomMealMedia: async (id: string, assetId: string): Promise<void> => {
+    await api.delete(API_ENDPOINTS.CUSTOM_MEALS.REMOVE_PHOTO(id, assetId));
+  },
+
+  /**
+   * Sắp xếp lại thứ tự ảnh
+   */
+  reorderCustomMealPhotos: async (id: string, orderedAssetIds: string[]): Promise<CustomMeal> => {
+    const res = await api.put<{ data: CustomMealResponseDto }>(
+      API_ENDPOINTS.CUSTOM_MEALS.REORDER_PHOTOS(id),
+      { orderedAssetIds }
+    );
+    return CustomMealMapper.toCustomMealModel(res.data.data);
   },
 };

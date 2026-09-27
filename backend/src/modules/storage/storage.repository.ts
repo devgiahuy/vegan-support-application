@@ -305,6 +305,35 @@ export class StorageRepository {
   }
 
   async listAccounts(query: StorageAccountListQuery) {
+    if (query.overQuota !== undefined) {
+      const nameFilter = query.q
+        ? Prisma.sql`AND (position(lower(${query.q}) in lower(u."email")) > 0 OR position(lower(${query.q}) in lower(u."display_name")) > 0)`
+        : Prisma.empty;
+      const comparison = query.overQuota ? Prisma.sql`>` : Prisma.sql`<=`;
+      const filter = Prisma.sql`
+        FROM "storage_accounts" sa
+        JOIN "storage_policies" sp ON sp."id" = sa."policy_id"
+        JOIN "users" u ON u."id" = sa."user_id"
+        WHERE sa."used_bytes" + sa."reserved_bytes" ${comparison} sp."quota_bytes" + sa."quota_adjustment_bytes"
+        ${nameFilter}
+      `;
+      return this.prisma.$transaction(async (transaction) => {
+        const [count] = await transaction.$queryRaw<Array<{ total: number }>>(
+          Prisma.sql`SELECT count(*)::int AS total ${filter}`,
+        );
+        const page = await transaction.$queryRaw<Array<{ userId: string }>>(
+          Prisma.sql`SELECT sa."user_id" AS "userId" ${filter}
+            ORDER BY sa."used_bytes" DESC, sa."user_id" ASC
+            LIMIT ${query.limit} OFFSET ${(query.page - 1) * query.limit}`,
+        );
+        const records = await transaction.storageAccount.findMany({
+          where: { userId: { in: page.map((row) => row.userId) } },
+          include: accountInclude,
+          orderBy: [{ usedBytes: 'desc' }, { userId: 'asc' }],
+        });
+        return { records, total: count?.total ?? 0 };
+      });
+    }
     const where: Prisma.StorageAccountWhereInput = {
       ...(query.q
         ? {
@@ -327,14 +356,7 @@ export class StorageRepository {
       }),
       this.prisma.storageAccount.count({ where }),
     ]);
-    const filtered =
-      query.overQuota === undefined
-        ? records
-        : records.filter((record) => {
-            const overQuota = record.usedBytes + record.reservedBytes > record.policy.quotaBytes + record.quotaAdjustmentBytes;
-            return overQuota === query.overQuota;
-          });
-    return { records: filtered, total: query.overQuota === undefined ? total : filtered.length };
+    return { records, total };
   }
 
   async listPolicies(query: StoragePolicyListQuery) {
@@ -543,11 +565,11 @@ export class StorageRepository {
       orderBy: { createdAt: 'asc' },
     });
     if (!policy) throw new Error('No active default storage policy');
-    await transaction.storageAccount.upsert({
-      where: { userId },
-      update: {},
-      create: { userId, policyId: policy.id },
-    });
+    await transaction.$executeRaw(Prisma.sql`
+      INSERT INTO "storage_accounts" ("user_id", "policy_id")
+      VALUES (${userId}::uuid, ${policy.id}::uuid)
+      ON CONFLICT ("user_id") DO NOTHING
+    `);
   }
 
   private async lockAccount(

@@ -1,6 +1,6 @@
 export type ReservationStatus = 'RESERVED' | 'COMMITTED' | 'RELEASED' | 'EXPIRED' | string;
 export type MediaResourceType = 'IMAGE' | 'VIDEO' | string;
-export type MediaKind = 'COVER_IMAGE' | 'VIDEO';
+export type MediaKind = 'COVER_IMAGE' | 'VIDEO' | 'FRIDGE_IMAGE' | 'RECEIPT_IMAGE';
 export type MediaAssetStatus = 'COMMITTED' | 'DELETED' | string;
 
 export interface StorageUsage {

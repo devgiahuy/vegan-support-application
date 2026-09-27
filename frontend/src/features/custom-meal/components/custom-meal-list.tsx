@@ -58,12 +58,15 @@ export const CustomMealList: React.FC = () => {
               setSearch(e.target.value);
               setPage(1);
             }}
-            className="pl-9 h-9 text-xs"
+            className="pl-9 h-10 text-sm bg-background"
           />
         </div>
 
         <Link href="/custom-meals/new">
-          <Button size="sm" className="w-full sm:w-auto h-9 text-xs gap-1.5 shadow-sm">
+          <Button
+            size="default"
+            className="w-full sm:w-auto h-10 text-sm gap-2 px-4 shadow-sm font-medium"
+          >
             <Plus className="w-4 h-4" />
             Tạo món mới
           </Button>
@@ -166,25 +169,25 @@ export const CustomMealList: React.FC = () => {
 
       {/* Phân trang */}
       {data && data.pagination.totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 pt-4">
+        <div className="flex justify-center items-center gap-3 pt-4">
           <Button
             variant="outline"
-            size="sm"
+            size="default"
             onClick={() => setPage((p) => Math.max(1, p - 1))}
             disabled={page <= 1}
-            className="text-xs h-8"
+            className="text-sm h-9 px-3 font-medium"
           >
             Trang trước
           </Button>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-sm text-muted-foreground font-medium">
             Trang {data.pagination.page} / {data.pagination.totalPages}
           </span>
           <Button
             variant="outline"
-            size="sm"
+            size="default"
             onClick={() => setPage((p) => Math.min(data.pagination.totalPages, p + 1))}
             disabled={page >= data.pagination.totalPages}
-            className="text-xs h-8"
+            className="text-sm h-9 px-3 font-medium"
           >
             Trang sau
           </Button>

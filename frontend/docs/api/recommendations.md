@@ -464,10 +464,7 @@ Recommendation home đã áp hard constraints
             "_truncated": true
           },
           "coverImageUrl": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": "string",
             "_truncated": true
           },
           "cookTimeMinutes": {
@@ -547,7 +544,9 @@ Recommendation home đã áp hard constraints
         },
         "generatedAt": {
           "type": "string",
-          "format": "date-time
+          "format": "date-time"
+        },
+        "appliedConstraints": {
   …(truncated — xem api-catalog.json)
 ```
 

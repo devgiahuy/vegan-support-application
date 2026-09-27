@@ -37,6 +37,8 @@ import {
   PracticeSchedule,
   PrismaClient,
   RecipeDifficulty,
+  RestaurantSource,
+  RestaurantStatus,
   NutrientReferenceType,
   NutritionCoverage,
   PantryAdjustmentType,
@@ -54,6 +56,7 @@ import { z } from 'zod';
 import { PasswordService } from '../src/modules/auth/password.service.js';
 import { normalizeVietnameseText } from '../src/modules/catalog/catalog.normalization.js';
 import { seedScenarioData } from './seed-scenarios.js';
+import { seedComprehensiveData } from './seed-data/seeder.js';
 
 const prisma = new PrismaClient();
 const passwordService = new PasswordService();
@@ -1013,7 +1016,8 @@ async function main(): Promise<void> {
           experience: definition.experience,
           referenceLinks: definition.referenceLinks,
           source: definition.source,
-          invitedById: definition.source === ContributorApplicationSource.ADMIN_INVITATION ? admin.id : null,
+          invitedById:
+            definition.source === ContributorApplicationSource.ADMIN_INVITATION ? admin.id : null,
           invitationReason: definition.invitationReason,
           status: ContributorApplicationStatus.APPROVED,
           approvalBasis: definition.approvalBasis,
@@ -2077,6 +2081,12 @@ async function main(): Promise<void> {
       activeKey: `${member.id}:${ReportTargetType.POST}:${communityRecipe.id}`,
     },
   });
+
+  await seedComprehensiveData(prisma, {
+    adminId: admin.id,
+    defaultPasswordHash: memberPasswordHash,
+  });
+
   await seedScenarioData(prisma, {
     memberEmail: seedEnvironment.SEED_MEMBER_EMAIL.toLowerCase(),
     memberPasswordHash,
@@ -2235,14 +2245,14 @@ async function main(): Promise<void> {
     {
       id: '21000000-0000-4000-8000-000000000001',
       publicId: 'seed/vision/fridge-primary',
-      secureUrl: 'https://res.cloudinary.com/demo/image/upload/seed/vision/fridge-primary.jpg',
-      bytes: 180_000,
+      secureUrl: '/seed/vision/fridge-scan-sample.jpg',
+      bytes: 40_800,
     },
     {
       id: '21000000-0000-4000-8000-000000000002',
       publicId: 'seed/vision/fridge-secondary',
-      secureUrl: 'https://res.cloudinary.com/demo/image/upload/seed/vision/fridge-secondary.jpg',
-      bytes: 165_000,
+      secureUrl: '/seed/vision/my-lunch-bowl.jpg',
+      bytes: 56_190,
     },
     {
       id: '21000000-0000-4000-8000-000000000003',
@@ -2291,8 +2301,8 @@ async function main(): Promise<void> {
     {
       id: '22000000-0000-4000-8000-000000000001',
       publicId: 'seed/receipts/market-primary',
-      secureUrl: 'https://res.cloudinary.com/demo/image/upload/seed/receipts/market-primary.jpg',
-      bytes: 125_000,
+      secureUrl: '/seed/vision/supermarket-receipt-sample.jpg',
+      bytes: 45_874,
     },
     {
       id: '22000000-0000-4000-8000-000000000002',
@@ -2350,8 +2360,80 @@ async function main(): Promise<void> {
       data: { usedBytes: aggregate._sum.bytes ?? 0 },
     });
   }
+  const restaurantFixtures = [
+    {
+      id: '24000000-0000-4000-8000-000000000001',
+      name: 'Vegan House Demo',
+      address: '1 Nguyễn Huệ, Quận 1, TP Hồ Chí Minh',
+      latitude: 10.7735,
+      longitude: 106.7032,
+      dietTags: ['VEGAN', 'LACTO_OVO'],
+      status: RestaurantStatus.APPROVED,
+      source: RestaurantSource.ADMIN,
+    },
+    {
+      id: '24000000-0000-4000-8000-000000000002',
+      name: 'Lacto Garden Demo',
+      address: '5 Đồng Khởi, Quận 1, TP Hồ Chí Minh',
+      latitude: 10.775,
+      longitude: 106.704,
+      dietTags: ['LACTO_OVO'],
+      status: RestaurantStatus.APPROVED,
+      source: RestaurantSource.ADMIN,
+    },
+    {
+      id: '24000000-0000-4000-8000-000000000003',
+      name: 'Pending Vegetarian Demo',
+      address: '9 Pasteur, Quận 1, TP Hồ Chí Minh',
+      latitude: 10.776,
+      longitude: 106.702,
+      dietTags: ['VEGAN'],
+      status: RestaurantStatus.PENDING,
+      source: RestaurantSource.MEMBER,
+    },
+  ] as const;
+  for (const fixture of restaurantFixtures) {
+    const { id, name, address, latitude, longitude, dietTags, status, source } = fixture;
+    await prisma.restaurant.upsert({
+      where: { id },
+      update: { name, address, latitude, longitude, dietTags: [...dietTags], status, source },
+      create: {
+        id,
+        name,
+        normalizedName: name.toLowerCase(),
+        address,
+        normalizedAddress: address.toLowerCase(),
+        latitude,
+        longitude,
+        categories: ['restaurant'],
+        dietTags: [...dietTags],
+        allergenFreeCodes: [],
+        excludedIngredients: [],
+        status,
+        source,
+        submitterId: source === RestaurantSource.MEMBER ? member.id : null,
+        reviewerId: status === RestaurantStatus.APPROVED ? admin.id : null,
+        reviewedAt: status === RestaurantStatus.APPROVED ? new Date() : null,
+        dataCheckedAt: status === RestaurantStatus.APPROVED ? new Date() : null,
+      },
+    });
+    await prisma.restaurantAudit.upsert({
+      where: { id: `24000000-0000-4000-9000-00000000000${id.slice(-1)}` },
+      update: {},
+      create: {
+        id: `24000000-0000-4000-9000-00000000000${id.slice(-1)}`,
+        restaurantId: id,
+        actorId: source === RestaurantSource.MEMBER ? member.id : admin.id,
+        action: status === RestaurantStatus.PENDING ? 'SUBMITTED' : 'APPROVED',
+        reason: 'Local demonstration fixture',
+      },
+    });
+  }
+  // Notification rows are created by committed domain decisions and quota
+  // crossings. Seed does not invent review outcomes or expose fixture users'
+  // private data through a synthetic notification.
   console.info(
-    `Seeded local Member, unified Contributors with all three approval bases, Admin, storage policy/accounting, pantry inventory, fridge-vision and receipt fake fixtures, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
+    `Seeded local Member, unified Contributors with all three approval bases, Admin, storage policy/accounting, pantry inventory, fridge-vision, receipt and restaurant fake fixtures, diet rules v${String(dietRuleSetVersion)}, catalog, discovery/community data, workflow states, behavior/recommendation, Meal Planner, scenario fixtures, and moderation queues.`,
   );
 }
 

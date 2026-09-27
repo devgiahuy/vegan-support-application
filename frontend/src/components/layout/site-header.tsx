@@ -17,6 +17,7 @@ import {
   Utensils,
   Target,
   Leaf,
+  Receipt,
 } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { cn } from '@/lib/utils';
@@ -214,6 +215,24 @@ export function SiteHeader() {
                 <DropdownMenuItem asChild>
                   <Link href="/meal-programs">
                     <Target className="h-4 w-4" /> Lộ trình nhiều tuần
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/pantry">
+                    <Utensils className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Tủ bếp
+                    gia đình
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/receipts">
+                    <Receipt className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Hóa đơn
+                    mua sắm
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link href="/assistant/public">
+                    <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Khám phá
+                    Tri thức AI
                   </Link>
                 </DropdownMenuItem>
                 {user.role === UserRole.ADMIN && (

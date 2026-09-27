@@ -18,6 +18,7 @@ import {
   type PrismaClient,
 } from '@prisma/client';
 import type { PublicAiArtifactsQuery } from './ai-review.schemas.js';
+import { aiCorrelationId } from '../ai-governance/ai-governance.context.js';
 
 const artifactInclude = {
   owner: { select: { displayName: true } },
@@ -255,6 +256,11 @@ export class AiReviewRepository {
           },
           include: { reviewer: { select: { displayName: true, role: true } } },
         });
+        await transaction.aiGovernanceEvent.create({ data: {
+          capability: 'VERIFICATION', provider: 'human', correlationId: aiCorrelationId(),
+          status: 'SUCCESS', safetyOutcome: data.conclusion, startedAt: verification.createdAt,
+          completedAt: verification.createdAt,
+        } });
         return {
           artifact: await transaction.aiArtifact.findUniqueOrThrow({ where: { id: artifact.id }, include: artifactInclude }),
           verification,
@@ -322,6 +328,11 @@ export class AiReviewRepository {
           replacementVerificationId: replacementId,
         },
       });
+      await transaction.aiGovernanceEvent.create({ data: {
+        capability: 'VERIFICATION', provider: 'human', correlationId: aiCorrelationId(),
+        status: 'SUCCESS', safetyOutcome: data.action, startedAt: updated.updatedAt,
+        completedAt: updated.updatedAt,
+      } });
       const artifact = await transaction.aiArtifact.findUniqueOrThrow({ where: { id: current.artifactId }, include: artifactInclude });
       const verification = artifact.verifications.find((item) => item.id === resultId);
       if (!verification) throw new Error('AI verification action result missing');

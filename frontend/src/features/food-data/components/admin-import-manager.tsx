@@ -46,7 +46,7 @@ const SAMPLE_IMPORT_RECORDS = [
     ],
     nutrients: [
       {
-        nutrientCode: 'ENERGY',
+        nutrientCode: 'ENERGY_KCAL',
         valuePer100g: 76,
         unit: 'kcal',
       },
@@ -56,8 +56,8 @@ const SAMPLE_IMPORT_RECORDS = [
         unit: 'g',
       },
       {
-        nutrientCode: 'CALCIUM',
-        valuePer100g: 350,
+        nutrientCode: 'IRON',
+        valuePer100g: 5.4,
         unit: 'mg',
       },
     ],
@@ -73,7 +73,7 @@ export const AdminImportManager: React.FC<AdminImportManagerProps> = ({
   onImportCommitted,
   className,
 }) => {
-  const [sourceCode, setSourceCode] = useState<string>('USDA');
+  const [sourceCode, setSourceCode] = useState<string>('USDA_FDC');
   const [idempotencyKey, setIdempotencyKey] = useState<string>(
     () => `import-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`
   );
@@ -93,6 +93,9 @@ export const AdminImportManager: React.FC<AdminImportManagerProps> = ({
   const commitMutation = useAdminImportCommitMutation();
 
   const handleFillSample = () => {
+    setSourceCode('USDA_FDC');
+    setSourceVersion('v2024.1');
+    setEffectiveFrom(new Date().toISOString().split('T')[0]);
     setRecordsJson(JSON.stringify(SAMPLE_IMPORT_RECORDS, null, 2));
     setIdempotencyKey(`import-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`);
     setPreviewResult(null);
@@ -188,7 +191,7 @@ export const AdminImportManager: React.FC<AdminImportManagerProps> = ({
             <Input
               value={sourceCode}
               onChange={(e) => setSourceCode(e.target.value)}
-              placeholder="vd: USDA, NIN_VN"
+              placeholder="vd: USDA_FDC, PROJECT_DEMO_V1"
             />
           </div>
 

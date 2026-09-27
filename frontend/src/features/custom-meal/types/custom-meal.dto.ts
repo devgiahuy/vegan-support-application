@@ -1,15 +1,20 @@
 /**
  * DTOs cho Custom Meals (Phase 17)
- * Phản chiếu schema từ Backend OpenAPI
+ * Phản chiếu chính xác schema từ Backend OpenAPI và Zod validation
  */
 
 export interface CustomMealPhotoDto {
   id?: string;
+  assetId?: string;
+  position?: number;
+  secureUrl?: string;
   url?: string;
   sortOrder?: number;
   isCover?: boolean;
   fileSizeBytes?: number;
-  mimeType?: string;
+  mimeType?: string | null;
+  width?: number | null;
+  height?: number | null;
   createdAt?: string;
 }
 
@@ -23,12 +28,26 @@ export interface CustomMealIngredientNutrientsDto {
 
 export interface CustomMealIngredientDto {
   id?: string;
+  position?: number;
+  displayName?: string;
+  amount?: number;
+  unit?: string;
+  resolutionStatus?: 'RESOLVED' | 'UNRESOLVED';
   ingredientId?: string | null;
+  ingredient?: {
+    id: string;
+    canonicalName: string;
+  } | null;
+  // Fallback alias cho frontend mapper
   name?: string;
   quantity?: number;
-  unit?: string;
   isCustom?: boolean;
   calculatedNutrients?: CustomMealIngredientNutrientsDto | null;
+}
+
+export interface CustomMealTagDto {
+  tag?: string;
+  normalizedTag?: string;
 }
 
 export interface CustomMealResponseDto {
@@ -39,6 +58,10 @@ export interface CustomMealResponseDto {
   servings?: number;
   sourceNote?: string | null;
   userCalories?: number | null;
+  userProteinGrams?: number | null;
+  userCarbsGrams?: number | null;
+  userFatGrams?: number | null;
+  // Fallback alias
   userProtein?: number | null;
   userCarbs?: number | null;
   userFat?: number | null;
@@ -46,10 +69,12 @@ export interface CustomMealResponseDto {
   calculatedProtein?: number | null;
   calculatedCarbs?: number | null;
   calculatedFat?: number | null;
+  nutritionCoverage?: string;
   coverageRatio?: number;
   isFullyCovered?: boolean;
   unmatchedIngredientCount?: number;
-  tags?: string[];
+  deletePolicy?: 'BLOCK' | 'RETAIN_SNAPSHOT';
+  tags?: Array<string | CustomMealTagDto>;
   photos?: CustomMealPhotoDto[];
   ingredients?: CustomMealIngredientDto[];
   createdAt: string;
@@ -63,13 +88,19 @@ export interface CustomMealListItemDto {
   servings?: number;
   sourceNote?: string | null;
   userCalories?: number | null;
+  userProteinGrams?: number | null;
+  userCarbsGrams?: number | null;
+  userFatGrams?: number | null;
   calculatedCalories?: number | null;
+  nutritionCoverage?: string;
   coverageRatio?: number;
   isFullyCovered?: boolean;
-  tags?: string[];
+  tags?: Array<string | CustomMealTagDto>;
+  photos?: CustomMealPhotoDto[];
   coverPhotoUrl?: string | null;
   photoCount?: number;
   ingredientCount?: number;
+  ingredients?: CustomMealIngredientDto[];
   createdAt: string;
   updatedAt: string;
 }
@@ -80,40 +111,38 @@ export interface CustomMealTagStatDto {
 }
 
 export interface CustomMealListResponseDto {
-  items: CustomMealListItemDto[];
+  records?: CustomMealResponseDto[];
+  items?: CustomMealListItemDto[];
   pagination: {
     page: number;
     limit: number;
-    totalItems: number;
+    total?: number;
+    totalItems?: number;
     totalPages: number;
   };
   availableTags?: CustomMealTagStatDto[];
 }
 
 export interface CreateCustomMealIngredientRequestDto {
-  ingredientId?: string | null;
-  name: string;
-  quantity: number;
+  position: number;
+  displayName: string;
+  amount: number;
   unit: string;
+  ingredientId?: string; // Không gửi nếu null/undefined để tránh lỗi Zod strict
 }
 
 export interface CreateCustomMealRequestDto {
   name: string;
-  notes?: string | null;
+  notes?: string;
   servings?: number;
-  sourceNote?: string | null;
-  userCalories?: number | null;
-  userProtein?: number | null;
-  userCarbs?: number | null;
-  userFat?: number | null;
+  sourceNote?: string;
+  userCalories?: number;
+  userProteinGrams?: number;
+  userCarbsGrams?: number;
+  userFatGrams?: number;
+  deletePolicy?: 'BLOCK' | 'RETAIN_SNAPSHOT';
   tags?: string[];
-  ingredients?: CreateCustomMealIngredientRequestDto[];
-}
-
-export interface UpdateCustomMealPhotoOrderItemDto {
-  photoId: string;
-  sortOrder: number;
-  isCover?: boolean;
+  ingredients: CreateCustomMealIngredientRequestDto[];
 }
 
 export interface UpdateCustomMealRequestDto {
@@ -122,12 +151,21 @@ export interface UpdateCustomMealRequestDto {
   servings?: number;
   sourceNote?: string | null;
   userCalories?: number | null;
-  userProtein?: number | null;
-  userCarbs?: number | null;
-  userFat?: number | null;
+  userProteinGrams?: number | null;
+  userCarbsGrams?: number | null;
+  userFatGrams?: number | null;
+  deletePolicy?: 'BLOCK' | 'RETAIN_SNAPSHOT';
   tags?: string[];
   ingredients?: CreateCustomMealIngredientRequestDto[];
-  photoOrder?: UpdateCustomMealPhotoOrderItemDto[];
+}
+
+export interface AttachCustomMealPhotoRequestDto {
+  assetId: string;
+  position?: number;
+}
+
+export interface ReorderCustomMealPhotosRequestDto {
+  orderedAssetIds: string[];
 }
 
 export interface AttachMediaRequestDto {

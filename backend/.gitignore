@@ -3,6 +3,7 @@ dist/
 dist-seed/
 .env
 .env.*
+env*
 !.env.example
 coverage/
 *.log

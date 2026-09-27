@@ -198,8 +198,8 @@ export class RecipeNutritionMapper extends BaseMapper<
       };
     }
 
-    const code = safeString(dto.nutrientCode, '');
-    const name = safeString(dto.nutrientName, code);
+    const code = safeString(pickField(dto, ['nutrientCode', 'code'], ''), '');
+    const name = safeString(pickField(dto, ['nutrientName', 'name'], code), code);
     const unit = safeString(dto.unit, '');
     const amount = Math.round(safeNumber(dto.amount, 0) * 10) / 10;
     const formattedAmount = `${amount} ${unit}`.trim();
@@ -259,18 +259,34 @@ export class RecipeNutritionMapper extends BaseMapper<
   private calculateMacroDistribution(
     perServingNutrients: NutrientItemModel[]
   ): MacroDistributionModel {
-    const calNutrient = perServingNutrients.find(
-      (n) => n.code.toUpperCase() === 'ENERC_KCAL' || n.code.toUpperCase() === 'CALORIES'
-    );
-    const proNutrient = perServingNutrients.find(
-      (n) => n.code.toUpperCase() === 'PROCNT' || n.code.toUpperCase() === 'PROTEIN'
-    );
-    const carbNutrient = perServingNutrients.find(
-      (n) => n.code.toUpperCase() === 'CHOCDF' || n.code.toUpperCase() === 'CARBS'
-    );
-    const fatNutrient = perServingNutrients.find(
-      (n) => n.code.toUpperCase() === 'FAT' || n.code.toUpperCase() === 'LIPID'
-    );
+    const calNutrient = perServingNutrients.find((n) => {
+      const c = n.code.toUpperCase();
+      return (
+        c === 'ENERGY_KCAL' ||
+        c === 'ENERC_KCAL' ||
+        c === 'CALORIES' ||
+        c === 'ENERGY' ||
+        c === 'KCAL'
+      );
+    });
+    const proNutrient = perServingNutrients.find((n) => {
+      const c = n.code.toUpperCase();
+      return c === 'PROTEIN' || c === 'PROCNT' || c === 'PRO';
+    });
+    const carbNutrient = perServingNutrients.find((n) => {
+      const c = n.code.toUpperCase();
+      return (
+        c === 'CHOCDF' ||
+        c === 'CARBS' ||
+        c === 'CARB' ||
+        c === 'CARBOHYDRATE' ||
+        c === 'CARBOHYDRATES'
+      );
+    });
+    const fatNutrient = perServingNutrients.find((n) => {
+      const c = n.code.toUpperCase();
+      return c === 'FAT' || c === 'LIPID' || c === 'FAT_TOTAL' || c === 'FATCE';
+    });
 
     const calories = calNutrient ? calNutrient.amount : 0;
     const proteinGrams = proNutrient ? proNutrient.amount : 0;

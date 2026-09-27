@@ -122,20 +122,43 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
 
   private toSlot(dto: MealSlotDto | null | undefined): MealSlot {
     const recipe = pickField(dto, ['recipe'], null) as MealSlotDto['recipe'];
+    const customMeal = pickField(
+      dto,
+      ['customMeal', 'custom_meal'],
+      null
+    ) as MealSlotDto['customMeal'];
+    const rawSourceType = safeString(
+      pickField(dto, ['sourceType', 'source_type'], customMeal ? 'CUSTOM_MEAL' : 'RECIPE'),
+      'RECIPE'
+    ).toUpperCase();
+    const isCustomMeal = rawSourceType === 'CUSTOM_MEAL' || Boolean(customMeal);
+    const sourceType: 'RECIPE' | 'CUSTOM_MEAL' = isCustomMeal ? 'CUSTOM_MEAL' : 'RECIPE';
     const status = safeString(pickField(dto, ['status'], '')).toUpperCase();
-    const filled = recipe !== null && typeof recipe === 'object' && status !== 'UNFILLED';
+    const filled =
+      status !== 'UNFILLED' &&
+      ((recipe !== null && typeof recipe === 'object') ||
+        (customMeal !== null && typeof customMeal === 'object'));
+
     const mealType = safeEnum(
       pickField(dto, ['mealType', 'meal_type'], 'BREAKFAST'),
       MealType,
       MealType.BREAKFAST
     );
-    // Calories ưu tiên ở slot-level (shape thật), fallback recipe-level (biến thể).
+    // Calories ưu tiên ở slot-level (shape thật), fallback recipe-level hoặc customMeal-level.
+    const customMealCal = customMeal
+      ? safeNumber(pickField(customMeal, ['calories', 'userCalories', 'calculatedCalories'], 0))
+      : 0;
     const calories = filled
-      ? safeNumber(pickField(dto, ['calories'], pickField(recipe, ['calories'], 0)))
+      ? safeNumber(pickField(dto, ['calories'], pickField(recipe, ['calories'], customMealCal)))
       : 0;
     const protein = filled ? safeNumber(pickField(recipe, ['protein'], 0)) : 0;
     const carbs = filled ? safeNumber(pickField(recipe, ['carbs'], 0)) : 0;
     const fat = filled ? safeNumber(pickField(recipe, ['fat'], 0)) : 0;
+
+    const dishTitle = isCustomMeal
+      ? safeString(pickField(customMeal, ['name'], 'Món ăn cá nhân'), 'Món ăn cá nhân')
+      : safeString(pickField(recipe, ['title', 'name'], 'Món chay'), 'Món chay');
+
     return {
       id: safeString(pickField(dto, ['id', 'itemId', 'item_id'], '')),
       date: safeString(pickField(dto, ['date'], '')),
@@ -151,14 +174,27 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
               'Không có món phù hợp với luật ăn của bạn.'
             )
           ),
-      recipeId: filled ? safeString(pickField(recipe, ['id'], '')) : '',
-      recipeTitle: filled ? safeString(pickField(recipe, ['title', 'name'], 'Món chay')) : '',
+      recipeId: filled
+        ? isCustomMeal
+          ? safeString(pickField(customMeal, ['id'], ''))
+          : safeString(pickField(recipe, ['id'], ''))
+        : '',
+      recipeTitle: filled ? dishTitle : '',
+      sourceType,
+      isCustomMeal,
+      customMealId: isCustomMeal ? safeString(pickField(customMeal, ['id'], '')) || null : null,
+      customMealName: isCustomMeal ? dishTitle : null,
+      customMealCoverage: isCustomMeal
+        ? safeString(pickField(customMeal, ['nutritionCoverage', 'nutrition_coverage'], '')) || null
+        : null,
       calories,
       formattedCalories: `${calories} kcal`,
       protein,
       carbs,
       fat,
-      servings: filled ? safeNumber(pickField(recipe, ['servings'], 1)) : 0,
+      servings: filled
+        ? safeNumber(pickField(dto, ['servings'], pickField(recipe, ['servings'], 1)), 1)
+        : 0,
     };
   }
 

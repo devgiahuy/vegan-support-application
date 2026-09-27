@@ -20,8 +20,10 @@ export default function NewCustomMealPage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-5xl space-y-6">
       <div className="border-b pb-4">
-        <h1 className="text-xl font-bold tracking-tight text-foreground">Tạo món ăn cá nhân mới</h1>
-        <p className="text-xs text-muted-foreground mt-0.5">
+        <h1 className="text-2xl font-bold tracking-tight text-foreground">
+          Tạo món ăn cá nhân mới
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
           Ghi lại định lượng nguyên liệu, cách làm và gắn thẻ để dễ dàng phân loại sau này.
         </p>
       </div>

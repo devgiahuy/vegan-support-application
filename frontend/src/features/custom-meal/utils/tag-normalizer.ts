@@ -8,13 +8,13 @@ export const MAX_TAGS_PER_MEAL = 10;
 
 /**
  * Regex kiểm tra ký tự hợp lệ cho thẻ:
- * Chữ cái tiếng Việt, tiếng Anh, số, khoảng trắng và dấu gạch nối.
+ * Chữ cái (Unicode tiếng Việt, tiếng Anh), số, khoảng trắng, dấu gạch nối (-) và gạch dưới (_).
  */
-export const VALID_TAG_REGEX =
-  /^[a-z0-9\s\-àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]+$/i;
+export const VALID_TAG_REGEX = /^[\p{L}\p{N}\s\-_]+$/u;
 
 /**
  * Chuẩn hóa một thẻ:
+ * - Loại bỏ ký tự '#' ở đầu nếu có (do người dùng quen gõ hashtag)
  * - Cắt khoảng trắng đầu cuối
  * - Chuyển sang chữ thường
  * - Thu gọn nhiều khoảng trắng liên tiếp thành 1 khoảng trắng
@@ -22,7 +22,8 @@ export const VALID_TAG_REGEX =
  */
 export function normalizeUserTag(rawTag: string): string {
   if (!rawTag) return '';
-  return rawTag.trim().toLowerCase().replace(/\s+/g, ' ').slice(0, MAX_TAG_LENGTH);
+  const stripped = rawTag.trim().replace(/^#+/, '');
+  return stripped.trim().toLowerCase().replace(/\s+/g, ' ').slice(0, MAX_TAG_LENGTH);
 }
 
 /**

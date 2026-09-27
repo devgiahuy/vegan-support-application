@@ -9,7 +9,10 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { toast } from 'sonner';
-import type { CreateCustomMealRequestDto } from '../types/custom-meal.dto';
+import type {
+  CreateCustomMealRequestDto,
+  CreateCustomMealIngredientRequestDto,
+} from '../types/custom-meal.dto';
 import type { CustomMeal } from '../types/custom-meal.model';
 import { CustomMealTagInput } from './custom-meal-tag-input';
 import { CustomMealIngredientInput, type IngredientRow } from './custom-meal-ingredient-input';
@@ -35,7 +38,9 @@ export const CustomMealForm: React.FC<CustomMealFormProps> = ({
   const router = useRouter();
 
   const [name, setName] = useState(initialData?.name || '');
-  const [servings, setServings] = useState<number>(initialData?.servings || 1);
+  const [servings, setServings] = useState<string>(
+    initialData?.servings ? String(initialData.servings) : ''
+  );
   const [notes, setNotes] = useState(initialData?.notes || '');
   const [sourceNote, setSourceNote] = useState(initialData?.sourceNote || '');
 
@@ -71,7 +76,7 @@ export const CustomMealForm: React.FC<CustomMealFormProps> = ({
       name: ing.name,
       quantity: ing.quantity,
       unit: ing.unit,
-    })) || [{ ingredientId: null, name: '', quantity: 100, unit: 'g' }]
+    })) || [{ ingredientId: null, name: '', quantity: 0, unit: 'g' }]
   );
 
   // Lỗi xác thực
@@ -82,18 +87,26 @@ export const CustomMealForm: React.FC<CustomMealFormProps> = ({
 
     if (!name.trim()) {
       newErrors.name = 'Vui lòng nhập tên món ăn';
-    } else if (name.trim().length > 100) {
-      newErrors.name = 'Tên món ăn không được vượt quá 100 ký tự';
+    } else if (name.trim().length > 200) {
+      newErrors.name = 'Tên món ăn không được vượt quá 200 ký tự';
     }
 
-    if (!servings || servings < 1) {
-      newErrors.servings = 'Số khẩu phần phải lớn hơn hoặc bằng 1';
+    const parsedServings = parseInt(servings, 10);
+    if (!servings || isNaN(parsedServings) || parsedServings < 1 || parsedServings > 99) {
+      newErrors.servings = 'Số khẩu phần phải từ 1 đến 99';
     }
 
     // Kiểm tra nguyên liệu
     const validIngredients = ingredients.filter((ing) => ing.name.trim().length > 0);
     if (validIngredients.length === 0) {
       newErrors.ingredients = 'Vui lòng thêm ít nhất 1 nguyên liệu có tên';
+    } else {
+      const invalidQuantity = validIngredients.find(
+        (ing) => isNaN(Number(ing.quantity)) || Number(ing.quantity) <= 0
+      );
+      if (invalidQuantity) {
+        newErrors.ingredients = `Nguyên liệu "${invalidQuantity.name}" phải có số lượng lớn hơn 0`;
+      }
     }
 
     setErrors(newErrors);
@@ -107,25 +120,46 @@ export const CustomMealForm: React.FC<CustomMealFormProps> = ({
       return;
     }
 
+    const validIngredients = ingredients.filter((ing) => ing.name.trim().length > 0);
+
     const payload: CreateCustomMealRequestDto = {
       name: name.trim(),
-      servings: Number(servings),
-      notes: notes.trim() || null,
-      sourceNote: sourceNote.trim() || null,
-      userCalories: userCalories ? parseFloat(userCalories) : null,
-      userProtein: userProtein ? parseFloat(userProtein) : null,
-      userCarbs: userCarbs ? parseFloat(userCarbs) : null,
-      userFat: userFat ? parseFloat(userFat) : null,
-      tags,
-      ingredients: ingredients
-        .filter((ing) => ing.name.trim().length > 0)
-        .map((ing) => ({
-          ingredientId: ing.ingredientId || null,
-          name: ing.name.trim(),
-          quantity: Number(ing.quantity) || 0,
+      servings: Math.min(99, Math.max(1, parseInt(servings, 10) || 1)),
+      tags: tags.map((t) => t.trim()).filter(Boolean),
+      ingredients: validIngredients.map((ing, index) => {
+        const item: CreateCustomMealIngredientRequestDto = {
+          position: index,
+          displayName: ing.name.trim(),
+          amount: Math.max(0.1, Number(ing.quantity) || 1),
           unit: ing.unit.trim() || 'g',
-        })),
+        };
+        // Chỉ gửi ingredientId nếu có giá trị UUID hợp lệ, không gửi null/undefined
+        if (ing.ingredientId && ing.ingredientId.trim()) {
+          item.ingredientId = ing.ingredientId.trim();
+        }
+        return item;
+      }),
     };
+
+    // Các trường tùy chọn: chỉ gắn vào payload khi có dữ liệu để tuân thủ Zod strict
+    if (notes.trim()) {
+      payload.notes = notes.trim();
+    }
+    if (sourceNote.trim()) {
+      payload.sourceNote = sourceNote.trim();
+    }
+    if (userCalories && !isNaN(parseInt(userCalories, 10)) && parseInt(userCalories, 10) >= 0) {
+      payload.userCalories = parseInt(userCalories, 10);
+    }
+    if (userProtein && !isNaN(parseFloat(userProtein)) && parseFloat(userProtein) > 0) {
+      payload.userProteinGrams = parseFloat(userProtein);
+    }
+    if (userCarbs && !isNaN(parseFloat(userCarbs)) && parseFloat(userCarbs) > 0) {
+      payload.userCarbsGrams = parseFloat(userCarbs);
+    }
+    if (userFat && !isNaN(parseFloat(userFat)) && parseFloat(userFat) > 0) {
+      payload.userFatGrams = parseFloat(userFat);
+    }
 
     try {
       await onSubmit(payload);
@@ -150,23 +184,27 @@ export const CustomMealForm: React.FC<CustomMealFormProps> = ({
         <Button
           type="button"
           variant="ghost"
-          size="sm"
+          size="default"
           onClick={() => router.back()}
-          className="text-xs gap-1.5"
+          className="text-sm gap-2 h-10 px-3 text-muted-foreground hover:text-foreground"
         >
-          <ArrowLeft className="w-3.5 h-3.5" />
+          <ArrowLeft className="w-4 h-4" />
           Quay lại
         </Button>
 
-        <Button type="submit" disabled={isSubmitting} className="gap-1.5 text-xs h-9">
+        <Button
+          type="submit"
+          disabled={isSubmitting}
+          className="gap-2 text-sm h-10 px-5 font-medium shadow-sm"
+        >
           {isSubmitting ? (
             <>
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" />
               Đang lưu món ăn...
             </>
           ) : (
             <>
-              <Save className="w-3.5 h-3.5" />
+              <Save className="w-4 h-4" />
               Lưu món ăn cá nhân
             </>
           )}
@@ -178,15 +216,17 @@ export const CustomMealForm: React.FC<CustomMealFormProps> = ({
         <div className="md:col-span-2 space-y-6">
           <Card>
             <CardHeader className="pb-4">
-              <CardTitle className="text-base">Thông tin món ăn cá nhân</CardTitle>
-              <CardDescription className="text-xs">
+              <CardTitle className="text-lg font-semibold text-foreground">
+                Thông tin món ăn cá nhân
+              </CardTitle>
+              <CardDescription className="text-sm text-muted-foreground">
                 Món ăn này hoàn toàn riêng tư, chỉ có bạn mới xem và dùng được trong thực đơn tuần.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Tên món */}
-              <div className="space-y-1.5">
-                <Label htmlFor="meal-name" className="text-xs font-semibold">
+              <div className="space-y-2">
+                <Label htmlFor="meal-name" className="text-sm font-semibold">
                   Tên món ăn <span className="text-destructive">*</span>
                 </Label>
                 <Input
@@ -198,31 +238,36 @@ export const CustomMealForm: React.FC<CustomMealFormProps> = ({
                     if (errors.name) setErrors((prev) => ({ ...prev, name: '' }));
                   }}
                   disabled={isSubmitting}
-                  className={errors.name ? 'border-destructive' : ''}
+                  className={`h-11 text-base bg-background ${errors.name ? 'border-destructive' : ''}`}
                 />
-                {errors.name && <p className="text-xs text-destructive">{errors.name}</p>}
+                {errors.name && (
+                  <p className="text-xs text-destructive font-medium">{errors.name}</p>
+                )}
               </div>
 
               {/* Số khẩu phần & Nguồn gốc */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="meal-servings" className="text-xs font-semibold">
+                <div className="space-y-2">
+                  <Label htmlFor="meal-servings" className="text-sm font-semibold">
                     Số khẩu phần ăn <span className="text-destructive">*</span>
                   </Label>
                   <Input
                     id="meal-servings"
                     type="number"
                     min="1"
+                    placeholder="Ví dụ: 1"
                     value={servings}
-                    onChange={(e) => setServings(parseInt(e.target.value, 10) || 1)}
+                    onChange={(e) => setServings(e.target.value)}
                     disabled={isSubmitting}
-                    className={errors.servings ? 'border-destructive' : ''}
+                    className={`h-10 text-sm bg-background ${errors.servings ? 'border-destructive' : ''}`}
                   />
-                  {errors.servings && <p className="text-xs text-destructive">{errors.servings}</p>}
+                  {errors.servings && (
+                    <p className="text-xs text-destructive font-medium">{errors.servings}</p>
+                  )}
                 </div>
 
-                <div className="space-y-1.5">
-                  <Label htmlFor="meal-source" className="text-xs font-semibold">
+                <div className="space-y-2">
+                  <Label htmlFor="meal-source" className="text-sm font-semibold">
                     Ghi chú nguồn gốc (tùy chọn)
                   </Label>
                   <Input
@@ -231,13 +276,14 @@ export const CustomMealForm: React.FC<CustomMealFormProps> = ({
                     value={sourceNote}
                     onChange={(e) => setSourceNote(e.target.value)}
                     disabled={isSubmitting}
+                    className="h-10 text-sm bg-background"
                   />
                 </div>
               </div>
 
               {/* Cách làm / Ghi chú */}
-              <div className="space-y-1.5">
-                <Label htmlFor="meal-notes" className="text-xs font-semibold">
+              <div className="space-y-2">
+                <Label htmlFor="meal-notes" className="text-sm font-semibold">
                   Ghi chú cách chế biến (tùy chọn)
                 </Label>
                 <Textarea
@@ -246,8 +292,8 @@ export const CustomMealForm: React.FC<CustomMealFormProps> = ({
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   disabled={isSubmitting}
-                  rows={3}
-                  className="text-xs"
+                  rows={4}
+                  className="text-sm min-h-[100px] leading-relaxed bg-background"
                 />
               </div>
             </CardContent>
@@ -255,21 +301,21 @@ export const CustomMealForm: React.FC<CustomMealFormProps> = ({
 
           {/* Phần Nguyên liệu */}
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-5 sm:p-6">
               <CustomMealIngredientInput
                 ingredients={ingredients}
                 onChange={setIngredients}
                 disabled={isSubmitting}
               />
               {errors.ingredients && (
-                <p className="text-xs text-destructive mt-2">{errors.ingredients}</p>
+                <p className="text-xs text-destructive font-medium mt-2">{errors.ingredients}</p>
               )}
             </CardContent>
           </Card>
 
           {/* Thẻ cá nhân (User Tags) */}
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-5 sm:p-6">
               <CustomMealTagInput tags={tags} onChange={setTags} disabled={isSubmitting} />
             </CardContent>
           </Card>
@@ -292,32 +338,32 @@ export const CustomMealForm: React.FC<CustomMealFormProps> = ({
           {/* Ước tính dinh dưỡng người dùng */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-xs font-semibold flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <CardTitle className="text-base font-semibold flex items-center gap-2">
+                <Sparkles className="w-4 h-4 text-amber-500" />
                 Tự điền dinh dưỡng ước tính
               </CardTitle>
-              <CardDescription className="text-[11px]">
+              <CardDescription className="text-xs text-muted-foreground">
                 Dành cho đồ hộp hoặc sản phẩm có nhãn năng lượng sẵn.
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="space-y-1">
-                <Label htmlFor="user-calories" className="text-[11px] text-muted-foreground">
+            <CardContent className="space-y-3.5">
+              <div className="space-y-1.5">
+                <Label htmlFor="user-calories" className="text-xs font-medium text-foreground">
                   Năng lượng (kcal)
                 </Label>
                 <Input
                   id="user-calories"
                   type="number"
-                  placeholder="kcal"
+                  placeholder="kcal (vd: 350)"
                   value={userCalories}
                   onChange={(e) => setUserCalories(e.target.value)}
                   disabled={isSubmitting}
-                  className="h-8 text-xs"
+                  className="h-10 text-sm bg-background"
                 />
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="space-y-1">
-                  <Label htmlFor="user-protein" className="text-[10px] text-muted-foreground">
+              <div className="grid grid-cols-3 gap-2.5">
+                <div className="space-y-1.5">
+                  <Label htmlFor="user-protein" className="text-xs font-medium text-foreground">
                     Đạm (g)
                   </Label>
                   <Input
@@ -328,11 +374,11 @@ export const CustomMealForm: React.FC<CustomMealFormProps> = ({
                     value={userProtein}
                     onChange={(e) => setUserProtein(e.target.value)}
                     disabled={isSubmitting}
-                    className="h-8 text-xs"
+                    className="h-10 text-sm bg-background"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="user-carbs" className="text-[10px] text-muted-foreground">
+                <div className="space-y-1.5">
+                  <Label htmlFor="user-carbs" className="text-xs font-medium text-foreground">
                     Carbs (g)
                   </Label>
                   <Input
@@ -343,11 +389,11 @@ export const CustomMealForm: React.FC<CustomMealFormProps> = ({
                     value={userCarbs}
                     onChange={(e) => setUserCarbs(e.target.value)}
                     disabled={isSubmitting}
-                    className="h-8 text-xs"
+                    className="h-10 text-sm bg-background"
                   />
                 </div>
-                <div className="space-y-1">
-                  <Label htmlFor="user-fat" className="text-[10px] text-muted-foreground">
+                <div className="space-y-1.5">
+                  <Label htmlFor="user-fat" className="text-xs font-medium text-foreground">
                     Béo (g)
                   </Label>
                   <Input
@@ -358,7 +404,7 @@ export const CustomMealForm: React.FC<CustomMealFormProps> = ({
                     value={userFat}
                     onChange={(e) => setUserFat(e.target.value)}
                     disabled={isSubmitting}
-                    className="h-8 text-xs"
+                    className="h-10 text-sm bg-background"
                   />
                 </div>
               </div>
@@ -369,12 +415,12 @@ export const CustomMealForm: React.FC<CustomMealFormProps> = ({
           {initialData && (
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-xs font-semibold">Hình ảnh món ăn</CardTitle>
-                <CardDescription className="text-[11px]">
+                <CardTitle className="text-base font-semibold">Hình ảnh món ăn</CardTitle>
+                <CardDescription className="text-xs text-muted-foreground">
                   Tải lên ảnh thực tế có kiểm soát hạn ngạch lưu trữ.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-4">
                 <CustomMealPhotoManager
                   photos={initialData.photos}
                   onDeletePhoto={onDeletePhoto}

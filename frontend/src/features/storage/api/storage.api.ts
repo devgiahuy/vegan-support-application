@@ -7,7 +7,9 @@ import type {
   CreateUploadReservationRequestDto,
   CreateUploadReservationResponseDto,
   DeleteMediaAssetRequestDto,
+  StorageAccountDto,
   StorageAccountListResponseDto,
+  StorageAdjustmentDto,
   StorageAdjustmentListResponseDto,
   StorageAssetResponseDto,
   StoragePolicyDto,
@@ -145,17 +147,24 @@ export const storageApi = {
     q?: string;
     overQuota?: boolean;
   }): Promise<PaginatedResult<StorageAccount>> => {
-    const res = await api.get<APIResponse<StorageAccountListResponseDto>>(
-      API_ENDPOINTS.ADMIN_STORAGE.ACCOUNTS,
-      { params }
-    );
-    const data = res.data?.data;
+    const res = await api.get<{
+      success: boolean;
+      data: StorageAccountDto[] | StorageAccountListResponseDto;
+      meta?: { page: number; limit: number; total: number; totalPages: number };
+    }>(API_ENDPOINTS.ADMIN_STORAGE.ACCOUNTS, { params });
+    const rawData = res.data?.data;
+    const rawMeta = res.data?.meta;
+    const rawList: StorageAccountDto[] = Array.isArray(rawData) ? rawData : rawData?.items || [];
     return {
-      items: (data?.items || []).map((item) => storageMapper.toAccountModel(item)),
-      total: data?.total ?? 0,
-      page: data?.page ?? 1,
-      limit: data?.limit ?? 20,
-      totalPages: data?.totalPages ?? 0,
+      items: rawList.map((item) => storageMapper.toAccountModel(item)),
+      total: rawMeta?.total ?? (rawData as StorageAccountListResponseDto)?.total ?? rawList.length,
+      page: rawMeta?.page ?? (rawData as StorageAccountListResponseDto)?.page ?? 1,
+      limit:
+        rawMeta?.limit ?? (rawData as StorageAccountListResponseDto)?.limit ?? params?.limit ?? 20,
+      totalPages:
+        rawMeta?.totalPages ??
+        (rawData as StorageAccountListResponseDto)?.totalPages ??
+        Math.max(1, Math.ceil(rawList.length / (params?.limit ?? 20))),
     };
   },
 
@@ -167,17 +176,24 @@ export const storageApi = {
     limit?: number;
     active?: boolean;
   }): Promise<PaginatedResult<StoragePolicy>> => {
-    const res = await api.get<APIResponse<StoragePolicyListResponseDto>>(
-      API_ENDPOINTS.ADMIN_STORAGE.POLICIES,
-      { params }
-    );
-    const data = res.data?.data;
+    const res = await api.get<{
+      success: boolean;
+      data: StoragePolicyDto[] | StoragePolicyListResponseDto;
+      meta?: { page: number; limit: number; total: number; totalPages: number };
+    }>(API_ENDPOINTS.ADMIN_STORAGE.POLICIES, { params });
+    const rawData = res.data?.data;
+    const rawMeta = res.data?.meta;
+    const rawList: StoragePolicyDto[] = Array.isArray(rawData) ? rawData : rawData?.items || [];
     return {
-      items: (data?.items || []).map((item) => storageMapper.toPolicyModel(item)),
-      total: data?.total ?? 0,
-      page: data?.page ?? 1,
-      limit: data?.limit ?? 20,
-      totalPages: data?.totalPages ?? 0,
+      items: rawList.map((item) => storageMapper.toPolicyModel(item)),
+      total: rawMeta?.total ?? (rawData as StoragePolicyListResponseDto)?.total ?? rawList.length,
+      page: rawMeta?.page ?? (rawData as StoragePolicyListResponseDto)?.page ?? 1,
+      limit:
+        rawMeta?.limit ?? (rawData as StoragePolicyListResponseDto)?.limit ?? params?.limit ?? 20,
+      totalPages:
+        rawMeta?.totalPages ??
+        (rawData as StoragePolicyListResponseDto)?.totalPages ??
+        Math.max(1, Math.ceil(rawList.length / (params?.limit ?? 20))),
     };
   },
 
@@ -213,17 +229,28 @@ export const storageApi = {
     limit?: number;
     userId?: string;
   }): Promise<PaginatedResult<StorageAdjustment>> => {
-    const res = await api.get<APIResponse<StorageAdjustmentListResponseDto>>(
-      API_ENDPOINTS.ADMIN_STORAGE.ADJUSTMENTS,
-      { params }
-    );
-    const data = res.data?.data;
+    const res = await api.get<{
+      success: boolean;
+      data: StorageAdjustmentDto[] | StorageAdjustmentListResponseDto;
+      meta?: { page: number; limit: number; total: number; totalPages: number };
+    }>(API_ENDPOINTS.ADMIN_STORAGE.ADJUSTMENTS, { params });
+    const rawData = res.data?.data;
+    const rawMeta = res.data?.meta;
+    const rawList: StorageAdjustmentDto[] = Array.isArray(rawData) ? rawData : rawData?.items || [];
     return {
-      items: (data?.items || []).map((item) => storageMapper.toAdjustmentModel(item)),
-      total: data?.total ?? 0,
-      page: data?.page ?? 1,
-      limit: data?.limit ?? 20,
-      totalPages: data?.totalPages ?? 0,
+      items: rawList.map((item) => storageMapper.toAdjustmentModel(item)),
+      total:
+        rawMeta?.total ?? (rawData as StorageAdjustmentListResponseDto)?.total ?? rawList.length,
+      page: rawMeta?.page ?? (rawData as StorageAdjustmentListResponseDto)?.page ?? 1,
+      limit:
+        rawMeta?.limit ??
+        (rawData as StorageAdjustmentListResponseDto)?.limit ??
+        params?.limit ??
+        20,
+      totalPages:
+        rawMeta?.totalPages ??
+        (rawData as StorageAdjustmentListResponseDto)?.totalPages ??
+        Math.max(1, Math.ceil(rawList.length / (params?.limit ?? 20))),
     };
   },
 };

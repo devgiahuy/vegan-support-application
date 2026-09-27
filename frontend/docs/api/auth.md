@@ -83,10 +83,7 @@ Rotate refresh token và cấp access token mới
               "_truncated": true
             },
             "avatarUrl": {
-              "type": [
-                "string",
-                "null"
-              ],
+              "type": "string",
               "_truncated": true
             },
             "role": {

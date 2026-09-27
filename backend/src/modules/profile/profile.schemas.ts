@@ -8,7 +8,7 @@ import {
   PracticeSchedule,
   Tradition,
 } from '@prisma/client';
-import { z } from '../../common/validation/zod.js';
+import { z, mediaUrlSchema } from '../../common/validation/zod.js';
 import { userResponseSchema } from '../auth/auth.schemas.js';
 
 const TIMEZONE = 'Asia/Ho_Chi_Minh' as const;
@@ -38,14 +38,7 @@ const uniqueDateListSchema = z
 export const updateBasicProfileRequestSchema = z
   .object({
     displayName: z.string().trim().min(2).max(100).optional(),
-    avatarUrl: z
-      .string()
-      .trim()
-      .url()
-      .max(2_048)
-      .refine((value) => /^https?:\/\//.test(value), 'Avatar URL phải dùng HTTP hoặc HTTPS')
-      .nullable()
-      .optional(),
+    avatarUrl: mediaUrlSchema.nullable().optional(),
   })
   .strict()
   .refine((input) => input.displayName !== undefined || input.avatarUrl !== undefined, {

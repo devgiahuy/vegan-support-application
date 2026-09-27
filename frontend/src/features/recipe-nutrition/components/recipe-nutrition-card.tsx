@@ -23,6 +23,8 @@ import {
 } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Activity, AlertTriangle, History, RotateCw, Sparkles, Info } from 'lucide-react';
+import { AiArtifactType } from '@/common/enums';
+import { SaveArtifactButton } from '@/features/ai-artifacts';
 
 export interface RecipeNutritionCardProps {
   postId: string;
@@ -208,6 +210,18 @@ export function RecipeNutritionCard({
         </div>
 
         <div className="flex items-center gap-2">
+          {nutrition?.id && (
+            <SaveArtifactButton
+              type={AiArtifactType.RECIPE_NUTRITION}
+              sourceId={nutrition.id}
+              defaultTitle="Phân tích dinh dưỡng công thức chay"
+              defaultSummary="Đánh giá chi tiết hàm lượng dinh dưỡng và vi chất có tính đến hao hụt nhiệt độ."
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs text-muted-foreground hover:text-foreground"
+            />
+          )}
+
           <Button
             variant="outline"
             size="sm"

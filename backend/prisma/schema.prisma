@@ -15,6 +15,21 @@ enum Role {
   @@map("user_role")
 }
 
+enum RestaurantStatus {
+  PENDING
+  APPROVED
+  REJECTED
+
+  @@map("restaurant_status")
+}
+
+enum RestaurantSource {
+  MEMBER
+  ADMIN
+
+  @@map("restaurant_source")
+}
+
 enum UserStatus {
   ACTIVE
   LOCKED
@@ -811,8 +826,92 @@ model User {
   aiArtifacts                    AiArtifact[]                @relation("AiArtifactOwner")
   aiVerifications                AiVerification[]            @relation("AiVerificationReviewer")
   aiVerificationAdminActions     AiVerificationAdminAction[] @relation("AiVerificationAdminActor")
+  submittedRestaurants           Restaurant[]                @relation("RestaurantSubmitter")
+  reviewedRestaurants            Restaurant[]                @relation("RestaurantReviewer")
+  restaurantAuditEvents          RestaurantAudit[]           @relation("RestaurantAuditActor")
+  notifications                  Notification[]
 
   @@map("users")
+}
+
+model Notification {
+  id             String   @id @default(uuid()) @db.Uuid
+  ownerId        String   @map("owner_id") @db.Uuid
+  type           String   @db.VarChar(50)
+  title          String   @db.VarChar(160)
+  summary        String?  @db.VarChar(300)
+  link           String?  @db.VarChar(300)
+  payloadVersion Int      @default(1) @map("payload_version")
+  payload        Json     @default("{}")
+  dedupeKey      String   @unique @map("dedupe_key") @db.VarChar(180)
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  readAt         DateTime? @map("read_at") @db.Timestamptz(3)
+  expiresAt      DateTime @map("expires_at") @db.Timestamptz(3)
+  owner          User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@index([ownerId, createdAt(sort: Desc), id(sort: Desc)])
+  @@index([ownerId, readAt, createdAt(sort: Desc)])
+  @@index([expiresAt])
+  @@map("notifications")
+}
+
+model Restaurant {
+  id                 String             @id @default(uuid()) @db.Uuid
+  name               String             @db.VarChar(180)
+  normalizedName     String             @map("normalized_name") @db.VarChar(180)
+  address            String             @db.VarChar(500)
+  normalizedAddress  String             @map("normalized_address") @db.VarChar(500)
+  latitude           Decimal            @db.Decimal(9, 6)
+  longitude          Decimal            @db.Decimal(9, 6)
+  categories         String[]           @default([])
+  dietTags           String[]           @default([]) @map("diet_tags")
+  allergenFreeCodes  String[]           @default([]) @map("allergen_free_codes")
+  excludedIngredients String[]          @default([]) @map("excluded_ingredients")
+  source             RestaurantSource
+  status             RestaurantStatus   @default(PENDING)
+  submitterId        String?            @map("submitter_id") @db.Uuid
+  reviewerId         String?            @map("reviewer_id") @db.Uuid
+  reviewedAt         DateTime?          @map("reviewed_at") @db.Timestamptz(3)
+  reviewReason       String?            @map("review_reason") @db.VarChar(1000)
+  dataCheckedAt      DateTime?          @map("data_checked_at") @db.Timestamptz(3)
+  createdAt          DateTime           @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt          DateTime           @updatedAt @map("updated_at") @db.Timestamptz(3)
+  submitter          User?              @relation("RestaurantSubmitter", fields: [submitterId], references: [id], onDelete: SetNull)
+  reviewer           User?              @relation("RestaurantReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  externalRefs       RestaurantExternalRef[]
+  auditEvents        RestaurantAudit[]
+
+  @@index([status, latitude, longitude])
+  @@index([normalizedName, normalizedAddress])
+  @@index([submitterId, status])
+  @@map("restaurants")
+}
+
+model RestaurantExternalRef {
+  id            String     @id @default(uuid()) @db.Uuid
+  restaurantId  String     @map("restaurant_id") @db.Uuid
+  provider      String     @db.VarChar(50)
+  placeId       String     @map("place_id") @db.VarChar(255)
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  restaurant    Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, placeId])
+  @@index([restaurantId])
+  @@map("restaurant_external_refs")
+}
+
+model RestaurantAudit {
+  id            String     @id @default(uuid()) @db.Uuid
+  restaurantId  String     @map("restaurant_id") @db.Uuid
+  actorId       String     @map("actor_id") @db.Uuid
+  action        String     @db.VarChar(30)
+  reason        String?    @db.VarChar(1000)
+  createdAt     DateTime   @default(now()) @map("created_at") @db.Timestamptz(3)
+  restaurant    Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  actor         User       @relation("RestaurantAuditActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([restaurantId, createdAt])
+  @@map("restaurant_audit")
 }
 
 model Category {
@@ -1024,6 +1123,7 @@ model RecognitionCandidate {
   uncertaintyNote      String?                        @map("uncertainty_note") @db.VarChar(500)
   status               RecognitionCandidateStatus     @default(PROPOSED)
   version              Int                            @default(1)
+  editedByUser         Boolean                        @default(false) @map("edited_by_user")
   pantryItemId         String?                        @map("pantry_item_id") @db.Uuid
   pantryAction         String?                        @map("pantry_action") @db.VarChar(20)
   createdAt            DateTime                       @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -1128,6 +1228,7 @@ model ReceiptCandidate {
   uncertaintyNote String?                @map("uncertainty_note") @db.VarChar(500)
   status          ReceiptCandidateStatus @default(PROPOSED)
   version         Int                    @default(1)
+  editedByUser    Boolean                @default(false) @map("edited_by_user")
   pantryItemId    String?                @map("pantry_item_id") @db.Uuid
   pantryAction    String?                @map("pantry_action") @db.VarChar(20)
   createdAt       DateTime               @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -1793,6 +1894,57 @@ model AiRequestLog {
   @@index([userId, createdAt])
   @@index([guestIdHash, createdAt])
   @@map("ai_request_logs")
+}
+
+model AiGovernanceEvent {
+  id              String   @id @default(uuid()) @db.Uuid
+  capability      String   @db.VarChar(40)
+  provider        String   @db.VarChar(80)
+  modelId         String?  @map("model_id") @db.VarChar(100)
+  templateVersion String?  @map("template_version") @db.VarChar(80)
+  correlationId   String   @map("correlation_id") @db.VarChar(128)
+  status          String   @db.VarChar(30)
+  errorClass      String?  @map("error_class") @db.VarChar(60)
+  safetyOutcome   String   @map("safety_outcome") @db.VarChar(40)
+  latencyMs       Int?     @map("latency_ms")
+  inputTokens     Int?     @map("input_tokens")
+  outputTokens    Int?     @map("output_tokens")
+  costMicros      BigInt?  @map("cost_micros")
+  confidence      Decimal? @db.Decimal(5, 4)
+  coverage        Decimal? @db.Decimal(5, 4)
+  startedAt       DateTime @map("started_at") @db.Timestamptz(3)
+  completedAt     DateTime @map("completed_at") @db.Timestamptz(3)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([createdAt, id])
+  @@index([capability, status, createdAt])
+  @@index([provider, createdAt])
+  @@map("ai_governance_events")
+}
+
+model AiCapabilityControl {
+  capability String   @db.VarChar(40)
+  provider   String   @db.VarChar(80)
+  enabled    Boolean  @default(true)
+  version    Int      @default(1)
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@id([capability, provider])
+  @@map("ai_capability_controls")
+}
+
+model AiCapabilityControlAudit {
+  id         String   @id @default(uuid()) @db.Uuid
+  capability String   @db.VarChar(40)
+  provider   String   @db.VarChar(80)
+  enabled    Boolean
+  version    Int
+  actorId    String   @map("actor_id") @db.Uuid
+  reason     String   @db.VarChar(500)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([capability, provider, createdAt])
+  @@map("ai_capability_control_audit")
 }
 
 model AiQuotaBucket {

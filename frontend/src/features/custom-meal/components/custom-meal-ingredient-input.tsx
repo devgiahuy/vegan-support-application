@@ -50,7 +50,7 @@ export const CustomMealIngredientInput: React.FC<CustomMealIngredientInputProps>
       {
         ingredientId: null,
         name: '',
-        quantity: 100,
+        quantity: 0,
         unit: 'g',
       },
     ]);
@@ -69,51 +69,52 @@ export const CustomMealIngredientInput: React.FC<CustomMealIngredientInputProps>
     updated[index] = {
       ...updated[index],
       [field]: value,
+      ...(field === 'name' ? { ingredientId: null } : {}),
     };
     onChange(updated);
   };
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <Label className="text-sm font-medium flex items-center gap-1.5 text-foreground">
+        <Label className="text-sm font-semibold flex items-center gap-2 text-foreground">
           <Utensils className="w-4 h-4 text-primary" />
           Danh sách nguyên liệu ({ingredients.length})
         </Label>
         <Button
           type="button"
           variant="outline"
-          size="sm"
+          size="default"
           onClick={handleAddRow}
           disabled={disabled}
-          className="text-xs h-8 gap-1"
+          className="text-sm h-9 gap-1.5 px-3 font-medium"
         >
-          <Plus className="w-3.5 h-3.5" />
+          <Plus className="w-4 h-4" />
           Thêm nguyên liệu
         </Button>
       </div>
 
       {ingredients.length === 0 ? (
-        <div className="text-center py-6 border border-dashed rounded-lg bg-muted/20">
-          <Utensils className="w-6 h-6 text-muted-foreground mx-auto mb-2 opacity-50" />
-          <p className="text-xs text-muted-foreground">Chưa có nguyên liệu nào.</p>
+        <div className="text-center py-8 border border-dashed rounded-xl bg-muted/20 space-y-2">
+          <Utensils className="w-8 h-8 text-muted-foreground mx-auto opacity-50" />
+          <p className="text-sm text-muted-foreground font-medium">Chưa có nguyên liệu nào.</p>
           <Button
             type="button"
             variant="ghost"
-            size="sm"
+            size="default"
             onClick={handleAddRow}
             disabled={disabled}
-            className="text-xs text-primary mt-1"
+            className="text-sm text-primary hover:text-primary/90 h-9 font-medium"
           >
             + Thêm nguyên liệu đầu tiên
           </Button>
         </div>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           {ingredients.map((row, index) => (
             <div
               key={index}
-              className="flex items-center gap-2 p-2 rounded-lg border bg-background/50 border-input/80 transition-colors"
+              className="flex items-center gap-2.5 p-2.5 sm:p-3 rounded-xl border bg-background/50 border-input transition-colors"
             >
               {/* Tên nguyên liệu */}
               <div className="flex-1">
@@ -123,12 +124,12 @@ export const CustomMealIngredientInput: React.FC<CustomMealIngredientInputProps>
                   value={row.name}
                   onChange={(e) => handleUpdateRow(index, 'name', e.target.value)}
                   disabled={disabled}
-                  className="h-8 text-xs"
+                  className="h-10 text-sm bg-background"
                 />
               </div>
 
               {/* Số lượng */}
-              <div className="w-20">
+              <div className="w-24 sm:w-28">
                 <Input
                   type="number"
                   placeholder="Số lượng"
@@ -139,23 +140,23 @@ export const CustomMealIngredientInput: React.FC<CustomMealIngredientInputProps>
                     handleUpdateRow(index, 'quantity', parseFloat(e.target.value) || 0)
                   }
                   disabled={disabled}
-                  className="h-8 text-xs"
+                  className="h-10 text-sm bg-background"
                 />
               </div>
 
               {/* Đơn vị */}
-              <div className="w-28">
+              <div className="w-28 sm:w-32">
                 <Select
                   value={row.unit}
                   onValueChange={(val) => handleUpdateRow(index, 'unit', val)}
                   disabled={disabled}
                 >
-                  <SelectTrigger className="h-8 text-xs">
+                  <SelectTrigger className="h-10 text-sm bg-background">
                     <SelectValue placeholder="Đơn vị" />
                   </SelectTrigger>
                   <SelectContent>
                     {COMMON_UNITS.map((unit) => (
-                      <SelectItem key={unit} value={unit} className="text-xs">
+                      <SelectItem key={unit} value={unit} className="text-sm">
                         {unit}
                       </SelectItem>
                     ))}
@@ -170,10 +171,10 @@ export const CustomMealIngredientInput: React.FC<CustomMealIngredientInputProps>
                 size="icon"
                 onClick={() => handleRemoveRow(index)}
                 disabled={disabled}
-                className="h-8 w-8 text-muted-foreground hover:text-destructive shrink-0"
+                className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0 rounded-lg"
                 aria-label={`Xóa nguyên liệu ${row.name || index + 1}`}
               >
-                <Trash2 className="w-3.5 h-3.5" />
+                <Trash2 className="w-4 h-4" />
               </Button>
             </div>
           ))}

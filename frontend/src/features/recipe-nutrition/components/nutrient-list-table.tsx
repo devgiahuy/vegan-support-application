@@ -13,14 +13,23 @@ export interface NutrientListTableProps {
 
 // Bỏ qua các mã năng lượng macro vì đã được hiển thị trên MacroDistributionBar
 const EXCLUDED_CODES = new Set([
+  'ENERGY_KCAL',
   'ENERC_KCAL',
   'CALORIES',
+  'ENERGY',
+  'KCAL',
   'PROCNT',
   'PROTEIN',
+  'PRO',
   'CHOCDF',
   'CARBS',
+  'CARB',
+  'CARBOHYDRATE',
+  'CARBOHYDRATES',
   'FAT',
   'LIPID',
+  'FAT_TOTAL',
+  'FATCE',
 ]);
 
 export function NutrientListTable({ nutrients, className }: NutrientListTableProps) {
