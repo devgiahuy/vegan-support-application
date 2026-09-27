@@ -1,10 +1,10 @@
 # Task: Phase 22 — Receipt Analysis & Pantry-aware Shopping Gaps
 
 > **Tương ứng Backend Prompt**: [`backend/docs/prompts/phase-22-receipts-shopping.md`](../../../../backend/docs/prompts/phase-22-receipts-shopping.md)
-> **Trạng thái Backend**: `NOT_STARTED`
-> **Trạng thái Frontend**: `PLANNED`
+> **Trạng thái Backend**: `READY` (theo `BACKEND_INTEGRATION.md` ngày 2026-09-24)
+> **Trạng thái Frontend**: `SPECIFIED & PLANNED` (Spec & Plan tại [`specs/023-receipts-shopping`](../../specs/023-receipts-shopping/))
 > **Phụ thuộc**: Phase 10 (Meal Planner), Phase 12 (Food Data), Phase 15 (Storage), Phase 20 (Pantry)
-> **Mức độ ưu tiên**: 📋 **KẾ HOẠCH TƯƠNG LAI**
+> **Mức độ ưu tiên**: 🎯 **SẴN SÀNG TRIỂN KHAI (Phase 22)**
 
 ---
 
@@ -23,19 +23,32 @@ Quét hóa đơn mua hàng và tối ưu danh sách đi chợ:
 
 ## 2. Kế hoạch Endpoints Dự Kiến
 
-| Method | Endpoint | Quyền | Mục đích |
-|---|---|---|---|
-| `POST` | `/api/v1/receipt-jobs` | Member | Tải ảnh hóa đơn lên và bắt đầu bóc tách OCR |
-| `GET` | `/api/v1/receipt-jobs/:id` | Member | Lấy các dòng sản phẩm bóc tách được |
-| `PATCH` | `/api/v1/receipt-jobs/:id/candidates/:candidateId` | Member | Điều chỉnh tên/số lượng hoặc loại bỏ dòng không khớp |
-| `POST` | `/api/v1/receipt-jobs/:id/confirm` | Member | Xác nhận nhập các món trên hóa đơn vào Tủ bếp |
-| `POST` | `/api/v1/shopping-lists/preview` | Member | Tính toán danh sách nguyên liệu còn thiếu dựa trên tủ bếp |
+| Method | Endpoint | Quyền | Mục đích | Trạng thái |
+|---|---|---|---|---|
+| `POST` | `/api/v1/receipt-jobs` | Member | Tải ảnh hóa đơn lên và bắt đầu bóc tách OCR | `READY` |
+| `GET` | `/api/v1/receipt-jobs/:id` | Member | Lấy các dòng sản phẩm bóc tách được & tiến trình | `READY` |
+| `PATCH` | `/api/v1/receipt-jobs/:id/candidates/:candidateId` | Member | Điều chỉnh tên/số lượng hoặc loại bỏ dòng không khớp | `READY` |
+| `POST` | `/api/v1/receipt-jobs/:id/confirm` | Member | Xác nhận nhập các món trên hóa đơn vào Tủ bếp | `READY` |
+| `POST` | `/api/v1/receipt-jobs/:id/cancel` | Member | Hủy tác vụ bóc tách hóa đơn chưa xác nhận | `READY` |
+| `POST` | `/api/v1/receipt-jobs/:id/retry` | Member | Thử lại bóc tách khi gặp lỗi | `READY` |
+| `POST` | `/api/v1/shopping-lists/preview` | Member | Tính toán danh sách nguyên liệu còn thiếu dựa trên tủ bếp | `READY` |
 
 ---
 
-## 3. Checklist Chuẩn Bị Khi Backend READY
-- [ ] Xây dựng module `features/receipt` theo 7 tầng scaffold.
-- [ ] Giao diện xem lại hóa đơn (`ReceiptInspectionView`): so sánh ảnh hóa đơn bên trái và bảng bóc tách bên phải.
-- [ ] Tích hợp tính năng "Đi chợ thông minh" vào màn hình thực đơn `/meal-plans/[id]`:
-  - Nút chuyển đổi giữa "Tất cả nguyên liệu" và "Chỉ mua phần còn thiếu".
-  - Đánh dấu các món đã có sẵn trong nhà.
+## 3. Kế hoạch & Danh sách Task Triển Khai (37 Tasks)
+
+Chi tiết đặc tả và kế hoạch thực thi 7 tầng scaffold đã được biên soạn đầy đủ tại:
+- **Feature Spec**: [`specs/023-receipts-shopping/spec.md`](../../specs/023-receipts-shopping/spec.md)
+- **Quality Checklist**: [`specs/023-receipts-shopping/checklists/requirements.md`](../../specs/023-receipts-shopping/checklists/requirements.md)
+- **Implementation Plan**: [`specs/023-receipts-shopping/plan.md`](../../specs/023-receipts-shopping/plan.md)
+- **Tasks Breakdown (37 tasks)**: [`specs/023-receipts-shopping/tasks.md`](../../specs/023-receipts-shopping/tasks.md)
+
+### Tóm tắt các giai đoạn triển khai:
+- [ ] **Phase 1: Setup & Foundational**: Endpoints constants, storage `RECEIPT_IMAGE`, DTOs, Clean UI Models, Zod schemas (T001 - T009).
+- [ ] **Phase 2: Data Transformation & Testing**: `ReceiptMapper`, `ShoppingGapMapper`, 25+ Vitest tests (T010 - T014).
+- [ ] **Phase 3: Network & Polling Layer**: API clients, TanStack Query hooks có polling 2s (T015 - T018).
+- [ ] **Phase 4: US1 - Upload & Scan**: Khung upload 1-4 ảnh hóa đơn, progress tracker (T019 - T021).
+- [ ] **Phase 5: US2 & US3 - Inspection & Edit**: `ReceiptInspectionView` 2 cột, zoom/pan ảnh, modal sửa dòng hàng (T022 - T026).
+- [ ] **Phase 6: US4 & US6 - Confirmation & Lifecycle**: Transactional confirm nhập tủ bếp, hủy, thử lại (T027 - T030).
+- [ ] **Phase 7: US5 - Smart Shopping Gaps**: Tích hợp Pantry-aware Shopping Gaps vào `/meal-plans/[id]` (T031 - T034).
+- [ ] **Phase 8: Routes & Verification**: Routes `/receipts`, lối vào tự nhiên, typecheck & tests & build (T035 - T037).
