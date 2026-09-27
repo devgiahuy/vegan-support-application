@@ -27,6 +27,7 @@ import { RecipeCard } from '@/features/recipe/components/recipe-card';
 import { useRecipeDetailQuery, useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
 import { useDeletePostMutation } from '@/features/post/queries/post.queries';
 import { CommunityPanel } from '@/features/community/components/community-panel';
+import { ReportButton } from '@/features/safety/components/report-button';
 import { PostStatus } from '@/common/enums';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
@@ -365,6 +366,8 @@ export default function RecipeDetailScreen() {
             ))}
           </View>
         </View>
+
+        {!isOwner ? <ReportButton targetType="POST" targetId={recipe.id} /> : null}
 
         {/* Cộng đồng: upvote, lưu món, đánh giá khẩu vị/độ khó, bình luận */}
         <CommunityPanel

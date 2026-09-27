@@ -1,4 +1,5 @@
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import { Link, type Href } from 'expo-router';
 import { Clock, MapPin } from 'lucide-react-native';
 import { useIconColors } from '@/lib/theme-colors';
 import type { Restaurant } from '../types/restaurant.model';
@@ -8,7 +9,8 @@ export function RestaurantCard({ restaurant }: { restaurant: Restaurant }) {
   const colors = useIconColors();
 
   return (
-    <View className="gap-2 rounded-2xl border border-border bg-card p-4">
+    <Link href={`/restaurants/${restaurant.id}` as Href} asChild>
+      <Pressable className="gap-2 rounded-2xl border border-border bg-card p-4">
       <Text className="text-base font-bold text-foreground">{restaurant.name}</Text>
       <View className="flex-row items-start gap-1.5">
         <MapPin size={14} color={colors.mutedForeground} />
@@ -30,6 +32,7 @@ export function RestaurantCard({ restaurant }: { restaurant: Restaurant }) {
           {restaurant.openingHours ?? 'Giờ mở cửa chưa rõ'}
         </Text>
       </View>
-    </View>
+      </Pressable>
+    </Link>
   );
 }

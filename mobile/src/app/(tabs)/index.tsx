@@ -14,6 +14,7 @@ import {
 
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
+import { RecommendedForYou } from '@/features/recommendation/components/recommended-for-you';
 import { RecipeCard } from '@/features/recipe/components/recipe-card';
 import { useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
 import { useIconColors } from '@/lib/theme-colors';
@@ -100,8 +101,7 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* TODO(recommendation): khối "Gợi ý cho bạn" (behavioral, cần consent + feature
-          recommendation riêng) chưa dựng ở mobile — frontend: RecommendedForYou. */}
+      <RecommendedForYou />
 
       {/* Popular recipes */}
       <View className="mt-8 px-5">

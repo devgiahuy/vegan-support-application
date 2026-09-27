@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { Link, type Href } from 'expo-router';
-import { BadgeCheck, CheckCircle2, Clock, Send, XCircle } from 'lucide-react-native';
+import { BadgeCheck, CheckCircle2, Clock, FileText, Send, XCircle } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -12,8 +12,7 @@ import {
 import type { ContributorApplicationDetail } from '@/features/contributor/types/contributor.model';
 import { ContributorApplicationStatus } from '@/common/enums';
 import { getApiErrorMessage } from '@/lib/api-error';
-import { formatDate } from '@/lib/utils';
-import { cn } from '@/lib/utils';
+import { cn, formatDate } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -82,6 +81,15 @@ function ApplicationCard({ item, colors }: { item: ContributorApplicationDetail;
   );
 }
 
+function DashboardStat({ label, value }: { label: string; value: string }) {
+  return (
+    <View className="flex-1 rounded-xl bg-background p-2.5">
+      <Text className="text-[11px] text-muted-foreground">{label}</Text>
+      <Text className="mt-1 text-lg font-extrabold text-primary">{value}</Text>
+    </View>
+  );
+}
+
 /**
  * Trạng thái nguyện vọng Contributor — `GET /contributor-applications/me`. Cho phép
  * gửi nguyện vọng mới (`POST /contributor-applications`) khi Member chưa có đơn đang
@@ -94,6 +102,9 @@ export default function ContributorStatusScreen() {
   const submitMutation = useSubmitContributorApplicationMutation();
   const applications = pagination?.items ?? [];
   const hasPending = applications.some((a) => a.status === ContributorApplicationStatus.PENDING);
+  const approvedCount = applications.filter((a) => a.status === ContributorApplicationStatus.APPROVED).length;
+  const pendingCount = applications.filter((a) => a.status === ContributorApplicationStatus.PENDING).length;
+  const rejectedCount = applications.filter((a) => a.status === ContributorApplicationStatus.REJECTED).length;
 
   const [showForm, setShowForm] = React.useState(false);
   const [basis, setBasis] = React.useState<Basis | null>(null);
@@ -176,6 +187,25 @@ export default function ContributorStatusScreen() {
             Tài khoản của bạn vẫn là Member cho tới khi được Admin duyệt. Mọi Contributor đã duyệt có
             cùng quyền hạn như nhau, không phân cấp theo căn cứ duyệt.
           </Text>
+        </View>
+
+        <View className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+          <View className="flex-row items-center gap-2">
+            <BadgeCheck size={18} color={colors.primary} />
+            <Text className="text-base font-bold text-foreground">Contributor dashboard</Text>
+          </View>
+          <View className="mt-4 flex-row gap-2">
+            <DashboardStat label="Tổng đơn" value={String(applications.length)} />
+            <DashboardStat label="Chờ duyệt" value={String(pendingCount)} />
+            <DashboardStat label="Đã duyệt" value={String(approvedCount)} />
+            <DashboardStat label="Từ chối" value={String(rejectedCount)} />
+          </View>
+          <Link href={'/my-content' as Href} asChild>
+            <Pressable className="mt-4 flex-row items-center justify-center gap-2 rounded-xl border border-input bg-background px-3 py-2.5">
+              <FileText size={15} color={colors.foreground} />
+              <Text className="text-sm font-semibold text-foreground">Xem nội dung đã đăng</Text>
+            </Pressable>
+          </Link>
         </View>
 
         {isLoading ? (

@@ -88,6 +88,12 @@ export const restaurantApi = {
   },
 
   /** Geocode địa chỉ text (fixture vài mẫu). */
+  getById: async (id: string): Promise<Restaurant | null> => {
+    await delay();
+    const item = clone(restaurantListFixture.data ?? []).find((restaurant) => restaurant?.id === id) ?? null;
+    return item ? restaurantMapper.toModel(item) : null;
+  },
+
   geocode: async (address: string): Promise<{ lat: number | null; lng: number | null; label: string }> => {
     await delay();
     return restaurantMapper.toCoordinates(geocodeFixture(address));

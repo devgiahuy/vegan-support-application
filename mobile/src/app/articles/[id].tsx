@@ -13,6 +13,7 @@ import {
   useRelatedArticlesQuery,
 } from '@/features/post/queries/post.queries';
 import { CommunityPanel } from '@/features/community/components/community-panel';
+import { ReportButton } from '@/features/safety/components/report-button';
 import { PostStatus } from '@/common/enums';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { useIconColors } from '@/lib/theme-colors';
@@ -191,6 +192,8 @@ export default function ArticleDetailScreen() {
             ))}
           </View>
         ) : null}
+
+        {!isOwner ? <ReportButton targetType="POST" targetId={article.id} /> : null}
 
         {/* Cộng đồng: BLOG chỉ hỗ trợ upvote + bình luận (backend từ chối bookmark/rating) */}
         <CommunityPanel

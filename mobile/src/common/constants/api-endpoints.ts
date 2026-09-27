@@ -41,6 +41,27 @@ export const API_ENDPOINTS = {
     ANALYZE: (id: string) => `/meal-plans/${id}/analyze`,
     ANALYSIS: (id: string) => `/meal-plans/${id}/analysis`,
   },
+  CUSTOM_MEALS: {
+    LIST: '/custom-meals',
+    DETAIL: (id: string) => `/custom-meals/${id}`,
+    PHOTOS: (id: string) => `/custom-meals/${id}/photos`,
+    PHOTO: (id: string, assetId: string) => `/custom-meals/${id}/photos/${assetId}`,
+    PHOTO_ORDER: (id: string) => `/custom-meals/${id}/photos/order`,
+  },
+  MEAL_PROGRAMS: {
+    LIST: '/meal-programs',
+    DETAIL: (id: string) => `/meal-programs/${id}`,
+  },
+  RECOMMENDATIONS: {
+    EVENTS: '/behavior-events',
+    CONSENT: '/users/me/personalization',
+    BEHAVIOR_HISTORY: '/users/me/behavior-history',
+    HOME: '/recommendations/home',
+  },
+  SAFETY: {
+    REPORTS: '/reports',
+    BEHAVIOR_HISTORY: '/users/me/behavior-history',
+  },
   CHAT: {
     SESSIONS: '/chat/sessions',
     SESSION_MESSAGES: (id: string) => `/chat/sessions/${id}/messages`,
