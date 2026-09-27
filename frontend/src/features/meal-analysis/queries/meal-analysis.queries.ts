@@ -9,17 +9,19 @@ export const MEAL_ANALYSIS_KEYS = {
 };
 
 /**
- * Hook truy xuất kết quả phân tích thực đơn tuần từ cache.
+ * Hook truy xuất kết quả phân tích thực đơn tuần từ API backend hoặc cache.
  */
 export function useMealAnalysisQuery(
   planId: string | null | undefined,
+  currentPlanLockVersion?: number,
   options?: { enabled?: boolean }
 ) {
   return useQuery<MealPlanAnalysis | null>({
     queryKey: MEAL_ANALYSIS_KEYS.detail(planId ?? ''),
-    queryFn: () => null, // Initial queryFn returns cached or null; analysis is triggered by user mutation
-    enabled: Boolean(planId) && (options?.enabled ?? false),
-    staleTime: 5 * 60 * 1000, // 5 phút
+    queryFn: () =>
+      planId ? mealAnalysisApi.getCurrentAnalysis(planId, currentPlanLockVersion) : null,
+    enabled: Boolean(planId) && (options?.enabled ?? true),
+    staleTime: 60 * 1000,
   });
 }
 
@@ -29,8 +31,18 @@ export function useMealAnalysisQuery(
 export function useAnalyzeMealPlanMutation(planId: string, currentPlanLockVersion?: number) {
   const queryClient = useQueryClient();
 
-  return useMutation<MealPlanAnalysis, Error, void>({
-    mutationFn: () => mealAnalysisApi.analyzeMealPlan(planId, currentPlanLockVersion),
+  return useMutation<
+    MealPlanAnalysis,
+    Error,
+    { expectedPlanVersion?: number; items?: Array<{ itemId: string; servings?: number }> } | void
+  >({
+    mutationFn: (vars) => {
+      const expectedPlanVersion = vars?.expectedPlanVersion ?? currentPlanLockVersion ?? 1;
+      return mealAnalysisApi.analyzeMealPlan(planId, {
+        expectedPlanVersion,
+        items: vars?.items,
+      });
+    },
     onSuccess: (data) => {
       queryClient.setQueryData(MEAL_ANALYSIS_KEYS.detail(planId), data);
       if (data.summary.dangerCount > 0) {

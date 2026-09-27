@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 import { MealAnalysisCard } from './meal-analysis-card';
 import type { MealWarning, MealWarningScope } from '../types/meal-analysis.model';
 
@@ -25,6 +26,9 @@ export function MealAnalysisAlerts({
 }: MealAnalysisAlertsProps) {
   const [activeTab, setActiveTab] = React.useState<FilterScope>('ALL');
 
+  const [isExpanded, setIsExpanded] = React.useState(false);
+  const INITIAL_DISPLAY_COUNT = 3;
+
   if (warnings.length === 0) {
     return null;
   }
@@ -39,20 +43,38 @@ export function MealAnalysisAlerts({
   const filteredWarnings =
     activeTab === 'ALL' ? sortedWarnings : sortedWarnings.filter((w) => w.scope === activeTab);
 
+  const displayedWarnings = isExpanded
+    ? filteredWarnings
+    : filteredWarnings.slice(0, INITIAL_DISPLAY_COUNT);
+
+  const hasMore = filteredWarnings.length > INITIAL_DISPLAY_COUNT;
+  const remainingCount = filteredWarnings.length - INITIAL_DISPLAY_COUNT;
+
   const sameDishCount = warnings.filter((w) => w.scope === 'SAME_DISH').length;
   const sameMealCount = warnings.filter((w) => w.scope === 'SAME_MEAL').length;
   const sameDayCount = warnings.filter((w) => w.scope === 'SAME_DAY').length;
 
   return (
-    <div className={`space-y-3 ${className}`}>
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-sm font-semibold text-foreground">
-          Chi tiết Cảnh báo Dinh dưỡng ({warnings.length})
-        </h3>
+    <div
+      id="canh-bao-chi-tiet"
+      className={`space-y-3 rounded-xl border bg-card/60 p-4 transition-all ${className}`}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b pb-3">
+        <div>
+          <h3 className="text-sm font-semibold text-foreground">
+            Chi tiết Cảnh báo Dinh dưỡng ({warnings.length})
+          </h3>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Dữ liệu khuyến nghị tương thích và giới hạn an toàn thực đơn
+          </p>
+        </div>
 
         <Tabs
           value={activeTab}
-          onValueChange={(val) => setActiveTab(val as FilterScope)}
+          onValueChange={(val) => {
+            setActiveTab(val as FilterScope);
+            setIsExpanded(false);
+          }}
           className="w-auto"
         >
           <TabsList className="h-8 p-1">
@@ -84,7 +106,7 @@ export function MealAnalysisAlerts({
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredWarnings.map((warning) => (
+          {displayedWarnings.map((warning) => (
             <MealAnalysisCard
               key={warning.id}
               warning={warning}
@@ -92,6 +114,24 @@ export function MealAnalysisAlerts({
               onViewSwaps={onViewSwaps}
             />
           ))}
+
+          {hasMore && (
+            <div className="pt-2 text-center">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setIsExpanded(!isExpanded)}
+                className="text-xs font-medium gap-1.5 h-8 px-4"
+              >
+                {isExpanded ? (
+                  <>Thu gọn bớt cảnh báo</>
+                ) : (
+                  <>Xem thêm {remainingCount} cảnh báo khác trong mục này</>
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       )}
     </div>

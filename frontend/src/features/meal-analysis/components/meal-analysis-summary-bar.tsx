@@ -185,6 +185,12 @@ export function MealAnalysisSummaryBar({
               {summary.sameDishCount} tương tác trong cùng món
             </span>
           )}
+          <a
+            href="#canh-bao-chi-tiet"
+            className="ml-auto text-primary hover:underline font-medium flex items-center gap-1 text-[11px]"
+          >
+            Xem danh sách chi tiết &darr;
+          </a>
         </div>
       )}
     </div>

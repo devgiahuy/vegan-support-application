@@ -50,15 +50,18 @@ function formatAnalysisDate(dateString: string): string {
 
 export class MealAnalysisMapper extends BaseMapper<MealPlanAnalysisResponseDto, MealPlanAnalysis> {
   public mapAffectedItem(dto: AffectedPlanItemDto): AffectedPlanItem {
-    const planItemId = safeString(pickField(dto, ['planItemId', 'plan_item_id'], ''), '');
-    const dishId = safeString(pickField(dto, ['dishId', 'dish_id'], ''), '');
+    const planItemId = safeString(
+      pickField(dto, ['planItemId', 'plan_item_id', 'itemId', 'item_id'], ''),
+      ''
+    );
+    const dishId = safeString(pickField(dto, ['dishId', 'dish_id', 'itemId', 'item_id'], ''), '');
     const rawDishType = safeString(
-      pickField(dto, ['dishType', 'dish_type'], 'RECIPE'),
+      pickField(dto, ['dishType', 'dish_type', 'sourceType', 'source_type'], 'RECIPE'),
       'RECIPE'
     ).toUpperCase();
     const dishType: DishSourceType = rawDishType === 'CUSTOM_MEAL' ? 'CUSTOM_MEAL' : 'RECIPE';
     const dishName = safeString(
-      pickField(dto, ['dishName', 'dish_name'], 'Món ăn không tên'),
+      pickField(dto, ['dishName', 'dish_name', 'name'], 'Món ăn không tên'),
       'Món ăn không tên'
     );
     const ingredientId =
@@ -125,10 +128,25 @@ export class MealAnalysisMapper extends BaseMapper<MealPlanAnalysisResponseDto, 
   public mapWarning(dto: MealWarningDto): MealWarning {
     const id = safeString(dto.id, `warn-${Math.random().toString(36).slice(2, 9)}`);
     const code = safeString(dto.code, 'GENERAL_WARNING');
-    const title = safeString(dto.title, 'Cảnh báo dinh dưỡng');
+
+    let title = safeString(dto.title, '');
+    if (!title) {
+      if (code === 'NUTRIENT_LIMIT_EXCEEDED') {
+        title = 'Vượt ngưỡng khuyến nghị trong ngày';
+      } else if (code === 'INGREDIENT_GUIDELINE_EXCEEDED') {
+        title = 'Vượt khuyến nghị tiêu thụ nguyên liệu';
+      } else if (code === 'INGREDIENT_INTERACTION') {
+        title = 'Tương tác thành phần thực phẩm';
+      } else if (code === 'PORTION_MULTIPLIER_HIGH') {
+        title = 'Khẩu phần món ăn vượt mức thông thường';
+      } else {
+        title = 'Lưu ý dinh dưỡng';
+      }
+    }
 
     const rawSeverity = safeString(dto.severity, 'WARNING').toUpperCase();
-    const severity: MealWarningSeverity = rawSeverity === 'DANGER' ? 'DANGER' : 'WARNING';
+    const severity: MealWarningSeverity =
+      rawSeverity === 'DANGER' || rawSeverity === 'HIGH' ? 'DANGER' : 'WARNING';
 
     const rawScope = safeString(dto.scope, 'SAME_MEAL').toUpperCase();
     const scope: MealWarningScope =
@@ -150,27 +168,54 @@ export class MealAnalysisMapper extends BaseMapper<MealPlanAnalysisResponseDto, 
         : 'GRADE_B';
     const evidenceGradeLabel = EVIDENCE_GRADE_LABELS[evidenceGrade];
 
-    const evidenceSource = safeString(
-      pickField(dto, ['evidenceSource', 'evidence_source'], 'Khuyến nghị Dinh dưỡng Chuẩn hóa'),
-      'Khuyến nghị Dinh dưỡng Chuẩn hóa'
+    let evidenceSource = safeString(pickField(dto, ['evidenceSource', 'evidence_source'], ''), '');
+    if (!evidenceSource && dto.source && typeof dto.source === 'object') {
+      evidenceSource = safeString(dto.source.name || dto.source.code, '');
+    }
+    if (!evidenceSource) {
+      evidenceSource = 'Khuyến nghị Dinh dưỡng Chuẩn hóa';
+    }
+
+    const ruleVersion = safeString(
+      pickField(dto, ['ruleVersion', 'rule_version'], dto.source?.version || '1.0'),
+      '1.0'
     );
-    const ruleVersion = safeString(pickField(dto, ['ruleVersion', 'rule_version'], '1.0'), '1.0');
     const confidenceVal = pickField(dto, ['confidence'], null);
     const confidence =
       confidenceVal !== null && confidenceVal !== undefined ? safeNumber(confidenceVal, 0.9) : 0.9;
 
-    const measuredVal = pickField(dto, ['measuredValue', 'measured_value'], null);
-    const measuredValue =
-      measuredVal !== null && measuredVal !== undefined ? safeNumber(measuredVal, 0) : null;
+    let measuredValue: number | null = null;
+    let limitValue: number | null = null;
+    let unit: string | null = safeString(pickField(dto, ['unit'], ''), '') || null;
 
-    const limitVal = pickField(dto, ['limitValue', 'limit_value'], null);
-    const limitValue = limitVal !== null && limitVal !== undefined ? safeNumber(limitVal, 0) : null;
+    if (dto.measured && typeof dto.measured === 'object') {
+      measuredValue = safeNumber(dto.measured.value, 0);
+      if (!unit && dto.measured.unit) unit = safeString(dto.measured.unit, '');
+    } else {
+      const measuredVal = pickField(dto, ['measuredValue', 'measured_value'], null);
+      if (measuredVal !== null && measuredVal !== undefined) {
+        measuredValue = safeNumber(measuredVal, 0);
+      }
+    }
 
-    const unit = safeString(pickField(dto, ['unit'], ''), '') || null;
+    if (dto.limit && typeof dto.limit === 'object') {
+      limitValue = safeNumber(dto.limit.value, 0);
+      if (!unit && dto.limit.unit) unit = safeString(dto.limit.unit, '');
+    } else {
+      const limitVal = pickField(dto, ['limitValue', 'limit_value'], null);
+      if (limitVal !== null && limitVal !== undefined) {
+        limitValue = safeNumber(limitVal, 0);
+      }
+    }
 
     const excessVal = pickField(dto, ['excessPercent', 'excess_percent'], null);
-    const excessPercent =
+    let excessPercent =
       excessVal !== null && excessVal !== undefined ? safeNumber(excessVal, 0) : null;
+    if (excessPercent === null && measuredValue !== null && limitValue !== null && limitValue > 0) {
+      if (measuredValue > limitValue) {
+        excessPercent = Math.round(((measuredValue - limitValue) / limitValue) * 100);
+      }
+    }
 
     const explanation = safeString(
       dto.explanation,
@@ -218,13 +263,22 @@ export class MealAnalysisMapper extends BaseMapper<MealPlanAnalysisResponseDto, 
     warnings: MealWarning[]
   ): AnalysisSummary {
     const dangerCount =
-      dto && pickField(dto, ['dangerCount', 'danger_count'], null) !== null
-        ? safeNumber(pickField(dto, ['dangerCount', 'danger_count'], 0), 0)
+      dto &&
+      pickField(dto, ['dangerCount', 'danger_count', 'highCount', 'high_count'], null) !== null
+        ? safeNumber(
+            pickField(dto, ['dangerCount', 'danger_count', 'highCount', 'high_count'], 0),
+            0
+          )
         : warnings.filter((w) => w.severity === 'DANGER').length;
 
     const warningCount =
-      dto && pickField(dto, ['warningCount', 'warning_count'], null) !== null
-        ? safeNumber(pickField(dto, ['warningCount', 'warning_count'], 0), 0)
+      dto &&
+      pickField(dto, ['warningCount', 'warning_count', 'cautionCount', 'caution_count'], null) !==
+        null
+        ? safeNumber(
+            pickField(dto, ['warningCount', 'warning_count', 'cautionCount', 'caution_count'], 0),
+            0
+          )
         : warnings.filter((w) => w.severity === 'WARNING').length;
 
     const totalWarnings =
@@ -281,35 +335,49 @@ export class MealAnalysisMapper extends BaseMapper<MealPlanAnalysisResponseDto, 
     const id = safeString(source?.id, '');
     const mealPlanId = safeString(pickField(source, ['mealPlanId', 'meal_plan_id'], ''), '');
     const planLockVersion = safeNumber(
-      pickField(source, ['planLockVersion', 'plan_lock_version'], 1),
+      pickField(source, ['planLockVersion', 'plan_lock_version', 'planVersion', 'plan_version'], 1),
       1
     );
     const analysisVersion = safeNumber(
-      pickField(source, ['analysisVersion', 'analysis_version'], 1),
+      pickField(source, ['analysisVersion', 'analysis_version', 'version'], 1),
       1
     );
     const analyzedAt = safeString(
-      pickField(source, ['analyzedAt', 'analyzed_at'], new Date().toISOString()),
+      pickField(
+        source,
+        ['analyzedAt', 'analyzed_at', 'createdAt', 'created_at'],
+        new Date().toISOString()
+      ),
       new Date().toISOString()
     );
     const formattedAnalyzedAt = formatAnalysisDate(analyzedAt);
 
     const isStale =
-      currentPlanLockVersion !== undefined && currentPlanLockVersion !== null
+      source?.status === 'STALE' ||
+      (currentPlanLockVersion !== undefined && currentPlanLockVersion !== null
         ? currentPlanLockVersion !== planLockVersion
-        : false;
+        : false);
 
-    const confVal = pickField(source, ['overallConfidence', 'overall_confidence'], null);
+    const confVal = pickField(
+      source,
+      ['overallConfidence', 'overall_confidence', 'confidence'],
+      null
+    );
     const overallConfidence =
       confVal !== null && confVal !== undefined ? safeNumber(confVal, 0.9) : 0.9;
 
-    const hasIncompleteData = safeBoolean(
-      pickField(source, ['hasIncompleteData', 'has_incomplete_data'], false),
-      false
+    const incompleteList = safeArray<string>(
+      pickField(source, ['incompleteData', 'incomplete_data'], [])
     );
-    const incompleteDataNotes =
-      safeString(pickField(source, ['incompleteDataNotes', 'incomplete_data_notes'], ''), '') ||
-      null;
+    const hasIncompleteData =
+      incompleteList.length > 0 ||
+      safeBoolean(pickField(source, ['hasIncompleteData', 'has_incomplete_data'], false), false);
+
+    const notesVal = pickField(source, ['incompleteDataNotes', 'incomplete_data_notes'], '');
+    const incompleteDataNotes = Array.isArray(notesVal)
+      ? notesVal.join('; ')
+      : safeString(notesVal || (incompleteList.length > 0 ? incompleteList.join('; ') : ''), '') ||
+        null;
 
     const rawWarnings = safeArray(source?.warnings);
     const warnings = rawWarnings.map((w) => this.mapWarning(w as MealWarningDto));

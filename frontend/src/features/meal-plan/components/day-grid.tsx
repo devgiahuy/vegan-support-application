@@ -28,26 +28,44 @@ function SlotCard({
   badge?: (slot: MealSlot) => React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-1.5 rounded-xl border p-3">
+    <div className="flex flex-col gap-2 rounded-xl border bg-card p-3 shadow-sm transition-all hover:border-border/80">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5">
-          <Badge variant="outline">{slot.mealTypeLabel}</Badge>
+        <div className="flex items-center gap-1.5 flex-wrap">
+          <Badge variant="outline" className="text-xs font-medium">
+            {slot.mealTypeLabel}
+          </Badge>
+          {slot.isCustomMeal && (
+            <Badge className="bg-primary/10 text-primary border-primary/25 text-[10px] px-1.5 py-0 font-medium">
+              Món cá nhân
+            </Badge>
+          )}
           {badge?.(slot)}
         </div>
-        {slot.filled && <span className="text-xs font-medium">{slot.formattedCalories}</span>}
+        {slot.filled && (
+          <span className="text-xs font-medium text-foreground">{slot.formattedCalories}</span>
+        )}
       </div>
       {slot.filled ? (
-        <>
-          <p className="text-sm font-medium">{slot.recipeTitle}</p>
-          {(slot.protein > 0 || slot.carbs > 0 || slot.fat > 0) && (
+        <div className="space-y-1">
+          <p className="text-sm font-semibold leading-snug text-foreground line-clamp-2">
+            {slot.recipeTitle}
+          </p>
+          {slot.protein > 0 || slot.carbs > 0 || slot.fat > 0 ? (
             <p className="text-xs text-muted-foreground">
               Đạm {slot.protein}g · Bột {slot.carbs}g · Béo {slot.fat}g
               {slot.servings > 0 && ` · ${slot.servings} khẩu phần`}
             </p>
+          ) : (
+            slot.servings > 0 && (
+              <p className="text-xs text-muted-foreground">
+                {slot.servings} khẩu phần{' '}
+                {slot.customMealCoverage ? `· ${slot.customMealCoverage}` : ''}
+              </p>
+            )
           )}
-        </>
+        </div>
       ) : (
-        <p className="text-sm text-muted-foreground">{slot.unfilledReason}</p>
+        <p className="text-xs text-muted-foreground italic py-1">{slot.unfilledReason}</p>
       )}
       {actions?.(slot)}
     </div>

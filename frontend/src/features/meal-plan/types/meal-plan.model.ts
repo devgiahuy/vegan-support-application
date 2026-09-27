@@ -11,6 +11,11 @@ export interface MealSlot {
   unfilledReason: string | null;
   recipeId: string;
   recipeTitle: string;
+  sourceType: 'RECIPE' | 'CUSTOM_MEAL';
+  isCustomMeal: boolean;
+  customMealId: string | null;
+  customMealName: string | null;
+  customMealCoverage: string | null;
   calories: number;
   formattedCalories: string;
   protein: number;

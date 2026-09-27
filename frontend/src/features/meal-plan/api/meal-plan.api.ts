@@ -3,6 +3,7 @@ import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
 import type { PaginationResult } from '@/types/api';
 import type {
   DeleteMealPlanResponseDto,
+  ManualAddMealPlanItemRequestDto,
   MealPlanListResponseDto,
   MealPlanResponseDto,
 } from '../types/meal-plan.dto';
@@ -59,6 +60,20 @@ export const mealPlanApi = {
     const res = await api.patch<MealPlanResponseDto>(
       API_ENDPOINTS.MEAL_PLANS.SWAP(planId, itemId),
       mealPlanMapper.toSwapDto(expectedVersion, idempotencyKey),
+      { showErrorToast: true }
+    );
+    return mealPlanMapper.toDetailModel(res.data);
+  },
+
+  /** `PATCH /meal-plans/:id/items/:itemId/manual-add` — thêm món cá nhân hoặc công thức vào ô thực đơn. */
+  manualAddItem: async (
+    planId: string,
+    itemId: string,
+    body: ManualAddMealPlanItemRequestDto
+  ): Promise<MealPlan> => {
+    const res = await api.patch<MealPlanResponseDto>(
+      API_ENDPOINTS.MEAL_PLANS.MANUAL_ADD(planId, itemId),
+      body,
       { showErrorToast: true }
     );
     return mealPlanMapper.toDetailModel(res.data);

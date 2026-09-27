@@ -273,4 +273,70 @@ describe('MealAnalysisMapper', () => {
     const res = mealAnalysisMapper.toModel({ id: 'singleton-test' });
     expect(res.id).toBe('singleton-test');
   });
+
+  it('13. Phase 18 backend live shape: maps HIGH severity, nested measured/limit, source object, itemId and sourceType', () => {
+    const warning = mapper.mapWarning({
+      code: 'NUTRIENT_LIMIT_EXCEEDED',
+      severity: 'HIGH',
+      scope: 'SAME_DAY',
+      evidenceGrade: 'GRADE_A',
+      source: {
+        code: 'RDA_VN_2026',
+        name: 'Nhu cầu Khuyến nghị Việt Nam 2026',
+        version: '2026.1',
+        recordId: 'rec-1',
+        url: 'https://example.com',
+      },
+      measured: { value: 2500, unit: 'mg' },
+      limit: { value: 2000, unit: 'mg' },
+      explanation: 'Natri vượt ngưỡng an toàn hàng ngày.',
+      affectedItems: [
+        {
+          itemId: 'item-uuid-1',
+          name: 'Chả lụa kho nấm',
+          sourceType: 'CUSTOM_MEAL',
+          servings: 2,
+        },
+      ],
+    });
+
+    expect(warning.severity).toBe('DANGER');
+    expect(warning.evidenceSource).toBe('Nhu cầu Khuyến nghị Việt Nam 2026');
+    expect(warning.ruleVersion).toBe('2026.1');
+    expect(warning.measuredValue).toBe(2500);
+    expect(warning.limitValue).toBe(2000);
+    expect(warning.unit).toBe('mg');
+    expect(warning.excessPercent).toBe(25);
+    expect(warning.affectedItems[0].planItemId).toBe('item-uuid-1');
+    expect(warning.affectedItems[0].dishName).toBe('Chả lụa kho nấm');
+    expect(warning.affectedItems[0].dishType).toBe('CUSTOM_MEAL');
+  });
+
+  it('14. Phase 18 backend live shape: maps status STALE, planVersion, incompleteData array, highCount/cautionCount', () => {
+    const model = mapper.toModel({
+      id: 'analysis-live',
+      planVersion: 4,
+      version: 2,
+      status: 'STALE',
+      confidence: 0.85,
+      incompleteData: ['Gạo lứt đỏ: chưa có vi chất canxi'],
+      summary: {
+        totalWarnings: 3,
+        highCount: 1,
+        cautionCount: 2,
+        infoCount: 0,
+        selectedItemCount: 15,
+      },
+      warnings: [],
+    });
+
+    expect(model.planLockVersion).toBe(4);
+    expect(model.analysisVersion).toBe(2);
+    expect(model.isStale).toBe(true);
+    expect(model.overallConfidence).toBe(0.85);
+    expect(model.hasIncompleteData).toBe(true);
+    expect(model.incompleteDataNotes).toContain('Gạo lứt đỏ');
+    expect(model.summary.dangerCount).toBe(1);
+    expect(model.summary.warningCount).toBe(2);
+  });
 });
