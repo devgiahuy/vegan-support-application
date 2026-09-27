@@ -421,6 +421,22 @@ export class ContentService {
         message: 'Canonical ingredient được chọn không tồn tại, bị trùng hoặc đã archive',
       });
     }
+    for (const [index, item] of recipe.ingredients.entries()) {
+      if (!item.ingredientId) continue;
+      const ingredient = byId.get(item.ingredientId);
+      const name = normalizedNames[index];
+      if (
+        ingredient &&
+        name !== ingredient.normalizedName &&
+        !ingredient.aliases.some((alias) => alias.normalizedAlias === name)
+      ) {
+        throw new AppError({
+          statusCode: 400,
+          code: 'INGREDIENT_ID_NAME_MISMATCH',
+          message: 'Tên nguyên liệu không khớp với nguyên liệu chuẩn đã chọn',
+        });
+      }
+    }
     const cookingMethodIds = recipe.steps.flatMap((step) =>
       step.cookingMethodId ? [step.cookingMethodId] : [],
     );

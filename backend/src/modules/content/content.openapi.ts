@@ -202,6 +202,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
         'INVALID_CONTENT',
         'INVALID_MEDIA_REFERENCE',
         'INVALID_INGREDIENT_REFERENCE',
+        'INGREDIENT_ID_NAME_MISMATCH',
       ]),
       401: errorResponse(errorSchema, 'Yêu cầu đăng nhập', ['AUTH_REQUIRED']),
       403: errorResponse(errorSchema, 'Tài khoản không được mutation', [
@@ -265,6 +266,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
         'INVALID_CONTENT',
         'INVALID_MEDIA_REFERENCE',
         'INVALID_INGREDIENT_REFERENCE',
+        'INGREDIENT_ID_NAME_MISMATCH',
       ]),
       401: errorResponse(errorSchema, 'Yêu cầu đăng nhập', ['AUTH_REQUIRED']),
       403: errorResponse(errorSchema, 'Author ownership required', ['FORBIDDEN', 'ACCOUNT_BANNED']),

@@ -48,7 +48,7 @@ Các dòng này không cộng vào % hiện tại cho tới khi endpoint tương
 | Backend phase | Frontend capability | Trạng thái BE | Trạng thái FE |
 |---:|---|---|---|
 | 12 | Food/nutrient provenance, reference intake, Admin imports/rules | `READY` (2026-09-19) | `READY` (Đã tích hợp 100% Phase 12) |
-| 13 | Structured cooking steps và cooking-aware nutrition estimate UI | `IN_PROGRESS` | `PLANNED` (chờ READY) |
+| 13 | Structured cooking steps và cooking-aware nutrition estimate UI | `READY` (2026-09-27 gate rerun) | `READY` (API/Mapper/UI present; checks pass) |
 | 14 | Breaking migration unified Contributor + approval basis | `READY` (2026-09-23) | `READY` (Đã hoàn tất tích hợp 100% Phase 14) |
 | 15 | Storage usage/reservation/quota UI (thay thế `/uploads/signature`) | `READY` (2026-09-21) | `READY` (Đã tích hợp 100% Phase 15) |
 | 16 | Video submission/review parity (chuyển sang `/admin/content-review*`) | `READY` (2026-09-21) | `READY` (Đã tích hợp 100% Phase 16) |
@@ -56,19 +56,20 @@ Các dòng này không cộng vào % hiện tại cho tới khi endpoint tương
 | 18 | Portion/daily-limit/cross-dish warnings | `NOT_STARTED` | `PLANNED` |
 | 19 | Multi-week program timeline and cumulative analysis | `NOT_STARTED` | Scaffold hoàn chỉnh (100% FE module, 10 tests pass, chờ BE READY) |
 | 20 | Pantry inventory/history | `NOT_STARTED` | `PLANNED` |
-| 21 | Multi-image fridge candidate confirmation | `NOT_STARTED` | `PLANNED` |
-| 22 | Receipt confirmation and pantry-aware shopping gaps | `NOT_STARTED` | `PLANNED` |
+| 21 | Multi-image fridge candidate confirmation | `IN_PROGRESS` (fake demo only) | `PLANNED` for production |
+| 22 | Receipt confirmation and pantry-aware shopping gaps | `IN_PROGRESS` receipt jobs; shopping preview `READY` | `PLANNED` for production receipt flow |
 | 23 | AI artifacts and unified Contributor verification | `NOT_STARTED` | `PLANNED` |
 | 24 | Live restaurant/maps integration | `NOT_STARTED` | `PLANNED` |
 | 25 | Live in-app notifications | `NOT_STARTED` | `PLANNED` |
 | 26 | Expanded live AI governance | `NOT_STARTED` | `PLANNED` |
-| 27 | Cross-feature release/accessibility/privacy hardening | `NOT_STARTED` | `PLANNED` |
+| 27 | Cross-feature release/accessibility/privacy hardening | `IN_PROGRESS` | Registration contract corrected; release gate pending production providers and remaining audits |
 
 Roadmap Phase 2 features are tracked only in `/docs/ROADMAP_PHASE_2.md`; they must not inflate MVP progress.
 
 ## Lịch sử cập nhật (mỗi dòng = 1 lần agent sửa %)
 
 | Ngày (UTC) | Task                                                                 | % cũ → % mới                           | Lý do                                                                                                                                                                                                                                                                          |
+| 2026-09-27 | Phase 27 auth registration contract and release audit | Auth 95% → 95%; Phase 13 BE IN_PROGRESS → READY; Phase 27 BE NOT_STARTED → IN_PROGRESS | `npm run sync:swagger -- ../backend/openapi.json`; removed legacy Contributor subtype from registration DTO/Model/Mapper/form and review DTO, added basis/organization validation and mapper tests; `npx tsc --noEmit`, 326 tests, and Next build pass. Image and receipt jobs remain demo-only and are not production READY. |
 | 2026-09-23 | Phase 14 Breaking Migration Unified Contributor Trust & Verification (spec 013-unified-contributors, T001–T027) | Phase 14: 0% → 100% (Row 10: 95%) | Xóa bỏ hoàn toàn phân loại nhánh con ContributorType (EXPERIENCED_PRACTITIONER, NUTRITION_EXPERT) theo SRS §3.3 và IMPLEMENTATION_PLAN BL-01. Thống nhất một vai trò CONTRIBUTOR duy nhất với 3 căn cứ xét duyệt ContributorApprovalBasis (ORGANIZATION_AFFILIATION, PLATFORM_TRACK_RECORD, ADMIN_INVITED). Căn cứ phê duyệt chỉ mang tính giải trình kiểm toán, không phân tầng quyền hạn. Bổ sung API Admin mời trực tiếp (POST /api/v1/admin/contributor-invitations) và thu hồi quyền kèm lý do kiểm toán bắt buộc (PATCH /api/v1/admin/contributors/:userId/revoke). Biểu mẫu nộp đơn công khai chỉ cho phép chọn ORGANIZATION_AFFILIATION hoặc PLATFORM_TRACK_RECORD, cấm tự chọn ADMIN_INVITED. Ngăn chặn tự duyệt đơn trong Review dialog. Hoàn thành 7 tầng kiến trúc (DTO/Model/Zod Schema/BaseMapper/12 unit tests 100% pass/API/Queries/UI Components). npx tsc 0 lỗi, npm test 319/319 pass, next build 35/35 routes pass 100%. |
 | 2026-09-23 | Phase 18 Meal Portion & Compatibility Analysis (spec 010-meal-analysis, T001–T025) | Phase 18: 0% → 100% | Triển khai toàn diện 7 tầng Phase 18: Bổ sung endpoint POST /meal-plans/:id/analyze, DTOs, Clean UI Models, MealAnalysisMapper kế thừa BaseMapper kèm 12/12 unit tests Vitest (100% pass), API Client, TanStack Query key factory và mutations/queries. Xây dựng các UI components: MealAnalysisSummaryBar, MealAnalysisCard, MealAnalysisAlerts có Tabs lọc 3 phạm vi (SAME_DISH, SAME_MEAL, SAME_DAY) và triệt tiêu trùng lặp, EvidenceGradeBadge (Grade A–D), MealAnalysisBadge nhúng vào từng ô bữa ăn DayGrid có tooltip, MealAnalysisDetailDialog trích dẫn khoa học và tuân thủ an toàn y khoa D22, MealAnalysisSwapDialog gợi ý đổi món thay thế an toàn, IncompleteDataBanner (không gán 0 cho nguyên liệu tự do), và cơ chế Stale Invalidation tự động hủy cache khi đổi/xóa món. Tích hợp trực tiếp vào trang /meal-plans/[id]. npx tsc 0 lỗi, npm test 305/305 pass, next build 35 routes pass. |
 | 2026-09-23 | Phase 12 Food & Nutrient Knowledge Base (spec 008-food-data, T001–T025) | Phase 12: 0% → 100% | Triển khai hoàn thiện 7 tầng Phase 12: Tích hợp 11 endpoints Food Data (5 public lookup + 6 admin records & imports). Áp dụng quy tắc "Missing is NOT zero", huy hiệu xuất xứ SourceProvenanceBadge, NutritionFactsPanel tra cứu 100g tích hợp vào /categories#tra-cuu và recipe detail view, ReferenceIntakeExplorer tra cứu RDA/AI & UL tự động tính %DV, CookingMethodCards tra cứu hao hụt và hệ số bảo tồn, FoodInteractionTable tra cứu kiêng kỵ theo 3 phạm vi (SAME_DISH, SAME_MEAL, SAME_DAY), AdminRecordsManager quản trị bản ghi theo kind và AdminImportManager nạp dữ liệu chuẩn 2 bước Preview/Commit có tính chất idempotent replay. Viết 13/13 unit tests mapper, npx tsc 0 lỗi, build pass 100%. |

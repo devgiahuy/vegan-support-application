@@ -66,7 +66,7 @@ export interface AiProvider {
   readonly name: 'openai' | 'fake' | 'unavailable';
   readonly chatModel: string;
   streamChat(input: AiChatInput): AsyncIterable<AiChatChunk>;
-  moderate(input: string, signal: AbortSignal): Promise<{ flagged: boolean }>;
+  moderate(input: string, signal: AbortSignal): Promise<{ flagged: boolean; unavailable?: boolean }>;
   suggestRecipeNutritionFallback(
     input: RecipeNutritionFallbackInput,
   ): Promise<RecipeNutritionFallbackSuggestion>;

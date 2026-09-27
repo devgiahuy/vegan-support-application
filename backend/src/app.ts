@@ -84,6 +84,10 @@ import { MealAnalysisRepository } from './modules/meal-analysis/meal-analysis.re
 import { createMealAnalysisRouter } from './modules/meal-analysis/meal-analysis.router.js';
 import { MealAnalysisService } from './modules/meal-analysis/meal-analysis.service.js';
 import { createAiProvider } from './modules/chat/ai-provider.js';
+import { AiGovernanceService } from './modules/ai-governance/ai-governance.service.js';
+import { AiGovernanceController } from './modules/ai-governance/ai-governance.controller.js';
+import { createAiGovernanceRouter } from './modules/ai-governance/ai-governance.router.js';
+import { governAiProvider, governReceiptProvider, governVisionProvider } from './modules/ai-governance/ai-governance.providers.js';
 import { ChatController } from './modules/chat/chat.controller.js';
 import { ChatIdentityService } from './modules/chat/chat.identity.js';
 import { ChatRepository } from './modules/chat/chat.repository.js';
@@ -129,9 +133,23 @@ import { createReceiptRouter } from './modules/receipts/receipt.router.js';
 import { ReceiptService } from './modules/receipts/receipt.service.js';
 import { AiReviewController } from './modules/ai-review/ai-review.controller.js';
 import { AiReviewRepository } from './modules/ai-review/ai-review.repository.js';
-import { createAiReviewAdminRouter, createAiReviewRouter } from './modules/ai-review/ai-review.router.js';
+import {
+  createAiReviewAdminRouter,
+  createAiReviewRouter,
+} from './modules/ai-review/ai-review.router.js';
 import { AiReviewService } from './modules/ai-review/ai-review.service.js';
 import { openApiDocument } from './openapi/document.js';
+import { RestaurantController } from './modules/restaurants/restaurant.controller.js';
+import { RestaurantService } from './modules/restaurants/restaurant.service.js';
+import { createMapsProvider } from './modules/restaurants/maps.provider.js';
+import { NotificationController } from './modules/notifications/notification.controller.js';
+import { NotificationService } from './modules/notifications/notification.service.js';
+import { createNotificationRouter } from './modules/notifications/notification.router.js';
+import {
+  createLocationRouter,
+  createRestaurantAdminRouter,
+  createRestaurantRouter,
+} from './modules/restaurants/restaurant.router.js';
 
 export interface AppDependencies {
   config: AppConfig;
@@ -194,7 +212,9 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   const mealProgramController = new MealProgramController(
     new MealProgramService(new MealProgramRepository(database.client), mealPlanService, config),
   );
-  const aiProvider = createAiProvider(config);
+  const baseAiProvider = createAiProvider(config);
+  const aiGovernance = new AiGovernanceService(database.client, config, baseAiProvider.chatModel);
+  const aiProvider = governAiProvider(baseAiProvider, aiGovernance, config);
   const chatController = new ChatController(
     new ChatService(new ChatRepository(database.client), aiProvider, recommendationService, config),
     new ChatIdentityService(config),
@@ -214,20 +234,24 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   const ingredientRecognitionController = new IngredientRecognitionController(
     new IngredientRecognitionService(
       new IngredientRecognitionRepository(database.client),
-      createIngredientVisionProvider(config),
+      governVisionProvider(createIngredientVisionProvider(config), aiGovernance),
       config,
     ),
   );
   const receiptController = new ReceiptController(
     new ReceiptService(
       new ReceiptRepository(database.client),
-      createReceiptExtractionProvider(config),
+      governReceiptProvider(createReceiptExtractionProvider(config), aiGovernance),
       config,
     ),
   );
   const aiReviewController = new AiReviewController(
     new AiReviewService(new AiReviewRepository(database.client)),
   );
+  const restaurantController = new RestaurantController(
+    new RestaurantService(database.client, createMapsProvider(config)),
+  );
+  const notificationController = new NotificationController(new NotificationService(database.client));
 
   app.disable('x-powered-by');
   app.use(helmet());
@@ -248,6 +272,12 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
     pinoHttp<Request, Response>({
       logger,
       genReqId: (request) => request.requestId,
+      autoLogging: {
+        ignore: (request) =>
+          request.url?.startsWith('/api/v1/restaurants') ||
+          request.url?.startsWith('/api/v1/location') ||
+          false,
+      },
     }),
   );
   app.use(cookieParser());
@@ -282,6 +312,8 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/admin', createModerationAdminRouter(moderationController, authentication));
   app.use('/api/v1/admin', createStorageAdminRouter(storageController, authentication));
   app.use('/api/v1/admin', createAiReviewAdminRouter(aiReviewController, authentication));
+  app.use('/api/v1/admin', createAiGovernanceRouter(new AiGovernanceController(aiGovernance), authentication));
+  app.use('/api/v1/admin', createRestaurantAdminRouter(restaurantController, authentication));
   app.use('/api/v1/review-queue', createReviewQueueRouter(moderationController, authentication));
   app.use('/api/v1/reports', createReportsRouter(moderationController, authentication));
   app.use(
@@ -308,6 +340,9 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
     '/api/v1/ingredient-recognition',
     createIngredientRecognitionRouter(ingredientRecognitionController, authentication),
   );
+  app.use('/api/v1/restaurants', createRestaurantRouter(restaurantController, authentication));
+  app.use('/api/v1/notifications', createNotificationRouter(notificationController, authentication));
+  app.use('/api/v1/location', createLocationRouter(restaurantController, authentication));
   app.use('/api/v1', createReceiptRouter(receiptController, authentication));
   app.use('/api/v1', createAiReviewRouter(aiReviewController, authentication));
 

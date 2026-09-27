@@ -7,7 +7,7 @@ export enum StatusEnum {
 
 /**
  * Vai trò tài khoản theo contract backend (OpenAPI `ProfileResponse.data.role`).
- * - `requestedType` của đơn contributor KHÔNG thuộc enum này và không cấp quyền.
+ * - `claimedApprovalBasis` của đơn Contributor không cấp quyền.
  */
 export enum UserRole {
   MEMBER = 'MEMBER',
@@ -31,15 +31,6 @@ export enum ContributorApprovalBasis {
   ORGANIZATION_AFFILIATION = 'ORGANIZATION_AFFILIATION',
   PLATFORM_TRACK_RECORD = 'PLATFORM_TRACK_RECORD',
   ADMIN_INVITED = 'ADMIN_INVITED',
-}
-
-/**
- * @deprecated Đã bị thay thế bởi `ContributorApprovalBasis` từ Phase 14 (Unified Contributor).
- * Giữ lại tạm thời để tương thích ngược cho tới khi dọn sạch toàn bộ tham chiếu cũ.
- */
-export enum ContributorType {
-  EXPERIENCED_PRACTITIONER = 'EXPERIENCED_PRACTITIONER',
-  NUTRITION_EXPERT = 'NUTRITION_EXPERT',
 }
 
 /** Trạng thái đơn nguyện vọng contributor. */

@@ -183,7 +183,7 @@ export function registerStorageOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     security: authenticated,
     request: { query: storageAccountListQuerySchema },
     responses: {
-      200: { description: 'Paginated storage accounts', content: { 'application/json': { schema: accountsResponse } } },
+      200: { description: 'Storage accounts filtered by overQuota before pagination; meta.total counts all matching accounts', content: { 'application/json': { schema: accountsResponse } } },
       400: errorResponse(errorSchema, 'Query không hợp lệ', ['VALIDATION_ERROR']),
       ...authErrors(errorSchema),
     },

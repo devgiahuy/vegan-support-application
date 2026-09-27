@@ -19,16 +19,10 @@ import type { RegisterFormValues } from '../schemas/auth.schema';
 import {
   ContributorApplicationStatus,
   ContributorApprovalBasis,
-  ContributorType,
   LogoutScope,
   MemberStatus,
   UserRole,
 } from '@/common/enums';
-
-const CONTRIBUTOR_TYPE_LABELS: Record<ContributorType, string> = {
-  [ContributorType.EXPERIENCED_PRACTITIONER]: 'Người thực hành có kinh nghiệm',
-  [ContributorType.NUTRITION_EXPERT]: 'Chuyên gia dinh dưỡng',
-};
 
 const APPROVAL_BASIS_LABELS: Record<ContributorApprovalBasis, string> = {
   [ContributorApprovalBasis.ORGANIZATION_AFFILIATION]: 'Tổ chức đối tác / Viện ẩm thực',
@@ -76,12 +70,6 @@ export class AuthMapper extends BaseMapper<UserDto, User> {
       null as unknown as ContributorApprovalBasis
     );
 
-    const requestedType = safeEnum(
-      pickField(dto, ['requestedType', 'requested_type'], null),
-      ContributorType,
-      null as unknown as ContributorType
-    );
-
     return {
       status: safeEnum(
         rawStatus,
@@ -93,11 +81,6 @@ export class AuthMapper extends BaseMapper<UserDto, User> {
       claimedApprovalBasisLabel:
         claimedApprovalBasis && claimedApprovalBasis in APPROVAL_BASIS_LABELS
           ? APPROVAL_BASIS_LABELS[claimedApprovalBasis as ContributorApprovalBasis]
-          : '',
-      requestedType: requestedType ?? null,
-      requestedTypeLabel:
-        requestedType && requestedType in CONTRIBUTOR_TYPE_LABELS
-          ? CONTRIBUTOR_TYPE_LABELS[requestedType as ContributorType]
           : '',
     };
   }
@@ -156,7 +139,10 @@ export class AuthMapper extends BaseMapper<UserDto, User> {
     };
     if (values.wantsContributor) {
       payload.contributorRequest = {
-        requestedType: safeString(values.requestedType),
+        claimedApprovalBasis: values.claimedApprovalBasis ?? 'PLATFORM_TRACK_RECORD',
+        ...(values.claimedApprovalBasis === 'ORGANIZATION_AFFILIATION'
+          ? { organizationClaim: safeString(values.organizationClaim).trim() }
+          : {}),
         experience: safeString(values.experience),
         referenceLinks:
           values.referenceLinks

@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { authMapper } from '@/features/auth/mappers/auth.mapper';
+import { registerSchema } from '@/features/auth/schemas/auth.schema';
 import {
   ContributorApplicationStatus,
-  ContributorType,
+  ContributorApprovalBasis,
   LogoutScope,
   MemberStatus,
   UserRole,
@@ -16,7 +17,7 @@ const FULL_USER = {
   role: 'MEMBER',
   status: 'ACTIVE',
   createdAt: '2026-09-15T08:30:00.000Z',
-  contributorApplication: { status: 'PENDING', requestedType: 'NUTRITION_EXPERT' },
+  contributorApplication: { status: 'PENDING', claimedApprovalBasis: 'ORGANIZATION_AFFILIATION' },
 } as const;
 
 describe('AuthMapper.toModel', () => {
@@ -33,7 +34,7 @@ describe('AuthMapper.toModel', () => {
     expect(u.contributorApplication).toMatchObject({
       status: ContributorApplicationStatus.PENDING,
       rawStatus: 'PENDING',
-      requestedType: ContributorType.NUTRITION_EXPERT,
+      claimedApprovalBasis: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
     });
     expect(u.initials).toBe('NA');
   });
@@ -45,14 +46,14 @@ describe('AuthMapper.toModel', () => {
       displayName: 'An',
       role: 'SUPERUSER',
       status: 'FROZEN',
-      contributorApplication: { status: 'WEIRD', requestedType: 'UNKNOWN' },
+      contributorApplication: { status: 'WEIRD', claimedApprovalBasis: 'UNKNOWN' },
     });
 
     expect(u.role).toBe(UserRole.MEMBER);
     expect(u.status).toBe(MemberStatus.ACTIVE);
     expect(u.contributorApplication?.status).toBe(ContributorApplicationStatus.PENDING);
     expect(u.contributorApplication?.rawStatus).toBe('WEIRD');
-    expect(u.contributorApplication?.requestedType).toBeNull();
+    expect(u.contributorApplication?.claimedApprovalBasis).toBeNull();
   });
 
   it('trả defaults an toàn khi dto null/thiếu trường', () => {
@@ -161,14 +162,59 @@ describe('AuthMapper.toRegisterDto', () => {
       password: 'Abcd1234',
       confirmPassword: 'Abcd1234',
       wantsContributor: true,
-      requestedType: 'EXPERIENCED_PRACTITIONER',
-      experience: '5 năm nấu chay',
+      claimedApprovalBasis: 'ORGANIZATION_AFFILIATION',
+      organizationClaim: 'Nhóm nấu chay cộng đồng',
+      experience: '5 năm nấu chay cho cộng đồng',
       referenceLinks: 'https://blog.example.com\n\n  \nhttps://video.example.com/x',
     });
     expect(dto.contributorRequest).toEqual({
-      requestedType: 'EXPERIENCED_PRACTITIONER',
-      experience: '5 năm nấu chay',
+      claimedApprovalBasis: 'ORGANIZATION_AFFILIATION',
+      organizationClaim: 'Nhóm nấu chay cộng đồng',
+      experience: '5 năm nấu chay cho cộng đồng',
       referenceLinks: ['https://blog.example.com', 'https://video.example.com/x'],
     });
+  });
+
+  it('không gửi organizationClaim cho căn cứ hoạt động trên nền tảng', () => {
+    const dto = authMapper.toRegisterDto({
+      displayName: 'Nguyễn Văn B',
+      email: 'member@example.com',
+      password: 'Abcd1234',
+      confirmPassword: 'Abcd1234',
+      wantsContributor: true,
+      claimedApprovalBasis: 'PLATFORM_TRACK_RECORD',
+      organizationClaim: 'Giá trị cũ trong form',
+      experience: 'Tôi đã chia sẻ công thức chay trong nhiều năm.',
+    });
+    expect(dto.contributorRequest).toEqual({
+      claimedApprovalBasis: 'PLATFORM_TRACK_RECORD',
+      experience: 'Tôi đã chia sẻ công thức chay trong nhiều năm.',
+      referenceLinks: [],
+    });
+  });
+});
+
+describe('Contributor registration validation', () => {
+  const base = {
+    displayName: 'Nguyễn Văn A',
+    email: 'member@example.com',
+    password: 'Abcd1234',
+    confirmPassword: 'Abcd1234',
+    wantsContributor: true,
+    experience: 'Tôi đã nấu món chay cho cộng đồng trong năm năm.',
+  };
+
+  it('yêu cầu tên tổ chức khi khai báo liên kết tổ chức', () => {
+    expect(registerSchema.safeParse({ ...base, claimedApprovalBasis: 'ORGANIZATION_AFFILIATION' }).success).toBe(false);
+    expect(registerSchema.safeParse({ ...base, claimedApprovalBasis: 'ORGANIZATION_AFFILIATION', organizationClaim: 'Bếp Chay Xanh' }).success).toBe(true);
+  });
+
+  it('giới hạn liên kết theo backend', () => {
+    const result = registerSchema.safeParse({
+      ...base,
+      claimedApprovalBasis: 'PLATFORM_TRACK_RECORD',
+      referenceLinks: 'not-a-url',
+    });
+    expect(result.success).toBe(false);
   });
 });
