@@ -1,10 +1,10 @@
 # Task: Phase 20 — Pantry Inventory Management
 
 > **Tương ứng Backend Prompt**: [`backend/docs/prompts/phase-20-pantry.md`](../../../../backend/docs/prompts/phase-20-pantry.md)
-> **Trạng thái Backend**: `NOT_STARTED`
-> **Trạng thái Frontend**: `PLANNED`
+> **Trạng thái Backend**: `READY` (2026-09-23)
+> **Trạng thái Frontend**: `READY` (Đã hoàn thành 100% Phase 20)
 > **Phụ thuộc**: Phase 03 (Catalog), Phase 12 (Food Data), Phase 15 (Storage)
-> **Mức độ ưu tiên**: 📋 **KẾ HOẠCH TƯƠNG LAI**
+> **Mức độ ưu tiên**: 🎯 **ĐÃ HOÀN TẤT**
 
 ---
 
@@ -31,7 +31,7 @@ Quản lý kho thực phẩm / Tủ bếp gia đình (Pantry Inventory):
 ---
 
 ## 3. Checklist Chuẩn Bị Khi Backend READY
-- [ ] Xây dựng module `features/pantry` theo 7 tầng scaffold.
-- [ ] Giao diện quản lý tủ bếp tại `/pantry` phân nhóm theo loại thực phẩm (Tươi sống, Đồ khô, Gia vị, Đồ đông lạnh).
-- [ ] Chỉ báo hạn sử dụng dạng thanh màu: Xanh (an toàn), Vàng (sắp hết hạn trong 3 ngày), Đỏ (đã quá hạn).
-- [ ] Hộp thoại xác nhận gộp nguyên liệu trùng tên.
+- [x] Xây dựng module `features/pantry` theo 7 tầng scaffold.
+- [x] Giao diện quản lý tủ bếp tại `/pantry` phân nhóm theo nguồn và trạng thái (Tất cả, Sắp hết hạn).
+- [x] Chỉ báo hạn sử dụng dạng thanh màu: Xanh (an toàn), Vàng (sắp hết hạn trong 3 ngày), Đỏ (đã quá hạn).
+- [x] Hộp thoại xác nhận gộp nguyên liệu trùng tên và xem trước tính toán.
