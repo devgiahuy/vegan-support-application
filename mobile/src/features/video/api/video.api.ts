@@ -24,10 +24,42 @@ export interface CreateVideoInput {
   youtubeUrl: string;
   categoryIds?: string[];
   tags?: string[];
+  coverMedia?: {
+    publicId: string;
+    secureUrl: string;
+    mimeType: string;
+    bytes: number;
+    width?: number;
+    height?: number;
+  };
 }
 
 export interface UpdateVideoInput extends CreateVideoInput {
   expectedVersion: number;
+}
+
+function buildVideoMedia(input: Pick<CreateVideoInput, 'coverMedia' | 'youtubeUrl'>): CreateVideoPostRequestDto['media'] {
+  return [
+    ...(input.coverMedia
+      ? [
+          {
+            provider: 'CLOUDINARY' as const,
+            kind: 'COVER_IMAGE' as const,
+            publicId: input.coverMedia.publicId,
+            secureUrl: input.coverMedia.secureUrl,
+            mimeType: input.coverMedia.mimeType,
+            bytes: input.coverMedia.bytes,
+            ...(input.coverMedia.width ? { width: input.coverMedia.width } : {}),
+            ...(input.coverMedia.height ? { height: input.coverMedia.height } : {}),
+          },
+        ]
+      : []),
+    {
+      provider: 'YOUTUBE',
+      kind: 'VIDEO',
+      secureUrl: input.youtubeUrl,
+    },
+  ];
 }
 
 export const videoApi = {
@@ -61,13 +93,7 @@ export const videoApi = {
       ...(input.excerpt ? { excerpt: input.excerpt } : {}),
       ...(input.categoryIds?.length ? { categoryIds: input.categoryIds } : {}),
       ...(input.tags?.length ? { tags: input.tags } : {}),
-      media: [
-        {
-          provider: 'YOUTUBE',
-          kind: 'VIDEO',
-          secureUrl: input.youtubeUrl,
-        },
-      ],
+      media: buildVideoMedia(input),
       body: input.body,
     };
 
@@ -88,7 +114,7 @@ export const videoApi = {
       ...(input.excerpt ? { excerpt: input.excerpt } : {}),
       ...(input.categoryIds?.length ? { categoryIds: input.categoryIds } : {}),
       ...(input.tags?.length ? { tags: input.tags } : {}),
-      media: [{ provider: 'YOUTUBE', kind: 'VIDEO', secureUrl: input.youtubeUrl }],
+      media: buildVideoMedia(input),
       body: input.body,
       expectedVersion: input.expectedVersion,
     };

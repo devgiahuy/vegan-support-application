@@ -30,6 +30,21 @@ function videoMediaFromList(media: PostMediaDto[] | null | undefined): PostMedia
   return list.find((item) => safeString(item?.kind).toUpperCase() === 'VIDEO') ?? null;
 }
 
+function coverMediaFromList(media: PostMediaDto[] | null | undefined): CookingVideo['coverMedia'] {
+  const list = Array.isArray(media) ? media : [];
+  const cover = list.find((item) => safeString(item?.kind).toUpperCase() === 'COVER_IMAGE');
+  if (!cover?.publicId || !cover.secureUrl || !cover.mimeType || !cover.bytes) return null;
+
+  return {
+    publicId: cover.publicId,
+    secureUrl: cover.secureUrl,
+    mimeType: cover.mimeType,
+    bytes: cover.bytes,
+    ...(cover.width ? { width: cover.width } : {}),
+    ...(cover.height ? { height: cover.height } : {}),
+  };
+}
+
 function thumbnailFromMedia(media: PostMediaDto[] | null | undefined): string {
   const coverUrl = coverUrlFromMedia(media, '');
   if (coverUrl) return coverUrl;
@@ -59,6 +74,7 @@ export class VideoMapper extends BaseMapper<VideoDetailDto, CookingVideo> {
       author: authorFromDto(dto, 'Bếp VeggieConnect'),
       category: firstCategory(dto),
       thumbnailUrl: thumbnailFromMedia(media),
+      coverMedia: coverMediaFromList(media),
       videoUrl: safeString(videoMedia?.secureUrl),
       provider: safeString(videoMedia?.provider, 'VIDEO'),
       durationSeconds: videoMedia?.durationSeconds == null ? null : safeNumber(videoMedia.durationSeconds, 0),

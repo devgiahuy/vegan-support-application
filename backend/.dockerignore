@@ -1,0 +1,10 @@
+.env
+.env.*
+!.env.example
+node_modules
+dist
+dist-seed
+openapi.json
+coverage
+*.log
+.DS_Store

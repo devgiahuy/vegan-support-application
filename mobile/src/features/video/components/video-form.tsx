@@ -1,12 +1,22 @@
 import * as React from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
-import { Link as LinkIcon, Send, Tags } from 'lucide-react-native';
+import { Image } from 'expo-image';
+import { Image as ImageIcon, Link as LinkIcon, Send, Tags } from 'lucide-react-native';
 
-import { PrimaryButton } from '@/components/ui/primary-button';
 import { CategoryType } from '@/common/enums';
+import { PrimaryButton } from '@/components/ui/primary-button';
 import { CategoryFilterPills } from '@/features/category/components/category-filter-pills';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
 import { useIconColors } from '@/lib/theme-colors';
+
+export interface VideoCoverMediaValues {
+  publicId: string;
+  secureUrl: string;
+  mimeType: string;
+  bytes: number;
+  width?: number;
+  height?: number;
+}
 
 export interface VideoFormValues {
   title: string;
@@ -15,10 +25,15 @@ export interface VideoFormValues {
   body: string;
   tags?: string[];
   categoryIds?: string[];
+  coverMedia?: VideoCoverMediaValues;
 }
 
 function splitTags(value: string): string[] {
-  return value.split(',').map((t) => t.trim()).filter(Boolean).slice(0, 15);
+  return value
+    .split(',')
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .slice(0, 15);
 }
 
 function isValidUrl(value: string): boolean {
@@ -30,17 +45,28 @@ function isValidUrl(value: string): boolean {
   }
 }
 
-/**
- * Form dùng chung cho đăng video mới và sửa video của chính mình — chỉ khác nhau ở
- * `initial` (giá trị điền sẵn) và `onSubmit`/`submitLabel` do màn gọi cung cấp.
- */
+function optionalPositiveNumber(value: string): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
 export function VideoForm({
   initial,
   submitLabel,
   isSubmitting,
   onSubmit,
 }: {
-  initial?: { title?: string; excerpt?: string; youtubeUrl?: string; body?: string; tags?: string[]; categoryId?: string | null };
+  initial?: {
+    title?: string;
+    excerpt?: string;
+    youtubeUrl?: string;
+    body?: string;
+    tags?: string[];
+    categoryId?: string | null;
+    coverMedia?: VideoCoverMediaValues | null;
+  };
   submitLabel: string;
   isSubmitting: boolean;
   onSubmit: (values: VideoFormValues) => void;
@@ -52,6 +78,12 @@ export function VideoForm({
   const [body, setBody] = React.useState(initial?.body ?? '');
   const [tags, setTags] = React.useState(initial?.tags?.join(', ') ?? '');
   const [categoryId, setCategoryId] = React.useState<string | null>(initial?.categoryId ?? null);
+  const [coverSecureUrl, setCoverSecureUrl] = React.useState(initial?.coverMedia?.secureUrl ?? '');
+  const [coverPublicId, setCoverPublicId] = React.useState(initial?.coverMedia?.publicId ?? '');
+  const [coverMimeType, setCoverMimeType] = React.useState(initial?.coverMedia?.mimeType ?? 'image/jpeg');
+  const [coverBytes, setCoverBytes] = React.useState(initial?.coverMedia?.bytes ? String(initial.coverMedia.bytes) : '');
+  const [coverWidth, setCoverWidth] = React.useState(initial?.coverMedia?.width ? String(initial.coverMedia.width) : '');
+  const [coverHeight, setCoverHeight] = React.useState(initial?.coverMedia?.height ? String(initial.coverMedia.height) : '');
 
   const {
     data: categoryTree = [],
@@ -65,6 +97,15 @@ export function VideoForm({
     const cleanUrl = youtubeUrl.trim();
     const cleanBody = body.trim();
     const cleanExcerpt = excerpt.trim();
+    const cleanCoverUrl = coverSecureUrl.trim();
+    const cleanCoverPublicId = coverPublicId.trim();
+    const cleanCoverMimeType = coverMimeType.trim();
+    const coverBytesNumber = optionalPositiveNumber(coverBytes);
+    const coverWidthNumber = optionalPositiveNumber(coverWidth);
+    const coverHeightNumber = optionalPositiveNumber(coverHeight);
+    const hasCoverInput = Boolean(
+      cleanCoverUrl || cleanCoverPublicId || coverBytes.trim() || coverWidth.trim() || coverHeight.trim()
+    );
 
     if (cleanTitle.length < 3) {
       Alert.alert('Thiếu tiêu đề', 'Tiêu đề video cần ít nhất 3 ký tự.');
@@ -78,6 +119,20 @@ export function VideoForm({
       Alert.alert('Thiếu tóm tắt', 'Tóm tắt công thức cần ít nhất 20 ký tự.');
       return;
     }
+    if (hasCoverInput) {
+      if (!isValidUrl(cleanCoverUrl)) {
+        Alert.alert('Ảnh bìa chưa hợp lệ', 'Secure URL ảnh bìa phải là URL http(s) từ Cloudinary.');
+        return;
+      }
+      if (!cleanCoverPublicId || !cleanCoverMimeType || !coverBytesNumber) {
+        Alert.alert('Thiếu metadata ảnh bìa', 'Ảnh bìa cần đủ publicId, MIME type và dung lượng bytes.');
+        return;
+      }
+      if (!cleanCoverMimeType.startsWith('image/')) {
+        Alert.alert('MIME ảnh bìa chưa hợp lệ', 'MIME type ảnh bìa phải bắt đầu bằng image/.');
+        return;
+      }
+    }
 
     onSubmit({
       title: cleanTitle,
@@ -86,6 +141,18 @@ export function VideoForm({
       body: cleanBody,
       categoryIds: categoryId ? [categoryId] : undefined,
       tags: splitTags(tags),
+      ...(hasCoverInput && coverBytesNumber
+        ? {
+            coverMedia: {
+              publicId: cleanCoverPublicId,
+              secureUrl: cleanCoverUrl,
+              mimeType: cleanCoverMimeType,
+              bytes: coverBytesNumber,
+              ...(coverWidthNumber ? { width: coverWidthNumber } : {}),
+              ...(coverHeightNumber ? { height: coverHeightNumber } : {}),
+            },
+          }
+        : {}),
     });
   };
 
@@ -128,6 +195,99 @@ export function VideoForm({
             placeholderTextColor={colors.mutedForeground}
             className="h-12 rounded-2xl border border-input bg-card px-3.5 text-sm text-foreground"
           />
+        </View>
+
+        <View className="rounded-2xl border border-border bg-card p-4">
+          <View className="flex-row items-center gap-2">
+            <ImageIcon size={16} color={colors.primary} />
+            <Text className="text-xs font-bold uppercase text-muted-foreground">Ảnh bìa Cloudinary</Text>
+          </View>
+          <Text className="mt-2 text-xs leading-relaxed text-muted-foreground">
+            Mobile hiện chưa có luồng chọn ảnh/upload trực tiếp. Dán metadata ảnh đã upload Cloudinary để backend lưu media COVER_IMAGE.
+          </Text>
+
+          {isValidUrl(coverSecureUrl.trim()) ? (
+            <View className="mt-3 aspect-video overflow-hidden rounded-xl bg-muted">
+              <Image source={{ uri: coverSecureUrl.trim() }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
+            </View>
+          ) : null}
+
+          <View className="mt-3 gap-3">
+            <View>
+              <Text className="mb-1.5 text-xs font-semibold text-muted-foreground">Secure URL</Text>
+              <TextInput
+                value={coverSecureUrl}
+                onChangeText={setCoverSecureUrl}
+                autoCapitalize="none"
+                keyboardType="url"
+                placeholder="https://res.cloudinary.com/.../image/upload/..."
+                placeholderTextColor={colors.mutedForeground}
+                className="h-12 rounded-2xl border border-input bg-background px-3.5 text-sm text-foreground"
+              />
+            </View>
+
+            <View>
+              <Text className="mb-1.5 text-xs font-semibold text-muted-foreground">Public ID</Text>
+              <TextInput
+                value={coverPublicId}
+                onChangeText={setCoverPublicId}
+                autoCapitalize="none"
+                placeholder="vegan-app/..."
+                placeholderTextColor={colors.mutedForeground}
+                className="h-12 rounded-2xl border border-input bg-background px-3.5 text-sm text-foreground"
+              />
+            </View>
+
+            <View className="flex-row gap-2">
+              <View className="flex-1">
+                <Text className="mb-1.5 text-xs font-semibold text-muted-foreground">MIME type</Text>
+                <TextInput
+                  value={coverMimeType}
+                  onChangeText={setCoverMimeType}
+                  autoCapitalize="none"
+                  placeholder="image/jpeg"
+                  placeholderTextColor={colors.mutedForeground}
+                  className="h-12 rounded-2xl border border-input bg-background px-3.5 text-sm text-foreground"
+                />
+              </View>
+              <View className="flex-1">
+                <Text className="mb-1.5 text-xs font-semibold text-muted-foreground">Bytes</Text>
+                <TextInput
+                  value={coverBytes}
+                  onChangeText={setCoverBytes}
+                  keyboardType="numeric"
+                  placeholder="120000"
+                  placeholderTextColor={colors.mutedForeground}
+                  className="h-12 rounded-2xl border border-input bg-background px-3.5 text-sm text-foreground"
+                />
+              </View>
+            </View>
+
+            <View className="flex-row gap-2">
+              <View className="flex-1">
+                <Text className="mb-1.5 text-xs font-semibold text-muted-foreground">Width</Text>
+                <TextInput
+                  value={coverWidth}
+                  onChangeText={setCoverWidth}
+                  keyboardType="numeric"
+                  placeholder="1280"
+                  placeholderTextColor={colors.mutedForeground}
+                  className="h-12 rounded-2xl border border-input bg-background px-3.5 text-sm text-foreground"
+                />
+              </View>
+              <View className="flex-1">
+                <Text className="mb-1.5 text-xs font-semibold text-muted-foreground">Height</Text>
+                <TextInput
+                  value={coverHeight}
+                  onChangeText={setCoverHeight}
+                  keyboardType="numeric"
+                  placeholder="720"
+                  placeholderTextColor={colors.mutedForeground}
+                  className="h-12 rounded-2xl border border-input bg-background px-3.5 text-sm text-foreground"
+                />
+              </View>
+            </View>
+          </View>
         </View>
 
         <View>

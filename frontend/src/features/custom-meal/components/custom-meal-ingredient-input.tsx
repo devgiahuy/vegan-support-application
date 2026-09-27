@@ -69,6 +69,7 @@ export const CustomMealIngredientInput: React.FC<CustomMealIngredientInputProps>
     updated[index] = {
       ...updated[index],
       [field]: value,
+      ...(field === 'name' ? { ingredientId: null } : {}),
     };
     onChange(updated);
   };

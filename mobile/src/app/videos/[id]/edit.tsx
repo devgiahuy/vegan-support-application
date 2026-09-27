@@ -75,6 +75,7 @@ export default function EditVideoScreen() {
             body: video.summary,
             tags: video.tags,
             categoryId: video.category.id || null,
+            coverMedia: video.coverMedia,
           }}
           submitLabel="Lưu thay đổi"
           isSubmitting={updateMutation.isPending}
@@ -89,6 +90,7 @@ export default function EditVideoScreen() {
                   body: values.body,
                   categoryIds: values.categoryIds,
                   tags: values.tags,
+                  coverMedia: values.coverMedia,
                   expectedVersion: video.version,
                 },
               });
