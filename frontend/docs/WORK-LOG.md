@@ -16,6 +16,68 @@
 - Còn lại / rủi ro:
 ```
 
+## [2026-09-28] — Ẩn bảng phân tích dinh dưỡng tĩnh (mock) tại sidebar trang /recipes/[id]
+
+- Mục tiêu:
+  - Ẩn thẻ "Phân tích dinh dưỡng (1 khẩu phần)" tĩnh ở cột phải trang chi tiết công thức (`/recipes/[id]`).
+  - Nguyên nhân: Thẻ này hiển thị số liệu tĩnh / giá trị mặc định (`recipe.carbs || 35`, `fat || 8`, `fiber || 6`) và nội dung tuyên bố viện dẫn tổ chức bên ngoài không thuộc dữ liệu tính toán thực tế, gây trùng lặp với thẻ phân tích dinh dưỡng động có xét hao hụt chế biến (`RecipeNutritionCard` Phase 13) đang hiển thị ở cột chính.
+- Đã làm:
+  - Loại bỏ khối Card "Phân tích dinh dưỡng (1 khẩu phần)" trong sidebar phải tại [`src/features/recipe/components/recipe-detail-view.tsx`](file:///d:/Project/vegan-support-application/frontend/src/features/recipe/components/recipe-detail-view.tsx).
+  - Giữ lại phần hiển thị "Món chay cùng chuyên mục" (`relatedRecipes`) để người dùng tiếp tục khám phá công thức liên quan.
+- File tạo/sửa:
+  - `src/features/recipe/components/recipe-detail-view.tsx`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 42 test files, 408/408 tests pass (100%).
+  - `npm run build`: Turbopack compile thành công 46/46 routes.
+- PROGRESS: Giao diện chi tiết công thức tinh gọn, chính xác, chỉ giữ lại thẻ tính toán dinh dưỡng thực tế chuẩn xác của hệ thống.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-28] — Bổ sung UI Picker trực quan cho phần chọn mục tiêu tại trang /meal-plans
+
+- Mục tiêu:
+  - Khắc phục tình trạng các thẻ chọn Mục tiêu ("Giữ cân", "Giảm cân", "Tăng cân") trong form Tạo thực đơn mới (`/meal-plans`) không có phản hồi thị giác khi được chọn, khiến người dùng không phân biệt được mục tiêu nào đang kích hoạt.
+  - Nguyên nhân: Trước đó component dùng selector Tailwind `has-checked:...` trong khi `RadioGroupItem` của Radix UI render thẻ `<button role="radio">` (dùng `data-state="checked"`, không khớp pseudo-class `:checked` của CSS) và ẩn `sr-only` mà không truyền state `isSelected` vào style của thẻ bao ngoài, đồng thời thiếu biểu tượng chỉ báo đã chọn (check indicator).
+- Đã làm:
+  - Cập nhật [`src/features/meal-plan/components/generate-form.tsx`](file:///d:/Project/vegan-support-application/frontend/src/features/meal-plan/components/generate-form.tsx):
+    - Đưa trạng thái chọn `isSelected = goal === option.value` vào điều kiện hiển thị của thẻ Card `Label`.
+    - Khi được chọn: viền nổi bật `border-primary`, nền nhấn nhẹ `bg-primary/5 dark:bg-primary/10`, viền sáng `ring-1 ring-primary`, đổ bóng `shadow-xs`, tiêu đề chuyển màu `text-primary font-semibold`.
+    - Bổ sung UI Picker indicator hình tròn ở góc phải tiêu đề mỗi thẻ: khi được chọn hiển thị vòng tròn màu chủ đạo có icon checkmark (`Check` stroke 3); khi chưa chọn hiển thị vòng tròn viền mờ `border-muted-foreground/35`.
+    - Bảo toàn khả năng điều hướng bàn phím (phím mũi tên, Tab, Space) và accessibility (`aria-labelledby`, `sr-only` RadioGroupItem).
+- File tạo/sửa:
+  - `src/features/meal-plan/components/generate-form.tsx`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 42 test files, 408/408 tests pass (100%).
+  - `npm run build`: Turbopack compile thành công 46/46 routes.
+- PROGRESS: Form tạo thực đơn tuần hiển thị UI picker rõ ràng, tức thì khi thay đổi mục tiêu.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-28] — Khắc phục lỗi mất Header và Footer tại trang /pantry và /pantry/scan
+
+- Mục tiêu:
+  - Khắc phục tình trạng khi truy cập trang `/pantry` (Tủ bếp gia đình) và `/pantry/scan` bị mất thanh điều hướng đầu trang (SiteHeader) và chân trang (SiteFooter).
+  - Nguyên nhân: Thư mục định tuyến `pantry` trước đó được đặt trực tiếp ở cấp gốc `src/app/pantry` thay vì nằm trong route group `src/app/(site)/pantry`, dẫn tới Next.js chỉ sử dụng `src/app/layout.tsx` (chỉ chứa Providers) mà bỏ qua `src/app/(site)/layout.tsx` (nơi bọc `SiteHeader` và `SiteFooter`).
+- Đã làm:
+  - Di chuyển toàn bộ cấu trúc thư mục từ `src/app/pantry` sang `src/app/(site)/pantry` bằng `git mv`:
+    - `src/app/(site)/pantry/page.tsx`
+    - `src/app/(site)/pantry/pantry-client-view.tsx`
+    - `src/app/(site)/pantry/scan/page.tsx`
+    - `src/app/(site)/pantry/scan/fridge-scan-client-view.tsx`
+  - Giữ nguyên toàn bộ đường dẫn URL (`/pantry`, `/pantry/scan`), mã nguồn logic, các import `@/` và Suspense boundary.
+  - Xóa cache build `.next` và kiểm tra lại TypeScript, Vitest và Turbopack build.
+- File tạo/sửa:
+  - `src/app/(site)/pantry/page.tsx` (di chuyển từ `src/app/pantry/page.tsx`)
+  - `src/app/(site)/pantry/pantry-client-view.tsx` (di chuyển từ `src/app/pantry/pantry-client-view.tsx`)
+  - `src/app/(site)/pantry/scan/page.tsx` (di chuyển từ `src/app/pantry/scan/page.tsx`)
+  - `src/app/(site)/pantry/scan/fridge-scan-client-view.tsx` (di chuyển từ `src/app/pantry/scan/fridge-scan-client-view.tsx`)
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 42 test files, 408/408 tests pass (100%).
+  - `npm run build`: Next.js Turbopack build thành công 46/46 routes, `/pantry` và `/pantry/scan` nằm trong app router layout chuẩn có `SiteHeader` và `SiteFooter`.
+- PROGRESS: Trang `/pantry` và `/pantry/scan` hiển thị đầy đủ Header & Footer đồng bộ toàn hệ thống.
+- Còn lại / rủi ro: Không có.
+
 ## [2026-09-28] — Loại bỏ hoàn toàn Mock/Fixture data và bổ sung Logging chi tiết luồng Map & Restaurants (Phase 24)
 
 - Mục tiêu:
