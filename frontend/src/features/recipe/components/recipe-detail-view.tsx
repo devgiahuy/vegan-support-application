@@ -685,48 +685,8 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Nutrition Breakdown & Related Recipes (Sidebar) */}
+        {/* RIGHT COLUMN: Related Recipes (Sidebar) */}
         <div className="space-y-6 lg:col-span-4">
-          {/* Nutrition Facts Detailed Card */}
-          <Card className="border-border/60 shadow-sm">
-            <CardHeader className="bg-primary/5 pb-3 border-b">
-              <CardTitle className="text-base font-bold flex items-center gap-2 text-foreground">
-                <ShieldCheck className="h-4 w-4 text-primary" /> Phân tích dinh dưỡng (1 khẩu phần)
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4 space-y-3">
-              <div className="flex justify-between items-center text-sm py-1 border-b">
-                <span className="text-muted-foreground">Tổng năng lượng:</span>
-                <span className="font-bold text-foreground">{recipe.kcal} kcal</span>
-              </div>
-              <div className="flex justify-between items-center text-sm py-1 border-b">
-                <span className="text-muted-foreground">Chất đạm thực vật (Protein):</span>
-                <span className="font-semibold text-emerald-600 dark:text-emerald-400">
-                  {recipe.protein}g
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-sm py-1 border-b">
-                <span className="text-muted-foreground">Carbohydrate tinh bột lành:</span>
-                <span className="font-semibold text-amber-600 dark:text-amber-400">
-                  {recipe.carbs || 35}g
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-sm py-1 border-b">
-                <span className="text-muted-foreground">Chất béo thực vật lành mạnh:</span>
-                <span className="font-semibold text-foreground">{recipe.fat || 8}g</span>
-              </div>
-              <div className="flex justify-between items-center text-sm py-1">
-                <span className="text-muted-foreground">Chất xơ tự nhiên:</span>
-                <span className="font-semibold text-foreground">{recipe.fiber || 6}g</span>
-              </div>
-
-              <div className="rounded-lg bg-muted/60 p-3 text-xs text-muted-foreground leading-relaxed mt-2">
-                🌱 Món ăn đã được cân đối dinh dưỡng theo chuẩn tháp thực phẩm ăn chay khoa học của
-                Viện Dinh Dưỡng.
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Related Recipes */}
           {relatedRecipes.length > 0 && (
             <div className="space-y-3">

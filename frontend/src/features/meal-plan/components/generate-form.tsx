@@ -4,7 +4,8 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertCircle, Sparkles } from 'lucide-react';
+import { AlertCircle, Check, Sparkles } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -134,7 +135,7 @@ export function GenerateForm({ recentPlans }: { recentPlans: MealPlan[] }) {
       </div>
 
       <div className="flex flex-col gap-2">
-        <Label>Mục tiêu</Label>
+        <Label id="meal-goal-label">Mục tiêu</Label>
         <RadioGroup
           value={goal}
           onValueChange={(value) => {
@@ -142,24 +143,53 @@ export function GenerateForm({ recentPlans }: { recentPlans: MealPlan[] }) {
             setGoal(next);
             form.setValue('goal', next, { shouldValidate: true });
           }}
+          aria-labelledby="meal-goal-label"
           className="grid gap-2 sm:grid-cols-3"
         >
-          {GOAL_OPTIONS.map((option) => (
-            <div key={option.value}>
-              <RadioGroupItem
-                value={option.value}
-                id={`goal-${option.value}`}
-                className="sr-only"
-              />
-              <Label
-                htmlFor={`goal-${option.value}`}
-                className="flex cursor-pointer flex-col gap-1 rounded-xl border p-3 text-sm transition-colors has-checked:border-primary has-checked:bg-primary/5"
-              >
-                <span className="font-medium">{option.label}</span>
-                <span className="text-xs text-muted-foreground">{option.hint}</span>
-              </Label>
-            </div>
-          ))}
+          {GOAL_OPTIONS.map((option) => {
+            const isSelected = goal === option.value;
+            return (
+              <div key={option.value} className="flex">
+                <RadioGroupItem
+                  value={option.value}
+                  id={`goal-${option.value}`}
+                  className="sr-only"
+                />
+                <Label
+                  htmlFor={`goal-${option.value}`}
+                  className={cn(
+                    'relative flex w-full cursor-pointer flex-col justify-between gap-1.5 rounded-xl border p-3 text-sm transition-all select-none',
+                    isSelected
+                      ? 'border-primary bg-primary/5 text-foreground ring-1 ring-primary shadow-xs dark:bg-primary/10'
+                      : 'border-border/70 bg-card text-muted-foreground hover:border-border hover:bg-accent/40'
+                  )}
+                >
+                  <div className="flex items-center justify-between gap-1.5">
+                    <span
+                      className={cn(
+                        'text-sm font-semibold transition-colors',
+                        isSelected ? 'text-primary' : 'text-foreground'
+                      )}
+                    >
+                      {option.label}
+                    </span>
+                    <div
+                      className={cn(
+                        'flex size-4.5 shrink-0 items-center justify-center rounded-full border transition-all',
+                        isSelected
+                          ? 'border-primary bg-primary text-primary-foreground shadow-xs'
+                          : 'border-muted-foreground/35 bg-transparent'
+                      )}
+                      aria-hidden="true"
+                    >
+                      {isSelected && <Check className="size-3 stroke-[3]" />}
+                    </div>
+                  </div>
+                  <span className="text-xs leading-snug text-muted-foreground">{option.hint}</span>
+                </Label>
+              </div>
+            );
+          })}
         </RadioGroup>
         {form.formState.errors.goal && (
           <p className="text-xs text-destructive">{form.formState.errors.goal.message}</p>
