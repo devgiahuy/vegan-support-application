@@ -1169,12 +1169,29 @@ export async function seedScenarioData(
   if (eligibleRecipes.length === 0) throw new Error('Scenario seed requires one eligible recipe');
 
   const mealPlanId = 'a7000000-0000-4000-8000-000000000001';
+  const seedMealPlanIdempotencyKey = 'seed-frontend-meal-plan-v1';
+  const toDateOnlyValue = (value: Date): string => value.toISOString().slice(0, 10);
   const existingMealPlan = await prisma.mealPlan.findUnique({ where: { id: mealPlanId } });
-  const maximumVersion = await prisma.mealPlan.aggregate({
-    where: { userId: member.id, weekStart: input.nextMonday },
-    _max: { version: true },
-  });
-  const planVersion = existingMealPlan?.version ?? (maximumVersion._max.version ?? 0) + 1;
+  // Only reuse the fixed seed row's version when it already points at the
+  // current (user, week) triple. Otherwise the row is stale (Monday rollover
+  // moved nextMonday, SEED_MEMBER_EMAIL changed, ...) and blindly reusing its
+  // version makes the upsert below UPDATE it onto a (userId, weekStart,
+  // version) triple that may already be occupied by an API-created plan,
+  // which crashes the seed with P2002 and blocks `docker compose up`.
+  const reusesExistingVersion =
+    existingMealPlan !== null &&
+    existingMealPlan.userId === member.id &&
+    toDateOnlyValue(existingMealPlan.weekStart) === toDateOnlyValue(input.nextMonday);
+  let planVersion: number;
+  if (reusesExistingVersion && existingMealPlan !== null) {
+    planVersion = existingMealPlan.version;
+  } else {
+    const maximumVersion = await prisma.mealPlan.aggregate({
+      where: { userId: member.id, weekStart: input.nextMonday },
+      _max: { version: true },
+    });
+    planVersion = (maximumVersion._max.version ?? 0) + 1;
+  }
   const mealTypes = [MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER] as const;
   const targetByMealType = {
     [MealType.BREAKFAST]: 375,
@@ -1266,7 +1283,7 @@ export async function seedScenarioData(
         version: planVersion,
         lockVersion: 1,
         supersedesMealPlanId: null,
-        idempotencyKey: 'seed-frontend-meal-plan-v1',
+        idempotencyKey: seedMealPlanIdempotencyKey,
         payloadHash: 'f'.repeat(64),
         seedHash: '1'.repeat(64),
         algorithmVersion: 'weekly-deterministic-v1',
@@ -1300,7 +1317,7 @@ export async function seedScenarioData(
         targetCalories: 1500,
         version: planVersion,
         lockVersion: 1,
-        idempotencyKey: 'seed-frontend-meal-plan-v1',
+        idempotencyKey: seedMealPlanIdempotencyKey,
         payloadHash: 'f'.repeat(64),
         seedHash: '1'.repeat(64),
         algorithmVersion: 'weekly-deterministic-v1',
