@@ -10,19 +10,114 @@ import { AuthGuard } from '@/components/shared/auth-guard';
 import { LoadingState } from '@/components/shared/loading-state';
 import { ErrorState } from '@/components/shared/error-state';
 import { getApiErrorStatus } from '@/lib/api-error';
-import { useMealPlanDetailQuery } from '@/features/meal-plan/queries/meal-plan.queries';
+import {
+  useMealPlanDetailQuery,
+  useSwapMealItemMutation,
+  useManualAddMealItemMutation,
+} from '@/features/meal-plan/queries/meal-plan.queries';
 import { DayGrid } from '@/features/meal-plan/components/day-grid';
 import { ShoppingList } from '@/features/meal-plan/components/shopping-list';
 import { WarningsBanner } from '@/features/meal-plan/components/warnings-banner';
 import { SwapMealItemDialog } from '@/features/meal-plan/components/swap-dialog';
 import { DeleteMealPlanDialog } from '@/features/meal-plan/components/delete-dialog';
+import {
+  MealPlanItemSelector,
+  type SelectedMealItem,
+} from '@/features/meal-plan/components/meal-plan-item-selector';
 import type { MealSlot } from '@/features/meal-plan/types/meal-plan.model';
 
-/** Chi tiết 1 phiên bản thực đơn: 21 ô + đi chợ + cảnh báo + dinh dưỡng. */
+import {
+  MealAnalysisSummaryBar,
+  MealAnalysisAlerts,
+  MealAnalysisDetailDialog,
+  MealAnalysisSwapDialog,
+  MealAnalysisBadge,
+  IncompleteDataBanner,
+  useMealAnalysisQuery,
+  useAnalyzeMealPlanMutation,
+  type MealWarning,
+  type SwapSuggestion,
+} from '@/features/meal-analysis';
+
+/** Chi tiết 1 phiên bản thực đơn: 21 ô + đi chợ + cảnh báo + dinh dưỡng + phân tích tương thích. */
 function MealPlanDetailContent({ id }: { id: string }) {
   const { data: plan, isLoading, isError, error, refetch } = useMealPlanDetailQuery(id);
   const [swapSlot, setSwapSlot] = React.useState<MealSlot | null>(null);
+  const [selectorSlot, setSelectorSlot] = React.useState<MealSlot | null>(null);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
+
+  // States cho phân tích tương thích và vi chất (Phase 18)
+  const [selectedDetailWarning, setSelectedDetailWarning] = React.useState<MealWarning | null>(
+    null
+  );
+  const [selectedSwapWarning, setSelectedSwapWarning] = React.useState<MealWarning | null>(null);
+
+  const { data: analysis } = useMealAnalysisQuery(plan?.id, plan?.lockVersion);
+  const analyzeMutation = useAnalyzeMealPlanMutation(plan?.id ?? '', plan?.lockVersion);
+  const swapMutation = useSwapMealItemMutation();
+  const manualAddMutation = useManualAddMealItemMutation();
+
+  // Danh sách các bữa ăn đã lên lịch dùng cho tính toán Đi chợ thông minh (Phase 22)
+  const planMeals = React.useMemo(() => {
+    if (!plan?.items) return [];
+    return plan.items
+      .filter((slot) => slot.filled && (slot.recipeId || slot.customMealId))
+      .map((slot) => ({
+        sourceType: slot.sourceType,
+        recipeId: slot.recipeId,
+        servings: slot.servings || 1,
+      }));
+  }, [plan?.items]);
+
+  // Bản đồ cảnh báo theo ô bữa ăn để hiển thị Badge trực quan trong DayGrid
+  const warningsBySlotId = React.useMemo(() => {
+    const map = new Map<string, MealWarning[]>();
+    if (!analysis || analysis.isStale) return map;
+    for (const warning of analysis.warnings) {
+      for (const item of warning.affectedItems) {
+        if (item.planItemId) {
+          const list = map.get(item.planItemId) ?? [];
+          list.push(warning);
+          map.set(item.planItemId, list);
+        }
+      }
+    }
+    return map;
+  }, [analysis]);
+
+  const handleApplySwap = async (planItemId: string, swap: SwapSuggestion) => {
+    if (!plan) return;
+    const updated = await swapMutation.mutateAsync({
+      planId: plan.id,
+      itemId: planItemId,
+      expectedVersion: plan.lockVersion,
+      idempotencyKey: `swap-suggestion-${planItemId}-${swap.suggestedDishId}-${Date.now()}`,
+    });
+    // Kích hoạt phân tích lại sau khi đổi món thành công
+    analyzeMutation.mutate({ expectedPlanVersion: updated.lockVersion });
+  };
+
+  const handleManualSelect = async (item: SelectedMealItem) => {
+    if (!plan || !selectorSlot) return;
+    try {
+      const updatedPlan = await manualAddMutation.mutateAsync({
+        planId: plan.id,
+        itemId: selectorSlot.id,
+        body: {
+          expectedVersion: plan.lockVersion,
+          idempotencyKey: `manual-add-${selectorSlot.id}-${item.id}-${Date.now()}`,
+          sourceType: item.sourceType,
+          recipeId: item.sourceType === 'RECIPE' ? item.id : undefined,
+          customMealId: item.sourceType === 'CUSTOM_MEAL' ? item.id : undefined,
+          servings: item.servings,
+        },
+      });
+      // Tự động phân tích lại thực đơn với phiên bản mới
+      analyzeMutation.mutate({ expectedPlanVersion: updatedPlan.lockVersion });
+    } catch {
+      // Lỗi đã được xử lý bằng toast ở query layer
+    }
+  };
 
   if (isError && getApiErrorStatus(error) === 404) notFound();
 
@@ -75,21 +170,84 @@ function MealPlanDetailContent({ id }: { id: string }) {
             </Button>
           </div>
 
+          {/* Banner cảnh báo phát sinh từ tạo thực đơn cơ bản */}
           <WarningsBanner warnings={plan.warnings} />
 
-          <DayGrid
-            items={plan.items}
-            actions={(slot) =>
-              slot.filled ? (
-                <Button variant="ghost" size="sm" onClick={() => setSwapSlot(slot)}>
-                  <Repeat data-icon="inline-start" />
-                  Đổi món
-                </Button>
-              ) : null
-            }
+          {/* Module Phân tích Khẩu phần & Tương thích Dinh dưỡng (Phase 18) */}
+          <MealAnalysisSummaryBar
+            analysis={analysis}
+            isLoading={analyzeMutation.isPending}
+            onAnalyze={() => analyzeMutation.mutate({ expectedPlanVersion: plan.lockVersion })}
           />
 
-          <ShoppingList items={plan.shoppingList} />
+          {analysis?.hasIncompleteData && (
+            <IncompleteDataBanner
+              confidence={analysis.overallConfidence}
+              notes={analysis.incompleteDataNotes}
+            />
+          )}
+
+          {/* Lưới lịch tuần có nhúng Huy hiệu cảnh báo trên từng ô bữa ăn */}
+          <DayGrid
+            items={plan.items}
+            actions={(slot) => (
+              <div className="flex items-center gap-1.5 pt-1">
+                {slot.filled ? (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 text-xs px-2 gap-1 text-muted-foreground hover:text-foreground"
+                      onClick={() => setSwapSlot(slot)}
+                    >
+                      <Repeat className="w-3.5 h-3.5" />
+                      Đổi món
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 text-xs px-2 gap-1 ml-auto text-primary hover:bg-primary/5"
+                      onClick={() => setSelectorSlot(slot)}
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Chọn món
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs w-full gap-1 text-primary border-primary/30 hover:bg-primary/5 font-medium"
+                    onClick={() => setSelectorSlot(slot)}
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Thêm món vào ô này
+                  </Button>
+                )}
+              </div>
+            )}
+            slotBadge={(slot) => {
+              const warnings = warningsBySlotId.get(slot.id);
+              if (!warnings || warnings.length === 0) return null;
+              return (
+                <MealAnalysisBadge
+                  warnings={warnings}
+                  onClick={(ws) => setSelectedDetailWarning(ws[0])}
+                />
+              );
+            }}
+          />
+
+          {/* Module Chi tiết Cảnh báo Dinh dưỡng (Phase 18) */}
+          {analysis && !analysis.isStale && (
+            <MealAnalysisAlerts
+              warnings={analysis.warnings}
+              onViewDetails={setSelectedDetailWarning}
+              onViewSwaps={setSelectedSwapWarning}
+            />
+          )}
+
+          <ShoppingList items={plan.shoppingList} planMeals={planMeals} />
 
           <p className="text-xs text-muted-foreground">
             {plan.vitaminB12Mcg !== null
@@ -106,12 +264,43 @@ function MealPlanDetailContent({ id }: { id: string }) {
               if (!open) setSwapSlot(null);
             }}
           />
+
+          <MealPlanItemSelector
+            open={selectorSlot !== null}
+            onOpenChange={(open) => {
+              if (!open) setSelectorSlot(null);
+            }}
+            onSelect={handleManualSelect}
+            dayLabel={selectorSlot?.date}
+            mealTypeLabel={selectorSlot?.mealTypeLabel}
+          />
+
           <DeleteMealPlanDialog
             planId={plan.id}
             weekLabel={plan.formattedWeekRange}
             expectedVersion={plan.lockVersion}
             open={deleteOpen}
             onOpenChange={setDeleteOpen}
+          />
+
+          {/* Hộp thoại xem chi tiết cơ sở khoa học & nguồn tài liệu */}
+          <MealAnalysisDetailDialog
+            warning={selectedDetailWarning}
+            open={selectedDetailWarning !== null}
+            onOpenChange={(open) => {
+              if (!open) setSelectedDetailWarning(null);
+            }}
+          />
+
+          {/* Hộp thoại gợi ý đổi món khắc phục cảnh báo */}
+          <MealAnalysisSwapDialog
+            warning={selectedSwapWarning}
+            open={selectedSwapWarning !== null}
+            onOpenChange={(open) => {
+              if (!open) setSelectedSwapWarning(null);
+            }}
+            onSelectSwap={handleApplySwap}
+            isSwapping={swapMutation.isPending}
           />
         </>
       )}

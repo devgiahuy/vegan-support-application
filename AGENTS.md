@@ -6,13 +6,17 @@ These instructions apply to the entire repository.
 
 Before changing product behavior, backend APIs, database schemas, or frontend API integration, read:
 
-1. `docs/IMPLEMENTATION_PLAN.md` — approved scope, business rules, state machines, sequencing, and Definition of Done.
-2. `backend/docs/IMPLEMENTATION_PHASES.md` — backend phase dependency, completion gates, and prompt index.
-3. The prompt for the active phase under `backend/docs/prompts/`, when phase-based implementation is requested.
-4. `frontend/docs/BACKEND_INTEGRATION.md` — live backend capability status and frontend integration contract.
-5. `frontend/docs/ARCHITECTURE.md` — mandatory frontend DTO/Model/Mapper and query-layer conventions.
-6. `frontend/AGENTS.md` — mandatory frontend agent instructions, architecture rules, and contextual skill enforcement.
-7. `docs/SRS.md` once it exists. Until the SRS files are consolidated, do not silently resolve conflicting requirements; follow the decisions in the implementation plan and flag remaining conflicts.
+1. `docs/SRS.md` — canonical product requirements and scope authority.
+2. `docs/IMPLEMENTATION_PLAN.md` — approved business rules, state machines, sequencing, and Definition of Done.
+3. `docs/ROADMAP_PHASE_2.md` — retained post-MVP backlog; do not implement it as MVP without a new approval.
+4. `backend/docs/IMPLEMENTATION_PHASES.md` — backend phase dependency, completion gates, and prompt index.
+5. The prompt for the active phase under `backend/docs/prompts/`, when phase-based implementation is requested.
+6. `frontend/docs/BACKEND_INTEGRATION.md` — live backend capability status and frontend integration contract.
+7. `frontend/docs/ARCHITECTURE.md` — mandatory frontend DTO/Model/Mapper and query-layer conventions.
+8. `frontend/AGENTS.md` — mandatory frontend agent instructions, architecture rules, and contextual skill enforcement.
+
+Older SRS/UI documents under `frontend/docs/` are reference or historical artifacts. Do not use them to override the canonical root SRS.
+For food-data, nutrition, cooking-retention, intake-limit, or ingredient-interaction work, also read `docs/FOOD_DATA_SOURCES.md` and preserve source/license/version provenance.
 
 ## Backend contract synchronization — mandatory
 
@@ -47,11 +51,16 @@ If a backend change is breaking, set the affected endpoint status to `CHANGING`,
 ## Business-rule safety
 
 - Allergy, explicit ingredient exclusions, diet pattern, and enabled tradition rules are backend-enforced constraints. Frontend checks are UX only.
-- Requested Contributor type never grants permission. Only the approved role/profile returned by backend authorization is authoritative.
+- Contributor intent or application data never grants permission. Only a manually approved Contributor role/profile returned by backend authorization is authoritative.
+- All approved Contributors have the same permissions. `ORGANIZATION_AFFILIATION`, `PLATFORM_TRACK_RECORD`, and `ADMIN_INVITED` describe approval basis only and must never be used as permission tiers.
 - AI flags and user reports are signals, not final violations. Automated logic must not hard-delete content.
 - Behavioral ranking must never reintroduce a recipe removed by dietary or allergy constraints.
+- Canonical ingredient, nutrient, upper-limit, retention, and compatibility data must retain source and version. AI suggestions cannot become hard nutrient or interaction rules without an explicit reviewed promotion.
+- Cooking-aware nutrition estimates must expose provenance, assumptions, confidence, and uncertainty; they must not silently overwrite canonical values.
+- Fridge-image and receipt results require user confirmation before changing pantry, meal-plan, or shopping-list state.
+- User-created tags such as `shopee` are metadata only and must not be treated as an external-service integration.
 - Do not hard-code an AI model ID or vendor quota in domain logic; use configuration/provider adapters.
-- Do not claim certificates are verified in the MVP; certificate upload/verification is Phase 2.
+- Do not claim certificates, professional status, clinical outcomes, freshness safety, or copyright ownership are verified in the MVP.
 
 ## Documentation accuracy
 

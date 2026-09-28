@@ -4,7 +4,7 @@ import { RecipeDifficulty } from '@/common/enums';
 export const recipeIngredientSchema = z.object({
   ingredientId: z.string().nullable().optional(),
   name: z.string().min(1, 'Tên nguyên liệu không được để trống'),
-  amount: z.number().positive('Định lượng phải lớn hơn 0'),
+  amount: z.number({ message: 'Định lượng phải là số' }).positive('Định lượng phải lớn hơn 0'),
   unit: z.string().min(1, 'Đơn vị tính không được để trống'),
   notes: z.string().optional(),
 });
@@ -34,16 +34,26 @@ export const recipeFormSchema = z.object({
   coverImageUrl: z.string().url('Đường dẫn ảnh bìa không hợp lệ').or(z.literal('')).optional(),
   coverMedia: z
     .object({
-      publicId: z.string(),
-      mimeType: z.string(),
-      bytes: z.number(),
+      assetId: z.string().optional(),
+      publicId: z.string().optional(),
+      mimeType: z.string().optional(),
+      bytes: z.number().optional(),
     })
     .nullable()
     .optional(),
   difficulty: z.nativeEnum(RecipeDifficulty),
-  servings: z.number().int().min(1, 'Khẩu phần ăn tối thiểu là 1 người'),
-  prepTimeMinutes: z.number().int().min(0, 'Thời gian sơ chế không được âm'),
-  cookTimeMinutes: z.number().int().min(0, 'Thời gian nấu không được âm'),
+  servings: z
+    .number({ message: 'Khẩu phần ăn phải là số' })
+    .int()
+    .min(1, 'Khẩu phần ăn tối thiểu là 1 người'),
+  prepTimeMinutes: z
+    .number({ message: 'Thời gian sơ chế phải là số' })
+    .int()
+    .min(0, 'Thời gian sơ chế không được âm'),
+  cookTimeMinutes: z
+    .number({ message: 'Thời gian nấu phải là số' })
+    .int()
+    .min(0, 'Thời gian nấu không được âm'),
   dietTag: z.string().optional(),
   description: z.string().max(500, 'Mô tả tối đa 500 ký tự').optional(),
   ingredients: z

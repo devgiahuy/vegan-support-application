@@ -7,10 +7,12 @@ import {
 } from '../../common/validation/validate-request.js';
 import {
   deletePostResponseSchema,
+  contentReviewHistoryResponseSchema,
   postListResponseSchema,
   postResponseSchema,
   relatedPostsResponseSchema,
-  uploadSignatureResponseSchema,
+  type ReviewHistoryQuery,
+  type SubmitPostInput,
   type CreatePostInput,
   type DeletePostQuery,
   type PostIdentifierParams,
@@ -18,17 +20,15 @@ import {
   type PostListQuery,
   type RelatedPostsQuery,
   type UpdatePostInput,
-  type UploadSignatureInput,
 } from './content.schemas.js';
 import type { ContentActor, ContentService } from './content.service.js';
-import type { MediaService } from './media.service.js';
 
 function actorFromRequest(request: Request): ContentActor {
   if (request.auth) {
     return {
       userId: request.auth.userId,
       role: request.auth.role,
-      contributorType: request.auth.contributorType,
+      hasActiveContributorProfile: request.auth.hasActiveContributorProfile,
     };
   }
   throw new AppError({ statusCode: 401, code: 'AUTH_REQUIRED', message: 'Vui lòng đăng nhập' });
@@ -37,7 +37,6 @@ function actorFromRequest(request: Request): ContentActor {
 export class ContentController {
   constructor(
     private readonly contentService: ContentService,
-    private readonly mediaService: MediaService,
   ) {}
 
   listPosts = async (request: Request, response: Response): Promise<void> => {
@@ -47,7 +46,7 @@ export class ContentController {
         ? {
             userId: request.auth.userId,
             role: request.auth.role,
-            contributorType: request.auth.contributorType,
+            hasActiveContributorProfile: request.auth.hasActiveContributorProfile,
           }
         : undefined,
     );
@@ -69,7 +68,7 @@ export class ContentController {
         ? {
             userId: request.auth.userId,
             role: request.auth.role,
-            contributorType: request.auth.contributorType,
+            hasActiveContributorProfile: request.auth.hasActiveContributorProfile,
           }
         : undefined,
     );
@@ -90,7 +89,7 @@ export class ContentController {
         ? {
             userId: request.auth.userId,
             role: request.auth.role,
-            contributorType: request.auth.contributorType,
+            hasActiveContributorProfile: request.auth.hasActiveContributorProfile,
           }
         : undefined,
     );
@@ -115,6 +114,32 @@ export class ContentController {
     response.status(200).json(postResponseSchema.parse({ success: true, data, meta: null }));
   };
 
+  submitPost = async (request: Request, response: Response): Promise<void> => {
+    const { id } = getValidatedParams<PostIdParams>(request);
+    const data = await this.contentService.submitPost(
+      actorFromRequest(request),
+      id,
+      getValidatedBody<SubmitPostInput>(request),
+    );
+    response.status(200).json(postResponseSchema.parse({ success: true, data, meta: null }));
+  };
+
+  getReviewHistory = async (request: Request, response: Response): Promise<void> => {
+    const { id } = getValidatedParams<PostIdParams>(request);
+    const result = await this.contentService.getReviewHistory(
+      actorFromRequest(request),
+      id,
+      getValidatedQuery<ReviewHistoryQuery>(request),
+    );
+    response.status(200).json(
+      contentReviewHistoryResponseSchema.parse({
+        success: true,
+        data: result.data,
+        meta: result.meta,
+      }),
+    );
+  };
+
   deletePost = async (request: Request, response: Response): Promise<void> => {
     const { id } = getValidatedParams<PostIdParams>(request);
     const data = await this.contentService.deletePost(
@@ -125,12 +150,4 @@ export class ContentController {
     response.status(200).json(deletePostResponseSchema.parse({ success: true, data, meta: null }));
   };
 
-  createUploadSignature = (request: Request, response: Response): void => {
-    const data = this.mediaService.createUploadSignature(
-      getValidatedBody<UploadSignatureInput>(request),
-    );
-    response
-      .status(200)
-      .json(uploadSignatureResponseSchema.parse({ success: true, data, meta: null }));
-  };
 }

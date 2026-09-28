@@ -1,10 +1,9 @@
 /**
- * DTO contributor applications: nộp đơn, lịch sử, admin duyệt.
- * Theo `docs/api/contributors.md` + `docs/api/contributor-admin.md` (backend PLANNED).
- * Envelope `{success, data, meta}` dùng trực tiếp khi nối live.
+ * DTOs cho Contributor Application, Admin Review, Direct Invitation & Revocation.
+ * Đồng bộ theo contract Backend Phase 14 (`docs/api/contributors.md` + `docs/api/contributor-admin.md`).
  */
 
-/** Đơn contributor thô (own + admin cùng shape). */
+/** DTO đơn Contributor thô (lịch sử cá nhân và hàng chờ admin). */
 export interface ContributorApplicationDto {
   id?: string;
   user?: {
@@ -13,25 +12,50 @@ export interface ContributorApplicationDto {
     displayName?: string;
     display_name?: string;
     role?: string;
-    currentContributorType?: string | null;
+    currentApprovalBasis?: string | null;
+    current_approval_basis?: string | null;
   } | null;
-  requestedType?: string;
-  requested_type?: string;
-  requestedTypeLabel?: string;
+  claimedApprovalBasis?: string;
+  claimed_approval_basis?: string;
+  claimedApprovalBasisLabel?: string;
+  claimed_approval_basis_label?: string;
+  organizationClaim?: string | null;
+  organization_claim?: string | null;
   experience?: string;
   referenceLinks?: (string | null)[] | null;
   reference_links?: (string | null)[] | null;
   source?: string;
+  invitedBy?: {
+    id?: string;
+    displayName?: string;
+    display_name?: string;
+  } | null;
+  invited_by?: {
+    id?: string;
+    displayName?: string;
+    display_name?: string;
+  } | null;
+  invitationReason?: string | null;
+  invitation_reason?: string | null;
   status?: string;
-  approvedType?: string | null;
-  approved_type?: string | null;
-  approvedTypeLabel?: string | null;
   approvalBasis?: string | null;
   approval_basis?: string | null;
+  approvalBasisLabel?: string | null;
+  approval_basis_label?: string | null;
+  reviewEvidence?: Record<string, unknown> | null;
+  review_evidence?: Record<string, unknown> | null;
   reviewNote?: string | null;
   review_note?: string | null;
-  reviewedBy?: { id?: string; displayName?: string } | null;
-  reviewed_by?: { id?: string; displayName?: string } | null;
+  reviewedBy?: {
+    id?: string;
+    displayName?: string;
+    display_name?: string;
+  } | null;
+  reviewed_by?: {
+    id?: string;
+    displayName?: string;
+    display_name?: string;
+  } | null;
   reviewedAt?: string | null;
   reviewed_at?: string | null;
   reapplyEligibleAt?: string | null;
@@ -42,14 +66,15 @@ export interface ContributorApplicationDto {
   updated_at?: string;
 }
 
-/** `POST /contributor-applications` — type + experience bắt buộc. */
+/** `POST /api/v1/contributor-applications` — Nộp đơn đăng ký. */
 export interface SubmitApplicationRequestDto {
-  requestedType: string;
+  claimedApprovalBasis: 'ORGANIZATION_AFFILIATION' | 'PLATFORM_TRACK_RECORD';
+  organizationClaim?: string;
   experience: string;
   referenceLinks?: string[];
 }
 
-/** `POST /contributor-applications` → đơn PENDING. */
+/** `POST /api/v1/contributor-applications` → Trả về đơn PENDING. */
 export interface ContributorApplicationResponseDto {
   success?: boolean;
   data?: ContributorApplicationDto | null;
@@ -65,14 +90,56 @@ export interface ContributorPageMetaDto {
   total_pages?: number;
 }
 
-/** `GET /contributor-applications/me` + `GET /admin/contributor-applications`. */
+/** `GET /api/v1/contributor-applications/me` + `GET /api/v1/admin/contributor-applications`. */
 export interface ContributorApplicationListResponseDto {
   success?: boolean;
   data?: (ContributorApplicationDto | null)[] | null;
   meta?: ContributorPageMetaDto | null;
 }
 
-/** `PATCH /admin/.../review` oneOf: APPROVE đủ 4 / REJECT note. */
+/** `PATCH /api/v1/admin/contributor-applications/:id/review` — oneOf: APPROVE / REJECT. */
 export type ReviewApplicationRequestDto =
-  | { decision: 'APPROVE'; contributorType: string; approvalBasis: string; reviewNote: string }
-  | { decision: 'REJECT'; reviewNote: string };
+  | {
+      decision: 'APPROVE';
+      approvalBasis: 'ORGANIZATION_AFFILIATION' | 'PLATFORM_TRACK_RECORD' | 'ADMIN_INVITED';
+      reviewNote: string;
+    }
+  | {
+      decision: 'REJECT';
+      reviewNote: string;
+    };
+
+/** `POST /api/v1/admin/contributor-invitations` — Admin mời thành viên. */
+export interface InviteContributorRequestDto {
+  userId: string;
+  reason: string;
+}
+
+/** `PATCH /api/v1/admin/contributors/:userId/revoke` — Admin thu hồi tư cách Contributor. */
+export interface RevokeContributorRequestDto {
+  reason: string;
+}
+
+/** Phản hồi thu hồi tư cách Contributor. */
+export interface ContributorRevocationResponseDto {
+  success?: boolean;
+  data?: {
+    userId?: string;
+    user_id?: string;
+    role?: string;
+    revokedAt?: string;
+    revoked_at?: string;
+    revokedBy?: {
+      id?: string;
+      displayName?: string;
+      display_name?: string;
+    } | null;
+    revoked_by?: {
+      id?: string;
+      displayName?: string;
+      display_name?: string;
+    } | null;
+    reason?: string;
+  } | null;
+  meta?: null;
+}

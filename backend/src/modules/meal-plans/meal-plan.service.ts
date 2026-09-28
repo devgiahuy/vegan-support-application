@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import {
   MealSlotStatus,
+  MealPlanItemSourceType,
   MealType,
   MediaKind,
   NutritionDataQuality,
@@ -15,6 +16,7 @@ import type { ContentRepository, PublishedPostRecord } from '../content/content.
 import { buildAuthenticatedSearchConstraints } from '../content/search-constraints.js';
 import { RECOMMENDATION_SCORING_VERSION } from '../recommendations/recommendation.schemas.js';
 import type { RecommendationService } from '../recommendations/recommendation.service.js';
+import type { MealAnalysisService } from '../meal-analysis/meal-analysis.service.js';
 import {
   MealPlanIdempotencyConflictError,
   MealPlanVersionConflictError,
@@ -28,6 +30,7 @@ import {
   type DeleteMealPlanQuery,
   type GenerateMealPlanInput,
   type MealPlanListQuery,
+  type ManualAddMealPlanItemInput,
   type MealPlanWarningCode,
   type SwapMealPlanItemInput,
 } from './meal-plan.schemas.js';
@@ -184,6 +187,7 @@ export class MealPlanService {
     private readonly contentRepository: ContentRepository,
     private readonly recommendationService: RecommendationService,
     private readonly config: AppConfig,
+    private readonly mealAnalysisService: MealAnalysisService,
   ) {}
 
   async generate(userId: string, input: GenerateMealPlanInput) {
@@ -196,7 +200,7 @@ export class MealPlanService {
     const existing = await this.repository.findByIdempotency(userId, input.idempotencyKey);
     if (existing) {
       if (existing.payloadHash !== payloadHash) throw this.idempotencyConflict();
-      return this.output(existing);
+      return this.outputWithAnalysis(userId, existing);
     }
     const health = await this.repository.findHealthProfile(userId);
     if (!health) {
@@ -330,12 +334,12 @@ export class MealPlanService {
         shoppingItems: aggregate.shopping.items,
       });
       if (created.payloadHash !== payloadHash) throw this.idempotencyConflict();
-      return this.output(created);
+      return this.outputWithAnalysis(userId, created);
     } catch (error) {
       if (error instanceof MealPlanIdempotencyConflictError) throw this.idempotencyConflict();
       if (!this.repository.isUniqueConstraintError(error)) throw error;
       const raced = await this.repository.findByIdempotency(userId, input.idempotencyKey);
-      if (raced?.payloadHash === payloadHash) return this.output(raced);
+      if (raced?.payloadHash === payloadHash) return this.outputWithAnalysis(userId, raced);
       throw this.idempotencyConflict();
     }
   }
@@ -361,7 +365,7 @@ export class MealPlanService {
   async get(userId: string, id: string) {
     const plan = await this.repository.findOwnedPlan(userId, id);
     if (!plan) throw this.notFound();
-    return this.output(plan);
+    return this.outputWithAnalysis(userId, plan);
   }
 
   async swap(userId: string, planId: string, itemId: string, input: SwapMealPlanItemInput) {
@@ -379,7 +383,7 @@ export class MealPlanService {
       if (existingMutation.payloadHash !== payloadHash) throw this.idempotencyConflict();
       const plan = await this.repository.findOwnedPlan(userId, existingMutation.mealPlanId);
       if (!plan) throw this.notFound();
-      return this.output(plan);
+      return this.outputWithAnalysis(userId, plan);
     }
     const plan = await this.repository.findOwnedPlan(userId, planId);
     if (!plan) throw this.notFound();
@@ -443,15 +447,37 @@ export class MealPlanService {
         mealType: current.mealType,
         position: current.position,
         status: current.status,
+        sourceType: current.sourceType,
         ...(current.recipeId ? { recipeId: current.recipeId } : {}),
         ...(current.recipeRevisionId ? { recipeRevisionId: current.recipeRevisionId } : {}),
+        ...(current.customMealId ? { customMealId: current.customMealId } : {}),
+        ...(current.customMealSnapshot ? { customMealSnapshot: current.customMealSnapshot } : {}),
+        servings: Number(current.servings),
         targetCalories: current.targetCalories,
         ...(current.calories ? { calories: current.calories } : {}),
         ...(current.tolerancePercent ? { tolerancePercent: Number(current.tolerancePercent) } : {}),
         reasonCodes: stringList(current.reasonCodes),
         warningCodes: warningList(current.warningCodes),
       },
-      revision: current.recipeRevision,
+      revision:
+        current.recipeRevision ??
+        (current.customMeal
+          ? {
+              recipeDetail: { vitaminB12Mcg: null },
+              ingredients: current.customMeal.ingredients.flatMap((ingredient) =>
+                ingredient.ingredientId && ingredient.ingredient
+                  ? [
+                      {
+                        ingredientId: ingredient.ingredientId,
+                        amount: ingredient.amount,
+                        unit: ingredient.unit,
+                        ingredient: { canonicalName: ingredient.ingredient.canonicalName },
+                      },
+                    ]
+                  : [],
+              ),
+            }
+          : null),
     }));
     const replacementIndex = slots.findIndex((slot) => slot.data.position === item.position);
     slots[replacementIndex] = {
@@ -491,7 +517,7 @@ export class MealPlanService {
         explanation: this.explanation(slots, plan.targetCalories, plan.goal),
         shoppingItems: aggregate.shopping.items,
       });
-      return this.output(updated);
+      return this.outputWithAnalysis(userId, updated);
     } catch (error) {
       if (error instanceof MealPlanVersionConflictError) throw this.versionConflict();
       if (error instanceof MealPlanIdempotencyConflictError) throw this.idempotencyConflict();
@@ -614,6 +640,18 @@ export class MealPlanService {
     return `Kế hoạch ${goal} deterministic: ${filled}/${TOTAL_SLOTS} bữa được lấp đầy theo mục tiêu ${targetCalories} kcal/ngày; hard constraints luôn được áp dụng trước scoring.`;
   }
 
+  private assertNoHardViolation(reasons: string[]): void {
+    const unique = [...new Set(reasons)];
+    if (!unique.length) return;
+    throw new AppError({
+      statusCode: 409,
+      code: 'MEAL_PLAN_HARD_CONSTRAINT_VIOLATION',
+      message:
+        'Món đã chọn vi phạm allergy, explicit exclusion, diet pattern hoặc enabled tradition rule',
+      fields: { reasons: unique },
+    });
+  }
+
   private summary(plan: MealPlanRecord) {
     const micronutrientSummary =
       plan.micronutrientSummary &&
@@ -671,6 +709,8 @@ export class MealPlanService {
         mealType: item.mealType,
         position: item.position,
         status: item.status,
+        sourceType: item.sourceType,
+        servings: Number(item.servings),
         targetCalories: item.targetCalories,
         calories: item.calories,
         tolerancePercent: item.tolerancePercent ? Number(item.tolerancePercent) : null,
@@ -687,6 +727,13 @@ export class MealPlanService {
                 difficulty: item.recipeRevision.recipeDetail.difficulty,
               }
             : null,
+        customMeal: item.customMeal
+          ? {
+              id: item.customMeal.id,
+              name: item.customMeal.name,
+              nutritionCoverage: item.customMeal.nutritionCoverage,
+            }
+          : null,
         reasonCodes: stringList(item.reasonCodes),
         warningCodes: warningList(item.warningCodes),
       })),
@@ -698,6 +745,263 @@ export class MealPlanService {
         sourceItemCount: item.sourceItemCount,
       })),
     };
+  }
+
+  async manualAdd(
+    userId: string,
+    planId: string,
+    itemId: string,
+    input: ManualAddMealPlanItemInput,
+  ) {
+    const payloadHash = sha256({ planId, itemId, ...input, idempotencyKey: undefined });
+    const existingMutation = await this.repository.findMutationByIdempotency(
+      userId,
+      input.idempotencyKey,
+    );
+    if (existingMutation) {
+      if (existingMutation.payloadHash !== payloadHash) throw this.idempotencyConflict();
+      const existing = await this.repository.findOwnedPlan(userId, existingMutation.mealPlanId);
+      if (!existing) throw this.notFound();
+      return this.outputWithAnalysis(userId, existing);
+    }
+    const plan = await this.repository.findOwnedPlan(userId, planId);
+    if (!plan) throw this.notFound();
+    if (plan.lockVersion !== input.expectedVersion) throw this.versionConflict();
+    const target = plan.items.find((item) => item.id === itemId);
+    if (!target) throw this.notFound();
+    const searchProfile = await this.contentRepository.findSearchProfile(userId);
+    const constraints = buildAuthenticatedSearchConstraints(
+      searchProfile,
+      undefined,
+      dateOnly(target.date),
+    ).constraints;
+    let replacement: PlannedSlot;
+    if (input.sourceType === MealPlanItemSourceType.RECIPE) {
+      const recipe = await this.contentRepository.findPublishedPost(input.recipeId!);
+      const revision = recipe?.publishedRevision;
+      if (!recipe || !revision?.recipeDetail) throw this.notFound();
+      const hardReasons: string[] = [];
+      const allergens = new Set(revision.recipeDetail.allergenCodes as string[]);
+      if (constraints.allergenCodes.some((code) => allergens.has(code)))
+        hardReasons.push('ALLERGY');
+      if (
+        revision.ingredients.some(
+          (ingredient) =>
+            (ingredient.ingredientId &&
+              constraints.excludedIngredientIds.includes(ingredient.ingredientId)) ||
+            constraints.excludedNormalizedNames.includes(ingredient.normalizedName),
+        )
+      )
+        hardReasons.push('INGREDIENT_EXCLUSION');
+      if (
+        constraints.dietPattern &&
+        revision.dietCompatibility.some(
+          (entry) => entry.dietPattern === constraints.dietPattern && !entry.compatible,
+        )
+      )
+        hardReasons.push('DIET_PATTERN');
+      const traditionWarnings = Array.isArray(revision.recipeDetail.traditionWarnings)
+        ? revision.recipeDetail.traditionWarnings
+        : [];
+      if (
+        traditionWarnings.some(
+          (warning) =>
+            warning &&
+            typeof warning === 'object' &&
+            !Array.isArray(warning) &&
+            typeof warning.tradition === 'string' &&
+            constraints.traditions.includes(warning.tradition as never),
+        )
+      )
+        hardReasons.push('TRADITION_RULE');
+      this.assertNoHardViolation(hardReasons);
+      const calories = Math.max(
+        1,
+        Math.round((revision.recipeDetail.calories ?? target.targetCalories) * input.servings),
+      );
+      replacement = {
+        data: {
+          date: target.date,
+          mealType: target.mealType,
+          position: target.position,
+          status: MealSlotStatus.FILLED,
+          sourceType: MealPlanItemSourceType.RECIPE,
+          recipeId: recipe.id,
+          recipeRevisionId: revision.id,
+          servings: input.servings,
+          targetCalories: target.targetCalories,
+          calories,
+          tolerancePercent: Number(
+            ((Math.abs(calories - target.targetCalories) / target.targetCalories) * 100).toFixed(2),
+          ),
+          reasonCodes: ['MANUAL_ADD'],
+          warningCodes: [],
+        },
+        revision,
+      };
+    } else {
+      const custom = await this.repository.findOwnedCustomMeal(userId, input.customMealId!);
+      if (!custom) throw this.notFound();
+      const hardReasons: string[] = [];
+      for (const ingredient of custom.ingredients) {
+        if (!ingredient.ingredient) {
+          hardReasons.push('UNRESOLVED_INGREDIENT');
+          continue;
+        }
+        if (
+          constraints.excludedIngredientIds.includes(ingredient.ingredient.id) ||
+          constraints.excludedNormalizedNames.includes(ingredient.normalizedName)
+        )
+          hardReasons.push('INGREDIENT_EXCLUSION');
+        if (
+          ingredient.ingredient.allergens.some((entry) =>
+            constraints.allergenCodes.includes(entry.allergenCode),
+          )
+        )
+          hardReasons.push('ALLERGY');
+        if (
+          constraints.dietPattern &&
+          ingredient.ingredient.dietCompatibilities.some(
+            (entry) => entry.dietPattern === constraints.dietPattern && !entry.compatible,
+          )
+        )
+          hardReasons.push('DIET_PATTERN');
+        if (
+          ingredient.ingredient.traditionWarnings.some((entry) =>
+            constraints.traditions.includes(entry.tradition),
+          )
+        )
+          hardReasons.push('TRADITION_RULE');
+      }
+      this.assertNoHardViolation(hardReasons);
+      const calories =
+        custom.userCalories === null
+          ? target.targetCalories
+          : Math.max(1, Math.round((custom.userCalories / custom.servings) * input.servings));
+      const snapshot = {
+        id: custom.id,
+        name: custom.name,
+        servings: custom.servings,
+        updatedAt: custom.updatedAt.toISOString(),
+        ingredients: custom.ingredients.map((ingredient) => ({
+          ingredientId: ingredient.ingredientId,
+          displayName: ingredient.displayName,
+          amount: Number(ingredient.amount),
+          unit: ingredient.unit,
+        })),
+      };
+      replacement = {
+        data: {
+          date: target.date,
+          mealType: target.mealType,
+          position: target.position,
+          status: MealSlotStatus.FILLED,
+          sourceType: MealPlanItemSourceType.CUSTOM_MEAL,
+          customMealId: custom.id,
+          customMealSnapshot: snapshot,
+          servings: input.servings,
+          targetCalories: target.targetCalories,
+          calories,
+          tolerancePercent: Number(
+            ((Math.abs(calories - target.targetCalories) / target.targetCalories) * 100).toFixed(2),
+          ),
+          reasonCodes: ['MANUAL_ADD'],
+          warningCodes: [],
+        },
+        revision: {
+          recipeDetail: { vitaminB12Mcg: null },
+          ingredients: custom.ingredients.flatMap((ingredient) =>
+            ingredient.ingredientId && ingredient.ingredient
+              ? [
+                  {
+                    ingredientId: ingredient.ingredientId,
+                    amount: ingredient.amount,
+                    unit: ingredient.unit,
+                    ingredient: { canonicalName: ingredient.ingredient.canonicalName },
+                  },
+                ]
+              : [],
+          ),
+        },
+      };
+    }
+    const slots = plan.items.map<PlannedSlot>((current) => ({
+      data: {
+        date: current.date,
+        mealType: current.mealType,
+        position: current.position,
+        status: current.status,
+        sourceType: current.sourceType,
+        ...(current.recipeId ? { recipeId: current.recipeId } : {}),
+        ...(current.recipeRevisionId ? { recipeRevisionId: current.recipeRevisionId } : {}),
+        ...(current.customMealId ? { customMealId: current.customMealId } : {}),
+        ...(current.customMealSnapshot ? { customMealSnapshot: current.customMealSnapshot } : {}),
+        servings: Number(current.servings),
+        targetCalories: current.targetCalories,
+        ...(current.calories ? { calories: current.calories } : {}),
+        ...(current.tolerancePercent ? { tolerancePercent: Number(current.tolerancePercent) } : {}),
+        reasonCodes: stringList(current.reasonCodes),
+        warningCodes: warningList(current.warningCodes),
+      },
+      revision:
+        current.recipeRevision ??
+        (current.customMeal
+          ? {
+              recipeDetail: { vitaminB12Mcg: null },
+              ingredients: current.customMeal.ingredients.flatMap((ingredient) =>
+                ingredient.ingredientId && ingredient.ingredient
+                  ? [
+                      {
+                        ingredientId: ingredient.ingredientId,
+                        amount: ingredient.amount,
+                        unit: ingredient.unit,
+                        ingredient: { canonicalName: ingredient.ingredient.canonicalName },
+                      },
+                    ]
+                  : [],
+              ),
+            }
+          : null),
+    }));
+    const index = slots.findIndex((slot) => slot.data.position === target.position);
+    slots[index] = replacement;
+    const aggregate = this.aggregate(slots);
+    try {
+      const updated = await this.repository.manualAddItem({
+        userId,
+        planId,
+        itemId,
+        expectedVersion: input.expectedVersion,
+        idempotencyKey: input.idempotencyKey,
+        payloadHash,
+        item: replacement.data,
+        warnings: aggregate.warnings,
+        nutritionDataQuality: aggregate.nutrition.quality,
+        micronutrientSummary: aggregate.nutrition.summary,
+        explanation: this.explanation(slots, plan.targetCalories, plan.goal),
+        shoppingItems: aggregate.shopping.items,
+      });
+      return this.outputWithAnalysis(userId, updated);
+    } catch (error) {
+      if (error instanceof MealPlanVersionConflictError) throw this.versionConflict();
+      if (error instanceof MealPlanIdempotencyConflictError) throw this.idempotencyConflict();
+      throw error;
+    }
+  }
+
+  private async outputWithAnalysis(userId: string, plan: MealPlanRecord) {
+    let analysis;
+    try {
+      analysis = await this.mealAnalysisService.getCurrent(userId, plan.id);
+    } catch (error) {
+      if (
+        !(error instanceof AppError) ||
+        !['NOT_FOUND', 'MEAL_ANALYSIS_STALE'].includes(error.code)
+      )
+        throw error;
+      analysis = await this.mealAnalysisService.analyzeDefault(userId, plan.id, plan.lockVersion);
+    }
+    return { ...this.output(plan), analysis };
   }
 
   private notFound() {

@@ -7,7 +7,7 @@ export enum StatusEnum {
 
 /**
  * Vai trò tài khoản theo contract backend (OpenAPI `ProfileResponse.data.role`).
- * - `requestedType` của đơn contributor KHÔNG thuộc enum này và không cấp quyền.
+ * - `claimedApprovalBasis` của đơn Contributor không cấp quyền.
  */
 export enum UserRole {
   MEMBER = 'MEMBER',
@@ -23,10 +23,14 @@ export enum MemberStatus {
   DELETED = 'DELETED',
 }
 
-/** Loại nguyện vọng contributor khi đăng ký (BL-01). Chỉ mô tả nguyện vọng, không cấp quyền. */
-export enum ContributorType {
-  EXPERIENCED_PRACTITIONER = 'EXPERIENCED_PRACTITIONER',
-  NUTRITION_EXPERT = 'NUTRITION_EXPERT',
+/**
+ * Căn cứ xét duyệt Contributor (BL-01, SRS §3.3).
+ * Chỉ là thông tin mô tả và kiểm toán (audit trail), không dùng phân quyền (RBAC).
+ */
+export enum ContributorApprovalBasis {
+  ORGANIZATION_AFFILIATION = 'ORGANIZATION_AFFILIATION',
+  PLATFORM_TRACK_RECORD = 'PLATFORM_TRACK_RECORD',
+  ADMIN_INVITED = 'ADMIN_INVITED',
 }
 
 /** Trạng thái đơn nguyện vọng contributor. */
@@ -34,6 +38,7 @@ export enum ContributorApplicationStatus {
   PENDING = 'PENDING',
   APPROVED = 'APPROVED',
   REJECTED = 'REJECTED',
+  WITHDRAWN = 'WITHDRAWN',
 }
 
 /** Phạm vi đăng xuất (OpenAPI `LogoutResponse.data.scope`). */
@@ -239,6 +244,14 @@ export enum ReportTargetKind {
   COMMENT = 'COMMENT',
 }
 
+/** Trạng thái quán chay (hiển thị công khai / chờ duyệt / từ chối / lưu trữ). */
+export enum RestaurantStatus {
+  PENDING = 'PENDING',
+  PUBLISHED = 'PUBLISHED',
+  REJECTED = 'REJECTED',
+  ARCHIVED = 'ARCHIVED',
+}
+
 /** Mã lý do báo cáo vi phạm (`createModerationReport.reasonCode`). */
 export enum ReportReasonCode {
   SPAM = 'SPAM',
@@ -269,4 +282,50 @@ export enum ReportStatus {
 export enum ReportTargetType {
   POST = 'POST',
   COMMENT = 'COMMENT',
+}
+
+/** Loại nguồn tạo bản ghi tri thức AI (Phase 23). */
+export enum AiArtifactType {
+  CHAT_ANSWER = 'CHAT_ANSWER',
+  RECIPE_NUTRITION = 'RECIPE_NUTRITION',
+  FRIDGE_RECOGNITION = 'FRIDGE_RECOGNITION',
+  RECEIPT_EXTRACTION = 'RECEIPT_EXTRACTION',
+}
+
+/** Trạng thái vòng đời của AI Artifact (Phase 23). */
+export enum AiArtifactStatus {
+  DRAFT = 'DRAFT',
+  SUBMITTED = 'SUBMITTED',
+}
+
+/** Chế độ hiển thị của AI Artifact (Phase 23). */
+export enum AiArtifactVisibility {
+  PRIVATE = 'PRIVATE',
+  PUBLIC = 'PUBLIC',
+}
+
+/** Kết luận thẩm định kiểm chứng của chuyên gia (Phase 23). */
+export enum AiVerificationConclusion {
+  VERIFIED = 'VERIFIED',
+  CORRECTION_NEEDED = 'CORRECTION_NEEDED',
+  REJECTED = 'REJECTED',
+}
+
+/** Trạng thái hiệu lực của bản kiểm chứng (Phase 23). */
+export enum AiVerificationStatus {
+  ACTIVE = 'ACTIVE',
+  SUPERSEDED = 'SUPERSEDED',
+  REVOKED = 'REVOKED',
+}
+
+/** Loại hành động can thiệp của Quản trị viên lên kiểm chứng (Phase 23). */
+export enum AiVerificationAdminActionType {
+  OVERRIDE = 'OVERRIDE',
+  REVOKE = 'REVOKE',
+}
+
+/** Nguồn dữ liệu quán ăn (Phase 24). */
+export enum RestaurantSource {
+  INTERNAL = 'INTERNAL',
+  GOOGLE_PLACES = 'GOOGLE_PLACES',
 }

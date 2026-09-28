@@ -148,6 +148,7 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
     return COVER_PRESETS[0].url;
   });
   const [coverMedia, setCoverMedia] = React.useState<{
+    assetId?: string;
     publicId?: string;
     mimeType?: string;
     bytes?: number;
@@ -156,16 +157,12 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
     return null;
   });
   const [contentMarkdown, setContentMarkdown] = React.useState(() => {
-    if (!initialPost) {
-      return `## 1. Mở đầu chia sẻ\nViết những dòng chia sẻ chân thành về trải nghiệm ăn chay của bạn...\n\n### 2. Bí quyết dinh dưỡng cần lưu ý\n- **Đảm bảo protein:** Kết hợp các loại đậu và ngũ cốc.\n- **Bổ sung khoáng chất:** Uống đủ nước và bổ sung rau xanh đậm.\n\n> *"Ăn chay nuôi dưỡng tình thương và mang lại sự an lạc nội tâm."*\n\n### 3. Lời khuyên thực hành\nChúc các bạn có những bữa cơm thanh lành tràn đầy năng lượng!`;
-    }
+    if (!initialPost) return '';
     if ('contentMarkdown' in initialPost) return initialPost.contentMarkdown;
     if ('content' in initialPost) return initialPost.content;
     return '';
   });
-  const [tags, setTags] = React.useState<string[]>(
-    initialPost?.tags || ['ĂnChayKhoaHọc', 'DinhDưỡngXanh', 'ThuầnChay']
-  );
+  const [tags, setTags] = React.useState<string[]>(initialPost?.tags || []);
   const [newTagInput, setNewTagInput] = React.useState('');
 
   // Quyền xuất bản lấy từ phiên đăng nhập thật (không mô phỏng):
@@ -614,8 +611,13 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
                 onChange={(url, meta) => {
                   setCoverImage(url);
                   setCoverMedia(
-                    meta?.publicId && meta?.mimeType && meta?.bytes
-                      ? { publicId: meta.publicId, mimeType: meta.mimeType, bytes: meta.bytes }
+                    meta?.assetId || (meta?.publicId && meta?.mimeType && meta?.bytes)
+                      ? {
+                          assetId: meta?.assetId,
+                          publicId: meta?.publicId,
+                          mimeType: meta?.mimeType,
+                          bytes: meta?.bytes,
+                        }
                       : null
                   );
                 }}

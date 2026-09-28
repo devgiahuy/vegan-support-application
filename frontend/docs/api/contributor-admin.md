@@ -4,9 +4,20 @@
 ## GET `/api/v1/admin/contributor-applications`
 Admin list/filter Contributor applications
 - operationId: `listContributorApplicationsAdmin`
-- Params: `query:page (integer)`, `query:limit (integer)`, `query:status (string)`, `query:requestedType (string)`, `query:source (string)`, `query:q (string)`
+- Params: `query:page (integer)`, `query:limit (integer)`, `query:status (string)`, `query:claimedApprovalBasis (string)`, `query:source (string)`, `query:q (string)`
 - Request: —
 - Responses: `200` → ContributorApplicationListResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse
+
+## POST `/api/v1/admin/contributor-invitations`
+Admin tạo Contributor invitation PENDING
+- operationId: `inviteContributorAdmin`
+- Params: —
+- Request: `object` (required)
+- Responses: `201` → ContributorApplicationResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
+
+```json
+{"type":"object","required":["userId","reason"],"properties":{"userId":{"type":"string","format":"uuid"},"reason":{"type":"string"}},"additionalProperties":false}
+```
 
 ## PATCH `/api/v1/admin/contributor-applications/{id}/review`
 Admin approve/reject Contributor application
@@ -16,7 +27,18 @@ Admin approve/reject Contributor application
 - Responses: `200` → ContributorApplicationResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
 ```json
-{"oneOf":[{"type":"object","required":["decision","contributorType","approvalBasis","reviewNote"],"properties":{"decision":{"type":"string","enum":["APPROVE"]},"contributorType":{"type":"string","enum":["EXPERIENCED_PRACTITIONER","NUTRITION_EXPERT"]},"approvalBasis":{"type":"string"},"reviewNote":{"type":"string"}},"additionalProperties":false},{"type":"object","required":["decision","reviewNote"],"properties":{"decision":{"type":"string","enum":["REJECT"]},"reviewNote":{"type":"string"}},"additionalProperties":false}]}
+{"oneOf":[{"type":"object","required":["decision","approvalBasis","reviewNote"],"properties":{"decision":{"type":"string","enum":["APPROVE"]},"approvalBasis":{"type":"string","enum":["ORGANIZATION_AFFILIATION","PLATFORM_TRACK_RECORD","ADMIN_INVITED"]},"reviewNote":{"type":"string"}},"additionalProperties":false},{"type":"object","required":["decision","reviewNote"],"properties":{"decision":{"type":"string","enum":["REJECT"]},"reviewNote":{"type":"string"}},"additionalProperties":false}]}
+```
+
+## PATCH `/api/v1/admin/contributors/{userId}/revoke`
+Admin thu hồi Contributor status
+- operationId: `revokeContributorAdmin`
+- Params: `path:userId* (string)`
+- Request: `object` (required)
+- Responses: `200` → ContributorRevocationResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
+
+```json
+{"type":"object","required":["reason"],"properties":{"reason":{"type":"string"}},"additionalProperties":false}
 ```
 
 ---
@@ -45,15 +67,18 @@ Admin approve/reject Contributor application
         "required": [
           "id",
           "user",
-          "requestedType",
-          "requestedTypeLabel",
+          "claimedApprovalBasis",
+          "claimedApprovalBasisLabel",
+          "organizationClaim",
           "experience",
           "referenceLinks",
           "source",
+          "invitedBy",
+          "invitationReason",
           "status",
-          "approvedType",
-          "approvedTypeLabel",
           "approvalBasis",
+          "approvalBasisLabel",
+          "reviewEvidence",
           "reviewNote",
           "reviewedBy",
           "reviewedAt",
@@ -70,12 +95,19 @@ Admin approve/reject Contributor application
             "type": "object",
             "_truncated": true
           },
-          "requestedType": {
+          "claimedApprovalBasis": {
             "type": "string",
             "_truncated": true
           },
-          "requestedTypeLabel": {
+          "claimedApprovalBasisLabel": {
             "type": "string",
+            "_truncated": true
+          },
+          "organizationClaim": {
+            "type": [
+              "string",
+              "null"
+            ],
             "_truncated": true
           },
           "experience": {
@@ -90,22 +122,22 @@ Admin approve/reject Contributor application
             "type": "string",
             "_truncated": true
           },
+          "invitedBy": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "_truncated": true
+          },
+          "invitationReason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "_truncated": true
+          },
           "status": {
             "type": "string",
-            "_truncated": true
-          },
-          "approvedType": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "_truncated": true
-          },
-          "approvedTypeLabel": {
-            "type": [
-              "string",
-              "null"
-            ],
             "_truncated": true
           },
           "approvalBasis": {
@@ -113,6 +145,17 @@ Admin approve/reject Contributor application
               "string",
               "null"
             ],
+            "_truncated": true
+          },
+          "approvalBasisLabel": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "_truncated": true
+          },
+          "reviewEvidence": {
+            "type": "object",
             "_truncated": true
           },
           "reviewNote": {
@@ -136,32 +179,7 @@ Admin approve/reject Contributor application
             ],
             "_truncated": true
           },
-          "reapplyEligibleAt": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "_truncated": true
-          },
-          "createdAt": {
-            "type": "string",
-            "_truncated": true
-          },
-          "updatedAt": {
-            "type": "string",
-            "_truncated": true
-          }
-        },
-        "additionalProperties": false
-      }
-    },
-    "meta": {
-      "type": "object",
-      "required": [
-        "page",
-        "limit",
-        "total",
-        "totalPag
+          "
   …(truncated — xem api-catalog.json)
 ```
 
@@ -186,15 +204,18 @@ Admin approve/reject Contributor application
       "required": [
         "id",
         "user",
-        "requestedType",
-        "requestedTypeLabel",
+        "claimedApprovalBasis",
+        "claimedApprovalBasisLabel",
+        "organizationClaim",
         "experience",
         "referenceLinks",
         "source",
+        "invitedBy",
+        "invitationReason",
         "status",
-        "approvedType",
-        "approvedTypeLabel",
         "approvalBasis",
+        "approvalBasisLabel",
+        "reviewEvidence",
         "reviewNote",
         "reviewedBy",
         "reviewedAt",
@@ -214,7 +235,7 @@ Admin approve/reject Contributor application
             "email",
             "displayName",
             "role",
-            "currentContributorType"
+            "currentApprovalBasis"
           ],
           "properties": {
             "id": {
@@ -233,7 +254,7 @@ Admin approve/reject Contributor application
               "type": "string",
               "_truncated": true
             },
-            "currentContributorType": {
+            "currentApprovalBasis": {
               "type": [
                 "string",
                 "null"
@@ -243,15 +264,22 @@ Admin approve/reject Contributor application
           },
           "additionalProperties": false
         },
-        "requestedType": {
+        "claimedApprovalBasis": {
           "type": "string",
           "enum": [
-            "EXPERIENCED_PRACTITIONER",
-            "NUTRITION_EXPERT"
+            "ORGANIZATION_AFFILIATION",
+            "PLATFORM_TRACK_RECORD",
+            "ADMIN_INVITED"
           ]
         },
-        "requestedTypeLabel": {
+        "claimedApprovalBasisLabel": {
           "type": "string"
+        },
+        "organizationClaim": {
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "experience": {
           "type": "string"
@@ -267,49 +295,105 @@ Admin approve/reject Contributor application
           "type": "string",
           "enum": [
             "REGISTRATION",
-            "PROFILE"
+            "PROFILE",
+            "ADMIN_INVITATION"
           ]
         },
-        "status": {
-          "type": "string",
-          "enum": [
-            "PENDING",
-            "APPROVED",
-            "REJECTED"
-          ]
-        },
-        "approvedType": {
+        "invitedBy": {
           "type": [
-            "string",
+            "object",
             "null"
           ],
-          "enum": [
-            "EXPERIENCED_PRACTITIONER",
-            "NUTRITION_EXPERT",
-            null
-          ]
+          "required": [
+            "id",
+            "displayName"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "_truncated": true
+            },
+            "displayName": {
+              "type": "string",
+              "_truncated": true
+            }
+          },
+          "additionalProperties": false
         },
-        "approvedTypeLabel": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "approvalBasis": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "reviewNote": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "reviewedBy": {
-          "type": [
+        "i
   …(truncated — xem api-catalog.json)
+```
+
+#### ContributorRevocationResponse
+```json
+{
+  "type": "object",
+  "required": [
+    "success",
+    "data",
+    "meta"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "enum": [
+        true
+      ]
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "userId",
+        "role",
+        "revokedAt",
+        "revokedBy",
+        "reason"
+      ],
+      "properties": {
+        "userId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "MEMBER"
+          ]
+        },
+        "revokedAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "revokedBy": {
+          "type": "object",
+          "required": [
+            "id",
+            "displayName"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "_truncated": true
+            },
+            "displayName": {
+              "type": "string",
+              "_truncated": true
+            }
+          },
+          "additionalProperties": false
+        },
+        "reason": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    },
+    "meta": {
+      "type": "null"
+    }
+  },
+  "additionalProperties": false
+}
 ```
 
 #### ErrorResponse

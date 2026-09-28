@@ -9,18 +9,21 @@ import {
   Pencil,
   ArrowLeft,
   AlertCircle,
-  AlertTriangle,
   Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AuthGuard } from '@/components/shared/auth-guard';
 import { PostEditorForm } from '@/features/post/components/post-editor-form';
 import { useArticleDetailQuery } from '@/features/post/queries/post.queries';
+import { ReviewStatusBanner } from '@/features/review/components/review-status-banner';
+import { ReviewHistoryDialog } from '@/features/review/components/review-history-dialog';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export default function EditPostPage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? '';
+  const [historyDialogOpen, setHistoryDialogOpen] = React.useState(false);
+  const currentUser = useAuthStore((s) => s.user);
 
   // Chỉ đọc Article chuẩn từ Query layer (DTO → Mapper → Model).
   // Không đọc Zustand ở đây: server-state do TanStack Query quản lý.
@@ -106,15 +109,26 @@ export default function EditPostPage() {
             </Button>
           </div>
 
-          {/* Revision Notice Alert */}
-          <Alert className="border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200">
-            <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-            <AlertTitle className="font-semibold text-sm">Lưu ý kiểm duyệt nội dung</AlertTitle>
-            <AlertDescription className="text-xs leading-relaxed mt-1">
-              Bài viết đã xuất bản nếu chỉnh sửa nội dung sẽ được chuyển sang trạng thái chờ Chuyên
-              gia Dinh dưỡng duyệt lại trước khi cập nhật công khai.
-            </AlertDescription>
-          </Alert>
+          {/* Review Status Banner */}
+          <ReviewStatusBanner
+            postId={article.id}
+            postTitle={article.title}
+            postStatus={article.status}
+            revisionId={article.revisionId}
+            revisionVersion={article.revisionVersion ?? article.version}
+            publishedRevisionVersion={article.publishedRevisionVersion}
+            isAuthor={!currentUser || !article.author?.id || currentUser.id === article.author.id}
+            onOpenHistory={() => setHistoryDialogOpen(true)}
+            onSuccess={() => void refetchArticle()}
+          />
+
+          {/* History Dialog */}
+          <ReviewHistoryDialog
+            open={historyDialogOpen}
+            onOpenChange={setHistoryDialogOpen}
+            postId={article.id}
+            postTitle={article.title}
+          />
 
           {/* Editor Form */}
           <PostEditorForm initialPost={article} isEditing={true} />

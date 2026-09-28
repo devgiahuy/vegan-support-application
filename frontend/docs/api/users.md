@@ -443,11 +443,7 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
           "type": "string"
         },
         "avatarUrl": {
-          "type": [
-            "string",
-            "null"
-          ],
-          "format": "uri"
+          "type": "string"
         },
         "role": {
           "type": "string",
@@ -477,14 +473,14 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
           ],
           "required": [
             "status",
-            "requestedType"
+            "claimedApprovalBasis"
           ],
           "properties": {
             "status": {
               "type": "string",
               "_truncated": true
             },
-            "requestedType": {
+            "claimedApprovalBasis": {
               "type": "string",
               "_truncated": true
             }
@@ -497,21 +493,16 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
             "null"
           ],
           "required": [
-            "contributorType",
-            "label",
             "approvalBasis",
+            "approvalBasisLabel",
             "approvedAt"
           ],
           "properties": {
-            "contributorType": {
-              "type": "string",
-              "_truncated": true
-            },
-            "label": {
-              "type": "string",
-              "_truncated": true
-            },
             "approvalBasis": {
+              "type": "string",
+              "_truncated": true
+            },
+            "approvalBasisLabel": {
               "type": "string",
               "_truncated": true
             },
@@ -541,6 +532,12 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
           ],
           "properties": {
             "heightCm": {
+              "type": "number",
+              "_truncated": true
+            },
+            "weightKg": {
+              "type": "number",
+              "_truncated": true
   …(truncated — xem api-catalog.json)
 ```
 
@@ -670,11 +667,7 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
       "type": "string"
     },
     "avatarUrl": {
-      "type": [
-        "string",
-        "null"
-      ],
-      "format": "uri"
+      "type": "string"
     }
   },
   "additionalProperties": false

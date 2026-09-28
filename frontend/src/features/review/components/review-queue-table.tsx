@@ -6,6 +6,7 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Eye,
   Flag,
   ShieldAlert,
   X,
@@ -32,9 +33,11 @@ import {
 import { ReviewDecision, ReviewItemStatus, PostType, ModerationPriority } from '@/common/enums';
 import { getApiErrorCode } from '@/lib/api-error';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useReviewQueueQuery } from '../queries/review.queries';
+import { useAdminContentReviewQueueQuery } from '../queries/review.queries';
 import { ReviewDecisionDialog } from './review-decision-dialog';
-import type { ReviewQueueItem } from '../types/review.model';
+import { ReviewDetailModal } from './review-detail-modal';
+import type { ContentReviewQueueItem } from '../types/content-review.model';
+import { ReviewDecisionEnum } from '../types/content-review.model';
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: 'ALL', label: 'Tất cả trạng thái' },
@@ -44,25 +47,26 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
 ];
 
 const TYPE_OPTIONS: { value: string; label: string }[] = [
-  { value: 'ALL', label: 'Mọi loại' },
+  { value: 'ALL', label: 'Tất cả loại' },
   { value: PostType.RECIPE, label: 'Công thức' },
   { value: PostType.BLOG, label: 'Bài viết' },
-  { value: PostType.VIDEO, label: 'Video' },
+  { value: PostType.VIDEO, label: 'Video nấu ăn' },
 ];
 
 const PRIORITY_OPTIONS: { value: string; label: string }[] = [
-  { value: 'ALL', label: 'Mọi độ ưu tiên' },
+  { value: 'ALL', label: 'Tất cả mức ưu tiên' },
   { value: ModerationPriority.URGENT, label: 'Khẩn cấp' },
   { value: ModerationPriority.HIGH, label: 'Cao' },
   { value: ModerationPriority.MEDIUM, label: 'Trung bình' },
-  { value: ModerationPriority.LOW, label: 'Thấp' },
+  { value: ModerationPriority.LOW, label: 'Bình thường' },
 ];
 
 function priorityBadgeClass(priority: ModerationPriority): string {
   switch (priority) {
     case ModerationPriority.URGENT:
-      return 'bg-destructive/10 text-destructive border-destructive/30';
     case ModerationPriority.HIGH:
+      return 'bg-destructive/10 text-destructive border-destructive/30 font-semibold';
+    case ModerationPriority.MEDIUM:
       return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30';
     default:
       return '';
@@ -70,7 +74,7 @@ function priorityBadgeClass(priority: ModerationPriority): string {
 }
 
 interface DecisionTarget {
-  item: ReviewQueueItem;
+  item: ContentReviewQueueItem;
   decision: ReviewDecision;
 }
 
@@ -81,8 +85,9 @@ export function ReviewQueueTable() {
   const [type, setType] = React.useState('ALL');
   const [priority, setPriority] = React.useState('ALL');
   const [decisionTarget, setDecisionTarget] = React.useState<DecisionTarget | null>(null);
+  const [detailRevisionId, setDetailRevisionId] = React.useState<string | null>(null);
 
-  const query = useReviewQueueQuery({
+  const query = useAdminContentReviewQueueQuery({
     page,
     limit: 12,
     status: status === 'ALL' ? undefined : (status as ReviewItemStatus),
@@ -117,7 +122,7 @@ export function ReviewQueueTable() {
           </SelectContent>
         </Select>
         <Select value={type} onValueChange={resetPage(setType)}>
-          <SelectTrigger className="h-9 text-xs rounded-xl w-[130px] bg-card">
+          <SelectTrigger className="h-9 text-xs rounded-xl w-[140px] bg-card">
             <SelectValue placeholder="Loại" />
           </SelectTrigger>
           <SelectContent>
@@ -141,7 +146,7 @@ export function ReviewQueueTable() {
           </SelectContent>
         </Select>
         <span className="text-xs text-muted-foreground ml-auto">
-          {totalItems > 0 ? `${totalItems} bài đang chờ` : ''}
+          {totalItems > 0 ? `${totalItems} bài trong hàng chờ` : ''}
         </span>
       </div>
 
@@ -181,7 +186,7 @@ export function ReviewQueueTable() {
       ) : items.length === 0 ? (
         <EmptyState
           title="Hàng chờ đang trống"
-          description="Không có bài viết nào khớp với bộ lọc hiện tại. Mọi nội dung đã được xử lý xong."
+          description="Không có nội dung nào khớp với bộ lọc hiện tại. Mọi bản nháp đã được xử lý xong."
         />
       ) : (
         <>
@@ -201,42 +206,54 @@ export function ReviewQueueTable() {
                 {items.map((item) => {
                   const isOwn = !!sessionUserId && item.author.id === sessionUserId;
                   const decidable = item.canDecide && !isOwn;
+                  const targetRevisionId = item.revisionId || item.postId;
+
                   return (
-                    <TableRow key={item.postId}>
+                    <TableRow key={item.postId + '-' + (item.revisionId || '')}>
                       <TableCell>
-                        <p className="font-medium">{item.title}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-foreground">{item.title}</p>
+                          <Badge variant="outline" className="text-[10px] font-mono px-1.5 py-0">
+                            v{item.revisionVersion}
+                          </Badge>
+                        </div>
                         {item.excerpt && (
                           <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
                             {item.excerpt}
                           </p>
                         )}
                         <p className="mt-0.5 text-[11px] text-muted-foreground">
-                          {item.type} • {item.formattedCreatedAt}
+                          {item.typeLabel || item.type} • {item.formattedCreatedAt}
                         </p>
                       </TableCell>
-                      <TableCell className="text-sm">{item.author.name}</TableCell>
+                      <TableCell className="text-sm">
+                        <span className="font-medium">{item.author.displayName || item.author.name}</span>
+                        {item.author.role !== 'MEMBER' && (
+                          <Badge variant="outline" className="ml-1.5 text-[10px] px-1 py-0">
+                            {item.author.role}
+                          </Badge>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <Badge
                           variant="outline"
                           className={`rounded-full ${priorityBadgeClass(item.priority)}`}
                         >
+                          {item.isHighPriority && <ShieldAlert className="h-3 w-3 mr-1 inline" />}
                           {item.priorityLabel}
                         </Badge>
                       </TableCell>
                       <TableCell>
                         {item.aiFlags.length > 0 || item.activeReporterCount > 0 ? (
-                          <span className="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                          <span className="inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
                             {item.aiFlags.length > 0 && (
                               <span className="inline-flex items-center gap-1">
                                 <Flag className="h-3.5 w-3.5" />
-                                {item.aiFlags
-                                  .flatMap((f) => f.reasonCodes)
-                                  .slice(0, 2)
-                                  .join(', ')}
+                                {item.aiFlags.length} cờ AI
                               </span>
                             )}
                             {item.activeReporterCount > 0 && (
-                              <span className="inline-flex items-center gap-1">
+                              <span className="inline-flex items-center gap-1 text-destructive font-medium">
                                 <ShieldAlert className="h-3.5 w-3.5" />
                                 {item.activeReporterCount} báo cáo
                               </span>
@@ -247,15 +264,23 @@ export function ReviewQueueTable() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="rounded-full">
-                          {item.statusLabel}
+                        <Badge variant="secondary" className="rounded-full text-xs">
+                          {item.postStatusLabel || item.statusLabel}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex justify-end gap-1">
+                        <div className="flex justify-end gap-1.5">
                           <Button
                             size="sm"
-                            className="gap-1 rounded-full"
+                            variant="outline"
+                            className="gap-1 rounded-xl text-xs h-8"
+                            onClick={() => setDetailRevisionId(targetRevisionId)}
+                          >
+                            <Eye className="h-3.5 w-3.5" /> Xem xét
+                          </Button>
+                          <Button
+                            size="sm"
+                            className="gap-1 rounded-xl text-xs h-8 bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
                             disabled={!decidable}
                             title={
                               decidable
@@ -271,7 +296,7 @@ export function ReviewQueueTable() {
                           <Button
                             size="sm"
                             variant="outline"
-                            className="gap-1 rounded-full text-destructive"
+                            className="gap-1 rounded-xl text-xs h-8 text-destructive hover:bg-destructive/10"
                             disabled={!decidable}
                             title={
                               decidable
@@ -299,17 +324,18 @@ export function ReviewQueueTable() {
           </div>
 
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
+            <div className="flex items-center justify-center gap-2 pt-2">
               <Button
                 variant="outline"
                 size="icon"
                 aria-label="Trang trước"
                 disabled={page <= 1}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="rounded-xl h-8 w-8"
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="text-sm text-muted-foreground">
+              <span className="text-xs text-muted-foreground">
                 Trang {page} / {totalPages}
               </span>
               <Button
@@ -318,6 +344,7 @@ export function ReviewQueueTable() {
                 aria-label="Trang sau"
                 disabled={page >= totalPages}
                 onClick={() => setPage((p) => p + 1)}
+                className="rounded-xl h-8 w-8"
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -326,6 +353,31 @@ export function ReviewQueueTable() {
         </>
       )}
 
+      {/* Modal chi tiết thẩm định bản nháp */}
+      {detailRevisionId && (
+        <ReviewDetailModal
+          open={Boolean(detailRevisionId)}
+          onOpenChange={(open) => !open && setDetailRevisionId(null)}
+          revisionId={detailRevisionId}
+          onDecide={(dec) => {
+            const item = items.find(
+              (i) => (i.revisionId || i.postId) === detailRevisionId
+            );
+            if (item) {
+              setDecisionTarget({
+                item,
+                decision:
+                  dec === ReviewDecisionEnum.APPROVE
+                    ? ReviewDecision.APPROVE
+                    : ReviewDecision.REJECT,
+              });
+              setDetailRevisionId(null);
+            }
+          }}
+        />
+      )}
+
+      {/* Dialog xác nhận phê duyệt / từ chối kèm lý do */}
       <ReviewDecisionDialog
         open={decisionTarget !== null}
         onOpenChange={(open) => {
@@ -333,6 +385,7 @@ export function ReviewQueueTable() {
         }}
         decision={decisionTarget?.decision ?? ReviewDecision.APPROVE}
         postId={decisionTarget?.item.postId || ''}
+        revisionId={decisionTarget?.item.revisionId}
         postTitle={decisionTarget?.item.title || ''}
         canDecide={!!decisionTarget && decisionTarget.item.canDecide}
       />

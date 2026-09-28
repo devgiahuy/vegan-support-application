@@ -12,6 +12,7 @@ import {
   mealPlanItemParamsSchema,
   mealPlanListQuerySchema,
   mealPlanParamsSchema,
+  manualAddMealPlanItemRequestSchema,
   swapMealPlanItemRequestSchema,
 } from './meal-plan.schemas.js';
 
@@ -29,6 +30,12 @@ export function createMealPlanRouter(
     validateParams(mealPlanItemParamsSchema),
     validateBody(swapMealPlanItemRequestSchema),
     controller.swap,
+  );
+  router.patch(
+    '/:id/items/:itemId/manual-add',
+    validateParams(mealPlanItemParamsSchema),
+    validateBody(manualAddMealPlanItemRequestSchema),
+    controller.manualAdd,
   );
   router.delete(
     '/:id',

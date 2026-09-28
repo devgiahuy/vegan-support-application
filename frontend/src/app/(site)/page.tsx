@@ -13,6 +13,11 @@ import {
   TrendingUp,
   Moon,
   CheckCircle2,
+  BookOpen,
+  Layers,
+  ChefHat,
+  ShieldAlert,
+  Scale,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { toast } from 'sonner';
@@ -45,11 +50,11 @@ export default function HomePage() {
   const [isWhyDialogOpen, setIsWhyDialogOpen] = React.useState(false);
 
   return (
-    <div className="mx-auto max-w-7xl px-4 pb-20 lg:px-6">
+    <div className="mx-auto w-full max-w-7xl px-4 pb-20 lg:px-6">
       {/* Hero */}
-      <section className="relative grid gap-8 pt-10 pb-12 lg:grid-cols-12 lg:pt-14">
-        <div className="absolute -left-24 top-10 h-56 w-56 rounded-full bg-secondary/50 blur-3xl" />
-        <div className="absolute right-0 top-40 h-56 w-56 rounded-full bg-cta/10 blur-3xl" />
+      <section className="relative grid gap-8 pt-10 pb-12 lg:grid-cols-12 lg:pt-14 overflow-hidden">
+        <div className="pointer-events-none absolute -left-24 top-10 h-56 w-56 rounded-full bg-secondary/50 blur-3xl" />
+        <div className="pointer-events-none absolute right-0 top-40 h-56 w-56 rounded-full bg-cta/10 blur-3xl" />
 
         <div className="relative lg:col-span-6 xl:col-span-7 flex flex-col justify-center">
           {/* Badge với hiệu ứng glow nhẹ */}
@@ -262,7 +267,7 @@ export default function HomePage() {
       </section>
 
       {/* AI + Weekly plan split */}
-      <section className="grid gap-6 py-10 lg:grid-cols-12">
+      {/* <section className="grid gap-6 py-10 lg:grid-cols-12">
         <Card className="lg:col-span-6">
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
@@ -413,6 +418,116 @@ export default function HomePage() {
             </Button>
           </CardContent>
         </Card>
+      </section> */}
+
+      {/* Kho Dữ liệu Dinh dưỡng & Tra cứu Khoa học (Phase 12) */}
+      <section className="py-10">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary">
+              <BookOpen className="h-4 w-4" /> Cơ sở dữ liệu chuẩn hóa
+            </span>
+            <h2 className="mt-1 text-2xl font-bold tracking-tight md:text-3xl">
+              Tra cứu Dinh dưỡng &amp; Kiến thức Khoa học
+            </h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Số liệu dinh dưỡng 100g có kiểm nghiệm nguồn gốc (USDA/NIN), quy tắc kiêng kỵ và
+              phương pháp bảo tồn vi chất.
+            </p>
+          </div>
+          <Button asChild variant="outline" className="gap-2 rounded-full">
+            <Link href="/categories#tra-cuu">
+              Xem toàn bộ tra cứu <ArrowRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Link
+            href="/categories#tra-cuu"
+            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/70 bg-card p-5 transition-all duration-200 hover:-translate-y-1 hover:border-primary/50 hover:shadow-md"
+          >
+            <div>
+              <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary transition-transform group-hover:scale-110">
+                <Scale className="size-5" />
+              </div>
+              <h3 className="mt-3.5 text-base font-bold text-foreground group-hover:text-primary transition-colors">
+                Dinh dưỡng chuẩn 100g
+              </h3>
+              <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+                Đo đạm, béo, xơ và vi chất nhạy cảm có minh bạch nguồn kiểm định khoa học.
+              </p>
+            </div>
+            <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-primary">
+              <span>Tra cứu ngay</span>
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+            </div>
+          </Link>
+
+          <Link
+            href="/categories#kieng-ky"
+            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/70 bg-card p-5 transition-all duration-200 hover:-translate-y-1 hover:border-amber-500/50 hover:shadow-md"
+          >
+            <div>
+              <div className="flex size-10 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 transition-transform group-hover:scale-110">
+                <Layers className="size-5" />
+              </div>
+              <h3 className="mt-3.5 text-base font-bold text-foreground group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                Kiêng kỵ thực phẩm
+              </h3>
+              <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+                Quy tắc phối hợp nguyên liệu theo 3 cấp độ: Cùng món, Cùng bữa ăn hoặc Cùng ngày.
+              </p>
+            </div>
+            <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+              <span>Xem quy tắc</span>
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+            </div>
+          </Link>
+
+          <Link
+            href="/categories#phuong-phap-nau"
+            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/70 bg-card p-5 transition-all duration-200 hover:-translate-y-1 hover:border-emerald-500/50 hover:shadow-md"
+          >
+            <div>
+              <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 transition-transform group-hover:scale-110">
+                <ChefHat className="size-5" />
+              </div>
+              <h3 className="mt-3.5 text-base font-bold text-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                Phương pháp nấu nướng
+              </h3>
+              <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+                Hệ số hao hụt khối lượng và tỷ lệ bảo tồn vitamin nhạy nhiệt sau khi luộc, hấp,
+                xào...
+              </p>
+            </div>
+            <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+              <span>Khám phá</span>
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+            </div>
+          </Link>
+
+          <Link
+            href="/categories#nhu-cau-khuyen-nghi"
+            className="group relative flex flex-col justify-between overflow-hidden rounded-2xl border border-border/70 bg-card p-5 transition-all duration-200 hover:-translate-y-1 hover:border-blue-500/50 hover:shadow-md"
+          >
+            <div>
+              <div className="flex size-10 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 transition-transform group-hover:scale-110">
+                <ShieldAlert className="size-5" />
+              </div>
+              <h3 className="mt-3.5 text-base font-bold text-foreground group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                Nhu cầu khuyến nghị &amp; UL
+              </h3>
+              <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
+                Chuẩn tiêu thụ RDA/AI hàng ngày và giới hạn dung nạp tối đa theo nhóm đối tượng.
+              </p>
+            </div>
+            <div className="mt-4 flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400">
+              <span>Đối chiếu</span>
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
+            </div>
+          </Link>
+        </div>
       </section>
 
       {/* Restaurants */}

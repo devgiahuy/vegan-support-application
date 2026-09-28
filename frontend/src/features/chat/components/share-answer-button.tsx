@@ -1,35 +1,28 @@
 'use client';
 
 import * as React from 'react';
-import { Share2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { ChatMessageStatus, ChatRole } from '@/common/enums';
+import { AiArtifactType, ChatMessageStatus, ChatRole } from '@/common/enums';
+import { SaveArtifactButton } from '@/features/ai-artifacts';
 import type { ChatMessage } from '../types/chat.model';
-import { ShareDialog } from './share-dialog';
 
 /**
- * Nút Chia sẻ câu trả lời: chỉ message ASSISTANT + COMPLETE.
- * Thu hồi thực hiện trong dialog sau khi đã chia sẻ (giữ 1 nút duy nhất).
+ * Nút Lưu & Chia sẻ câu trả lời từ Trợ lý Chat sang AI Artifacts (Phase 23).
+ * Chỉ hiển thị với tin nhắn ASSISTANT đã hoàn tất (COMPLETE).
  */
 export function ShareAnswerButton({ message }: { message: ChatMessage }) {
-  const [open, setOpen] = React.useState(false);
-
   if (message.role !== ChatRole.ASSISTANT || message.status !== ChatMessageStatus.COMPLETE) {
     return null;
   }
 
   return (
-    <>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon"
-        aria-label="Chia sẻ câu trả lời công khai"
-        onClick={() => setOpen(true)}
-      >
-        <Share2 className="size-4" />
-      </Button>
-      <ShareDialog message={message} open={open} onOpenChange={setOpen} />
-    </>
+    <SaveArtifactButton
+      type={AiArtifactType.CHAT_ANSWER}
+      sourceId={message.id}
+      defaultTitle="Câu trả lời từ Trợ lý VeggieConnect"
+      defaultSummary={message.content.slice(0, 150)}
+      showLabel={false}
+      size="icon"
+      className="size-7 rounded-md text-muted-foreground hover:text-foreground"
+    />
   );
 }

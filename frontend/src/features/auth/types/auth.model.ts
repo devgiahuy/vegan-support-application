@@ -1,6 +1,6 @@
 import {
   ContributorApplicationStatus,
-  ContributorType,
+  ContributorApprovalBasis,
   LogoutScope,
   MemberStatus,
   UserRole,
@@ -16,8 +16,8 @@ export interface ContributorApplication {
   status: ContributorApplicationStatus;
   /** Chuỗi gốc từ backend để hiển thị an toàn khi status lạ. */
   rawStatus: string;
-  requestedType: ContributorType | null;
-  requestedTypeLabel: string;
+  claimedApprovalBasis: ContributorApprovalBasis | null;
+  claimedApprovalBasisLabel: string;
 }
 
 /** Người dùng hiện tại. */

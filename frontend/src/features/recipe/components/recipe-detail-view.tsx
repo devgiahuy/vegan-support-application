@@ -27,6 +27,8 @@ import {
   Minus,
   Hourglass,
   AlertTriangle,
+  Pencil,
+  Info,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -35,6 +37,9 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { NutritionFactsPanel } from '@/features/food-data/components/nutrition-facts-panel';
+import { RecipeNutritionCard } from '@/features/recipe-nutrition/components/recipe-nutrition-card';
 import { RecipeCard } from './recipe-card';
 import type { Recipe } from '../types/recipe.model';
 import { VoteControl } from '@/components/shared/vote-control';
@@ -48,6 +53,8 @@ import { BookmarkButton } from '@/features/community/components/bookmark-button'
 import { useCommunitySummaryQuery } from '@/features/community/queries/community.queries';
 import { useAuthStore } from '@/store/useAuthStore';
 import { UserRole } from '@/common/enums';
+import { ReviewStatusBanner } from '@/features/review/components/review-status-banner';
+import { ReviewHistoryDialog } from '@/features/review/components/review-history-dialog';
 
 interface RecipeDetailViewProps {
   recipe: Recipe;
@@ -57,11 +64,17 @@ interface RecipeDetailViewProps {
 export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewProps) {
   const router = useRouter();
   const user = useAuthStore((s) => s.user);
+  const [historyDialogOpen, setHistoryDialogOpen] = React.useState(false);
+  const isAuthor = Boolean(user && recipe.author?.id && user.id === recipe.author.id);
   const { data: summary } = useCommunitySummaryQuery(recipe.id);
   const canModerate = user?.role === UserRole.ADMIN || user?.role === UserRole.CONTRIBUTOR;
   const [servings, setServings] = React.useState<number>(recipe.servings || 2);
   const [isSaved, setIsSaved] = React.useState<boolean>(recipe.saved ?? false);
   const [checkedIngredients, setCheckedIngredients] = React.useState<string[]>([]);
+  const [viewingNutritionIngredient, setViewingNutritionIngredient] = React.useState<{
+    id?: string;
+    name: string;
+  } | null>(null);
 
   // Tỷ lệ nhân khẩu phần
   const baseServings = recipe.servings || 2;
@@ -129,63 +142,28 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
         {/* LEFT COLUMN: Main Recipe Details */}
         <div className="space-y-8 lg:col-span-8">
-          {/* Status Alert Banners */}
-          {recipe.status === 'PENDING_REVIEW' && (
-            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-3">
-                <div className="rounded-xl bg-amber-500/20 p-2 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5">
-                  <Hourglass className="h-5 w-5" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="font-semibold text-amber-900 dark:text-amber-200">
-                      Công thức đang chờ kiểm duyệt
-                    </p>
-                    <Badge className="rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300 hover:bg-amber-500/30 border-amber-500/30 text-xs">
-                      Chưa xuất bản
-                    </Badge>
-                  </div>
-                  <p className="text-sm text-amber-800/80 dark:text-amber-300/80 mt-1 leading-relaxed">
-                    Công thức đang được Ban biên tập kiểm định tiêu chuẩn thuần chay 100%. Hiện tại
-                    chỉ tác giả và người kiểm duyệt mới xem được liên kết này.
-                  </p>
-                </div>
-              </div>
-              {canModerate && (
-                <Button asChild size="sm" className="rounded-full shrink-0">
-                  <Link
-                    href={
-                      user?.role === UserRole.ADMIN
-                        ? '/admin/dashboard?tab=queue'
-                        : '/contributor/dashboard'
-                    }
-                  >
-                    Đi tới hàng chờ duyệt
-                  </Link>
-                </Button>
-              )}
-            </div>
+          {/* Review Status Banner (hiển thị cho tác giả hoặc khi công thức chưa xuất bản) */}
+          {(isAuthor || recipe.status !== 'PUBLISHED') && (
+            <ReviewStatusBanner
+              postId={recipe.id}
+              postTitle={recipe.title}
+              postStatus={recipe.status}
+              revisionId={recipe.revisionId}
+              revisionVersion={recipe.revisionVersion ?? recipe.version}
+              publishedRevisionVersion={recipe.publishedRevisionVersion}
+              isAuthor={isAuthor}
+              onOpenHistory={() => setHistoryDialogOpen(true)}
+              onSuccess={() => router.refresh()}
+            />
           )}
 
-          {recipe.status === 'REJECTED' && (
-            <div className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4 sm:p-5 flex items-start gap-3">
-              <div className="rounded-xl bg-destructive/20 p-2 text-destructive shrink-0 mt-0.5">
-                <AlertTriangle className="h-5 w-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="font-semibold text-destructive">Công thức không được phê duyệt</p>
-                  <Badge variant="destructive" className="rounded-full text-xs">
-                    Từ chối
-                  </Badge>
-                </div>
-                <p className="text-sm text-destructive/80 mt-1 leading-relaxed">
-                  Bài viết không đáp ứng tiêu chuẩn thuần chay hoặc an toàn thực phẩm. Vui lòng
-                  chỉnh sửa lại theo góp ý của kiểm duyệt viên.
-                </p>
-              </div>
-            </div>
-          )}
+          {/* History Dialog */}
+          <ReviewHistoryDialog
+            open={historyDialogOpen}
+            onOpenChange={setHistoryDialogOpen}
+            postId={recipe.id}
+            postTitle={recipe.title}
+          />
 
           {/* Header Info */}
           <div className="space-y-3">
@@ -286,6 +264,14 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
                   <CalendarPlus className="h-4 w-4" />
                   <span>Thêm vào thực đơn</span>
                 </Button>
+                {isAuthor && (
+                  <Button asChild variant="outline" size="sm" className="gap-1.5 font-medium">
+                    <Link href={`/recipes/${recipe.id}/edit`}>
+                      <Pencil className="h-4 w-4" />
+                      <span>Sửa công thức</span>
+                    </Link>
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -416,9 +402,30 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
                             {ing.name}
                           </span>
                         </div>
-                        <span className="text-xs font-semibold text-primary shrink-0 ml-2 bg-primary/10 px-2 py-0.5 rounded-full">
-                          {ing.amount}
-                        </span>
+                        <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                          <span className="text-xs font-semibold text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                            {ing.amount}
+                          </span>
+                          {ing.ingredientId && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 rounded-full text-muted-foreground hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                              title={`Xem dinh dưỡng của ${ing.name}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setViewingNutritionIngredient({
+                                  id: ing.ingredientId || undefined,
+                                  name: ing.name,
+                                });
+                              }}
+                            >
+                              <Info className="h-3.5 w-3.5" />
+                              <span className="sr-only">Xem dinh dưỡng {ing.name}</span>
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     );
                   })}
@@ -430,6 +437,30 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
               )}
             </CardContent>
           </Card>
+
+          {/* Quick-view Nutrition Dialog */}
+          <Dialog
+            open={Boolean(viewingNutritionIngredient?.id)}
+            onOpenChange={(open) => !open && setViewingNutritionIngredient(null)}
+          >
+            <DialogContent className="max-w-md p-4 sm:p-6 overflow-y-auto max-h-[90vh]">
+              <DialogTitle className="sr-only">
+                Dinh dưỡng {viewingNutritionIngredient?.name}
+              </DialogTitle>
+              {viewingNutritionIngredient?.id && (
+                <NutritionFactsPanel
+                  ingredientId={viewingNutritionIngredient.id}
+                  className="w-full max-w-none border-0 shadow-none p-0"
+                />
+              )}
+            </DialogContent>
+          </Dialog>
+
+          {/* COOKING-AWARE RECIPE NUTRITION (PHASE 13) */}
+          <RecipeNutritionCard
+            postId={recipe.id}
+            isAuthorOrAdmin={isAuthor || user?.role === UserRole.ADMIN}
+          />
 
           {/* STEP-BY-STEP INSTRUCTIONS */}
           <div className="space-y-4">

@@ -11,17 +11,19 @@
 
 | # | Tài liệu | Nội dung trọng tâm cần nắm |
 |---|---|---|
-| **1** | `docs/ARCHITECTURE.md` | **Quan trọng nhất.** Luật code 7 tầng scaffold, cấu trúc `src/`, luồng DTO → Mapper → Model, rule cấm trang mồ côi, nhật ký bắt buộc. |
-| **2** | `docs/BACKEND_INTEGRATION.md` | Trạng thái API Backend (`READY`, `IN_PROGRESS`...). **Chỉ tích hợp các endpoint đã READY**. |
-| **3** | `docs/API-WORKFLOW.md` | Quy trình đồng bộ và tiêu thụ API từ Swagger BE (`npm run sync:swagger`). **Cấm đọc swagger gốc** khi code. |
-| **4** | `docs/SRS_Vegan_Support_Application.md` | Đặc tả nghiệp vụ MVP. **Chỉ đọc đúng Use Case của module sắp làm** (ví dụ task Auth → đọc UC-01, Sức khỏe → UC-13). Không đọc lan man. |
-| **5** | `docs/PROGRESS.md` & `docs/WORK-LOG.md` | Nơi theo dõi tiến độ % và nhật ký công việc. Agent **bắt buộc cập nhật sau mỗi task**. |
-| **6** | `package.json`, `components.json`, `tsconfig.json` | Tech stack (Next.js 16, React 19, Tailwind v4, shadcn/ui style `new-york` base `radix`), path alias `@/*`. |
-| **7** | `src/app/layout.tsx`, `src/middleware.ts`, `src/lib/auth-refresh.ts` | App shell, cơ chế Auth session, HttpOnly cookie, silent-refresh chống race condition. |
-| **8** | `src/lib/mapper/` + `src/common/constants/api-endpoints.ts` | Base mapper, contract API tập trung. |
-| **9** | `src/features/category/*` hoặc `src/features/profile/*` | **Feature mẫu chuẩn end-to-end**: DTO → Model → Mapper → API → Query → Components. Mọi feature mới phải theo đúng mẫu này. |
+| **1** | `../docs/SRS.md` | Nguồn yêu cầu sản phẩm chuẩn duy nhất; phân biệt rõ MVP và năng lực đang chạy. |
+| **2** | `../docs/IMPLEMENTATION_PLAN.md` | Business logic, state machine, quyết định đã duyệt và thứ tự triển khai. |
+| **3** | `docs/ARCHITECTURE.md` | **Quan trọng nhất cho code frontend.** Luật code 7 tầng scaffold, DTO → Mapper → Model, rule cấm trang mồ côi, nhật ký bắt buộc. |
+| **4** | `docs/BACKEND_INTEGRATION.md` | Trạng thái API Backend (`READY`, `IN_PROGRESS`...). **Chỉ tích hợp các endpoint đã READY**. |
+| **5** | `docs/API-CATALOG.md` | Catalog đã sinh và quy trình đồng bộ API từ Swagger BE (`npm run sync:swagger`). **Cấm đọc swagger gốc** khi code feature. |
+| **6** | `../docs/ROADMAP_PHASE_2.md` | Backlog sau MVP để giữ định hướng; không biến thành capability hiện tại. |
+| **7** | `docs/PROGRESS.md` & `docs/WORK-LOG.md` | Nơi theo dõi tiến độ % và nhật ký công việc. Agent **bắt buộc cập nhật sau mỗi task**. |
+| **8** | `package.json`, `components.json`, `tsconfig.json` | Tech stack (Next.js 16, React 19, Tailwind v4, shadcn/ui style `new-york` base `radix`), path alias `@/*`. |
+| **9** | `src/app/layout.tsx`, `src/middleware.ts`, `src/lib/auth-refresh.ts` | App shell, cơ chế Auth session, HttpOnly cookie, silent-refresh chống race condition. |
+| **10** | `src/lib/mapper/` + `src/common/constants/api-endpoints.ts` | Base mapper, contract API tập trung. |
+| **11** | `src/features/category/*` hoặc `src/features/profile/*` | **Feature mẫu chuẩn end-to-end**: DTO → Model → Mapper → API → Query → Components. Mọi feature mới phải theo đúng mẫu này. |
 
-*Lưu ý:* Tuyệt đối không đọc `node_modules/`, `.next/`, file build artifacts hoặc đọc trực tiếp file swagger json thô khi chưa cần thiết.
+*Lưu ý:* `docs/SRS_Vegan_Support_Application.md` và `docs/SRS_Production.md` chỉ là tài liệu tham khảo/lịch sử. Nếu mâu thuẫn, dùng `../docs/SRS.md`. Tuyệt đối không đọc `node_modules/`, `.next/`, file build artifacts hoặc đọc trực tiếp file swagger json thô khi chưa cần thiết.
 
 ### Xác nhận đã hiểu (trả lời 3 câu này trước khi nhận task)
 

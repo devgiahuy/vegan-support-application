@@ -8,13 +8,13 @@ function formatDate(date: Date | null): string {
   return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
 }
 
-/** Lịch sử đơn (presentational): trạng thái, nhóm, ghi chú duyệt, ngày nộp lại. */
+/** Lịch sử đơn xét duyệt Contributor của bản thân (Phase 14 Parity). */
 export function MyApplications({ apps }: { apps: ContributorApplication[] }) {
   if (apps.length === 0) {
     return (
       <EmptyState
-        title="Chưa có đơn nào"
-        description="Gửi đơn đầu tiên ở biểu mẫu bên trên để trở thành người đóng góp."
+        title="Chưa có hồ sơ nào"
+        description="Gửi đơn đầu tiên ở biểu mẫu bên trên để trở thành Người đóng góp cho cộng đồng."
       />
     );
   }
@@ -25,7 +25,14 @@ export function MyApplications({ apps }: { apps: ContributorApplication[] }) {
         <Card key={app.id}>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between gap-2">
-              <CardTitle className="text-base">{app.requestedTypeLabel}</CardTitle>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-base">{app.claimedApprovalBasisLabel}</CardTitle>
+                {app.organizationClaim && (
+                  <span className="text-xs text-muted-foreground font-normal">
+                    ({app.organizationClaim})
+                  </span>
+                )}
+              </div>
               <Badge
                 variant={
                   app.status === 'PENDING'
@@ -40,29 +47,34 @@ export function MyApplications({ apps }: { apps: ContributorApplication[] }) {
             </div>
           </CardHeader>
           <CardContent className="space-y-1.5 text-sm">
-            {app.approvedTypeLabel && (
+            {app.approvalBasisLabel && (
               <p>
-                Nhóm đã duyệt: <strong>{app.approvedTypeLabel}</strong>
-                {app.approvalBasis && (
-                  <span className="text-muted-foreground"> — {app.approvalBasis}</span>
-                )}
+                Căn cứ phê duyệt chính thức: <strong>{app.approvalBasisLabel}</strong>
+              </p>
+            )}
+            {app.invitedBy && (
+              <p className="text-muted-foreground">
+                Quản trị viên mời: <strong>{app.invitedBy.displayName}</strong>
+                {app.invitationReason ? ` — Lý do: ${app.invitationReason}` : ''}
               </p>
             )}
             {app.reviewNote && (
-              <p className="text-muted-foreground">Ghi chú duyệt: {app.reviewNote}</p>
+              <p className="text-muted-foreground">
+                Ghi chú thẩm định: <span className="text-foreground">{app.reviewNote}</span>
+              </p>
             )}
             {app.reviewedBy && (
-              <p className="text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Người duyệt: {app.reviewedBy}
                 {app.reviewedAt ? ` · ${formatDate(app.reviewedAt)}` : ''}
               </p>
             )}
             {app.status === 'REJECTED' && app.reapplyEligibleAt && (
-              <p className="text-muted-foreground">
-                Được nộp lại từ ngày {formatDate(app.reapplyEligibleAt)}.
+              <p className="text-amber-700 dark:text-amber-400 font-medium text-xs">
+                Được phép nộp lại hồ sơ từ ngày: {formatDate(app.reapplyEligibleAt)}
               </p>
             )}
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground pt-1 border-t">
               Nộp ngày {formatDate(app.createdAt)} · Nguồn: {app.sourceLabel || app.source}
             </p>
           </CardContent>

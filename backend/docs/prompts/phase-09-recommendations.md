@@ -1,6 +1,6 @@
 # Prompt — Phase 09: Behavior Events & Recommendation
 
-Triển khai Phase 09 trong repository `/Users/thienel/hhnthienn/fptu/sem8/wdp/vegan-support-application`; không dùng context chat cũ.
+Triển khai Phase 09 từ thư mục gốc của repository hiện tại; không dùng context chat cũ.
 
 Đọc `AGENTS.md`, BL-02/04/08 trong implementation plan, phase map, Search/Community/Profile code, OpenAPI và integration guide. Xác minh phases 02, 04, 06.
 

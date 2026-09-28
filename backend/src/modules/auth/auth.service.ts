@@ -16,7 +16,7 @@ import {
 } from './auth.repository.js';
 import type { PasswordService } from './password.service.js';
 import type { TokenService } from './token.service.js';
-import { approvedContributorTypeLabel } from '../contributors/contributor-application.state-machine.js';
+import { contributorApprovalBasisLabel } from '../contributors/contributor-application.state-machine.js';
 
 interface SessionResult {
   user: PublicUser;
@@ -64,13 +64,16 @@ export function toPublicUser(
     status: user.status,
     createdAt: user.createdAt.toISOString(),
     contributorApplication: application
-      ? { status: application.status, requestedType: application.requestedType }
-      : null,
-    contributorProfile: contributorProfile
       ? {
-          contributorType: contributorProfile.contributorType,
-          label: approvedContributorTypeLabel(contributorProfile.contributorType),
+          status: application.status,
+          claimedApprovalBasis: application.claimedApprovalBasis,
+        }
+      : null,
+    contributorProfile:
+      contributorProfile && user.role === 'CONTRIBUTOR' && contributorProfile.revokedAt === null
+      ? {
           approvalBasis: contributorProfile.approvalBasis,
+          approvalBasisLabel: contributorApprovalBasisLabel(contributorProfile.approvalBasis),
           approvedAt: contributorProfile.approvedAt.toISOString(),
         }
       : null,

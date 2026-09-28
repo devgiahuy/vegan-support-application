@@ -2,14 +2,14 @@
 # Contributors
 
 ## POST `/api/v1/contributor-applications`
-Gửi Contributor application hoặc yêu cầu đổi subtype
+Gửi Contributor application
 - operationId: `submitContributorApplication`
 - Params: —
 - Request: `object` (required)
 - Responses: `201` → ContributorApplicationResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
 ```json
-{"type":"object","required":["requestedType","experience"],"properties":{"requestedType":{"type":"string","enum":["EXPERIENCED_PRACTITIONER","NUTRITION_EXPERT"]},"experience":{"type":"string"},"referenceLinks":{"type":"array","items":{"type":"string","format":"uri"}}},"additionalProperties":false}
+{"type":"object","required":["claimedApprovalBasis","experience"],"properties":{"claimedApprovalBasis":{"type":"string","enum":["ORGANIZATION_AFFILIATION","PLATFORM_TRACK_RECORD"]},"organizationClaim":{"type":"string"},"experience":{"type":"string"},"referenceLinks":{"type":"array","items":{"type":"string","format":"uri"}}},"additionalProperties":false}
 ```
 
 ## GET `/api/v1/contributor-applications/me`
@@ -45,15 +45,18 @@ List lịch sử Contributor application của current user
         "required": [
           "id",
           "user",
-          "requestedType",
-          "requestedTypeLabel",
+          "claimedApprovalBasis",
+          "claimedApprovalBasisLabel",
+          "organizationClaim",
           "experience",
           "referenceLinks",
           "source",
+          "invitedBy",
+          "invitationReason",
           "status",
-          "approvedType",
-          "approvedTypeLabel",
           "approvalBasis",
+          "approvalBasisLabel",
+          "reviewEvidence",
           "reviewNote",
           "reviewedBy",
           "reviewedAt",
@@ -70,12 +73,19 @@ List lịch sử Contributor application của current user
             "type": "object",
             "_truncated": true
           },
-          "requestedType": {
+          "claimedApprovalBasis": {
             "type": "string",
             "_truncated": true
           },
-          "requestedTypeLabel": {
+          "claimedApprovalBasisLabel": {
             "type": "string",
+            "_truncated": true
+          },
+          "organizationClaim": {
+            "type": [
+              "string",
+              "null"
+            ],
             "_truncated": true
           },
           "experience": {
@@ -90,22 +100,22 @@ List lịch sử Contributor application của current user
             "type": "string",
             "_truncated": true
           },
+          "invitedBy": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "_truncated": true
+          },
+          "invitationReason": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "_truncated": true
+          },
           "status": {
             "type": "string",
-            "_truncated": true
-          },
-          "approvedType": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "_truncated": true
-          },
-          "approvedTypeLabel": {
-            "type": [
-              "string",
-              "null"
-            ],
             "_truncated": true
           },
           "approvalBasis": {
@@ -113,6 +123,17 @@ List lịch sử Contributor application của current user
               "string",
               "null"
             ],
+            "_truncated": true
+          },
+          "approvalBasisLabel": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "_truncated": true
+          },
+          "reviewEvidence": {
+            "type": "object",
             "_truncated": true
           },
           "reviewNote": {
@@ -136,32 +157,7 @@ List lịch sử Contributor application của current user
             ],
             "_truncated": true
           },
-          "reapplyEligibleAt": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "_truncated": true
-          },
-          "createdAt": {
-            "type": "string",
-            "_truncated": true
-          },
-          "updatedAt": {
-            "type": "string",
-            "_truncated": true
-          }
-        },
-        "additionalProperties": false
-      }
-    },
-    "meta": {
-      "type": "object",
-      "required": [
-        "page",
-        "limit",
-        "total",
-        "totalPag
+          "
   …(truncated — xem api-catalog.json)
 ```
 
@@ -186,15 +182,18 @@ List lịch sử Contributor application của current user
       "required": [
         "id",
         "user",
-        "requestedType",
-        "requestedTypeLabel",
+        "claimedApprovalBasis",
+        "claimedApprovalBasisLabel",
+        "organizationClaim",
         "experience",
         "referenceLinks",
         "source",
+        "invitedBy",
+        "invitationReason",
         "status",
-        "approvedType",
-        "approvedTypeLabel",
         "approvalBasis",
+        "approvalBasisLabel",
+        "reviewEvidence",
         "reviewNote",
         "reviewedBy",
         "reviewedAt",
@@ -214,7 +213,7 @@ List lịch sử Contributor application của current user
             "email",
             "displayName",
             "role",
-            "currentContributorType"
+            "currentApprovalBasis"
           ],
           "properties": {
             "id": {
@@ -233,7 +232,7 @@ List lịch sử Contributor application của current user
               "type": "string",
               "_truncated": true
             },
-            "currentContributorType": {
+            "currentApprovalBasis": {
               "type": [
                 "string",
                 "null"
@@ -243,15 +242,22 @@ List lịch sử Contributor application của current user
           },
           "additionalProperties": false
         },
-        "requestedType": {
+        "claimedApprovalBasis": {
           "type": "string",
           "enum": [
-            "EXPERIENCED_PRACTITIONER",
-            "NUTRITION_EXPERT"
+            "ORGANIZATION_AFFILIATION",
+            "PLATFORM_TRACK_RECORD",
+            "ADMIN_INVITED"
           ]
         },
-        "requestedTypeLabel": {
+        "claimedApprovalBasisLabel": {
           "type": "string"
+        },
+        "organizationClaim": {
+          "type": [
+            "string",
+            "null"
+          ]
         },
         "experience": {
           "type": "string"
@@ -267,48 +273,32 @@ List lịch sử Contributor application của current user
           "type": "string",
           "enum": [
             "REGISTRATION",
-            "PROFILE"
+            "PROFILE",
+            "ADMIN_INVITATION"
           ]
         },
-        "status": {
-          "type": "string",
-          "enum": [
-            "PENDING",
-            "APPROVED",
-            "REJECTED"
-          ]
-        },
-        "approvedType": {
+        "invitedBy": {
           "type": [
-            "string",
+            "object",
             "null"
           ],
-          "enum": [
-            "EXPERIENCED_PRACTITIONER",
-            "NUTRITION_EXPERT",
-            null
-          ]
+          "required": [
+            "id",
+            "displayName"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "_truncated": true
+            },
+            "displayName": {
+              "type": "string",
+              "_truncated": true
+            }
+          },
+          "additionalProperties": false
         },
-        "approvedTypeLabel": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "approvalBasis": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "reviewNote": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "reviewedBy": {
-          "type": [
+        "i
   …(truncated — xem api-catalog.json)
 ```
 

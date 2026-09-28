@@ -1,6 +1,6 @@
 # Prompt — Phase 03: Category & Ingredient Catalog
 
-Triển khai Phase 03 độc lập về session trong repository `/Users/thienel/hhnthienn/fptu/sem8/wdp/vegan-support-application`.
+Triển khai Phase 03 độc lập về session từ thư mục gốc của repository hiện tại.
 
 Đọc `AGENTS.md`, BL-04/12 trong implementation plan, phase map và integration guide. Xác minh Phase 01; nếu Phase 02 đã tồn tại, tái sử dụng diet/allergen types mà không phá contract. Kiểm tra git status.
 

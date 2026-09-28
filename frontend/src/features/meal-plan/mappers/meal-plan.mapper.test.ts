@@ -205,4 +205,40 @@ describe('MealPlanMapper', () => {
     expect(plan.shoppingList[0].displayLine).toBe('1520 g Bông cải xanh');
     expect(plan.warnings[0].message).toContain('vi chất');
   });
+
+  it('Phase 18: ánh xạ slot chứa món ăn cá nhân (CUSTOM_MEAL)', () => {
+    const plan = mealPlanMapper.toModel({
+      id: 'plan-custom-1',
+      weekStart: '2026-09-28',
+      items: [
+        {
+          id: 'slot-custom-1',
+          date: '2026-09-28',
+          mealType: 'DINNER',
+          position: 3,
+          status: 'FILLED',
+          sourceType: 'CUSTOM_MEAL',
+          targetCalories: 600,
+          calories: 550,
+          servings: 2,
+          customMeal: {
+            id: 'cm-uuid-1',
+            name: 'Salad đậu hũ hạt chia sốt bơ',
+            nutritionCoverage: 'FULL',
+          },
+          reasonCodes: [],
+          warningCodes: [],
+        },
+      ],
+    });
+    const slot = plan.items[0];
+    expect(slot.isCustomMeal).toBe(true);
+    expect(slot.sourceType).toBe('CUSTOM_MEAL');
+    expect(slot.customMealId).toBe('cm-uuid-1');
+    expect(slot.customMealName).toBe('Salad đậu hũ hạt chia sốt bơ');
+    expect(slot.recipeTitle).toBe('Salad đậu hũ hạt chia sốt bơ');
+    expect(slot.calories).toBe(550);
+    expect(slot.servings).toBe(2);
+    expect(slot.customMealCoverage).toBe('FULL');
+  });
 });

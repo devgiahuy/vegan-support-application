@@ -1,31 +1,34 @@
 import {
+  ContributorApplicationSource,
   ContributorApplicationStatus,
-  ContributorType,
+  ContributorApprovalBasis,
   Role,
-  type ContributorApplicationSource,
 } from '@prisma/client';
 
 export const CONTRIBUTOR_REAPPLY_DAYS = 30;
 
-export function contributorTypeLabel(type: ContributorType): string {
-  return type === ContributorType.NUTRITION_EXPERT
-    ? 'Chuyên gia dinh dưỡng'
-    : 'Người thực hành có kinh nghiệm';
-}
-
-export function approvedContributorTypeLabel(type: ContributorType): string {
-  return `${contributorTypeLabel(type)} được Admin duyệt`;
+export function contributorApprovalBasisLabel(basis: ContributorApprovalBasis): string {
+  switch (basis) {
+    case ContributorApprovalBasis.ORGANIZATION_AFFILIATION:
+      return 'Liên kết tổ chức';
+    case ContributorApprovalBasis.PLATFORM_TRACK_RECORD:
+      return 'Lịch sử đóng góp trên nền tảng';
+    case ContributorApprovalBasis.ADMIN_INVITED:
+      return 'Được Admin mời';
+  }
 }
 
 export interface ContributorSubmission {
-  requestedType: ContributorType;
+  claimedApprovalBasis:
+    | typeof ContributorApprovalBasis.ORGANIZATION_AFFILIATION
+    | typeof ContributorApprovalBasis.PLATFORM_TRACK_RECORD;
+  organizationClaim?: string | undefined;
   experience: string;
   referenceLinks: string[];
 }
 
 export interface ContributorSubmissionContext {
   role: Role;
-  currentType: ContributorType | null;
   hasPendingApplication: boolean;
   reapplyEligibleAt: Date | null;
 }
@@ -33,10 +36,10 @@ export interface ContributorSubmissionContext {
 export type ContributorTransitionErrorKind =
   | 'APPLICATION_NOT_ALLOWED'
   | 'APPLICATION_PENDING'
-  | 'TYPE_UNCHANGED'
   | 'REAPPLY_NOT_ALLOWED'
   | 'SELF_APPROVAL_FORBIDDEN'
-  | 'APPLICATION_ALREADY_REVIEWED';
+  | 'APPLICATION_ALREADY_REVIEWED'
+  | 'APPROVAL_BASIS_NOT_ALLOWED';
 
 export class ContributorTransitionError extends Error {
   constructor(
@@ -51,8 +54,7 @@ export class ContributorTransitionError extends Error {
 export type ContributorReviewInput =
   | {
       decision: 'APPROVE';
-      contributorType: ContributorType;
-      approvalBasis: string;
+      approvalBasis: ContributorApprovalBasis;
       reviewNote: string;
     }
   | { decision: 'REJECT'; reviewNote: string };
@@ -60,12 +62,15 @@ export type ContributorReviewInput =
 export class ContributorApplicationStateMachine {
   pendingApplicationData(
     userId: string,
-    source: ContributorApplicationSource,
+    source:
+      | typeof ContributorApplicationSource.REGISTRATION
+      | typeof ContributorApplicationSource.PROFILE,
     input: ContributorSubmission,
   ) {
     return {
       userId,
-      requestedType: input.requestedType,
+      claimedApprovalBasis: input.claimedApprovalBasis,
+      organizationClaim: input.organizationClaim ?? null,
       experience: input.experience,
       referenceLinks: input.referenceLinks,
       source,
@@ -73,19 +78,26 @@ export class ContributorApplicationStateMachine {
     };
   }
 
-  assertCanSubmit(
-    context: ContributorSubmissionContext,
-    requestedType: ContributorType,
-    now: Date,
-  ): void {
-    if (context.role === Role.ADMIN) {
+  invitedApplicationData(userId: string, inviterId: string, invitationReason: string) {
+    return {
+      userId,
+      claimedApprovalBasis: ContributorApprovalBasis.ADMIN_INVITED,
+      organizationClaim: null,
+      experience: invitationReason,
+      referenceLinks: [],
+      source: ContributorApplicationSource.ADMIN_INVITATION,
+      invitedById: inviterId,
+      invitationReason,
+      status: ContributorApplicationStatus.PENDING,
+    };
+  }
+
+  assertCanSubmit(context: ContributorSubmissionContext, now: Date): void {
+    if (context.role !== Role.MEMBER) {
       throw new ContributorTransitionError('APPLICATION_NOT_ALLOWED');
     }
     if (context.hasPendingApplication) {
       throw new ContributorTransitionError('APPLICATION_PENDING');
-    }
-    if (context.currentType === requestedType) {
-      throw new ContributorTransitionError('TYPE_UNCHANGED');
     }
     if (context.reapplyEligibleAt && context.reapplyEligibleAt > now) {
       throw new ContributorTransitionError('REAPPLY_NOT_ALLOWED', context.reapplyEligibleAt);
@@ -93,8 +105,14 @@ export class ContributorApplicationStateMachine {
   }
 
   assertCanReview(
-    application: { userId: string; status: ContributorApplicationStatus },
+    application: {
+      userId: string;
+      status: ContributorApplicationStatus;
+      source: ContributorApplicationSource;
+      organizationClaim: string | null;
+    },
     reviewerId: string,
+    input: ContributorReviewInput,
   ): void {
     if (application.userId === reviewerId) {
       throw new ContributorTransitionError('SELF_APPROVAL_FORBIDDEN');
@@ -102,14 +120,39 @@ export class ContributorApplicationStateMachine {
     if (application.status !== ContributorApplicationStatus.PENDING) {
       throw new ContributorTransitionError('APPLICATION_ALREADY_REVIEWED');
     }
+    if (input.decision !== 'APPROVE') return;
+
+    if (
+      application.source === ContributorApplicationSource.ADMIN_INVITATION &&
+      input.approvalBasis !== ContributorApprovalBasis.ADMIN_INVITED
+    ) {
+      throw new ContributorTransitionError('APPROVAL_BASIS_NOT_ALLOWED');
+    }
+    if (
+      application.source !== ContributorApplicationSource.ADMIN_INVITATION &&
+      input.approvalBasis === ContributorApprovalBasis.ADMIN_INVITED
+    ) {
+      throw new ContributorTransitionError('APPROVAL_BASIS_NOT_ALLOWED');
+    }
+    if (
+      input.approvalBasis === ContributorApprovalBasis.ORGANIZATION_AFFILIATION &&
+      !application.organizationClaim
+    ) {
+      throw new ContributorTransitionError('APPROVAL_BASIS_NOT_ALLOWED');
+    }
   }
 
-  reviewData(reviewerId: string, input: ContributorReviewInput, now: Date) {
+  reviewData(
+    reviewerId: string,
+    input: ContributorReviewInput,
+    evidence: object | null,
+    now: Date,
+  ) {
     if (input.decision === 'APPROVE') {
       return {
         status: ContributorApplicationStatus.APPROVED,
-        approvedType: input.contributorType,
         approvalBasis: input.approvalBasis,
+        reviewEvidence: evidence,
         reviewNote: input.reviewNote,
         reviewedById: reviewerId,
         reviewedAt: now,
@@ -118,8 +161,8 @@ export class ContributorApplicationStateMachine {
     }
     return {
       status: ContributorApplicationStatus.REJECTED,
-      approvedType: null,
       approvalBasis: null,
+      reviewEvidence: null,
       reviewNote: input.reviewNote,
       reviewedById: reviewerId,
       reviewedAt: now,

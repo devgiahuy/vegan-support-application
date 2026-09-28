@@ -1,7 +1,9 @@
 # SRS — Ứng Dụng Hỗ Trợ Người Ăn Chay (Vegan Support Application)
 
-**Version:** 1.5-aligned | **Ngày gốc:** 10/09/2026 | **Cập nhật:** 15/09/2026
-**Trạng thái:** 🔶 REFERENCE — đã căn chỉnh theo `docs/IMPLEMENTATION_PLAN.md` v1.1
+> **SUPERSEDED REFERENCE — 2026-09-18.** Use `/docs/SRS.md` as the canonical requirement and `/docs/ROADMAP_PHASE_2.md` for deferred features. This long-form UC document predates the reviewed post-Phase-11 decisions; old Contributor subtype, auto-publish, and phase-number statements below are historical and must not drive new code.
+
+**Version:** 1.6-superseded | **Ngày gốc:** 10/09/2026 | **Cập nhật:** 18/09/2026
+**Trạng thái:** `DEPRECATED` cho quyết định sản phẩm; chỉ tham khảo lịch sử UC
 **Stack:** Next.js 16 · Node/Express + TypeScript · PostgreSQL + Prisma · AI Provider Adapter · Cloudinary + YouTube URL · Google Maps Platform
 
 **Chuẩn tham chiếu:** IEEE Std 830-1998 | **Phiên bản:** 1.5 (MVP Demo) | **Ngày:** 2026-09-16
@@ -15,16 +17,17 @@
 > **📌 Nguồn sự thật (Single Source of Truth):**
 > File này **không còn là nguồn sự thật duy nhất**. Nguồn sự thật là:
 >
-> 1. `docs/IMPLEMENTATION_PLAN.md` v1.1 — scope, business rules BL-01..BL-15, state machines, slices.
-> 2. `backend/docs/IMPLEMENTATION_PHASES.md` + `backend/docs/prompts/` — phase dependency và gate.
-> 3. `frontend/docs/BACKEND_INTEGRATION.md` + OpenAPI `/api-docs.json` — contract tích hợp thực thi được.
-> 4. `docs/SRS.md` — sau khi hợp nhất theo Ngày 0 của IMPLEMENTATION_PLAN.
+> 1. `docs/SRS.md` — yêu cầu sản phẩm canonical.
+> 2. `docs/IMPLEMENTATION_PLAN.md` v4.0 — scope, business rules, state machines, phases 12–27.
+> 3. `docs/ROADMAP_PHASE_2.md` — backlog sản phẩm sau MVP.
+> 4. `backend/docs/IMPLEMENTATION_PHASES.md` + `backend/docs/prompts/` — phase dependency và gate.
+> 5. `frontend/docs/BACKEND_INTEGRATION.md` + OpenAPI `/api-docs.json` — contract tích hợp thực thi được.
 >
 > File này chỉ là **tài liệu tham chiếu frontend**, mô tả lại yêu cầu theo ngôn ngữ UC/FR để dev FE dễ đọc. Khi lệch với IMPLEMENTATION_PLAN, IMPLEMENTATION_PLAN thắng. Theo D12: Product SRS đặt ở `/docs`, tài liệu frontend chỉ mô tả kỹ thuật.
 >
 > **Changelog v1.4 → v1.5-aligned (15/09/2026 — căn chỉnh IMPLEMENTATION_PLAN v1.1):**
 >
-> - Roles: bỏ `AUTHORIZED_USER`, dùng `MEMBER`; `CONTRIBUTOR` tách 2 `ContributorType`: `EXPERIENCED_PRACTITIONER` / `NUTRITION_EXPERT`. Chỉ `NUTRITION_EXPERT` + Admin được verify/correct AI dinh dưỡng.
+> - Quyết định mới 18/09/2026: `CONTRIBUTOR` là một role/quyền thống nhất. Ba approval basis chỉ mô tả cách được duyệt và không phân quyền. Backend contract subtype hiện tại sẽ migrate ở Phase 14.
 > - Bỏ `veganType` 5 giá trị và `dietSchool PHAT_GIAO/DAO_GIAO/KHONG_TON_GIAO`. Dùng `dietPattern VEGAN|LACTO_OVO` + `practiceSchedule PERMANENT|PERIODIC` + `tradition NONE|BUDDHIST|CHRISTIAN` + rule confirmation có version/toggle (BL-02/BL-03).
 > - DB: bỏ `MongoDB Atlas`, dùng `PostgreSQL + Prisma`. Bỏ `Gemini 1.5 Flash` hard-code, dùng `AI Provider Adapter` cấu hình qua env (`AI_PROVIDER/AI_MODEL_CHAT/AI_MODEL_MODERATION`).
 > - Search: bỏ `Elasticsearch`, dùng Postgres normalized không dấu. Upload: bỏ `S3 pre-signed/multipart/HLS/DLQ/SSE transcode`, dùng `Cloudinary signature` (`POST /api/v1/uploads/signature`) + YouTube URL.
@@ -32,7 +35,8 @@
 > - Moderation: bỏ `auto REJECTED khi risk >0.8`. Chỉ `flag/QUARANTINED` tạm, không hard-delete, Admin quyết định cuối (BL-06).
 > - Meal Planner: tolerance `±15% → ±20% + warning`, overlap nguyên liệu là ranking không phải `60%` hard, lặp tối đa 2 + warning, slot hết candidate để `UNFILLED`, swap `±100kcal` (BL-07). Behavioral MVP **IN scope** với scoring giải thích được, không phải DEFER.
 > - Chat: quota chỉ trừ sau provider success, reset `00:00 Asia/Ho_Chi_Minh`, guest `signed cookie + IP`, share từng answer, 1 active verification/target else `409` (BL-09).
-> - Contributor MVP: **không** upload/xác minh chứng chỉ, không nhãn `đã xác minh chứng chỉ`, chỉ `được Admin duyệt`. Chứng chỉ thuộc Phase 2.
+> - Contributor MVP: **không** upload/xác minh chứng chỉ, không nhãn `đã xác minh chứng chỉ`, chỉ `được Admin duyệt`. Chứng chỉ thuộc Roadmap Phase 2.
+> - Reviewed MVP mới gồm canonical food/nutrient DB, cooking-aware nutrition, quota, video review parity, custom meals/tags, compatibility warnings, multi-week programs, pantry, multi-image fridge recognition, receipt analysis và shopping gaps; xem SRS canonical thay vì các mục cũ bên dưới.
 > - API prefix thống nhất `/api/v1`, envelope success/error, pagination `limit<=100`, UUID, ISO 8601 UTC.
 
 ---

@@ -14,6 +14,7 @@ import {
   Sparkles,
   HelpCircle,
   Lightbulb,
+  Eye,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -33,8 +34,10 @@ import { flattenCategories } from '@/features/category/utils/flatten-categories'
 import { ImageUploader } from '@/features/post/components/image-uploader';
 import { recipeFormSchema, RecipeFormValues } from '../schemas/recipe-form.schema';
 import { RecipeIngredientRow } from './recipe-ingredient-row';
+import { RecipeNutritionPreviewDrawer } from '@/features/recipe-nutrition/components/recipe-nutrition-preview-drawer';
 
 interface RecipeEditorFormProps {
+  postId?: string;
   initialValues?: Partial<RecipeFormValues>;
   onSubmit: (values: RecipeFormValues) => Promise<void> | void;
   isSubmitting?: boolean;
@@ -42,11 +45,13 @@ interface RecipeEditorFormProps {
 }
 
 export function RecipeEditorForm({
+  postId,
   initialValues,
   onSubmit,
   isSubmitting = false,
   formTitle = 'Đăng công thức món chay mới',
 }: RecipeEditorFormProps) {
+  const [previewDrawerOpen, setPreviewDrawerOpen] = React.useState(false);
   const { data: categoryTree = [] } = useCategoryTreeQuery(CategoryType.RECIPE_GROUP);
   const flatCategories = React.useMemo(() => flattenCategories(categoryTree), [categoryTree]);
 
@@ -57,35 +62,34 @@ export function RecipeEditorForm({
       categoryId: initialValues?.categoryId || '',
       coverImageUrl: initialValues?.coverImageUrl || '',
       difficulty: initialValues?.difficulty || RecipeDifficulty.MEDIUM,
-      servings: initialValues?.servings || 2,
-      prepTimeMinutes: initialValues?.prepTimeMinutes ?? 15,
-      cookTimeMinutes: initialValues?.cookTimeMinutes ?? 20,
+      servings: initialValues?.servings ?? ('' as unknown as number),
+      prepTimeMinutes: initialValues?.prepTimeMinutes ?? ('' as unknown as number),
+      cookTimeMinutes: initialValues?.cookTimeMinutes ?? ('' as unknown as number),
       dietTag: initialValues?.dietTag || 'Thuần chay',
       description: initialValues?.description || '',
-      ingredients: initialValues?.ingredients || [
-        { name: 'Đậu hũ non', amount: 200, unit: 'gram', notes: 'Cắt quân cờ' },
-        { name: 'Nấm rơm', amount: 150, unit: 'gram', notes: 'Rửa sạch ngâm nước muối' },
-      ],
-      steps: initialValues?.steps || [
-        {
-          stepNumber: 1,
-          instruction: 'Sơ chế sạch các nguyên liệu, để ráo nước.',
-          tip: 'Ngâm nấm vào nước muối loãng để giữ độ giòn ngọt.',
-        },
-        {
-          stepNumber: 2,
-          instruction: 'Đun nóng chảo, xào thơm nấm và gia vị vừa ăn.',
-          tip: 'Không đảo mạnh tránh làm vỡ đậu hũ non.',
-        },
-      ],
-      nutrition: initialValues?.nutrition || {
-        calories: 250,
-        protein: 14,
-        carbs: 32,
-        fat: 8,
-        fiber: 6,
-        vitaminB12: 0.5,
-      },
+      ingredients:
+        initialValues?.ingredients && initialValues.ingredients.length > 0
+          ? initialValues.ingredients
+          : [
+              {
+                name: '',
+                ingredientId: null,
+                amount: '' as unknown as number,
+                unit: '',
+                notes: '',
+              },
+            ],
+      steps:
+        initialValues?.steps && initialValues.steps.length > 0
+          ? initialValues.steps
+          : [
+              {
+                stepNumber: 1,
+                instruction: '',
+                tip: '',
+              },
+            ],
+      nutrition: initialValues?.nutrition,
     },
   });
 
@@ -188,9 +192,13 @@ export function RecipeEditorForm({
                 id="servings"
                 type="number"
                 min={1}
+                placeholder="Ví dụ: 4"
                 className="h-11 rounded-xl"
                 {...form.register('servings', { valueAsNumber: true })}
               />
+              {form.formState.errors.servings && (
+                <p className="text-xs text-destructive">{form.formState.errors.servings.message}</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="prepTimeMinutes" className="font-semibold">
@@ -200,6 +208,7 @@ export function RecipeEditorForm({
                 id="prepTimeMinutes"
                 type="number"
                 min={0}
+                placeholder="Ví dụ: 15"
                 className="h-11 rounded-xl"
                 {...form.register('prepTimeMinutes', { valueAsNumber: true })}
               />
@@ -217,6 +226,7 @@ export function RecipeEditorForm({
                 id="cookTimeMinutes"
                 type="number"
                 min={0}
+                placeholder="Ví dụ: 25"
                 className="h-11 rounded-xl"
                 {...form.register('cookTimeMinutes', { valueAsNumber: true })}
               />
@@ -236,8 +246,13 @@ export function RecipeEditorForm({
                 form.setValue('coverImageUrl', url, { shouldValidate: true });
                 form.setValue(
                   'coverMedia',
-                  meta?.publicId && meta?.mimeType && meta?.bytes
-                    ? { publicId: meta.publicId, mimeType: meta.mimeType, bytes: meta.bytes }
+                  meta?.assetId || (meta?.publicId && meta?.mimeType && meta?.bytes)
+                    ? {
+                        assetId: meta?.assetId,
+                        publicId: meta?.publicId,
+                        mimeType: meta?.mimeType,
+                        bytes: meta?.bytes,
+                      }
                     : null,
                   { shouldValidate: true }
                 );
@@ -280,8 +295,8 @@ export function RecipeEditorForm({
               appendIngredient({
                 name: '',
                 ingredientId: null,
-                amount: 100,
-                unit: 'gram',
+                amount: '' as unknown as number,
+                unit: '',
                 notes: '',
               })
             }
@@ -379,7 +394,7 @@ export function RecipeEditorForm({
                   <Lightbulb className="h-3.5 w-3.5" /> Mẹo nhỏ cho bước này (tùy chọn)
                 </div>
                 <Input
-                  placeholder="Ví dụ: Giữ lửa nhỏ để nấm ngấm đều gia vị..."
+                  placeholder="Mẹo nhỏ tùy chọn cho bước này..."
                   className="h-9 rounded-lg text-xs"
                   {...form.register(`steps.${idx}.tip`)}
                 />
@@ -392,71 +407,42 @@ export function RecipeEditorForm({
         </CardContent>
       </Card>
 
-      {/* 4. PHÂN TÍCH DINH DƯỠNG ƯỚC TÍNH */}
-      <Card className="rounded-2xl border-border/80 shadow-sm">
-        <CardHeader className="border-b bg-muted/20 pb-4">
-          <CardTitle className="text-lg font-bold flex items-center gap-2">
-            <Flame className="h-5 w-5 text-primary" /> 4. Dinh dưỡng ước tính (cho 1 khẩu phần)
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            <div className="space-y-1">
-              <Label className="text-xs">Năng lượng (kcal)</Label>
-              <Input
-                type="number"
-                className="h-10 rounded-lg text-sm"
-                {...form.register('nutrition.calories', { valueAsNumber: true })}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Chất đạm (Protein - g)</Label>
-              <Input
-                type="number"
-                step="any"
-                className="h-10 rounded-lg text-sm"
-                {...form.register('nutrition.protein', { valueAsNumber: true })}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Carbs (g)</Label>
-              <Input
-                type="number"
-                step="any"
-                className="h-10 rounded-lg text-sm"
-                {...form.register('nutrition.carbs', { valueAsNumber: true })}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Chất béo (g)</Label>
-              <Input
-                type="number"
-                step="any"
-                className="h-10 rounded-lg text-sm"
-                {...form.register('nutrition.fat', { valueAsNumber: true })}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Chất xơ (g)</Label>
-              <Input
-                type="number"
-                step="any"
-                className="h-10 rounded-lg text-sm"
-                {...form.register('nutrition.fiber', { valueAsNumber: true })}
-              />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Vitamin B12 (mcg)</Label>
-              <Input
-                type="number"
-                step="any"
-                className="h-10 rounded-lg text-sm"
-                {...form.register('nutrition.vitaminB12', { valueAsNumber: true })}
-              />
-            </div>
+      {/* 4. DINH DƯỠNG & NĂNG LƯỢNG TỰ ĐỘNG */}
+      <Card className="rounded-2xl border-border/80 shadow-sm bg-muted/20">
+        <CardHeader className="p-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="space-y-1">
+            <CardTitle className="text-base font-bold flex items-center gap-2">
+              <Flame className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              4. Phân tích Dinh dưỡng tự động
+            </CardTitle>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Bạn không cần tính toán thủ công. Hệ thống sẽ tự động đối soát nguyên liệu và phương
+              pháp nấu để ước tính vi chất, năng lượng và cảnh báo kiêng kỵ sau khi lưu công thức.
+            </p>
           </div>
-        </CardContent>
+          {postId && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setPreviewDrawerOpen(true)}
+              className="rounded-xl text-xs shrink-0 inline-flex items-center gap-1.5 border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>Xem trước tính toán chi tiết</span>
+            </Button>
+          )}
+        </CardHeader>
       </Card>
+
+      {/* Drawer xem trước dinh dưỡng nấu nướng */}
+      {postId && (
+        <RecipeNutritionPreviewDrawer
+          postId={postId}
+          isOpen={previewDrawerOpen}
+          onClose={() => setPreviewDrawerOpen(false)}
+        />
+      )}
 
       {/* Nút gửi */}
       <div className="flex items-center justify-end gap-3 pt-4">

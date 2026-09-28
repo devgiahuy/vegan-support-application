@@ -5,6 +5,7 @@ import QueryProvider from '@/components/providers/query-provider';
 import { AuthProvider } from '@/components/providers/auth-provider';
 import { ThemeController } from '@/components/providers/theme-controller';
 import { Toaster } from '@/components/ui/sonner';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
 const beVietnam = Be_Vietnam_Pro({
   subsets: ['latin', 'vietnamese'],
@@ -33,8 +34,10 @@ export default function RootLayout({
         <QueryProvider>
           <ThemeController>
             <AuthProvider>
-              {children}
-              <Toaster position="bottom-right" duration={3000} />
+              <TooltipProvider delayDuration={200}>
+                {children}
+                <Toaster position="bottom-right" duration={3000} />
+              </TooltipProvider>
             </AuthProvider>
           </ThemeController>
         </QueryProvider>

@@ -128,3 +128,4 @@ export class ReviewMapper extends BaseMapper<ReviewQueueItemDto, ReviewQueueItem
 }
 
 export const reviewMapper = new ReviewMapper();
+export { contentReviewMapper } from './content-review.mapper';

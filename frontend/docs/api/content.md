@@ -131,6 +131,10 @@ Soft-delete content thuộc quyền sở hữu
             "ingredients": {
               "type": "array",
               "_truncated": true
+            },
+            "steps": {
+              "type": "array",
+              "_truncated": true
             }
           },
           "additionalProperties": false
@@ -184,13 +188,6 @@ Soft-delete content thuộc quyền sở hữu
         },
         "body": {
           "type": "string"
-        }
-      },
-      "additionalProperties": false
-    },
-    {
-      "type": "object",
-      "required":
   …(truncated — xem api-catalog.json)
 ```
 
@@ -728,6 +725,10 @@ Soft-delete content thuộc quyền sở hữu
             "ingredients": {
               "type": "array",
               "_truncated": true
+            },
+            "steps": {
+              "type": "array",
+              "_truncated": true
             }
           },
           "additionalProperties": false
@@ -779,11 +780,6 @@ Soft-delete content thuộc quyền sở hữu
         "media": {
           "type": "array",
           "items": {
-            "type": "object",
-            "_truncated": true
-          }
-        },
-        "body": {
-          "typ
+            "t
   …(truncated — xem api-catalog.json)
 ```

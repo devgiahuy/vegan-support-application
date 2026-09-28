@@ -14,6 +14,7 @@ import {
   type MealPlanItemParams,
   type MealPlanListQuery,
   type MealPlanParams,
+  type ManualAddMealPlanItemInput,
   type SwapMealPlanItemInput,
 } from './meal-plan.schemas.js';
 import type { MealPlanService } from './meal-plan.service.js';
@@ -61,6 +62,17 @@ export class MealPlanController {
       params.id,
       params.itemId,
       getValidatedBody<SwapMealPlanItemInput>(request),
+    );
+    response.status(200).json(mealPlanResponseSchema.parse({ success: true, data, meta: null }));
+  };
+
+  manualAdd = async (request: Request, response: Response): Promise<void> => {
+    const params = getValidatedParams<MealPlanItemParams>(request);
+    const data = await this.service.manualAdd(
+      userId(request),
+      params.id,
+      params.itemId,
+      getValidatedBody<ManualAddMealPlanItemInput>(request),
     );
     response.status(200).json(mealPlanResponseSchema.parse({ success: true, data, meta: null }));
   };

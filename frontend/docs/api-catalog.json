@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
-  "source": "http://localhost:4000/api-docs.json",
-  "generatedAt": "2026-09-17T03:57:40.072Z",
+  "source": "../backend/openapi.json",
+  "generatedAt": "2026-09-27T07:27:12.283Z",
   "stats": {
-    "operations": 71,
-    "groups": 17,
-    "schemas": 70
+    "operations": 168,
+    "groups": 39,
+    "schemas": 150
   },
   "operations": [
     {
@@ -1051,23 +1051,68 @@
     },
     {
       "method": "POST",
-      "path": "/api/v1/uploads/signature",
-      "group": "Uploads",
-      "summary": "Tạo Cloudinary signed-upload parameters",
-      "operationId": "createUploadSignature",
-      "params": [],
+      "path": "/api/v1/posts/{id}/submit",
+      "group": "Content Review",
+      "summary": "Submit một immutable draft revision để Admin review",
+      "operationId": "submitPostRevision",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
       "request": {
         "schema": {
-          "$ref": "UploadSignatureRequest"
+          "$ref": "SubmitPostRequest"
         },
         "required": true
       },
       "responses": {
-        "200": "UploadSignatureResponse",
+        "200": "PostResponse",
         "400": "ErrorResponse",
         "401": "ErrorResponse",
         "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "410": "ErrorResponse",
         "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/{id}/review-history",
+      "group": "Content Review",
+      "summary": "Author/Admin xem status và review history",
+      "operationId": "getPostReviewHistory",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "ContentReviewHistoryResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse"
       }
     },
     {
@@ -1422,23 +1467,26 @@
       "method": "POST",
       "path": "/api/v1/contributor-applications",
       "group": "Contributors",
-      "summary": "Gửi Contributor application hoặc yêu cầu đổi subtype",
+      "summary": "Gửi Contributor application",
       "operationId": "submitContributorApplication",
       "params": [],
       "request": {
         "schema": {
           "type": "object",
           "required": [
-            "requestedType",
+            "claimedApprovalBasis",
             "experience"
           ],
           "properties": {
-            "requestedType": {
+            "claimedApprovalBasis": {
               "type": "string",
               "enum": [
-                "EXPERIENCED_PRACTITIONER",
-                "NUTRITION_EXPERT"
+                "ORGANIZATION_AFFILIATION",
+                "PLATFORM_TRACK_RECORD"
               ]
+            },
+            "organizationClaim": {
+              "type": "string"
             },
             "experience": {
               "type": "string"
@@ -1519,7 +1567,7 @@
         },
         {
           "in": "query",
-          "name": "requestedType",
+          "name": "claimedApprovalBasis",
           "required": false,
           "type": "string"
         },
@@ -1545,6 +1593,42 @@
       }
     },
     {
+      "method": "POST",
+      "path": "/api/v1/admin/contributor-invitations",
+      "group": "Contributor Admin",
+      "summary": "Admin tạo Contributor invitation PENDING",
+      "operationId": "inviteContributorAdmin",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "userId",
+            "reason"
+          ],
+          "properties": {
+            "userId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "ContributorApplicationResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
       "method": "PATCH",
       "path": "/api/v1/admin/contributor-applications/{id}/review",
       "group": "Contributor Admin",
@@ -1565,7 +1649,6 @@
               "type": "object",
               "required": [
                 "decision",
-                "contributorType",
                 "approvalBasis",
                 "reviewNote"
               ],
@@ -1576,15 +1659,13 @@
                     "APPROVE"
                   ]
                 },
-                "contributorType": {
+                "approvalBasis": {
                   "type": "string",
                   "enum": [
-                    "EXPERIENCED_PRACTITIONER",
-                    "NUTRITION_EXPERT"
+                    "ORGANIZATION_AFFILIATION",
+                    "PLATFORM_TRACK_RECORD",
+                    "ADMIN_INVITED"
                   ]
-                },
-                "approvalBasis": {
-                  "type": "string"
                 },
                 "reviewNote": {
                   "type": "string"
@@ -1621,6 +1702,44 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/contributors/{userId}/revoke",
+      "group": "Contributor Admin",
+      "summary": "Admin thu hồi Contributor status",
+      "operationId": "revokeContributorAdmin",
+      "params": [
+        {
+          "in": "path",
+          "name": "userId",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "reason"
+          ],
+          "properties": {
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "ContributorRevocationResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
         "409": "ErrorResponse",
         "423": "ErrorResponse"
       }
@@ -1741,6 +1860,104 @@
       },
       "responses": {
         "200": "ReviewQueueItemResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/content-review",
+      "group": "Content Review Admin",
+      "summary": "Admin list submitted content revisions",
+      "operationId": "listContentReviewAdmin",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "type",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "priority",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "ReviewQueueListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/content-review/{id}",
+      "group": "Content Review Admin",
+      "summary": "Admin inspect one immutable revision and its evidence",
+      "operationId": "getContentReviewAdmin",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "AdminContentReviewDetailResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/content-review/{id}",
+      "group": "Content Review Admin",
+      "summary": "Admin approve or reject a submitted revision",
+      "operationId": "reviewContentAdmin",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "AdminContentReviewDecisionRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "AdminContentReviewDetailResponse",
         "400": "ErrorResponse",
         "401": "ErrorResponse",
         "403": "ErrorResponse",
@@ -2346,6 +2563,205 @@
       }
     },
     {
+      "method": "PATCH",
+      "path": "/api/v1/meal-plans/{id}/items/{itemId}/manual-add",
+      "group": "Meal Plans",
+      "summary": "Thêm recipe hoặc private custom meal vào slot",
+      "operationId": "manualAddMealPlanItem",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "path",
+          "name": "itemId",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "ManualAddMealPlanItemRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "MealPlanResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/meal-plans/{id}/analyze",
+      "group": "Meal Analysis",
+      "summary": "Phân tích khẩu phần, giới hạn và tương tác của meal plan",
+      "operationId": "analyzeMealPlan",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "MealAnalysisRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "MealAnalysisResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/meal-plans/{id}/analysis",
+      "group": "Meal Analysis",
+      "summary": "Đọc kết quả phân tích hiện hành",
+      "operationId": "getCurrentMealAnalysis",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "MealAnalysisResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/meal-programs",
+      "group": "Meal Programs",
+      "summary": "List owned meal programs",
+      "operationId": "listMealPrograms",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "MealProgramListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/meal-programs",
+      "group": "Meal Programs",
+      "summary": "Generate a bounded multi-week meal program",
+      "operationId": "createMealProgram",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "CreateMealProgramRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "MealProgramResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/meal-programs/{id}",
+      "group": "Meal Programs",
+      "summary": "Read an owned program and weekly snapshots",
+      "operationId": "getMealProgram",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "MealProgramResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/meal-programs/{id}",
+      "group": "Meal Programs",
+      "summary": "Edit, regenerate, reanalyze, or confirm a program",
+      "operationId": "mutateMealProgram",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "PatchMealProgramRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "MealProgramResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
       "method": "GET",
       "path": "/api/v1/chat/sessions",
       "group": "AI Chat",
@@ -2488,6 +2904,5271 @@
         "403": "ErrorResponse",
         "404": "ErrorResponse",
         "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/food-data/ingredients/{ingredientId}/nutrients",
+      "group": "Food Data",
+      "summary": "Lấy nutrient values theo 100 g và provenance của ingredient",
+      "operationId": "getIngredientNutrients",
+      "params": [
+        {
+          "in": "path",
+          "name": "ingredientId",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "preparation",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "locale",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "FoodDataRecordResponse",
+        "400": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/food-data/reference-intakes",
+      "group": "Food Data",
+      "summary": "Reference intakes và upper limits theo population",
+      "operationId": "listNutrientReferenceIntakes",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "locale",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "populationCode",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "nutrientCode",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "ingredientId",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "scope",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "FoodDataListResponse",
+        "400": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/food-data/ingredient-guidelines",
+      "group": "Food Data",
+      "summary": "Ingredient amount/frequency guidelines",
+      "operationId": "listIngredientGuidelines",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "locale",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "populationCode",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "nutrientCode",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "ingredientId",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "scope",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "FoodDataListResponse",
+        "400": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/food-data/cooking-methods",
+      "group": "Food Data",
+      "summary": "Cooking methods cùng retention/yield factors",
+      "operationId": "listCookingMethods",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "locale",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "populationCode",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "nutrientCode",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "ingredientId",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "scope",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "FoodDataListResponse",
+        "400": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/food-data/interaction-rules",
+      "group": "Food Data",
+      "summary": "Interaction rules theo dish/meal/day",
+      "operationId": "listIngredientInteractionRules",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "locale",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "populationCode",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "nutrientCode",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "ingredientId",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "scope",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "FoodDataListResponse",
+        "400": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/food-data/records",
+      "group": "Food Data Admin",
+      "summary": "List food-data record theo kind, gồm cả staged/superseded",
+      "operationId": "listAdminFoodDataRecords",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "kind",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "FoodDataListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/food-data/records",
+      "group": "Food Data Admin",
+      "summary": "Tạo source, nutrient, profile, factor, rule hoặc AI suggestion",
+      "operationId": "createAdminFoodDataRecord",
+      "params": [],
+      "request": {
+        "schema": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "SOURCE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "name",
+                    "provider",
+                    "licenseName",
+                    "attribution"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "name": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "provider": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "licenseName": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "licenseUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "attribution": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "defaultLocale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "active": {
+                      "type": "boolean",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "NUTRIENT"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "name",
+                    "defaultUnit",
+                    "unitDimension"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "name": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "defaultUnit": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "unitDimension": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "active": {
+                      "type": "boolean",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "INGREDIENT_PROFILE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "ingredientId",
+                    "ediblePortionPercent",
+                    "quality",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "ingredientId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "importBatchId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "preparation": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "ediblePortionPercent": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "servingGrams": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "quality": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "HOUSEHOLD_CONVERSION"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "profileId",
+                    "unitName",
+                    "quantity",
+                    "unitDimension",
+                    "grams",
+                    "quality"
+                  ],
+                  "properties": {
+                    "profileId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "unitName": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "unitSymbol": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "quantity": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "unitDimension": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "grams": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "quality": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "NUTRIENT_VALUE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "profileId",
+                    "nutrientId",
+                    "valuePer100g",
+                    "unit",
+                    "quality",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "profileId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "nutrientId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "valuePer100g": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "unit": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "minValue": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "maxValue": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "quality": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "REFERENCE_INTAKE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "nutrientId",
+                    "referenceType",
+                    "populationCode",
+                    "value",
+                    "unit",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "nutrientId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "referenceType": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "populationCode": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "applicability": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "value": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "unit": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "warningEligible": {
+                      "type": "boolean",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "INGREDIENT_GUIDELINE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "ingredientId",
+                    "populationCode",
+                    "amount",
+                    "unit",
+                    "period",
+                    "evidenceGrade",
+                    "severity",
+                    "explanation",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "ingredientId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "populationCode": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "applicability": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "amount": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "unit": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "frequency": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "period": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "advisoryOnly": {
+                      "type": "boolean",
+                      "_truncated": true
+                    },
+                    "evidenceGrade": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "severity": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "explanation": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "COOKING_METHOD"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "name"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "name": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "active": {
+                      "type": "boolean",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "RETENTION_FACTOR"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "cookingMethodId",
+                    "nutrientId",
+                    "factor",
+                    "quality",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "cookingMethodId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "nutrientId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "factor": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "applicability": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "quality": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "YIELD_FACTOR"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "cookingMethodId",
+                    "factor",
+                    "quality",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "cookingMethodId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "ingredientId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "factor": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "applicability": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "quality": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "INTERACTION_RULE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "ingredientAId",
+                    "ingredientBId",
+                    "scope",
+                    "direction",
+                    "severity",
+                    "evidenceGrade",
+                    "explanation",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "ingredientAId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "ingredientBId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "scope": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "direction": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "severity": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "evidenceGrade": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "applicability": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "explanation": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "suggestedAction": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "hardRule": {
+                      "type": "boolean",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "AI_SUGGESTION"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "suggestionType",
+                    "payload"
+                  ],
+                  "properties": {
+                    "suggestionType": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "provider": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "payload": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "rationale": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "confidence": {
+                      "type": "object",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "FoodDataRecordResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/food-data/records/{id}",
+      "group": "Food Data Admin",
+      "summary": "Thay thế đầy đủ một food-data record",
+      "operationId": "replaceAdminFoodDataRecord",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "SOURCE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "name",
+                    "provider",
+                    "licenseName",
+                    "attribution"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "name": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "provider": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "licenseName": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "licenseUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "attribution": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "defaultLocale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "active": {
+                      "type": "boolean",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "NUTRIENT"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "name",
+                    "defaultUnit",
+                    "unitDimension"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "name": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "defaultUnit": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "unitDimension": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "active": {
+                      "type": "boolean",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "INGREDIENT_PROFILE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "ingredientId",
+                    "ediblePortionPercent",
+                    "quality",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "ingredientId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "importBatchId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "preparation": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "ediblePortionPercent": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "servingGrams": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "quality": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "HOUSEHOLD_CONVERSION"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "profileId",
+                    "unitName",
+                    "quantity",
+                    "unitDimension",
+                    "grams",
+                    "quality"
+                  ],
+                  "properties": {
+                    "profileId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "unitName": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "unitSymbol": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "quantity": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "unitDimension": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "grams": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "quality": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "NUTRIENT_VALUE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "profileId",
+                    "nutrientId",
+                    "valuePer100g",
+                    "unit",
+                    "quality",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "profileId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "nutrientId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "valuePer100g": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "unit": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "minValue": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "maxValue": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "quality": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "REFERENCE_INTAKE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "nutrientId",
+                    "referenceType",
+                    "populationCode",
+                    "value",
+                    "unit",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "nutrientId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "referenceType": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "populationCode": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "applicability": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "value": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "unit": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "warningEligible": {
+                      "type": "boolean",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "INGREDIENT_GUIDELINE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "ingredientId",
+                    "populationCode",
+                    "amount",
+                    "unit",
+                    "period",
+                    "evidenceGrade",
+                    "severity",
+                    "explanation",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "ingredientId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "populationCode": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "applicability": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "amount": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "unit": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "frequency": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "period": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "advisoryOnly": {
+                      "type": "boolean",
+                      "_truncated": true
+                    },
+                    "evidenceGrade": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "severity": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "explanation": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "COOKING_METHOD"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "code",
+                    "name"
+                  ],
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "name": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "description": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "active": {
+                      "type": "boolean",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "RETENTION_FACTOR"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "cookingMethodId",
+                    "nutrientId",
+                    "factor",
+                    "quality",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "cookingMethodId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "nutrientId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "factor": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "applicability": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "quality": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "YIELD_FACTOR"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "cookingMethodId",
+                    "factor",
+                    "quality",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "cookingMethodId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "ingredientId": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "factor": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "applicability": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "quality": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "INTERACTION_RULE"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "ingredientAId",
+                    "ingredientBId",
+                    "scope",
+                    "direction",
+                    "severity",
+                    "evidenceGrade",
+                    "explanation",
+                    "sourceId",
+                    "sourceRecordId",
+                    "sourceVersion",
+                    "effectiveFrom"
+                  ],
+                  "properties": {
+                    "ingredientAId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "ingredientBId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "scope": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "direction": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "severity": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "evidenceGrade": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "applicability": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "explanation": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "suggestedAction": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "hardRule": {
+                      "type": "boolean",
+                      "_truncated": true
+                    },
+                    "sourceId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceRecordId": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "sourceVersion": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "locale": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveFrom": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "effectiveTo": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "reviewStatus": {
+                      "type": "string",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "kind",
+                "data"
+              ],
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "AI_SUGGESTION"
+                  ]
+                },
+                "data": {
+                  "type": "object",
+                  "required": [
+                    "suggestionType",
+                    "payload"
+                  ],
+                  "properties": {
+                    "suggestionType": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "provider": {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    "payload": {
+                      "type": "object",
+                      "_truncated": true
+                    },
+                    "rationale": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "_truncated": true
+                    },
+                    "confidence": {
+                      "type": "object",
+                      "_truncated": true
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "FoodDataRecordResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/admin/food-data/records/{id}",
+      "group": "Food Data Admin",
+      "summary": "Archive/supersede food-data record",
+      "operationId": "archiveAdminFoodDataRecord",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "kind",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "FoodDataRecordResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/food-data/imports/preview",
+      "group": "Food Data Admin",
+      "summary": "Validate và stage import qua provider adapter",
+      "operationId": "previewFoodDataImport",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "sourceCode",
+            "idempotencyKey",
+            "sourceVersion",
+            "effectiveFrom",
+            "records"
+          ],
+          "properties": {
+            "sourceCode": {
+              "type": "string"
+            },
+            "idempotencyKey": {
+              "type": "string"
+            },
+            "sourceVersion": {
+              "type": "string"
+            },
+            "sourceDate": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "format": "date"
+            },
+            "effectiveFrom": {
+              "type": "string",
+              "format": "date"
+            },
+            "records": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "sourceRecordId",
+                  "canonicalName",
+                  "foodGroup",
+                  "ediblePortionPercent"
+                ],
+                "properties": {
+                  "sourceRecordId": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "canonicalName": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "foodGroup": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "preparation": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "locale": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "ediblePortionPercent": {
+                    "type": "object",
+                    "_truncated": true
+                  },
+                  "servingGrams": {
+                    "type": "object",
+                    "_truncated": true
+                  },
+                  "quality": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "aliases": {
+                    "type": "array",
+                    "_truncated": true
+                  },
+                  "householdConversions": {
+                    "type": "array",
+                    "_truncated": true
+                  },
+                  "nutrients": {
+                    "type": "array",
+                    "_truncated": true
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "FoodDataImportResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/food-data/imports",
+      "group": "Food Data Admin",
+      "summary": "Commit import preview idempotently",
+      "operationId": "commitFoodDataImport",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "importId"
+          ],
+          "properties": {
+            "importId": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "FoodDataImportResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/{id}/nutrition/preview",
+      "group": "Recipe Nutrition",
+      "summary": "Preview cooking-aware nutrition estimate without saving",
+      "operationId": "previewRecipeNutrition",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "RecipeNutritionPreviewRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "RecipeNutritionEstimateResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/posts/{id}/nutrition/recalculate",
+      "group": "Recipe Nutrition",
+      "summary": "Save a new current cooking-aware nutrition estimate",
+      "operationId": "recalculateRecipeNutrition",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "RecipeNutritionRecalculateRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "RecipeNutritionEstimateResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/{id}/nutrition/current",
+      "group": "Recipe Nutrition",
+      "summary": "Get current saved nutrition estimate",
+      "operationId": "getCurrentRecipeNutrition",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "RecipeNutritionEstimateResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/{id}/nutrition/history",
+      "group": "Recipe Nutrition",
+      "summary": "List saved nutrition estimate history",
+      "operationId": "listRecipeNutritionHistory",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "RecipeNutritionHistoryResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/{id}/nutrition/status",
+      "group": "Recipe Nutrition",
+      "summary": "Get nutrition estimate freshness and latest AI job status",
+      "operationId": "getRecipeNutritionStatus",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "RecipeNutritionStatusResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/storage/me",
+      "group": "Storage",
+      "summary": "Đọc usage và quota của current user",
+      "operationId": "getMyStorageUsage",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "StorageUsageResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/uploads/reservations",
+      "group": "Uploads",
+      "summary": "Reserve quota và cấp cấu hình signed upload",
+      "operationId": "createUploadReservation",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "CreateUploadReservationRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "CreateUploadReservationResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "409": "ErrorResponse",
+        "410": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/uploads/reservations/{id}/commit",
+      "group": "Uploads",
+      "summary": "Verify provider và commit actual bytes",
+      "operationId": "commitUploadReservation",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "CommitUploadReservationRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "UploadReservationResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "410": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse",
+        "502": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/uploads/reservations/{id}",
+      "group": "Uploads",
+      "summary": "Release reservation chưa commit",
+      "operationId": "releaseUploadReservation",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "UploadReservationResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/storage/assets/{id}",
+      "group": "Storage",
+      "summary": "Durably delete owned provider asset",
+      "operationId": "deleteStorageAsset",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "DeleteMediaAssetRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "StorageAssetResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse",
+        "502": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/storage/accounts",
+      "group": "Storage Admin",
+      "summary": "List account usage and effective limits",
+      "operationId": "listStorageAccounts",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "q",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "overQuota",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "StorageAccountListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/storage/policies",
+      "group": "Storage Admin",
+      "summary": "List configurable storage policies",
+      "operationId": "listStoragePolicies",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "active",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "StoragePolicyListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/storage/policies/{id}",
+      "group": "Storage Admin",
+      "summary": "Update policy with optimistic version",
+      "operationId": "updateStoragePolicy",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "UpdateStoragePolicyRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "StoragePolicyResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/storage/accounts/{userId}/adjustments",
+      "group": "Storage Admin",
+      "summary": "Grant or remove audited account quota bytes",
+      "operationId": "createStorageAdjustment",
+      "params": [
+        {
+          "in": "path",
+          "name": "userId",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "CreateStorageAdjustmentRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "201": "StorageAdjustmentResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/storage/adjustments",
+      "group": "Storage Admin",
+      "summary": "List immutable Admin quota adjustments",
+      "operationId": "listStorageAdjustments",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "userId",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "StorageAdjustmentListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/custom-meals",
+      "group": "Custom Meals",
+      "summary": "Danh sách bữa ăn tùy chỉnh của tôi",
+      "operationId": "listCustomMeals",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "tag",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "CustomMealListResponse",
+        "401": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/custom-meals",
+      "group": "Custom Meals",
+      "summary": "Tạo bữa ăn tùy chỉnh mới",
+      "operationId": "createCustomMeal",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "name"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "notes": {
+              "type": "string"
+            },
+            "servings": {
+              "type": "integer"
+            },
+            "sourceNote": {
+              "type": "string"
+            },
+            "userCalories": {
+              "type": "integer"
+            },
+            "userProteinGrams": {
+              "type": "number"
+            },
+            "userCarbsGrams": {
+              "type": "number"
+            },
+            "userFatGrams": {
+              "type": "number"
+            },
+            "deletePolicy": {
+              "type": "string",
+              "enum": [
+                "BLOCK",
+                "RETAIN_SNAPSHOT"
+              ]
+            },
+            "ingredients": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "position",
+                  "displayName",
+                  "amount",
+                  "unit"
+                ],
+                "properties": {
+                  "position": {
+                    "type": "integer",
+                    "_truncated": true
+                  },
+                  "displayName": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "amount": {
+                    "type": "number",
+                    "_truncated": true
+                  },
+                  "unit": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "ingredientId": {
+                    "type": "string",
+                    "_truncated": true
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "201": "object",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/custom-meals/{id}",
+      "group": "Custom Meals",
+      "summary": "Chi tiết bữa ăn tùy chỉnh",
+      "operationId": "getCustomMeal",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "object",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/custom-meals/{id}",
+      "group": "Custom Meals",
+      "summary": "Cập nhật bữa ăn tùy chỉnh",
+      "operationId": "updateCustomMeal",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "notes": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "servings": {
+              "type": "integer"
+            },
+            "sourceNote": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "userCalories": {
+              "type": [
+                "integer",
+                "null"
+              ]
+            },
+            "userProteinGrams": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "userCarbsGrams": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "userFatGrams": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "deletePolicy": {
+              "type": "string",
+              "enum": [
+                "BLOCK",
+                "RETAIN_SNAPSHOT"
+              ]
+            },
+            "ingredients": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "position",
+                  "displayName",
+                  "amount",
+                  "unit"
+                ],
+                "properties": {
+                  "position": {
+                    "type": "integer",
+                    "_truncated": true
+                  },
+                  "displayName": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "amount": {
+                    "type": "number",
+                    "_truncated": true
+                  },
+                  "unit": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "ingredientId": {
+                    "type": "string",
+                    "_truncated": true
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "tags": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "object",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/custom-meals/{id}",
+      "group": "Custom Meals",
+      "summary": "Xóa bữa ăn tùy chỉnh",
+      "operationId": "deleteCustomMeal",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "204": "Đã xóa thành công",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/custom-meals/{id}/photos",
+      "group": "Custom Meals",
+      "summary": "Gắn ảnh vào bữa ăn tùy chỉnh",
+      "operationId": "attachCustomMealPhoto",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "assetId"
+          ],
+          "properties": {
+            "assetId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "position": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "object",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/custom-meals/{id}/photos/{assetId}",
+      "group": "Custom Meals",
+      "summary": "Gỡ ảnh khỏi bữa ăn tùy chỉnh",
+      "operationId": "removeCustomMealPhoto",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "path",
+          "name": "assetId",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "object",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/custom-meals/{id}/photos/order",
+      "group": "Custom Meals",
+      "summary": "Sắp xếp lại thứ tự ảnh",
+      "operationId": "reorderCustomMealPhotos",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "orderedAssetIds"
+          ],
+          "properties": {
+            "orderedAssetIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "object",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/pantry/items",
+      "group": "Pantry",
+      "summary": "List and filter owned pantry items",
+      "operationId": "listPantryItems",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "ingredientId",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "source",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "confirmationStatus",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "conversionStatus",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "search",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "expiresFrom",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "expiresTo",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "includeZero",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "PantryListEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pantry/items",
+      "group": "Pantry",
+      "summary": "Create a confirmed manual pantry item",
+      "operationId": "createPantryItem",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "quantity",
+            "unit",
+            "idempotencyKey"
+          ],
+          "properties": {
+            "ingredientId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "unmatchedText": {
+              "type": "string"
+            },
+            "quantity": {
+              "type": "number"
+            },
+            "unit": {
+              "type": "string"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "purchasedAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "openedAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expiresAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "freshnessNote": {
+              "type": "string"
+            },
+            "idempotencyKey": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "201": "PantryAdjustmentEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/pantry/items/expiring-soon",
+      "group": "Pantry",
+      "summary": "List confirmed items expiring in an inclusive date window",
+      "operationId": "listExpiringPantryItems",
+      "params": [
+        {
+          "in": "query",
+          "name": "asOf",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "days",
+          "required": false,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "PantryListEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pantry/merge-preview",
+      "group": "Pantry",
+      "summary": "Preview duplicate pantry item merge",
+      "operationId": "previewPantryMerge",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "itemIds"
+          ],
+          "properties": {
+            "itemIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "PantryMergePreviewEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pantry/merge",
+      "group": "Pantry",
+      "summary": "Merge duplicate pantry items atomically",
+      "operationId": "mergePantryItems",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "targetItemId",
+            "items",
+            "idempotencyKey"
+          ],
+          "properties": {
+            "targetItemId": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "id",
+                  "expectedVersion"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "_truncated": true
+                  },
+                  "expectedVersion": {
+                    "type": "integer",
+                    "_truncated": true
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "idempotencyKey": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "object",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/pantry/items/{id}",
+      "group": "Pantry",
+      "summary": "Get an owned pantry item",
+      "operationId": "getPantryItem",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "PantryItemEnvelope",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/pantry/items/{id}",
+      "group": "Pantry",
+      "summary": "Update pantry observations with optimistic concurrency",
+      "operationId": "updatePantryItem",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "expectedVersion"
+          ],
+          "properties": {
+            "expectedVersion": {
+              "type": "integer"
+            },
+            "confidence": {
+              "type": "number"
+            },
+            "purchasedAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "openedAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "expiresAt": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "freshnessNote": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "PantryItemEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/v1/pantry/items/{id}",
+      "group": "Pantry",
+      "summary": "Soft-delete an owned pantry item",
+      "operationId": "deletePantryItem",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "expectedVersion",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "204": "Soft-deleted; history retained",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/pantry/items/{id}/adjustments",
+      "group": "Pantry",
+      "summary": "List immutable quantity ledger entries",
+      "operationId": "listPantryAdjustments",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "PantryAdjustmentListEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/pantry/items/{id}/adjustments",
+      "group": "Pantry",
+      "summary": "Consume, restore, or adjust pantry quantity",
+      "operationId": "adjustPantryItem",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "oneOf": [
+            {
+              "type": "object",
+              "required": [
+                "type",
+                "quantity",
+                "unit",
+                "expectedVersion",
+                "idempotencyKey"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "CONSUME"
+                  ]
+                },
+                "quantity": {
+                  "type": "number"
+                },
+                "unit": {
+                  "type": "string"
+                },
+                "expectedVersion": {
+                  "type": "integer"
+                },
+                "idempotencyKey": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "type",
+                "quantity",
+                "unit",
+                "expectedVersion",
+                "idempotencyKey"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "RESTORE"
+                  ]
+                },
+                "quantity": {
+                  "type": "number"
+                },
+                "unit": {
+                  "type": "string"
+                },
+                "expectedVersion": {
+                  "type": "integer"
+                },
+                "idempotencyKey": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "required": [
+                "type",
+                "deltaQuantity",
+                "unit",
+                "expectedVersion",
+                "idempotencyKey",
+                "reason"
+              ],
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "ADJUST"
+                  ]
+                },
+                "deltaQuantity": {
+                  "type": "number"
+                },
+                "unit": {
+                  "type": "string"
+                },
+                "expectedVersion": {
+                  "type": "integer"
+                },
+                "idempotencyKey": {
+                  "type": "string"
+                },
+                "reason": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "PantryAdjustmentEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ingredient-recognition/jobs",
+      "group": "Ingredient Recognition",
+      "summary": "Create an asynchronous multi-image fridge recognition job",
+      "operationId": "createIngredientRecognitionJob",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "CreateRecognitionJobRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "202": "RecognitionJobResponse",
+        "401": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ingredient-recognition/jobs/{id}",
+      "group": "Ingredient Recognition",
+      "summary": "Get recognition progress and editable candidates",
+      "operationId": "getIngredientRecognitionJob",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "RecognitionJobResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/ingredient-recognition/jobs/{id}/candidates/{candidateId}",
+      "group": "Ingredient Recognition",
+      "summary": "Correct or reject a recognition candidate",
+      "operationId": "updateIngredientRecognitionCandidate",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "path",
+          "name": "candidateId",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "UpdateRecognitionCandidateRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "RecognitionJobResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ingredient-recognition/jobs/{id}/confirm",
+      "group": "Ingredient Recognition",
+      "summary": "Confirm selected candidates and apply the pantry diff",
+      "operationId": "confirmIngredientRecognitionJob",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "ConfirmRecognitionJobRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "RecognitionConfirmationResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ingredient-recognition/jobs/{id}/cancel",
+      "group": "Ingredient Recognition",
+      "summary": "Cancel an unconfirmed recognition job",
+      "operationId": "cancelIngredientRecognitionJob",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "RecognitionJobResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ingredient-recognition/jobs/{id}/retry",
+      "group": "Ingredient Recognition",
+      "summary": "Retry a failed or partially failed recognition job",
+      "operationId": "retryIngredientRecognitionJob",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "RetryRecognitionJobRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "202": "RecognitionJobResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/receipt-jobs",
+      "group": "Receipts",
+      "summary": "Create an asynchronous receipt extraction job",
+      "operationId": "createReceiptJob",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "CreateReceiptJobRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "202": "ReceiptJobResponse",
+        "401": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/receipt-jobs/{id}",
+      "group": "Receipts",
+      "summary": "Get receipt metadata, progress, and editable candidate lines",
+      "operationId": "getReceiptJob",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "ReceiptJobResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/receipt-jobs/{id}/candidates/{candidateId}",
+      "group": "Receipts",
+      "summary": "Correct or reject a receipt candidate",
+      "operationId": "updateReceiptCandidate",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "path",
+          "name": "candidateId",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "UpdateReceiptCandidateRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "ReceiptJobResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/receipt-jobs/{id}/confirm",
+      "group": "Receipts",
+      "summary": "Confirm selected receipt candidates and apply the pantry diff",
+      "operationId": "confirmReceiptJob",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "ConfirmReceiptJobRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "ReceiptConfirmationResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/receipt-jobs/{id}/cancel",
+      "group": "Receipts",
+      "summary": "Cancel an unconfirmed receipt job",
+      "operationId": "cancelReceiptJob",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "ReceiptJobResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/receipt-jobs/{id}/retry",
+      "group": "Receipts",
+      "summary": "Retry failed or partially failed receipt extraction",
+      "operationId": "retryReceiptJob",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "RetryReceiptJobRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "202": "ReceiptJobResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/shopping-lists/preview",
+      "group": "Shopping Lists",
+      "summary": "Preview pantry-aware shopping gaps for selected meals and servings",
+      "operationId": "previewShoppingGaps",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "ShoppingGapPreviewRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "ShoppingGapPreviewResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ai-artifacts",
+      "group": "AI Artifacts",
+      "summary": "Save an immutable eligible AI output as a private draft artifact",
+      "operationId": "createAiArtifact",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "CreateAiArtifactRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "201": "AiArtifactResponse",
+        "401": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/ai-artifacts/{id}/visibility",
+      "group": "AI Artifacts",
+      "summary": "Share or unshare an owned AI artifact",
+      "operationId": "updateAiArtifactVisibility",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "UpdateAiArtifactVisibilityRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "AiArtifactResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ai-artifacts/{id}/submit",
+      "group": "AI Artifacts",
+      "summary": "Submit an owned artifact for Contributor verification",
+      "operationId": "submitAiArtifact",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "SubmitAiArtifactRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "AiArtifactResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/ai-artifacts/public",
+      "group": "AI Artifacts",
+      "summary": "List submitted public AI artifacts using a strict privacy-safe allowlist",
+      "operationId": "listPublicAiArtifacts",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "type",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "PublicAiArtifactListResponse",
+        "422": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ai-artifacts/{id}/verifications",
+      "group": "AI Verification",
+      "summary": "Verify a submitted public artifact",
+      "operationId": "createAiVerification",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "CreateAiVerificationRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "201": "AiVerificationResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/ai-verifications/{id}",
+      "group": "AI Verification Admin",
+      "summary": "Override or revoke an active verification with an audit reason",
+      "operationId": "adminUpdateAiVerification",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "AdminAiVerificationActionRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "AiVerificationResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/restaurants/nearby",
+      "group": "Restaurants",
+      "summary": "Nearby approved internal and live provider places; hard diet filtering precedes ranking",
+      "operationId": "nearbyRestaurants",
+      "params": [
+        {
+          "in": "query",
+          "name": "lat",
+          "required": false,
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        {
+          "in": "query",
+          "name": "lng",
+          "required": false,
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        {
+          "in": "query",
+          "name": "north",
+          "required": false,
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        {
+          "in": "query",
+          "name": "south",
+          "required": false,
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        {
+          "in": "query",
+          "name": "east",
+          "required": false,
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        {
+          "in": "query",
+          "name": "west",
+          "required": false,
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        {
+          "in": "query",
+          "name": "radiusMeters",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "dietPattern",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "locationSource",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "locationConsent",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "RestaurantDiscoveryResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/restaurants/search",
+      "group": "Restaurants",
+      "summary": "Search nearby restaurants and shops",
+      "operationId": "searchRestaurants",
+      "params": [
+        {
+          "in": "query",
+          "name": "lat",
+          "required": false,
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        {
+          "in": "query",
+          "name": "lng",
+          "required": false,
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        {
+          "in": "query",
+          "name": "north",
+          "required": false,
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        {
+          "in": "query",
+          "name": "south",
+          "required": false,
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        {
+          "in": "query",
+          "name": "east",
+          "required": false,
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        {
+          "in": "query",
+          "name": "west",
+          "required": false,
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        {
+          "in": "query",
+          "name": "radiusMeters",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "dietPattern",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "locationSource",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "locationConsent",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "q",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "minPrice",
+          "required": false,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        {
+          "in": "query",
+          "name": "maxPrice",
+          "required": false,
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        {
+          "in": "query",
+          "name": "minRating",
+          "required": false,
+          "type": "number"
+        },
+        {
+          "in": "query",
+          "name": "openState",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "openOnDay",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "openAtHour",
+          "required": false,
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "RestaurantDiscoveryResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/restaurants/mine",
+      "group": "Restaurants",
+      "summary": "List own submissions and review outcomes",
+      "operationId": "myRestaurantSubmissions",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "RestaurantAdminListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/restaurants/{id}",
+      "group": "Restaurants",
+      "summary": "Get approved internal or live external place",
+      "operationId": "getRestaurant",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "object"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "RestaurantPlaceResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/restaurants",
+      "group": "Restaurants",
+      "summary": "Submit an untrusted place for admin review",
+      "operationId": "submitRestaurant",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "name",
+            "address",
+            "latitude",
+            "longitude"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "address": {
+              "type": "string"
+            },
+            "latitude": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "longitude": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "categories": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "dietTags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "VEGAN",
+                  "LACTO_OVO",
+                  "BUDDHIST",
+                  "CHRISTIAN"
+                ]
+              }
+            },
+            "allergenFreeCodes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "excludedIngredients": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "201": "RestaurantRecordResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/location/geocode",
+      "group": "Location",
+      "summary": "Geocode an explicitly entered address without retaining it",
+      "operationId": "geocodeAddress",
+      "params": [
+        {
+          "in": "query",
+          "name": "address",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "LocationGeocodeResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/restaurants",
+      "group": "Restaurant Admin",
+      "summary": "List restaurant review queue",
+      "operationId": "listAdminRestaurants",
+      "params": [
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "RestaurantAdminListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/restaurants/{id}/history",
+      "group": "Restaurant Admin",
+      "summary": "Read immutable submission, review, and edit events",
+      "operationId": "restaurantHistory",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "RestaurantAuditResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/restaurants/{id}/review",
+      "group": "Restaurant Admin",
+      "summary": "Approve or reject pending submission with reason",
+      "operationId": "reviewRestaurant",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "decision",
+            "reason"
+          ],
+          "properties": {
+            "decision": {
+              "type": "string",
+              "enum": [
+                "APPROVED",
+                "REJECTED"
+              ]
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "RestaurantRecordResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/restaurants/{id}",
+      "group": "Restaurant Admin",
+      "summary": "Edit internal place and reviewed dietary attestations",
+      "operationId": "editRestaurant",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "name",
+            "address",
+            "latitude",
+            "longitude",
+            "reason"
+          ],
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "address": {
+              "type": "string"
+            },
+            "latitude": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "longitude": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "categories": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "dietTags": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "VEGAN",
+                  "LACTO_OVO",
+                  "BUDDHIST",
+                  "CHRISTIAN"
+                ]
+              }
+            },
+            "allergenFreeCodes": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "excludedIngredients": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "externalPlaceId": {
+              "type": "string"
+            },
+            "reason": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "RestaurantRecordResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications",
+      "group": "Notifications",
+      "summary": "List own unexpired notifications, newest first",
+      "operationId": "listNotifications",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "unreadOnly",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "NotificationListResponse",
+        "401": "ErrorResponse",
+        "422": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/notifications/unread-count",
+      "group": "Notifications",
+      "summary": "Count own unexpired unread notifications",
+      "operationId": "countUnreadNotifications",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "NotificationUnreadCountResponse",
+        "401": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/notifications/read-all",
+      "group": "Notifications",
+      "summary": "Mark visible own unread notifications read atomically",
+      "operationId": "markAllNotificationsRead",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "NotificationReadAllResponse",
+        "401": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/notifications/{id}/read",
+      "group": "Notifications",
+      "summary": "Idempotently mark one owned notification read",
+      "operationId": "markNotificationRead",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "NotificationReadResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ai/requests",
+      "group": "AI Governance Admin",
+      "summary": "Paginated redacted capability logs; 90-day maximum range",
+      "operationId": "listAiGovernanceRequests",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "capability",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "provider",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "from",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "to",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "AiGovernanceRequestsResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "422": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ai/metrics",
+      "group": "AI Governance Admin",
+      "summary": "Aggregated request, quality, correction, and review signals",
+      "operationId": "getAiGovernanceMetrics",
+      "params": [
+        {
+          "in": "query",
+          "name": "capability",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "provider",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "from",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "to",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "AiGovernanceMetricsResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "422": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ai/flags",
+      "group": "AI Governance Admin",
+      "summary": "Paginated AI moderation signals without source content",
+      "operationId": "listAiGovernanceFlags",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "provider",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "from",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "to",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "status",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "AiGovernanceFlagsResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "422": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ai/features",
+      "group": "AI Governance Admin",
+      "summary": "Configured capability/provider states and fallbacks",
+      "operationId": "listAiGovernanceFeatures",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "AiGovernanceControlsResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "422": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ai/features/audit",
+      "group": "AI Governance Admin",
+      "summary": "Paginated Admin toggle reasons and versions",
+      "operationId": "listAiGovernanceControlAudit",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "capability",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "provider",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "from",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "to",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "AiGovernanceControlAuditResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "422": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/ai/features/{feature}",
+      "group": "AI Governance Admin",
+      "summary": "Versioned audited provider toggle; reason required",
+      "operationId": "setAiGovernanceFeature",
+      "params": [
+        {
+          "in": "path",
+          "name": "feature",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "provider",
+            "enabled",
+            "expectedVersion",
+            "reason"
+          ],
+          "properties": {
+            "provider": {
+              "type": "string"
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "expectedVersion": {
+              "type": "integer"
+            },
+            "reason": {
+              "type": "string",
+              "enum": [
+                "PROVIDER_INCIDENT",
+                "QUALITY_INVESTIGATION",
+                "SAFETY_HOLD",
+                "PLANNED_MAINTENANCE",
+                "RESTORE_SERVICE"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "AiGovernanceControlResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ai/health",
+      "group": "AI Governance Admin",
+      "summary": "Last 24 hours failures, fallback, provider availability and controls",
+      "operationId": "getAiGovernanceHealth",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "AiGovernanceHealthResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "422": "ErrorResponse"
       }
     }
   ]

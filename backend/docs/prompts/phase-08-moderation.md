@@ -1,6 +1,6 @@
 # Prompt — Phase 08: Moderation & Reports
 
-Triển khai Phase 08 trong repository `/Users/thienel/hhnthienn/fptu/sem8/wdp/vegan-support-application`. Không phụ thuộc lịch sử chat.
+Triển khai Phase 08 từ thư mục gốc của repository hiện tại. Không phụ thuộc lịch sử chat.
 
 Đọc `AGENTS.md`, BL-05/06/13 và state machines trong implementation plan, phase map, current OpenAPI/integration guide. Xác minh phases 04, 06, 07 từ code/OpenAPI.
 
@@ -27,7 +27,7 @@ Triển khai post review queue, AI/rule flags, user reports, Admin decisions, ba
 - OpenAPI/errors/examples, integration guide và phase record cập nhật.
 - Lint/typecheck/build pass.
 
-Không triển khai provider AI moderation nâng cao hoặc notification delivery; có thể phát domain events/outbox hook cho Phase 14.
+Không triển khai provider AI moderation nâng cao hoặc notification delivery; có thể phát domain events/outbox hook cho notification Phase 25 theo phase map hiện hành.
 
 Commit duy nhất:
 

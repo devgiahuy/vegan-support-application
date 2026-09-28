@@ -18,15 +18,16 @@ import {
 import type { RegisterFormValues } from '../schemas/auth.schema';
 import {
   ContributorApplicationStatus,
-  ContributorType,
+  ContributorApprovalBasis,
   LogoutScope,
   MemberStatus,
   UserRole,
 } from '@/common/enums';
 
-const CONTRIBUTOR_TYPE_LABELS: Record<ContributorType, string> = {
-  [ContributorType.EXPERIENCED_PRACTITIONER]: 'Người thực hành có kinh nghiệm',
-  [ContributorType.NUTRITION_EXPERT]: 'Chuyên gia dinh dưỡng',
+const APPROVAL_BASIS_LABELS: Record<ContributorApprovalBasis, string> = {
+  [ContributorApprovalBasis.ORGANIZATION_AFFILIATION]: 'Tổ chức đối tác / Viện ẩm thực',
+  [ContributorApprovalBasis.PLATFORM_TRACK_RECORD]: 'Thành viên uy tín trên nền tảng',
+  [ContributorApprovalBasis.ADMIN_INVITED]: 'Được Quản trị viên mời',
 };
 
 /**
@@ -62,11 +63,13 @@ export class AuthMapper extends BaseMapper<UserDto, User> {
   ): ContributorApplication | null {
     if (!dto || typeof dto !== 'object') return null;
     const rawStatus = safeString(pickField(dto, ['status'], 'PENDING'));
-    const requestedType = safeEnum(
-      pickField(dto, ['requestedType', 'requested_type'], null),
-      ContributorType,
-      null as unknown as ContributorType
+    const rawBasis = pickField(dto, ['claimedApprovalBasis', 'claimed_approval_basis'], null);
+    const claimedApprovalBasis = safeEnum(
+      rawBasis,
+      ContributorApprovalBasis,
+      null as unknown as ContributorApprovalBasis
     );
+
     return {
       status: safeEnum(
         rawStatus,
@@ -74,10 +77,10 @@ export class AuthMapper extends BaseMapper<UserDto, User> {
         ContributorApplicationStatus.PENDING
       ),
       rawStatus,
-      requestedType: requestedType ?? null,
-      requestedTypeLabel:
-        requestedType && requestedType in CONTRIBUTOR_TYPE_LABELS
-          ? CONTRIBUTOR_TYPE_LABELS[requestedType as ContributorType]
+      claimedApprovalBasis: claimedApprovalBasis ?? null,
+      claimedApprovalBasisLabel:
+        claimedApprovalBasis && claimedApprovalBasis in APPROVAL_BASIS_LABELS
+          ? APPROVAL_BASIS_LABELS[claimedApprovalBasis as ContributorApprovalBasis]
           : '',
     };
   }
@@ -136,7 +139,10 @@ export class AuthMapper extends BaseMapper<UserDto, User> {
     };
     if (values.wantsContributor) {
       payload.contributorRequest = {
-        requestedType: safeString(values.requestedType),
+        claimedApprovalBasis: values.claimedApprovalBasis ?? 'PLATFORM_TRACK_RECORD',
+        ...(values.claimedApprovalBasis === 'ORGANIZATION_AFFILIATION'
+          ? { organizationClaim: safeString(values.organizationClaim).trim() }
+          : {}),
         experience: safeString(values.experience),
         referenceLinks:
           values.referenceLinks

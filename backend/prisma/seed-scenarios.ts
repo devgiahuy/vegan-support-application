@@ -7,11 +7,16 @@ import {
   CommentStatus,
   ContributorApplicationSource,
   ContributorApplicationStatus,
-  ContributorType,
+  ContributorApprovalBasis,
+  ContributorDecisionType,
   DietPattern,
   FoodGroup,
   IngredientResolutionStatus,
   MealGoal,
+  MealProgramAnalysisStatus,
+  MealProgramProjectionStatus,
+  MealProgramStatus,
+  MealProgramWeekStatus,
   MealSlotStatus,
   MealType,
   MediaKind,
@@ -23,7 +28,7 @@ import {
   PostRevisionStatus,
   PostStatus,
   PostType,
-  type Prisma,
+  Prisma,
   type PrismaClient,
   RecipeDifficulty,
   ReportStatus,
@@ -37,8 +42,8 @@ interface ScenarioSeedInput {
   memberEmail: string;
   memberPasswordHash: string;
   adminEmail: string;
-  experiencedContributorEmail: string;
-  nutritionExpertEmail: string;
+  platformContributorEmail: string;
+  organizationContributorEmail: string;
   nextMonday: Date;
 }
 
@@ -271,11 +276,11 @@ export async function seedScenarioData(
   prisma: PrismaClient,
   input: ScenarioSeedInput,
 ): Promise<void> {
-  const [member, admin, experiencedContributor, nutritionExpert] = await Promise.all([
+  const [member, admin, platformContributor, organizationContributor] = await Promise.all([
     prisma.user.findUniqueOrThrow({ where: { email: input.memberEmail } }),
     prisma.user.findUniqueOrThrow({ where: { email: input.adminEmail } }),
-    prisma.user.findUniqueOrThrow({ where: { email: input.experiencedContributorEmail } }),
-    prisma.user.findUniqueOrThrow({ where: { email: input.nutritionExpertEmail } }),
+    prisma.user.findUniqueOrThrow({ where: { email: input.platformContributorEmail } }),
+    prisma.user.findUniqueOrThrow({ where: { email: input.organizationContributorEmail } }),
   ]);
 
   const scenarioUsers = [
@@ -372,13 +377,14 @@ export async function seedScenarioData(
       where: { id: 'a1100000-0000-4000-8000-000000000001' },
       update: {
         userId: pendingApplicant.id,
-        requestedType: ContributorType.EXPERIENCED_PRACTITIONER,
+        claimedApprovalBasis: ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
+        organizationClaim: null,
         experience: 'Đang chờ Admin đánh giá kinh nghiệm thực hành và đóng góp cộng đồng.',
         referenceLinks: ['https://example.com/seed/pending-contributor'],
         source: ContributorApplicationSource.PROFILE,
         status: ContributorApplicationStatus.PENDING,
-        approvedType: null,
         approvalBasis: null,
+        reviewEvidence: Prisma.DbNull,
         reviewNote: null,
         reviewedById: null,
         reviewedAt: null,
@@ -387,7 +393,8 @@ export async function seedScenarioData(
       create: {
         id: 'a1100000-0000-4000-8000-000000000001',
         userId: pendingApplicant.id,
-        requestedType: ContributorType.EXPERIENCED_PRACTITIONER,
+        claimedApprovalBasis: ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
+        organizationClaim: null,
         experience: 'Đang chờ Admin đánh giá kinh nghiệm thực hành và đóng góp cộng đồng.',
         referenceLinks: ['https://example.com/seed/pending-contributor'],
         source: ContributorApplicationSource.PROFILE,
@@ -398,13 +405,14 @@ export async function seedScenarioData(
       where: { id: 'a1100000-0000-4000-8000-000000000002' },
       update: {
         userId: rejectedApplicant.id,
-        requestedType: ContributorType.NUTRITION_EXPERT,
+        claimedApprovalBasis: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
+        organizationClaim: 'Demo rejected organization claim',
         experience: 'Hồ sơ demo thiếu căn cứ chuyên môn để kiểm tra trạng thái bị từ chối.',
         referenceLinks: [],
         source: ContributorApplicationSource.PROFILE,
         status: ContributorApplicationStatus.REJECTED,
-        approvedType: null,
         approvalBasis: null,
+        reviewEvidence: Prisma.DbNull,
         reviewNote: 'Cần bổ sung mô tả kinh nghiệm và nguồn tham khảo trước khi nộp lại.',
         reviewedById: admin.id,
         reviewedAt: new Date('2026-09-15T05:30:00.000Z'),
@@ -413,7 +421,8 @@ export async function seedScenarioData(
       create: {
         id: 'a1100000-0000-4000-8000-000000000002',
         userId: rejectedApplicant.id,
-        requestedType: ContributorType.NUTRITION_EXPERT,
+        claimedApprovalBasis: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
+        organizationClaim: 'Demo rejected organization claim',
         experience: 'Hồ sơ demo thiếu căn cứ chuyên môn để kiểm tra trạng thái bị từ chối.',
         referenceLinks: [],
         source: ContributorApplicationSource.PROFILE,
@@ -425,6 +434,22 @@ export async function seedScenarioData(
       },
     }),
   ]);
+  await prisma.contributorDecision.deleteMany({
+    where: {
+      applicationId: 'a1100000-0000-4000-8000-000000000002',
+      decision: ContributorDecisionType.REJECTED,
+    },
+  });
+  await prisma.contributorDecision.create({
+    data: {
+      userId: rejectedApplicant.id,
+      applicationId: 'a1100000-0000-4000-8000-000000000002',
+      actorId: admin.id,
+      decision: ContributorDecisionType.REJECTED,
+      reason: 'Cần bổ sung mô tả kinh nghiệm và nguồn tham khảo trước khi nộp lại.',
+      createdAt: new Date('2026-09-15T05:30:00.000Z'),
+    },
+  });
 
   await prisma.category.upsert({
     where: { id: 'a1200000-0000-4000-8000-000000000001' },
@@ -502,7 +527,7 @@ export async function seedScenarioData(
   await prisma.$transaction(async (transaction) => {
     await seedPost(transaction, {
       id: 'a2000000-0000-4000-8000-000000000001',
-      authorId: experiencedContributor.id,
+      authorId: platformContributor.id,
       type: PostType.BLOG,
       slug: 'seed-bai-viet-cho-duyet',
       status: PostStatus.PENDING_REVIEW,
@@ -521,7 +546,7 @@ export async function seedScenarioData(
     });
     await seedPost(transaction, {
       id: 'a2000000-0000-4000-8000-000000000002',
-      authorId: experiencedContributor.id,
+      authorId: platformContributor.id,
       type: PostType.BLOG,
       slug: 'seed-bai-viet-bi-tu-choi',
       status: PostStatus.REJECTED,
@@ -542,7 +567,7 @@ export async function seedScenarioData(
     });
     await seedPost(transaction, {
       id: 'a2000000-0000-4000-8000-000000000003',
-      authorId: experiencedContributor.id,
+      authorId: platformContributor.id,
       type: PostType.RECIPE,
       slug: 'seed-cong-thuc-da-dang-co-ban-sua-cho-duyet',
       status: PostStatus.PUBLISHED,
@@ -654,7 +679,7 @@ export async function seedScenarioData(
     });
     await seedPost(transaction, {
       id: 'a2000000-0000-4000-8000-000000000004',
-      authorId: nutritionExpert.id,
+      authorId: organizationContributor.id,
       type: PostType.RECIPE,
       slug: 'seed-cong-thuc-kho-nam-gao-lut',
       status: PostStatus.PUBLISHED,
@@ -707,7 +732,7 @@ export async function seedScenarioData(
     });
     await seedPost(transaction, {
       id: 'a2000000-0000-4000-8000-000000000005',
-      authorId: nutritionExpert.id,
+      authorId: organizationContributor.id,
       type: PostType.RECIPE,
       slug: 'seed-cong-thuc-lacto-ovo-sua',
       status: PostStatus.PUBLISHED,
@@ -761,7 +786,7 @@ export async function seedScenarioData(
     });
     await seedPost(transaction, {
       id: 'a2000000-0000-4000-8000-000000000006',
-      authorId: nutritionExpert.id,
+      authorId: organizationContributor.id,
       type: PostType.BLOG,
       slug: 'seed-bai-viet-flag-medium',
       status: PostStatus.FLAGGED,
@@ -1144,12 +1169,29 @@ export async function seedScenarioData(
   if (eligibleRecipes.length === 0) throw new Error('Scenario seed requires one eligible recipe');
 
   const mealPlanId = 'a7000000-0000-4000-8000-000000000001';
+  const seedMealPlanIdempotencyKey = 'seed-frontend-meal-plan-v1';
+  const toDateOnlyValue = (value: Date): string => value.toISOString().slice(0, 10);
   const existingMealPlan = await prisma.mealPlan.findUnique({ where: { id: mealPlanId } });
-  const maximumVersion = await prisma.mealPlan.aggregate({
-    where: { userId: member.id, weekStart: input.nextMonday },
-    _max: { version: true },
-  });
-  const planVersion = existingMealPlan?.version ?? (maximumVersion._max.version ?? 0) + 1;
+  // Only reuse the fixed seed row's version when it already points at the
+  // current (user, week) triple. Otherwise the row is stale (Monday rollover
+  // moved nextMonday, SEED_MEMBER_EMAIL changed, ...) and blindly reusing its
+  // version makes the upsert below UPDATE it onto a (userId, weekStart,
+  // version) triple that may already be occupied by an API-created plan,
+  // which crashes the seed with P2002 and blocks `docker compose up`.
+  const reusesExistingVersion =
+    existingMealPlan !== null &&
+    existingMealPlan.userId === member.id &&
+    toDateOnlyValue(existingMealPlan.weekStart) === toDateOnlyValue(input.nextMonday);
+  let planVersion: number;
+  if (reusesExistingVersion && existingMealPlan !== null) {
+    planVersion = existingMealPlan.version;
+  } else {
+    const maximumVersion = await prisma.mealPlan.aggregate({
+      where: { userId: member.id, weekStart: input.nextMonday },
+      _max: { version: true },
+    });
+    planVersion = (maximumVersion._max.version ?? 0) + 1;
+  }
   const mealTypes = [MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER] as const;
   const targetByMealType = {
     [MealType.BREAKFAST]: 375,
@@ -1241,7 +1283,7 @@ export async function seedScenarioData(
         version: planVersion,
         lockVersion: 1,
         supersedesMealPlanId: null,
-        idempotencyKey: 'seed-frontend-meal-plan-v1',
+        idempotencyKey: seedMealPlanIdempotencyKey,
         payloadHash: 'f'.repeat(64),
         seedHash: '1'.repeat(64),
         algorithmVersion: 'weekly-deterministic-v1',
@@ -1275,7 +1317,7 @@ export async function seedScenarioData(
         targetCalories: 1500,
         version: planVersion,
         lockVersion: 1,
-        idempotencyKey: 'seed-frontend-meal-plan-v1',
+        idempotencyKey: seedMealPlanIdempotencyKey,
         payloadHash: 'f'.repeat(64),
         seedHash: '1'.repeat(64),
         algorithmVersion: 'weekly-deterministic-v1',
@@ -1331,6 +1373,109 @@ export async function seedScenarioData(
         unit: item.unit,
         sourceItemCount: item.count,
       })),
+    });
+  });
+
+  const mealProgramId = 'a8000000-0000-4000-8000-000000000001';
+  await prisma.$transaction(async (transaction) => {
+    await transaction.mealProgram.deleteMany({ where: { id: mealProgramId } });
+    const totalCalories = slots.reduce((sum, slot) => sum + slot.calories, 0);
+    const totalB12 = b12Values.length
+      ? Number(b12Values.reduce((sum, value) => sum + value, 0).toFixed(2))
+      : null;
+    await transaction.mealProgram.create({
+      data: {
+        id: mealProgramId,
+        userId: member.id,
+        title: 'Chương trình thuần chay 2 tuần mẫu',
+        goal: MealGoal.MAINTAIN,
+        startDate: input.nextMonday,
+        timezone: 'Asia/Ho_Chi_Minh',
+        horizonWeeks: 2,
+        status: MealProgramStatus.PARTIAL,
+        idempotencyKey: 'seed-frontend-meal-program-v1',
+        payloadHash: '8'.repeat(64),
+        generationParameters: {
+          fixture: true,
+          algorithmVersion: 'multi-week-program-v1',
+          alternativesPerWeek: 1,
+          limits: {
+            minWeeks: 2,
+            maxWeeks: 12,
+            maxAlternativesPerWeek: 3,
+            maxRegenerationsPerWeek: 2,
+          },
+        },
+        failureSummary: [
+          { weekIndex: 1, failure: { code: 'SEED_PARTIAL_WEEK', message: 'Fixture for retry UI' } },
+        ],
+        weeks: {
+          create: [
+            {
+              id: 'a8100000-0000-4000-8000-000000000001',
+              weekIndex: 0,
+              weekStart: input.nextMonday,
+              status: MealProgramWeekStatus.READY,
+              selectedAlternativeRank: 0,
+              projectionStatus: MealProgramProjectionStatus.CURRENT,
+              alternatives: {
+                create: {
+                  id: 'a8200000-0000-4000-8000-000000000001',
+                  mealPlanId,
+                  rank: 0,
+                  seed: 'seed-meal-program-week-0',
+                  snapshot: {
+                    id: mealPlanId,
+                    weekStart: input.nextMonday.toISOString().slice(0, 10),
+                    goal: MealGoal.MAINTAIN,
+                    items: slots.map((slot) => ({
+                      id: slot.id,
+                      calories: slot.calories,
+                      recipe: { id: slot.recipe.id, title: slot.revision.title },
+                    })),
+                    micronutrientSummary: { vitaminB12Mcg: totalB12 },
+                    analysis: null,
+                  },
+                },
+              },
+            },
+            {
+              weekIndex: 1,
+              weekStart: addDays(input.nextMonday, 7),
+              status: MealProgramWeekStatus.FAILED,
+              projectionStatus: MealProgramProjectionStatus.CURRENT,
+              failure: { code: 'SEED_PARTIAL_WEEK', message: 'Fixture for retry UI' },
+            },
+          ],
+        },
+        analyses: {
+          create: {
+            version: 1,
+            status: MealProgramAnalysisStatus.CURRENT,
+            inputFingerprint: '9'.repeat(64),
+            warnings: [{ code: 'PARTIAL_HORIZON', severity: 'INFO', incompleteWeekIndexes: [1] }],
+            nutritionSummary: {
+              horizonWeeks: 2,
+              analyzedWeeks: 1,
+              totalCalories,
+              averageDailyCalories: Number((totalCalories / 7).toFixed(2)),
+              totalVitaminB12Mcg: totalB12,
+              averageWeeklyVitaminB12Mcg: totalB12,
+              incompleteWeekIndexes: [1],
+            },
+            weeklyAnalyses: [
+              {
+                weekIndex: 0,
+                mealPlanId,
+                mealAnalysisId: null,
+                version: null,
+                status: null,
+                warningCount: 0,
+              },
+            ],
+          },
+        },
+      },
     });
   });
 }

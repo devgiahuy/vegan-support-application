@@ -148,10 +148,7 @@ List bookmark Recipe/Video của current user
             "_truncated": true
           },
           "coverImageUrl": {
-            "type": [
-              "string",
-              "null"
-            ],
+            "type": "string",
             "_truncated": true
           },
           "publishedAt": {

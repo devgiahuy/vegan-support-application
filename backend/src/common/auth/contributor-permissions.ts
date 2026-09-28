@@ -1,4 +1,4 @@
-import { ContributorType, Role } from '@prisma/client';
+import { Role } from '@prisma/client';
 import type { NextFunction, Request, Response } from 'express';
 import { AppError } from '../errors/app-error.js';
 
@@ -9,7 +9,7 @@ export enum ContributorPermission {
 
 export interface ContributorPermissionActor {
   role: Role;
-  contributorType: ContributorType | null;
+  hasActiveContributorProfile: boolean;
 }
 
 export function hasContributorPermission(
@@ -17,9 +17,8 @@ export function hasContributorPermission(
   permission: ContributorPermission,
 ): boolean {
   if (actor.role === Role.ADMIN) return true;
-  if (actor.role !== Role.CONTRIBUTOR || actor.contributorType === null) return false;
-  if (permission === ContributorPermission.REVIEW_MEMBER_CONTENT) return true;
-  return actor.contributorType === ContributorType.NUTRITION_EXPERT;
+  if (actor.role !== Role.CONTRIBUTOR || !actor.hasActiveContributorProfile) return false;
+  return Object.values(ContributorPermission).includes(permission);
 }
 
 export function requireContributorPermission(permission: ContributorPermission) {
@@ -37,7 +36,7 @@ export function requireContributorPermission(permission: ContributorPermission) 
         new AppError({
           statusCode: 403,
           code: 'FORBIDDEN',
-          message: 'Contributor subtype hiện tại không có quyền thực hiện thao tác này',
+          message: 'Cần Contributor đã được Admin phê duyệt để thực hiện thao tác này',
         }),
       );
       return;

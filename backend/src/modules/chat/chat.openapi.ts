@@ -164,7 +164,7 @@ export function registerChatOpenApi(registry: OpenAPIRegistry, errorSchema: ZodT
     tags: ['AI Chat'],
     summary: 'Stream nutrition answer qua SSE',
     description:
-      'OpenAI Responses API được bọc sau internal SSE contract. Quota chỉ consume sau provider completion; fallback, validation, moderation block, timeout, abort và partial error không consume. Reset 00:00 Asia/Ho_Chi_Minh. Retry cùng idempotencyKey replay completed response hoặc tiếp tục an toàn mà không trừ quota hai lần.',
+      'OpenAI Responses API được bọc sau internal SSE contract. Quota chỉ consume sau provider completion; fallback, validation, moderation block, timeout, abort và partial error không consume. Khi moderation provider bị tắt hoặc không khả dụng, generated answer bị giữ lại và trả static unavailable advisory với fallback=true. Reset 00:00 Asia/Ho_Chi_Minh. Retry cùng idempotencyKey replay completed response hoặc tiếp tục an toàn mà không trừ quota hai lần.',
     operationId: 'streamChatMessage',
     security: guestOrAuthenticated,
     request: {

@@ -13,8 +13,9 @@ import {
   postIdParamsSchema,
   postListQuerySchema,
   relatedPostsQuerySchema,
+  reviewHistoryQuerySchema,
+  submitPostRequestSchema,
   updatePostRequestSchema,
-  uploadSignatureRequestSchema,
 } from './content.schemas.js';
 
 export function createPostsRouter(
@@ -41,6 +42,20 @@ export function createPostsRouter(
     validateQuery(relatedPostsQuerySchema),
     controller.getRelatedPosts,
   );
+  router.post(
+    '/:id/submit',
+    authentication.authenticate,
+    validateParams(postIdParamsSchema),
+    validateBody(submitPostRequestSchema),
+    controller.submitPost,
+  );
+  router.get(
+    '/:id/review-history',
+    authentication.authenticate,
+    validateParams(postIdParamsSchema),
+    validateQuery(reviewHistoryQuerySchema),
+    controller.getReviewHistory,
+  );
   router.get(
     '/:idOrSlug',
     authentication.optionalAuthenticate,
@@ -60,20 +75,6 @@ export function createPostsRouter(
     validateParams(postIdParamsSchema),
     validateQuery(deletePostQuerySchema),
     controller.deletePost,
-  );
-  return router;
-}
-
-export function createUploadsRouter(
-  controller: ContentController,
-  authentication: AuthenticationMiddleware,
-): Router {
-  const router = Router();
-  router.post(
-    '/signature',
-    authentication.authenticate,
-    validateBody(uploadSignatureRequestSchema),
-    controller.createUploadSignature,
   );
   return router;
 }

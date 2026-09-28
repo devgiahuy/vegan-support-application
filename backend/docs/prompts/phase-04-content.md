@@ -1,6 +1,6 @@
 # Prompt — Phase 04: Content Core & Media
 
-Triển khai Phase 04 trong repository `/Users/thienel/hhnthienn/fptu/sem8/wdp/vegan-support-application`. Không dùng memory từ session trước.
+Triển khai Phase 04 từ thư mục gốc của repository hiện tại. Không dùng memory từ session trước.
 
 Đọc `AGENTS.md`, BL-04/05 trong implementation plan, phase map, integration guide và OpenAPI hiện tại. Xác minh Phase 01 và 03. Giữ thay đổi user không liên quan.
 

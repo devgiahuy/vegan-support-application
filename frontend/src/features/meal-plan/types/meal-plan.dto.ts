@@ -22,6 +22,24 @@ export interface MealSlotDto {
   warningCodes?: (string | null)[] | null;
   reason?: string;
   unfilledReason?: string;
+  servings?: number | string;
+  sourceType?: 'RECIPE' | 'CUSTOM_MEAL' | string;
+  source_type?: 'RECIPE' | 'CUSTOM_MEAL' | string;
+  customMeal?: {
+    id?: string;
+    name?: string;
+    nutritionCoverage?: string;
+    nutrition_coverage?: string;
+    calories?: number | string;
+    userCalories?: number | string;
+    calculatedCalories?: number | string;
+  } | null;
+  custom_meal?: {
+    id?: string;
+    name?: string;
+    nutritionCoverage?: string;
+    nutrition_coverage?: string;
+  } | null;
   recipe?: {
     id?: string;
     revisionId?: string;
@@ -100,6 +118,16 @@ export interface SwapMealPlanItemRequestDto {
   expectedVersion: number;
   idempotencyKey: string;
   seed?: string;
+}
+
+/** `PATCH /meal-plans/:id/items/:itemId/manual-add` — `expectedVersion` + `idempotencyKey` + `sourceType` bắt buộc. */
+export interface ManualAddMealPlanItemRequestDto {
+  expectedVersion: number;
+  idempotencyKey: string;
+  sourceType: 'RECIPE' | 'CUSTOM_MEAL';
+  recipeId?: string;
+  customMealId?: string;
+  servings: number;
 }
 
 /** `POST /meal-plans/generate` / `GET /meal-plans/:id` / swap → detail đầy đủ. */

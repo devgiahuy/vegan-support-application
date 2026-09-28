@@ -53,17 +53,36 @@ const environmentSchema = z
       .default('vegan-support/posts'),
     MAX_UPLOAD_IMAGE_BYTES: z.coerce.number().int().min(1).max(25_000_000).default(10_000_000),
     MAX_UPLOAD_VIDEO_BYTES: z.coerce.number().int().min(1).max(250_000_000).default(100_000_000),
+    STORAGE_DEFAULT_QUOTA_BYTES: z.coerce
+      .number()
+      .int()
+      .min(1)
+      .max(10_000_000_000_000)
+      .default(1_073_741_824),
+    UPLOAD_RESERVATION_TTL_SECONDS: z.coerce.number().int().min(60).max(86_400).default(900),
+    CLOUDINARY_API_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(60_000).default(10_000),
     MEAL_PLAN_MAINTAIN_FACTOR: z.coerce.number().min(0.8).max(1.2).default(1),
     MEAL_PLAN_LOSE_FACTOR: z.coerce.number().min(0.8).max(1).default(0.9),
     MEAL_PLAN_GAIN_FACTOR: z.coerce.number().min(1).max(1.2).default(1.1),
+    MEAL_PROGRAM_MAX_WEEKS: z.coerce.number().int().min(2).max(12).default(12),
+    MEAL_PROGRAM_MAX_ALTERNATIVES_PER_WEEK: z.coerce.number().int().min(1).max(3).default(3),
+    MEAL_PROGRAM_MAX_REGENERATIONS_PER_WEEK: z.coerce.number().int().min(1).max(4).default(2),
     AI_CHAT_ENABLED: z.stringbool().default(true),
     AI_PROVIDER: z.enum(['openai', 'fake']).default('openai'),
     OPENAI_API_KEY: z.preprocess(
       (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
       z.string().trim().min(1).optional(),
     ),
+    OPENAI_BASE_URL: z.preprocess(
+      (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+      z.string().trim().url().optional(),
+    ),
     AI_MODEL_CHAT: z.string().trim().min(1).max(100).default('gpt-5.6-terra'),
     AI_MODEL_MODERATION: z.string().trim().min(1).max(100).default('omni-moderation-latest'),
+    AI_FALLBACK_MODEL: z.string().trim().min(1).max(100).default('static-fallback-v1'),
+    AI_CHAT_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('chat-v1'),
+    AI_NUTRITION_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('nutrition-v1'),
+    AI_TOPIC_RULE_VERSION: z.string().trim().min(1).max(80).default('topic-boundary-v1'),
     AI_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(120_000).default(30_000),
     AI_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(64).max(4_096).default(800),
     AI_GUEST_DAILY_QUOTA: z.coerce.number().int().min(1).max(100).default(5),
@@ -72,6 +91,97 @@ const environmentSchema = z
     AI_GUEST_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(60).default(10),
     CHAT_GUEST_COOKIE_SECRET: z.string().min(32).optional(),
     CHAT_GUEST_COOKIE_TTL_DAYS: z.coerce.number().int().min(1).max(30).default(7),
+    VISION_ENABLED: z.stringbool().default(false),
+    VISION_PROVIDER: z.enum(['fake', 'openai']).default('openai'),
+    VISION_MODEL: z.preprocess(
+      (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+      z.string().trim().min(1).max(100).optional(),
+    ),
+    VISION_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('fridge-v1'),
+    VISION_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(256).max(8192).default(2048),
+    VISION_MAX_IMAGES: z.coerce.number().int().min(2).max(12).default(6),
+    VISION_MAX_IMAGE_BYTES: z.coerce.number().int().min(1).max(25_000_000).default(10_000_000),
+    RECEIPT_ENABLED: z.stringbool().default(false),
+    RECEIPT_PROVIDER: z.enum(['fake', 'openai']).default('openai'),
+    RECEIPT_MODEL: z.preprocess(
+      (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+      z.string().trim().min(1).max(100).optional(),
+    ),
+    RECEIPT_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('receipt-v1'),
+    RECEIPT_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(256).max(8192).default(4096),
+    RECEIPT_MAX_IMAGES: z.coerce.number().int().min(1).max(8).default(4),
+    RECEIPT_MAX_IMAGE_BYTES: z.coerce.number().int().min(1).max(25_000_000).default(10_000_000),
+    MAPS_PROVIDER: z.enum(['fake', 'google', 'serpapi']).default('fake'),
+    GOOGLE_MAPS_API_KEY: z.preprocess(
+      (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+      z.string().trim().min(1).optional(),
+    ),
+    SERPAPI_API_KEY: z.preprocess(
+      (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+      z.string().trim().min(1).optional(),
+    ),
+    SERPAPI_BASE_URL: z.string().trim().url().default('https://serpapi.com/search.json'),
+    MAPS_TIMEOUT_MS: z.coerce.number().int().min(1000).max(30000).default(5000),
+  })
+  .superRefine((environment, context) => {
+    if (
+      environment.NODE_ENV === 'production' &&
+      environment.VISION_ENABLED &&
+      environment.VISION_PROVIDER === 'fake'
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['VISION_ENABLED'],
+        message: 'fake vision provider cannot be enabled in production',
+      });
+    }
+    if (
+      environment.NODE_ENV === 'production' &&
+      environment.RECEIPT_ENABLED &&
+      environment.RECEIPT_PROVIDER === 'fake'
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['RECEIPT_ENABLED'],
+        message: 'fake receipt provider cannot be enabled in production',
+      });
+    }
+    if (environment.MAPS_PROVIDER === 'google' && !environment.GOOGLE_MAPS_API_KEY) {
+      context.addIssue({
+        code: 'custom',
+        path: ['GOOGLE_MAPS_API_KEY'],
+        message: 'required when MAPS_PROVIDER=google',
+      });
+    }
+    if (environment.MAPS_PROVIDER === 'serpapi' && !environment.SERPAPI_API_KEY) {
+      context.addIssue({
+        code: 'custom',
+        path: ['SERPAPI_API_KEY'],
+        message: 'required when MAPS_PROVIDER=serpapi',
+      });
+    }
+    if (
+      environment.VISION_ENABLED &&
+      environment.VISION_PROVIDER === 'openai' &&
+      !environment.OPENAI_API_KEY
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['OPENAI_API_KEY'],
+        message: 'required when VISION_PROVIDER=openai is enabled',
+      });
+    }
+    if (
+      environment.RECEIPT_ENABLED &&
+      environment.RECEIPT_PROVIDER === 'openai' &&
+      !environment.OPENAI_API_KEY
+    ) {
+      context.addIssue({
+        code: 'custom',
+        path: ['OPENAI_API_KEY'],
+        message: 'required when RECEIPT_PROVIDER=openai is enabled',
+      });
+    }
   })
   .transform((environment) => ({
     nodeEnv: environment.NODE_ENV,
@@ -97,17 +207,31 @@ const environmentSchema = z
     cloudinaryUploadFolder: environment.CLOUDINARY_UPLOAD_FOLDER,
     maxUploadImageBytes: environment.MAX_UPLOAD_IMAGE_BYTES,
     maxUploadVideoBytes: environment.MAX_UPLOAD_VIDEO_BYTES,
+    storageDefaultQuotaBytes: environment.STORAGE_DEFAULT_QUOTA_BYTES,
+    uploadReservationTtlSeconds: environment.UPLOAD_RESERVATION_TTL_SECONDS,
+    cloudinaryApiTimeoutMs: environment.CLOUDINARY_API_TIMEOUT_MS,
     mealPlanGoalFactors: {
       MAINTAIN: environment.MEAL_PLAN_MAINTAIN_FACTOR,
       LOSE: environment.MEAL_PLAN_LOSE_FACTOR,
       GAIN: environment.MEAL_PLAN_GAIN_FACTOR,
     },
+    mealProgramLimits: {
+      minWeeks: 2,
+      maxWeeks: environment.MEAL_PROGRAM_MAX_WEEKS,
+      maxAlternativesPerWeek: environment.MEAL_PROGRAM_MAX_ALTERNATIVES_PER_WEEK,
+      maxRegenerationsPerWeek: environment.MEAL_PROGRAM_MAX_REGENERATIONS_PER_WEEK,
+    },
     ai: {
       chatEnabled: environment.AI_CHAT_ENABLED,
       provider: environment.AI_PROVIDER,
       openAiApiKey: environment.OPENAI_API_KEY,
+      openAiBaseUrl: environment.OPENAI_BASE_URL,
       chatModel: environment.AI_MODEL_CHAT,
       moderationModel: environment.AI_MODEL_MODERATION,
+      fallbackModel: environment.AI_FALLBACK_MODEL,
+      chatTemplateVersion: environment.AI_CHAT_TEMPLATE_VERSION,
+      nutritionTemplateVersion: environment.AI_NUTRITION_TEMPLATE_VERSION,
+      topicRuleVersion: environment.AI_TOPIC_RULE_VERSION,
       timeoutMs: environment.AI_TIMEOUT_MS,
       maxOutputTokens: environment.AI_MAX_OUTPUT_TOKENS,
       guestDailyQuota: environment.AI_GUEST_DAILY_QUOTA,
@@ -116,6 +240,35 @@ const environmentSchema = z
       guestRateLimitPerMinute: environment.AI_GUEST_RATE_LIMIT_PER_MINUTE,
       guestCookieSecret: environment.CHAT_GUEST_COOKIE_SECRET ?? environment.JWT_ACCESS_SECRET,
       guestCookieTtlDays: environment.CHAT_GUEST_COOKIE_TTL_DAYS,
+    },
+    vision: {
+      enabled: environment.VISION_ENABLED,
+      provider: environment.VISION_PROVIDER,
+      model:
+        environment.VISION_MODEL ??
+        (environment.VISION_PROVIDER === 'openai' ? 'gpt-5.6-terra' : 'local-fridge-vision-v1'),
+      templateVersion: environment.VISION_TEMPLATE_VERSION,
+      maxOutputTokens: environment.VISION_MAX_OUTPUT_TOKENS,
+      maxImages: environment.VISION_MAX_IMAGES,
+      maxImageBytes: environment.VISION_MAX_IMAGE_BYTES,
+    },
+    receipt: {
+      enabled: environment.RECEIPT_ENABLED,
+      provider: environment.RECEIPT_PROVIDER,
+      model:
+        environment.RECEIPT_MODEL ??
+        (environment.RECEIPT_PROVIDER === 'openai' ? 'gpt-5.6-terra' : 'local-receipt-ocr-v1'),
+      templateVersion: environment.RECEIPT_TEMPLATE_VERSION,
+      maxOutputTokens: environment.RECEIPT_MAX_OUTPUT_TOKENS,
+      maxImages: environment.RECEIPT_MAX_IMAGES,
+      maxImageBytes: environment.RECEIPT_MAX_IMAGE_BYTES,
+    },
+    maps: {
+      provider: environment.MAPS_PROVIDER,
+      apiKey: environment.GOOGLE_MAPS_API_KEY,
+      serpApiKey: environment.SERPAPI_API_KEY,
+      serpApiBaseUrl: environment.SERPAPI_BASE_URL,
+      timeoutMs: environment.MAPS_TIMEOUT_MS,
     },
     cookieSecure: environment.NODE_ENV === 'production',
   }));

@@ -23,8 +23,8 @@ export interface UserDto {
 /** Đơn nguyện vọng contributor thô (chỉ để hiển thị, không cấp quyền). */
 export interface ContributorApplicationDto {
   status?: string;
-  requestedType?: string;
-  requested_type?: string;
+  claimedApprovalBasis?: string;
+  claimed_approval_basis?: string;
 }
 
 /** `POST /auth/register` + `POST /auth/login` → `201/200 AuthSessionResponse`. */
@@ -72,7 +72,8 @@ export interface ProfileResponseDto {
 
 /** Nguyện vọng contributor gửi kèm khi đăng ký (optional). */
 export interface ContributorRequestDto {
-  requestedType: string;
+  claimedApprovalBasis: 'ORGANIZATION_AFFILIATION' | 'PLATFORM_TRACK_RECORD';
+  organizationClaim?: string;
   experience: string;
   referenceLinks?: string[];
 }

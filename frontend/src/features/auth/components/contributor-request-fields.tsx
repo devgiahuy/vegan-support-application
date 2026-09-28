@@ -13,18 +13,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import type { RegisterFormValues } from '../schemas/auth.schema';
-import { ContributorType } from '@/common/enums';
+import { Input } from '@/components/ui/input';
+import { ContributorApprovalBasis } from '@/common/enums';
 
-const REQUESTED_TYPE_OPTIONS: Array<{ value: ContributorType; label: string; hint: string }> = [
+const APPROVAL_BASIS_OPTIONS: Array<{ value: ContributorApprovalBasis; label: string }> = [
   {
-    value: ContributorType.EXPERIENCED_PRACTITIONER,
-    label: 'Người thực hành có kinh nghiệm',
-    hint: 'Đã ăn chay lâu năm, am hiểu thực tế',
+    value: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
+    label: 'Liên kết với tổ chức',
   },
   {
-    value: ContributorType.NUTRITION_EXPERT,
-    label: 'Chuyên gia dinh dưỡng',
-    hint: 'Có chuyên môn dinh dưỡng được kiểm chứng',
+    value: ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
+    label: 'Hoạt động trên nền tảng',
   },
 ];
 
@@ -58,39 +57,53 @@ export function ContributorRequestFields() {
       {wantsContributor && (
         <div className="space-y-3 pt-1">
           <div className="space-y-1.5">
-            <Label>Bạn là ai?</Label>
+            <Label>Căn cứ đăng ký</Label>
             <Select
-              value={form.watch('requestedType') ?? ''}
+              value={form.watch('claimedApprovalBasis') ?? ''}
               onValueChange={(v) =>
-                form.setValue('requestedType', v as RegisterFormValues['requestedType'])
+                form.setValue('claimedApprovalBasis', v as RegisterFormValues['claimedApprovalBasis'], { shouldValidate: true })
               }
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder="Chọn loại nguyện vọng" />
+                <SelectValue placeholder="Chọn căn cứ đăng ký" />
               </SelectTrigger>
               <SelectContent>
-                {REQUESTED_TYPE_OPTIONS.map((o) => (
+                {APPROVAL_BASIS_OPTIONS.map((o) => (
                   <SelectItem key={o.value} value={o.value}>
                     {o.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            {errors.requestedType && (
-              <p className="text-xs text-destructive">{errors.requestedType.message}</p>
+            {errors.claimedApprovalBasis && (
+              <p className="text-xs text-destructive">{errors.claimedApprovalBasis.message}</p>
             )}
           </div>
+
+          {form.watch('claimedApprovalBasis') === 'ORGANIZATION_AFFILIATION' && (
+            <div className="space-y-1.5">
+              <Label htmlFor="register-organizationClaim">Tên hoặc mô tả tổ chức</Label>
+              <Input
+                id="register-organizationClaim"
+                maxLength={500}
+                {...form.register('organizationClaim')}
+              />
+              {errors.organizationClaim && (
+                <p className="text-xs text-destructive">{errors.organizationClaim.message}</p>
+              )}
+            </div>
+          )}
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <Label htmlFor="register-experience">Kinh nghiệm của bạn</Label>
-              <span className="text-xs text-muted-foreground">{experience.length}/1000</span>
+              <span className="text-xs text-muted-foreground">{experience.length}/2000</span>
             </div>
             <Textarea
               id="register-experience"
               placeholder="Ví dụ: 5 năm nấu món chay cho gia đình, từng mở lớp hướng dẫn..."
               rows={3}
-              maxLength={1000}
+              maxLength={2000}
               {...form.register('experience')}
             />
             {errors.experience && (
@@ -106,6 +119,9 @@ export function ContributorRequestFields() {
               rows={2}
               {...form.register('referenceLinks')}
             />
+            {errors.referenceLinks && (
+              <p className="text-xs text-destructive">{errors.referenceLinks.message}</p>
+            )}
             {errors.referenceLinks && (
               <p className="text-xs text-destructive">{errors.referenceLinks.message}</p>
             )}

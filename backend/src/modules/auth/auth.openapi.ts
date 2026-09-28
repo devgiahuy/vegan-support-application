@@ -98,8 +98,9 @@ export function registerAuthOpenApi(registry: OpenAPIRegistry, errorSchema: ZodT
               password: 'StrongPassword123!',
               displayName: 'Nguyễn An',
               contributorRequest: {
-                requestedType: 'NUTRITION_EXPERT',
-                experience: 'Tôi có kinh nghiệm tư vấn dinh dưỡng thực vật.',
+                claimedApprovalBasis: 'ORGANIZATION_AFFILIATION',
+                organizationClaim: 'Cộng đồng Dinh dưỡng Thực vật',
+                experience: 'Tôi muốn đóng góp nội dung dinh dưỡng thực vật cho cộng đồng.',
                 referenceLinks: ['https://example.com/profile'],
               },
             },

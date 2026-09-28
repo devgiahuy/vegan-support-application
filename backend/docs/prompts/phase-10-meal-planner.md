@@ -1,6 +1,6 @@
 # Prompt — Phase 10: Meal Planner
 
-Triển khai Phase 10 trong repository `/Users/thienel/hhnthienn/fptu/sem8/wdp/vegan-support-application`. Session độc lập, repository là nguồn trạng thái.
+Triển khai Phase 10 từ thư mục gốc của repository hiện tại. Session độc lập, repository là nguồn trạng thái.
 
 Đọc `AGENTS.md`, BL-02/03/04/07/08 trong implementation plan, phase map, related modules, OpenAPI và integration guide. Xác minh phases 02, 03, 04, 09.
 

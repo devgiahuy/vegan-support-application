@@ -7,25 +7,24 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { cn } from '@/lib/utils';
-import { avatarUploadApi } from '../api/avatar-upload.api';
+import { uploadWithReservation } from '@/features/storage/api/storage-upload';
 
-const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-const MAX_AVATAR_BYTES = 5 * 1024 * 1024;
+const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
+const MAX_AVATAR_BYTES = 10 * 1024 * 1024;
 
 function validateAvatarFile(file: File): string | null {
   if (!ALLOWED_AVATAR_TYPES.includes(file.type)) {
-    return `Định dạng ảnh không hợp lệ (${file.type || 'không rõ'}). Chỉ chấp nhận JPG, PNG hoặc WebP.`;
+    return `Định dạng ảnh không hợp lệ (${file.type || 'không rõ'}). Chỉ chấp nhận JPG, PNG, WebP hoặc AVIF.`;
   }
   if (file.size > MAX_AVATAR_BYTES) {
-    return 'Dung lượng ảnh vượt quá 5 MB. Vui lòng chọn ảnh nhỏ hơn.';
+    return 'Dung lượng ảnh vượt quá 10 MB. Vui lòng chọn ảnh nhỏ hơn.';
   }
   return null;
 }
 
 /**
- * Uploader ảnh đại diện: chọn file → xin signature → upload Cloudinary
- * → trả `secure_url` qua `onChange`. Nhận Model `string`, không đọc DTO.
- * Upload mock (`blob:`) chỉ để xem trước, form sẽ chặn submit.
+ * Uploader ảnh đại diện: chọn file → xin reservation → upload Cloudinary
+ * → commit reservation → trả `secureUrl` qua `onChange`.
  */
 export function AvatarUploader({
   value,
@@ -52,18 +51,14 @@ export function AvatarUploader({
     try {
       setIsUploading(true);
       setUploadPercent(0);
-      const signature = await avatarUploadApi.getSignature();
-      const result = await avatarUploadApi.uploadToCloudinary(file, signature, (pct) =>
-        setUploadPercent(pct)
-      );
-      onChange(result.secureUrl, signature.isMock);
-      if (signature.isMock) {
-        toast.warning('Máy chủ upload chưa phản hồi — ảnh chỉ xem trước tạm thời.', {
-          description: 'Hãy thử lại khi backend sẵn sàng trước khi bấm Cập nhật.',
-        });
-      } else {
-        toast.success('Đã tải ảnh lên thành công!');
-      }
+
+      const asset = await uploadWithReservation(file, {
+        kind: 'COVER_IMAGE',
+        onProgress: (p) => setUploadPercent(p.percent),
+      });
+
+      onChange(asset.secureUrl, false);
+      toast.success('Đã tải ảnh đại diện lên thành công!');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Không thể tải ảnh lên';
       toast.error('Lỗi khi tải ảnh', { description: msg });

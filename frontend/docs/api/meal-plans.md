@@ -36,6 +36,13 @@ Swap một meal slot an toàn
 - Request: `SwapMealPlanItemRequest` (required)
 - Responses: `200` → MealPlanResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
+## PATCH `/api/v1/meal-plans/{id}/items/{itemId}/manual-add`
+Thêm recipe hoặc private custom meal vào slot
+- operationId: `manualAddMealPlanItem`
+- Params: `path:id* (string)`, `path:itemId* (string)`
+- Request: `ManualAddMealPlanItemRequest` (required)
+- Responses: `200` → MealPlanResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
+
 ---
 ### Schemas dùng trong nhóm
 
@@ -156,6 +163,45 @@ Swap một meal slot an toàn
     "supersedesMealPlanId": {
       "type": "string",
       "format": "uuid"
+    }
+  },
+  "additionalProperties": false
+}
+```
+
+#### ManualAddMealPlanItemRequest
+```json
+{
+  "type": "object",
+  "required": [
+    "expectedVersion",
+    "idempotencyKey",
+    "sourceType"
+  ],
+  "properties": {
+    "expectedVersion": {
+      "type": "integer"
+    },
+    "idempotencyKey": {
+      "type": "string"
+    },
+    "sourceType": {
+      "type": "string",
+      "enum": [
+        "RECIPE",
+        "CUSTOM_MEAL"
+      ]
+    },
+    "recipeId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "customMealId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "servings": {
+      "type": "number"
     }
   },
   "additionalProperties": false
@@ -339,7 +385,8 @@ Swap một meal slot an toàn
         "updatedAt",
         "constraintSnapshot",
         "items",
-        "shoppingList"
+        "shoppingList",
+        "analysis"
       ],
       "properties": {
         "id": {
@@ -441,7 +488,7 @@ Swap một meal slot an toàn
         },
         "updatedAt": {
           "type": "string",
-          "format": "date-time"
+          "format"
   …(truncated — xem api-catalog.json)
 ```
 

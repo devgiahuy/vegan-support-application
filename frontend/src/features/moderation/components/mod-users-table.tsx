@@ -20,6 +20,8 @@ import { useAuthStore } from '@/store/useAuthStore';
 import type { ModeratedUser } from '../types/moderation.model';
 import { useModeratedUsersQuery } from '../queries/moderation.queries';
 import { UserStatusDialog } from './user-status-dialog';
+import { RevokeContributorDialog } from '@/features/contributor/components/revoke-contributor-dialog';
+import { InviteContributorDialog } from '@/features/contributor/components/invite-contributor-dialog';
 
 /** Bảng quản trị tài khoản: tìm/lọc + đổi trạng thái đúng luật, chặn tự sửa/bảo vệ. */
 export function ModUsersTable() {
@@ -27,6 +29,15 @@ export function ModUsersTable() {
   const [query, setQuery] = React.useState('');
   const [status, setStatus] = React.useState('');
   const [selected, setSelected] = React.useState<ModeratedUser | null>(null);
+  const [revokeTarget, setRevokeTarget] = React.useState<{
+    id: string;
+    displayName: string;
+    email?: string;
+  } | null>(null);
+  const [inviteTarget, setInviteTarget] = React.useState<{
+    id: string;
+    displayName: string;
+  } | null>(null);
   const { data, isLoading, isError, refetch } = useModeratedUsersQuery({
     q: query || undefined,
     status: status || undefined,
@@ -104,24 +115,57 @@ export function ModUsersTable() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={locked}
-                        title={
-                          isSelf
-                            ? 'Không thể tự đổi trạng thái tài khoản của chính mình'
-                            : account.isProtectedAdmin
-                              ? 'Tài khoản admin được bảo vệ'
-                              : 'Đổi trạng thái'
-                        }
-                        onClick={() => setSelected(account)}
-                      >
-                        {(isSelf || account.isProtectedAdmin) && (
-                          <ShieldAlert data-icon="inline-start" />
+                      <div className="flex items-center justify-end gap-1.5">
+                        {account.role === 'CONTRIBUTOR' && !isSelf && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30"
+                            onClick={() =>
+                              setRevokeTarget({
+                                id: account.id,
+                                displayName: account.displayName,
+                                email: account.email,
+                              })
+                            }
+                          >
+                            Thu hồi quyền
+                          </Button>
                         )}
-                        Đổi trạng thái
-                      </Button>
+                        {account.role === 'MEMBER' && !isSelf && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="text-primary hover:bg-primary/10"
+                            onClick={() =>
+                              setInviteTarget({
+                                id: account.id,
+                                displayName: account.displayName,
+                              })
+                            }
+                          >
+                            Mời Contributor
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={locked}
+                          title={
+                            isSelf
+                              ? 'Không thể tự đổi trạng thái tài khoản của chính mình'
+                              : account.isProtectedAdmin
+                                ? 'Tài khoản admin được bảo vệ'
+                                : 'Đổi trạng thái'
+                          }
+                          onClick={() => setSelected(account)}
+                        >
+                          {(isSelf || account.isProtectedAdmin) && (
+                            <ShieldAlert data-icon="inline-start" />
+                          )}
+                          Đổi trạng thái
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -137,6 +181,25 @@ export function ModUsersTable() {
         onOpenChange={(open) => {
           if (!open) setSelected(null);
         }}
+      />
+
+      <RevokeContributorDialog
+        user={revokeTarget}
+        open={revokeTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setRevokeTarget(null);
+        }}
+        onSuccess={() => void refetch()}
+      />
+
+      <InviteContributorDialog
+        defaultUserId={inviteTarget?.id}
+        defaultUserName={inviteTarget?.displayName}
+        open={inviteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setInviteTarget(null);
+        }}
+        onSuccess={() => void refetch()}
       />
     </div>
   );

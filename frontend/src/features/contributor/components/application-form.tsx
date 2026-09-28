@@ -3,14 +3,14 @@
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link2, Plus, X } from 'lucide-react';
+import { Building2, CheckCircle2, Link2, Plus, Sparkles, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
-import { ContributorType, UserRole } from '@/common/enums';
+import { ContributorApprovalBasis, UserRole } from '@/common/enums';
 import { useAuthStore } from '@/store/useAuthStore';
 import type { ContributorApplication } from '../types/contributor.model';
 import { useSubmitApplicationMutation } from '../queries/contributor.queries';
@@ -21,46 +21,47 @@ import {
   type SubmitApplicationFormValues,
 } from '../schemas/contributor.schema';
 
-const TYPE_OPTIONS: Array<{ value: ContributorType; label: string; hint: string }> = [
+const BASIS_OPTIONS = [
   {
-    value: ContributorType.EXPERIENCED_PRACTITIONER,
-    label: 'Người ăn chay kinh nghiệm',
-    hint: 'Chia sẻ công thức, mẹo nấu chay thực tế',
+    value: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
+    label: 'Tổ chức đối tác / Viện ẩm thực',
+    hint: 'Trực thuộc hoặc đại diện tổ chức, viện nghiên cứu, hội đoàn ẩm thực chay',
+    icon: Building2,
   },
   {
-    value: ContributorType.NUTRITION_EXPERT,
-    label: 'Chuyên gia dinh dưỡng',
-    hint: 'Tư vấn, cẩm nang dinh dưỡng chuyên sâu',
+    value: ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
+    label: 'Thành viên uy tín trên nền tảng',
+    hint: 'Đã có lịch sử hoạt động tích cực, chia sẻ nội dung chay chất lượng cho cộng đồng',
+    icon: Sparkles,
   },
-];
+] as const;
 
 /**
- * Form nộp đơn contributor. Chặn: admin, đã có đơn chờ, còn thời gian chờ.
- * Không cấp quyền gì khi nộp — chỉ tạo đơn PENDING.
+ * Form nộp đơn đăng ký Contributor chuẩn Phase 14 (Unified Contributor).
+ * Không phân quyền subtype; chỉ ghi nhận nguyện vọng và căn cứ đề xuất.
  */
 export function ApplicationForm({ existing }: { existing: ContributorApplication[] }) {
   const { user } = useAuthStore();
   const submitMutation = useSubmitApplicationMutation();
   const [links, setLinks] = React.useState<string[]>(['']);
-  const [requestedType, setRequestedType] = React.useState<ContributorType>(
-    ContributorType.EXPERIENCED_PRACTITIONER
-  );
+  const [claimedBasis, setClaimedBasis] = React.useState<
+    | ContributorApprovalBasis.ORGANIZATION_AFFILIATION
+    | ContributorApprovalBasis.PLATFORM_TRACK_RECORD
+  >(ContributorApprovalBasis.ORGANIZATION_AFFILIATION);
 
   const pending = existing.find((app) => app.status === 'PENDING');
-  // Chụp 1 lần lúc mount để so cooldown (tránh Date.now() trong render).
+  // Chụp 1 lần lúc mount để so sánh cooldown
   const [now] = React.useState(() => Date.now());
   const cooling = existing.find(
     (app) =>
       app.status === 'REJECTED' && app.reapplyEligibleAt && app.reapplyEligibleAt.getTime() > now
   );
-  // Nhóm đã duyệt (nếu có) — đổi subtype phải khác nhóm hiện tại.
-  const approved = existing.find((app) => app.status === 'APPROVED');
-  const [formError, setFormError] = React.useState<string | null>(null);
 
   const form = useForm<SubmitApplicationFormValues>({
     resolver: zodResolver(submitApplicationSchema),
     defaultValues: {
-      requestedType: ContributorType.EXPERIENCED_PRACTITIONER,
+      claimedApprovalBasis: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
+      organizationClaim: '',
       experience: '',
       referenceLinks: [],
     },
@@ -68,11 +69,30 @@ export function ApplicationForm({ existing }: { existing: ContributorApplication
 
   if (user?.role === UserRole.ADMIN) return null;
 
+  if (user?.role === UserRole.CONTRIBUTOR) {
+    return (
+      <div className="flex items-start gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm text-foreground">
+        <CheckCircle2 className="mt-0.5 size-5 shrink-0 text-primary" />
+        <div>
+          <p className="font-semibold text-primary">Bạn đang là Người đóng góp (Contributor)</p>
+          <p className="mt-1 text-muted-foreground">
+            Tài khoản của bạn đã được Quản trị viên kích hoạt toàn bộ quyền hạn đóng góp công thức,
+            cẩm nang ẩm thực chay và xác thực nội dung cộng đồng.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (pending) {
     return (
-      <p className="rounded-xl border bg-muted/60 p-4 text-sm">
-        Bạn đã có đơn đang chờ duyệt. Hãy theo dõi kết quả ở lịch sử bên dưới thay vì gửi đơn mới.
-      </p>
+      <div className="rounded-xl border bg-muted/60 p-4 text-sm text-foreground">
+        <p className="font-medium text-foreground">Hồ sơ của bạn đang được xử lý</p>
+        <p className="mt-1 text-muted-foreground">
+          Bạn đã có một đơn đăng ký đang ở trạng thái chờ duyệt. Vui lòng theo dõi kết quả thẩm định
+          tại bảng lịch sử bên dưới thay vì gửi thêm đơn mới.
+        </p>
+      </div>
     );
   }
 
@@ -83,31 +103,35 @@ export function ApplicationForm({ existing }: { existing: ContributorApplication
       year: 'numeric',
     });
     return (
-      <p className="rounded-xl border bg-muted/60 p-4 text-sm">
-        Đơn trước chưa đủ điều kiện. Bạn có thể nộp lại từ ngày {date}.
-      </p>
+      <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-foreground">
+        <p className="font-medium text-amber-700 dark:text-amber-400">
+          Chưa đến thời hạn nộp lại hồ sơ
+        </p>
+        <p className="mt-1 text-muted-foreground">
+          Hồ sơ trước của bạn chưa đủ điều kiện. Bạn có thể cập nhật thêm thông tin và gửi lại đơn
+          xét duyệt từ ngày <strong className="text-foreground">{date}</strong>.
+        </p>
+      </div>
     );
   }
 
   const onSubmit = async (values: SubmitApplicationFormValues) => {
-    // Đổi subtype phải khác nhóm đã duyệt (CONTRIBUTOR_TYPE_UNCHANGED).
-    if (approved?.approvedType && values.requestedType === approved.approvedType) {
-      setFormError(
-        `Bạn đã là ${approved.approvedTypeLabel ?? 'nhóm này'}. Vui lòng chọn nhóm khác để đổi.`
-      );
-      return;
-    }
-    setFormError(null);
     try {
       await submitMutation.mutateAsync({
-        requestedType: values.requestedType,
+        claimedApprovalBasis: values.claimedApprovalBasis,
         experience: values.experience,
+        organizationClaim: values.organizationClaim,
         referenceLinks: values.referenceLinks,
       });
-      form.reset();
+      form.reset({
+        claimedApprovalBasis: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
+        organizationClaim: '',
+        experience: '',
+        referenceLinks: [],
+      });
       setLinks(['']);
     } catch {
-      // Lỗi đã toast ở query layer.
+      // Lỗi đã được xử lý toast ở query layer
     }
   };
 
@@ -133,25 +157,26 @@ export function ApplicationForm({ existing }: { existing: ContributorApplication
       noValidate
     >
       <div className="flex flex-col gap-2">
-        <Label>Nhóm đóng góp mong muốn</Label>
+        <Label>Căn cứ đề xuất phê duyệt</Label>
         <RadioGroup
-          value={requestedType}
+          value={claimedBasis}
           onValueChange={(value) => {
-            const next = value as ContributorType;
-            setRequestedType(next);
-            form.setValue('requestedType', next, { shouldValidate: true });
+            const next = value as typeof claimedBasis;
+            setClaimedBasis(next);
+            form.setValue('claimedApprovalBasis', next, { shouldValidate: true });
           }}
           className="grid gap-2.5 sm:grid-cols-2"
         >
-          {TYPE_OPTIONS.map((option) => {
-            const isSelected = requestedType === option.value;
+          {BASIS_OPTIONS.map((option) => {
+            const isSelected = claimedBasis === option.value;
+            const IconComponent = option.icon;
             return (
               <label
                 key={option.value}
-                htmlFor={`ctype-${option.value}`}
+                htmlFor={`basis-${option.value}`}
                 onClick={() => {
-                  setRequestedType(option.value);
-                  form.setValue('requestedType', option.value, { shouldValidate: true });
+                  setClaimedBasis(option.value);
+                  form.setValue('claimedApprovalBasis', option.value, { shouldValidate: true });
                 }}
                 className={cn(
                   'flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 text-sm transition-all',
@@ -162,29 +187,54 @@ export function ApplicationForm({ existing }: { existing: ContributorApplication
               >
                 <RadioGroupItem
                   value={option.value}
-                  id={`ctype-${option.value}`}
+                  id={`basis-${option.value}`}
                   className="mt-0.5 shrink-0"
                 />
-                <div className="flex flex-col gap-0.5">
-                  <span className="font-semibold text-foreground">{option.label}</span>
+                <div className="flex flex-col gap-1">
+                  <div className="flex items-center gap-1.5 font-semibold text-foreground">
+                    <IconComponent className="size-4 text-primary" />
+                    <span>{option.label}</span>
+                  </div>
                   <span className="text-xs text-muted-foreground">{option.hint}</span>
                 </div>
               </label>
             );
           })}
         </RadioGroup>
-        {form.formState.errors.requestedType && (
-          <p className="text-xs text-destructive">{form.formState.errors.requestedType.message}</p>
+        {form.formState.errors.claimedApprovalBasis && (
+          <p className="text-xs text-destructive">
+            {form.formState.errors.claimedApprovalBasis.message}
+          </p>
         )}
       </div>
 
+      {claimedBasis === ContributorApprovalBasis.ORGANIZATION_AFFILIATION && (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="contrib-org-claim">
+            Tên tổ chức / Hội đoàn liên kết <span className="text-destructive">*</span>
+          </Label>
+          <Input
+            id="contrib-org-claim"
+            placeholder="Ví dụ: Hội Đầu bếp Chay Việt Nam, Viện Ẩm thực..."
+            {...form.register('organizationClaim')}
+          />
+          {form.formState.errors.organizationClaim && (
+            <p className="text-xs text-destructive">
+              {form.formState.errors.organizationClaim.message}
+            </p>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="contrib-experience">Kinh nghiệm của bạn (tối thiểu 20 ký tự)</Label>
+        <Label htmlFor="contrib-experience">
+          Kinh nghiệm & Nguyện vọng đóng góp (tối thiểu 20 ký tự)
+        </Label>
         <Textarea
           id="contrib-experience"
           rows={5}
           maxLength={MAX_EXPERIENCE_LENGTH}
-          placeholder="Mô tả hành trình ăn chay, kinh nghiệm nấu nướng hoặc chuyên môn dinh dưỡng..."
+          placeholder="Mô tả hành trình thực hành ăn chay, kinh nghiệm xây dựng thực đơn hoặc chuyên môn dinh dưỡng của bạn..."
           {...form.register('experience')}
         />
         {form.formState.errors.experience && (
@@ -194,7 +244,7 @@ export function ApplicationForm({ existing }: { existing: ContributorApplication
 
       <div className="flex flex-col gap-2">
         <Label>
-          Link tham khảo{' '}
+          Liên kết minh chứng tham khảo{' '}
           <span className="font-normal text-muted-foreground">
             (tùy chọn, tối đa {MAX_REFERENCE_LINKS})
           </span>
@@ -229,7 +279,7 @@ export function ApplicationForm({ existing }: { existing: ContributorApplication
             className="self-start"
             onClick={() => setLinks((prev) => [...prev, ''])}
           >
-            <Plus data-icon="inline-start" /> Thêm link
+            <Plus data-icon="inline-start" /> Thêm liên kết
           </Button>
         )}
         {form.formState.errors.referenceLinks && (
@@ -237,14 +287,9 @@ export function ApplicationForm({ existing }: { existing: ContributorApplication
         )}
       </div>
 
-      <Button type="submit" disabled={submitMutation.isPending}>
-        {submitMutation.isPending
-          ? 'Đang gửi...'
-          : approved
-            ? 'Gửi yêu cầu đổi nhóm'
-            : 'Gửi đơn đăng ký'}
+      <Button type="submit" disabled={submitMutation.isPending} className="mt-2">
+        {submitMutation.isPending ? 'Đang gửi đơn...' : 'Gửi đơn đăng ký Contributor'}
       </Button>
-      {formError && <p className="text-xs text-destructive">{formError}</p>}
     </form>
   );
 }
