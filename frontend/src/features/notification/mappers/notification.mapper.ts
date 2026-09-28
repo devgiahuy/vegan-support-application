@@ -5,13 +5,26 @@ import type {
   NotificationListResponseDto,
   NotificationReadAllResponseDto,
   NotificationReadResponseDto,
+  NotificationUnreadCountResponseDto,
 } from '../types/notification.dto';
 import type { AppNotification, UnreadCount } from '../types/notification.model';
 
 const TYPE_LABELS: Record<string, string> = {
   POST_APPROVED: 'Bài được duyệt',
+  POST_REJECTED: 'Bài viết bị từ chối',
   COMMENT_REPLY: 'Trả lời bình luận',
+  CONTRIBUTOR_APPROVED: 'Đơn cộng tác được duyệt',
+  CONTRIBUTOR_REJECTED: 'Đơn cộng tác bị từ chối',
+  CONTRIBUTOR_REVOKED: 'Thu hồi quyền cộng tác',
   APPLICATION_DECIDED: 'Đơn cộng tác',
+  RESTAURANT_APPROVED: 'Nhà hàng được duyệt',
+  RESTAURANT_REJECTED: 'Nhà hàng bị từ chối',
+  STORAGE_WARNING: 'Cảnh báo dung lượng',
+  QUOTA_WARNING: 'Cảnh báo dung lượng',
+  MODERATION_ACTION: 'Quyết định kiểm duyệt',
+  REPORT_RESOLVED: 'Báo cáo đã xử lý',
+  AI_VERIFICATION_CREATED: 'Yêu cầu thẩm định AI',
+  AI_VERIFICATION_STATUS: 'Cập nhật thẩm định AI',
   SYSTEM: 'Hệ thống',
 };
 
@@ -35,21 +48,20 @@ function isInternalLink(link: string): boolean {
 
 /**
  * NotificationMapper: list + read + unread count.
- * DTO SUY LUẬN (không schema swagger) — mọi field optional + fallback.
- * Envelope `{success, data, meta}` đọc trực tiếp.
+ * Đảm bảo allowlist an toàn, không hiển thị private data hay external url.
  */
 export class NotificationMapper extends BaseMapper<NotificationDto, AppNotification> {
   toModel(dto: NotificationDto | null | undefined): AppNotification {
     const type = safeString(pickField(dto, ['type'], '')) || 'SYSTEM';
-    const link = safeString(pickField(dto, ['link'], '')) || null;
+    const rawLink = safeString(pickField(dto, ['link'], '')) || null;
     const createdAt = safeDate(pickField(dto, ['createdAt', 'created_at'], null));
     return {
       id: safeString(pickField(dto, ['id'], '')),
       type,
-      typeLabel: TYPE_LABELS[type] ?? type,
+      typeLabel: TYPE_LABELS[type] ?? (type.length > 0 ? type : 'Hệ thống'),
       title: safeString(pickField(dto, ['title'], '')) || 'Thông báo mới',
       summary: safeString(pickField(dto, ['summary'], '')),
-      link: link && isInternalLink(link) ? link : null,
+      link: rawLink && isInternalLink(rawLink) ? rawLink : null,
       read: pickField<boolean>(dto, ['read'], false),
       readAt: safeDate(pickField(dto, ['readAt', 'read_at'], null)),
       createdAt,
@@ -83,7 +95,14 @@ export class NotificationMapper extends BaseMapper<NotificationDto, AppNotificat
     };
   }
 
-  /** Đếm chưa đọc từ list (không endpoint riêng). */
+  /** `GET /notifications/unread-count` → UnreadCount */
+  toUnreadCountFromDto(dto: NotificationUnreadCountResponseDto | null | undefined): UnreadCount {
+    const data = pickField(dto, ['data'], null) as NotificationUnreadCountResponseDto['data'];
+    const count = safeNumber(pickField(data, ['count'], 0));
+    return { count, capped: count === 0 ? '' : count > 9 ? '9+' : String(count) };
+  }
+
+  /** Đếm chưa đọc từ danh sách local cache. */
   toUnreadCount(items: AppNotification[]): UnreadCount {
     const count = items.filter((item) => !item.read).length;
     return { count, capped: count === 0 ? '' : count > 9 ? '9+' : String(count) };

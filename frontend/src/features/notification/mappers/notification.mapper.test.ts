@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { notificationMapper, toTimeAgo } from './notification.mapper';
-import type { NotificationListResponseDto } from '../types/notification.dto';
+import type {
+  NotificationListResponseDto,
+  NotificationUnreadCountResponseDto,
+} from '../types/notification.dto';
 
 const listEnvelope: NotificationListResponseDto = {
   success: true,
@@ -50,10 +53,34 @@ describe('NotificationMapper list', () => {
     expect(result.items).toEqual([]);
     expect(result.metadata.totalItems).toBe(0);
   });
+
+  it('map nhãn tiếng Việt cho các loại thông báo Phase 25', () => {
+    const dto = {
+      success: true,
+      data: [
+        { id: '1', type: 'POST_REJECTED' },
+        { id: '2', type: 'CONTRIBUTOR_APPROVED' },
+        { id: '3', type: 'CONTRIBUTOR_REJECTED' },
+        { id: '4', type: 'RESTAURANT_APPROVED' },
+        { id: '5', type: 'QUOTA_WARNING' },
+        { id: '6', type: 'MODERATION_ACTION' },
+      ],
+      meta: null,
+    };
+    const res = notificationMapper.toListModel(dto);
+    expect(res.items.map((i) => i.typeLabel)).toEqual([
+      'Bài viết bị từ chối',
+      'Đơn cộng tác được duyệt',
+      'Đơn cộng tác bị từ chối',
+      'Nhà hàng được duyệt',
+      'Cảnh báo dung lượng',
+      'Quyết định kiểm duyệt',
+    ]);
+  });
 });
 
 describe('NotificationMapper unread', () => {
-  it('đếm chưa đọc + capped 9+', () => {
+  it('đếm chưa đọc + capped 9+ từ items', () => {
     const result = notificationMapper.toListModel(listEnvelope);
     expect(notificationMapper.toUnreadCount(result.items)).toEqual({ count: 1, capped: '1' });
     expect(notificationMapper.toUnreadCount([])).toEqual({ count: 0, capped: '' });
@@ -64,9 +91,31 @@ describe('NotificationMapper unread', () => {
     }));
     expect(notificationMapper.toUnreadCount(many).capped).toBe('9+');
   });
+
+  it('toUnreadCountFromDto map đúng count từ backend endpoint GET /notifications/unread-count', () => {
+    const countDto: NotificationUnreadCountResponseDto = {
+      success: true,
+      data: { count: 7 },
+    };
+    expect(notificationMapper.toUnreadCountFromDto(countDto)).toEqual({ count: 7, capped: '7' });
+
+    const cappedDto: NotificationUnreadCountResponseDto = {
+      success: true,
+      data: { count: 15 },
+    };
+    expect(notificationMapper.toUnreadCountFromDto(cappedDto)).toEqual({ count: 15, capped: '9+' });
+
+    const zeroDto: NotificationUnreadCountResponseDto = {
+      success: true,
+      data: { count: 0 },
+    };
+    expect(notificationMapper.toUnreadCountFromDto(zeroDto)).toEqual({ count: 0, capped: '' });
+
+    expect(notificationMapper.toUnreadCountFromDto(null)).toEqual({ count: 0, capped: '' });
+  });
 });
 
-describe('toTimeAgo', () => {
+describe('NotificationMapper mutations', () => {
   it('toReadModel mặc định read=true', () => {
     expect(
       notificationMapper.toReadModel({ success: true, data: { id: 'n1' }, meta: null })

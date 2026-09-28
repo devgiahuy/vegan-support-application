@@ -1,24 +1,27 @@
 /**
- * DTO notifications (SUY LUẬN — không có schema swagger, BE còn `PLANNED`).
- * Mọi field optional + `TODO(BE-READY)` reconfirm shape ở task nối live.
- * Envelope `{success, data, meta}` dùng trực tiếp khi nối live.
+ * DTO notifications — khế ước chính thức từ BE Phase 25 (OpenAPI).
+ * Envelope `{success, data, meta}` dùng trực tiếp từ backend.
  */
 
-/** Thông báo (thô, suy luận). */
+/** Mục thông báo từ backend (OpenAPI: NotificationListResponse.data[i]). */
 export interface NotificationDto {
   id?: string;
   type?: string;
   title?: string;
   summary?: string | null;
   link?: string | null;
+  payloadVersion?: number;
+  payload?: Record<string, unknown>;
   read?: boolean;
   readAt?: string | null;
   read_at?: string | null;
   createdAt?: string;
   created_at?: string;
+  expiresAt?: string;
+  expires_at?: string;
 }
 
-/** `GET /notifications` (suy luận). */
+/** `GET /notifications` */
 export interface NotificationListResponseDto {
   success?: boolean;
   data?: (NotificationDto | null)[] | null;
@@ -31,16 +34,29 @@ export interface NotificationListResponseDto {
   } | null;
 }
 
-/** `PATCH /notifications/:id/read` (suy luận). */
+/** `GET /notifications/unread-count` */
+export interface NotificationUnreadCountResponseDto {
+  success?: boolean;
+  data?: {
+    count?: number;
+  } | null;
+}
+
+/** `PATCH /notifications/:id/read` */
 export interface NotificationReadResponseDto {
   success?: boolean;
-  data?: { id?: string; read?: boolean } | null;
+  data?: {
+    id?: string;
+    read?: boolean;
+  } | null;
   meta?: null;
 }
 
-/** `PATCH /notifications/read-all` (suy luận). */
+/** `PATCH /notifications/read-all` */
 export interface NotificationReadAllResponseDto {
   success?: boolean;
-  data?: { updatedCount?: number | string } | null;
+  data?: {
+    updatedCount?: number | string;
+  } | null;
   meta?: null;
 }
