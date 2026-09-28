@@ -16,7 +16,293 @@
 - Còn lại / rủi ro:
 ```
 
-## [2026-09-27] — Khắc phục lỗi Footer đè lên giao diện Trợ lý AI (/assistant)
+## [2026-09-28] — Loại bỏ hoàn toàn Mock/Fixture data và bổ sung Logging chi tiết luồng Map & Restaurants (Phase 24)
+
+- Mục tiêu:
+  - Loại bỏ hoàn toàn mock data / fixture fallback trong `src/features/restaurant/api/restaurant.api.ts`, chuyển 100% sang gọi live backend API endpoints (`/restaurants/nearby`, `/restaurants/search`, `/location/geocode`, `/restaurants/:id`, `/restaurants`).
+  - Bổ sung console.log trực quan, có cấu trúc chi tiết tại API client và Page component để lập trình viên theo dõi trọn vẹn luồng gửi request và dữ liệu nhận về từ Backend.
+- Đã làm:
+  - **Dọn sạch Mock Data (`restaurant.api.ts`)**:
+    - Xóa bỏ các biến cục bộ và logic fallback giả lập: `USE_FIXTURES`, `delay`, `clone`, `queueStore`, `submittedStore`, `withDistance`, `applyFilters`, `haversineMeters`, `__resetRestaurantFixtures`.
+    - Gọi trực tiếp instance `api` (Axios) cho tất cả các phương thức: `getNearby`, `search`, `getDetail`, `submitRestaurant`, `geocode`, `getQueue`, `reviewRestaurant`.
+  - **Bổ sung Console Logs chi tiết**:
+    - In rõ thông tin Request URL + Query parameters / Body payload (kèm icon `📡 Request`).
+    - In dữ liệu thô nhận về từ Backend DTO (kèm icon `📥 Response raw DTO`).
+    - In dữ liệu đã qua Mapper thành UI Model chuyển cho Map & List Component (kèm icon `🗺️ Mapped`).
+    - Tại `src/app/(site)/restaurants/page.tsx`, bổ sung log tọa độ người dùng `coords` và danh sách `restaurants` nhận được từ TanStack Query.
+  - **Cập nhật Unit Tests (`restaurant.api.test.ts`)**:
+    - Sử dụng `vi.spyOn(api, 'get')` để kiểm chứng luồng truyền đúng `radiusMeters`, `lat`, `lng`, `q` và chuyển tiếp an toàn giữa search và nearby.
+- File tạo/sửa:
+  - `src/features/restaurant/api/restaurant.api.ts`
+  - `src/features/restaurant/api/restaurant.api.test.ts`
+  - `src/app/(site)/restaurants/page.tsx`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 42 test files, 408/408 tests pass (100%).
+  - `npm run build`: Turbopack compile thành công 46/46 routes.
+- PROGRESS: Phase 24 kết nối 100% Live REST Backend, không phụ thuộc mock fixtures.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-28] — Khắc phục triệt để chùm 8 lỗi 404 Not Found từ Next.js prefetch tại Footer
+
+- Mục tiêu:
+  - Khắc phục 8 lỗi `GET /... 404 (Not Found)` xuất hiện đồng loạt trên DevTools Console: `/posts`, `/about`, `/help`, `/privacy`, `/terms`, `/guidelines`, `/contact`, `/feedback`.
+  - Nguyên nhân: Do `<Link>` tại `site-footer.tsx` trỏ tới `/posts` (trong khi trang bài viết thực tế là `/articles`) và các trang thông tin/chính sách chưa tồn tại, khiến cơ chế tự động nạp trước (pre-fetch `_rsc`) của Next.js gọi lên server và trả về mã lỗi 404.
+- Đã làm:
+  - **Sửa đường dẫn & Thêm Redirect**:
+    - Sửa `<Link href="/posts">` thành `<Link href="/articles">` tại `src/components/layout/site-footer.tsx`.
+    - Bổ sung quy tắc chuyển hướng vĩnh viễn (permanent redirect 308) từ `/posts` và `/posts/:id` sang `/articles` và `/articles/:id` trong `next.config.ts`.
+  - **Khởi tạo 7 trang thông tin & chính sách chuẩn mực**:
+    - `src/app/(site)/about/page.tsx`: Giới thiệu sứ mệnh, tầm nhìn, giá trị cốt lõi của VeggieConnect.
+    - `src/app/(site)/help/page.tsx`: Trung tâm trợ giúp kèm danh mục FAQ giải đáp thắc mắc thường gặp.
+    - `src/app/(site)/privacy/page.tsx`: Chính sách bảo mật dữ liệu, cookie HttpOnly, cam kết không bán dữ liệu.
+    - `src/app/(site)/terms/page.tsx`: Điều khoản sử dụng và tuyên bố miễn trừ y tế (Medical Disclaimer SRS D22).
+    - `src/app/(site)/guidelines/page.tsx`: Quy chế ứng xử và chuẩn mực cộng đồng ăn chay.
+    - `src/app/(site)/contact/page.tsx`: Thông tin liên hệ, hotline, email và biểu mẫu gửi tin nhắn trực tiếp.
+    - `src/app/(site)/feedback/page.tsx`: Biểu mẫu góp ý cải tiến và báo lỗi kỹ thuật với các phân loại cụ thể.
+- File tạo/sửa:
+  - `src/components/layout/site-footer.tsx`
+  - `next.config.ts`
+  - `src/app/(site)/about/page.tsx`
+  - `src/app/(site)/help/page.tsx`
+  - `src/app/(site)/privacy/page.tsx`
+  - `src/app/(site)/terms/page.tsx`
+  - `src/app/(site)/guidelines/page.tsx`
+  - `src/app/(site)/contact/page.tsx`
+  - `src/app/(site)/feedback/page.tsx`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 42 test files, 408/408 tests pass (100%).
+  - `npm run build`: Turbopack compile thành công 46/46 routes tĩnh và động.
+- PROGRESS: Triệt tiêu 100% console errors 404, bảo đảm không còn broken links tại Footer.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-28] — Tái thiết kế trải nghiệm Bản đồ & Khám phá quán chay phong cách Google Maps / GrabFood và sửa triệt để tính toán cự ly khoảng cách (Phase 24)
+
+- Mục tiêu:
+  - Khắc phục lỗi tính toán khoảng cách: người dùng ở TP.HCM tìm quán lại ra kết quả quán ở Hà Nội chỉ cách vài trăm mét (do fixture có `distanceMeters: 850` tĩnh, mapper ưu tiên `distanceMeters`, và hàm lọc `applyFilters` không lọc bán kính `radiusM`).
+  - Tái thiết kế giao diện Khám phá quán chay (`/restaurants`) theo phong cách Google Maps / GrabFood Split View: bản đồ cố định ở cột trái (sticky map), danh sách thẻ quán cuộn mượt mà ở cột phải (scrollable list), chống cắt cụt tên quán (`Quán...`), đồng bộ hai chiều mượt mà.
+  - Khắc phục lỗi nhãn marker bị đè/chồng chéo chữ trên bản đồ; bổ sung cụm phím điều khiển zoom (+, -, đặt lại tầm nhìn) và thẻ xem nhanh (Quick Preview Popup) khi bấm vào marker.
+- Đã làm:
+  - **Sửa lỗi tính cự ly & Lọc bán kính (`restaurant-fixtures.ts`, `restaurant.api.ts`)**:
+    - Xóa bỏ `distanceMeters: 850` tĩnh trong fixture các quán Hà Nội.
+    - Bổ sung các quán chay thực tế tại Gò Vấp (Quang Trung, Nguyễn Văn Khối) có cự ly lân cận 800m–1.2km.
+    - Cập nhật hàm `withDistance` trong `restaurant.api.ts` tự động tính khoảng cách Haversine chuẩn xác theo tọa độ thực tế của người dùng và quán, ghi đè cả `distanceM` và `distanceMeters`.
+    - Cập nhật `applyFilters` trong `restaurant.api.ts` lọc nghiêm ngặt theo `radiusM` (loại bỏ hoàn toàn các quán ngoài bán kính đã chọn).
+    - Bổ sung sắp xếp cự ly tăng dần (từ gần nhất đến xa nhất) cho cả `search` và `getNearby`.
+    - Viết unit test suite mới `restaurant.api.test.ts` (3/3 test pass) kiểm tra tìm quán ở TP.HCM loại trừ 100% quán Hà Nội và ngược lại.
+  - **Tái thiết kế giao diện Google Maps / GrabFood (`page.tsx`, `restaurant-list.tsx`, `restaurant-card.tsx`)**:
+    - Chuyển đổi bố cục sang Split View chuẩn mực:
+      - Cột trái (`lg:col-span-7`): Sticky Map cao vừa vặn màn hình (`h-[calc(100vh-170px)] min-h-[420px] max-h-[750px]`).
+      - Cột phải (`lg:col-span-5`): Khung cuộn độc lập (`max-h-[calc(100vh-220px)] overflow-y-auto`) chứa danh sách thẻ quán 1 cột rộng rãi (`grid-cols-1 gap-3`), hiển thị trọn vẹn tên quán, địa chỉ, tag chế độ ăn, món tiêu biểu và nút chi tiết mà không bị co cụm thành `Quán...`.
+    - Đồng bộ 2 chiều: Khi bấm marker trên map, danh sách thẻ tự động cuộn mượt (`scrollIntoView`) đến thẻ tương ứng và highlight; khi bấm thẻ quán, marker trên map tương ứng được kích hoạt.
+  - **Nâng cấp trải nghiệm Bản đồ (`MapFallback`, `RestaurantMap`)**:
+    - Khắc phục đè chữ marker: Nhãn tên quán trên bản đồ chỉ hiển thị khi rê chuột (hover) hoặc khi đang chọn (`isSelected`), giữ mặt phẳng bản đồ thoáng đãng, tinh gọn.
+    - Bổ sung cụm phím điều khiển phóng to (+), thu nhỏ (-), và đặt lại tầm nhìn (LocateFixed) theo tỷ lệ zoomFactor động.
+    - Bổ sung thẻ xem nhanh (Quick Preview Popup) ở góc dưới bản đồ khi marker được chọn: hiển thị tên quán, badge cự ly, địa chỉ, nút Chỉ đường Google Maps và nút Chi tiết.
+    - Hỗ trợ `size-full min-h-[400px]` co giãn linh hoạt theo container cha.
+- File tạo/sửa:
+  - `src/features/restaurant/__fixtures__/restaurant-fixtures.ts`
+  - `src/features/restaurant/api/restaurant.api.ts`
+  - `src/features/restaurant/api/restaurant.api.test.ts`
+  - `src/features/restaurant/types/restaurant.model.ts`
+  - `src/features/restaurant/components/restaurant-card.tsx`
+  - `src/features/restaurant/components/restaurant-list.tsx`
+  - `src/features/restaurant/components/restaurant-map.tsx`
+  - `src/features/restaurant/components/map-fallback.tsx`
+  - `src/app/(site)/restaurants/page.tsx`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 42 test files, 408/408 tests passed (100%).
+  - `npm run build`: Turbopack compile thành công 39/39 routes bao gồm `/restaurants` và `/restaurants/[id]`.
+- PROGRESS: Phase 24 UI/UX & Quality refinement hoàn tất 100%.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-27] — Khắc phục triệt để lỗi bản đồ trắng, lỗi 400 Bad Request và tối ưu tìm kiếm quán chay (Phase 24)
+
+- Mục tiêu:
+  - Khắc phục lỗi 400 Bad Request khi truy vấn `/api/v1/restaurants/search`: do schema backend áp dụng `.strict()` và yêu cầu bắt buộc tham số `q` (min 2 ký tự), trong khi frontend trước đó luôn gọi `/restaurants/search` ngay cả khi không có từ khóa và truyền các tham số không hợp lệ (`radius` thay vì `radiusMeters`, `diet` thay vì `dietPattern`).
+  - Khắc phục lỗi bản đồ (Map) hiển thị khung trắng tinh: do Google Maps JS SDK không thể tải khi thiếu API key hoặc bị Google API chặn, trong khi component map trước đó chưa bọc try-catch runtime exception và fallback chỉ dựa vào items.
+  - Khắc phục lỗi tìm kiếm địa điểm / geocode không ra kết quả: do backend geocode trả về `latitude`, `longitude`, `address` nhưng mapper frontend chỉ đọc `lat`, `lng`, `label`; đồng thời mở rộng từ điển geocode thông minh hỗ trợ toàn diện các quận/huyện ở TP.HCM và Hà Nội khi backend dùng FakeMapsProvider.
+  - Nâng cấp `MapFallback` thành Bản đồ tương tác Radar trực quan độc lập (Interactive Radar Map), đồng bộ 2 chiều với danh sách quán, hiển thị tâm người dùng, sóng radar và vòng quét bán kính tìm kiếm.
+- Đã làm:
+  - **DTO & Mapper**:
+    - Cập nhật `RestaurantDto` và `GeocodeResponseDto` bổ sung `distanceMeters`, `dietTags`, `phone`, `website`, `operatingHours`, `latitude`, `longitude`, `address`.
+    - Sửa `restaurantMapper.toModel` hỗ trợ đầy đủ các trường mới trả về từ backend, tính `distanceM` và nhãn cự ly `distanceLabel` chính xác.
+    - Sửa `restaurantMapper.toCoordinates` đọc đúng các alias `latitude`/`longitude` và `address`.
+    - Sửa `restaurantMapper.toLocationQuery` tuân thủ 100% strict schema của backend: truyền `radiusMeters` (100–50000), loại bỏ các tham số lạ, chỉ truyền `q` khi có từ khóa >= 2 ký tự, ánh xạ `dietPattern` sang enum `VEGAN` / `LACTO_OVO`.
+    - Bổ sung 2 unit test mới cho mapper trong `restaurant.mapper.test.ts` (10/10 tests pass).
+  - **API Layer (`restaurant.api.ts`)**:
+    - Trong `search`: tự động chuyển sang `getNearby` nếu không có từ khóa `q` hoặc từ khóa < 2 ký tự, ngăn chặn triệt để lỗi 400 Bad Request.
+    - Trong `geocode`: ưu tiên đọc tọa độ từ backend; nếu backend trả về null/lỗi thì tự động đối chiếu từ điển địa danh thông minh phong phú phủ kín các quận huyện TP.HCM và Hà Nội.
+    - Mở rộng fixture dữ liệu quán chay tại các khu vực TP.HCM (Gò Vấp, Tân Bình, Phú Nhuận, Q1, Q10) và Hà Nội để khi test ở bất kỳ vị trí nào đều có quán lân cận.
+  - **Bản đồ trực quan tương tác (`MapFallback` & `RestaurantMap`)**:
+    - Nâng cấp `MapFallback` thành một Canvas Radar tương tác tuyệt đẹp: hiển thị tâm vị trí người dùng (chấm xanh VeggieConnect với sóng lan tỏa), vòng tròn bán kính quét (2km, 5km, 10km, 20km), các marker quán lân cận được định vị theo tỷ lệ khoảng cách địa lý thực tế.
+    - Đồng bộ 2 chiều: click vào marker trên bản đồ sẽ highlight thẻ quán tương ứng ở danh sách và hiển thị card mini xem nhanh; click vào thẻ quán sẽ zoom marker trên bản đồ.
+    - Khi danh sách trống: bản đồ hiển thị radar quét và gợi ý các nút bấm nhanh: "Mở rộng 10 km", "Mở rộng 20 km", "50 km".
+    - Trong `RestaurantMap`: bọc an toàn try-catch khi khởi tạo `window.google.maps.Map` và markers, tự động chuyển đổi sang `MapFallback` nếu Google Maps ném lỗi DOM/runtime.
+  - **Trang Khám Phá (`src/app/(site)/restaurants/page.tsx`)**:
+    - Dùng hook `useRestaurantDiscoveryQuery` hợp nhất, tự động phân nhánh mượt mà giữa `nearby` và `search`.
+    - Bổ sung nút "Đổi vị trí" tiện lợi cho phép người dùng thay đổi địa chỉ hoặc lấy lại GPS mà không cần reload trang.
+    - Truyền `radiusM` và `onRadiusChange` đồng bộ giữa bộ lọc và bản đồ.
+- File tạo/sửa:
+  - `src/features/restaurant/types/restaurant.dto.ts`
+  - `src/features/restaurant/mappers/restaurant.mapper.ts`
+  - `src/features/restaurant/mappers/restaurant.mapper.test.ts`
+  - `src/features/restaurant/__fixtures__/restaurant-fixtures.ts`
+  - `src/features/restaurant/api/restaurant.api.ts`
+  - `src/features/restaurant/queries/restaurant.queries.ts`
+  - `src/features/restaurant/components/use-google-maps.ts`
+  - `src/features/restaurant/components/map-fallback.tsx`
+  - `src/features/restaurant/components/restaurant-map.tsx`
+  - `src/app/(site)/restaurants/page.tsx`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi compilation.
+  - `npm test`: 41 test files, 405/405 tests passed (100%).
+  - `npm run build`: biên dịch thành công toàn bộ 39 routes Turbopack.
+- PROGRESS: Phase 24: 100% Hoàn thiện & ổn định thực chiến.
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-27] — Hoàn thành tích hợp Phase 26: Admin AI Governance & Safety (spec 027, T001–T022)
+
+- Mục tiêu:
+  - Tích hợp toàn diện 7 live endpoints quản trị AI theo Backend Phase 26: `GET /admin/ai/health`, `GET /admin/ai/metrics`, `GET /admin/ai/requests`, `GET /admin/ai/flags`, `GET /admin/ai/features`, `GET /admin/ai/features/audit`, `PATCH /admin/ai/features/:feature`.
+  - Loại bỏ hoàn toàn fixture runtime (`USE_FIXTURES = false`), kết nối Axios qua `apiClient` (`src/lib/axios.ts`).
+  - Bảo đảm an toàn bảo mật và quyền riêng tư: triệt tiêu 100% rủi ro rò rỉ dữ liệu cá nhân (PII), thông tin sức khỏe, ảnh, hóa đơn và raw prompt vào DOM/UI state thông qua cơ chế Mapper defense-in-depth.
+  - Quản lý phiên bản lạc quan (Optimistic Concurrency Control): xử lý lỗi HTTP 409 `VERSION_CONFLICT` với thông báo tiếng Việt trực quan và tự động làm mới cấu hình.
+  - Kiểm soát cấu hình tính năng AI yêu cầu chọn lý do kiểm toán từ danh mục cho phép (`PROVIDER_INCIDENT`, `QUALITY_INVESTIGATION`, `SAFETY_HOLD`, `PLANNED_MAINTENANCE`, `RESTORE_SERVICE`).
+  - Hiển thị cờ kiểm duyệt an toàn AI dưới dạng tín hiệu cảnh báo hỗ trợ ra quyết định (không tự động xử phạt/xóa cứng).
+- Đã làm:
+  - **T001**: Khai báo 7 endpoint tập trung `API_ENDPOINTS.AI_GOVERNANCE.*` trong `src/common/constants/api-endpoints.ts`.
+  - **T002**: Định nghĩa đầy đủ DTOs theo chuẩn OpenAPI Backend Phase 26 trong `ai-governance.dto.ts`.
+  - **T003**: Cập nhật UI Models trong `ai-governance.model.ts` phục vụ trình diễn UI sạch.
+  - **T004**: Xây dựng `AiGovernanceMapper` kế thừa `BaseMapper`, chuẩn hóa null-safety, tỷ lệ phần trăm và ẩn hoàn toàn raw prompts/sensitive fields.
+  - **T005**: Cập nhật bộ unit test `ai-governance.mapper.test.ts` (11/11 tests pass 100%).
+  - **T006**: Kết nối API calls thật trong `ai-governance.api.ts`, tắt runtime fixtures.
+  - **T007, T010, T012, T015**: Triển khai React Query hooks (`useAiHealthQuery`, `useAiMetricsQuery`, `useAiRequestsQuery`, `useAiFeaturesQuery`, `useAiFeatureAuditQuery`, `useToggleAiFeatureMutation`) với query key factories và stale time 60s.
+  - **T008**: Tạo component `HealthSummary` hiển thị trạng thái vận hành 24h, tỷ lệ lỗi, fallback và thời hạn lưu trữ dữ liệu 90 ngày.
+  - **T009**: Cập nhật `MetricsOverview` với bộ lọc ngày (tối đa 90 ngày) và chỉ số hiệu năng tổng hợp.
+  - **T011**: Nâng cấp `RequestsTable` hỗ trợ phân trang, bộ lọc và huy hiệu bảo vệ dữ liệu (Redacted).
+  - **T013, T014**: Nâng cấp `FeaturesTable` và `FeatureToggleDialog` với dropdown chọn lý do bắt buộc và phiên bản kiểm soát.
+  - **T016**: Nâng cấp `FlagsList` hiển thị điểm rủi ro và trạng thái xem xét.
+  - **T017**: Tạo component `FeaturesAuditTable` hiển thị lịch sử thay đổi cấu hình tính năng của quản trị viên.
+  - **T018**: Tích hợp toàn diện các thành phần vào Bảng điều khiển Quản trị (`/admin/dashboard?tab=ai-governance`).
+  - **T019, T020**: Kiểm tra toàn bộ verification gates (`npx tsc --noEmit`: 0 lỗi, `npm test`: 403/403 tests pass, `npm run build`: compile thành công 39 routes).
+  - **T021, T022**: Đồng bộ tài liệu `BACKEND_INTEGRATION.md` (`FE integrated = Yes (2026-09-27)`), `PROGRESS.md` (Task 15: 100% Xong, Phase 26 READY), và `specs/027-ai-governance-live-integration/tasks.md` (100% hoàn thành).
+- File tạo/sửa:
+  - `src/common/constants/api-endpoints.ts`
+  - `src/features/ai-governance/types/ai-governance.dto.ts`
+  - `src/features/ai-governance/types/ai-governance.model.ts`
+  - `src/features/ai-governance/mappers/ai-governance.mapper.ts`
+  - `src/features/ai-governance/mappers/ai-governance.mapper.test.ts`
+  - `src/features/ai-governance/api/ai-governance.api.ts`
+  - `src/features/ai-governance/queries/ai-governance.queries.ts`
+  - `src/features/ai-governance/components/health-summary.tsx`
+  - `src/features/ai-governance/components/metrics-overview.tsx`
+  - `src/features/ai-governance/components/requests-table.tsx`
+  - `src/features/ai-governance/components/features-table.tsx`
+  - `src/features/ai-governance/components/feature-toggle-dialog.tsx`
+  - `src/features/ai-governance/components/flags-list.tsx`
+  - `src/features/ai-governance/components/features-audit-table.tsx`
+  - `src/features/ai-governance/index.ts`
+  - `src/app/(admin)/admin/dashboard/page.tsx`
+  - `docs/BACKEND_INTEGRATION.md`
+  - `docs/PROGRESS.md`
+  - `docs/tasks/phase-26-ai-governance.md`
+  - `specs/027-ai-governance-live-integration/tasks.md`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 41 test suites pass, 403/403 tests pass (11/11 tests pass cho ai-governance).
+  - `npm run build`: 39/39 static & dynamic routes compiled và build production thành công.
+- PROGRESS: Task 15 (Admin AI Governance & Safety): 70% → 100% (Hoàn thành tích hợp live API).
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-27] — Hoàn thành tích hợp Phase 25: In-app Notifications Live Integration (spec 026, T001–T017)
+
+- Mục tiêu:
+  - Tích hợp live 4 endpoints thông báo nội bộ Phase 25: `GET /notifications`, `GET /notifications/unread-count`, `PATCH /notifications/:id/read`, `PATCH /notifications/read-all`.
+  - Loại bỏ hoàn toàn mock fixture runtime, chuyển `__fixtures__` sang test-only.
+  - Phân tách riêng `useUnreadCountQuery` polling 60s cho thành viên đăng nhập, tự động tạm dừng khi tab ẩn (`refetchIntervalInBackground: false`).
+  - Cập nhật DTO, Mapper, Types theo chuẩn allowlist payload v1 của Backend Phase 25.
+  - Hỗ trợ optimistic updates cho thao tác đánh dấu đã đọc 1 mục và đánh dấu tất cả.
+- Đã làm:
+  - Bổ sung `API_ENDPOINTS.NOTIFICATIONS.UNREAD_COUNT` vào `src/common/constants/api-endpoints.ts`.
+  - Cập nhật `notification.dto.ts` với đầy đủ schemas OpenAPI.
+  - Nâng cấp `notification.mapper.ts`: bổ sung `toUnreadCountFromDto`, map đủ nhãn tiếng Việt cho các loại thông báo Phase 25, lọc link an toàn nội bộ (`/` và không `//`).
+  - Cập nhật `notification.mapper.test.ts` (14 unit tests pass 100%).
+  - Chuyển `notification.api.ts` sang gọi Axios thật qua `apiClient`.
+  - Nâng cấp `notification.queries.ts`: `useUnreadCountQuery`, `useNotificationsQuery`, optimistic update + rollback error handling.
+  - Tối ưu `NotificationBell` và `NotificationPanel` kết nối live query và mutation.
+  - Cập nhật `docs/BACKEND_INTEGRATION.md` (`FE integrated = Yes (2026-09-27)`), `docs/tasks/phase-25-notifications.md` (`COMPLETED`) và `docs/PROGRESS.md` (100% Xong).
+- File tạo/sửa:
+  - `src/common/constants/api-endpoints.ts`
+  - `src/features/notification/types/notification.dto.ts`
+  - `src/features/notification/mappers/notification.mapper.ts`
+  - `src/features/notification/mappers/notification.mapper.test.ts`
+  - `src/features/notification/api/notification.api.ts`
+  - `src/features/notification/queries/notification.queries.ts`
+  - `src/features/notification/components/notification-bell.tsx`
+  - `docs/BACKEND_INTEGRATION.md`
+  - `docs/tasks/phase-25-notifications.md`
+  - `docs/PROGRESS.md`
+  - `docs/WORK-LOG.md`
+- Verify: `npx tsc --noEmit` (0 lỗi), `npx vitest run src/features/notification` (14/14 tests pass).
+- PROGRESS: Phase 25 (Notifications): 70% → 100% (Hoàn thành tích hợp live API).
+- Còn lại / rủi ro: Không có.
+
+## [2026-09-27] — Hoàn thành tích hợp Phase 24: Restaurants & Google Maps Integration (spec 025, T001–T041)
+
+- Mục tiêu:
+  - Tích hợp toàn diện tính năng Khám phá Quán Chay & Google Maps (UC-12 / BL-16) theo chuẩn kiến trúc 7 tầng quy định tại `docs/ARCHITECTURE.md`.
+  - Kết nối live Google Maps JavaScript SDK với cơ chế suy giảm êm dịu `MapFallback` (EC-05).
+  - Lọc cứng chế độ ăn (`Dietary Hard Filtering`: Vegan, Lacto, Ovo) và tính khoảng cách Haversine.
+  - Hỗ trợ Geocoding địa chỉ khi từ chối cấp quyền GPS (EC-01, EC-02).
+  - Thành viên gửi đề xuất quán mới (`POST /restaurants`) và Quản trị viên duyệt quán kèm lý do kiểm toán tại Admin Dashboard.
+  - Hiển thị nguồn dữ liệu (`INTERNAL` vs `GOOGLE_PLACES`), ghi nhận bản quyền (`Attribution`) và cảnh báo dữ liệu cũ (>30 ngày).
+- Đã làm:
+  - Cài đặt dependency `@googlemaps/js-api-loader` và `@types/google.maps`.
+  - Khai báo endpoint tập trung: `API_ENDPOINTS.RESTAURANTS.*`, `LOCATION.GEOCODE`, `ADMIN_RESTAURANTS.*`.
+  - Nâng cấp DTO, Model, Zod schema (`addressGeocodeSchema`, `submitRestaurantSchema`, `reviewRestaurantSchema`).
+  - Nâng cấp `RestaurantMapper` kế thừa `BaseMapper` xử lý an toàn các trường, format distance, gắn nhãn nguồn và tính `isStale`.
+  - Viết 8 unit tests cho mapper (`restaurant.mapper.test.ts`) kiểm tra đầy đủ các trường hợp.
+  - Xây dựng hook `useGoogleMaps` tải dynamic SDK và component `RestaurantMap` đồng bộ 2 chiều (Marker <-> Card), kèm `MapFallback`.
+  - Nâng cấp `RestaurantFilters`, `RestaurantCard`, `RestaurantDetail`, `SubmitForm`, và `ReviewRestaurantDialog`.
+  - Kích hoạt tab "Quán chờ duyệt" (`RestaurantQueueTable`) trên Bảng điều khiển Quản trị (`/admin/dashboard`).
+  - Cập nhật trạng thái `FE integrated = Yes` trong `docs/BACKEND_INTEGRATION.md` và đồng bộ tiến độ trong `docs/PROGRESS.md`.
+- File tạo/sửa:
+  - `package.json`
+  - `src/common/constants/api-endpoints.ts`
+  - `src/common/enums/index.ts`
+  - `src/features/restaurant/types/restaurant.dto.ts`
+  - `src/features/restaurant/types/restaurant.model.ts`
+  - `src/features/restaurant/schemas/restaurant.schema.ts`
+  - `src/features/restaurant/mappers/restaurant.mapper.ts`
+  - `src/features/restaurant/mappers/restaurant.mapper.test.ts`
+  - `src/features/restaurant/api/restaurant.api.ts`
+  - `src/features/restaurant/queries/restaurant.queries.ts`
+  - `src/features/restaurant/components/use-google-maps.ts`
+  - `src/features/restaurant/components/map-fallback.tsx`
+  - `src/features/restaurant/components/restaurant-map.tsx`
+  - `src/features/restaurant/components/restaurant-filters.tsx`
+  - `src/features/restaurant/components/restaurant-card.tsx`
+  - `src/features/restaurant/components/restaurant-list.tsx`
+  - `src/features/restaurant/components/restaurant-detail.tsx`
+  - `src/features/restaurant/components/submit-form.tsx`
+  - `src/features/restaurant/components/queue-table.tsx`
+  - `src/features/restaurant/components/review-restaurant-dialog.tsx`
+  - `src/app/(site)/restaurants/page.tsx`
+  - `src/app/(admin)/admin/dashboard/page.tsx`
+  - `docs/BACKEND_INTEGRATION.md`
+  - `docs/PROGRESS.md`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 41 test suites pass, 402/402 tests pass 100%.
+  - `npm run build`: 39/39 static & dynamic routes compiled và build thành công không lỗi.
+- PROGRESS: Phase 24 Restaurants & Google Maps Integration hoàn thành 100% (FE Integrated).
+
+
 
 - Mục tiêu:
   - Khắc phục triệt để lỗi giao diện khi vào trang Trợ lý AI (`/assistant`), `SiteFooter` hiển thị đè lên khung soạn thảo tin nhắn (composer) và thanh cuộn hội thoại.

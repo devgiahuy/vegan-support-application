@@ -164,9 +164,10 @@ export const API_ENDPOINTS = {
     PUBLIC_LIST: '/ai-artifacts/public',
     VERIFY: (id: string) => `/ai-artifacts/${id}/verifications`,
   },
-  // TODO(BE-READY): Notifications còn PLANNED — nhánh dưới CHƯA được import ở đâu.
+  // Phase 25 — In-app Notifications (BE READY)
   NOTIFICATIONS: {
     LIST: '/notifications',
+    UNREAD_COUNT: '/notifications/unread-count',
     READ: (id: string) => `/notifications/${id}/read`,
     READ_ALL: '/notifications/read-all',
   },
@@ -181,15 +182,18 @@ export const API_ENDPOINTS = {
     GEOCODE: '/location/geocode',
   },
   ADMIN_RESTAURANTS: {
+    QUEUE: '/admin/restaurants',
     LIST: '/admin/restaurants',
     REVIEW: (id: string) => `/admin/restaurants/${id}/review`,
   },
-  // TODO(BE-READY): AI governance còn PLANNED — nhánh dưới CHƯA được import ở đâu.
+  // Phase 26: Admin AI Governance & Safety (READY)
   AI_GOVERNANCE: {
+    HEALTH: '/admin/ai/health',
     METRICS: '/admin/ai/metrics',
     REQUESTS: '/admin/ai/requests',
     FLAGS: '/admin/ai/flags',
     FEATURES: '/admin/ai/features',
+    FEATURES_AUDIT: '/admin/ai/features/audit',
     FEATURE_TOGGLE: (feature: string) => `/admin/ai/features/${feature}`,
   },
   // Custom meals Phase 17 — phục vụ món ăn cá nhân (Owner-scoped)
