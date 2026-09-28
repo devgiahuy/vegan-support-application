@@ -1,11 +1,7 @@
 import { createHash } from 'node:crypto';
-import {
-  AiArtifactType,
-  AiVerificationStatus,
-  type Prisma,
-  type Role,
-} from '@prisma/client';
+import { AiArtifactType, AiVerificationStatus, type Prisma, type Role } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
+import type { z } from '../../common/validation/zod.js';
 import {
   AiReviewConflictError,
   type AiArtifactRecord,
@@ -30,6 +26,34 @@ function decimal(value: { toNumber(): number } | null): number | null {
   return value?.toNumber() ?? null;
 }
 
+function defaultArtifactPresentation(content: z.infer<typeof artifactContentSchema>): {
+  title: string;
+  summary: string;
+} {
+  switch (content.type) {
+    case AiArtifactType.CHAT_ANSWER:
+      return {
+        title: 'Câu trả lời dinh dưỡng từ AI',
+        summary: content.answer.slice(0, 5_000),
+      };
+    case AiArtifactType.RECIPE_NUTRITION:
+      return {
+        title: content.recipe.title.slice(0, 160),
+        summary: 'Ước tính dinh dưỡng cho công thức, có kèm nguồn gốc và độ không chắc chắn.',
+      };
+    case AiArtifactType.FRIDGE_RECOGNITION:
+      return {
+        title: 'Kết quả nhận diện nguyên liệu',
+        summary: 'Các nguyên liệu được AI đề xuất từ ảnh và cần người dùng kiểm tra lại.',
+      };
+    case AiArtifactType.RECEIPT_EXTRACTION:
+      return {
+        title: 'Kết quả phân tích hóa đơn',
+        summary: 'Các mặt hàng được AI trích xuất từ hóa đơn và cần người dùng kiểm tra lại.',
+      };
+  }
+}
+
 function nutrientSnapshot(value: Prisma.JsonValue) {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {
@@ -42,19 +66,22 @@ function nutrientSnapshot(value: Prisma.JsonValue) {
       typeof row.unit !== 'string' ||
       typeof row.origin !== 'string' ||
       typeof row.confidence !== 'number'
-    ) return [];
-    return [{
-      code: row.nutrientCode,
-      name: row.nutrientName,
-      amount: row.amount,
-      unit: row.unit,
-      origin: row.origin,
-      confidence: row.confidence,
-      range: {
-        min: typeof row.min === 'number' ? row.min : null,
-        max: typeof row.max === 'number' ? row.max : null,
+    )
+      return [];
+    return [
+      {
+        code: row.nutrientCode,
+        name: row.nutrientName,
+        amount: row.amount,
+        unit: row.unit,
+        origin: row.origin,
+        confidence: row.confidence,
+        range: {
+          min: typeof row.min === 'number' ? row.min : null,
+          max: typeof row.max === 'number' ? row.max : null,
+        },
       },
-    }];
+    ];
   });
 }
 
@@ -72,22 +99,26 @@ export class AiReviewService {
       throw new AppError({
         statusCode: 422,
         code: 'AI_ARTIFACT_SOURCE_NOT_ELIGIBLE',
-        message: 'The selected AI output is unavailable, private to another user, incomplete, or not eligible.',
+        message:
+          'The selected AI output is unavailable, private to another user, incomplete, or not eligible.',
       });
     }
     const content = artifactContentSchema.parse(source.snapshot);
+    const presentation = defaultArtifactPresentation(content);
     try {
-      return this.serialize(await this.repository.createArtifact({
-        ownerId,
-        type: input.type,
-        sourceId: input.sourceId,
-        sourceVersion: source.version,
-        snapshot: content,
-        snapshotHash: hash(content),
-        title: input.title,
-        summary: input.summary,
-        authorAnonymous: input.authorAnonymous,
-      }));
+      return this.serialize(
+        await this.repository.createArtifact({
+          ownerId,
+          type: input.type,
+          sourceId: input.sourceId,
+          sourceVersion: source.version,
+          snapshot: content,
+          snapshotHash: hash(content),
+          title: input.title ?? presentation.title,
+          summary: input.summary ?? presentation.summary,
+          authorAnonymous: input.authorAnonymous,
+        }),
+      );
     } catch (error) {
       throw this.mapConflict(error);
     }
@@ -151,13 +182,20 @@ export class AiReviewService {
         evidenceNote: input.evidenceNote,
         correction: input.correction ?? null,
       });
-      return { artifact: this.serialize(result.artifact), verification: this.serializeVerification(result.verification) };
+      return {
+        artifact: this.serialize(result.artifact),
+        verification: this.serializeVerification(result.verification),
+      };
     } catch (error) {
       throw this.mapConflict(error);
     }
   }
 
-  async adminAction(actorId: string, verificationId: string, input: AdminAiVerificationActionInput) {
+  async adminAction(
+    actorId: string,
+    verificationId: string,
+    input: AdminAiVerificationActionInput,
+  ) {
     try {
       const result = await this.repository.adminAction({
         verificationId,
@@ -177,15 +215,26 @@ export class AiReviewService {
           : {}),
       });
       if (!result) {
-        throw new AppError({ statusCode: 404, code: 'AI_VERIFICATION_NOT_FOUND', message: 'AI verification was not found.' });
+        throw new AppError({
+          statusCode: 404,
+          code: 'AI_VERIFICATION_NOT_FOUND',
+          message: 'AI verification was not found.',
+        });
       }
-      return { artifact: this.serialize(result.artifact), verification: this.serializeVerification(result.verification) };
+      return {
+        artifact: this.serialize(result.artifact),
+        verification: this.serializeVerification(result.verification),
+      };
     } catch (error) {
       throw this.mapConflict(error);
     }
   }
 
-  private async snapshot(ownerId: string, type: AiArtifactType, sourceId: string): Promise<{
+  private async snapshot(
+    ownerId: string,
+    type: AiArtifactType,
+    sourceId: string,
+  ): Promise<{
     version: number;
     snapshot: Prisma.InputJsonObject;
   } | null> {
@@ -201,7 +250,10 @@ export class AiReviewService {
             snapshot: {
               type,
               recipe: { title: source.revision.title, servings: source.servings },
-              totals: { rawGrams: source.totalRawGrams.toNumber(), cookedGrams: source.totalCookedGrams.toNumber() },
+              totals: {
+                rawGrams: source.totalRawGrams.toNumber(),
+                cookedGrams: source.totalCookedGrams.toNumber(),
+              },
               perServingNutrients: nutrientSnapshot(source.perServingNutrients),
               confidence: source.confidence.toNumber(),
               disclaimer: source.disclaimer,
@@ -213,7 +265,9 @@ export class AiReviewService {
       const source = await this.repository.findOwnedRecognition(ownerId, sourceId);
       return source
         ? {
-            version: source.attemptCount * 100_000 + source.candidates.reduce((sum, candidate) => sum + candidate.version, 0),
+            version:
+              source.attemptCount * 100_000 +
+              source.candidates.reduce((sum, candidate) => sum + candidate.version, 0),
             snapshot: {
               type,
               items: source.candidates.map((candidate) => ({
@@ -229,7 +283,9 @@ export class AiReviewService {
     const source = await this.repository.findOwnedReceipt(ownerId, sourceId);
     return source
       ? {
-          version: source.attemptCount * 100_000 + source.candidates.reduce((sum, candidate) => sum + candidate.version, 0),
+          version:
+            source.attemptCount * 100_000 +
+            source.candidates.reduce((sum, candidate) => sum + candidate.version, 0),
           snapshot: {
             type,
             items: source.candidates.map((candidate) => ({
@@ -244,7 +300,9 @@ export class AiReviewService {
   }
 
   private serialize(record: AiArtifactRecord) {
-    const history = record.verifications.map((verification) => this.serializeVerification(verification));
+    const history = record.verifications.map((verification) =>
+      this.serializeVerification(verification),
+    );
     return {
       id: record.id,
       type: record.type,
@@ -263,7 +321,8 @@ export class AiReviewService {
         submittedAt: record.submittedAt?.toISOString() ?? null,
         sharedAt: record.sharedAt?.toISOString() ?? null,
       },
-      activeVerification: history.find((verification) => verification.status === AiVerificationStatus.ACTIVE) ?? null,
+      activeVerification:
+        history.find((verification) => verification.status === AiVerificationStatus.ACTIVE) ?? null,
       verificationHistory: history,
       createdAt: record.createdAt.toISOString(),
     };
@@ -286,27 +345,56 @@ export class AiReviewService {
   }
 
   private notFound(): AppError {
-    return new AppError({ statusCode: 404, code: 'AI_ARTIFACT_NOT_FOUND', message: 'AI artifact was not found.' });
+    return new AppError({
+      statusCode: 404,
+      code: 'AI_ARTIFACT_NOT_FOUND',
+      message: 'AI artifact was not found.',
+    });
   }
 
   private mapConflict(error: unknown): Error {
     if (error instanceof AppError) return error;
-    if (!(error instanceof AiReviewConflictError)) return error instanceof Error ? error : new Error('Unknown AI review error');
+    if (!(error instanceof AiReviewConflictError))
+      return error instanceof Error ? error : new Error('Unknown AI review error');
     if (error.kind === 'SOURCE_ALREADY_SAVED') {
-      return new AppError({ statusCode: 409, code: 'AI_ARTIFACT_ALREADY_SAVED', message: 'This version of the AI output has already been saved.' });
+      return new AppError({
+        statusCode: 409,
+        code: 'AI_ARTIFACT_ALREADY_SAVED',
+        message: 'This version of the AI output has already been saved.',
+      });
     }
     if (error.kind === 'ARTIFACT_VERSION') {
-      return new AppError({ statusCode: 409, code: 'AI_ARTIFACT_VERSION_CONFLICT', message: 'The artifact version is stale; refresh before continuing.' });
+      return new AppError({
+        statusCode: 409,
+        code: 'AI_ARTIFACT_VERSION_CONFLICT',
+        message: 'The artifact version is stale; refresh before continuing.',
+      });
     }
     if (error.kind === 'VERIFICATION_EXISTS') {
-      return new AppError({ statusCode: 409, code: 'AI_VERIFICATION_ALREADY_EXISTS', message: 'This artifact already has an active verification.' });
+      return new AppError({
+        statusCode: 409,
+        code: 'AI_VERIFICATION_ALREADY_EXISTS',
+        message: 'This artifact already has an active verification.',
+      });
     }
     if (error.kind === 'VERIFICATION_VERSION') {
-      return new AppError({ statusCode: 409, code: 'AI_VERIFICATION_VERSION_CONFLICT', message: 'The verification changed; refresh before continuing.' });
+      return new AppError({
+        statusCode: 409,
+        code: 'AI_VERIFICATION_VERSION_CONFLICT',
+        message: 'The verification changed; refresh before continuing.',
+      });
     }
     if (error.kind === 'VERIFICATION_STATE') {
-      return new AppError({ statusCode: 409, code: 'AI_VERIFICATION_STATE_CONFLICT', message: 'The verification is no longer active.' });
+      return new AppError({
+        statusCode: 409,
+        code: 'AI_VERIFICATION_STATE_CONFLICT',
+        message: 'The verification is no longer active.',
+      });
     }
-    return new AppError({ statusCode: 409, code: 'AI_ARTIFACT_STATE_CONFLICT', message: 'The artifact is not in a state that permits this action.' });
+    return new AppError({
+      statusCode: 409,
+      code: 'AI_ARTIFACT_STATE_CONFLICT',
+      message: 'The artifact is not in a state that permits this action.',
+    });
   }
 }

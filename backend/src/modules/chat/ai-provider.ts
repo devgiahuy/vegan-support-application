@@ -1,6 +1,20 @@
 import { randomUUID } from 'node:crypto';
 import OpenAI from 'openai';
+import { z } from '../../common/validation/zod.js';
 import type { AppConfig } from '../../config/env.js';
+
+const optionalNutritionAmountSchema = z.number().finite().nonnegative().max(999_999).nullable();
+const customMealNutritionFallbackSchema = z
+  .object({
+    calories: optionalNutritionAmountSchema,
+    proteinGrams: optionalNutritionAmountSchema,
+    carbsGrams: optionalNutritionAmountSchema,
+    fatGrams: optionalNutritionAmountSchema,
+    fiberGrams: optionalNutritionAmountSchema,
+    confidence: z.number().min(0).max(1),
+    uncertaintyNote: z.string().trim().min(1).max(2_000),
+  })
+  .strict();
 
 export interface AiChatMessage {
   role: 'user' | 'assistant';
@@ -53,6 +67,31 @@ export interface RecipeNutritionFallbackSuggestion {
   }>;
 }
 
+export interface CustomMealNutritionFallbackInput {
+  mealName: string;
+  servings: number;
+  ingredients: Array<{
+    displayName: string;
+    canonicalName: string | null;
+    amount: number;
+    unit: string;
+  }>;
+  missingMetrics: Array<
+    'calories' | 'proteinGrams' | 'carbsGrams' | 'fatGrams' | 'fiberGrams'
+  >;
+  signal: AbortSignal;
+}
+
+export interface CustomMealNutritionFallbackSuggestion {
+  calories: number | null;
+  proteinGrams: number | null;
+  carbsGrams: number | null;
+  fatGrams: number | null;
+  fiberGrams: number | null;
+  confidence: number;
+  uncertaintyNote: string;
+}
+
 export type AiChatChunk =
   | { type: 'delta'; delta: string }
   | {
@@ -66,10 +105,16 @@ export interface AiProvider {
   readonly name: 'openai' | 'fake' | 'unavailable';
   readonly chatModel: string;
   streamChat(input: AiChatInput): AsyncIterable<AiChatChunk>;
-  moderate(input: string, signal: AbortSignal): Promise<{ flagged: boolean; unavailable?: boolean }>;
+  moderate(
+    input: string,
+    signal: AbortSignal,
+  ): Promise<{ flagged: boolean; unavailable?: boolean }>;
   suggestRecipeNutritionFallback(
     input: RecipeNutritionFallbackInput,
   ): Promise<RecipeNutritionFallbackSuggestion>;
+  suggestCustomMealNutritionFallback(
+    input: CustomMealNutritionFallbackInput,
+  ): Promise<CustomMealNutritionFallbackSuggestion>;
 }
 
 export class AiProviderUnavailableError extends Error {
@@ -183,6 +228,40 @@ export class OpenAiProvider implements AiProvider {
       throw new AiProviderResponseError('AI nutrition fallback returned invalid JSON');
     }
   }
+
+  async suggestCustomMealNutritionFallback(
+    input: CustomMealNutritionFallbackInput,
+  ): Promise<CustomMealNutritionFallbackSuggestion> {
+    let content = '';
+    for await (const chunk of this.streamChat({
+      instructions: [
+        'Return only compact JSON estimating total nutrition for the entire custom meal.',
+        'Use this exact shape: {"calories":null,"proteinGrams":null,"carbsGrams":null,"fatGrams":null,"fiberGrams":null,"confidence":0,"uncertaintyNote":""}.',
+        'Estimate only metrics listed in missingMetrics; leave all other metrics null.',
+        'Never present estimates as measured or canonical values. Use null when the ingredients or amounts are insufficient.',
+        'Write uncertaintyNote in Vietnamese. All non-null nutrition values must be finite and non-negative; confidence must be from 0 to 1.',
+      ].join('\n'),
+      messages: [
+        {
+          role: 'user',
+          content: JSON.stringify({
+            mealName: input.mealName,
+            servings: input.servings,
+            ingredients: input.ingredients,
+            missingMetrics: input.missingMetrics,
+          }),
+        },
+      ],
+      signal: input.signal,
+    })) {
+      if (chunk.type === 'delta') content += chunk.delta;
+    }
+    try {
+      return customMealNutritionFallbackSchema.parse(JSON.parse(content) as unknown);
+    } catch {
+      throw new AiProviderResponseError('AI custom-meal nutrition fallback returned invalid JSON');
+    }
+  }
 }
 
 export class FakeAiProvider implements AiProvider {
@@ -232,9 +311,7 @@ export class FakeAiProvider implements AiProvider {
         ? input.steps.flatMap((step) => {
             const normalized = step.instruction.toLocaleLowerCase('vi');
             return !step.cookingMethodCode &&
-              ['luộc', 'luoc', 'nấu', 'nau', 'sôi', 'soi'].some((term) =>
-                normalized.includes(term),
-              )
+              ['luộc', 'luoc', 'nấu', 'nau', 'sôi', 'soi'].some((term) => normalized.includes(term))
               ? [
                   {
                     stepPosition: step.position,
@@ -248,6 +325,23 @@ export class FakeAiProvider implements AiProvider {
         : [],
       yieldFactors: [],
       retentionFactors: [],
+    });
+  }
+
+  suggestCustomMealNutritionFallback(
+    input: CustomMealNutritionFallbackInput,
+  ): Promise<CustomMealNutritionFallbackSuggestion> {
+    if (input.signal.aborted) {
+      return Promise.reject(new Error('Request aborted', { cause: input.signal.reason }));
+    }
+    return Promise.resolve({
+      calories: null,
+      proteinGrams: null,
+      carbsGrams: null,
+      fatGrams: null,
+      fiberGrams: null,
+      confidence: 0,
+      uncertaintyNote: 'Bộ cung cấp thử nghiệm không ước tính dinh dưỡng khi thiếu dữ liệu chuẩn.',
     });
   }
 }
@@ -275,6 +369,10 @@ export class UnavailableAiProvider implements AiProvider {
   }
 
   suggestRecipeNutritionFallback(): Promise<RecipeNutritionFallbackSuggestion> {
+    return Promise.reject(new AiProviderUnavailableError());
+  }
+
+  suggestCustomMealNutritionFallback(): Promise<CustomMealNutritionFallbackSuggestion> {
     return Promise.reject(new AiProviderUnavailableError());
   }
 }

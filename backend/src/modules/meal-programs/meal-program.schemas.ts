@@ -24,7 +24,7 @@ const mondaySchema = dateOnlySchema.refine(
 
 export const createMealProgramRequestSchema = z
   .object({
-    title: z.string().trim().min(1).max(200),
+    title: z.string().trim().min(1).max(200).optional(),
     goal: z.enum(MealGoal),
     startDate: mondaySchema,
     timezone: z.string().trim().min(1).max(64).refine(validTimeZone, 'timezone IANA không hợp lệ'),

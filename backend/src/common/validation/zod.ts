@@ -14,4 +14,13 @@ export const mediaUrlSchema = z
     example: 'https://example.com/image.jpg',
   });
 
+export const nullableMediaUrlSchema = z
+  .union([
+    z.string().refine((val) => val.startsWith('/') || /^https?:\/\//.test(val), {
+      message: 'URL must be a valid HTTP/HTTPS URL or root-relative path',
+    }),
+    z.null(),
+  ])
+  .openapi({ type: ['string', 'null'] });
+
 export { z };

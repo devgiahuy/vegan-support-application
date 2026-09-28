@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.16
+**Version:** 4.17
 
 **Cập nhật:** 28/09/2026
 
@@ -966,6 +966,8 @@ Thêm entry mới nhất ở trên cùng.
 
 Runtime note 2026-09-28 (v4.16): local Phase 21/22 startup now enables the configured OpenAI-compatible image adapters by default, uses the canonical `fake` identity for deterministic governed fixtures, and rebuilds backend output before `npm start`. API shapes and confirmation boundaries are unchanged; shared/production environments should remain disabled until representative-image validation passes.
 
+Change 2026-09-28 (v4.17): backward-compatible validation relaxation makes Custom Meal ingredient `position`, Meal Program create `title`, and AI Artifact create `title`/`summary` optional; long-form notes and evidence retain larger bounded limits. Phase 21/22 AI descriptions are Vietnamese while raw receipt merchant/original line text remains unchanged. Custom Meal creation performs best-effort canonical nutrition calculation before governed AI fallback, stores provenance/confidence/uncertainty internally, preserves missing metrics as `null`, and does not roll back creation on provider failure. Routes and response shapes are unchanged; clients should sync OpenAPI and may stop sending the newly optional fields.
+
 | Date       | Version | Module                 | Change                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |    Breaking     | FE action                                                                                                                                                                                                                      |
 | ---------- | ------- | ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :-------------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | 2026-09-27 | 5.2     | Meal Analysis          | Hoàn thành tích hợp Phase 18: kết nối API phân tích thực đơn (POST/GET /meal-plans/:id/analyze, /analysis), hỗ trợ thêm món cá nhân và công thức (PATCH /manual-add) kèm số khẩu phần tùy chọn (servings), hiển thị badge "Món cá nhân" và phân tích tương thích món/dinh dưỡng vi chất/cảnh báo kỵ thực phẩm trên DayGrid; 14 mapper tests pass 100%, npx tsc 0 lỗi, next build 39 routes pass.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |       No        | Sẵn sàng sử dụng trong UI thực đơn /meal-plans/[id].                                                                                                                                                                           |
@@ -1102,6 +1104,8 @@ Một frontend/backend capability chỉ được xem là tích hợp xong khi:
 - Asset attached as photo must be owned by the same user and of COVER_IMAGE kind.
 - Deleting a MediaAsset used as a custom meal photo is blocked (409 ASSET_IN_USE) by storage module.
 - MealPlanItem now has sourceType (RECIPE|CUSTOM_MEAL) and customMealId; existing rows default to RECIPE.
+- `userCalories`, `userProteinGrams`, `userCarbsGrams`, and `userFatGrams` remain optional. After creation, the backend fills only missing values from reviewed Food Data where possible, then uses a labeled AI estimate only for still-missing metrics. Missing metrics remain `null`, never zero. Provenance, confidence, uncertainty, uncovered ingredients, and provider-failure state are stored internally; the existing response shape is unchanged.
+- `ingredients[].position` is optional; when omitted, array order is used. `sourceNote` accepts up to 2,000 characters.
 
 **Error codes:**
 
@@ -1156,6 +1160,7 @@ Một frontend/backend capability chỉ được xem là tích hợp xong khi:
 - Weekly snapshots: alternatives snapshot base meal plans so future recipe/plan changes do not corrupt active programs.
 - Confirmation lifecycle: once confirmed (`CONFIRMED`), program structure is locked against further generation edits (`PROGRAM_ALREADY_CONFIRMED`).
 - Cross-week aggregated analysis: aggregates nutrition and nutrient limits across weeks, invalidating downstream weeks if alternative changed.
+- Create `title` is optional; the backend generates a Vietnamese bounded title from the requested horizon when omitted.
 
 **Error codes:**
 
@@ -1220,6 +1225,7 @@ Một frontend/backend capability chỉ được xem là tích hợp xong khi:
 - Storage integration prerequisite: 1–6 images must be reserved and committed via `/uploads/reservations` with `kind: FRIDGE_IMAGE`.
 - Sole Pantry Mutation Boundary: Job creation, processing, candidate editing, cancellation, and retry NEVER mutate pantry items. Only `POST /confirm` writes to pantry.
 - Freshness Disclaimer: Freshness is visual estimation only. UI must display cautious disclaimer copy and not certify food safety.
+- AI-generated candidate names, freshness observations, uncertainty notes, image issues, and the freshness disclaimer are Vietnamese. Canonical Vietnamese ingredient names take precedence when a reviewed match exists.
 - Idempotency & Concurrency: Candidate edit requires `expectedVersion` to guard against concurrent edits (`RECOGNITION_CANDIDATE_VERSION_CONFLICT`). Confirm, cancel, and retry are idempotent.
 - Confirmation Safety: Cannot confirm job unless status is `READY_FOR_REVIEW` or `COMPLETED`. Confirming twice returns identical pantry diff.
 
@@ -1256,6 +1262,7 @@ Một frontend/backend capability chỉ được xem là tích hợp xong khi:
 - Idempotency & Concurrency: Candidate edits require `expectedVersion` to guard against concurrent overwrites (`RECEIPT_CANDIDATE_VERSION_CONFLICT`).
 - Confirmation Safety: Confirmation accepts explicit `{ id, expectedVersion }[]` array and idempotency key, invalidating pantry cache on client.
 - Shopping Gap Pantry Authority: Only confirmed, positive pantry balances offset recipe requirement grams. Inconvertible or unresolved items are placed into `unresolvedItems`.
+- AI-generated candidate names, uncertainty notes, and extraction issues are Vietnamese. Raw merchant names and original `lineText` remain unmodified.
 
 ### 6.18 AI Artifacts & Unified Contributor Verification — Phase 23
 
@@ -1277,6 +1284,7 @@ Một frontend/backend capability chỉ được xem là tích hợp xong khi:
 - Optimistic Concurrency: Sharing and submitting require `expectedLifecycleVersion`, and verification requires `expectedArtifactVersion` (`AI_ARTIFACT_VERSION_CONFLICT` / 409).
 - Badge Language Rule: UI must say "Được kiểm chứng bởi Người đóng góp", NEVER "chứng nhận khoa học", accompanied by a Medical Disclaimer.
 - Admin Audit: Admin override and revoke actions require a non-empty audit reason (>= 3 chars) and mark prior verifications as `SUPERSEDED` or `REVOKED`.
+- Artifact `title` and `summary` are optional on create; the backend derives bounded Vietnamese presentation text from the immutable source snapshot when omitted.
 
 | Code                      | HTTP | Description                                 |
 | ------------------------- | ---- | ------------------------------------------- |

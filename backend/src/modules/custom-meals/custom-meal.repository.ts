@@ -11,8 +11,16 @@ import { AppError } from '../../common/errors/app-error.js';
 import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 
 const customMealInclude = {
-  ingredients: { orderBy: { position: 'asc' as const }, include: { ingredient: { select: { id: true, canonicalName: true } } } },
-  photos: { orderBy: { position: 'asc' as const }, include: { asset: { select: { id: true, secureUrl: true, mimeType: true, width: true, height: true } } } },
+  ingredients: {
+    orderBy: { position: 'asc' as const },
+    include: { ingredient: { select: { id: true, canonicalName: true } } },
+  },
+  photos: {
+    orderBy: { position: 'asc' as const },
+    include: {
+      asset: { select: { id: true, secureUrl: true, mimeType: true, width: true, height: true } },
+    },
+  },
   tags: { orderBy: { normalizedTag: 'asc' as const } },
 } satisfies Prisma.CustomMealInclude;
 
@@ -127,11 +135,83 @@ export class CustomMealRepository {
     });
   }
 
-  async update(id: string, ownerId: string, data: UpdateCustomMealData): Promise<CustomMealRecord | null> {
+  findNutritionProfiles(ingredientIds: string[]) {
+    if (ingredientIds.length === 0) return Promise.resolve([]);
+    const today = new Date();
+    return this.prisma.ingredientFoodProfile.findMany({
+      where: {
+        ingredientId: { in: ingredientIds },
+        reviewStatus: FoodDataReviewStatus.APPROVED,
+        effectiveFrom: { lte: today },
+        OR: [{ effectiveTo: null }, { effectiveTo: { gte: today } }],
+        source: { active: true },
+      },
+      include: {
+        source: { select: { code: true } },
+        householdConversions: {
+          where: { reviewStatus: FoodDataReviewStatus.APPROVED },
+        },
+        nutrientValues: {
+          where: {
+            reviewStatus: FoodDataReviewStatus.APPROVED,
+            effectiveFrom: { lte: today },
+            OR: [{ effectiveTo: null }, { effectiveTo: { gte: today } }],
+            nutrient: { code: { in: ['ENERGY_KCAL', 'PROTEIN', 'CARBS', 'FAT', 'FIBER'] } },
+          },
+          include: { nutrient: { select: { code: true, name: true } } },
+        },
+      },
+      orderBy: [{ effectiveFrom: 'desc' }, { updatedAt: 'desc' }],
+    });
+  }
+
+  async saveNutritionAnalysis(
+    ownerId: string,
+    id: string,
+    values: {
+      calories?: number;
+      proteinGrams?: number;
+      carbsGrams?: number;
+      fatGrams?: number;
+      metadata: Prisma.InputJsonObject;
+      coverage: NutritionCoverage;
+    },
+  ): Promise<CustomMealRecord | null> {
+    const current = await this.findOwned(ownerId, id);
+    if (!current) return null;
+    return this.prisma.customMeal.update({
+      where: { id },
+      data: {
+        ...(current.userCalories === null && values.calories !== undefined
+          ? { userCalories: Math.round(values.calories) }
+          : {}),
+        ...(current.userProteinGrams === null && values.proteinGrams !== undefined
+          ? { userProteinGrams: values.proteinGrams }
+          : {}),
+        ...(current.userCarbsGrams === null && values.carbsGrams !== undefined
+          ? { userCarbsGrams: values.carbsGrams }
+          : {}),
+        ...(current.userFatGrams === null && values.fatGrams !== undefined
+          ? { userFatGrams: values.fatGrams }
+          : {}),
+        nutritionMetadata: values.metadata,
+        nutritionAnalyzedAt: new Date(),
+        nutritionCoverage: values.coverage,
+      },
+      include: customMealInclude,
+    });
+  }
+
+  async update(
+    id: string,
+    ownerId: string,
+    data: UpdateCustomMealData,
+  ): Promise<CustomMealRecord | null> {
     const existing = await this.findOwned(ownerId, id);
     if (!existing) return null;
 
-    let resolvedIngredients: Awaited<ReturnType<typeof this.resolveIngredients>>['resolvedIngredients'] | undefined;
+    let resolvedIngredients:
+      Awaited<ReturnType<typeof this.resolveIngredients>>['resolvedIngredients'] | undefined;
     let nutritionCoverage: NutritionCoverage | undefined;
 
     if (data.ingredients !== undefined) {
@@ -155,7 +235,9 @@ export class CustomMealRepository {
           ...(data.servings !== undefined ? { servings: data.servings } : {}),
           ...(data.sourceNote !== undefined ? { sourceNote: data.sourceNote?.trim() ?? null } : {}),
           ...(data.userCalories !== undefined ? { userCalories: data.userCalories } : {}),
-          ...(data.userProteinGrams !== undefined ? { userProteinGrams: data.userProteinGrams } : {}),
+          ...(data.userProteinGrams !== undefined
+            ? { userProteinGrams: data.userProteinGrams }
+            : {}),
           ...(data.userCarbsGrams !== undefined ? { userCarbsGrams: data.userCarbsGrams } : {}),
           ...(data.userFatGrams !== undefined ? { userFatGrams: data.userFatGrams } : {}),
           ...(nutritionCoverage !== undefined ? { nutritionCoverage } : {}),
@@ -163,9 +245,7 @@ export class CustomMealRepository {
           ...(resolvedIngredients !== undefined
             ? { ingredients: { create: resolvedIngredients } }
             : {}),
-          ...(data.tags !== undefined
-            ? { tags: { create: this.normalizeTags(data.tags) } }
-            : {}),
+          ...(data.tags !== undefined ? { tags: { create: this.normalizeTags(data.tags) } } : {}),
         },
         include: customMealInclude,
       });
@@ -314,13 +394,14 @@ export class CustomMealRepository {
     const noneResolved = resolvedIngredients.every(
       (ing) => ing.resolutionStatus === IngredientResolutionStatus.UNKNOWN,
     );
-    const nutritionCoverage: NutritionCoverage = ingredients.length === 0
-      ? NutritionCoverage.UNAVAILABLE
-      : allResolved
-        ? NutritionCoverage.COMPLETE
-        : noneResolved
-          ? NutritionCoverage.UNAVAILABLE
-          : NutritionCoverage.PARTIAL;
+    const nutritionCoverage: NutritionCoverage =
+      ingredients.length === 0
+        ? NutritionCoverage.UNAVAILABLE
+        : allResolved
+          ? NutritionCoverage.COMPLETE
+          : noneResolved
+            ? NutritionCoverage.UNAVAILABLE
+            : NutritionCoverage.PARTIAL;
 
     return { resolvedIngredients, nutritionCoverage };
   }

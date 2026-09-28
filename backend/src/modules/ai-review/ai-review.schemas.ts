@@ -12,8 +12,8 @@ export const createAiArtifactSchema = z
   .object({
     type: z.nativeEnum(AiArtifactType),
     sourceId: z.string().uuid(),
-    title: z.string().trim().min(3).max(160),
-    summary: z.string().trim().min(3).max(1000),
+    title: z.string().trim().min(3).max(160).optional(),
+    summary: z.string().trim().min(3).max(5_000).optional(),
     authorAnonymous: z.boolean().default(true),
   })
   .strict();
@@ -42,9 +42,9 @@ export const publicAiArtifactsQuerySchema = z
 
 const verificationFields = {
   conclusion: z.nativeEnum(AiVerificationConclusion),
-  scope: z.string().trim().min(3).max(500),
-  evidenceNote: z.string().trim().min(3).max(2000),
-  correction: z.string().trim().min(3).max(2000).nullable().optional(),
+  scope: z.string().trim().min(3).max(2_000),
+  evidenceNote: z.string().trim().min(3).max(10_000),
+  correction: z.string().trim().min(3).max(10_000).nullable().optional(),
 };
 
 export const createAiVerificationSchema = z
@@ -55,7 +55,11 @@ export const createAiVerificationSchema = z
   .strict()
   .superRefine((value, context) => {
     if (value.conclusion === AiVerificationConclusion.CORRECTION_NEEDED && !value.correction) {
-      context.addIssue({ code: 'custom', path: ['correction'], message: 'A scoped correction is required.' });
+      context.addIssue({
+        code: 'custom',
+        path: ['correction'],
+        message: 'A scoped correction is required.',
+      });
     }
   });
 
@@ -64,20 +68,24 @@ export const adminAiVerificationActionSchema = z.discriminatedUnion('action', [
     .object({
       action: z.literal('OVERRIDE'),
       expectedVersion: z.number().int().positive(),
-      reason: z.string().trim().min(3).max(2000),
+      reason: z.string().trim().min(3).max(10_000),
       ...verificationFields,
     })
     .strict()
     .superRefine((value, context) => {
       if (value.conclusion === AiVerificationConclusion.CORRECTION_NEEDED && !value.correction) {
-        context.addIssue({ code: 'custom', path: ['correction'], message: 'A scoped correction is required.' });
+        context.addIssue({
+          code: 'custom',
+          path: ['correction'],
+          message: 'A scoped correction is required.',
+        });
       }
     }),
   z
     .object({
       action: z.literal('REVOKE'),
       expectedVersion: z.number().int().positive(),
-      reason: z.string().trim().min(3).max(2000),
+      reason: z.string().trim().min(3).max(10_000),
     })
     .strict(),
 ]);
@@ -160,11 +168,19 @@ export const aiArtifactSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
-export const aiArtifactEnvelopeSchema = z.object({ success: z.literal(true), data: aiArtifactSchema });
+export const aiArtifactEnvelopeSchema = z.object({
+  success: z.literal(true),
+  data: aiArtifactSchema,
+});
 export const publicAiArtifactListEnvelopeSchema = z.object({
   success: z.literal(true),
   data: z.array(aiArtifactSchema),
-  meta: z.object({ page: z.number().int(), limit: z.number().int(), total: z.number().int(), totalPages: z.number().int() }),
+  meta: z.object({
+    page: z.number().int(),
+    limit: z.number().int(),
+    total: z.number().int(),
+    totalPages: z.number().int(),
+  }),
 });
 export const aiVerificationEnvelopeSchema = z.object({
   success: z.literal(true),

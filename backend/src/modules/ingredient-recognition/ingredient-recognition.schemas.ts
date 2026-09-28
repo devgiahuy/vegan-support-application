@@ -29,34 +29,33 @@ export const updateRecognitionCandidateSchema = z
     ...candidateIdentityFields,
     quantity: z.number().positive().max(999_999_999).nullable().optional(),
     unit: z.string().trim().min(1).max(40).nullable().optional(),
-    freshnessObservation: z.string().trim().min(1).max(1000).nullable().optional(),
+    freshnessObservation: z.string().trim().min(1).max(2_000).nullable().optional(),
     confidence: z.number().min(0).max(1).optional(),
     decision: z.enum(['KEEP', 'REJECT']).optional(),
   })
   .strict()
-  .refine(
-    (input) =>
-      Object.keys(input).some((key) => key !== 'expectedVersion'),
-    { message: 'Provide at least one candidate change' },
-  );
+  .refine((input) => Object.keys(input).some((key) => key !== 'expectedVersion'), {
+    message: 'Provide at least one candidate change',
+  });
 
 export const confirmRecognitionJobSchema = z
   .object({
     candidates: z
       .array(
-        z
-          .object({ id: z.string().uuid(), expectedVersion: z.number().int().positive() })
-          .strict(),
+        z.object({ id: z.string().uuid(), expectedVersion: z.number().int().positive() }).strict(),
       )
       .min(1)
       .max(100),
     idempotencyKey: idempotencyKeySchema,
   })
   .strict()
-  .refine((input) => new Set(input.candidates.map((item) => item.id)).size === input.candidates.length, {
-    message: 'Candidate IDs must be unique',
-    path: ['candidates'],
-  });
+  .refine(
+    (input) => new Set(input.candidates.map((item) => item.id)).size === input.candidates.length,
+    {
+      message: 'Candidate IDs must be unique',
+      path: ['candidates'],
+    },
+  );
 
 export const retryRecognitionJobSchema = z
   .object({ idempotencyKey: idempotencyKeySchema })
@@ -83,7 +82,11 @@ const candidateSchema = z.object({
   status: z.nativeEnum(RecognitionCandidateStatus),
   version: z.number().int().positive(),
   evidence: z.array(
-    z.object({ imageId: z.string().uuid(), imagePosition: z.number().int(), confidence: z.number() }),
+    z.object({
+      imageId: z.string().uuid(),
+      imagePosition: z.number().int(),
+      confidence: z.number(),
+    }),
   ),
 });
 

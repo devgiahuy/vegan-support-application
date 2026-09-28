@@ -53,8 +53,9 @@ export class MealProgramService {
 
   async create(userId: string, input: CreateMealProgramInput) {
     this.assertCreateLimits(input);
+    const title = input.title ?? `Chương trình dinh dưỡng ${String(input.horizonWeeks)} tuần`;
     const payloadHash = sha256({
-      title: input.title,
+      title,
       goal: input.goal,
       startDate: input.startDate,
       timezone: input.timezone,
@@ -71,7 +72,7 @@ export class MealProgramService {
       existing ??
       (await this.repository.create({
         userId,
-        title: input.title,
+        title,
         goal: input.goal,
         startDate,
         timezone: input.timezone,
