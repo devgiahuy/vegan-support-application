@@ -1,140 +1,173 @@
 import type {
-  AiFeatureListResponseDto,
-  AiFlagListResponseDto,
-  AiMetricsResponseDto,
-  AiRequestListResponseDto,
-  ToggleFeatureResponseDto,
+  AiGovernanceControlResponseDto,
+  AiGovernanceControlsResponseDto,
+  AiGovernanceFlagsResponseDto,
+  AiGovernanceHealthResponseDto,
+  AiGovernanceMetricsResponseDto,
+  AiGovernanceRequestsResponseDto,
 } from '../types/ai-governance.dto';
 
-/** Fixture AI governance (phase scaffold — BE còn `PLANNED`, 0 nội dung thô). */
-export const aiMetricsFixture: AiMetricsResponseDto = {
+/** Fixture AI governance — dùng cho unit test offline */
+export const aiHealthFixture: AiGovernanceHealthResponseDto = {
   success: true,
-  data: [
-    {
-      date: '2026-09-17',
-      feature: 'chat',
-      requests: 120,
-      errorCount: 3,
-      errorRate: 0.025,
-      fallbackCount: 1,
-      fallbackRate: 0.008,
-      avgLatencyMs: 1400,
+  data: {
+    evaluatedAt: '2026-09-27T10:00:00.000Z',
+    last24Hours: {
+      total: 1250,
+      failures: 12,
+      fallback: 4,
+      providerUnavailable: 0,
     },
-    {
-      date: '2026-09-17',
-      feature: 'meal-plan',
-      requests: 45,
-      errorCount: 0,
-      errorRate: 0,
-      fallbackCount: 0,
-      fallbackRate: 0,
-      avgLatencyMs: 900,
-    },
-    {
-      date: '2026-09-16',
-      feature: 'chat',
-      requests: 98,
-      errorCount: 5,
-      errorRate: 0.051,
-      fallbackCount: 2,
-      fallbackRate: 0.02,
-      avgLatencyMs: 1600,
-    },
-  ],
-  meta: null,
+    controls: [
+      {
+        capability: 'CHAT',
+        provider: 'gemini',
+        modelId: 'gemini-1.5-flash',
+        enabled: true,
+        version: 3,
+        fallback: 'HEURISTIC_RULESET',
+        updatedAt: '2026-09-26T14:00:00.000Z',
+      },
+    ],
+    retentionDays: 90,
+  },
 };
 
-export const aiRequestsFixture: AiRequestListResponseDto = {
+export const aiMetricsFixture: AiGovernanceMetricsResponseDto = {
+  success: true,
+  data: {
+    window: { from: '2026-09-20', to: '2026-09-27' },
+    requests: [
+      {
+        capability: 'CHAT',
+        provider: 'gemini',
+        total: 850,
+        failures: 8,
+        fallback: 2,
+        avgLatencyMs: 420,
+      },
+      {
+        capability: 'VISION',
+        provider: 'gemini',
+        total: 240,
+        failures: 3,
+        fallback: 1,
+        avgLatencyMs: 850,
+      },
+    ],
+    feedback: { positive: 450, negative: 20 },
+    moderation: { open: 2, dismissed: 5, actioned: 8, falsePositiveSignals: 1 },
+    recognition: { total: 150, corrected: 15, correctionRate: 0.1 },
+    receipts: { total: 90, corrected: 9, correctionRate: 0.1 },
+    nutrition: { coverage: 0.95, confidence: 0.92 },
+    verification: { total: 50, approved: 45, rejected: 5, revoked: 0 },
+    providerUnavailable: 0,
+  },
+};
+
+export const aiRequestsFixture: AiGovernanceRequestsResponseDto = {
   success: true,
   data: [
     {
       id: 'req-1',
-      promptHash: 'a1b2c3d4e5f60718293a4b5c6',
-      topicCodes: ['PROTEIN', 'B12'],
-      provider: 'openai',
-      modelId: 'gpt-5.6-terra',
-      latencyMs: 1350,
-      tokens: 420,
+      capability: 'CHAT',
+      provider: 'gemini',
+      modelId: 'gemini-1.5-flash',
+      templateVersion: 'v1.2',
+      correlationId: 'corr-001',
       status: 'OK',
-      createdAt: '2026-09-17T10:00:00.000Z',
+      errorClass: null,
+      safetyOutcome: 'SAFE',
+      latencyMs: 420,
+      inputTokens: 180,
+      outputTokens: 310,
+      costMicros: '1200',
+      confidence: 0.95,
+      coverage: 1.0,
+      startedAt: '2026-09-27T09:30:00.000Z',
+      completedAt: '2026-09-27T09:30:00.420Z',
+      redacted: true,
     },
     {
       id: 'req-2',
-      promptHash: 'ff00112233445566778899aabb',
-      topicCodes: [],
-      provider: 'openai',
-      modelId: 'gpt-5.6-terra',
-      latencyMs: null,
-      tokens: null,
+      capability: 'VISION',
+      provider: 'gemini',
+      modelId: 'gemini-1.5-flash',
+      templateVersion: 'v1.0',
+      correlationId: 'corr-002',
       status: 'FALLBACK',
-      createdAt: '2026-09-17T09:00:00.000Z',
+      errorClass: 'LATENCY_EXCEEDED',
+      safetyOutcome: 'SAFE',
+      latencyMs: 1200,
+      inputTokens: 800,
+      outputTokens: 200,
+      costMicros: '2400',
+      confidence: 0.7,
+      coverage: 0.8,
+      startedAt: '2026-09-27T09:15:00.000Z',
+      completedAt: '2026-09-27T09:15:01.200Z',
+      redacted: true,
     },
   ],
   meta: { page: 1, limit: 10, total: 2, totalPages: 1 },
 };
 
-export const aiFlagsFixture: AiFlagListResponseDto = {
+export const aiFlagsFixture: AiGovernanceFlagsResponseDto = {
   success: true,
   data: [
     {
       id: 'flag-1',
-      kind: 'QUOTA_SPIKE',
-      target: 'chat',
+      provider: 'gemini-moderation',
+      model: 'text-moderation-001',
+      riskLevel: 'MEDIUM',
+      riskScore: 0.65,
       status: 'OPEN',
-      createdAt: '2026-09-17T08:00:00.000Z',
-    },
-    {
-      id: 'flag-2',
-      kind: 'FALLBACK_RATE',
-      target: 'meal-plan',
-      status: 'REVIEWED',
-      createdAt: '2026-09-16T08:00:00.000Z',
+      createdAt: '2026-09-27T08:00:00.000Z',
+      reviewedAt: null,
     },
   ],
-  meta: null,
+  meta: { page: 1, limit: 10, total: 1, totalPages: 1 },
 };
 
-export const aiFeaturesFixture: AiFeatureListResponseDto = {
+export const aiFeaturesFixture: AiGovernanceControlsResponseDto = {
   success: true,
   data: [
     {
-      feature: 'chat',
+      capability: 'CHAT',
+      provider: 'gemini',
+      modelId: 'gemini-1.5-flash',
       enabled: true,
-      provider: 'openai',
-      modelId: 'gpt-5.6-terra',
-      updatedBy: 'Admin Demo',
-      updatedAt: '2026-09-17T08:00:00.000Z',
-      updateReason: 'Ổn định sau bảo trì.',
+      version: 3,
+      fallback: 'HEURISTIC_RULESET',
+      updatedAt: '2026-09-26T14:00:00.000Z',
     },
     {
-      feature: 'meal-plan',
+      capability: 'VISION',
+      provider: 'gemini',
+      modelId: 'gemini-1.5-flash',
       enabled: false,
-      provider: 'openai',
-      modelId: 'gpt-5.6-terra',
-      updatedBy: 'Admin Demo',
-      updatedAt: '2026-09-16T08:00:00.000Z',
-      updateReason: 'Tạm tắt khi provider quá tải.',
+      version: 1,
+      fallback: 'DISABLED',
+      updatedAt: '2026-09-25T11:00:00.000Z',
     },
   ],
-  meta: null,
 };
 
 export function toggledFeatureFixture(
-  feature: string,
+  capability: string,
   enabled: boolean,
-  reason: string
-): ToggleFeatureResponseDto {
+  version: number
+): AiGovernanceControlResponseDto {
   return {
     success: true,
     data: {
-      feature,
+      capability,
+      provider: 'gemini',
+      modelId: 'gemini-1.5-flash',
       enabled,
-      provider: 'openai',
-      modelId: 'gpt-5.6-terra',
-      updatedBy: 'Admin Demo',
+      version,
+      fallback: 'HEURISTIC_RULESET',
       updatedAt: new Date().toISOString(),
-      updateReason: reason,
     },
-    meta: null,
   };
 }

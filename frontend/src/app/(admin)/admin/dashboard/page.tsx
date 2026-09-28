@@ -56,11 +56,15 @@ import {
 import { useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
 import { ContribQueueTable } from '@/features/contributor/components/contrib-queue-table';
 import { RestaurantQueueTable } from '@/features/restaurant/components/queue-table';
-import { MetricsOverview } from '@/features/ai-governance/components/metrics-overview';
-import { FlagsList } from '@/features/ai-governance/components/flags-list';
+import {
+  HealthSummary,
+  MetricsOverview,
+  FlagsList,
+  FeaturesTable,
+  RequestsTable,
+  FeaturesAuditTable,
+} from '@/features/ai-governance';
 import { AiVerificationTable } from '@/features/ai-artifacts';
-import { FeaturesTable } from '@/features/ai-governance/components/features-table';
-import { RequestsTable } from '@/features/ai-governance/components/requests-table';
 
 type Tab =
   | 'queue'
@@ -192,7 +196,7 @@ function AdminDashboardContent() {
     { id: 'mod-comments', label: 'Kiểm duyệt BL', icon: MessagesSquare },
     // { id: 'contrib-apps', label: 'Đơn cộng tác', icon: UserCheck },
     { id: 'ai-governance', label: 'Giám sát AI', icon: Bot },
-    // { id: 'restaurants', label: 'Quán chờ duyệt', icon: Store },
+    { id: 'restaurants', label: 'Quán chờ duyệt', icon: Store },
     { id: 'categories', label: 'Cây danh mục', icon: FolderTree },
     { id: 'ingredients', label: 'Nguyên liệu', icon: Leaf },
     { id: 'food-data', label: 'Dữ liệu dinh dưỡng', icon: Database },
@@ -315,14 +319,16 @@ function AdminDashboardContent() {
             {/* TAB: RESTAURANTS — duyệt quán mới (features/restaurant, fixture) */}
             {tab === 'restaurants' && <RestaurantQueueTable />}
 
-            {/* TAB: AI-GOVERNANCE — giám sát AI (features/ai-governance, fixture) */}
+            {/* TAB: AI-GOVERNANCE — giám sát và quản trị an toàn AI (features/ai-governance, Phase 26 Live) */}
             {tab === 'ai-governance' && (
-              <div className="space-y-4">
+              <div className="space-y-5">
+                <HealthSummary />
                 <MetricsOverview />
-                <div className="grid gap-4 lg:grid-cols-2">
-                  <FlagsList />
+                <div className="grid gap-5 lg:grid-cols-2">
                   <FeaturesTable />
+                  <FlagsList />
                 </div>
+                <FeaturesAuditTable />
                 <RequestsTable />
               </div>
             )}

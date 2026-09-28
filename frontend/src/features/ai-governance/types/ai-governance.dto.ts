@@ -1,48 +1,105 @@
 /**
- * DTO AI governance (SUY LUẬN — không có schema swagger, BE còn `PLANNED`).
- * Mọi field optional + `TODO(BE-READY)` reconfirm shape ở task nối live.
- * Envelope `{success, data, meta}` dùng trực tiếp khi nối live.
+ * DTO AI Governance Admin — Phase 26 (READY)
+ * Schema đồng bộ trực tiếp từ OpenAPI (`docs/api/ai-governance-admin.md`).
  */
 
-/** Chỉ số theo ngày/tính năng (thô, suy luận). */
-export interface AiMetricDto {
-  date?: string;
-  feature?: string;
-  requests?: number | string;
-  errorCount?: number | string;
-  errorRate?: number | string;
-  fallbackCount?: number | string;
-  fallbackRate?: number | string;
-  avgLatencyMs?: number | string | null;
+/** 24h Operational Health DTO */
+export interface AiHealthSummaryDto {
+  evaluatedAt?: string;
+  last24Hours?: {
+    total?: number;
+    failures?: number;
+    fallback?: number;
+    providerUnavailable?: number;
+  };
+  controls?: (AiGovernanceControlItemDto | null)[] | null;
+  retentionDays?: number;
 }
 
-/** `GET /admin/ai/metrics` (suy luận). */
-export interface AiMetricsResponseDto {
+export interface AiGovernanceHealthResponseDto {
   success?: boolean;
-  data?: (AiMetricDto | null)[] | null;
-  meta?: null;
+  data?: AiHealthSummaryDto | null;
 }
 
-/** Log che mờ (thô, suy luận) — KHÔNG BAO GIỜ có nội dung thô. */
-export interface AiRequestLogDto {
+/** Aggregated Metrics DTO */
+export interface AiMetricsDataDto {
+  window?: {
+    from?: string;
+    to?: string;
+  };
+  requests?:
+    | {
+        capability?: string;
+        provider?: string;
+        total?: number;
+        failures?: number;
+        fallback?: number;
+        avgLatencyMs?: number | null;
+      }[]
+    | null;
+  feedback?: {
+    positive?: number;
+    negative?: number;
+  };
+  moderation?: {
+    open?: number;
+    dismissed?: number;
+    actioned?: number;
+    falsePositiveSignals?: number;
+  };
+  recognition?: {
+    total?: number;
+    corrected?: number;
+    correctionRate?: number | null;
+  };
+  receipts?: {
+    total?: number;
+    corrected?: number;
+    correctionRate?: number | null;
+  };
+  nutrition?: {
+    coverage?: number | null;
+    confidence?: number | null;
+  };
+  verification?: {
+    total?: number;
+    approved?: number;
+    rejected?: number;
+    revoked?: number;
+  };
+  providerUnavailable?: number;
+}
+
+export interface AiGovernanceMetricsResponseDto {
+  success?: boolean;
+  data?: AiMetricsDataDto | null;
+}
+
+/** Paginated Redacted Request Log Item DTO — Tuyệt đối KHÔNG chứa nội dung thô / PII */
+export interface AiGovernanceRequestItemDto {
   id?: string;
-  promptHash?: string;
-  prompt_hash?: string;
-  topicCodes?: (string | null)[] | null;
+  capability?: string;
   provider?: string;
-  modelId?: string;
-  model_id?: string;
-  latencyMs?: number | string | null;
-  tokens?: number | string | null;
+  modelId?: string | null;
+  templateVersion?: string | null;
+  correlationId?: string;
   status?: string;
-  createdAt?: string;
-  created_at?: string;
+  errorClass?: string | null;
+  safetyOutcome?: string;
+  latencyMs?: number | null;
+  inputTokens?: number | null;
+  outputTokens?: number | null;
+  costMicros?: string | null;
+  confidence?: number | null;
+  coverage?: number | null;
+  startedAt?: string;
+  completedAt?: string;
+  redacted?: boolean;
 }
 
-/** `GET /admin/ai/requests` (suy luận). */
-export interface AiRequestListResponseDto {
+export interface AiGovernanceRequestsResponseDto {
   success?: boolean;
-  data?: (AiRequestLogDto | null)[] | null;
+  data?: (AiGovernanceRequestItemDto | null)[] | null;
   meta?: {
     page?: number;
     limit?: number;
@@ -52,53 +109,84 @@ export interface AiRequestListResponseDto {
   } | null;
 }
 
-/** Cờ kiểm tra (thô, suy luận). */
-export interface AiFlagDto {
+/** Moderation Safety Flag DTO */
+export interface AiGovernanceFlagItemDto {
   id?: string;
-  kind?: string;
-  target?: string;
+  provider?: string;
+  model?: string;
+  riskLevel?: string;
+  riskScore?: number;
   status?: string;
   createdAt?: string;
-  created_at?: string;
+  reviewedAt?: string | null;
 }
 
-/** `GET /admin/ai/flags` (suy luận). */
-export interface AiFlagListResponseDto {
+export interface AiGovernanceFlagsResponseDto {
   success?: boolean;
-  data?: (AiFlagDto | null)[] | null;
-  meta?: null;
+  data?: (AiGovernanceFlagItemDto | null)[] | null;
+  meta?: {
+    page?: number;
+    limit?: number;
+    total?: number;
+    totalPages?: number;
+    total_pages?: number;
+  } | null;
 }
 
-/** Công tắc tính năng (thô, suy luận). */
-export interface AiFeatureDto {
-  feature?: string;
-  enabled?: boolean;
+/** Capability Control Item DTO */
+export interface AiGovernanceControlItemDto {
+  capability?: string;
   provider?: string;
-  modelId?: string;
-  model_id?: string;
-  updatedBy?: string | null;
-  updated_by?: string | null;
+  modelId?: string | null;
+  enabled?: boolean;
+  version?: number;
+  fallback?: string;
   updatedAt?: string | null;
-  updated_at?: string | null;
-  updateReason?: string | null;
 }
 
-/** `GET /admin/ai/features` (suy luận). */
-export interface AiFeatureListResponseDto {
+export interface AiGovernanceControlsResponseDto {
   success?: boolean;
-  data?: (AiFeatureDto | null)[] | null;
-  meta?: null;
+  data?: (AiGovernanceControlItemDto | null)[] | null;
 }
 
-/** `PATCH /admin/ai/features/:feature` — `enabled` + `reason` bắt buộc. */
-export interface ToggleFeatureRequestDto {
+/** Cập nhật toggle / provider cấu hình AI */
+export interface SetAiGovernanceFeatureRequestDto {
+  provider: string;
   enabled: boolean;
-  reason: string;
+  expectedVersion: number;
+  reason:
+    | 'PROVIDER_INCIDENT'
+    | 'QUALITY_INVESTIGATION'
+    | 'SAFETY_HOLD'
+    | 'PLANNED_MAINTENANCE'
+    | 'RESTORE_SERVICE';
 }
 
-/** `PATCH /admin/ai/features/:feature` (suy luận). */
-export interface ToggleFeatureResponseDto {
+export interface AiGovernanceControlResponseDto {
   success?: boolean;
-  data?: AiFeatureDto | null;
-  meta?: null;
+  data?: AiGovernanceControlItemDto | null;
+}
+
+/** Audit Log Item DTO cho thao tác bật/tắt tính năng */
+export interface AiGovernanceControlAuditItemDto {
+  id?: string;
+  capability?: string;
+  provider?: string;
+  enabled?: boolean;
+  version?: number;
+  actorId?: string;
+  reason?: string;
+  createdAt?: string;
+}
+
+export interface AiGovernanceControlAuditResponseDto {
+  success?: boolean;
+  data?: (AiGovernanceControlAuditItemDto | null)[] | null;
+  meta?: {
+    page?: number;
+    limit?: number;
+    total?: number;
+    totalPages?: number;
+    total_pages?: number;
+  } | null;
 }
