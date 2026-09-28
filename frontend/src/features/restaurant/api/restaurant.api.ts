@@ -1,175 +1,181 @@
+import api from '@/lib/axios';
+import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
 import type { PaginationResult } from '@/types/api';
-import type { RestaurantDto } from '../types/restaurant.dto';
+import type {
+  AdminRestaurantListResponseDto,
+  GeocodeResponseDto,
+  RestaurantListResponseDto,
+  RestaurantResponseDto,
+  ReviewRestaurantResponseDto,
+  SubmitRestaurantResponseDto,
+} from '../types/restaurant.dto';
 import type { LocationQuery, Restaurant, SubmitRestaurantInput } from '../types/restaurant.model';
 import { restaurantMapper } from '../mappers/restaurant.mapper';
-import {
-  geocodeFixture,
-  restaurantDetailFixture,
-  restaurantListFixture,
-  restaurantQueueFixture,
-} from '../__fixtures__/restaurant-fixtures';
 
 /**
- * API quán chay — PHASE SCAFFOLD: đọc fixture, 0 request mạng, 0 gọi maps ngoài.
- * Backend còn `PLANNED` (không có schema swagger) nên 7 hàm dưới MÔ PHỎNG
- * đúng signature dự kiến live.
- *
- * Ngày nối live (TODO(BE-READY)): reconfirm shape 7 endpoint với swagger thật,
- * sửa mapper nếu lệch, thay thân hàm bằng axios qua `API_ENDPOINTS.RESTAURANTS`
- * / `LOCATION` / `ADMIN_RESTAURANTS`, giữ nguyên chữ ký + kiểu trả về —
- * queries/components KHÔNG đổi (kể cả haversine sort). Đồng thời chuyển
- * `__fixtures__` sang test-only hoặc xóa khỏi bundle.
+ * Service API Quán Chay & Bản Đồ (Phase 24 - 100% Live REST Endpoints).
+ * Đã loại bỏ hoàn toàn mock/fixtures, gọi trực tiếp Backend và in chi tiết console.log.
  */
-export const USE_FIXTURES = true;
-
-const SIMULATED_DELAY_MS = 300;
-
-function delay(): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, SIMULATED_DELAY_MS));
-}
-
-function clone<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T;
-}
-
-/** Haversine mét giữa 2 tọa độ (dùng sắp xếp ở tầng api, giữ nguyên khi live). */
-export function haversineMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const toRad = (deg: number): number => (deg * Math.PI) / 180;
-  const earthM = 6371000;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-  return 2 * earthM * Math.asin(Math.sqrt(a));
-}
-
-function normalizeText(value: string): string {
-  return value.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-}
-
-let queueStore: (RestaurantDto | null)[] = clone(restaurantQueueFixture.data ?? []);
-let submittedStore: (RestaurantDto | null)[] = [];
-
-export function __resetRestaurantFixtures(): void {
-  queueStore = clone(restaurantQueueFixture.data ?? []);
-  submittedStore = [];
-}
-
-function withDistance(
-  items: (RestaurantDto | null)[],
-  query: LocationQuery
-): (RestaurantDto | null)[] {
-  if (query.lat === undefined || query.lng === undefined) return items;
-  return items.map((item) => {
-    if (!item) return item;
-    const lat = Number(item.lat ?? item.latitude ?? NaN);
-    const lng = Number(item.lng ?? item.longitude ?? NaN);
-    if (Number.isNaN(lat) || Number.isNaN(lng)) return item;
-    return {
-      ...item,
-      distanceM: Math.round(haversineMeters(query.lat ?? 0, query.lng ?? 0, lat, lng)),
-    };
-  });
-}
-
-function applyDishFilter(
-  items: (RestaurantDto | null)[],
-  dishQuery: string
-): (RestaurantDto | null)[] {
-  const keyword = normalizeText(dishQuery.trim());
-  if (!keyword) return items;
-  return items.filter((item) =>
-    (item?.dishes ?? []).some((dish) => dish && normalizeText(dish).includes(keyword))
-  );
-}
-
 export const restaurantApi = {
-  /** `GET /restaurants/nearby` (fixture + haversine sort). */
+  /**
+   * `GET /restaurants/nearby` (UC-12 / FR-001)
+   * Tìm kiếm quán chay theo tọa độ GPS và bán kính.
+   */
   getNearby: async (query: LocationQuery): Promise<PaginationResult<Restaurant>> => {
-    await delay();
-    const source = withDistance(clone(restaurantListFixture.data ?? []), query);
-    const sorted = [...source].sort((a, b) => {
-      const da = typeof a?.distanceM === 'number' ? a.distanceM : Number.POSITIVE_INFINITY;
-      const db = typeof b?.distanceM === 'number' ? b.distanceM : Number.POSITIVE_INFINITY;
-      return da - db;
+    const params = restaurantMapper.toLocationQuery(query);
+    console.log('[Restaurant API] 📡 Request GET /restaurants/nearby:', {
+      endpoint: API_ENDPOINTS.RESTAURANTS.NEARBY,
+      params,
     });
-    return restaurantMapper.toListModel({
-      success: true,
-      data: sorted,
-      meta: { page: 1, limit: 10, total: sorted.length, totalPages: 1 },
+
+    const response = await api.get<RestaurantListResponseDto>(API_ENDPOINTS.RESTAURANTS.NEARBY, {
+      params,
     });
+    console.log('[Restaurant API] 📥 Response GET /restaurants/nearby raw DTO:', response.data);
+
+    const result = restaurantMapper.toListModel(response.data);
+    console.log('[Restaurant API] 🗺️ Mapped restaurants for Map & List:', {
+      count: result.items.length,
+      items: result.items,
+      metadata: result.metadata,
+    });
+    return result;
   },
 
-  /** `GET /restaurants/search` (fixture + lọc món không dấu). */
+  /**
+   * `GET /restaurants/search` (FR-003, FR-004)
+   * Tìm kiếm theo từ khóa món ăn và áp dụng lọc cứng chế độ ăn.
+   * Nếu query trống hoặc < 2 ký tự, an toàn chuyển tiếp sang getNearby.
+   */
   search: async (query: LocationQuery): Promise<PaginationResult<Restaurant>> => {
-    await delay();
-    const source = applyDishFilter(
-      withDistance(clone(restaurantListFixture.data ?? []), query),
-      query.query
-    );
-    return restaurantMapper.toListModel({
-      success: true,
-      data: source,
-      meta: { page: 1, limit: 10, total: source.length, totalPages: 1 },
+    if (!query.query || query.query.trim().length < 2) {
+      return restaurantApi.getNearby(query);
+    }
+    const params = restaurantMapper.toLocationQuery(query);
+    console.log('[Restaurant API] 📡 Request GET /restaurants/search:', {
+      endpoint: API_ENDPOINTS.RESTAURANTS.SEARCH,
+      params,
     });
+
+    const response = await api.get<RestaurantListResponseDto>(API_ENDPOINTS.RESTAURANTS.SEARCH, {
+      params,
+    });
+    console.log('[Restaurant API] 📥 Response GET /restaurants/search raw DTO:', response.data);
+
+    const result = restaurantMapper.toListModel(response.data);
+    console.log('[Restaurant API] 🔍 Mapped search results for Map & List:', {
+      count: result.items.length,
+      items: result.items,
+      metadata: result.metadata,
+    });
+    return result;
   },
 
-  /** `GET /restaurants/:id` (fixture). */
+  /**
+   * `GET /restaurants/:id` (FR-007)
+   * Chi tiết quán ăn chay.
+   */
   getDetail: async (id: string): Promise<Restaurant> => {
-    await delay();
-    return restaurantMapper.toSingleModel(restaurantDetailFixture(id));
+    console.log('[Restaurant API] 📡 Request GET /restaurants/:id:', {
+      id,
+      endpoint: API_ENDPOINTS.RESTAURANTS.DETAIL(id),
+    });
+
+    const response = await api.get<RestaurantResponseDto>(API_ENDPOINTS.RESTAURANTS.DETAIL(id));
+    console.log('[Restaurant API] 📥 Response GET /restaurants/:id raw DTO:', response.data);
+
+    const result = restaurantMapper.toSingleModel(response.data);
+    console.log('[Restaurant API] 🍴 Mapped detail restaurant:', result);
+    return result;
   },
 
-  /** `POST /restaurants` (fixture, vào chờ — không hiện công khai). */
+  /**
+   * `POST /restaurants` (FR-009)
+   * Thành viên đề xuất quán mới vào hàng chờ duyệt (PENDING).
+   */
   submitRestaurant: async (input: SubmitRestaurantInput): Promise<Restaurant> => {
-    await delay();
-    const created: RestaurantDto = {
-      id: `sub-${Date.now().toString(36)}`,
-      name: input.name,
-      address: input.address,
-      lat: input.lat,
-      lng: input.lng,
-      dishes: input.dishes,
-      status: 'PENDING',
-    };
-    submittedStore = [created, ...submittedStore];
-    queueStore = [created, ...queueStore];
-    return restaurantMapper.toSingleModel({ success: true, data: created, meta: null });
+    const payload = restaurantMapper.toSubmitDto(input);
+    console.log('[Restaurant API] 📡 Request POST /restaurants:', {
+      endpoint: API_ENDPOINTS.RESTAURANTS.SUBMIT,
+      payload,
+    });
+
+    const response = await api.post<SubmitRestaurantResponseDto>(
+      API_ENDPOINTS.RESTAURANTS.SUBMIT,
+      payload
+    );
+    console.log('[Restaurant API] 📥 Response POST /restaurants raw DTO:', response.data);
+
+    const result = restaurantMapper.toSingleModel(response.data);
+    console.log('[Restaurant API] 📝 Mapped submitted restaurant:', result);
+    return result;
   },
 
-  /** `GET /location/geocode` (fixture vài địa chỉ mẫu). */
+  /**
+   * `GET /location/geocode` (FR-002 / EC-01)
+   * Chuyển đổi địa chỉ sang tọa độ địa lý.
+   */
   geocode: async (
     address: string
   ): Promise<{ lat: number | null; lng: number | null; label: string }> => {
-    await delay();
-    return restaurantMapper.toCoordinates(geocodeFixture(address));
-  },
-
-  /** `GET /admin/restaurants` (fixture). */
-  getQueue: async (): Promise<PaginationResult<Restaurant>> => {
-    await delay();
-    const source = clone(queueStore);
-    return restaurantMapper.toQueueModel({
-      success: true,
-      data: source,
-      meta: { page: 1, limit: 10, total: source.length, totalPages: 1 },
+    console.log('[Restaurant API] 📡 Request GET /location/geocode:', {
+      endpoint: API_ENDPOINTS.LOCATION.GEOCODE,
+      address,
     });
+
+    const response = await api.get<GeocodeResponseDto>(API_ENDPOINTS.LOCATION.GEOCODE, {
+      params: { address: address.trim() },
+    });
+    console.log('[Restaurant API] 📥 Response GET /location/geocode raw DTO:', response.data);
+
+    const mapped = restaurantMapper.toCoordinates(response.data);
+    console.log('[Restaurant API] 📍 Mapped geocode coordinates:', mapped);
+    return mapped;
   },
 
-  /** `PATCH /admin/restaurants/:id/review` (fixture, duyệt hiện công khai). */
+  /**
+   * `GET /admin/restaurants` (FR-010)
+   * Hàng chờ kiểm duyệt quán ăn dành cho Admin.
+   */
+  getQueue: async (): Promise<PaginationResult<Restaurant>> => {
+    console.log('[Restaurant API] 📡 Request GET /admin/restaurants:', {
+      endpoint: API_ENDPOINTS.ADMIN_RESTAURANTS.LIST,
+    });
+
+    const response = await api.get<AdminRestaurantListResponseDto>(
+      API_ENDPOINTS.ADMIN_RESTAURANTS.LIST
+    );
+    console.log('[Restaurant API] 📥 Response GET /admin/restaurants raw DTO:', response.data);
+
+    const result = restaurantMapper.toQueueModel(response.data);
+    console.log('[Restaurant API] 📋 Mapped admin queue:', result);
+    return result;
+  },
+
+  /**
+   * `PATCH /admin/restaurants/:id/review` (FR-010)
+   * Phê duyệt hoặc từ chối quán ăn đề xuất kèm lý do.
+   */
   reviewRestaurant: async (
     id: string,
     decision: 'APPROVE' | 'REJECT',
-    reason: string
+    reason?: string
   ): Promise<Restaurant> => {
-    await delay();
-    void reason;
-    queueStore = queueStore.filter((item) => item?.id !== id);
-    return restaurantMapper.toReviewedModel({
-      success: true,
-      data: { id, status: decision === 'APPROVE' ? 'PUBLISHED' : 'PENDING' },
-      meta: null,
+    const payload = restaurantMapper.toReviewDto(decision, reason);
+    console.log('[Restaurant API] 📡 Request PATCH /admin/restaurants/:id/review:', {
+      endpoint: API_ENDPOINTS.ADMIN_RESTAURANTS.REVIEW(id),
+      id,
+      payload,
     });
+
+    const response = await api.patch<ReviewRestaurantResponseDto>(
+      API_ENDPOINTS.ADMIN_RESTAURANTS.REVIEW(id),
+      payload
+    );
+    console.log('[Restaurant API] 📥 Response PATCH review raw DTO:', response.data);
+
+    const result = restaurantMapper.toReviewedModel(response.data);
+    console.log('[Restaurant API] ⚖️ Mapped review decision result:', result);
+    return result;
   },
 };

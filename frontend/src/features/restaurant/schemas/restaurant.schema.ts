@@ -19,24 +19,44 @@ export const locationQuerySchema = z.object({
     .max(MAX_RADIUS_M, `Bán kính tối đa ${MAX_RADIUS_M}m.`)
     .default(DEFAULT_RADIUS_M),
   query: z.string().trim().max(200).default(''),
+  dietaryTags: z.array(z.string()).default([]),
 });
 
 export type LocationQueryFormValues = z.infer<typeof locationQuerySchema>;
 
+export const addressGeocodeSchema = z.object({
+  address: z
+    .string()
+    .trim()
+    .min(3, 'Vui lòng nhập địa chỉ cụ thể hơn (tối thiểu 3 ký tự).')
+    .max(500),
+});
+
+export type AddressGeocodeFormValues = z.infer<typeof addressGeocodeSchema>;
+
 export const submitRestaurantSchema = z.object({
-  name: z.string().trim().min(2, 'Vui lòng nhập tên quán.').max(200),
-  address: z.string().trim().min(5, 'Vui lòng nhập địa chỉ đầy đủ.').max(500),
+  name: z.string().trim().min(2, 'Vui lòng nhập tên quán (tối thiểu 2 ký tự).').max(200),
+  address: z.string().trim().min(5, 'Vui lòng nhập địa chỉ đầy đủ (tối thiểu 5 ký tự).').max(500),
   lat: z.number().min(-90).max(90).optional(),
   lng: z.number().min(-180).max(180).optional(),
+  dietaryTags: z.array(z.string()),
   dishes: z.array(z.string().trim().min(1)).max(MAX_DISHES, `Tối đa ${MAX_DISHES} món.`),
+  openingHours: z.string().trim().max(200).optional(),
+  priceRange: z.string().trim().max(100).optional(),
+  phoneNumber: z.string().trim().max(20).optional(),
   note: z.string().trim().max(2000).optional(),
 });
 
 export type SubmitRestaurantFormValues = z.infer<typeof submitRestaurantSchema>;
 
-export const reviewRestaurantSchema = z.object({
-  decision: z.enum(['APPROVE', 'REJECT'], { message: 'Vui lòng chọn quyết định.' }),
-  reason: z.string().trim().min(1, 'Vui lòng nhập lý do.').max(2000),
-});
+export const reviewRestaurantSchema = z
+  .object({
+    decision: z.enum(['APPROVE', 'REJECT'], { message: 'Vui lòng chọn quyết định.' }),
+    reason: z.string().trim().max(2000).optional(),
+  })
+  .refine((data) => data.decision !== 'REJECT' || (data.reason && data.reason.trim().length >= 3), {
+    message: 'Vui lòng nhập lý do từ chối (tối thiểu 3 ký tự).',
+    path: ['reason'],
+  });
 
 export type ReviewRestaurantFormValues = z.infer<typeof reviewRestaurantSchema>;

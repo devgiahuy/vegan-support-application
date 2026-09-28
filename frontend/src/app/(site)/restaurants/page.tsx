@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { Plus } from 'lucide-react';
+import { MapPin, Navigation, Plus, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -15,7 +15,7 @@ import {
 import { useAuthStore } from '@/store/useAuthStore';
 import { DEFAULT_RADIUS_M } from '@/features/restaurant/schemas/restaurant.schema';
 import type { LocationQuery } from '@/features/restaurant/types/restaurant.model';
-import { useRestaurantSearchQuery } from '@/features/restaurant/queries/restaurant.queries';
+import { useRestaurantDiscoveryQuery } from '@/features/restaurant/queries/restaurant.queries';
 import {
   LocationPrompt,
   type UserCoordinates,
@@ -23,12 +23,15 @@ import {
 import { AddressForm } from '@/features/restaurant/components/address-form';
 import { RestaurantFilters } from '@/features/restaurant/components/restaurant-filters';
 import { RestaurantList } from '@/features/restaurant/components/restaurant-list';
-import { MapPlaceholder } from '@/features/restaurant/components/map-placeholder';
+import { RestaurantMap } from '@/features/restaurant/components/restaurant-map';
 import { SubmitForm } from '@/features/restaurant/components/submit-form';
 
 /**
- * Trang quán chay: vị trí/form địa chỉ + tìm món + list + khung bản đồ.
- * Dữ liệu fixture ở phase scaffold (BE còn PLANNED, 0 gọi maps ngoài).
+ * Trang Khám Phá Quán Chay (UC-12 / BL-16):
+ * - Vị trí GPS hoặc Geocoding nhập tay.
+ * - Tìm kiếm món ăn kèm bộ lọc chế độ ăn chay nghiêm ngặt.
+ * - Bản đồ tương tác Google Maps kèm Radar Map trực quan đồng bộ 2 chiều với thẻ danh sách.
+ * - Đề xuất quán chay mới do thành viên gửi.
  */
 export default function RestaurantMapPage() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -37,35 +40,89 @@ export default function RestaurantMapPage() {
   const [deniedMessage, setDeniedMessage] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState('');
   const [radiusM, setRadiusM] = React.useState(DEFAULT_RADIUS_M);
+  const [dietaryTags, setDietaryTags] = React.useState<string[]>([]);
+  const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [submitOpen, setSubmitOpen] = React.useState(false);
+  const [isChangingLocation, setIsChangingLocation] = React.useState(false);
 
   const searchQuery: LocationQuery = {
     ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
     radiusM,
     query: query.trim(),
+    dietaryTags,
   };
-  const { data, isLoading, isError, refetch } = useRestaurantSearchQuery(
+
+  // Sử dụng hook discovery tự động chuyển đổi an toàn giữa Nearby và Search
+  const { data, isLoading, isError, refetch } = useRestaurantDiscoveryQuery(
     searchQuery,
     coords !== null
   );
+
   const restaurants = data?.items ?? [];
+
+  React.useEffect(() => {
+    if (coords) {
+      console.log('[Page /restaurants] 📍 Tọa độ vị trí người dùng:', coords);
+    }
+  }, [coords]);
+
+  React.useEffect(() => {
+    if (data) {
+      console.log('[Page /restaurants] 📊 Dữ liệu quán nhận được từ Backend:', {
+        count: data.items.length,
+        items: data.items,
+        metadata: data.metadata,
+      });
+    }
+  }, [data]);
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-4 px-4 py-6 lg:px-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Quán chay quanh đây</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {placeLabel ? `Khu vực: ${placeLabel}` : 'Cho phép vị trí hoặc nhập địa chỉ để bắt đầu.'}
-        </p>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Khám phá quán chay</h1>
+          <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+            {placeLabel ? (
+              <>
+                <MapPin className="size-4 shrink-0 text-emerald-600" />
+                <span className="font-medium text-foreground">{placeLabel}</span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 gap-1 px-1.5 text-xs text-muted-foreground hover:text-foreground"
+                  onClick={() => setIsChangingLocation(true)}
+                >
+                  <RotateCcw className="size-3" /> Đổi vị trí
+                </Button>
+              </>
+            ) : (
+              <span>Cho phép vị trí hoặc nhập địa chỉ để tìm quán chay gần bạn nhất.</span>
+            )}
+          </div>
+        </div>
       </div>
 
-      {!coords && (
-        <div className="flex flex-col gap-3 rounded-2xl border p-4">
+      {(!coords || isChangingLocation) && (
+        <div className="flex flex-col gap-3 rounded-2xl border p-4 bg-card shadow-xs">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold">Chọn khu vực tìm kiếm</h2>
+            {coords && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs"
+                onClick={() => setIsChangingLocation(false)}
+              >
+                Hủy
+              </Button>
+            )}
+          </div>
           <LocationPrompt
             onLocated={(position) => {
               setCoords(position);
-              setPlaceLabel('Vị trí của bạn');
+              setPlaceLabel('Vị trí hiện tại của bạn');
               setDeniedMessage(null);
+              setIsChangingLocation(false);
             }}
             onDenied={setDeniedMessage}
           />
@@ -75,9 +132,10 @@ export default function RestaurantMapPage() {
               setCoords(position);
               setPlaceLabel(label);
               setDeniedMessage(null);
+              setIsChangingLocation(false);
             }}
           />
-          {deniedMessage && <p className="text-xs text-muted-foreground">{deniedMessage}</p>}
+          {deniedMessage && <p className="text-xs text-destructive">{deniedMessage}</p>}
         </div>
       )}
 
@@ -86,48 +144,72 @@ export default function RestaurantMapPage() {
           <RestaurantFilters
             query={query}
             radiusM={radiusM}
+            dietaryTags={dietaryTags}
             onQueryChange={setQuery}
             onRadiusChange={setRadiusM}
+            onDietaryTagsChange={setDietaryTags}
           />
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
-            <div className="xl:col-span-7">
-              <MapPlaceholder items={restaurants} />
+
+          {/* Layout Split View phong cách Google Maps / GrabFood */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 items-start">
+            {/* Cột trái: Bản đồ cố định (Sticky Map), tối ưu hóa chiều cao hiển thị */}
+            <div className="lg:col-span-7 xl:col-span-7 lg:sticky lg:top-20">
+              <div className="h-[420px] lg:h-[calc(100vh-170px)] min-h-[420px] max-h-[750px] w-full rounded-2xl overflow-hidden shadow-xs">
+                <RestaurantMap
+                  items={restaurants}
+                  userLocation={coords}
+                  radiusM={radiusM}
+                  selectedId={selectedId}
+                  onSelectRestaurant={setSelectedId}
+                  onRadiusChange={setRadiusM}
+                />
+              </div>
             </div>
-            <div className="space-y-3 xl:col-span-5">
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="font-bold">Quán chay xung quanh ({restaurants.length})</h2>
+
+            {/* Cột phải: Danh sách thẻ quán chay cuộn độc lập (Scrollable Cards) */}
+            <div className="flex flex-col space-y-3 lg:col-span-5 xl:col-span-5">
+              <div className="flex items-center justify-between gap-2 bg-background/95 pb-1 backdrop-blur-xs">
+                <h2 className="text-base font-bold text-foreground">
+                  Quán chay lân cận ({restaurants.length})
+                </h2>
                 {isAuthenticated ? (
                   <Dialog open={submitOpen} onOpenChange={setSubmitOpen}>
                     <DialogTrigger asChild>
-                      <Button size="sm" className="gap-1.5 rounded-full">
-                        <Plus className="size-4" /> Đóng góp quán
+                      <Button size="sm" className="gap-1.5 rounded-full shadow-2xs">
+                        <Plus className="size-4" /> Đề xuất quán
                       </Button>
                     </DialogTrigger>
                     <DialogContent className="sm:max-w-lg">
                       <DialogHeader>
-                        <DialogTitle>Đóng góp quán chay mới</DialogTitle>
+                        <DialogTitle>Đề xuất quán chay mới</DialogTitle>
                         <DialogDescription>
-                          Quán vào hàng chờ duyệt trước khi hiển thị công khai.
+                          Quán sẽ được Ban quản trị xem xét và phê duyệt trước khi xuất hiện công
+                          khai.
                         </DialogDescription>
                       </DialogHeader>
                       <SubmitForm onDone={() => setSubmitOpen(false)} />
                     </DialogContent>
                   </Dialog>
                 ) : (
-                  <Button asChild size="sm" variant="outline" className="rounded-full">
+                  <Button asChild size="sm" variant="outline" className="rounded-full shadow-2xs">
                     <Link href={`/login?from=${encodeURIComponent('/restaurants')}`}>
-                      Đăng nhập để đóng góp quán
+                      Đăng nhập để đề xuất
                     </Link>
                   </Button>
                 )}
               </div>
-              <RestaurantList
-                items={restaurants}
-                isLoading={isLoading}
-                isError={isError}
-                onRetry={() => void refetch()}
-                externalNotice="Dữ liệu minh họa — danh sách thật khi backend sẵn sàng."
-              />
+
+              {/* Danh sách cuộn mượt mà với thanh cuộn tinh tế */}
+              <div className="lg:max-h-[calc(100vh-220px)] lg:overflow-y-auto lg:pr-1.5">
+                <RestaurantList
+                  items={restaurants}
+                  isLoading={isLoading}
+                  isError={isError}
+                  selectedId={selectedId}
+                  onSelect={setSelectedId}
+                  onRetry={() => void refetch()}
+                />
+              </div>
             </div>
           </div>
         </>

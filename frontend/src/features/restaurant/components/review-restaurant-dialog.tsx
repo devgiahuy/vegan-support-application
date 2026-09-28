@@ -12,12 +12,14 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { Restaurant } from '../types/restaurant.model';
 import { useReviewRestaurantMutation } from '../queries/restaurant.queries';
 
 /**
- * Dialog duyệt/từ chối quán: quyết định + lý do bắt buộc.
- * Duyệt thì quán hiện công khai, từ chối thì loại (người gửi thấy lý do).
+ * Dialog xem xét và kiểm duyệt quán ăn (Admin Moderation):
+ * - Quyết định: Phê duyệt (PUBLISHED) hoặc Từ chối (REJECTED).
+ * - Bắt buộc nhập lý do (tối thiểu 3 ký tự) khi từ chối để phục vụ kiểm toán.
  */
 export function ReviewRestaurantDialog({
   restaurant,
@@ -33,70 +35,107 @@ export function ReviewRestaurantDialog({
   const [reason, setReason] = React.useState('');
   const [fieldError, setFieldError] = React.useState<string | null>(null);
 
+  React.useEffect(() => {
+    if (open) {
+      setDecision('APPROVE');
+      setReason('');
+      setFieldError(null);
+    }
+  }, [open]);
+
   const handleConfirm = async () => {
     if (!restaurant) return;
-    if (reason.trim().length === 0) {
-      setFieldError('Vui lòng nhập lý do.');
+    if (decision === 'REJECT' && reason.trim().length < 3) {
+      setFieldError('Vui lòng nhập lý do từ chối cụ thể (tối thiểu 3 ký tự).');
       return;
     }
     setFieldError(null);
     try {
-      await reviewMutation.mutateAsync({ id: restaurant.id, decision, reason: reason.trim() });
-      setReason('');
-      setDecision('APPROVE');
+      await reviewMutation.mutateAsync({
+        id: restaurant.id,
+        decision,
+        reason: reason.trim() || undefined,
+      });
       onOpenChange(false);
     } catch {
-      // Lỗi đã toast ở query layer.
+      // Lỗi đã được toast ở mutation hook.
     }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Duyệt quán mới</DialogTitle>
+          <DialogTitle>Kiểm duyệt đề xuất quán chay</DialogTitle>
           <DialogDescription>
-            {restaurant ? `${restaurant.name} — ${restaurant.address}.` : ''}
+            {restaurant ? `${restaurant.name} — ${restaurant.address}` : ''}
           </DialogDescription>
         </DialogHeader>
-        <div className="flex gap-2" role="group" aria-label="Quyết định">
-          {(
-            [
-              { value: 'APPROVE', label: 'Duyệt' },
-              { value: 'REJECT', label: 'Từ chối' },
-            ] as const
-          ).map((option) => (
-            <Button
-              key={option.value}
-              type="button"
-              variant={decision === option.value ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setDecision(option.value)}
+
+        <div className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label>Quyết định kiểm duyệt</Label>
+            <RadioGroup
+              value={decision}
+              onValueChange={(val) => {
+                setDecision(val as 'APPROVE' | 'REJECT');
+                setFieldError(null);
+              }}
+              className="flex gap-4"
             >
-              {option.label}
-            </Button>
-          ))}
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="APPROVE" id="decision-approve" />
+                <Label
+                  htmlFor="decision-approve"
+                  className="cursor-pointer font-medium text-emerald-600"
+                >
+                  Phê duyệt (Công khai)
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="REJECT" id="decision-reject" />
+                <Label
+                  htmlFor="decision-reject"
+                  className="cursor-pointer font-medium text-destructive"
+                >
+                  Từ chối
+                </Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="review-reason">
+              Lý do kiểm duyệt {decision === 'REJECT' ? '*' : '(Tùy chọn)'}
+            </Label>
+            <Textarea
+              id="review-reason"
+              rows={3}
+              placeholder={
+                decision === 'REJECT'
+                  ? 'VD: Quán đã đóng cửa, địa chỉ không có thật, hoặc quán có phục vụ món mặn...'
+                  : 'Ghi chú kiểm duyệt nếu có...'
+              }
+              value={reason}
+              onChange={(e) => {
+                setReason(e.target.value);
+                if (fieldError) setFieldError(null);
+              }}
+            />
+            {fieldError && <p className="text-xs text-destructive">{fieldError}</p>}
+          </div>
         </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="restaurant-review-reason">Lý do (bắt buộc)</Label>
-          <Textarea
-            id="restaurant-review-reason"
-            rows={3}
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-          />
-          {fieldError && <p className="text-xs text-destructive">{fieldError}</p>}
-        </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Hủy
           </Button>
           <Button
-            variant={decision === 'REJECT' ? 'destructive' : 'default'}
-            onClick={() => void handleConfirm()}
-            disabled={reviewMutation.isPending || !restaurant}
+            onClick={handleConfirm}
+            disabled={reviewMutation.isPending}
+            variant={decision === 'APPROVE' ? 'default' : 'destructive'}
           >
-            {reviewMutation.isPending ? 'Đang xử lý...' : 'Xác nhận'}
+            {reviewMutation.isPending ? 'Đang xử lý...' : 'Xác nhận quyết định'}
           </Button>
         </DialogFooter>
       </DialogContent>

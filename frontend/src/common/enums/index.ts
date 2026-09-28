@@ -244,10 +244,12 @@ export enum ReportTargetKind {
   COMMENT = 'COMMENT',
 }
 
-/** Trạng thái quán chay (hiển thị công khai / chờ duyệt). */
+/** Trạng thái quán chay (hiển thị công khai / chờ duyệt / từ chối / lưu trữ). */
 export enum RestaurantStatus {
   PENDING = 'PENDING',
   PUBLISHED = 'PUBLISHED',
+  REJECTED = 'REJECTED',
+  ARCHIVED = 'ARCHIVED',
 }
 
 /** Mã lý do báo cáo vi phạm (`createModerationReport.reasonCode`). */
@@ -320,4 +322,10 @@ export enum AiVerificationStatus {
 export enum AiVerificationAdminActionType {
   OVERRIDE = 'OVERRIDE',
   REVOKE = 'REVOKE',
+}
+
+/** Nguồn dữ liệu quán ăn (Phase 24). */
+export enum RestaurantSource {
+  INTERNAL = 'INTERNAL',
+  GOOGLE_PLACES = 'GOOGLE_PLACES',
 }

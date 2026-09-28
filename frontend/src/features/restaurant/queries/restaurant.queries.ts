@@ -7,11 +7,12 @@ import type { LocationQuery, SubmitRestaurantInput } from '../types/restaurant.m
 export const RESTAURANT_KEYS = {
   all: ['restaurants'] as const,
   nearby: (query: LocationQuery) => [...RESTAURANT_KEYS.all, 'nearby', query] as const,
+  search: (query: LocationQuery) => [...RESTAURANT_KEYS.all, 'search', query] as const,
   detail: (id: string) => [...RESTAURANT_KEYS.all, 'detail', id] as const,
   queue: () => [...RESTAURANT_KEYS.all, 'queue'] as const,
 };
 
-/** Quán gần vị trí/từ khóa (fixture ở phase scaffold). */
+/** Quán gần vị trí/tọa độ (GET /restaurants/nearby). */
 export function useNearbyRestaurantsQuery(query: LocationQuery, enabled = true) {
   return useQuery({
     queryKey: RESTAURANT_KEYS.nearby(query),
@@ -21,11 +22,26 @@ export function useNearbyRestaurantsQuery(query: LocationQuery, enabled = true) 
   });
 }
 
-/** Tìm theo món (fixture). */
+/** Tìm theo món ăn (GET /restaurants/search). */
 export function useRestaurantSearchQuery(query: LocationQuery, enabled = true) {
   return useQuery({
-    queryKey: [...RESTAURANT_KEYS.all, 'search', query] as const,
+    queryKey: RESTAURANT_KEYS.search(query),
     queryFn: () => restaurantApi.search(query),
+    staleTime: 2 * 60 * 1000,
+    enabled,
+  });
+}
+
+/**
+ * Hook tìm quán khám phá hợp nhất (tự động phân nhánh nearby vs search):
+ * - Nếu query có từ khóa >= 2 ký tự: gọi search endpoint (/restaurants/search).
+ * - Ngược lại: gọi nearby endpoint (/restaurants/nearby).
+ */
+export function useRestaurantDiscoveryQuery(query: LocationQuery, enabled = true) {
+  const hasKeyword = Boolean(query.query && query.query.trim().length >= 2);
+  return useQuery({
+    queryKey: hasKeyword ? RESTAURANT_KEYS.search(query) : RESTAURANT_KEYS.nearby(query),
+    queryFn: () => (hasKeyword ? restaurantApi.search(query) : restaurantApi.getNearby(query)),
     staleTime: 2 * 60 * 1000,
     enabled,
   });
@@ -75,7 +91,7 @@ export function useRestaurantQueueQuery() {
 export function useReviewRestaurantMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (vars: { id: string; decision: 'APPROVE' | 'REJECT'; reason: string }) =>
+    mutationFn: (vars: { id: string; decision: 'APPROVE' | 'REJECT'; reason?: string }) =>
       restaurantApi.reviewRestaurant(vars.id, vars.decision, vars.reason),
     onSuccess: (_, vars) => {
       queryClient.invalidateQueries({ queryKey: RESTAURANT_KEYS.queue() });

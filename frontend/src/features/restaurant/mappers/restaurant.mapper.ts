@@ -19,22 +19,32 @@ import type {
   SubmitRestaurantRequestDto,
 } from '../types/restaurant.dto';
 import type { LocationQuery, Restaurant, SubmitRestaurantInput } from '../types/restaurant.model';
-import { RestaurantStatus } from '@/common/enums';
+import { RestaurantStatus, RestaurantSource } from '@/common/enums';
 
 const SOURCE_LABELS: Record<string, string> = {
-  INTERNAL: 'Nội bộ',
-  GOOGLE: 'Google',
+  INTERNAL: 'Cộng đồng VeggieConnect',
+  GOOGLE_PLACES: 'Google Places',
+  GOOGLE: 'Google Places',
 };
 
 const STATUS_LABELS: Record<RestaurantStatus, string> = {
   [RestaurantStatus.PENDING]: 'Chờ duyệt',
   [RestaurantStatus.PUBLISHED]: 'Đang hiển thị',
+  [RestaurantStatus.REJECTED]: 'Bị từ chối',
+  [RestaurantStatus.ARCHIVED]: 'Đã lưu trữ',
 };
 
 const STALE_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
 
 function emptyPageMeta() {
-  return { page: 1, limit: 10, totalItems: 0, totalPages: 0 };
+  return {
+    page: 1,
+    limit: 10,
+    totalItems: 0,
+    totalPages: 0,
+    hasNextPage: false,
+    hasPrevPage: false,
+  };
 }
 
 function toPageMeta(
@@ -67,7 +77,7 @@ export function formatDistance(distanceM: number | null): string {
 
 /**
  * RestaurantMapper: quán, geocode, review. Sắp xếp khoảng cách ở tầng api.
- * DTO SUY LUẬN — mọi field optional + fallback. Envelope đọc trực tiếp.
+ * DTO theo đặc tả Phase 24 — mọi field an toàn + fallback.
  */
 export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
   toModel(dto: RestaurantDto | null | undefined): Restaurant {
@@ -81,10 +91,26 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
       RestaurantStatus,
       RestaurantStatus.PUBLISHED
     );
-    const source = safeString(pickField(dto, ['source'], 'INTERNAL')).toUpperCase();
+    const rawSource = safeString(pickField(dto, ['source'], 'INTERNAL')).toUpperCase();
+    const source =
+      rawSource === 'GOOGLE' || rawSource === 'GOOGLE_PLACES'
+        ? RestaurantSource.GOOGLE_PLACES
+        : RestaurantSource.INTERNAL;
     const fetchedAt = safeDate(pickField(dto, ['fetchedAt', 'fetched_at'], null));
-    const distanceM = toNum(pickField(dto, ['distanceM', 'distance_m'], null));
+    const distanceM = toNum(pickField(dto, ['distanceMeters', 'distanceM', 'distance_m'], null));
     const submitter = pickField(dto, ['submittedBy'], null) as RestaurantDto['submittedBy'];
+
+    const rawHours = pickField(dto, ['openingHours', 'opening_hours', 'operatingHours'], null);
+    let openingHours: string | null = null;
+    if (typeof rawHours === 'string') {
+      const trimmed = (rawHours as string).trim();
+      openingHours = trimmed.length > 0 ? trimmed : null;
+    } else if (rawHours && typeof rawHours === 'object') {
+      openingHours = Object.entries(rawHours as Record<string, string>)
+        .map(([day, hours]) => `${day}: ${hours}`)
+        .join(', ');
+    }
+
     return {
       id: safeString(pickField(dto, ['id'], '')),
       name: safeString(pickField(dto, ['name'], '')) || 'Quán chay',
@@ -93,16 +119,23 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
       lng: toNum(pickField(dto, ['lng', 'longitude'], null)),
       distanceM,
       distanceLabel: formatDistance(distanceM),
+      dietaryTags: safeArray<string | null, string>(
+        pickField(dto, ['dietaryTags', 'dietTags'], null),
+        (tag) => safeString(tag)
+      ).filter((tag) => tag.length > 0),
       dishes: safeArray<string | null, string>(pickField(dto, ['dishes'], null), (dish) =>
         safeString(dish)
       ).filter((dish) => dish.length > 0),
-      openingHours: safeString(pickField(dto, ['openingHours', 'opening_hours'], '')) || null,
+      openingHours,
+      priceRange: safeString(pickField(dto, ['priceRange', 'price_range'], '')) || null,
+      phoneNumber: safeString(pickField(dto, ['phoneNumber', 'phone_number', 'phone'], '')) || null,
+      websiteUrl: safeString(pickField(dto, ['websiteUrl', 'website_url', 'website'], '')) || null,
       source,
-      sourceLabel: SOURCE_LABELS[source] ?? source,
+      sourceLabel: SOURCE_LABELS[source] ?? 'Quán chay',
       fetchedAt,
       isStale: fetchedAt !== null && Date.now() - fetchedAt.getTime() > STALE_AFTER_MS,
       status,
-      statusLabel: STATUS_LABELS[status],
+      statusLabel: STATUS_LABELS[status] ?? 'Đang hiển thị',
       submittedByName:
         submitter && typeof submitter === 'object'
           ? safeString((submitter as { displayName?: string }).displayName) || null
@@ -167,9 +200,9 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
       return Number.isNaN(parsed) ? null : parsed;
     };
     return {
-      lat: toNum(pickField(data, ['lat'], null)),
-      lng: toNum(pickField(data, ['lng'], null)),
-      label: safeString(pickField(data, ['label'], '')),
+      lat: toNum(pickField(data, ['lat', 'latitude'], null)),
+      lng: toNum(pickField(data, ['lng', 'longitude'], null)),
+      label: safeString(pickField(data, ['label', 'address'], '')),
     };
   }
 
@@ -179,29 +212,46 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
       address: input.address,
       ...(input.lat !== undefined ? { lat: input.lat } : {}),
       ...(input.lng !== undefined ? { lng: input.lng } : {}),
+      ...(input.dietaryTags && input.dietaryTags.length > 0
+        ? { dietaryTags: input.dietaryTags }
+        : {}),
       ...(input.dishes.length > 0 ? { dishes: input.dishes } : {}),
+      ...(input.openingHours ? { openingHours: input.openingHours } : {}),
+      ...(input.priceRange ? { priceRange: input.priceRange } : {}),
+      ...(input.phoneNumber ? { phoneNumber: input.phoneNumber } : {}),
       ...(input.note ? { note: input.note } : {}),
     };
   }
 
-  toReviewDto(decision: 'APPROVE' | 'REJECT', reason: string): ReviewRestaurantRequestDto {
-    return { decision, reason };
+  toReviewDto(decision: 'APPROVE' | 'REJECT', reason?: string): ReviewRestaurantRequestDto {
+    return { decision, ...(reason ? { reason } : {}) };
   }
 
   toLocationQuery(query: LocationQuery): Record<string, string | number> {
-    if (query.addressText && query.addressText.trim().length > 0) {
-      return {
-        address: query.addressText.trim(),
-        radius: query.radiusM,
-        ...(query.query ? { q: query.query } : {}),
-      };
-    }
-    return {
-      lat: query.lat ?? 0,
-      lng: query.lng ?? 0,
-      radius: query.radiusM,
-      ...(query.query ? { q: query.query } : {}),
+    const base: Record<string, string | number> = {
+      radiusMeters: Math.max(100, Math.min(50000, Math.round(query.radiusM || 5000))),
     };
+    if (
+      query.lat !== undefined &&
+      query.lng !== undefined &&
+      !Number.isNaN(query.lat) &&
+      !Number.isNaN(query.lng)
+    ) {
+      base.lat = query.lat;
+      base.lng = query.lng;
+    }
+    if (query.query && query.query.trim().length >= 2) {
+      base.q = query.query.trim();
+    }
+    if (query.dietaryTags && query.dietaryTags.length > 0) {
+      const upper = query.dietaryTags.map((t) => t.toUpperCase());
+      if (upper.includes('VEGAN')) {
+        base.dietPattern = 'VEGAN';
+      } else if (upper.some((t) => t.includes('LACTO') || t.includes('OVO'))) {
+        base.dietPattern = 'LACTO_OVO';
+      }
+    }
+    return base;
   }
 }
 
