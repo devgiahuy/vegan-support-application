@@ -337,7 +337,7 @@ export function SiteFooter() {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/posts" className="transition-colors hover:text-emerald-300">
+                  <Link href="/articles" className="transition-colors hover:text-emerald-300">
                     Blog & Bài viết
                   </Link>
                 </li>

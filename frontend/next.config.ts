@@ -16,6 +16,8 @@ const nextConfig: NextConfig = {
   async redirects() {
     // 004-fe-english-routes: permanent VI → EN route rename (static rules first).
     return [
+      { source: '/posts', destination: '/articles', permanent: true },
+      { source: '/posts/:id', destination: '/articles/:id', permanent: true },
       { source: '/bai-viet/tao-moi', destination: '/articles/new', permanent: true },
       { source: '/bai-viet/:id/chinh-sua', destination: '/articles/:id/edit', permanent: true },
       { source: '/ke-hoach-bua-an/da-luu', destination: '/meal-plans/saved', permanent: true },
