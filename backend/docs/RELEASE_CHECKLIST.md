@@ -34,7 +34,7 @@ The ten scenarios in `docs/IMPLEMENTATION_PLAN.md` §10 were exercised at API/se
 
 ## Demo startup
 
-From `backend/`, copy `.env.example` to `.env`, set distinct `SEED_MEMBER_PASSWORD` and `SEED_ADMIN_PASSWORD`, and replace the database, JWT, guest-cookie, and provider secrets before a shared deployment. Keep `VISION_ENABLED=false` and `RECEIPT_ENABLED=false` until a real-image evaluation passes. For an isolated OpenAI evaluation, set `VISION_PROVIDER=openai`, `RECEIPT_PROVIDER=openai`, enable the desired capability, and supply `OPENAI_API_KEY` plus a compatible `OPENAI_BASE_URL`. Use JPEG/PNG/WebP images; the fake adapter remains available for deterministic development checks.
+From `backend/`, copy `.env.example` to `.env`, set distinct `SEED_MEMBER_PASSWORD` and `SEED_ADMIN_PASSWORD`, and replace the database, JWT, guest-cookie, and provider secrets before a shared deployment. The local example enables OpenAI image analysis for development; set `VISION_ENABLED=false` and `RECEIPT_ENABLED=false` before a shared or production deployment until a real-image evaluation passes. For an isolated OpenAI evaluation, keep `VISION_PROVIDER=openai`, `RECEIPT_PROVIDER=openai`, and supply `OPENAI_API_KEY` plus a compatible `OPENAI_BASE_URL`. Use JPEG/PNG/WebP images; the fake adapter remains available for deterministic development checks.
 
 ```bash
 docker compose -f docker-compose.yml up --build

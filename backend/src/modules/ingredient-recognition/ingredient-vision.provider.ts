@@ -55,7 +55,7 @@ export interface IngredientVisionProvider {
 }
 
 export class FakeIngredientVisionProvider implements IngredientVisionProvider {
-  readonly name = 'fake-local';
+  readonly name = 'fake';
 
   constructor(
     readonly model: string,
