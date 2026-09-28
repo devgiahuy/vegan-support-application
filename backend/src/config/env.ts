@@ -91,7 +91,7 @@ const environmentSchema = z
     AI_GUEST_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(60).default(10),
     CHAT_GUEST_COOKIE_SECRET: z.string().min(32).optional(),
     CHAT_GUEST_COOKIE_TTL_DAYS: z.coerce.number().int().min(1).max(30).default(7),
-    VISION_ENABLED: z.stringbool().default(false),
+    VISION_ENABLED: z.stringbool().default(true),
     VISION_PROVIDER: z.enum(['fake', 'openai']).default('openai'),
     VISION_MODEL: z.preprocess(
       (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
@@ -101,7 +101,7 @@ const environmentSchema = z
     VISION_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(256).max(8192).default(2048),
     VISION_MAX_IMAGES: z.coerce.number().int().min(2).max(12).default(6),
     VISION_MAX_IMAGE_BYTES: z.coerce.number().int().min(1).max(25_000_000).default(10_000_000),
-    RECEIPT_ENABLED: z.stringbool().default(false),
+    RECEIPT_ENABLED: z.stringbool().default(true),
     RECEIPT_PROVIDER: z.enum(['fake', 'openai']).default('openai'),
     RECEIPT_MODEL: z.preprocess(
       (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),

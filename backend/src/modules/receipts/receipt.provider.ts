@@ -71,7 +71,7 @@ export interface ReceiptExtractionProvider {
 }
 
 export class FakeReceiptExtractionProvider implements ReceiptExtractionProvider {
-  readonly name = 'fake-local';
+  readonly name = 'fake';
 
   constructor(
     readonly model: string,

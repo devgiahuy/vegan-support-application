@@ -28,9 +28,11 @@ The current stack has no Redis dependency.
 4. For a host demo, start PostgreSQL, run `npm ci`, `npm run prisma:migrate:deploy`, `npm run seed`,
    then `npm run dev` from `backend/`.
 
-The Docker demo uses a fake maps provider and disables image recognition and receipt extraction by
-default. To use real image analysis, set `VISION_PROVIDER=openai`, `RECEIPT_PROVIDER=openai`,
-`VISION_ENABLED=true`, `RECEIPT_ENABLED=true`, and `OPENAI_API_KEY`. Both jobs use the configured
+The Docker demo uses a fake maps provider. Local source configuration enables image recognition and
+receipt extraction through the OpenAI adapters by default when `OPENAI_API_KEY` is configured; shared
+and production environments should disable both capabilities until their image evaluation passes.
+Set `VISION_PROVIDER=openai`, `RECEIPT_PROVIDER=openai`, `VISION_ENABLED=true`,
+`RECEIPT_ENABLED=true`, and `OPENAI_API_KEY` to use real image analysis. Both jobs use the configured
 `OPENAI_BASE_URL` and configurable vision/receipt model IDs (default `gpt-5.6-terra` for OpenAI).
 That endpoint must support Responses image inputs and strict JSON schema output. The OpenAI jobs
 accept JPEG, PNG, and WebP; AVIF is accepted only by the fake development adapter. Receipt analysis

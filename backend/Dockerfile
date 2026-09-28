@@ -27,4 +27,4 @@ COPY --from=build /app/dist-seed ./dist-seed
 
 EXPOSE 4000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node dist-seed/prisma/seed.js && npm start"]
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist-seed/prisma/seed.js && node dist/server.js"]
