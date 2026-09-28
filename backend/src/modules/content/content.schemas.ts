@@ -122,11 +122,14 @@ const recipeIngredientInputSchema = z
 const uniqueIngredientPositions = z
   .array(z.number().int().min(0).max(99))
   .max(100)
-  .refine((values) => new Set(values).size === values.length, 'Ingredient position khong duoc trung lap');
+  .refine(
+    (values) => new Set(values).size === values.length,
+    'Ingredient position khong duoc trung lap',
+  );
 
 const recipeStepInputSchema = z
   .object({
-    instruction: z.string().trim().min(1).max(2000),
+    instruction: z.string().trim().min(1).max(5_000),
     cookingMethodId: z.string().uuid().optional(),
     durationMinutes: z.number().int().positive().max(10_080).optional(),
     temperatureCelsius: z.number().min(0).max(400).optional(),

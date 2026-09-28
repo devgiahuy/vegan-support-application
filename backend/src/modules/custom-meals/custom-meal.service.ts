@@ -1,5 +1,6 @@
-import { MediaKind } from '@prisma/client';
+import { MediaKind, NutritionCoverage, NutritionValueOrigin, type Prisma } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
+import type { AiProvider } from '../chat/ai-provider.js';
 import type { StorageRepository } from '../storage/storage.repository.js';
 import type {
   AttachPhotoInput,
@@ -16,6 +17,26 @@ import type {
 } from './custom-meal.repository.js';
 
 const MAX_PHOTOS = 10;
+const MASS_FACTORS = new Map([
+  ['g', 1],
+  ['gram', 1],
+  ['grams', 1],
+  ['kg', 1_000],
+  ['mg', 0.001],
+]);
+const METRIC_BY_NUTRIENT = {
+  ENERGY_KCAL: 'calories',
+  PROTEIN: 'proteinGrams',
+  CARBS: 'carbsGrams',
+  FAT: 'fatGrams',
+  FIBER: 'fiberGrams',
+} as const;
+type NutritionMetric = (typeof METRIC_BY_NUTRIENT)[keyof typeof METRIC_BY_NUTRIENT];
+
+function rounded(value: number, digits = 2): number {
+  const factor = 10 ** digits;
+  return Math.round((value + Number.EPSILON) * factor) / factor;
+}
 
 function formatDecimal(value: { toNumber(): number } | null | undefined): number | null {
   if (value == null) return null;
@@ -61,15 +82,18 @@ export function formatCustomMeal(meal: CustomMealRecord) {
   };
 }
 
-function mapIngredient(ing: {
-  position: number;
-  displayName: string;
-  amount: number;
-  unit: string;
-  ingredientId?: string | undefined;
-}): CreateCustomMealData['ingredients'][number] {
+function mapIngredient(
+  ing: {
+    position?: number | undefined;
+    displayName: string;
+    amount: number;
+    unit: string;
+    ingredientId?: string | undefined;
+  },
+  index: number,
+): CreateCustomMealData['ingredients'][number] {
   const base = {
-    position: ing.position,
+    position: ing.position ?? index,
     displayName: ing.displayName,
     amount: ing.amount,
     unit: ing.unit,
@@ -124,6 +148,7 @@ export class CustomMealService {
   constructor(
     private readonly repository: CustomMealRepository,
     private readonly storageRepository: StorageRepository,
+    private readonly aiProvider: AiProvider,
   ) {}
 
   async list(ownerId: string, query: CustomMealListQuery) {
@@ -153,7 +178,13 @@ export class CustomMealService {
 
   async create(ownerId: string, input: CreateCustomMealInput) {
     const meal = await this.repository.create(buildCreateData(ownerId, input));
-    return formatCustomMeal(meal);
+    try {
+      const analyzed = await this.analyzeNutrition(ownerId, meal);
+      return formatCustomMeal(analyzed ?? meal);
+    } catch {
+      // Nutrition enrichment is best-effort and must never roll back a valid private meal.
+      return formatCustomMeal(meal);
+    }
   }
 
   async update(ownerId: string, id: string, input: UpdateCustomMealInput) {
@@ -251,5 +282,172 @@ export class CustomMealService {
       });
     }
     return formatCustomMeal(meal);
+  }
+
+  private async analyzeNutrition(ownerId: string, meal: CustomMealRecord) {
+    const ingredientIds = [
+      ...new Set(meal.ingredients.flatMap((ingredient) => ingredient.ingredientId ?? [])),
+    ];
+    const profiles = await this.repository.findNutritionProfiles(ingredientIds);
+    const profileByIngredient = new Map<string, (typeof profiles)[number]>();
+    for (const profile of profiles) {
+      if (!profileByIngredient.has(profile.ingredientId)) {
+        profileByIngredient.set(profile.ingredientId, profile);
+      }
+    }
+
+    const totals = new Map<NutritionMetric, number>();
+    const sources: Array<Record<string, string>> = [];
+    const uncovered: Array<{ position: number; displayName: string; reason: string }> = [];
+    for (const ingredient of meal.ingredients) {
+      const profile = ingredient.ingredientId
+        ? profileByIngredient.get(ingredient.ingredientId)
+        : undefined;
+      if (!profile) {
+        uncovered.push({
+          position: ingredient.position,
+          displayName: ingredient.displayName,
+          reason: ingredient.ingredientId ? 'MISSING_CANONICAL_PROFILE' : 'UNRESOLVED_INGREDIENT',
+        });
+        continue;
+      }
+      const amount = ingredient.amount.toNumber();
+      const normalizedUnit = ingredient.unit.trim().toLocaleLowerCase('vi');
+      const massFactor = MASS_FACTORS.get(normalizedUnit);
+      const conversion = profile.householdConversions.find(
+        (item) =>
+          item.unitName.toLocaleLowerCase('vi') === normalizedUnit ||
+          item.unitSymbol?.toLocaleLowerCase('vi') === normalizedUnit,
+      );
+      const rawGrams =
+        massFactor !== undefined
+          ? amount * massFactor
+          : conversion
+            ? (amount / conversion.quantity.toNumber()) * conversion.grams.toNumber()
+            : null;
+      if (rawGrams === null) {
+        uncovered.push({
+          position: ingredient.position,
+          displayName: ingredient.displayName,
+          reason: 'UNIT_CONVERSION_UNAVAILABLE',
+        });
+        continue;
+      }
+      const edibleGrams = rawGrams * (profile.ediblePortionPercent.toNumber() / 100);
+      for (const nutrient of profile.nutrientValues) {
+        const metric =
+          METRIC_BY_NUTRIENT[nutrient.nutrient.code as keyof typeof METRIC_BY_NUTRIENT];
+        if (!metric) continue;
+        totals.set(
+          metric,
+          (totals.get(metric) ?? 0) + (nutrient.valuePer100g.toNumber() * edibleGrams) / 100,
+        );
+      }
+      sources.push({
+        ingredientId: profile.ingredientId,
+        sourceCode: profile.source.code,
+        sourceVersion: profile.sourceVersion,
+        sourceRecordId: profile.sourceRecordId,
+      });
+    }
+
+    const existing: Partial<Record<NutritionMetric, number>> = {
+      ...(meal.userCalories !== null ? { calories: meal.userCalories } : {}),
+      ...(meal.userProteinGrams !== null ? { proteinGrams: meal.userProteinGrams.toNumber() } : {}),
+      ...(meal.userCarbsGrams !== null ? { carbsGrams: meal.userCarbsGrams.toNumber() } : {}),
+      ...(meal.userFatGrams !== null ? { fatGrams: meal.userFatGrams.toNumber() } : {}),
+    };
+    const values: Partial<Record<NutritionMetric, number>> = { ...existing };
+    const metricMetadata: Record<string, Prisma.InputJsonValue> = {};
+    for (const metric of Object.values(METRIC_BY_NUTRIENT)) {
+      if (existing[metric] !== undefined) {
+        metricMetadata[metric] = {
+          origin: NutritionValueOrigin.USER_PROVIDED,
+          confidence: 1,
+          uncertainty: null,
+        };
+      } else if (totals.has(metric)) {
+        const amount = rounded(totals.get(metric)!);
+        values[metric] = amount;
+        metricMetadata[metric] = {
+          origin: NutritionValueOrigin.CANONICAL_CALCULATED,
+          confidence: uncovered.length === 0 ? 0.95 : 0.75,
+          uncertainty: { partialIngredients: uncovered.length > 0 },
+        };
+      }
+    }
+
+    const missingMetrics = Object.values(METRIC_BY_NUTRIENT).filter(
+      (metric) => values[metric] === undefined,
+    );
+    let aiMetadata: Prisma.InputJsonObject = { used: false, providerDown: false };
+    if (missingMetrics.length > 0 && meal.ingredients.length > 0) {
+      try {
+        const suggestion = await this.aiProvider.suggestCustomMealNutritionFallback({
+          mealName: meal.name,
+          servings: meal.servings,
+          ingredients: meal.ingredients.map((ingredient) => ({
+            displayName: ingredient.displayName,
+            canonicalName: ingredient.ingredient?.canonicalName ?? null,
+            amount: ingredient.amount.toNumber(),
+            unit: ingredient.unit,
+          })),
+          missingMetrics,
+          signal: AbortSignal.timeout(10_000),
+        });
+        let aiUsed = false;
+        for (const metric of missingMetrics) {
+          const amount = suggestion[metric];
+          if (amount === null || !Number.isFinite(amount) || amount < 0) continue;
+          values[metric] = rounded(amount);
+          aiUsed = true;
+          metricMetadata[metric] = {
+            origin: NutritionValueOrigin.AI_ESTIMATED,
+            confidence: suggestion.confidence,
+            uncertainty: suggestion.uncertaintyNote,
+          };
+        }
+        aiMetadata = {
+          used: aiUsed,
+          provider: this.aiProvider.name,
+          modelId: this.aiProvider.chatModel,
+          providerDown: false,
+          uncertaintyNote: suggestion.uncertaintyNote,
+        };
+      } catch {
+        aiMetadata = {
+          used: false,
+          provider: this.aiProvider.name,
+          modelId: this.aiProvider.chatModel,
+          providerDown: true,
+        };
+      }
+    }
+
+    const availableCount = Object.values(METRIC_BY_NUTRIENT).filter(
+      (metric) => values[metric] !== undefined,
+    ).length;
+    const coverage =
+      availableCount === 0
+        ? NutritionCoverage.UNAVAILABLE
+        : availableCount === Object.keys(METRIC_BY_NUTRIENT).length && uncovered.length === 0
+          ? NutritionCoverage.COMPLETE
+          : NutritionCoverage.PARTIAL;
+    return this.repository.saveNutritionAnalysis(ownerId, meal.id, {
+      ...(values.calories !== undefined ? { calories: values.calories } : {}),
+      ...(values.proteinGrams !== undefined ? { proteinGrams: values.proteinGrams } : {}),
+      ...(values.carbsGrams !== undefined ? { carbsGrams: values.carbsGrams } : {}),
+      ...(values.fatGrams !== undefined ? { fatGrams: values.fatGrams } : {}),
+      coverage,
+      metadata: {
+        calculationVersion: 'custom-meal-nutrition-v1',
+        metrics: metricMetadata,
+        sources,
+        uncoveredIngredients: uncovered,
+        ai: aiMetadata,
+        disclaimer:
+          'Giá trị dinh dưỡng chỉ mang tính tham khảo; dữ liệu thực tế có thể thay đổi theo nguyên liệu và cách chế biến.',
+      },
+    });
   }
 }

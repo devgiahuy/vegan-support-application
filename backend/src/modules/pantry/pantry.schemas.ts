@@ -36,7 +36,7 @@ export const createPantryItemSchema = z
     unit: z.string().trim().min(1).max(40),
     confidence: z.number().min(0).max(1).default(1),
     ...dateFields,
-    freshnessNote: z.string().trim().min(1).max(1000).optional(),
+    freshnessNote: z.string().trim().min(1).max(5_000).optional(),
     idempotencyKey: idempotencyKeySchema,
   })
   .strict()
@@ -49,7 +49,7 @@ export const updatePantryItemSchema = z
     expectedVersion: z.number().int().positive(),
     confidence: z.number().min(0).max(1).optional(),
     ...dateFields,
-    freshnessNote: z.string().trim().min(1).max(1000).nullable().optional(),
+    freshnessNote: z.string().trim().min(1).max(5_000).nullable().optional(),
   })
   .strict();
 
@@ -90,7 +90,7 @@ export const createAdjustmentSchema = z.discriminatedUnion('type', [
       unit: z.string().trim().min(1).max(40),
       expectedVersion: z.number().int().positive(),
       idempotencyKey: idempotencyKeySchema,
-      reason: z.string().trim().min(1).max(1000).optional(),
+      reason: z.string().trim().min(1).max(5_000).optional(),
     })
     .strict(),
   z
@@ -100,7 +100,7 @@ export const createAdjustmentSchema = z.discriminatedUnion('type', [
       unit: z.string().trim().min(1).max(40),
       expectedVersion: z.number().int().positive(),
       idempotencyKey: idempotencyKeySchema,
-      reason: z.string().trim().min(1).max(1000).optional(),
+      reason: z.string().trim().min(1).max(5_000).optional(),
     })
     .strict(),
   z
@@ -114,7 +114,7 @@ export const createAdjustmentSchema = z.discriminatedUnion('type', [
       unit: z.string().trim().min(1).max(40),
       expectedVersion: z.number().int().positive(),
       idempotencyKey: idempotencyKeySchema,
-      reason: z.string().trim().min(1).max(1000),
+      reason: z.string().trim().min(1).max(5_000),
     })
     .strict(),
 ]);

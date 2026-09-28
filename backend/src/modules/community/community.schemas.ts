@@ -1,5 +1,5 @@
 import { CommentStatus, PostType } from '@prisma/client';
-import { z, mediaUrlSchema } from '../../common/validation/zod.js';
+import { z, mediaUrlSchema, nullableMediaUrlSchema } from '../../common/validation/zod.js';
 
 export const communityPostParamsSchema = z.object({ id: z.string().uuid() }).strict();
 export const commentParamsSchema = z.object({ id: z.string().uuid() }).strict();
@@ -42,7 +42,7 @@ const communityAuthorSchema = z
   .object({
     id: z.string().uuid(),
     displayName: z.string(),
-    avatarUrl: mediaUrlSchema.nullable(),
+    avatarUrl: nullableMediaUrlSchema,
   })
   .strict();
 

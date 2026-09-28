@@ -89,7 +89,9 @@ export class ReceiptService {
       const asset = byId.get(id);
       if (
         !asset?.mimeType ||
-        !(this.config.receipt.provider === 'openai' ? OPENAI_IMAGE_MIME_TYPES : IMAGE_MIME_TYPES).has(asset.mimeType) ||
+        !(
+          this.config.receipt.provider === 'openai' ? OPENAI_IMAGE_MIME_TYPES : IMAGE_MIME_TYPES
+        ).has(asset.mimeType) ||
         asset.bytes > BigInt(this.config.receipt.maxImageBytes)
       ) {
         throw this.invalidImage();
@@ -141,17 +143,28 @@ export class ReceiptService {
       ingredientId = input.ingredientId;
       if (ingredientId) {
         const ingredient = await this.repository.resolveIngredientById(ingredientId);
-        if (!ingredient) throw this.validation('RECEIPT_INGREDIENT_INVALID', 'The selected ingredient is not active.');
+        if (!ingredient)
+          throw this.validation(
+            'RECEIPT_INGREDIENT_INVALID',
+            'The selected ingredient is not active.',
+          );
         detectedName = ingredient.canonicalName;
         normalizedName = normalizeVietnameseText(ingredient.canonicalName);
         matchConfidence = 1;
       } else matchConfidence = null;
     }
-    if (!normalizedName) throw this.validation('RECEIPT_CANDIDATE_INVALID', 'Candidate name must contain letters or numbers.');
+    if (!normalizedName)
+      throw this.validation(
+        'RECEIPT_CANDIDATE_INVALID',
+        'Candidate name must contain letters or numbers.',
+      );
     const quantity = input.quantity === undefined ? number(current.quantity) : input.quantity;
     const unit = input.unit === undefined ? current.unit : input.unit;
     if ((quantity === null) !== (unit === null)) {
-      throw this.validation('RECEIPT_QUANTITY_INCOMPLETE', 'Quantity and unit must both be provided or both be empty.');
+      throw this.validation(
+        'RECEIPT_QUANTITY_INCOMPLETE',
+        'Quantity and unit must both be provided or both be empty.',
+      );
     }
     const data: Prisma.ReceiptCandidateUncheckedUpdateManyInput = {
       ingredientId,
@@ -160,7 +173,10 @@ export class ReceiptService {
       matchConfidence,
       quantity,
       unit,
-      status: input.decision === 'REJECT' ? ReceiptCandidateStatus.REJECTED : ReceiptCandidateStatus.EDITED,
+      status:
+        input.decision === 'REJECT'
+          ? ReceiptCandidateStatus.REJECTED
+          : ReceiptCandidateStatus.EDITED,
       ...(input.decision === 'REJECT' ? {} : { editedByUser: true }),
       ...(input.lineText !== undefined ? { lineText: input.lineText } : {}),
       ...(input.unitPrice !== undefined ? { unitPrice: input.unitPrice } : {}),
@@ -210,7 +226,9 @@ export class ReceiptService {
         idempotencyKey: input.idempotencyKey,
         requestHash,
       });
-      const pantryByCandidate = new Map(result.job.candidates.map((candidate) => [candidate.id, candidate.pantryItem]));
+      const pantryByCandidate = new Map(
+        result.job.candidates.map((candidate) => [candidate.id, candidate.pantryItem]),
+      );
       return {
         job: this.serializeJob(result.job),
         pantryChanges: result.changes.map((change) => {
@@ -221,7 +239,9 @@ export class ReceiptService {
             action: change.action,
             pantryItem: {
               id: item.id,
-              ingredient: item.ingredient ? { id: item.ingredient.id, name: item.ingredient.canonicalName } : null,
+              ingredient: item.ingredient
+                ? { id: item.ingredient.id, name: item.ingredient.canonicalName }
+                : null,
               unmatchedText: item.unmatchedText ?? null,
               quantity: item.quantity.toNumber(),
               unit: item.unit,
@@ -252,7 +272,12 @@ export class ReceiptService {
   async retry(ownerId: string, id: string, input: RetryReceiptJobInput) {
     this.ensureEnabled();
     try {
-      const result = await this.repository.queueRetry(ownerId, id, input.idempotencyKey, sha256({ id }));
+      const result = await this.repository.queueRetry(
+        ownerId,
+        id,
+        input.idempotencyKey,
+        sha256({ id }),
+      );
       if (!result) throw this.notFound();
       if (!result.replay) this.schedule(ownerId, id);
       return this.serializeJob(result.job);
@@ -264,13 +289,21 @@ export class ReceiptService {
   async process(ownerId: string, id: string): Promise<void> {
     const job = await this.repository.startProcessing(ownerId, id);
     if (!job) return;
-    if (job.provider !== this.provider.name || job.modelId !== this.provider.model || job.templateVersion !== this.provider.templateVersion) {
+    if (
+      job.provider !== this.provider.name ||
+      job.modelId !== this.provider.model ||
+      job.templateVersion !== this.provider.templateVersion
+    ) {
       await this.repository.markFailed(job.id);
       return;
     }
     try {
       const results = await this.provider.extract(
-        job.inputs.map((input) => ({ id: input.id, position: input.position, url: input.asset.secureUrl })),
+        job.inputs.map((input) => ({
+          id: input.id,
+          position: input.position,
+          url: input.asset.secureUrl,
+        })),
       );
       const successful = results.filter((result) => !result.error);
       const bestMetadata = successful
@@ -301,7 +334,10 @@ export class ReceiptService {
     const customSelections = input.meals.filter((meal) => meal.sourceType === 'CUSTOM_MEAL');
     const [recipes, customMeals] = await Promise.all([
       this.repository.findPublishedRecipes(recipeSelections.map((meal) => meal.recipeId)),
-      this.repository.findOwnedCustomMeals(ownerId, customSelections.map((meal) => meal.customMealId)),
+      this.repository.findOwnedCustomMeals(
+        ownerId,
+        customSelections.map((meal) => meal.customMealId),
+      ),
     ]);
     const recipeById = new Map(recipes.map((recipe) => [recipe.id, recipe]));
     const customById = new Map(customMeals.map((meal) => [meal.id, meal]));
@@ -361,14 +397,23 @@ export class ReceiptService {
       explanation: string;
       sourceMeals: SourceMeal[];
     }> = [];
-    const groups = new Map<string, { ingredient: { id: string; name: string }; required: number; confidence: number; assumptions: Set<string>; sourceMeals: Map<string, SourceMeal> }>();
+    const groups = new Map<
+      string,
+      {
+        ingredient: { id: string; name: string };
+        required: number;
+        confidence: number;
+        assumptions: Set<string>;
+        sourceMeals: Map<string, SourceMeal>;
+      }
+    >();
     for (const line of lines) {
       if (!line.ingredientId) {
         unresolvedItems.push({
           name: line.name,
           required: { value: Number(line.amount.toFixed(4)), unit: line.unit },
           reasonCode: 'INGREDIENT_UNRESOLVED',
-          explanation: 'This meal ingredient has no canonical ingredient identity.',
+          explanation: 'Nguyên liệu trong bữa ăn này chưa có định danh nguyên liệu chuẩn.',
           sourceMeals: [line.sourceMeal],
         });
         continue;
@@ -379,7 +424,7 @@ export class ReceiptService {
           name: line.name,
           required: { value: Number(line.amount.toFixed(4)), unit: line.unit },
           reasonCode: 'REVIEWED_CONVERSION_UNAVAILABLE',
-          explanation: `No reviewed conversion from ${line.unit} to grams is available.`,
+          explanation: `Chưa có quy đổi đã được duyệt từ ${line.unit} sang gam.`,
           sourceMeals: [line.sourceMeal],
         });
         continue;
@@ -395,8 +440,8 @@ export class ReceiptService {
       group.confidence = Math.min(group.confidence, conversion.confidence ?? 0.5);
       group.assumptions.add(
         conversion.source === 'SYSTEM_MASS'
-          ? `${line.amount} ${line.unit} converted with UCUM-MASS-V1.`
-          : `${line.amount} ${line.unit} converted with reviewed ${conversion.source ?? 'food-data'} ${conversion.version ?? ''}.`.trim(),
+          ? `${line.amount} ${line.unit} được quy đổi theo UCUM-MASS-V1.`
+          : `${line.amount} ${line.unit} được quy đổi theo nguồn đã duyệt ${conversion.source ?? 'dữ liệu thực phẩm'} ${conversion.version ?? ''}.`.trim(),
       );
       group.sourceMeals.set(`${line.sourceMeal.sourceType}:${line.sourceMeal.id}`, line.sourceMeal);
       groups.set(line.ingredientId, group);
@@ -413,13 +458,22 @@ export class ReceiptService {
       const inventory = pantryByIngredient.get(group.ingredient.id) ?? [];
       const convertible = inventory.filter((item) => item.normalizedGrams !== null);
       const unavailableCount = inventory.length - convertible.length;
-      const available = convertible.reduce((sum, item) => sum + (item.normalizedGrams?.toNumber() ?? 0), 0);
+      const available = convertible.reduce(
+        (sum, item) => sum + (item.normalizedGrams?.toNumber() ?? 0),
+        0,
+      );
       const required = Number(group.required.toFixed(4));
       if (unavailableCount) {
-        group.assumptions.add(`${String(unavailableCount)} confirmed pantry line(s) were excluded because no reviewed gram conversion exists.`);
+        group.assumptions.add(
+          `${String(unavailableCount)} mục kho đã xác nhận không được tính vì chưa có quy đổi sang gam đã được duyệt.`,
+        );
         group.confidence = Math.min(group.confidence, 0.5);
       }
-      for (const item of convertible) group.confidence = Math.min(group.confidence, item.conversionConfidence?.toNumber() ?? item.confidence.toNumber());
+      for (const item of convertible)
+        group.confidence = Math.min(
+          group.confidence,
+          item.conversionConfidence?.toNumber() ?? item.confidence.toNumber(),
+        );
       return {
         ingredient: group.ingredient,
         required: { value: required, unit: 'g' },
@@ -458,7 +512,9 @@ export class ReceiptService {
           ingredientId: ingredient?.id ?? null,
           lineText: line.lineText,
           detectedName: ingredient?.canonicalName ?? line.name,
-          normalizedName: ingredient ? normalizeVietnameseText(ingredient.canonicalName) : normalizedName,
+          normalizedName: ingredient
+            ? normalizeVietnameseText(ingredient.canonicalName)
+            : normalizedName,
           quantity: line.quantity,
           unit: line.unit,
           unitPrice: line.unitPrice,
@@ -489,11 +545,20 @@ export class ReceiptService {
         confidence: 1,
       };
     }
-    if (!ingredientId) return { normalizedGrams: null, status: PantryConversionStatus.UNKNOWN, source: null, version: null, confidence: null };
+    if (!ingredientId)
+      return {
+        normalizedGrams: null,
+        status: PantryConversionStatus.UNKNOWN,
+        source: null,
+        version: null,
+        confidence: null,
+      };
     const profiles = await this.repository.findReviewedConversions(ingredientId);
     for (const profile of profiles) {
       const conversion = profile.householdConversions.find(
-        (item) => item.unitName.toLowerCase() === normalizedUnit || item.unitSymbol?.toLowerCase() === normalizedUnit,
+        (item) =>
+          item.unitName.toLowerCase() === normalizedUnit ||
+          item.unitSymbol?.toLowerCase() === normalizedUnit,
       );
       if (!conversion) continue;
       return {
@@ -504,7 +569,13 @@ export class ReceiptService {
         confidence: qualityConfidence(conversion.quality),
       };
     }
-    return { normalizedGrams: null, status: PantryConversionStatus.UNKNOWN, source: null, version: null, confidence: null };
+    return {
+      normalizedGrams: null,
+      status: PantryConversionStatus.UNKNOWN,
+      source: null,
+      version: null,
+      confidence: null,
+    };
   }
 
   private serializeJob(job: ReceiptJobRecord) {
@@ -535,7 +606,11 @@ export class ReceiptService {
         lineText: candidate.lineText,
         name: candidate.detectedName,
         ingredientSuggestion: candidate.ingredient
-          ? { id: candidate.ingredient.id, name: candidate.ingredient.canonicalName, confidence: number(candidate.matchConfidence) ?? 0 }
+          ? {
+              id: candidate.ingredient.id,
+              name: candidate.ingredient.canonicalName,
+              confidence: number(candidate.matchConfidence) ?? 0,
+            }
           : null,
         quantity: { value: number(candidate.quantity), unit: candidate.unit ?? null },
         pricing: {
@@ -549,7 +624,9 @@ export class ReceiptService {
         version: candidate.version,
       })),
       attempt: job.attemptCount,
-      issue: job.errorCode ? { code: job.errorCode, message: job.errorMessage ?? 'Receipt extraction could not be completed.' } : null,
+      issue: job.errorCode
+        ? { code: job.errorCode, message: job.errorMessage ?? 'Không thể hoàn tất đọc hóa đơn.' }
+        : null,
       createdAt: job.createdAt.toISOString(),
       updatedAt: job.updatedAt.toISOString(),
       completedAt: job.processingCompletedAt?.toISOString() ?? null,
@@ -563,12 +640,19 @@ export class ReceiptService {
 
   private ensureEnabled(): void {
     if (!this.config.receipt.enabled) {
-      throw new AppError({ statusCode: 503, code: 'RECEIPT_PROVIDER_UNAVAILABLE', message: 'Receipt extraction is currently disabled.' });
+      throw new AppError({
+        statusCode: 503,
+        code: 'RECEIPT_PROVIDER_UNAVAILABLE',
+        message: 'Receipt extraction is currently disabled.',
+      });
     }
   }
 
   private invalidImage(): AppError {
-    return this.validation('RECEIPT_IMAGE_INVALID', 'Every image must be an owned, committed receipt image with a supported type and size.');
+    return this.validation(
+      'RECEIPT_IMAGE_INVALID',
+      'Every image must be an owned, committed receipt image with a supported type and size.',
+    );
   }
 
   private validation(code: string, message: string): AppError {
@@ -576,16 +660,28 @@ export class ReceiptService {
   }
 
   private notFound(): AppError {
-    return new AppError({ statusCode: 404, code: 'RECEIPT_JOB_NOT_FOUND', message: 'Receipt job was not found.' });
+    return new AppError({
+      statusCode: 404,
+      code: 'RECEIPT_JOB_NOT_FOUND',
+      message: 'Receipt job was not found.',
+    });
   }
 
   private mapConflict(error: unknown): Error {
     if (error instanceof AppError) return error;
     if (error instanceof ReceiptVersionConflictError) {
-      return new AppError({ statusCode: 409, code: 'RECEIPT_VERSION_CONFLICT', message: 'Receipt candidate changed; refresh before continuing.' });
+      return new AppError({
+        statusCode: 409,
+        code: 'RECEIPT_VERSION_CONFLICT',
+        message: 'Receipt candidate changed; refresh before continuing.',
+      });
     }
     if (error instanceof ReceiptConflictError) {
-      return new AppError({ statusCode: 409, code: 'RECEIPT_STATE_CONFLICT', message: 'Receipt job is not in a state that permits this action.' });
+      return new AppError({
+        statusCode: 409,
+        code: 'RECEIPT_STATE_CONFLICT',
+        message: 'Receipt job is not in a state that permits this action.',
+      });
     }
     return error instanceof Error ? error : new Error('Unknown receipt error');
   }

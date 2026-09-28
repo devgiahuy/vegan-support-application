@@ -398,7 +398,7 @@
               "experience": {
                 "type": "string",
                 "minLength": 20,
-                "maxLength": 2000
+                "maxLength": 5000
               },
               "referenceLinks": {
                 "type": "array",
@@ -3256,7 +3256,7 @@
                         "instruction": {
                           "type": "string",
                           "minLength": 1,
-                          "maxLength": 2000
+                          "maxLength": 5000
                         },
                         "cookingMethodId": {
                           "type": "string",
@@ -3785,7 +3785,7 @@
                         "instruction": {
                           "type": "string",
                           "minLength": 1,
-                          "maxLength": 2000
+                          "maxLength": 5000
                         },
                         "cookingMethodId": {
                           "type": "string",
@@ -13958,7 +13958,6 @@
           }
         },
         "required": [
-          "title",
           "goal",
           "startDate",
           "timezone",
@@ -17922,7 +17921,7 @@
           "reason": {
             "type": "string",
             "minLength": 10,
-            "maxLength": 1000
+            "maxLength": 5000
           },
           "idempotencyKey": {
             "type": "string",
@@ -19834,7 +19833,7 @@
               "null"
             ],
             "minLength": 1,
-            "maxLength": 1000
+            "maxLength": 2000
           },
           "confidence": {
             "type": "number",
@@ -20619,7 +20618,7 @@
           "lineText": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 300
+            "maxLength": 1000
           },
           "quantity": {
             "type": [
@@ -20671,7 +20670,7 @@
               "null"
             ],
             "minLength": 1,
-            "maxLength": 500
+            "maxLength": 2000
           },
           "decision": {
             "type": "string",
@@ -21872,7 +21871,7 @@
           "summary": {
             "type": "string",
             "minLength": 3,
-            "maxLength": 1000
+            "maxLength": 5000
           },
           "authorAnonymous": {
             "type": "boolean",
@@ -21881,9 +21880,7 @@
         },
         "required": [
           "type",
-          "sourceId",
-          "title",
-          "summary"
+          "sourceId"
         ],
         "additionalProperties": false
       },
@@ -21939,12 +21936,12 @@
           "scope": {
             "type": "string",
             "minLength": 3,
-            "maxLength": 500
+            "maxLength": 2000
           },
           "evidenceNote": {
             "type": "string",
             "minLength": 3,
-            "maxLength": 2000
+            "maxLength": 10000
           },
           "correction": {
             "type": [
@@ -21952,7 +21949,7 @@
               "null"
             ],
             "minLength": 3,
-            "maxLength": 2000
+            "maxLength": 10000
           }
         },
         "required": [
@@ -21981,7 +21978,7 @@
               "reason": {
                 "type": "string",
                 "minLength": 3,
-                "maxLength": 2000
+                "maxLength": 10000
               },
               "conclusion": {
                 "type": "string",
@@ -21994,12 +21991,12 @@
               "scope": {
                 "type": "string",
                 "minLength": 3,
-                "maxLength": 500
+                "maxLength": 2000
               },
               "evidenceNote": {
                 "type": "string",
                 "minLength": 3,
-                "maxLength": 2000
+                "maxLength": 10000
               },
               "correction": {
                 "type": [
@@ -22007,7 +22004,7 @@
                   "null"
                 ],
                 "minLength": 3,
-                "maxLength": 2000
+                "maxLength": 10000
               }
             },
             "required": [
@@ -22036,7 +22033,7 @@
               "reason": {
                 "type": "string",
                 "minLength": 3,
-                "maxLength": 2000
+                "maxLength": 10000
               }
             },
             "required": [
@@ -34165,7 +34162,7 @@
                   "experience": {
                     "type": "string",
                     "minLength": 20,
-                    "maxLength": 2000
+                    "maxLength": 5000
                   },
                   "referenceLinks": {
                     "type": "array",
@@ -34741,7 +34738,7 @@
                   "reason": {
                     "type": "string",
                     "minLength": 10,
-                    "maxLength": 2000
+                    "maxLength": 5000
                   }
                 },
                 "required": [
@@ -34976,7 +34973,7 @@
                       "reviewNote": {
                         "type": "string",
                         "minLength": 10,
-                        "maxLength": 2000
+                        "maxLength": 5000
                       }
                     },
                     "required": [
@@ -34998,7 +34995,7 @@
                       "reviewNote": {
                         "type": "string",
                         "minLength": 10,
-                        "maxLength": 2000
+                        "maxLength": 5000
                       }
                     },
                     "required": [
@@ -35261,7 +35258,7 @@
                   "reason": {
                     "type": "string",
                     "minLength": 10,
-                    "maxLength": 2000
+                    "maxLength": 5000
                   }
                 },
                 "required": [
@@ -43217,7 +43214,7 @@
                           "attribution": {
                             "type": "string",
                             "minLength": 1,
-                            "maxLength": 1000
+                            "maxLength": 5000
                           },
                           "defaultLocale": {
                             "type": "string",
@@ -43289,7 +43286,7 @@
                               "string",
                               "null"
                             ],
-                            "maxLength": 1000
+                            "maxLength": 5000
                           },
                           "active": {
                             "type": "boolean",
@@ -43838,7 +43835,7 @@
                           "explanation": {
                             "type": "string",
                             "minLength": 1,
-                            "maxLength": 2000
+                            "maxLength": 5000
                           },
                           "sourceId": {
                             "type": "string",
@@ -43933,7 +43930,7 @@
                               "string",
                               "null"
                             ],
-                            "maxLength": 1000
+                            "maxLength": 5000
                           },
                           "active": {
                             "type": "boolean",
@@ -44225,14 +44222,14 @@
                           "explanation": {
                             "type": "string",
                             "minLength": 1,
-                            "maxLength": 2000
+                            "maxLength": 5000
                           },
                           "suggestedAction": {
                             "type": [
                               "string",
                               "null"
                             ],
-                            "maxLength": 1000
+                            "maxLength": 5000
                           },
                           "hardRule": {
                             "type": "boolean",
@@ -44342,7 +44339,7 @@
                               "string",
                               "null"
                             ],
-                            "maxLength": 2000
+                            "maxLength": 5000
                           },
                           "confidence": {
                             "anyOf": [
@@ -44707,7 +44704,7 @@
                           "attribution": {
                             "type": "string",
                             "minLength": 1,
-                            "maxLength": 1000
+                            "maxLength": 5000
                           },
                           "defaultLocale": {
                             "type": "string",
@@ -44779,7 +44776,7 @@
                               "string",
                               "null"
                             ],
-                            "maxLength": 1000
+                            "maxLength": 5000
                           },
                           "active": {
                             "type": "boolean",
@@ -45328,7 +45325,7 @@
                           "explanation": {
                             "type": "string",
                             "minLength": 1,
-                            "maxLength": 2000
+                            "maxLength": 5000
                           },
                           "sourceId": {
                             "type": "string",
@@ -45423,7 +45420,7 @@
                               "string",
                               "null"
                             ],
-                            "maxLength": 1000
+                            "maxLength": 5000
                           },
                           "active": {
                             "type": "boolean",
@@ -45715,14 +45712,14 @@
                           "explanation": {
                             "type": "string",
                             "minLength": 1,
-                            "maxLength": 2000
+                            "maxLength": 5000
                           },
                           "suggestedAction": {
                             "type": [
                               "string",
                               "null"
                             ],
-                            "maxLength": 1000
+                            "maxLength": 5000
                           },
                           "hardRule": {
                             "type": "boolean",
@@ -45832,7 +45829,7 @@
                               "string",
                               "null"
                             ],
-                            "maxLength": 2000
+                            "maxLength": 5000
                           },
                           "confidence": {
                             "anyOf": [
@@ -50071,7 +50068,7 @@
                   "sourceNote": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 500
+                    "maxLength": 2000
                   },
                   "userCalories": {
                     "type": "integer",
@@ -50080,17 +50077,17 @@
                   },
                   "userProteinGrams": {
                     "type": "number",
-                    "exclusiveMinimum": 0,
+                    "minimum": 0,
                     "maximum": 99999
                   },
                   "userCarbsGrams": {
                     "type": "number",
-                    "exclusiveMinimum": 0,
+                    "minimum": 0,
                     "maximum": 99999
                   },
                   "userFatGrams": {
                     "type": "number",
-                    "exclusiveMinimum": 0,
+                    "minimum": 0,
                     "maximum": 99999
                   },
                   "deletePolicy": {
@@ -50132,7 +50129,6 @@
                         }
                       },
                       "required": [
-                        "position",
                         "displayName",
                         "amount",
                         "unit"
@@ -50363,7 +50359,7 @@
                       "null"
                     ],
                     "minLength": 1,
-                    "maxLength": 500
+                    "maxLength": 2000
                   },
                   "userCalories": {
                     "type": [
@@ -50378,7 +50374,7 @@
                       "number",
                       "null"
                     ],
-                    "exclusiveMinimum": 0,
+                    "minimum": 0,
                     "maximum": 99999
                   },
                   "userCarbsGrams": {
@@ -50386,7 +50382,7 @@
                       "number",
                       "null"
                     ],
-                    "exclusiveMinimum": 0,
+                    "minimum": 0,
                     "maximum": 99999
                   },
                   "userFatGrams": {
@@ -50394,7 +50390,7 @@
                       "number",
                       "null"
                     ],
-                    "exclusiveMinimum": 0,
+                    "minimum": 0,
                     "maximum": 99999
                   },
                   "deletePolicy": {
@@ -50435,7 +50431,6 @@
                         }
                       },
                       "required": [
-                        "position",
                         "displayName",
                         "amount",
                         "unit"
@@ -51183,7 +51178,7 @@
                   "freshnessNote": {
                     "type": "string",
                     "minLength": 1,
-                    "maxLength": 1000
+                    "maxLength": 5000
                   },
                   "idempotencyKey": {
                     "type": "string",
@@ -51742,7 +51737,7 @@
                       "null"
                     ],
                     "minLength": 1,
-                    "maxLength": 1000
+                    "maxLength": 5000
                   }
                 },
                 "required": [
@@ -52075,7 +52070,7 @@
                       "reason": {
                         "type": "string",
                         "minLength": 1,
-                        "maxLength": 1000
+                        "maxLength": 5000
                       }
                     },
                     "required": [
@@ -52118,7 +52113,7 @@
                       "reason": {
                         "type": "string",
                         "minLength": 1,
-                        "maxLength": 1000
+                        "maxLength": 5000
                       }
                     },
                     "required": [
@@ -52161,7 +52156,7 @@
                       "reason": {
                         "type": "string",
                         "minLength": 1,
-                        "maxLength": 1000
+                        "maxLength": 5000
                       }
                     },
                     "required": [

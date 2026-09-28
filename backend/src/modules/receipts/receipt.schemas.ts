@@ -2,7 +2,11 @@ import { PantryItemSource, ReceiptCandidateStatus, ReceiptJobStatus } from '@pri
 import { z, mediaUrlSchema } from '../../common/validation/zod.js';
 
 const idempotencyKeySchema = z.string().trim().min(8).max(160);
-const currencySchema = z.string().trim().toUpperCase().regex(/^[A-Z]{3}$/);
+const currencySchema = z
+  .string()
+  .trim()
+  .toUpperCase()
+  .regex(/^[A-Z]{3}$/);
 
 export const createReceiptJobSchema = z
   .object({
@@ -25,14 +29,14 @@ export const updateReceiptCandidateSchema = z
     expectedVersion: z.number().int().positive(),
     ingredientId: z.string().uuid().nullable().optional(),
     detectedName: z.string().trim().min(1).max(160).optional(),
-    lineText: z.string().trim().min(1).max(300).optional(),
+    lineText: z.string().trim().min(1).max(1_000).optional(),
     quantity: z.number().positive().max(999_999_999).nullable().optional(),
     unit: z.string().trim().min(1).max(40).nullable().optional(),
     unitPrice: z.number().nonnegative().max(999_999_999_999).nullable().optional(),
     lineTotal: z.number().nonnegative().max(999_999_999_999).nullable().optional(),
     currency: currencySchema.nullable().optional(),
     confidence: z.number().min(0).max(1).optional(),
-    uncertaintyNote: z.string().trim().min(1).max(500).nullable().optional(),
+    uncertaintyNote: z.string().trim().min(1).max(2_000).nullable().optional(),
     decision: z.enum(['KEEP', 'REJECT']).optional(),
   })
   .strict()
@@ -44,19 +48,20 @@ export const confirmReceiptJobSchema = z
   .object({
     candidates: z
       .array(
-        z
-          .object({ id: z.string().uuid(), expectedVersion: z.number().int().positive() })
-          .strict(),
+        z.object({ id: z.string().uuid(), expectedVersion: z.number().int().positive() }).strict(),
       )
       .min(1)
       .max(200),
     idempotencyKey: idempotencyKeySchema,
   })
   .strict()
-  .refine((input) => new Set(input.candidates.map((item) => item.id)).size === input.candidates.length, {
-    message: 'Candidate IDs must be unique',
-    path: ['candidates'],
-  });
+  .refine(
+    (input) => new Set(input.candidates.map((item) => item.id)).size === input.candidates.length,
+    {
+      message: 'Candidate IDs must be unique',
+      path: ['candidates'],
+    },
+  );
 
 export const retryReceiptJobSchema = z.object({ idempotencyKey: idempotencyKeySchema }).strict();
 
