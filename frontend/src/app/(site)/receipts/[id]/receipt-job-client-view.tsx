@@ -92,6 +92,7 @@ export function ReceiptJobClientView({ jobId }: ReceiptJobClientViewProps) {
       <ReceiptInspectionView
         job={job}
         onConfirmationSuccess={(diff) => setConfirmationDiff(diff)}
+        onScanAnother={() => router.push('/receipts/scan')}
       />
 
       {/* Modal tổng kết kết quả nhập kho */}
@@ -101,6 +102,7 @@ export function ReceiptJobClientView({ jobId }: ReceiptJobClientViewProps) {
           if (!open) setConfirmationDiff(null);
         }}
         diff={confirmationDiff}
+        onScanAnother={() => router.push('/receipts/scan')}
       />
     </div>
   );

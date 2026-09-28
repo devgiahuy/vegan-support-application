@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { ZoomIn, ZoomOut, RotateCw, Maximize2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import type { ReceiptImage } from '../types/receipt.model';
 
 interface ReceiptImageViewerProps {
@@ -20,6 +21,7 @@ export function ReceiptImageViewer({
   const [currentIndex, setCurrentIndex] = useState(0);
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
+  const [isZoomOpen, setIsZoomOpen] = useState(false);
 
   if (!images || images.length === 0) {
     return (
@@ -127,6 +129,17 @@ export function ReceiptImageViewer({
               <RefreshCw className="h-3.5 w-3.5" />
             </Button>
           )}
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsZoomOpen(true)}
+            className="h-8 w-8 text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-lg"
+            title="Xem toàn màn hình"
+          >
+            <Maximize2 className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
@@ -160,6 +173,28 @@ export function ReceiptImageViewer({
         </span>
         <span className="text-[11px] text-neutral-500">Dùng thanh công cụ để zoom và xoay ảnh</span>
       </div>
+
+      {/* Modal phóng to toàn màn hình */}
+      <Dialog open={isZoomOpen} onOpenChange={setIsZoomOpen}>
+        <DialogContent className="max-w-[95vw] sm:max-w-4xl p-2 bg-neutral-950 border-neutral-800 text-white">
+          <DialogHeader className="px-4 pt-3 pb-2 text-white">
+            <DialogTitle className="text-sm font-semibold flex items-center justify-between">
+              <span>
+                Ảnh hóa đơn đoạn #{activeIndex + 1} / {images.length}
+              </span>
+            </DialogTitle>
+          </DialogHeader>
+          {currentImage.url && (
+            <div className="relative max-h-[85vh] overflow-auto flex items-center justify-center p-4 bg-neutral-900/60 rounded-xl">
+              <img
+                src={currentImage.url}
+                alt="Ảnh hóa đơn phóng to"
+                className="max-h-[80vh] w-auto object-contain rounded-md"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

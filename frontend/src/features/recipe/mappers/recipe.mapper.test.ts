@@ -191,9 +191,16 @@ describe('RecipeMapper', () => {
     expect(model.expertVerified).toBe(false);
     expect(model.author.verified).toBe(false);
     expect(model.allergenCodes).toEqual(['SOY']);
+    expect(model.allergens).toEqual([{ code: 'SOY', name: 'Đậu nành' }]);
     expect(model.mealPlannerEligible).toBe(false);
     expect(model.traditionWarnings?.[0].label).toBe('Kiêng ngũ vị tân');
+    expect(model.traditionWarnings?.[0].traditionName).toBe('Phật giáo');
+    expect(model.traditionWarnings?.[0].traditionLabel).toBe('Phật giáo');
     expect(model.dietCompatibilities?.[0].compatible).toBe(false);
+    expect(model.dietCompatibilities?.[0].dietPatternName).toBe('Thuần chay');
+    expect(model.dietCompatibilities?.[0].reasonLabels).toEqual([
+      'Nguyên liệu chưa được chuẩn hóa',
+    ]);
   });
 
   it('includes ingredientId when provided as valid UUID string', () => {

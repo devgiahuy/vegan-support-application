@@ -22,6 +22,7 @@ import { Pagination } from '@/components/shared/pagination';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useIngredientsQuery } from '../queries/ingredient.queries';
 import { FoodGroup } from '@/common/enums';
+import { getAllergenName } from '@/common/constants/diet-labels';
 
 const FOOD_GROUP_OPTIONS: Array<{ value: FoodGroup | 'ALL'; label: string }> = [
   { value: 'ALL', label: 'Mọi nhóm' },
@@ -128,7 +129,7 @@ export function IngredientSearch() {
                   <div className="mt-2 flex flex-wrap gap-1">
                     {item.allergenCodes.map((code) => (
                       <Badge key={code} variant="outline" className="rounded-full text-[11px]">
-                        Dị ứng: {code}
+                        Dị ứng: {getAllergenName(code)}
                       </Badge>
                     ))}
                   </div>
