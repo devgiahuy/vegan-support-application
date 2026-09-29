@@ -5,10 +5,16 @@ import {
   GuidelinePeriod,
   InteractionScope,
   MealAnalysisStatus,
-  NutrientReferenceType,
   type Prisma,
 } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
+import {
+  addMealMacroValues,
+  emptyMealMacroValues,
+  estimateMealMacroTargets,
+  isMacroOverTarget,
+} from '../../common/nutrition/meal-macros.js';
+import type { AppConfig } from '../../config/env.js';
 import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 import {
   type AnalysisPlanRecord,
@@ -71,7 +77,13 @@ function nutrientList(
     return typeof item.nutrientCode === 'string' &&
       typeof item.unit === 'string' &&
       typeof item.amount === 'number'
-      ? [{ code: item.nutrientCode, unit: item.unit, amount: item.amount }]
+      ? [
+          {
+            code: item.nutrientCode === 'CARBOHYDRATE' ? 'CARBS' : item.nutrientCode,
+            unit: item.unit,
+            amount: item.amount,
+          },
+        ]
       : [];
   });
 }
@@ -96,10 +108,6 @@ function warningConfidence(grade: EvidenceGrade): number {
     [EvidenceGrade.LOW]: 0.6,
     [EvidenceGrade.INSUFFICIENT]: 0.35,
   }[grade];
-}
-
-function severityForReference(type: NutrientReferenceType): FoodRuleSeverity {
-  return type === NutrientReferenceType.UL ? FoodRuleSeverity.HIGH : FoodRuleSeverity.CAUTION;
 }
 
 function affectedItem(selected: SelectedItem) {
@@ -138,13 +146,16 @@ function dedupeWarnings(warnings: MealAnalysisWarning[]): MealAnalysisWarning[] 
 }
 
 export class MealAnalysisService {
-  constructor(private readonly repository: MealAnalysisRepository) {}
+  constructor(
+    private readonly repository: MealAnalysisRepository,
+    private readonly config: AppConfig,
+  ) {}
 
   async analyze(userId: string, mealPlanId: string, input: MealAnalysisInput) {
     const context = await this.loadContext(userId, mealPlanId, input);
     const warnings = dedupeWarnings([
       ...this.portionWarnings(context.selected),
-      ...this.nutrientWarnings(context),
+      ...this.macroTargetWarnings(context),
       ...this.guidelineWarnings(context),
       ...this.interactionWarnings(context),
     ]);
@@ -154,12 +165,14 @@ export class MealAnalysisService {
     const confidence = Number(
       Math.max(0.2, baseConfidence - context.incomplete.length * 0.03).toFixed(4),
     );
+    const estimatedNutrition = this.estimatedNutrition(context);
     const summary = {
       warningCount: warnings.length,
       highCount: warnings.filter((item) => item.severity === FoodRuleSeverity.HIGH).length,
       cautionCount: warnings.filter((item) => item.severity === FoodRuleSeverity.CAUTION).length,
       infoCount: warnings.filter((item) => item.severity === FoodRuleSeverity.INFO).length,
       selectedItemCount: context.selected.length,
+      estimatedNutrition,
     };
     const saved = await this.repository.save({
       mealPlanId,
@@ -170,7 +183,7 @@ export class MealAnalysisService {
       ruleVersions: context.ruleVersions,
       warnings: warnings as unknown as Prisma.InputJsonArray,
       incompleteData: context.incomplete,
-      summary,
+      summary: summary as unknown as Prisma.InputJsonValue,
       confidence,
       disclaimer: DISCLAIMER,
     });
@@ -374,6 +387,34 @@ export class MealAnalysisService {
                   unit: 'kcal',
                   amount: item.recipeRevision.recipeDetail.calories * servings,
                 },
+            item.recipeRevision.recipeDetail.proteinGrams === null
+              ? null
+              : {
+                  code: 'PROTEIN',
+                  unit: 'g',
+                  amount: Number(item.recipeRevision.recipeDetail.proteinGrams) * servings,
+                },
+            item.recipeRevision.recipeDetail.fiberGrams === null
+              ? null
+              : {
+                  code: 'FIBER',
+                  unit: 'g',
+                  amount: Number(item.recipeRevision.recipeDetail.fiberGrams) * servings,
+                },
+            item.recipeRevision.recipeDetail.fatGrams === null
+              ? null
+              : {
+                  code: 'FAT',
+                  unit: 'g',
+                  amount: Number(item.recipeRevision.recipeDetail.fatGrams) * servings,
+                },
+            item.recipeRevision.recipeDetail.carbsGrams === null
+              ? null
+              : {
+                  code: 'CARBS',
+                  unit: 'g',
+                  amount: Number(item.recipeRevision.recipeDetail.carbsGrams) * servings,
+                },
           ].flatMap((entry) => (entry ? [entry] : []));
       if (!estimate)
         incomplete.push(
@@ -443,13 +484,20 @@ export class MealAnalysisService {
         meal.userCarbsGrams === null
           ? null
           : {
-              code: 'CARBOHYDRATE',
+              code: 'CARBS',
               unit: 'g',
               amount: Number(meal.userCarbsGrams) * perServing * servings,
             },
         meal.userFatGrams === null
           ? null
           : { code: 'FAT', unit: 'g', amount: Number(meal.userFatGrams) * perServing * servings },
+        meal.userFiberGrams === null
+          ? null
+          : {
+              code: 'FIBER',
+              unit: 'g',
+              amount: Number(meal.userFiberGrams) * perServing * servings,
+            },
       ].flatMap((entry) => (entry ? [entry] : []));
       if (!nutrients.length)
         incomplete.push(`Custom meal item ${item.id} chưa có nutrition do người dùng cung cấp.`);
@@ -536,47 +584,58 @@ export class MealAnalysisService {
     );
   }
 
-  private nutrientWarnings(context: AnalysisContext): MealAnalysisWarning[] {
-    const warnings: MealAnalysisWarning[] = [];
+  private macroTargetWarnings(context: AnalysisContext): MealAnalysisWarning[] {
+    const targets = estimateMealMacroTargets(
+      context.plan.targetCalories,
+      this.config.mealPlanMacroTargets,
+    );
+    const metrics = [
+      { code: 'PROTEIN', key: 'proteinGrams', label: 'protein' },
+      { code: 'FIBER', key: 'fiberGrams', label: 'fiber' },
+      { code: 'FAT', key: 'fatGrams', label: 'fat' },
+      { code: 'CARBS', key: 'carbohydrateGrams', label: 'carbohydrates' },
+    ] as const;
     const byDay = new Map<string, SelectedItem[]>();
     for (const item of context.selected) {
       const day = dateOnly(item.item.date);
       byDay.set(day, [...(byDay.get(day) ?? []), item]);
     }
-    for (const reference of context.rules.references) {
-      if (!applicabilityMatches(reference.applicability, context.profile)) continue;
-      for (const items of byDay.values()) {
+    const warnings: MealAnalysisWarning[] = [];
+    for (const [day, items] of byDay) {
+      for (const metric of metrics) {
         const matching = items.flatMap((item) =>
           item.nutrients
-            .filter(
-              (nutrient) =>
-                nutrient.code === reference.nutrient.code && nutrient.unit === reference.unit,
-            )
+            .filter((nutrient) => nutrient.code === metric.code && nutrient.unit === 'g')
             .map((nutrient) => ({ item, amount: nutrient.amount })),
         );
         const measured = matching.reduce((sum, entry) => sum + entry.amount, 0);
-        if (!matching.length || measured <= Number(reference.value)) continue;
+        const target = targets[metric.key];
+        if (!matching.length || !isMacroOverTarget(measured, target, targets.tolerancePercent))
+          continue;
         warnings.push({
-          code: 'NUTRIENT_LIMIT_EXCEEDED',
-          severity: severityForReference(reference.referenceType),
+          code: 'MACRO_TARGET_EXCEEDED',
+          severity: FoodRuleSeverity.CAUTION,
           scope: InteractionScope.SAME_DAY,
-          evidenceGrade: EvidenceGrade.HIGH,
+          evidenceGrade: EvidenceGrade.INSUFFICIENT,
           source: {
-            code: reference.source.code,
-            name: reference.source.name,
-            version: reference.sourceVersion,
-            recordId: reference.sourceRecordId,
-            url: reference.source.sourceUrl,
+            code: 'MEAL_PLAN_ESTIMATED_MACRO_TARGET',
+            name: 'Configured meal-plan macro estimate',
+            version: MEAL_ANALYSIS_ALGORITHM_VERSION,
+            recordId: `${day}:${metric.code}`,
+            url: null,
           },
-          applicability: asRecord(reference.applicability),
+          applicability: { date: day, tolerancePercent: targets.tolerancePercent },
           affectedItems: matching.map((entry) => affectedItem(entry.item)),
           affectedIngredients: [],
-          measured: { value: Number(measured.toFixed(4)), unit: reference.unit },
-          limit: { value: Number(reference.value), unit: reference.unit },
-          explanation: `Tổng ${reference.nutrient.name} của các món đã chọn vượt mức tham chiếu áp dụng cho ngày này.`,
+          measured: { value: Number(measured.toFixed(2)), unit: 'g' },
+          limit: {
+            value: Number((target! * (1 + targets.tolerancePercent / 100)).toFixed(2)),
+            unit: 'g',
+          },
+          explanation: `Estimated daily ${metric.label} is above the approximate configured target and tolerance.`,
           suggestedAdjustment:
-            'Giảm khẩu phần hoặc thay một món và phân tích lại; nếu có nhu cầu sức khỏe riêng, hãy hỏi chuyên gia phù hợp.',
-          confidence: 0.9,
+            'You may keep this manual choice. Consider adjusting a portion or another meal if you want to move the estimated daily total nearer the target.',
+          confidence: Math.min(...matching.map((entry) => entry.item.confidence)),
           advisory: true,
           incompleteDataNotes: context.incomplete.filter((note) => note.includes('nutrition')),
         });
@@ -702,6 +761,57 @@ export class MealAnalysisService {
     return warnings;
   }
 
+  private estimatedNutrition(context: AnalysisContext) {
+    const targets = estimateMealMacroTargets(
+      context.plan.targetCalories,
+      this.config.mealPlanMacroTargets,
+    );
+    const dates = Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(context.plan.weekStart);
+      date.setUTCDate(date.getUTCDate() + index);
+      return dateOnly(date);
+    });
+    const macroCodeMap = {
+      PROTEIN: 'proteinGrams',
+      FIBER: 'fiberGrams',
+      FAT: 'fatGrams',
+      CARBS: 'carbohydrateGrams',
+    } as const;
+    const days = dates.map((date) => {
+      const items = context.selected.filter((item) => dateOnly(item.item.date) === date);
+      let totals = emptyMealMacroValues();
+      for (const item of items) {
+        const values = emptyMealMacroValues();
+        for (const nutrient of item.nutrients) {
+          const key = macroCodeMap[nutrient.code as keyof typeof macroCodeMap];
+          if (key && nutrient.unit === 'g') values[key] = nutrient.amount;
+        }
+        totals = addMealMacroValues(totals, values);
+      }
+      return {
+        date,
+        totals,
+        confidence: items.length ? Math.min(...items.map((item) => item.confidence)) : 0.2,
+        uncertaintyNotes: context.incomplete.filter((note) =>
+          items.some((item) => note.includes(item.item.id)),
+        ),
+      };
+    });
+    return {
+      estimated: true as const,
+      targetSource: targets.source,
+      targetSourceDetail: targets.sourceDetail,
+      tolerancePercent: targets.tolerancePercent,
+      targets: {
+        proteinGrams: targets.proteinGrams!,
+        fiberGrams: targets.fiberGrams!,
+        fatGrams: targets.fatGrams!,
+        carbohydrateGrams: targets.carbohydrateGrams!,
+      },
+      days,
+    };
+  }
+
   private output(record: MealAnalysisRecord) {
     const request = asRecord(record.requestSnapshot);
     const summary = asRecord(record.summary);
@@ -743,6 +853,7 @@ export class MealAnalysisService {
       },
       confidence: Number(record.confidence),
       incompleteData,
+      estimatedNutrition: summary.estimatedNutrition,
       ruleVersions,
       disclaimer: record.disclaimer,
       createdAt: record.createdAt.toISOString(),

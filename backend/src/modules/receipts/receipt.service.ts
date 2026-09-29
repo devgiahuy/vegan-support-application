@@ -206,7 +206,13 @@ export class ReceiptService {
     const selected = new Map(input.candidates.map((candidate) => [candidate.id, candidate]));
     const candidates = [];
     for (const candidate of job.candidates.filter((item) => selected.has(item.id))) {
-      if (candidate.quantity === null || !candidate.unit) throw new ReceiptVersionConflictError();
+      if (candidate.quantity === null || !candidate.unit) {
+        throw new AppError({
+          statusCode: 422,
+          code: 'RECEIPT_CANDIDATE_INCOMPLETE',
+          message: 'Vui lòng bổ sung đầy đủ số lượng và đơn vị cho các mục được chọn.',
+        });
+      }
       candidates.push({
         id: candidate.id,
         expectedVersion: selected.get(candidate.id)!.expectedVersion,

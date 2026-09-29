@@ -2,7 +2,7 @@ import { EvidenceGrade, FoodRuleSeverity, InteractionScope, MealType } from '@pr
 import { z } from '../../common/validation/zod.js';
 import { dateOnlySchema } from '../profile/profile.schemas.js';
 
-export const MEAL_ANALYSIS_ALGORITHM_VERSION = 'meal-analysis-v1' as const;
+export const MEAL_ANALYSIS_ALGORITHM_VERSION = 'meal-analysis-v2-four-macros' as const;
 
 export const mealAnalysisParamsSchema = z.object({ id: z.string().uuid() }).strict();
 
@@ -53,6 +53,7 @@ export const mealAnalysisWarningSchema = z
       'INGREDIENT_GUIDELINE_EXCEEDED',
       'INGREDIENT_INTERACTION',
       'PORTION_MULTIPLIER_HIGH',
+      'MACRO_TARGET_EXCEEDED',
     ]),
     severity: z.enum(FoodRuleSeverity),
     scope: z.enum(InteractionScope),
@@ -100,6 +101,39 @@ export const mealAnalysisDataSchema = z
       .strict(),
     confidence: z.number().min(0).max(1),
     incompleteData: z.array(z.string()),
+    estimatedNutrition: z
+      .object({
+        estimated: z.literal(true),
+        targetSource: z.literal('HEALTH_PROFILE_TDEE_GOAL_CONFIG'),
+        targetSourceDetail: z.string(),
+        tolerancePercent: z.number().positive(),
+        targets: z
+          .object({
+            proteinGrams: z.number().nonnegative(),
+            fiberGrams: z.number().nonnegative(),
+            fatGrams: z.number().nonnegative(),
+            carbohydrateGrams: z.number().nonnegative(),
+          })
+          .strict(),
+        days: z.array(
+          z
+            .object({
+              date: dateOnlySchema,
+              totals: z
+                .object({
+                  proteinGrams: z.number().nonnegative().nullable(),
+                  fiberGrams: z.number().nonnegative().nullable(),
+                  fatGrams: z.number().nonnegative().nullable(),
+                  carbohydrateGrams: z.number().nonnegative().nullable(),
+                })
+                .strict(),
+              confidence: z.number().min(0).max(1),
+              uncertaintyNotes: z.array(z.string()),
+            })
+            .strict(),
+        ),
+      })
+      .strict(),
     ruleVersions: z.array(z.string()),
     disclaimer: z.string(),
     createdAt: z.string().datetime(),

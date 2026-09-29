@@ -1,5 +1,9 @@
 import { PantryItemSource, RecognitionCandidateStatus, RecognitionJobStatus } from '@prisma/client';
-import { z, mediaUrlSchema } from '../../common/validation/zod.js';
+import {
+  mediaUrlSchema,
+  optionalNullableTrimmedTextSchema,
+  z,
+} from '../../common/validation/zod.js';
 
 const idempotencyKeySchema = z.string().trim().min(8).max(160);
 const candidateIdentityFields = {
@@ -29,7 +33,7 @@ export const updateRecognitionCandidateSchema = z
     ...candidateIdentityFields,
     quantity: z.number().positive().max(999_999_999).nullable().optional(),
     unit: z.string().trim().min(1).max(40).nullable().optional(),
-    freshnessObservation: z.string().trim().min(1).max(2_000).nullable().optional(),
+    freshnessObservation: optionalNullableTrimmedTextSchema(1, 2_000),
     confidence: z.number().min(0).max(1).optional(),
     decision: z.enum(['KEEP', 'REJECT']).optional(),
   })

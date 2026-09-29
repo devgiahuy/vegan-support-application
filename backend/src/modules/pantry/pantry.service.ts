@@ -1,6 +1,15 @@
 import { createHash } from 'node:crypto';
-import { FoodDataQuality, PantryAdjustmentType, PantryConversionStatus } from '@prisma/client';
+import {
+  FoodDataQuality,
+  PantryAdjustmentType,
+  PantryConfirmationStatus,
+  PantryConversionStatus,
+} from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
+import {
+  massFactorToGrams,
+  normalizeDisplayUnit,
+} from '../../common/units/unit-normalization.js';
 import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 import type {
   AdjustmentListQuery,
@@ -23,18 +32,6 @@ import {
   type PantryItemRecord,
   type PantryRepository,
 } from './pantry.repository.js';
-
-const MASS_UNITS = new Map<string, number>([
-  ['mg', 0.001],
-  ['milligram', 0.001],
-  ['milligrams', 0.001],
-  ['g', 1],
-  ['gram', 1],
-  ['grams', 1],
-  ['kg', 1000],
-  ['kilogram', 1000],
-  ['kilograms', 1000],
-]);
 
 function number(value: { toNumber(): number } | number | null): number | null {
   if (value === null) return null;
@@ -69,7 +66,11 @@ function pagination(page: number, limit: number, total: number) {
   return { page, limit, total, totalPages: total === 0 ? 0 : Math.ceil(total / limit) };
 }
 
-export function serializePantryItem(item: PantryItemRecord) {
+export function serializePantryItem(item: PantryItemRecord, asOf = todayUtc()) {
+  const daysUntilExpiry = item.expiresAt
+    ? Math.round((item.expiresAt.getTime() - asOf.getTime()) / 86_400_000)
+    : null;
+  const expiryStatus = classifyPantryExpiry(item.confirmationStatus, daysUntilExpiry);
   return {
     id: item.id,
     ingredient: item.ingredient
@@ -77,7 +78,7 @@ export function serializePantryItem(item: PantryItemRecord) {
       : null,
     unmatchedText: item.unmatchedText ?? null,
     quantity: number(item.quantity) ?? 0,
-    unit: item.unit,
+    unit: normalizeDisplayUnit(item.unit),
     conversion: {
       status: item.conversionStatus,
       normalizedGrams: number(item.normalizedGrams),
@@ -92,8 +93,23 @@ export function serializePantryItem(item: PantryItemRecord) {
     openedAt: dateOnly(item.openedAt),
     expiresAt: dateOnly(item.expiresAt),
     freshnessNote: item.freshnessNote ?? null,
+    expiryStatus,
+    daysUntilExpiry,
+    expiryStatusAsOf: item.expiresAt ? dateOnly(asOf) : null,
     version: item.version,
   };
+}
+
+export function classifyPantryExpiry(
+  confirmationStatus: PantryConfirmationStatus,
+  daysUntilExpiry: number | null,
+): 'GOOD' | 'WARNING' | 'ALERT' | 'EXPIRED' | null {
+  if (confirmationStatus !== PantryConfirmationStatus.CONFIRMED || daysUntilExpiry === null)
+    return null;
+  if (daysUntilExpiry < 0) return 'EXPIRED';
+  if (daysUntilExpiry <= 1) return 'ALERT';
+  if (daysUntilExpiry <= 3) return 'WARNING';
+  return 'GOOD';
 }
 
 export function serializePantryAdjustment(adjustment: PantryAdjustmentRecord) {
@@ -136,7 +152,7 @@ export class PantryService {
       ...(query.expiresTo ? { expiresTo: parseDate(query.expiresTo) as Date } : {}),
     });
     return {
-      data: result.records.map(serializePantryItem),
+      data: result.records.map((item) => serializePantryItem(item)),
       meta: pagination(query.page, query.limit, result.total),
     };
   }
@@ -151,7 +167,7 @@ export class PantryService {
       query.limit,
     );
     return {
-      data: result.records.map(serializePantryItem),
+      data: result.records.map((item) => serializePantryItem(item, from)),
       meta: pagination(query.page, query.limit, result.total),
     };
   }
@@ -178,7 +194,8 @@ export class PantryService {
       });
     }
     this.validateDates(input.purchasedAt, input.openedAt, input.expiresAt);
-    const conversion = await this.resolveConversion(input.ingredientId, input.quantity, input.unit);
+    const normalizedUnit = normalizeDisplayUnit(input.unit);
+    const conversion = await this.resolveConversion(input.ingredientId, input.quantity, normalizedUnit);
     try {
       const result = await this.repository.create({
         ownerId,
@@ -190,7 +207,7 @@ export class PantryService {
             }
           : {}),
         quantity: input.quantity,
-        unit: input.unit,
+        unit: normalizedUnit,
         confidence: input.confidence,
         ...(input.purchasedAt !== undefined
           ? { purchasedAt: parseDate(input.purchasedAt) as Date | null }
@@ -266,7 +283,8 @@ export class PantryService {
       input.type === PantryAdjustmentType.ADJUST
         ? input.deltaQuantity
         : input.quantity * (input.type === PantryAdjustmentType.CONSUME ? -1 : 1);
-    const converted = await this.convertDelta(item, signedInput, input.unit);
+    const normalizedUnit = normalizeDisplayUnit(input.unit);
+    const converted = await this.convertDelta(item, signedInput, normalizedUnit);
     try {
       const result = await this.repository.adjust({
         ownerId,
@@ -274,7 +292,7 @@ export class PantryService {
         type: input.type,
         inputQuantity:
           input.type === PantryAdjustmentType.ADJUST ? input.deltaQuantity : input.quantity,
-        inputUnit: input.unit,
+        inputUnit: normalizedUnit,
         appliedDeltaQuantity: converted.quantity,
         normalizedDeltaGrams: converted.grams,
         expectedVersion: input.expectedVersion,
@@ -434,9 +452,9 @@ export class PantryService {
     quantity: number,
     unit: string,
   ): Promise<ConversionSnapshot> {
-    const normalizedUnit = unit.trim().toLowerCase();
-    const massFactor = MASS_UNITS.get(normalizedUnit);
-    if (massFactor !== undefined)
+    const normalizedUnit = normalizeDisplayUnit(unit);
+    const massFactor = massFactorToGrams(normalizedUnit);
+    if (massFactor !== null)
       return {
         normalizedGrams: quantity * massFactor,
         status: PantryConversionStatus.CONVERTED,
@@ -456,8 +474,8 @@ export class PantryService {
     for (const profile of profiles) {
       const conversion = profile.householdConversions.find(
         (value) =>
-          value.unitName.toLowerCase() === normalizedUnit ||
-          value.unitSymbol?.toLowerCase() === normalizedUnit,
+          normalizeDisplayUnit(value.unitName) === normalizedUnit ||
+          (value.unitSymbol !== null && normalizeDisplayUnit(value.unitSymbol) === normalizedUnit),
       );
       if (!conversion) continue;
       const confidence =
@@ -491,7 +509,7 @@ export class PantryService {
     unit: string,
     sourceItem?: PantryItemRecord,
   ) {
-    if (unit.trim().toLowerCase() === target.unit.trim().toLowerCase()) {
+    if (normalizeDisplayUnit(unit) === normalizeDisplayUnit(target.unit)) {
       const grams =
         target.normalizedGrams === null
           ? null

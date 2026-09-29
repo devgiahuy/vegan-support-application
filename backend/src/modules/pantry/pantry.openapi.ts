@@ -84,7 +84,8 @@ export function registerPantryOpenApi(
     path: '/api/v1/pantry/items/expiring-soon',
     tags: [tag],
     summary: 'List confirmed items expiring in an inclusive date window',
-    description: 'Expiry is a user-provided observation and is not a food-safety determination.',
+    description:
+      'Expiry is a user-provided observation and is not a food-safety determination. Confirmed items expose additive date-only severity: more than 3 days GOOD, more than 1 through 3 days WARNING, 1 day or less ALERT, and past dates EXPIRED.',
     operationId: 'listExpiringPantryItems',
     security,
     request: { query: expiringSoonQuerySchema },

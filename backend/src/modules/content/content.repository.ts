@@ -509,8 +509,6 @@ export class ContentRepository {
       ${publishedBase}
       ${where}
         AND rd."meal_planner_eligible" = true
-        AND rd."calories" IS NOT NULL
-        AND rd."calories" > 0
         AND NOT EXISTS (
           SELECT 1
           FROM "recipe_ingredients" ri

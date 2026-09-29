@@ -44,6 +44,7 @@ export interface CreateCustomMealData {
   userProteinGrams?: number;
   userCarbsGrams?: number;
   userFatGrams?: number;
+  userFiberGrams?: number;
   deletePolicy?: CustomMealDeletePolicy;
   ingredients: CustomMealIngredientInput[];
   tags: string[];
@@ -58,6 +59,7 @@ export interface UpdateCustomMealData {
   userProteinGrams?: number | null;
   userCarbsGrams?: number | null;
   userFatGrams?: number | null;
+  userFiberGrams?: number | null;
   deletePolicy?: CustomMealDeletePolicy;
   ingredients?: CustomMealIngredientInput[];
   tags?: string[];
@@ -126,6 +128,7 @@ export class CustomMealRepository {
         userProteinGrams: data.userProteinGrams ?? null,
         userCarbsGrams: data.userCarbsGrams ?? null,
         userFatGrams: data.userFatGrams ?? null,
+        userFiberGrams: data.userFiberGrams ?? null,
         nutritionCoverage,
         deletePolicy: data.deletePolicy ?? CustomMealDeletePolicy.BLOCK,
         ingredients: { create: resolvedIngredients },
@@ -173,6 +176,7 @@ export class CustomMealRepository {
       proteinGrams?: number;
       carbsGrams?: number;
       fatGrams?: number;
+      fiberGrams?: number;
       metadata: Prisma.InputJsonObject;
       coverage: NutritionCoverage;
     },
@@ -193,6 +197,9 @@ export class CustomMealRepository {
           : {}),
         ...(current.userFatGrams === null && values.fatGrams !== undefined
           ? { userFatGrams: values.fatGrams }
+          : {}),
+        ...(current.userFiberGrams === null && values.fiberGrams !== undefined
+          ? { userFiberGrams: values.fiberGrams }
           : {}),
         nutritionMetadata: values.metadata,
         nutritionAnalyzedAt: new Date(),
@@ -240,6 +247,7 @@ export class CustomMealRepository {
             : {}),
           ...(data.userCarbsGrams !== undefined ? { userCarbsGrams: data.userCarbsGrams } : {}),
           ...(data.userFatGrams !== undefined ? { userFatGrams: data.userFatGrams } : {}),
+          ...(data.userFiberGrams !== undefined ? { userFiberGrams: data.userFiberGrams } : {}),
           ...(nutritionCoverage !== undefined ? { nutritionCoverage } : {}),
           ...(data.deletePolicy !== undefined ? { deletePolicy: data.deletePolicy } : {}),
           ...(resolvedIngredients !== undefined

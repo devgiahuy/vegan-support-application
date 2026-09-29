@@ -1,8 +1,8 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.0
+**Version:** 4.1
 
-**Updated:** 2026-09-18
+**Updated:** 2026-09-28
 
 **Status:** Approved implementation baseline
 
@@ -292,6 +292,10 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 6. Warnings support tooltip/dialog UX and do not claim medical certainty.
 7. The user chooses among suggestions before final insertion; swap/regenerate preserves hard constraints.
 8. Unknown data lowers confidence instead of being treated as safe or nutritionally zero.
+9. Weekly-plan generation and user-facing nutrition comparison use four estimated dimensions only: protein, fiber, fat, and carbohydrates. Micronutrient completeness is not a generation blocker or weekly-plan warning.
+10. Macro targets extend the existing health-profile target: stored TDEE is multiplied by the configured goal factor, then converted through the configured protein/fat/carbohydrate energy distribution and fiber-per-1000-kcal factor. The response identifies this source, tolerance, and estimate status; these values are guidance rather than measurements.
+11. Manual insertion preserves a hard-compatible user choice and returns advisory over-target warnings after recalculating the day. Allergy, explicit exclusion, diet-pattern, and enabled-tradition violations remain blocking.
+12. Generated plans attempt all Monday-through-Sunday breakfast/lunch/dinner slots. Calorie/macro tolerance and repetition are scoring preferences, not reasons to hide a hard-compatible candidate; a genuinely unresolved slot remains explicit with a reason.
 
 ### BL-11 — Multi-week programs
 
@@ -537,4 +541,5 @@ A phase is complete only when:
 
 ## 13. Change record
 
+- **4.1 — 2026-09-28:** Clarified four-macro estimated weekly planning/analysis, target provenance, non-blocking manual over-target warnings, and explicit 21-slot/unresolved behavior.
 - **4.0 — 2026-09-18:** Consolidated product decisions after Phase 11 review; added food database, cooking-aware nutrition, unified Contributor, quota, video parity, custom meals/tags, compatibility, multi-week planning, pantry, fridge and receipt workflows; expanded phases to 27; moved all deferred work into the complete Phase 2 roadmap.
