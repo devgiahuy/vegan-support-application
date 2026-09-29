@@ -900,6 +900,36 @@ model RestaurantExternalRef {
   @@map("restaurant_external_refs")
 }
 
+model RestaurantProviderPlace {
+  id              String   @id @default(uuid()) @db.Uuid
+  provider        String   @db.VarChar(50)
+  placeId         String   @map("place_id") @db.VarChar(255)
+  name            String   @db.VarChar(180)
+  address         String   @db.VarChar(500)
+  latitude        Decimal  @db.Decimal(9, 6)
+  longitude       Decimal  @db.Decimal(9, 6)
+  categories      String[] @default([])
+  rating          Decimal? @db.Decimal(3, 1)
+  reviewCount     Int?     @map("review_count")
+  price           String?  @db.VarChar(50)
+  openState       String?  @map("open_state") @db.VarChar(100)
+  operatingHours Json?     @map("operating_hours")
+  phone           String?  @db.VarChar(80)
+  website         String?  @db.VarChar(1000)
+  thumbnailUrl    String?  @map("thumbnail_url") @db.VarChar(1000)
+  mapsUrl         String?  @map("maps_url") @db.VarChar(1000)
+  attribution     String   @db.VarChar(500)
+  fetchedAt       DateTime @map("fetched_at") @db.Timestamptz(3)
+  expiresAt       DateTime @map("expires_at") @db.Timestamptz(3)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([provider, placeId])
+  @@index([provider, latitude, longitude])
+  @@index([expiresAt])
+  @@map("restaurant_provider_places")
+}
+
 model RestaurantAudit {
   id           String     @id @default(uuid()) @db.Uuid
   restaurantId String     @map("restaurant_id") @db.Uuid
