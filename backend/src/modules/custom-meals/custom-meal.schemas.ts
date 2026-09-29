@@ -1,5 +1,9 @@
 import { CustomMealDeletePolicy, IngredientResolutionStatus } from '@prisma/client';
-import { z } from '../../common/validation/zod.js';
+import {
+  optionalNullableTrimmedTextSchema,
+  optionalTrimmedTextSchema,
+  z,
+} from '../../common/validation/zod.js';
 
 const positiveInt = z.number().int().min(1);
 const positiveDecimal = z.number().positive().max(99_999);
@@ -18,13 +22,14 @@ export const customMealIngredientInputSchema = z
 export const createCustomMealSchema = z
   .object({
     name: z.string().trim().min(1).max(200),
-    notes: z.string().trim().min(1).max(5_000).optional(),
+    notes: optionalTrimmedTextSchema(1, 5_000),
     servings: positiveInt.max(99).default(1),
-    sourceNote: z.string().trim().min(1).max(2_000).optional(),
+    sourceNote: optionalTrimmedTextSchema(1, 2_000),
     userCalories: z.number().int().min(0).max(99_999).optional(),
     userProteinGrams: nonnegativeDecimal.optional(),
     userCarbsGrams: nonnegativeDecimal.optional(),
     userFatGrams: nonnegativeDecimal.optional(),
+    userFiberGrams: nonnegativeDecimal.optional(),
     deletePolicy: z.nativeEnum(CustomMealDeletePolicy).default(CustomMealDeletePolicy.BLOCK),
     ingredients: z
       .array(customMealIngredientInputSchema)
@@ -41,13 +46,14 @@ export const createCustomMealSchema = z
 export const updateCustomMealSchema = z
   .object({
     name: z.string().trim().min(1).max(200).optional(),
-    notes: z.string().trim().min(1).max(5_000).nullable().optional(),
+    notes: optionalNullableTrimmedTextSchema(1, 5_000),
     servings: positiveInt.max(99).optional(),
-    sourceNote: z.string().trim().min(1).max(2_000).nullable().optional(),
+    sourceNote: optionalNullableTrimmedTextSchema(1, 2_000),
     userCalories: z.number().int().min(0).max(99_999).nullable().optional(),
     userProteinGrams: nonnegativeDecimal.nullable().optional(),
     userCarbsGrams: nonnegativeDecimal.nullable().optional(),
     userFatGrams: nonnegativeDecimal.nullable().optional(),
+    userFiberGrams: nonnegativeDecimal.nullable().optional(),
     deletePolicy: z.nativeEnum(CustomMealDeletePolicy).optional(),
     ingredients: z
       .array(customMealIngredientInputSchema)
@@ -138,6 +144,7 @@ export const customMealResponseSchema = z.object({
   userProteinGrams: z.number().nullable(),
   userCarbsGrams: z.number().nullable(),
   userFatGrams: z.number().nullable(),
+  userFiberGrams: z.number().nullable(),
   nutritionCoverage: z.string(),
   deletePolicy: z.nativeEnum(CustomMealDeletePolicy),
   ingredients: z.array(customMealIngredientResponseSchema),

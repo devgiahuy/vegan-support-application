@@ -9,7 +9,7 @@ import { z, mediaUrlSchema } from '../../common/validation/zod.js';
 import { dateOnlySchema } from '../profile/profile.schemas.js';
 import { mealAnalysisDataSchema } from '../meal-analysis/meal-analysis.schemas.js';
 
-export const MEAL_PLAN_ALGORITHM_VERSION = 'weekly-deterministic-v1' as const;
+export const MEAL_PLAN_ALGORITHM_VERSION = 'weekly-four-macro-v2' as const;
 
 export const mealPlanWarningCodeSchema = z.enum([
   'CALORIE_TOLERANCE_WIDENED',
@@ -18,6 +18,7 @@ export const mealPlanWarningCodeSchema = z.enum([
   'SHOPPING_UNIT_NOT_COMBINED',
   'MICRONUTRIENT_DATA_PARTIAL',
   'MICRONUTRIENT_DATA_UNAVAILABLE',
+  'NUTRITION_TARGET_OUTSIDE_TOLERANCE',
 ]);
 
 export const generateMealPlanRequestSchema = z
@@ -116,6 +117,57 @@ const mealPlanItemSchema = z
     customMeal: customMealSummarySchema.nullable(),
     reasonCodes: z.array(z.string()).max(3),
     warningCodes: z.array(mealPlanWarningCodeSchema),
+    unresolved: z
+      .object({ code: z.string(), reason: z.string(), hardConstraintsPreserved: z.literal(true) })
+      .strict()
+      .nullable(),
+  })
+  .strict();
+
+export const estimatedMacroValuesSchema = z
+  .object({
+    proteinGrams: z.number().nonnegative().nullable(),
+    fiberGrams: z.number().nonnegative().nullable(),
+    fatGrams: z.number().nonnegative().nullable(),
+    carbohydrateGrams: z.number().nonnegative().nullable(),
+  })
+  .strict();
+
+export const estimatedMacroTargetsSchema = estimatedMacroValuesSchema
+  .extend({
+    estimated: z.literal(true),
+    source: z.literal('HEALTH_PROFILE_TDEE_GOAL_CONFIG'),
+    sourceDetail: z.string(),
+    tolerancePercent: z.number().positive(),
+  })
+  .strict();
+
+const mealPlanDaySchema = z
+  .object({
+    date: dateOnlySchema,
+    dayOfWeek: z.enum([
+      'MONDAY',
+      'TUESDAY',
+      'WEDNESDAY',
+      'THURSDAY',
+      'FRIDAY',
+      'SATURDAY',
+      'SUNDAY',
+    ]),
+    slots: z
+      .object({
+        breakfast: mealPlanItemSchema,
+        lunch: mealPlanItemSchema,
+        dinner: mealPlanItemSchema,
+      })
+      .strict(),
+    estimatedTotals: estimatedMacroValuesSchema
+      .extend({
+        estimated: z.literal(true),
+        confidence: z.number().min(0).max(1),
+        uncertaintyNotes: z.array(z.string()),
+      })
+      .strict(),
   })
   .strict();
 
@@ -165,6 +217,8 @@ const mealPlanDetailSchema = mealPlanSummarySchema
     items: z.array(mealPlanItemSchema).length(21),
     shoppingList: z.array(shoppingItemSchema),
     analysis: mealAnalysisDataSchema,
+    days: z.array(mealPlanDaySchema).length(7),
+    estimatedNutritionTargets: estimatedMacroTargetsSchema,
   })
   .strict();
 

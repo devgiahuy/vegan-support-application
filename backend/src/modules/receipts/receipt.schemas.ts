@@ -1,5 +1,9 @@
 import { PantryItemSource, ReceiptCandidateStatus, ReceiptJobStatus } from '@prisma/client';
-import { z, mediaUrlSchema } from '../../common/validation/zod.js';
+import {
+  mediaUrlSchema,
+  optionalNullableTrimmedTextSchema,
+  z,
+} from '../../common/validation/zod.js';
 
 const idempotencyKeySchema = z.string().trim().min(8).max(160);
 const currencySchema = z
@@ -36,7 +40,7 @@ export const updateReceiptCandidateSchema = z
     lineTotal: z.number().nonnegative().max(999_999_999_999).nullable().optional(),
     currency: currencySchema.nullable().optional(),
     confidence: z.number().min(0).max(1).optional(),
-    uncertaintyNote: z.string().trim().min(1).max(2_000).nullable().optional(),
+    uncertaintyNote: optionalNullableTrimmedTextSchema(1, 2_000),
     decision: z.enum(['KEEP', 'REJECT']).optional(),
   })
   .strict()

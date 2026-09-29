@@ -40,7 +40,7 @@ export function registerMealAnalysisOpenApi(registry: OpenAPIRegistry, errorSche
     tags: ['Meal Analysis'],
     summary: 'Phân tích khẩu phần, giới hạn và tương tác của meal plan',
     description:
-      'Phân tích recipe và private custom meal theo item/servings đã chọn. Trả warning UI-ready cho SAME_DISH, SAME_MEAL, SAME_DAY với evidence, provenance, applicability, measured/limit, confidence và incomplete-data notes. Compatibility có bằng chứng thường là advisory; hard dietary/allergy filtering vẫn có precedence.',
+      'Phân tích recipe và private custom meal theo item/servings đã chọn. User-facing nutrition focus chỉ gồm estimated protein, fiber, fat và carbohydrate; micronutrient completeness không tạo warning. Trả warning UI-ready cho macro target, portion và reviewed ingredient compatibility với confidence/uncertainty. Hard dietary/allergy filtering vẫn có precedence.',
     operationId: 'analyzeMealPlan',
     security,
     request: {

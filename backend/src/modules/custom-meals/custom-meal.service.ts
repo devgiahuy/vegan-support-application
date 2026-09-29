@@ -1,5 +1,6 @@
 import { MediaKind, NutritionCoverage, NutritionValueOrigin, type Prisma } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
+import { normalizeDisplayUnit } from '../../common/units/unit-normalization.js';
 import type { AiProvider } from '../chat/ai-provider.js';
 import type { StorageRepository } from '../storage/storage.repository.js';
 import type {
@@ -55,6 +56,7 @@ export function formatCustomMeal(meal: CustomMealRecord) {
     userProteinGrams: formatDecimal(meal.userProteinGrams),
     userCarbsGrams: formatDecimal(meal.userCarbsGrams),
     userFatGrams: formatDecimal(meal.userFatGrams),
+    userFiberGrams: formatDecimal(meal.userFiberGrams),
     nutritionCoverage: meal.nutritionCoverage,
     deletePolicy: meal.deletePolicy,
     ingredients: meal.ingredients.map((ing) => ({
@@ -62,7 +64,7 @@ export function formatCustomMeal(meal: CustomMealRecord) {
       position: ing.position,
       displayName: ing.displayName,
       amount: formatDecimal(ing.amount) ?? 0,
-      unit: ing.unit,
+      unit: normalizeDisplayUnit(ing.unit),
       resolutionStatus: ing.resolutionStatus,
       ingredientId: ing.ingredientId ?? null,
       ingredient: ing.ingredient ?? null,
@@ -96,7 +98,7 @@ function mapIngredient(
     position: ing.position ?? index,
     displayName: ing.displayName,
     amount: ing.amount,
-    unit: ing.unit,
+    unit: normalizeDisplayUnit(ing.unit),
   };
   if (ing.ingredientId !== undefined) {
     return { ...base, ingredientId: ing.ingredientId };
@@ -118,6 +120,7 @@ function buildCreateData(ownerId: string, input: CreateCustomMealInput): CreateC
   if (input.userProteinGrams !== undefined) data.userProteinGrams = input.userProteinGrams;
   if (input.userCarbsGrams !== undefined) data.userCarbsGrams = input.userCarbsGrams;
   if (input.userFatGrams !== undefined) data.userFatGrams = input.userFatGrams;
+  if (input.userFiberGrams !== undefined) data.userFiberGrams = input.userFiberGrams;
   if (input.deletePolicy !== undefined) data.deletePolicy = input.deletePolicy;
   return data;
 }
@@ -132,6 +135,7 @@ function buildUpdateData(input: UpdateCustomMealInput): UpdateCustomMealData {
   if (input.userProteinGrams !== undefined) data.userProteinGrams = input.userProteinGrams;
   if (input.userCarbsGrams !== undefined) data.userCarbsGrams = input.userCarbsGrams;
   if (input.userFatGrams !== undefined) data.userFatGrams = input.userFatGrams;
+  if (input.userFiberGrams !== undefined) data.userFiberGrams = input.userFiberGrams;
   if (input.deletePolicy !== undefined) data.deletePolicy = input.deletePolicy;
   if (input.ingredients !== undefined) data.ingredients = input.ingredients.map(mapIngredient);
   if (input.tags !== undefined) data.tags = input.tags;
@@ -356,6 +360,7 @@ export class CustomMealService {
       ...(meal.userProteinGrams !== null ? { proteinGrams: meal.userProteinGrams.toNumber() } : {}),
       ...(meal.userCarbsGrams !== null ? { carbsGrams: meal.userCarbsGrams.toNumber() } : {}),
       ...(meal.userFatGrams !== null ? { fatGrams: meal.userFatGrams.toNumber() } : {}),
+      ...(meal.userFiberGrams !== null ? { fiberGrams: meal.userFiberGrams.toNumber() } : {}),
     };
     const values: Partial<Record<NutritionMetric, number>> = { ...existing };
     const metricMetadata: Record<string, Prisma.InputJsonValue> = {};
@@ -438,6 +443,7 @@ export class CustomMealService {
       ...(values.proteinGrams !== undefined ? { proteinGrams: values.proteinGrams } : {}),
       ...(values.carbsGrams !== undefined ? { carbsGrams: values.carbsGrams } : {}),
       ...(values.fatGrams !== undefined ? { fatGrams: values.fatGrams } : {}),
+      ...(values.fiberGrams !== undefined ? { fiberGrams: values.fiberGrams } : {}),
       coverage,
       metadata: {
         calculationVersion: 'custom-meal-nutrition-v1',

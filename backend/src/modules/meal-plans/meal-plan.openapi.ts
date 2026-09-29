@@ -66,7 +66,7 @@ export function registerMealPlanOpenApi(registry: OpenAPIRegistry, errorSchema: 
     tags: ['Meal Plans'],
     summary: 'Tạo hoặc regenerate weekly meal plan',
     description:
-      'Tạo version mới gồm 7 ngày × 3 bữa. MAINTAIN/LOSE/GAIN dùng TDEE × 1/0.9/1.1 từ config. Backend hard-filter theo từng ngày trước scoring, thử calorie ±15% rồi ±20% kèm warning, không lặp nếu pool đủ, tối đa 2 lần/recipe và để UNFILLED nếu không có candidate. seed cho kết quả deterministic; supersedesMealPlanId liên kết version regenerate.',
+      'Tạo Monday–Sunday, 3 bữa/ngày. MAINTAIN/LOSE/GAIN dùng TDEE × goal factor; protein, fiber, fat và carbohydrate là target ước tính từ cấu hình. Backend hard-filter trước scoring, ưu tiên tolerance nhưng vẫn dùng candidate hard-compatible ngoài tolerance. Chỉ UNFILLED khi không còn candidate hard-compatible và luôn trả unresolved reason. seed cho kết quả deterministic; supersedesMealPlanId liên kết version regenerate.',
     operationId: 'generateMealPlan',
     security: authenticated,
     request: {
@@ -129,7 +129,7 @@ export function registerMealPlanOpenApi(registry: OpenAPIRegistry, errorSchema: 
     request: { params: mealPlanParamsSchema },
     responses: {
       200: {
-        description: '21 slots, constraint snapshot, shopping list và nutrition quality',
+        description: 'Existing 21-item list plus additive Monday–Sunday day/slot view, explicit unresolved state, estimated four-macro targets/totals, shopping list and analysis',
         content: { 'application/json': { schema: planResponse } },
       },
       400: errorResponse(errorSchema, 'Meal plan ID không hợp lệ', ['VALIDATION_ERROR']),
@@ -176,7 +176,7 @@ export function registerMealPlanOpenApi(registry: OpenAPIRegistry, errorSchema: 
     tags: ['Meal Plans'],
     summary: 'Thêm recipe hoặc private custom meal vào slot',
     description:
-      'Backend kiểm tra allergy, explicit exclusion, diet pattern và enabled tradition constraints trước khi ghi. Món hợp lệ được thêm với servings đã chọn, plan version tăng và Phase 18 analysis được tính lại. Compatibility evidence-graded không tự biến thành hard prohibition.',
+      'Backend kiểm tra allergy, explicit exclusion, diet pattern và enabled tradition constraints trước khi ghi. Món hard-compatible được lưu kể cả khi estimated protein/fiber/fat/carbohydrate của ngày vượt target+tolerance; response trả advisory MACRO_TARGET_EXCEEDED thay vì rollback. Compatibility evidence-graded không tự biến thành hard prohibition.',
     operationId: 'manualAddMealPlanItem',
     security: authenticated,
     request: {

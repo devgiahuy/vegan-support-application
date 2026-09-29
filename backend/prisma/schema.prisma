@@ -2953,6 +2953,7 @@ model CustomMeal {
   userProteinGrams    Decimal?               @map("user_protein_grams") @db.Decimal(8, 2)
   userCarbsGrams      Decimal?               @map("user_carbs_grams") @db.Decimal(8, 2)
   userFatGrams        Decimal?               @map("user_fat_grams") @db.Decimal(8, 2)
+  userFiberGrams      Decimal?               @map("user_fiber_grams") @db.Decimal(8, 2)
   nutritionMetadata   Json?                  @map("nutrition_metadata")
   nutritionAnalyzedAt DateTime?              @map("nutrition_analyzed_at") @db.Timestamptz(3)
   nutritionCoverage   NutritionCoverage      @default(UNAVAILABLE) @map("nutrition_coverage")

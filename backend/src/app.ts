@@ -203,7 +203,10 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
     contentRepository,
   );
   const recommendationController = new RecommendationController(recommendationService);
-  const mealAnalysisService = new MealAnalysisService(new MealAnalysisRepository(database.client));
+  const mealAnalysisService = new MealAnalysisService(
+    new MealAnalysisRepository(database.client),
+    config,
+  );
   const mealAnalysisController = new MealAnalysisController(mealAnalysisService);
   const mealPlanService = new MealPlanService(
     new MealPlanRepository(database.client),
