@@ -129,6 +129,12 @@ function fromExternal(
   };
 }
 
+function cachedOperatingHours(value: unknown): Record<string, string> | undefined {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
+  const entries = Object.entries(value).filter(([, item]) => typeof item === 'string');
+  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
+}
+
 function conflict(code: string, message: string): never {
   throw new AppError({ statusCode: 409, code, message });
 }
@@ -197,6 +203,58 @@ export class RestaurantService {
     }
   }
 
+  private async cacheProviderPlaces(places: ExternalPlace[]): Promise<void> {
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 5 * 60_000);
+    await Promise.all(
+      places.map((place) =>
+        this.prisma.restaurantProviderPlace.upsert({
+          where: { provider_placeId: { provider: this.provider.name, placeId: place.placeId } },
+          create: {
+            provider: this.provider.name,
+            placeId: place.placeId,
+            name: place.name,
+            address: place.address,
+            latitude: place.latitude,
+            longitude: place.longitude,
+            categories: place.categories,
+            rating: place.rating ?? null,
+            reviewCount: place.reviewCount ?? null,
+            price: place.price ?? null,
+            openState: place.openState ?? null,
+            ...(place.operatingHours ? { operatingHours: place.operatingHours } : {}),
+            phone: place.phone ?? null,
+            website: place.website ?? null,
+            thumbnailUrl: place.thumbnailUrl ?? null,
+            mapsUrl: place.mapsUrl ?? null,
+            attribution: place.attribution,
+            fetchedAt: new Date(place.fetchedAt),
+            expiresAt,
+          },
+          update: {
+            name: place.name,
+            address: place.address,
+            latitude: place.latitude,
+            longitude: place.longitude,
+            categories: place.categories,
+            rating: place.rating ?? null,
+            reviewCount: place.reviewCount ?? null,
+            price: place.price ?? null,
+            openState: place.openState ?? null,
+            ...(place.operatingHours ? { operatingHours: place.operatingHours } : {}),
+            phone: place.phone ?? null,
+            website: place.website ?? null,
+            thumbnailUrl: place.thumbnailUrl ?? null,
+            mapsUrl: place.mapsUrl ?? null,
+            attribution: place.attribution,
+            fetchedAt: new Date(place.fetchedAt),
+            expiresAt,
+          },
+        }),
+      ),
+    );
+  }
+
   async discover(query: NearbyQuery | SearchQuery, userId?: string) {
     this.assertLocation(query);
     const lat = query.lat ?? (query.north! + query.south!) / 2;
@@ -241,8 +299,56 @@ export class RestaurantService {
           normalize(`${p.name} ${p.address} ${p.categories.join(' ')}`).includes(normalize(text)),
       )
       .map((p) => fromInternal(p, lat, lng));
+    const activeProviderCache = await this.prisma.restaurantProviderPlace.findMany({
+      where: {
+        provider: this.provider.name,
+        expiresAt: { gt: new Date() },
+        latitude: { gte: lat - latDelta, lte: lat + latDelta },
+        longitude: { gte: lng - lngDelta, lte: lng + lngDelta },
+      },
+      orderBy: { fetchedAt: 'desc' },
+      take: 1000,
+    });
     let externalDataUnavailable = false;
-    let external: ResultPlace[] = [];
+    const externalByPlaceId = new Map<string, ResultPlace>();
+    for (const place of activeProviderCache) {
+      if (
+        !inArea(Number(place.latitude), Number(place.longitude)) ||
+        (text &&
+          !normalize(`${place.name} ${place.address} ${place.categories.join(' ')}`).includes(
+            normalize(text),
+          ))
+      )
+        continue;
+      const operatingHours = cachedOperatingHours(place.operatingHours);
+      externalByPlaceId.set(
+        place.placeId,
+        fromExternal(
+          {
+            placeId: place.placeId,
+            name: place.name,
+            address: place.address,
+            latitude: Number(place.latitude),
+            longitude: Number(place.longitude),
+            categories: place.categories,
+            ...(place.rating !== null ? { rating: Number(place.rating) } : {}),
+            ...(place.reviewCount !== null ? { reviewCount: place.reviewCount } : {}),
+            ...(place.price !== null ? { price: place.price } : {}),
+            ...(place.openState !== null ? { openState: place.openState } : {}),
+            ...(operatingHours ? { operatingHours } : {}),
+            ...(place.phone !== null ? { phone: place.phone } : {}),
+            ...(place.website !== null ? { website: place.website } : {}),
+            ...(place.thumbnailUrl !== null ? { thumbnailUrl: place.thumbnailUrl } : {}),
+            ...(place.mapsUrl !== null ? { mapsUrl: place.mapsUrl } : {}),
+            attribution: place.attribution,
+            fetchedAt: place.fetchedAt.toISOString(),
+          },
+          place.provider,
+          lat,
+          lng,
+        ),
+      );
+    }
     const providerResultLimit = 200;
     const mapsFilters: MapsSearchFilters =
       'q' in query
@@ -265,22 +371,36 @@ export class RestaurantService {
       constraints.exclusions.length,
     );
     if (!hardConstraints) {
-      try {
-        external = (
-          await this.provider.search(
-            text ? `vegetarian ${text}` : 'vegetarian restaurant',
+      const providerQueries = text
+        ? [`vegetarian ${text}`]
+        : ['chay restaurant', 'vegan restaurant', 'vegetarian restaurant'];
+      let successfulQueries = 0;
+      for (const providerQuery of providerQueries) {
+        try {
+          const places = await this.provider.search(
+            providerQuery,
             lat,
             lng,
             radiusMeters,
             mapsFilters,
-          )
-        )
-          .filter((p) => inArea(p.latitude, p.longitude))
-          .map((p) => fromExternal(p, this.provider.name, lat, lng));
-      } catch {
-        externalDataUnavailable = true;
+          );
+          await this.cacheProviderPlaces(places);
+          successfulQueries += 1;
+          for (const place of places) {
+            if (inArea(place.latitude, place.longitude)) {
+              externalByPlaceId.set(
+                place.placeId,
+                fromExternal(place, this.provider.name, lat, lng),
+              );
+            }
+          }
+        } catch {
+          // Keep partial results when one provider query fails.
+        }
       }
+      externalDataUnavailable = successfulQueries === 0;
     }
+    const external = [...externalByPlaceId.values()];
     const result = [...selected];
     for (const candidate of external) {
       if (
@@ -308,11 +428,12 @@ export class RestaurantService {
         a.id.localeCompare(b.id)
       );
     });
+    const start = (query.page - 1) * query.limit;
     return {
-      data: result,
+      data: result.slice(start, start + query.limit),
       meta: {
-        page: 1,
-        limit: result.length,
+        page: query.page,
+        limit: query.limit,
         total: result.length,
         resultsTruncated: resultsTruncated || external.length >= providerResultLimit,
         externalDataUnavailable,

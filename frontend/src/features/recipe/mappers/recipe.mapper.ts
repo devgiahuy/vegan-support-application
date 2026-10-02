@@ -29,8 +29,15 @@ import type {
   AppliedConstraintsDto,
 } from '../types/recipe.dto';
 import type { PostMediaDto, PostRevisionDto } from '@/features/post/types/post.dto';
+import {
+  getAllergenName,
+  getDietPatternName,
+  getDietReasonLabel,
+  getTraditionName,
+} from '@/common/constants/diet-labels';
 import type {
   Recipe,
+  RecipeAllergen,
   RecipeIngredient,
   RecipeStep,
   NutritionFact,
@@ -117,17 +124,37 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
 
     const traditionWarnings: TraditionWarning[] = safeArray<TraditionWarningDto>(
       detail?.traditionWarnings
-    ).map((w) => ({
-      tradition: safeString(w?.tradition),
-      warningCode: safeString(w?.warningCode),
-      label: safeString(w?.label),
-    }));
+    ).map((w) => {
+      const tradition = safeString(w?.tradition);
+      const tradName = getTraditionName(tradition);
+      return {
+        tradition,
+        traditionName: tradName,
+        traditionLabel: tradName,
+        warningCode: safeString(w?.warningCode),
+        label: safeString(w?.label),
+      };
+    });
     const dietCompatibilities: DietCompatibility[] = safeArray<DietCompatibilityDto>(
       detail?.dietCompatibilities
-    ).map((c) => ({
-      dietPattern: safeString(c?.dietPattern),
-      compatible: safeBoolean(c?.compatible, false),
-      reasonCodes: safeArray<string>(c?.reasonCodes),
+    ).map((c) => {
+      const dietPattern = safeString(c?.dietPattern);
+      const patternName = getDietPatternName(dietPattern);
+      const reasonCodes = safeArray<string>(c?.reasonCodes);
+      return {
+        dietPattern,
+        dietPatternName: patternName,
+        dietPatternLabel: patternName,
+        compatible: safeBoolean(c?.compatible, false),
+        reasonCodes,
+        reasonLabels: reasonCodes.map(getDietReasonLabel),
+      };
+    });
+
+    const allergenCodes = safeArray<string>(detail?.allergenCodes);
+    const allergens: RecipeAllergen[] = allergenCodes.map((code) => ({
+      code,
+      name: getAllergenName(code),
     }));
 
     const revisionId = safeString(revision?.id);
@@ -192,7 +219,8 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       expertVerified: false,
       description: safeString(revision?.excerpt, ''),
       dietTag: undefined,
-      allergenCodes: safeArray<string>(detail?.allergenCodes),
+      allergenCodes,
+      allergens,
       traditionWarnings,
       dietCompatibilities,
     };

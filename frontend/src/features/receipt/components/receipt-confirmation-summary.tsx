@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckCircle2, ArrowRight, PackagePlus, PlusCircle, RefreshCw } from 'lucide-react';
+import { CheckCircle2, ArrowRight, PackagePlus, PlusCircle, RefreshCw, Camera } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -19,12 +19,14 @@ interface ReceiptConfirmationSummaryProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   diff: ReceiptConfirmationDiff | null;
+  onScanAnother?: () => void;
 }
 
 export function ReceiptConfirmationSummary({
   open,
   onOpenChange,
   diff,
+  onScanAnother,
 }: ReceiptConfirmationSummaryProps) {
   const router = useRouter();
 
@@ -119,19 +121,34 @@ export function ReceiptConfirmationSummary({
         </div>
 
         <DialogFooter className="pt-3 flex flex-col sm:flex-row gap-2">
+          {onScanAnother && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                onOpenChange(false);
+                onScanAnother();
+              }}
+              className="rounded-xl w-full sm:w-auto"
+            >
+              <Camera className="h-4 w-4 mr-1.5" />
+              Quét thêm hóa đơn khác
+            </Button>
+          )}
+
           <Button
             type="button"
-            variant="outline"
+            variant={onScanAnother ? 'ghost' : 'outline'}
             onClick={() => onOpenChange(false)}
-            className="rounded-xl w-full sm:w-auto"
+            className="rounded-xl w-full sm:w-auto text-muted-foreground"
           >
-            Ở lại trang này
+            Đóng
           </Button>
 
           <Button
             type="button"
             onClick={handleGoToPantry}
-            className="rounded-xl w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="rounded-xl w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
           >
             Đến Tủ bếp của tôi
             <ArrowRight className="h-4 w-4 ml-1.5" />

@@ -57,16 +57,26 @@ export interface NutritionFact {
   vitaminB12: number;
 }
 
+export interface RecipeAllergen {
+  code: string;
+  name: string;
+}
+
 export interface TraditionWarning {
   tradition: string;
+  traditionName?: string;
+  traditionLabel?: string;
   warningCode: string;
   label: string;
 }
 
 export interface DietCompatibility {
   dietPattern: string;
+  dietPatternName?: string;
+  dietPatternLabel?: string;
   compatible: boolean;
   reasonCodes: string[];
+  reasonLabels?: string[];
 }
 
 export interface RecipeReview {
@@ -150,6 +160,8 @@ export interface Recipe {
   dietSchool?: DietSchool;
   /** Mã dị ứng suy từ nguyên liệu chuẩn (backend, có thể rỗng). */
   allergenCodes?: string[];
+  /** Danh sách dị ứng kèm tên tiếng Việt chuẩn hóa. */
+  allergens?: RecipeAllergen[];
   traditionWarnings?: TraditionWarning[];
   dietCompatibilities?: DietCompatibility[];
 }
