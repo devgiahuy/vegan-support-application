@@ -38,9 +38,9 @@ export function registerMealAnalysisOpenApi(registry: OpenAPIRegistry, errorSche
     method: 'post',
     path: '/api/v1/meal-plans/{id}/analyze',
     tags: ['Meal Analysis'],
-    summary: 'Phân tích khẩu phần, giới hạn và tương tác của meal plan',
+    summary: 'Phân tích khẩu phần và các điểm cần lưu ý trong thực đơn',
     description:
-      'Phân tích recipe và private custom meal theo item/servings đã chọn. User-facing nutrition focus chỉ gồm estimated protein, fiber, fat và carbohydrate; micronutrient completeness không tạo warning. Trả warning UI-ready cho macro target, portion và reviewed ingredient compatibility với confidence/uncertainty. Hard dietary/allergy filtering vẫn có precedence.',
+      'Phân tích món và khẩu phần đã chọn. Cảnh báo dinh dưỡng dành cho người dùng chỉ tập trung vào chất đạm, chất xơ, chất béo và tinh bột, luôn được diễn đạt là số liệu ước tính. Kết quả có tiêu đề, giải thích vị trí/ngày/bữa, ý nghĩa và gợi ý điều chỉnh bằng tiếng Việt. Thông tin nguồn và mã vẫn được giữ để kiểm tra nội bộ; dị ứng và các yêu cầu ăn uống bắt buộc không thay đổi.',
     operationId: 'analyzeMealPlan',
     security,
     request: {
@@ -60,7 +60,7 @@ export function registerMealAnalysisOpenApi(registry: OpenAPIRegistry, errorSche
     },
     responses: {
       201: {
-        description: 'Kết quả phân tích version mới cho tooltip/dialog',
+        description: 'Kết quả phân tích mới với cảnh báo và gợi ý dễ hiểu cho người dùng',
         content: { 'application/json': { schema: response } },
       },
       400: error(errorSchema, 'Selection hoặc portion không hợp lệ', [
@@ -84,13 +84,14 @@ export function registerMealAnalysisOpenApi(registry: OpenAPIRegistry, errorSche
     tags: ['Meal Analysis'],
     summary: 'Đọc kết quả phân tích hiện hành',
     description:
-      'Kiểm tra fingerprint của plan items, portions, recipe nutrition, custom meals, profile và reviewed rules. Trả MEAL_ANALYSIS_STALE thay vì phục vụ kết quả cũ.',
+      'Trả kết quả còn phù hợp với thực đơn hiện tại. Nếu món, khẩu phần hoặc thông tin liên quan đã thay đổi, yêu cầu phân tích lại thay vì trả kết quả cũ.',
     operationId: 'getCurrentMealAnalysis',
     security,
     request: { params: mealAnalysisParamsSchema },
     responses: {
       200: {
-        description: 'Kết quả current, có provenance và warning dialog fields',
+        description:
+          'Kết quả hiện hành với nội dung cảnh báo tiếng Việt và thông tin kiểm tra nội bộ',
         content: { 'application/json': { schema: response } },
       },
       400: error(errorSchema, 'Meal plan ID không hợp lệ', ['VALIDATION_ERROR']),

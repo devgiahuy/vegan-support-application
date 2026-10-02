@@ -36,13 +36,11 @@ export function estimateMealMacroTargets(
     proteinGrams: rounded((targetCalories * config.proteinEnergyPercent) / 100 / 4),
     fiberGrams: rounded((targetCalories / 1000) * config.fiberGramsPer1000Kcal),
     fatGrams: rounded((targetCalories * config.fatEnergyPercent) / 100 / 9),
-    carbohydrateGrams: rounded(
-      (targetCalories * config.carbohydrateEnergyPercent) / 100 / 4,
-    ),
+    carbohydrateGrams: rounded((targetCalories * config.carbohydrateEnergyPercent) / 100 / 4),
     estimated: true,
     source: 'HEALTH_PROFILE_TDEE_GOAL_CONFIG',
     sourceDetail:
-      'Estimated from the stored health-profile TDEE, the selected goal factor, and configured macro distribution; values are approximate targets, not measurements.',
+      'Mục tiêu được ước tính từ thông tin sức khỏe và mục tiêu bạn đã chọn. Đây là khoảng tham khảo, không phải số đo chính xác.',
     tolerancePercent: config.tolerancePercent,
   };
 }
@@ -56,10 +54,7 @@ export function emptyMealMacroValues(): MealMacroValues {
   };
 }
 
-export function addMealMacroValues(
-  left: MealMacroValues,
-  right: MealMacroValues,
-): MealMacroValues {
+export function addMealMacroValues(left: MealMacroValues, right: MealMacroValues): MealMacroValues {
   const add = (a: number | null, b: number | null) =>
     a === null && b === null ? null : rounded((a ?? 0) + (b ?? 0));
   return {
@@ -88,7 +83,8 @@ export function macroDistance(values: MealMacroValues, targets: MealMacroValues)
     [values.carbohydrateGrams, targets.carbohydrateGrams],
   ] as const;
   const comparable = pairs.filter(
-    (pair): pair is readonly [number, number] => pair[0] !== null && pair[1] !== null && pair[1] > 0,
+    (pair): pair is readonly [number, number] =>
+      pair[0] !== null && pair[1] !== null && pair[1] > 0,
   );
   if (!comparable.length) return Number.POSITIVE_INFINITY;
   return comparable.reduce((sum, [value, target]) => sum + Math.abs(value - target) / target, 0);

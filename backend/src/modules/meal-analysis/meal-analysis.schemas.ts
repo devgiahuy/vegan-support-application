@@ -2,7 +2,7 @@ import { EvidenceGrade, FoodRuleSeverity, InteractionScope, MealType } from '@pr
 import { z } from '../../common/validation/zod.js';
 import { dateOnlySchema } from '../profile/profile.schemas.js';
 
-export const MEAL_ANALYSIS_ALGORITHM_VERSION = 'meal-analysis-v2-four-macros' as const;
+export const MEAL_ANALYSIS_ALGORITHM_VERSION = 'meal-analysis-v3-user-facing-warnings' as const;
 
 export const mealAnalysisParamsSchema = z.object({ id: z.string().uuid() }).strict();
 
@@ -54,6 +54,7 @@ export const mealAnalysisWarningSchema = z
       'INGREDIENT_INTERACTION',
       'PORTION_MULTIPLIER_HIGH',
       'MACRO_TARGET_EXCEEDED',
+      'MACRO_TARGET_BELOW_RANGE',
     ]),
     severity: z.enum(FoodRuleSeverity),
     scope: z.enum(InteractionScope),
@@ -77,6 +78,14 @@ export const mealAnalysisWarningSchema = z
     confidence: z.number().min(0).max(1),
     advisory: z.boolean(),
     incompleteDataNotes: z.array(z.string()),
+    title: z.string(),
+    detail: z.string(),
+    suggestion: z.string(),
+    severityLabel: z.enum(['Thông tin', 'Nên lưu ý']),
+    scopeLabel: z.string(),
+    targetDate: dateOnlySchema,
+    mealType: z.enum(MealType).nullable(),
+    targetComparison: z.enum(['ABOVE', 'BELOW']).nullable(),
   })
   .strict();
 
@@ -97,6 +106,16 @@ export const mealAnalysisDataSchema = z
         cautionCount: z.number().int().nonnegative(),
         infoCount: z.number().int().nonnegative(),
         selectedItemCount: z.number().int().nonnegative(),
+        userStatus: z.enum([
+          'NO_SERIOUS_ISSUE',
+          'ADVISORY_ADJUSTMENTS',
+          'HARD_CONSTRAINT_VIOLATION',
+        ]),
+        title: z.string(),
+        detail: z.string(),
+        advisoryCount: z.number().int().nonnegative(),
+        hardConstraintViolationCount: z.number().int().nonnegative(),
+        hardConstraintsPreserved: z.boolean(),
       })
       .strict(),
     confidence: z.number().min(0).max(1),
