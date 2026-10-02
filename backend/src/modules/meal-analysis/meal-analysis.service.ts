@@ -3,6 +3,7 @@ import {
   EvidenceGrade,
   FoodRuleSeverity,
   GuidelinePeriod,
+  InteractionDirection,
   InteractionScope,
   MealAnalysisStatus,
   type Prisma,
@@ -27,9 +28,18 @@ import {
   type MealAnalysisInput,
   type MealAnalysisWarning,
 } from './meal-analysis.schemas.js';
+import {
+  incompleteIngredientMessage,
+  incompleteNutritionMessage,
+  macroWarningCopy,
+  mealLocation,
+  scopeLabel,
+  severityLabel,
+  type MacroWarningDirection,
+} from './meal-warning-copy.js';
 
 const DISCLAIMER =
-  'Phân tích này chỉ nhằm mục đích giáo dục, phụ thuộc vào dữ liệu hiện có và không thay thế tư vấn y tế hoặc chẩn đoán.';
+  'Kết quả này chỉ mang tính tham khảo, dựa trên dữ liệu hiện có và không thay thế tư vấn y tế hoặc chẩn đoán.';
 
 interface SelectedItem {
   item: AnalysisPlanRecord['items'][number];
@@ -166,12 +176,24 @@ export class MealAnalysisService {
       Math.max(0.2, baseConfidence - context.incomplete.length * 0.03).toFixed(4),
     );
     const estimatedNutrition = this.estimatedNutrition(context);
+    const advisoryCount = warnings.filter((item) => item.advisory).length;
+    const hasWarnings = warnings.length > 0;
     const summary = {
       warningCount: warnings.length,
       highCount: warnings.filter((item) => item.severity === FoodRuleSeverity.HIGH).length,
       cautionCount: warnings.filter((item) => item.severity === FoodRuleSeverity.CAUTION).length,
       infoCount: warnings.filter((item) => item.severity === FoodRuleSeverity.INFO).length,
       selectedItemCount: context.selected.length,
+      userStatus: hasWarnings ? 'ADVISORY_ADJUSTMENTS' : 'NO_SERIOUS_ISSUE',
+      title: hasWarnings
+        ? `Có ${warnings.length} điểm bạn có thể cân nhắc điều chỉnh`
+        : 'Chưa thấy vấn đề đáng lo trong thực đơn',
+      detail: hasWarnings
+        ? 'Các lưu ý dưới đây dựa trên số liệu ước tính. Bạn vẫn có thể dùng thực đơn và điều chỉnh khẩu phần hoặc món ăn nếu thấy phù hợp.'
+        : 'Các món đã chọn không có cảnh báo nghiêm trọng theo thông tin hiện có. Dị ứng và các yêu cầu ăn uống bắt buộc vẫn được kiểm tra riêng.',
+      advisoryCount,
+      hardConstraintViolationCount: 0,
+      hardConstraintsPreserved: true,
       estimatedNutrition,
     };
     const saved = await this.repository.save({
@@ -192,7 +214,7 @@ export class MealAnalysisService {
 
   async getCurrent(userId: string, mealPlanId: string) {
     const latest = await this.repository.findLatest(mealPlanId);
-    if (!latest) throw this.notFound('Chưa có kết quả phân tích cho meal plan');
+    if (!latest) throw this.notFound('Thực đơn này chưa có kết quả phân tích');
     const snapshot = asRecord(latest.requestSnapshot);
     const itemValues = Array.isArray(snapshot.items) ? snapshot.items : [];
     const items = itemValues.flatMap((entry) => {
@@ -226,7 +248,7 @@ export class MealAnalysisService {
         statusCode: 409,
         code: 'MEAL_ANALYSIS_STALE',
         message:
-          'Meal plan, khẩu phần, recipe, nutrition, profile hoặc rule đã thay đổi; cần phân tích lại',
+          'Thực đơn hoặc thông tin liên quan đã thay đổi. Vui lòng phân tích lại để xem kết quả mới.',
       });
     }
     return this.output(latest);
@@ -245,20 +267,20 @@ export class MealAnalysisService {
       this.repository.findOwnedPlan(userId, mealPlanId),
       this.repository.findProfile(userId),
     ]);
-    if (!plan) throw this.notFound('Không tìm thấy meal plan');
-    if (!profile) throw this.notFound('Không tìm thấy user profile');
+    if (!plan) throw this.notFound('Không tìm thấy thực đơn');
+    if (!profile) throw this.notFound('Không tìm thấy hồ sơ của bạn');
     if (plan.lockVersion !== input.expectedPlanVersion) {
       throw new AppError({
         statusCode: 409,
         code: 'MEAL_ANALYSIS_STALE',
-        message: 'Meal plan version đã thay đổi; hãy refetch trước khi phân tích',
+        message: 'Thực đơn đã thay đổi. Vui lòng tải lại trước khi phân tích.',
         fields: { currentVersion: [String(plan.lockVersion)] },
       });
     }
     const selectedRows = input.items?.length
       ? input.items.map((selection) => {
           const item = plan.items.find((candidate) => candidate.id === selection.itemId);
-          if (!item) throw this.notFound('Meal plan item không thuộc meal plan');
+          if (!item) throw this.notFound('Món đã chọn không thuộc thực đơn này');
           return { item, servings: selection.servings };
         })
       : plan.items
@@ -268,7 +290,7 @@ export class MealAnalysisService {
       throw new AppError({
         statusCode: 400,
         code: 'MEAL_ANALYSIS_ITEM_UNFILLED',
-        message: 'Không thể phân tích slot chưa có món',
+        message: 'Chưa thể phân tích một bữa đang để trống. Vui lòng thêm món trước.',
       });
     }
     const ingredientIds = [
@@ -301,7 +323,10 @@ export class MealAnalysisService {
       );
     }
     const incomplete: string[] = [];
-    if (!selectedRows.length) incomplete.push('Meal plan chưa có item đã điền để phân tích.');
+    if (!selectedRows.length)
+      incomplete.push(
+        'Thực đơn chưa có món để ước tính dinh dưỡng. Bạn có thể thêm món rồi phân tích lại.',
+      );
     const selected = selectedRows.map(({ item, servings }) =>
       this.selectedItem(item, servings, conversions, incomplete),
     );
@@ -416,12 +441,9 @@ export class MealAnalysisService {
                   amount: Number(item.recipeRevision.recipeDetail.carbsGrams) * servings,
                 },
           ].flatMap((entry) => (entry ? [entry] : []));
-      if (!estimate)
-        incomplete.push(
-          `Recipe item ${item.id} chưa có cooking-aware nutrition estimate hiện hành.`,
-        );
+      if (!estimate) incomplete.push(incompleteNutritionMessage(item.recipeRevision.title));
       if (estimate && nutrientList(estimate.perServingNutrients).length === 0)
-        incomplete.push(`Recipe item ${item.id} không có nutrient values có thể cộng gộp.`);
+        incomplete.push(incompleteNutritionMessage(item.recipeRevision.title));
       const ingredientAmounts = new Map<string, number>();
       if (estimate) {
         for (const line of estimate.lines) {
@@ -437,7 +459,7 @@ export class MealAnalysisService {
       const ingredients = item.recipeRevision.ingredients.flatMap((entry) => {
         if (!entry.ingredientId || !entry.ingredient) {
           incomplete.push(
-            `Recipe item ${item.id} có ingredient chưa chuẩn hóa: ${entry.displayName}.`,
+            incompleteIngredientMessage(item.recipeRevision!.title, entry.displayName),
           );
           return [];
         }
@@ -451,7 +473,9 @@ export class MealAnalysisService {
             servings / item.recipeRevision!.recipeDetail!.servings,
           );
         if (grams === null)
-          incomplete.push(`Không đổi được ${entry.displayName} (${entry.unit}) sang gram.`);
+          incomplete.push(
+            incompleteIngredientMessage(item.recipeRevision!.title, entry.displayName),
+          );
         return [{ id: entry.ingredientId, name: entry.ingredient.canonicalName, grams }];
       });
       return {
@@ -499,13 +523,10 @@ export class MealAnalysisService {
               amount: Number(meal.userFiberGrams) * perServing * servings,
             },
       ].flatMap((entry) => (entry ? [entry] : []));
-      if (!nutrients.length)
-        incomplete.push(`Custom meal item ${item.id} chưa có nutrition do người dùng cung cấp.`);
+      if (!nutrients.length) incomplete.push(incompleteNutritionMessage(meal.name));
       const ingredients = meal.ingredients.flatMap((entry) => {
         if (!entry.ingredientId || !entry.ingredient) {
-          incomplete.push(
-            `Custom meal item ${item.id} có ingredient chưa chuẩn hóa: ${entry.displayName}.`,
-          );
+          incomplete.push(incompleteIngredientMessage(meal.name, entry.displayName));
           return [];
         }
         const grams = this.toGrams(
@@ -516,7 +537,7 @@ export class MealAnalysisService {
           perServing * servings,
         );
         if (grams === null)
-          incomplete.push(`Không đổi được ${entry.displayName} (${entry.unit}) sang gram.`);
+          incomplete.push(incompleteIngredientMessage(meal.name, entry.displayName));
         return [{ id: entry.ingredientId, name: entry.ingredient.canonicalName, grams }];
       });
       return {
@@ -561,7 +582,7 @@ export class MealAnalysisService {
               evidenceGrade: EvidenceGrade.INSUFFICIENT,
               source: {
                 code: 'SYSTEM_ANALYSIS',
-                name: 'Vegan Support portion heuristic',
+                name: 'Kiểm tra khẩu phần của Vegan Support',
                 version: MEAL_ANALYSIS_ALGORITHM_VERSION,
                 recordId: 'portion-multiplier-over-two',
                 url: null,
@@ -571,13 +592,21 @@ export class MealAnalysisService {
               affectedIngredients: [],
               measured: { value: entry.servings, unit: 'serving' },
               limit: { value: 2, unit: 'serving' },
-              explanation:
-                'Khẩu phần đã chọn lớn hơn hai khẩu phần chuẩn; tổng dinh dưỡng và lượng nguyên liệu tăng tương ứng.',
+              explanation: `${mealLocation([affectedItem(entry)], InteractionScope.SAME_DISH)} đang được tính với hơn hai khẩu phần. Tổng dinh dưỡng và lượng nguyên liệu ước tính vì vậy cũng tăng theo.`,
               suggestedAdjustment:
                 'Kiểm tra lại số người ăn hoặc giảm khẩu phần trước khi xác nhận.',
               confidence: 0.35,
               advisory: true,
               incompleteDataNotes: [],
+              title: `Khẩu phần của món ${entry.name} có thể đang quá lớn`,
+              detail: `${mealLocation([affectedItem(entry)], InteractionScope.SAME_DISH)} đang được tính với hơn hai khẩu phần. Tổng dinh dưỡng và lượng nguyên liệu ước tính vì vậy cũng tăng theo.`,
+              suggestion:
+                'Bạn có thể kiểm tra lại số người ăn hoặc giảm khẩu phần rồi phân tích lại.',
+              severityLabel: severityLabel(FoodRuleSeverity.CAUTION),
+              scopeLabel: scopeLabel(InteractionScope.SAME_DISH),
+              targetDate: dateOnly(entry.item.date),
+              mealType: entry.item.mealType,
+              targetComparison: null,
             },
           ]
         : [],
@@ -590,10 +619,10 @@ export class MealAnalysisService {
       this.config.mealPlanMacroTargets,
     );
     const metrics = [
-      { code: 'PROTEIN', key: 'proteinGrams', label: 'protein' },
-      { code: 'FIBER', key: 'fiberGrams', label: 'fiber' },
-      { code: 'FAT', key: 'fatGrams', label: 'fat' },
-      { code: 'CARBS', key: 'carbohydrateGrams', label: 'carbohydrates' },
+      { code: 'PROTEIN', key: 'proteinGrams' },
+      { code: 'FIBER', key: 'fiberGrams' },
+      { code: 'FAT', key: 'fatGrams' },
+      { code: 'CARBS', key: 'carbohydrateGrams' },
     ] as const;
     const byDay = new Map<string, SelectedItem[]>();
     for (const item of context.selected) {
@@ -610,34 +639,58 @@ export class MealAnalysisService {
         );
         const measured = matching.reduce((sum, entry) => sum + entry.amount, 0);
         const target = targets[metric.key];
-        if (!matching.length || !isMacroOverTarget(measured, target, targets.tolerancePercent))
-          continue;
+        if (!matching.length || target === null) continue;
+        const above = isMacroOverTarget(measured, target, targets.tolerancePercent);
+        const hasCompleteDayData = matching.length === items.length;
+        const below =
+          hasCompleteDayData && measured < target * (1 - targets.tolerancePercent / 100);
+        if (!above && !below) continue;
+        const direction: MacroWarningDirection = above ? 'ABOVE' : 'BELOW';
+        const copy = macroWarningCopy(metric.code, direction, day);
+        const affected = matching.map((entry) => affectedItem(entry.item));
         warnings.push({
-          code: 'MACRO_TARGET_EXCEEDED',
+          code: above ? 'MACRO_TARGET_EXCEEDED' : 'MACRO_TARGET_BELOW_RANGE',
           severity: FoodRuleSeverity.CAUTION,
           scope: InteractionScope.SAME_DAY,
           evidenceGrade: EvidenceGrade.INSUFFICIENT,
           source: {
             code: 'MEAL_PLAN_ESTIMATED_MACRO_TARGET',
-            name: 'Configured meal-plan macro estimate',
+            name: 'Ước tính dinh dưỡng của thực đơn',
             version: MEAL_ANALYSIS_ALGORITHM_VERSION,
             recordId: `${day}:${metric.code}`,
             url: null,
           },
-          applicability: { date: day, tolerancePercent: targets.tolerancePercent },
-          affectedItems: matching.map((entry) => affectedItem(entry.item)),
+          applicability: {
+            date: day,
+            tolerancePercent: targets.tolerancePercent,
+            macro: metric.code,
+            direction,
+          },
+          affectedItems: affected,
           affectedIngredients: [],
           measured: { value: Number(measured.toFixed(2)), unit: 'g' },
           limit: {
-            value: Number((target! * (1 + targets.tolerancePercent / 100)).toFixed(2)),
+            value: Number(
+              (
+                target *
+                (1 + ((direction === 'ABOVE' ? 1 : -1) * targets.tolerancePercent) / 100)
+              ).toFixed(2),
+            ),
             unit: 'g',
           },
-          explanation: `Estimated daily ${metric.label} is above the approximate configured target and tolerance.`,
-          suggestedAdjustment:
-            'You may keep this manual choice. Consider adjusting a portion or another meal if you want to move the estimated daily total nearer the target.',
+          explanation: copy.detail,
+          suggestedAdjustment: copy.suggestion,
           confidence: Math.min(...matching.map((entry) => entry.item.confidence)),
           advisory: true,
-          incompleteDataNotes: context.incomplete.filter((note) => note.includes('nutrition')),
+          incompleteDataNotes: context.incomplete,
+          title: copy.title,
+          detail: copy.detail,
+          suggestion: copy.suggestion,
+          severityLabel: severityLabel(FoodRuleSeverity.CAUTION),
+          scopeLabel: scopeLabel(InteractionScope.SAME_DAY),
+          targetDate: day,
+          mealType: null,
+          targetComparison: direction,
         });
       }
     }
@@ -670,13 +723,19 @@ export class MealAnalysisService {
         );
         const limit = Number(rule.amount) * Number(rule.frequency);
         if (!affected.length || rule.unit !== 'g' || grams <= limit) continue;
+        const scope =
+          rule.period === GuidelinePeriod.DAY
+            ? InteractionScope.SAME_DAY
+            : InteractionScope.SAME_MEAL;
+        const affectedItems = affected.map(affectedItem);
+        const title = `Lượng ${rule.ingredient.canonicalName} ước tính đang cao hơn mức khuyến nghị`;
+        const detail = `${mealLocation(affectedItems, scope)} có tổng lượng ${rule.ingredient.canonicalName} ước tính cao hơn khoảng tham khảo đang áp dụng. Điều này không có nghĩa là chắc chắn gây hại, nhưng bạn nên cân nhắc lượng dùng.`;
+        const suggestion =
+          'Bạn có thể giảm lượng nguyên liệu hoặc chia sang bữa, ngày khác rồi phân tích lại.';
         warnings.push({
           code: 'INGREDIENT_GUIDELINE_EXCEEDED',
           severity: rule.severity,
-          scope:
-            rule.period === GuidelinePeriod.DAY
-              ? InteractionScope.SAME_DAY
-              : InteractionScope.SAME_MEAL,
+          scope,
           evidenceGrade: rule.evidenceGrade,
           source: {
             code: rule.source.code,
@@ -686,20 +745,27 @@ export class MealAnalysisService {
             url: rule.source.sourceUrl,
           },
           applicability: asRecord(rule.applicability),
-          affectedItems: affected.map(affectedItem),
+          affectedItems,
           affectedIngredients: [
             { ingredientId: rule.ingredientId, name: rule.ingredient.canonicalName },
           ],
           measured: { value: Number(grams.toFixed(4)), unit: 'g' },
           limit: { value: limit, unit: rule.unit },
-          explanation: rule.explanation,
-          suggestedAdjustment:
-            'Cân nhắc giảm lượng nguyên liệu hoặc chia sang bữa/ngày khác rồi phân tích lại.',
+          explanation: detail,
+          suggestedAdjustment: suggestion,
           confidence: warningConfidence(rule.evidenceGrade),
           advisory: rule.advisoryOnly,
           incompleteDataNotes: context.incomplete.filter((note) =>
             note.includes(rule.ingredient.canonicalName),
           ),
+          title,
+          detail,
+          suggestion,
+          severityLabel: severityLabel(rule.severity),
+          scopeLabel: scopeLabel(scope),
+          targetDate: dateOnly(affected[0]!.item.date),
+          mealType: scope === InteractionScope.SAME_MEAL ? affected[0]!.item.mealType : null,
+          targetComparison: 'ABOVE',
         });
       }
     }
@@ -728,6 +794,19 @@ export class MealAnalysisService {
         );
         const ids = new Set(affected.flatMap((item) => item.ingredients.map((entry) => entry.id)));
         if (!ids.has(rule.ingredientAId) || !ids.has(rule.ingredientBId)) continue;
+        const affectedItems = affected.map(affectedItem);
+        const ingredientNames = `${rule.ingredientA.canonicalName} và ${rule.ingredientB.canonicalName}`;
+        const beneficial = rule.direction === InteractionDirection.BENEFICIAL;
+        const title = beneficial
+          ? `Kết hợp ${ingredientNames} có thể hỗ trợ dinh dưỡng`
+          : `Kết hợp ${ingredientNames} có thể chưa phù hợp`;
+        const consequence = beneficial
+          ? 'có thể giúp cơ thể hấp thu hoặc sử dụng một số chất dinh dưỡng tốt hơn'
+          : 'có thể làm giảm khả năng hấp thu một số chất dinh dưỡng hoặc gây khó chịu ở một số người';
+        const detail = `${mealLocation(affectedItems, rule.scope)} có cả ${ingredientNames}. Theo dữ liệu tham khảo, cách kết hợp này ${consequence}; mức ảnh hưởng thực tế có thể khác nhau giữa mỗi người.`;
+        const suggestion = beneficial
+          ? 'Bạn có thể giữ cách kết hợp này nếu phù hợp với khẩu vị và nhu cầu của mình.'
+          : 'Bạn có thể giảm lượng dùng, tách hai nguyên liệu sang bữa khác hoặc chọn món thay thế.';
         warnings.push({
           code: 'INGREDIENT_INTERACTION',
           severity: rule.severity,
@@ -741,20 +820,26 @@ export class MealAnalysisService {
             url: rule.source.sourceUrl,
           },
           applicability: asRecord(rule.applicability),
-          affectedItems: affected.map(affectedItem),
+          affectedItems,
           affectedIngredients: [
             { ingredientId: rule.ingredientAId, name: rule.ingredientA.canonicalName },
             { ingredientId: rule.ingredientBId, name: rule.ingredientB.canonicalName },
           ],
           measured: null,
           limit: null,
-          explanation: rule.explanation,
-          suggestedAdjustment:
-            rule.suggestedAction ??
-            'Xem xét điều chỉnh cách kết hợp hoặc chọn món khác trước khi xác nhận.',
+          explanation: detail,
+          suggestedAdjustment: suggestion,
           confidence: warningConfidence(rule.evidenceGrade),
           advisory: !rule.hardRule,
           incompleteDataNotes: context.incomplete,
+          title,
+          detail,
+          suggestion,
+          severityLabel: severityLabel(rule.severity),
+          scopeLabel: scopeLabel(rule.scope),
+          targetDate: dateOnly(affected[0]!.item.date),
+          mealType: rule.scope === InteractionScope.SAME_DAY ? null : affected[0]!.item.mealType,
+          targetComparison: null,
         });
       }
     }
@@ -850,6 +935,27 @@ export class MealAnalysisService {
         infoCount: typeof summary.infoCount === 'number' ? summary.infoCount : 0,
         selectedItemCount:
           typeof summary.selectedItemCount === 'number' ? summary.selectedItemCount : 0,
+        userStatus:
+          summary.userStatus === 'ADVISORY_ADJUSTMENTS'
+            ? 'ADVISORY_ADJUSTMENTS'
+            : summary.userStatus === 'HARD_CONSTRAINT_VIOLATION'
+              ? 'HARD_CONSTRAINT_VIOLATION'
+              : 'NO_SERIOUS_ISSUE',
+        title:
+          typeof summary.title === 'string'
+            ? summary.title
+            : 'Chưa thấy vấn đề đáng lo trong thực đơn',
+        detail:
+          typeof summary.detail === 'string'
+            ? summary.detail
+            : 'Kết quả dựa trên thông tin hiện có và chỉ mang tính tham khảo.',
+        advisoryCount:
+          typeof summary.advisoryCount === 'number' ? summary.advisoryCount : warnings.length,
+        hardConstraintViolationCount:
+          typeof summary.hardConstraintViolationCount === 'number'
+            ? summary.hardConstraintViolationCount
+            : 0,
+        hardConstraintsPreserved: summary.hardConstraintsPreserved !== false,
       },
       confidence: Number(record.confidence),
       incompleteData,

@@ -12645,6 +12645,142 @@
                   ]
                 }
               },
+              "warningDetails": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "CALORIE_TOLERANCE_WIDENED",
+                        "RECIPE_REPEATED",
+                        "UNFILLED_SLOT",
+                        "SHOPPING_UNIT_NOT_COMBINED",
+                        "MICRONUTRIENT_DATA_PARTIAL",
+                        "MICRONUTRIENT_DATA_UNAVAILABLE",
+                        "NUTRITION_TARGET_OUTSIDE_TOLERANCE"
+                      ]
+                    },
+                    "severity": {
+                      "type": "string",
+                      "enum": [
+                        "INFO",
+                        "WARNING"
+                      ]
+                    },
+                    "severityLabel": {
+                      "type": "string",
+                      "enum": [
+                        "Thông tin",
+                        "Nên lưu ý"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "suggestion": {
+                      "type": "string"
+                    },
+                    "advisory": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "affectedSlots": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "itemId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "date": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "mealType": {
+                            "type": "string",
+                            "enum": [
+                              "BREAKFAST",
+                              "LUNCH",
+                              "DINNER"
+                            ]
+                          },
+                          "name": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "itemId",
+                          "date",
+                          "mealType",
+                          "name"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "severity",
+                    "severityLabel",
+                    "message",
+                    "detail",
+                    "suggestion",
+                    "advisory",
+                    "affectedSlots"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "userSummary": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "NO_SERIOUS_ISSUE",
+                      "ADVISORY_ADJUSTMENTS",
+                      "HARD_CONSTRAINT_BLOCKED"
+                    ]
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "detail": {
+                    "type": "string"
+                  },
+                  "suggestion": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "hardConstraintsPreserved": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  }
+                },
+                "required": [
+                  "status",
+                  "title",
+                  "detail",
+                  "suggestion",
+                  "hardConstraintsPreserved"
+                ],
+                "additionalProperties": false
+              },
               "nutritionDataQuality": {
                 "type": "string",
                 "enum": [
@@ -12989,7 +13125,8 @@
                             "INGREDIENT_GUIDELINE_EXCEEDED",
                             "INGREDIENT_INTERACTION",
                             "PORTION_MULTIPLIER_HIGH",
-                            "MACRO_TARGET_EXCEEDED"
+                            "MACRO_TARGET_EXCEEDED",
+                            "MACRO_TARGET_BELOW_RANGE"
                           ]
                         },
                         "severity": {
@@ -13182,6 +13319,52 @@
                           "items": {
                             "type": "string"
                           }
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "detail": {
+                          "type": "string"
+                        },
+                        "suggestion": {
+                          "type": "string"
+                        },
+                        "severityLabel": {
+                          "type": "string",
+                          "enum": [
+                            "Thông tin",
+                            "Nên lưu ý"
+                          ]
+                        },
+                        "scopeLabel": {
+                          "type": "string"
+                        },
+                        "targetDate": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "mealType": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "enum": [
+                            "BREAKFAST",
+                            "LUNCH",
+                            "DINNER",
+                            null
+                          ]
+                        },
+                        "targetComparison": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "enum": [
+                            "ABOVE",
+                            "BELOW",
+                            null
+                          ]
                         }
                       },
                       "required": [
@@ -13199,7 +13382,15 @@
                         "suggestedAdjustment",
                         "confidence",
                         "advisory",
-                        "incompleteDataNotes"
+                        "incompleteDataNotes",
+                        "title",
+                        "detail",
+                        "suggestion",
+                        "severityLabel",
+                        "scopeLabel",
+                        "targetDate",
+                        "mealType",
+                        "targetComparison"
                       ],
                       "additionalProperties": false
                     }
@@ -13226,6 +13417,31 @@
                       "selectedItemCount": {
                         "type": "integer",
                         "minimum": 0
+                      },
+                      "userStatus": {
+                        "type": "string",
+                        "enum": [
+                          "NO_SERIOUS_ISSUE",
+                          "ADVISORY_ADJUSTMENTS",
+                          "HARD_CONSTRAINT_VIOLATION"
+                        ]
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "detail": {
+                        "type": "string"
+                      },
+                      "advisoryCount": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "hardConstraintViolationCount": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "hardConstraintsPreserved": {
+                        "type": "boolean"
                       }
                     },
                     "required": [
@@ -13233,7 +13449,13 @@
                       "highCount",
                       "cautionCount",
                       "infoCount",
-                      "selectedItemCount"
+                      "selectedItemCount",
+                      "userStatus",
+                      "title",
+                      "detail",
+                      "advisoryCount",
+                      "hardConstraintViolationCount",
+                      "hardConstraintsPreserved"
                     ],
                     "additionalProperties": false
                   },
@@ -14177,6 +14399,8 @@
               "algorithmVersion",
               "recommendationVersion",
               "warnings",
+              "warningDetails",
+              "userSummary",
               "nutritionDataQuality",
               "micronutrientSummary",
               "explanation",
@@ -14275,6 +14499,142 @@
                     ]
                   }
                 },
+                "warningDetails": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "string",
+                        "enum": [
+                          "CALORIE_TOLERANCE_WIDENED",
+                          "RECIPE_REPEATED",
+                          "UNFILLED_SLOT",
+                          "SHOPPING_UNIT_NOT_COMBINED",
+                          "MICRONUTRIENT_DATA_PARTIAL",
+                          "MICRONUTRIENT_DATA_UNAVAILABLE",
+                          "NUTRITION_TARGET_OUTSIDE_TOLERANCE"
+                        ]
+                      },
+                      "severity": {
+                        "type": "string",
+                        "enum": [
+                          "INFO",
+                          "WARNING"
+                        ]
+                      },
+                      "severityLabel": {
+                        "type": "string",
+                        "enum": [
+                          "Thông tin",
+                          "Nên lưu ý"
+                        ]
+                      },
+                      "message": {
+                        "type": "string"
+                      },
+                      "detail": {
+                        "type": "string"
+                      },
+                      "suggestion": {
+                        "type": "string"
+                      },
+                      "advisory": {
+                        "type": "boolean",
+                        "enum": [
+                          true
+                        ]
+                      },
+                      "affectedSlots": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "itemId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "date": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            "mealType": {
+                              "type": "string",
+                              "enum": [
+                                "BREAKFAST",
+                                "LUNCH",
+                                "DINNER"
+                              ]
+                            },
+                            "name": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "itemId",
+                            "date",
+                            "mealType",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "code",
+                      "severity",
+                      "severityLabel",
+                      "message",
+                      "detail",
+                      "suggestion",
+                      "advisory",
+                      "affectedSlots"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "userSummary": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "NO_SERIOUS_ISSUE",
+                        "ADVISORY_ADJUSTMENTS",
+                        "HARD_CONSTRAINT_BLOCKED"
+                      ]
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "suggestion": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "hardConstraintsPreserved": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "title",
+                    "detail",
+                    "suggestion",
+                    "hardConstraintsPreserved"
+                  ],
+                  "additionalProperties": false
+                },
                 "nutritionDataQuality": {
                   "type": "string",
                   "enum": [
@@ -14346,6 +14706,8 @@
                 "algorithmVersion",
                 "recommendationVersion",
                 "warnings",
+                "warningDetails",
+                "userSummary",
                 "nutritionDataQuality",
                 "micronutrientSummary",
                 "explanation",
@@ -14527,7 +14889,8 @@
                         "INGREDIENT_GUIDELINE_EXCEEDED",
                         "INGREDIENT_INTERACTION",
                         "PORTION_MULTIPLIER_HIGH",
-                        "MACRO_TARGET_EXCEEDED"
+                        "MACRO_TARGET_EXCEEDED",
+                        "MACRO_TARGET_BELOW_RANGE"
                       ]
                     },
                     "severity": {
@@ -14720,6 +15083,52 @@
                       "items": {
                         "type": "string"
                       }
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "suggestion": {
+                      "type": "string"
+                    },
+                    "severityLabel": {
+                      "type": "string",
+                      "enum": [
+                        "Thông tin",
+                        "Nên lưu ý"
+                      ]
+                    },
+                    "scopeLabel": {
+                      "type": "string"
+                    },
+                    "targetDate": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "mealType": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "BREAKFAST",
+                        "LUNCH",
+                        "DINNER",
+                        null
+                      ]
+                    },
+                    "targetComparison": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "ABOVE",
+                        "BELOW",
+                        null
+                      ]
                     }
                   },
                   "required": [
@@ -14737,7 +15146,15 @@
                     "suggestedAdjustment",
                     "confidence",
                     "advisory",
-                    "incompleteDataNotes"
+                    "incompleteDataNotes",
+                    "title",
+                    "detail",
+                    "suggestion",
+                    "severityLabel",
+                    "scopeLabel",
+                    "targetDate",
+                    "mealType",
+                    "targetComparison"
                   ],
                   "additionalProperties": false
                 }
@@ -14764,6 +15181,31 @@
                   "selectedItemCount": {
                     "type": "integer",
                     "minimum": 0
+                  },
+                  "userStatus": {
+                    "type": "string",
+                    "enum": [
+                      "NO_SERIOUS_ISSUE",
+                      "ADVISORY_ADJUSTMENTS",
+                      "HARD_CONSTRAINT_VIOLATION"
+                    ]
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "detail": {
+                    "type": "string"
+                  },
+                  "advisoryCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "hardConstraintViolationCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "hardConstraintsPreserved": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -14771,7 +15213,13 @@
                   "highCount",
                   "cautionCount",
                   "infoCount",
-                  "selectedItemCount"
+                  "selectedItemCount",
+                  "userStatus",
+                  "title",
+                  "detail",
+                  "advisoryCount",
+                  "hardConstraintViolationCount",
+                  "hardConstraintsPreserved"
                 ],
                 "additionalProperties": false
               },
@@ -40461,7 +40909,7 @@
         },
         "responses": {
           "201": {
-            "description": "Meal plan version mới cùng shopping list và warnings",
+            "description": "Thực đơn tuần mới cùng danh sách mua sắm, tóm tắt dễ hiểu và các lưu ý dành cho người dùng",
             "content": {
               "application/json": {
                 "schema": {
@@ -41353,7 +41801,7 @@
           "Meal Plans"
         ],
         "summary": "Thêm recipe hoặc private custom meal vào slot",
-        "description": "Backend kiểm tra allergy, explicit exclusion, diet pattern và enabled tradition constraints trước khi ghi. Món hard-compatible được lưu kể cả khi estimated protein/fiber/fat/carbohydrate của ngày vượt target+tolerance; response trả advisory MACRO_TARGET_EXCEEDED thay vì rollback. Compatibility evidence-graded không tự biến thành hard prohibition.",
+        "description": "Hệ thống kiểm tra dị ứng, nguyên liệu cần tránh, chế độ ăn và quy tắc truyền thống trước khi lưu. Món phù hợp vẫn được lưu khi các chỉ số chất đạm, chất xơ, chất béo hoặc tinh bột ước tính lệch khỏi khoảng mục tiêu; các lưu ý này chỉ là gợi ý điều chỉnh và không chặn thao tác.",
         "operationId": "manualAddMealPlanItem",
         "security": [
           {
@@ -41580,8 +42028,8 @@
         "tags": [
           "Meal Analysis"
         ],
-        "summary": "Phân tích khẩu phần, giới hạn và tương tác của meal plan",
-        "description": "Phân tích recipe và private custom meal theo item/servings đã chọn. User-facing nutrition focus chỉ gồm estimated protein, fiber, fat và carbohydrate; micronutrient completeness không tạo warning. Trả warning UI-ready cho macro target, portion và reviewed ingredient compatibility với confidence/uncertainty. Hard dietary/allergy filtering vẫn có precedence.",
+        "summary": "Phân tích khẩu phần và các điểm cần lưu ý trong thực đơn",
+        "description": "Phân tích món và khẩu phần đã chọn. Cảnh báo dinh dưỡng dành cho người dùng chỉ tập trung vào chất đạm, chất xơ, chất béo và tinh bột, luôn được diễn đạt là số liệu ước tính. Kết quả có tiêu đề, giải thích vị trí/ngày/bữa, ý nghĩa và gợi ý điều chỉnh bằng tiếng Việt. Thông tin nguồn và mã vẫn được giữ để kiểm tra nội bộ; dị ứng và các yêu cầu ăn uống bắt buộc không thay đổi.",
         "operationId": "analyzeMealPlan",
         "security": [
           {
@@ -41623,7 +42071,7 @@
         },
         "responses": {
           "201": {
-            "description": "Kết quả phân tích version mới cho tooltip/dialog",
+            "description": "Kết quả phân tích mới với cảnh báo và gợi ý dễ hiểu cho người dùng",
             "content": {
               "application/json": {
                 "schema": {
@@ -41809,7 +42257,7 @@
           "Meal Analysis"
         ],
         "summary": "Đọc kết quả phân tích hiện hành",
-        "description": "Kiểm tra fingerprint của plan items, portions, recipe nutrition, custom meals, profile và reviewed rules. Trả MEAL_ANALYSIS_STALE thay vì phục vụ kết quả cũ.",
+        "description": "Trả kết quả còn phù hợp với thực đơn hiện tại. Nếu món, khẩu phần hoặc thông tin liên quan đã thay đổi, yêu cầu phân tích lại thay vì trả kết quả cũ.",
         "operationId": "getCurrentMealAnalysis",
         "security": [
           {
@@ -41832,7 +42280,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Kết quả current, có provenance và warning dialog fields",
+            "description": "Kết quả hiện hành với nội dung cảnh báo tiếng Việt và thông tin kiểm tra nội bộ",
             "content": {
               "application/json": {
                 "schema": {

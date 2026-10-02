@@ -21,6 +21,38 @@ export const mealPlanWarningCodeSchema = z.enum([
   'NUTRITION_TARGET_OUTSIDE_TOLERANCE',
 ]);
 
+const mealPlanWarningDetailSchema = z
+  .object({
+    code: mealPlanWarningCodeSchema,
+    severity: z.enum(['INFO', 'WARNING']),
+    severityLabel: z.enum(['Thông tin', 'Nên lưu ý']),
+    message: z.string(),
+    detail: z.string(),
+    suggestion: z.string(),
+    advisory: z.literal(true),
+    affectedSlots: z.array(
+      z
+        .object({
+          itemId: z.string().uuid(),
+          date: dateOnlySchema,
+          mealType: z.enum(MealType),
+          name: z.string().nullable(),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+
+const mealPlanUserSummarySchema = z
+  .object({
+    status: z.enum(['NO_SERIOUS_ISSUE', 'ADVISORY_ADJUSTMENTS', 'HARD_CONSTRAINT_BLOCKED']),
+    title: z.string(),
+    detail: z.string(),
+    suggestion: z.string().nullable(),
+    hardConstraintsPreserved: z.literal(true),
+  })
+  .strict();
+
 export const generateMealPlanRequestSchema = z
   .object({
     weekStart: dateOnlySchema.refine(
@@ -201,6 +233,8 @@ const mealPlanSummarySchema = z
     algorithmVersion: z.string().min(1),
     recommendationVersion: z.string(),
     warnings: z.array(mealPlanWarningCodeSchema),
+    warningDetails: z.array(mealPlanWarningDetailSchema),
+    userSummary: mealPlanUserSummarySchema,
     nutritionDataQuality: z.enum(NutritionDataQuality),
     micronutrientSummary: micronutrientSummarySchema,
     explanation: z.string().nullable(),

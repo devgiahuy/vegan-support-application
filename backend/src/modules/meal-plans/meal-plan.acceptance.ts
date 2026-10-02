@@ -13,7 +13,7 @@ import {
 } from '../../common/units/unit-normalization.js';
 import { classifyPantryExpiry } from '../pantry/pantry.service.js';
 import { buildWeeklySlotBlueprint } from './weekly-plan.js';
-import { MealPlanService } from './meal-plan.service.js';
+import { mealPlanWarningCopy, MealPlanService } from './meal-plan.service.js';
 import type { MealPlanRepository } from './meal-plan.repository.js';
 import type { ContentRepository, PublishedPostRecord } from '../content/content.repository.js';
 import type { RecommendationService } from '../recommendations/recommendation.service.js';
@@ -71,6 +71,11 @@ assert.equal(classifyPantryExpiry(PantryConfirmationStatus.CONFIRMED, 1), 'ALERT
 assert.equal(classifyPantryExpiry(PantryConfirmationStatus.CONFIRMED, 0), 'ALERT');
 assert.equal(classifyPantryExpiry(PantryConfirmationStatus.CONFIRMED, -1), 'EXPIRED');
 assert.equal(classifyPantryExpiry(PantryConfirmationStatus.PENDING, 1), null);
+
+const repeatedWarning = mealPlanWarningCopy('RECIPE_REPEATED');
+assert.equal(repeatedWarning?.severityLabel, 'Thông tin');
+assert.match(repeatedWarning?.detail ?? '', /phù hợp với yêu cầu ăn uống/);
+assert.equal(mealPlanWarningCopy('MICRONUTRIENT_DATA_PARTIAL'), null);
 
 const captureError = new Error('CAPTURE_COMPLETE');
 let capturedItems: Array<{ status: string; reasonCodes: unknown; warningCodes: unknown }> = [];
@@ -136,11 +141,15 @@ try {
 assert.equal(capturedItems.length, 21);
 assert(capturedItems.every((item) => item.status === 'FILLED'));
 assert(
-  capturedItems.slice(2).some((item) =>
-    Array.isArray(item.warningCodes)
-      ? item.warningCodes.includes('NUTRITION_TARGET_OUTSIDE_TOLERANCE')
-      : false,
-  ),
+  capturedItems
+    .slice(2)
+    .some((item) =>
+      Array.isArray(item.warningCodes)
+        ? item.warningCodes.includes('NUTRITION_TARGET_OUTSIDE_TOLERANCE')
+        : false,
+    ),
 );
 
-process.stdout.write('Meal-plan macro, unit normalization, and pantry expiry acceptance checks passed.\n');
+process.stdout.write(
+  'Meal-plan macro, unit normalization, and pantry expiry acceptance checks passed.\n',
+);
