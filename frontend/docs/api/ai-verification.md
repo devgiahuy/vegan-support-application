@@ -175,6 +175,17 @@ Verify a submitted public artifact
       "type": [
         "string",
         "null"
+      ],
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
       ]
     }
   },

@@ -484,6 +484,17 @@ Retry failed or partially failed receipt extraction
       "type": [
         "string",
         "null"
+      ],
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
       ]
     },
     "decision": {

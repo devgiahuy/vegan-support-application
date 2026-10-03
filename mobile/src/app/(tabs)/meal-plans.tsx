@@ -12,6 +12,7 @@ import {
   Sparkles,
   Target,
   Utensils,
+  Warehouse,
 } from 'lucide-react-native';
 
 import { MealPlanGoal } from '@/common/enums';
@@ -244,6 +245,13 @@ export default function MealPlansScreen() {
             </Pressable>
           </Link>
         </View>
+
+        <Link href={'/pantry' as Href} asChild>
+          <Pressable className="flex-row items-center justify-center gap-1.5 rounded-xl border border-input py-2.5">
+            <Warehouse size={14} color={colors.primary} />
+            <Text className="text-xs font-semibold text-foreground">Tu bep</Text>
+          </Pressable>
+        </Link>
 
         <View className="gap-3">
           <View className="flex-row items-center justify-between">

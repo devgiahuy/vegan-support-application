@@ -1,4 +1,32 @@
 export const API_ENDPOINTS = {
+  SCANNING: {
+    fridge: {
+      JOBS: '/ingredient-recognition/jobs',
+      JOB: (id: string) => `/ingredient-recognition/jobs/${id}`,
+      CANDIDATE: (id: string, candidateId: string) => `/ingredient-recognition/jobs/${id}/candidates/${candidateId}`,
+      CONFIRM: (id: string) => `/ingredient-recognition/jobs/${id}/confirm`,
+      CANCEL: (id: string) => `/ingredient-recognition/jobs/${id}/cancel`,
+      RETRY: (id: string) => `/ingredient-recognition/jobs/${id}/retry`,
+    },
+    receipt: {
+      JOBS: '/receipt-jobs',
+      JOB: (id: string) => `/receipt-jobs/${id}`,
+      CANDIDATE: (id: string, candidateId: string) => `/receipt-jobs/${id}/candidates/${candidateId}`,
+      CONFIRM: (id: string) => `/receipt-jobs/${id}/confirm`,
+      CANCEL: (id: string) => `/receipt-jobs/${id}/cancel`,
+      RETRY: (id: string) => `/receipt-jobs/${id}/retry`,
+    },
+  },
+  STORAGE: {
+    ME: '/storage/me',
+    RESERVATIONS: '/uploads/reservations',
+    COMMIT: (id: string) => `/uploads/reservations/${id}/commit`,
+    RELEASE: (id: string) => `/uploads/reservations/${id}`,
+    ASSET: (id: string) => `/storage/assets/${id}`,
+  },
+  SHOPPING: {
+    PREVIEW: '/shopping-lists/preview',
+  },
   AUTH: {
     LOGIN: '/auth/login',
     REGISTER: '/auth/register',
@@ -112,5 +140,13 @@ export const API_ENDPOINTS = {
     GUIDELINES: '/food-data/ingredient-guidelines',
     COOKING_METHODS: '/food-data/cooking-methods',
     INTERACTIONS: '/food-data/interaction-rules',
+  },
+  PANTRY: {
+    ITEMS: '/pantry/items',
+    ITEM_DETAIL: (id: string) => `/pantry/items/${id}`,
+    EXPIRING_SOON: '/pantry/items/expiring-soon',
+    ADJUSTMENTS: (id: string) => `/pantry/items/${id}/adjustments`,
+    MERGE_PREVIEW: '/pantry/merge-preview',
+    MERGE: '/pantry/merge',
   },
 } as const;
