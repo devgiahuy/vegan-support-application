@@ -35,6 +35,14 @@
       ],
       "expo-secure-store",
       [
+        "expo-image-picker",
+        {
+          "photosPermission": "Cho phép VeggieConnect chọn ảnh từ thư viện của bạn.",
+          "cameraPermission": "Cho phép VeggieConnect chụp ảnh đại diện.",
+          "microphonePermission": false
+        }
+      ],
+      [
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Cho phép VeggieConnect truy cập vị trí để tìm quán chay gần bạn."

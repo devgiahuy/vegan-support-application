@@ -3,6 +3,48 @@
 > Agent BẮT BUỘC append 1 entry sau mỗi task xong (xem `ARCHITECTURE.md` mục 7).
 > Mỗi entry ghi: đã làm gì, file đổi, cách verify, % PROGRESS đổi ra sao.
 
+## [2026-10-03] — Switch development scan providers to real OpenAI
+
+- User explicitly requested real providers after completing fake-provider acceptance. Restarted only the dedicated backend/mobile dev processes on ports 4003/8084 with VISION_PROVIDER=openai, RECEIPT_PROVIDER=openai and matching EXPO_PUBLIC_SCAN_PROVIDER=openai. No shared .env, API key or model changes.
+- Updated mobile provider label/policy and tests, contextual provider error copy, .env.example and dev restart instructions. Existing fake jobs retain their original identity/results; new scans are required. Production guard and backend IN_PROGRESS statuses unchanged.
+- Verify: mobile typecheck and targeted lint pass; provider-policy tests pass. Created new jobs from committed owned sample assets: both persisted provider openai, then FAILED with no candidates. Cancelled diagnostic jobs without Pantry confirmation. Direct OpenAI diagnostic still returns 429 credit_balance_exhausted / insufficient_quota. This verifies selection, not successful recognition or model validity.
+- Remaining: replenish provider credits or configure an authorized key with quota; real-image and physical-device acceptance remain open. No commit/push.
+
+## [2026-10-03] — Mobile scan workflows integrated under approved dev exception
+
+- Muc tieu: finish fridge and receipt mobile integration with fake development providers after explicit user approval of the IN_PROGRESS exception.
+- Da lam: centralized six endpoints per scan kind; dev-only opt-in guards on UI/API; create/get/edit/confirm/cancel/retry API functions through mappers; owner-scoped TanStack queries/mutations and polling; camera/library picker, validation, image ordering, signed Cloudinary upload/commit, recovery without redundant upload, resumable job ID in route; editable/rejectable candidates and explicit selected-version confirmation diff; invalidate Pantry/shopping caches only at confirmation boundary; new routes and Pantry links. Session-keyed workspace clears previous account state. PrimaryButton now exposes its accessible button role. Shared backend .env and OpenAI defaults unchanged.
+- File tao/sua: mobile/src/features/scanning/{api,queries,components,lib,mappers}, mobile/src/app/{fridge-scan,receipt-scan,pantry}.tsx, endpoint constants, PrimaryButton, mobile/.env.example, mobile/docs/SCAN_DEV.md; integration/progress/work-log docs.
+- Verify: sync:swagger pass (168 endpoints). Mobile typecheck/targeted lint pass; 23/23 related tests pass including production guard and confirmation/retry mapping. Android export pass; web export pass (65 routes). HTTP checks pass create/replay, edit/version conflict, explicit confirm/replay, partial failure, retry/cancel for both scan groups. Standalone Chrome/Playwright UI checks pass seed login, actual Cloudinary upload/commit, fake results, candidate edit/select and Pantry confirmation on both routes; no browser runtime errors or horizontal page overflow. Mobile/desktop screenshots inspected and constrained layout refined. Integrated browser tool remained unavailable, so standalone Playwright was used. QA cache/dependencies/screenshots stay under ignored .expo/.
+- PROGRESS: both mobile scan workflows integrated and verified in dev. Backend status remains IN_PROGRESS, production scans disabled. Fake confirmations changed seed-account demo inventory during acceptance; no user content or unrelated changes reverted.
+- Preview: http://localhost:8084/pantry against fake-provider backend http://localhost:4003/api/v1. Ports override only these dedicated processes; setup and restart steps are in mobile/docs/SCAN_DEV.md.
+- Con lai: successful OpenAI recognition still blocked by exhausted credits; physical-device camera/library permissions and recognition-quality acceptance remain pending. Full mobile lint had pre-existing unrelated failures in the earlier audit; no backend domain changes or new backend test infrastructure. No commit/push requested.
+
+## [2026-10-03] — Real upload/provider diagnostic and shared mobile scan UI
+
+- Muc tieu: finish remaining fridge/receipt mobile workflows where contract gates permit, and identify the real-image blocker with actual requests.
+- Da lam: real signed Cloudinary upload and backend commit of repository fridge/receipt samples pass. Started a network-enabled backend on port 4002 because sandboxed backend requests could not reach Cloudinary. Created/cancelled both scan jobs; no Pantry confirmation. Direct OpenAI request returned 429 credit_balance_exhausted / insufficient_quota. No key/model/provider configuration changed.
+- File tao/sua: mobile/src/features/scanning/{types,mappers,lib,components}; shared result view with original-image inspection, uncertainty, selection controls and action callbacks; candidate editor with canonical picker, quantities, freshness/receipt text/prices/currency; request mappers and validation tests. API/query/routes intentionally not wired while the READY-only rule applies.
+- Verify: mobile typecheck and scanning ESLint pass; all 21 related mobile mapper/workflow/validation tests pass. Real Cloudinary upload/commit 200; scan create 202 followed by FAILED; direct provider diagnostic confirms exhausted credits. Native camera and UI visual acceptance not run; screens are not yet wired into app.
+- PROGRESS: shared mobile implementation prepared, not an integrated scan capability. Status remains IN_PROGRESS. Requested explicit approval for a development-only fake-provider integration exception; no approval received at time of this record. Successful live recognition still requires provider credit and a passing readiness gate.
+
+## [2026-10-03] — Scan readiness audit and local database setup
+
+- Muc tieu: investigate actual blockers for mobile fridge/receipt integration rather than infer missing backend implementation from conflicting status tables.
+- Da lam: backed up local database, deployed 24 pending migrations, regenerated Prisma Client, seeded data and built/started current backend on port 4001. Mobile web on port 8083 uses this backend. Reconciled current scan status tables to the latest Phase 21/22 IN_PROGRESS gate; preserved historical web integration records.
+- Verify: backend lint/typecheck pass; existing vision and receipt fake-provider acceptance scripts pass, including correction, retry/cancel, ownership/idempotency and explicit Pantry confirmation. Running OpenAI HTTP create returns 202; local seed image jobs reach FAILED with PARTIAL_PROVIDER_FAILURE / PARTIAL_RECEIPT_EXTRACTION and zero candidates. Audit jobs cancelled; no confirmation performed. Seed URLs are relative local fixtures, rejected by the owned HTTPS Cloudinary input restriction before provider inference.
+- PROGRESS: database blocker cleared and documentation contradiction resolved. Mobile scan consumers remain not integrated under the READY-only rule; real Cloudinary upload, representative-image recognition and device acceptance remain open. No claim about key/model validity or provider outage follows from these fixture failures.
+- File doi: BACKEND_INTEGRATION.md, PROGRESS.md, WORK-LOG.md. No backend domain or mobile behavior changes in this readiness audit.
+
+## [2026-10-03] — Mobile Pantry, shopping preview, storage and avatar completion
+
+- Mục tiêu: tiếp tục các phần mobile còn lại trong `DOC_WDP.docx` trên `feature/mobile-table-completion`, dùng contract `READY` và kiến trúc DTO/Model/Mapper/API/Query.
+- Đã làm: hoàn thiện Pantry với phân trang, lọc hạn trong 7 ngày, quan sát/ngày mua-ngày mở-hạn dùng, consume/restore/adjust, lịch sử, gộp có preview và xác nhận; sửa nhãn hạn dùng theo contract mới và bỏ `freshnessNote: null` khỏi request create. Thêm shopping preview với món công khai/món riêng, khẩu phần, lượng thiếu/dư và dòng chưa quy đổi. Thêm tab Dung lượng ở Profile, ảnh đại diện từ thư viện/camera, preview, signed reservation upload, commit/release, phục hồi commit khi mất response và retry lưu hồ sơ không upload lại.
+- File tạo/sửa: `mobile/src/features/{pantry,shopping,storage}`, `mobile/src/features/profile/components/avatar-editor.tsx`, `mobile/src/app/{pantry,shopping-preview}.tsx`, Profile, endpoint constants, `mobile/app.json`, dependency `expo-image-picker`; sync generated API catalog từ backend OpenAPI hiện tại.
+- Verify: 15/15 mapper/workflow tests pass bằng Node test runner qua tsx hiện có trong backend; `npx tsc --noEmit`, targeted lint, Expo web export (63 routes) và Android bundle export pass; `git diff --check` pass. Full mobile lint vẫn có 6 lỗi và 5 warnings có sẵn trong các file ngoài phạm vi task (my-content, bottom-tab-bar, AI artifact sheets, restore-session, community-panel). Camera/library và Cloudinary chưa kiểm thử trên thiết bị; browser automation không kết nối được do lỗi môi trường công cụ. Expo web preview: `http://localhost:8082`.
+- PROGRESS: ghi riêng tiến độ mobile ở `PROGRESS.md`; không đổi tỷ lệ hoàn thành của web hoặc tuyên bố đã qua acceptance native/live.
+- Còn lại / rủi ro: scan tủ lạnh/hóa đơn giữ chưa tích hợp do latest phase `IN_PROGRESS`. Backend cũ ở cổng 4000 trả 404 cho các route mới. Backend current-source ở cổng kiểm tra riêng lỗi login vì database thiếu `contributor_profiles.approval_evidence`; `prisma migrate status` cho thấy 24 migration chưa áp dụng. Chỉ regenerate Prisma Client; không migrate/reset database.
+
 ## Mẫu entry (copy khi ghi mới)
 
 ```md

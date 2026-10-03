@@ -25,6 +25,7 @@ export function PrimaryButton({
 
   return (
     <Pressable
+      accessibilityRole="button"
       disabled={isDisabled}
       className={cn(
         'h-12 flex-row items-center justify-center gap-2 rounded-xl',

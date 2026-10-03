@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { ActivityIndicator, Alert, Pressable, Switch, Text, View } from 'react-native';
 import { Link, type Href } from 'expo-router';
+import { Image } from 'expo-image';
 import {
   Activity,
   AlertTriangle,
@@ -22,6 +23,7 @@ import {
   Trash2,
   UtensilsCrossed,
   UserRound,
+  Warehouse,
 } from 'lucide-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -34,6 +36,8 @@ import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextField } from '@/components/ui/text-field';
 import { useDetailedProfileQuery, useUpdateBasicProfileMutation } from '@/features/profile/queries/profile.queries';
+import { AvatarEditor } from '@/features/profile/components/avatar-editor';
+import { StorageSection } from '@/features/storage/components/storage-section';
 import { useSaveHealthProfileMutation } from '@/features/profile/queries/health.queries';
 import type { HealthProfile } from '@/features/profile/types/health.model';
 import { useLogoutMutation } from '@/features/auth/queries/auth.queries';
@@ -99,6 +103,8 @@ export default function ProfileScreen() {
   const logoutMutation = useLogoutMutation();
 
   const [displayName, setDisplayName] = React.useState('');
+  const [profileTab, setProfileTab] = React.useState<'PROFILE' | 'STORAGE'>('PROFILE');
+  const [avatarEditing, setAvatarEditing] = React.useState(false);
   const [height, setHeight] = React.useState('');
   const [weight, setWeight] = React.useState('');
   const [age, setAge] = React.useState('');
@@ -238,9 +244,18 @@ export default function ProfileScreen() {
         <View className="rounded-3xl border border-primary/20 bg-primary/10 p-5">
           <View className="flex-row items-center gap-3">
             <View className="h-14 w-14 items-center justify-center rounded-full bg-primary">
-              <Text className="text-base font-extrabold text-primary-foreground">
-                {displayProfile.user.initials}
-              </Text>
+              {displayProfile.user.avatarUrl ? (
+                <Image
+                  source={{ uri: displayProfile.user.avatarUrl }}
+                  style={{ width: 56, height: 56, borderRadius: 28 }}
+                  contentFit="cover"
+                  accessibilityLabel="Ảnh đại diện"
+                />
+              ) : (
+                <Text className="text-base font-extrabold text-primary-foreground">
+                  {displayProfile.user.initials}
+                </Text>
+              )}
             </View>
             <View className="min-w-0 flex-1">
               <Text className="text-xl font-bold text-foreground">{displayProfile.user.displayName}</Text>
@@ -254,8 +269,24 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        <View className="mt-4 flex-row gap-2">
+          {(['PROFILE', 'STORAGE'] as const).map((tab) => (
+            <Pressable
+              key={tab}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: profileTab === tab }}
+              onPress={() => setProfileTab(tab)}
+              className={`min-h-12 flex-1 items-center justify-center rounded-lg border px-3 ${profileTab === tab ? 'border-primary bg-primary/10' : 'border-border'}`}>
+              <Text className="text-sm font-semibold text-foreground">
+                {tab === 'PROFILE' ? 'Hồ sơ' : 'Dung lượng'}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+        {profileTab === 'STORAGE' ? <StorageSection /> : <>
         <SectionTitle title="Thông tin cá nhân" subtitle="Cập nhật tên hiển thị trên ứng dụng." />
         <View className="rounded-2xl border border-border bg-card p-4">
+          <PrimaryButton label="Đổi ảnh đại diện" variant="outline" className="mb-4" onPress={() => setAvatarEditing(true)} />
           <TextField
             label="Tên hiển thị"
             icon={UserRound}
@@ -404,7 +435,7 @@ export default function ProfileScreen() {
                 )}
               </View>
               <View className="mt-4 flex-row gap-2">
-                <Link href="/diet-preferences" asChild>
+                <Link href={'/diet-preferences' as Href} asChild>
                   <Pressable className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl border border-input py-2.5">
                     <Text className="text-sm font-semibold text-foreground">Chỉnh sửa chế độ ăn</Text>
                   </Pressable>
@@ -425,7 +456,7 @@ export default function ProfileScreen() {
               <Text className="mt-1 text-center text-sm text-muted-foreground">
                 Thiết lập kiểu ăn, dị ứng và nguyên liệu loại trừ để lọc công thức phù hợp hơn.
               </Text>
-              <Link href="/diet-preferences" asChild>
+              <Link href={'/diet-preferences' as Href} asChild>
                 <PrimaryButton label="Thiết lập ngay" className="mt-4 w-full" />
               </Link>
             </View>
@@ -448,7 +479,7 @@ export default function ProfileScreen() {
               <ChevronRight size={16} color={colors.mutedForeground} />
             </Pressable>
           </Link>
-          <Link href="/bookmarks" asChild>
+          <Link href={'/bookmarks' as Href} asChild>
             <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
               <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                 <Bookmark size={18} color={colors.primary} />
@@ -483,6 +514,20 @@ export default function ProfileScreen() {
                 <Text className="text-sm font-semibold text-foreground">Chương trình ăn nhiều tuần</Text>
                 <Text className="mt-0.5 text-xs text-muted-foreground">
                   Tạo lộ trình 2-12 tuần và xem phân tích tích lũy.
+                </Text>
+              </View>
+              <ChevronRight size={16} color={colors.mutedForeground} />
+            </Pressable>
+          </Link>
+          <Link href={'/pantry' as Href} asChild>
+            <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <Warehouse size={18} color={colors.primary} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-semibold text-foreground">Tủ bếp của tôi</Text>
+                <Text className="mt-0.5 text-xs text-muted-foreground">
+                  Quản lý nguyên liệu đã xác nhận, số lượng và hạn dùng.
                 </Text>
               </View>
               <ChevronRight size={16} color={colors.mutedForeground} />
@@ -536,7 +581,7 @@ export default function ProfileScreen() {
               <ChevronRight size={16} color={colors.mutedForeground} />
             </Pressable>
           </Link>
-          <Link href="/categories" asChild>
+          <Link href={'/categories' as Href} asChild>
             <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
               <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                 <FolderTree size={18} color={colors.primary} />
@@ -548,7 +593,7 @@ export default function ProfileScreen() {
               <ChevronRight size={16} color={colors.mutedForeground} />
             </Pressable>
           </Link>
-          <Link href="/contributor-status" asChild>
+          <Link href={'/contributor-status' as Href} asChild>
             <Pressable className="flex-row items-center gap-3 p-4 active:bg-muted">
               <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
                 <BadgeCheck size={18} color={colors.primary} />
@@ -592,8 +637,10 @@ export default function ProfileScreen() {
           </Pressable>
         </View>
 
+        </>}
         <View className="h-6" />
       </View>
+      {avatarEditing ? <AvatarEditor onClose={() => setAvatarEditing(false)} /> : null}
     </SiteScreen>
   );
 }

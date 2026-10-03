@@ -1,5 +1,16 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Mobile completion — Updated 2026-10-03
+
+| Capability | Mobile status | Remaining gate |
+| --- | --- | --- |
+| Pantry manual inventory, quantity ledger, observations, expiry filter, pagination, merge | Implemented on `feature/mobile-table-completion`; list smoke test passes | Full workflow and device acceptance |
+| Pantry-aware shopping preview | Implemented: recipes/custom meals, servings, missing/surplus/unresolved lines | Live acceptance |
+| Profile storage tab and avatar upload | Implemented: quota, image picker/camera, signed reservation upload, commit/release and retry recovery; real Cloudinary signed upload/commit verified for scan images | Native permission/camera tests and avatar-specific acceptance |
+| Fridge/receipt scanning | Integrated end-to-end in opted-in dev runtime under the user-approved exception: pick/upload, job/poll, correction/rejection, explicit Pantry confirmation, cancel/retry; Pantry links and resumable routes | Backend remains `IN_PROGRESS`; real OpenAI credit/accuracy acceptance and native camera/permissions pending. Production disabled |
+
+Mobile typecheck, targeted lint, all 23 related tests, Android export and web export (65 routes) passed for the fake-provider integration; both dev workflows passed HTTP and browser acceptance. On the user's subsequent request, the current preview switched to real OpenAI on backend port 4003 / mobile web port 8084. Both new job identities were verified as openai, but requests still fail with 429 credit_balance_exhausted. Mobile labels match the current configuration; typecheck, targeted lint and provider-policy tests pass after the switch. Existing fake jobs retain their old results; start a new scan. This record does not change web totals or claim successful real recognition/native completion. All 36 migrations remain applied. Setup: `mobile/docs/SCAN_DEV.md`.
+
 > File duy nhất để trả lời "xong bao nhiêu %". Agent BẮT BUỘC cập nhật sau mỗi task (xem `ARCHITECTURE.md` mục 7).
 > Phạm vi MVP chuẩn: xem `/docs/SRS.md`, `/docs/IMPLEMENTATION_PLAN.md`, và trạng thái API tại `BACKEND_INTEGRATION.md`. Hai SRS cũ trong thư mục frontend chỉ là lịch sử/tham khảo.
 

@@ -182,9 +182,7 @@ List submitted public AI artifacts using a strict privacy-safe allowlist
   "type": "object",
   "required": [
     "type",
-    "sourceId",
-    "title",
-    "summary"
+    "sourceId"
   ],
   "properties": {
     "type": {
@@ -201,10 +199,38 @@ List submitted public AI artifacts using a strict privacy-safe allowlist
       "format": "uuid"
     },
     "title": {
-      "type": "string"
+      "type": [
+        "string",
+        "null"
+      ],
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "summary": {
-      "type": "string"
+      "type": [
+        "string",
+        "null"
+      ],
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "authorAnonymous": {
       "type": "boolean"
