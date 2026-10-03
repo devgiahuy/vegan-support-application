@@ -887,6 +887,7 @@ export class MealPlanService {
         : {};
     const items = plan.items.map((item) => {
       const reasonCodes = stringList(item.reasonCodes);
+      const macros = this.itemMacros(item);
       return {
         id: item.id,
         date: dateOnly(item.date),
@@ -898,6 +899,10 @@ export class MealPlanService {
         targetCalories: item.targetCalories,
         calories: item.calories,
         tolerancePercent: item.tolerancePercent ? Number(item.tolerancePercent) : null,
+        proteinGrams: macros.proteinGrams,
+        fiberGrams: macros.fiberGrams,
+        fatGrams: macros.fatGrams,
+        carbohydrateGrams: macros.carbohydrateGrams,
         recipe:
           item.recipe && item.recipeRevision?.recipeDetail
             ? {

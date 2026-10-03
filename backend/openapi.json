@@ -12906,6 +12906,34 @@
                       "minimum": 0,
                       "maximum": 100
                     },
+                    "proteinGrams": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "fiberGrams": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "fatGrams": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "carbohydrateGrams": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
                     "recipe": {
                       "type": [
                         "object",
@@ -13034,6 +13062,10 @@
                     "servings",
                     "calories",
                     "tolerancePercent",
+                    "proteinGrams",
+                    "fiberGrams",
+                    "fatGrams",
+                    "carbohydrateGrams",
                     "recipe",
                     "customMeal",
                     "reasonCodes",
@@ -13718,6 +13750,34 @@
                               "minimum": 0,
                               "maximum": 100
                             },
+                            "proteinGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fiberGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fatGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "carbohydrateGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
                             "recipe": {
                               "type": [
                                 "object",
@@ -13846,6 +13906,10 @@
                             "servings",
                             "calories",
                             "tolerancePercent",
+                            "proteinGrams",
+                            "fiberGrams",
+                            "fatGrams",
+                            "carbohydrateGrams",
                             "recipe",
                             "customMeal",
                             "reasonCodes",
@@ -13914,6 +13978,34 @@
                               "minimum": 0,
                               "maximum": 100
                             },
+                            "proteinGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fiberGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fatGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "carbohydrateGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
                             "recipe": {
                               "type": [
                                 "object",
@@ -14042,6 +14134,10 @@
                             "servings",
                             "calories",
                             "tolerancePercent",
+                            "proteinGrams",
+                            "fiberGrams",
+                            "fatGrams",
+                            "carbohydrateGrams",
                             "recipe",
                             "customMeal",
                             "reasonCodes",
@@ -14110,6 +14206,34 @@
                               "minimum": 0,
                               "maximum": 100
                             },
+                            "proteinGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fiberGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fatGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "carbohydrateGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
                             "recipe": {
                               "type": [
                                 "object",
@@ -14238,6 +14362,10 @@
                             "servings",
                             "calories",
                             "tolerancePercent",
+                            "proteinGrams",
+                            "fiberGrams",
+                            "fatGrams",
+                            "carbohydrateGrams",
                             "recipe",
                             "customMeal",
                             "reasonCodes",

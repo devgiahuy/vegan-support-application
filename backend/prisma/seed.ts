@@ -1312,91 +1312,27 @@ async function main(): Promise<void> {
     });
   }
 
-  const plannerRecipeDefinitions = [
-    { slug: 'to-dau-hu-rau-xanh-420-demo', title: 'Tô đậu hũ rau xanh 420 kcal', calories: 420 },
-    { slug: 'com-nam-gao-lut-500-demo', title: 'Cơm nấm gạo lứt 500 kcal', calories: 500 },
-    { slug: 'com-dau-hu-nam-520-demo', title: 'Cơm đậu hũ nấm 520 kcal', calories: 520 },
-    { slug: 'gao-lut-bong-cai-540-demo', title: 'Gạo lứt bông cải 540 kcal', calories: 540 },
-    { slug: 'to-nam-rau-xanh-560-demo', title: 'Tô nấm rau xanh 560 kcal', calories: 560 },
-    { slug: 'com-dau-hu-bong-cai-580-demo', title: 'Cơm đậu hũ bông cải 580 kcal', calories: 580 },
-    { slug: 'gao-lut-dau-hu-600-demo', title: 'Gạo lứt đậu hũ 600 kcal', calories: 600 },
-    { slug: 'com-nam-bong-cai-610-demo', title: 'Cơm nấm bông cải 610 kcal', calories: 610 },
+  const retiredPlannerRecipeSlugs = [
+    'to-dau-hu-rau-xanh-420-demo',
+    'com-nam-gao-lut-500-demo',
+    'com-dau-hu-nam-520-demo',
+    'gao-lut-bong-cai-540-demo',
+    'to-nam-rau-xanh-560-demo',
+    'com-dau-hu-bong-cai-580-demo',
+    'gao-lut-dau-hu-600-demo',
+    'com-nam-bong-cai-610-demo',
   ] as const;
-  for (const [index, definition] of plannerRecipeDefinitions.entries()) {
-    if (await prisma.post.findUnique({ where: { slug: definition.slug } })) continue;
-    const firstIngredient = index % 2 === 0 ? tofu : mushroom;
-    const secondIngredient = index % 3 === 0 ? broccoli : brownRice;
-    await prisma.$transaction(async (transaction) => {
-      const post = await transaction.post.create({
-        data: {
-          authorId: admin.id,
-          type: PostType.RECIPE,
-          slug: definition.slug,
-          status: PostStatus.PUBLISHED,
-          version: 1,
-          publishedAt: new Date(),
-        },
-      });
-      const revision = await transaction.postRevision.create({
-        data: {
-          postId: post.id,
-          createdById: admin.id,
-          version: 1,
-          status: PostRevisionStatus.PUBLISHED,
-          title: definition.title,
-          normalizedTitle: normalizeVietnameseText(definition.title),
-          excerpt: 'Fixture Recipe có nutrition và canonical ingredients cho Meal Planner.',
-          normalizedExcerpt: normalizeVietnameseText(
-            'Fixture Recipe có nutrition và canonical ingredients cho Meal Planner.',
-          ),
-          body: 'Sơ chế nguyên liệu, nấu chín và chia khẩu phần theo hướng dẫn Meal Planner demo.',
-          normalizedBody: normalizeVietnameseText(
-            'Sơ chế nguyên liệu, nấu chín và chia khẩu phần theo hướng dẫn Meal Planner demo.',
-          ),
-          categories: { create: [{ categoryId: recipeCategory.id }] },
-          tags: { create: postTagRows(['meal planner', 'bữa chính']) },
-          recipeDetail: {
-            create: {
-              servings: 2,
-              prepTimeMinutes: 15,
-              cookTimeMinutes: 25,
-              difficulty: RecipeDifficulty.EASY,
-              calories: definition.calories,
-              proteinGrams: 22,
-              carbsGrams: 58,
-              fatGrams: 14,
-              fiberGrams: 10,
-              ...(index % 2 === 0 ? { vitaminB12Mcg: 0 } : {}),
-              mealPlannerEligible: true,
-              allergenCodes: firstIngredient.id === tofu.id ? ['SOY'] : [],
-              traditionWarnings: [],
-            },
-          },
-          ingredients: {
-            create: [firstIngredient, secondIngredient].map((ingredient, position) => ({
-              ingredientId: ingredient.id,
-              position,
-              displayName: ingredient.canonicalName,
-              normalizedName: ingredient.normalizedName,
-              amount: position === 0 ? 180 : 140,
-              unit: 'g',
-              resolutionStatus: IngredientResolutionStatus.EXACT,
-            })),
-          },
-          dietCompatibility: {
-            create: [
-              { dietPattern: DietPattern.VEGAN, compatible: true, reasonCodes: [] },
-              { dietPattern: DietPattern.LACTO_OVO, compatible: true, reasonCodes: [] },
-            ],
-          },
-        },
-      });
-      await transaction.post.update({
-        where: { id: post.id },
-        data: { publishedRevisionId: revision.id },
-      });
-    });
-  }
+  await prisma.post.updateMany({
+    where: {
+      slug: { in: [...retiredPlannerRecipeSlugs] },
+      type: PostType.RECIPE,
+    },
+    data: {
+      status: PostStatus.DELETED,
+      deletedAt: new Date('2026-10-03T00:00:00.000Z'),
+      deletedById: admin.id,
+    },
+  });
 
   if (!(await prisma.post.findUnique({ where: { slug: 'dam-thuc-vat-trong-bua-an-demo' } }))) {
     await prisma.$transaction(async (transaction) => {
