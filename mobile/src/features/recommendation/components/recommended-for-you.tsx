@@ -27,9 +27,9 @@ export function RecommendedForYou() {
         <View className="flex-1">
           <View className="flex-row items-center gap-1.5">
             <Sparkles size={14} color={colors.cta} />
-            <Text className="text-xs font-semibold uppercase tracking-wide text-cta">Goi y cho ban</Text>
+            <Text className="text-xs font-semibold uppercase tracking-wide text-cta">Gợi ý cho bạn</Text>
           </View>
-          <Text className="mt-1 text-xl font-bold text-foreground">Mon phu hop thoi quen cua ban</Text>
+          <Text className="mt-1 text-xl font-bold text-foreground">Món phù hợp thói quen của bạn</Text>
         </View>
         {consent ? (
           <Pressable
@@ -37,7 +37,7 @@ export function RecommendedForYou() {
             disabled={consentMutation.isPending}
             className={consent.enabled ? 'rounded-full bg-primary px-3 py-1.5' : 'rounded-full bg-muted px-3 py-1.5'}>
             <Text className={consent.enabled ? 'text-xs font-semibold text-primary-foreground' : 'text-xs font-semibold text-muted-foreground'}>
-              {consent.enabled ? 'Ca nhan hoa' : 'Quy chuan'}
+              {consent.enabled ? 'Cá nhân hóa' : 'Quy chuẩn'}
             </Text>
           </Pressable>
         ) : null}
@@ -46,12 +46,12 @@ export function RecommendedForYou() {
       <View className="mt-4 gap-3">
         {!isAuthenticated ? (
           <View className="rounded-2xl border border-dashed border-border p-5">
-            <Text className="font-semibold text-foreground">Dang nhap de nhan goi y rieng</Text>
+            <Text className="font-semibold text-foreground">Đăng nhập để nhận gợi ý riêng</Text>
             <Text className="mt-1 text-sm text-muted-foreground">
-              Goi y ca nhan dung lich su xem, luu mon va meal plan da duoc ban cho phep.
+              Gợi ý cá nhân dùng lịch sử xem, lưu món và thực đơn tuần đã được bạn cho phép.
             </Text>
             <Link href={'/(auth)/login' as Href} asChild>
-              <PrimaryButton label="Dang nhap" className="mt-4 w-full" />
+              <PrimaryButton label="Đăng nhập" className="mt-4 w-full" />
             </Link>
           </View>
         ) : isLoading ? (
@@ -59,14 +59,14 @@ export function RecommendedForYou() {
         ) : isError ? (
           <View className="rounded-2xl border border-dashed border-border p-5">
             <Text className="text-sm text-muted-foreground">
-              Chua tai duoc goi y ca nhan hoa. Ban van co the xem cac mon xu huong ben duoi.
+              Chưa tải được gợi ý cá nhân hóa. Bạn vẫn có thể xem các món xu hướng bên dưới.
             </Text>
           </View>
         ) : recommendations.length === 0 ? (
           <View className="rounded-2xl border border-dashed border-border p-5">
-            <Text className="font-semibold text-foreground">Chua co goi y rieng</Text>
+            <Text className="font-semibold text-foreground">Chưa có gợi ý riêng</Text>
             <Text className="mt-1 text-sm text-muted-foreground">
-              Luu mon, xem cong thuc hoac tao meal plan de he thong co tin hieu goi y tot hon.
+              Lưu món, xem công thức hoặc tạo thực đơn tuần để hệ thống có tín hiệu gợi ý tốt hơn.
             </Text>
           </View>
         ) : (
@@ -81,10 +81,10 @@ export function RecommendedForYou() {
                 <View className="min-w-0 flex-1">
                   <Text numberOfLines={2} className="text-sm font-bold text-foreground">{item.title}</Text>
                   <Text numberOfLines={2} className="mt-1 text-xs text-muted-foreground">
-                    {item.reasonLabels.join(' · ') || 'Phu hop voi che do an cua ban'}
+                    {item.reasonLabels.join(' · ') || 'Phù hợp với chế độ ăn của bạn'}
                   </Text>
                   <Text className="mt-2 text-xs font-semibold text-primary">
-                    {item.calories ? `${item.calories} kcal` : 'Xem chi tiet'}
+                    {item.calories ? `${item.calories} kcal` : 'Xem chi tiết'}
                   </Text>
                 </View>
               </Pressable>
@@ -96,7 +96,7 @@ export function RecommendedForYou() {
       {isAuthenticated && consent ? (
         <View className="mt-3">
           <PrimaryButton
-            label={consent.enabled ? 'Tat ca nhan hoa' : 'Bat ca nhan hoa'}
+            label={consent.enabled ? 'Tắt cá nhân hóa' : 'Bật cá nhân hóa'}
             variant="outline"
             loading={consentMutation.isPending}
             icon={<SlidersHorizontal size={16} color={colors.foreground} />}

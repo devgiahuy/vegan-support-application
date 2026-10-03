@@ -1,4 +1,4 @@
-import { FoodGroup } from '@/common/enums';
+import type { FoodGroup, ResolutionMatch } from '@/common/enums';
 
 export interface IngredientAlias {
   id: string;
@@ -13,4 +13,16 @@ export interface Ingredient {
   foodGroupLabel: string;
   aliases: IngredientAlias[];
   allergenCodes: string[];
+}
+
+/** Ứng viên phân giải: nguyên liệu kèm tương thích chế độ ăn và cảnh báo truyền thống. */
+export interface ResolvedIngredient extends Ingredient {
+  dietCompatibilities: { label: string; compatible: boolean }[];
+  traditionWarnings: string[];
+}
+
+export interface IngredientResolution {
+  query: string;
+  match: ResolutionMatch;
+  candidates: ResolvedIngredient[];
 }

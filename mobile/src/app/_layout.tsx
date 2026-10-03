@@ -6,6 +6,7 @@ import { useColorScheme } from 'nativewind';
 import { QueryClientProvider } from '@tanstack/react-query';
 import * as React from 'react';
 
+import { useSessionRestore } from '@/features/auth/lib/restore-session';
 import { createQueryClient } from '@/lib/query-client';
 
 SplashScreen.preventAutoHideAsync();
@@ -14,9 +15,14 @@ export default function RootLayout() {
   const { colorScheme } = useColorScheme();
   const [queryClient] = React.useState(() => createQueryClient());
 
+  // Giữ splash đến khi khôi phục xong phiên đăng nhập (silent refresh bằng cookie refresh token).
+  const sessionReady = useSessionRestore();
+
   React.useEffect(() => {
-    SplashScreen.hideAsync();
-  }, []);
+    if (sessionReady) void SplashScreen.hideAsync();
+  }, [sessionReady]);
+
+  if (!sessionReady) return null;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -41,6 +47,7 @@ export default function RootLayout() {
           <Stack.Screen name="categories" />
           <Stack.Screen name="search" />
           <Stack.Screen name="bookmarks" />
+          <Stack.Screen name="notifications" />
           <Stack.Screen name="contributor-status" />
           <Stack.Screen name="diet-preferences" />
           <Stack.Screen name="diet-schedule" />

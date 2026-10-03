@@ -179,7 +179,7 @@ export function VideoForm({
               onChangeText={setYoutubeUrl}
               autoCapitalize="none"
               keyboardType="url"
-              placeholder="https://www.youtube.com/watch?v=..."
+              placeholder="Dán link video YouTube"
               placeholderTextColor={colors.mutedForeground}
               className="h-12 flex-1 text-sm text-foreground"
             />
@@ -220,7 +220,7 @@ export function VideoForm({
                 onChangeText={setCoverSecureUrl}
                 autoCapitalize="none"
                 keyboardType="url"
-                placeholder="https://res.cloudinary.com/.../image/upload/..."
+                placeholder="Dán đường dẫn ảnh bìa đã tải lên"
                 placeholderTextColor={colors.mutedForeground}
                 className="h-12 rounded-2xl border border-input bg-background px-3.5 text-sm text-foreground"
               />

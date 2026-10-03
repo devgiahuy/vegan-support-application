@@ -3,7 +3,12 @@ import api from '@/lib/axios';
 import type { PaginationResult } from '@/types/api';
 import { mealPlanMapper } from '../mappers/meal-plan.mapper';
 import type { DeleteMealPlanResponseDto, MealPlanListResponseDto, MealPlanResponseDto } from '../types/meal-plan.dto';
-import type { GenerateMealPlanInput, MealPlan, MealPlanListQueryParams } from '../types/meal-plan.model';
+import type {
+  GenerateMealPlanInput,
+  ManualAddMealInput,
+  MealPlan,
+  MealPlanListQueryParams,
+} from '../types/meal-plan.model';
 
 export const mealPlanApi = {
   generate: async (input: GenerateMealPlanInput): Promise<MealPlan> => {
@@ -42,6 +47,15 @@ export const mealPlanApi = {
     const res = await api.patch<MealPlanResponseDto>(
       API_ENDPOINTS.MEAL_PLANS.SWAP(planId, itemId),
       mealPlanMapper.toSwapDto(expectedVersion, idempotencyKey)
+    );
+    return mealPlanMapper.toDetailModel(res.data);
+  },
+
+  /** `PATCH /meal-plans/:id/items/:itemId/manual-add` — chọn tay món cho một ô; backend kiểm tra ràng buộc cứng. */
+  manualAdd: async (input: ManualAddMealInput): Promise<MealPlan> => {
+    const res = await api.patch<MealPlanResponseDto>(
+      API_ENDPOINTS.MEAL_PLANS.MANUAL_ADD(input.planId, input.itemId),
+      mealPlanMapper.toManualAddDto(input)
     );
     return mealPlanMapper.toDetailModel(res.data);
   },

@@ -1,51 +1,94 @@
-import { BaseMapper, pickField, safeArray, safeBoolean, safeNumber, safeString } from '@/lib/mapper';
-import type { CustomMealDto, CustomMealListResponseDto, CreateCustomMealRequestDto } from '../types/custom-meal.dto';
-import type { CustomMeal, CustomMealFormValues, CustomMealIngredient, CustomMealPhoto, CustomMealListResult } from '../types/custom-meal.model';
+import { BaseMapper, pickField, safeArray, safeNumber, safeString } from '@/lib/mapper';
+import type {
+  CreateCustomMealRequestDto,
+  CustomMealDto,
+  CustomMealIngredientDto,
+  CustomMealListResponseDto,
+  CustomMealPhotoDto,
+  CustomMealTagDto,
+} from '../types/custom-meal.dto';
+import type {
+  CustomMeal,
+  CustomMealFormValues,
+  CustomMealIngredient,
+  CustomMealListResult,
+  CustomMealPhoto,
+  IngredientResolutionStatus,
+} from '../types/custom-meal.model';
+
+const COVERAGE_LABELS: Record<string, string> = {
+  COMPLETE: 'Dinh dưỡng đầy đủ',
+  PARTIAL: 'Dinh dưỡng một phần',
+  NONE: 'Chưa có dữ liệu dinh dưỡng',
+};
+
+/** Giá trị thiếu -> `null` (không đổi thành 0 để không bịa số dinh dưỡng). */
+function nullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = safeNumber(value, Number.NaN);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function toResolutionStatus(value: unknown): IngredientResolutionStatus {
+  const raw = safeString(value).toUpperCase();
+  return raw === 'EXACT' || raw === 'AMBIGUOUS' ? raw : 'UNKNOWN';
+}
 
 export class CustomMealMapper extends BaseMapper<CustomMealDto, CustomMeal> {
   toModel(dto: CustomMealDto | null | undefined): CustomMeal {
-    const photos = safeArray<unknown, CustomMealPhoto>(pickField(dto, ['photos'], []), (item) => {
-      const photo = item as Record<string, unknown>;
-      return {
-        id: safeString(pickField(photo, ['id', 'assetId'], '')),
-        url: safeString(pickField(photo, ['url', 'secureUrl', 'secure_url'], '')),
-        sortOrder: safeNumber(pickField(photo, ['sortOrder', 'position'], 0)),
-        isCover: safeBoolean(pickField(photo, ['isCover'], false)),
-        mimeType: safeString(pickField(photo, ['mimeType'], 'image/jpeg')),
-      };
-    }).filter((photo) => photo.id || photo.url);
+    const photos = safeArray<CustomMealPhotoDto | null, CustomMealPhoto>(pickField(dto, ['photos'], []), (photo, index) => ({
+      id: safeString(pickField(photo, ['assetId', 'id'], '')),
+      url: safeString(pickField(photo, ['secureUrl'], '')),
+      sortOrder: safeNumber(pickField(photo, ['position'], index), index),
+      isCover: index === 0,
+      mimeType: safeString(pickField(photo, ['mimeType'], 'image/jpeg')) || 'image/jpeg',
+    }))
+      .filter((photo) => photo.url.length > 0)
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((photo, index) => ({ ...photo, isCover: index === 0 }));
 
-    const coverPhoto = photos.find((photo) => photo.isCover) ?? photos[0] ?? null;
-    const ingredients = safeArray<unknown, CustomMealIngredient>(pickField(dto, ['ingredients'], []), (item, index) => {
-      const ingredient = item as Record<string, unknown>;
-      return {
-        id: safeString(pickField(ingredient, ['id'], `ingredient-${index}`)),
-        ingredientId: safeString(pickField(ingredient, ['ingredientId'], '')) || null,
-        displayName: safeString(pickField(ingredient, ['displayName', 'name'], 'Nguyen lieu')),
-        amount: safeNumber(pickField(ingredient, ['amount', 'quantity'], 0)),
-        unit: safeString(pickField(ingredient, ['unit'], 'g')),
-      };
-    });
+    const ingredients = safeArray<CustomMealIngredientDto | null, CustomMealIngredient>(
+      pickField(dto, ['ingredients'], []),
+      (ingredient, index) => {
+        const ingredientId = safeString(pickField(ingredient, ['ingredientId'], '')) || null;
+        const canonical = pickField(ingredient, ['ingredient'], null);
+        return {
+          id: safeString(pickField(ingredient, ['id'], `ingredient-${index}`)),
+          ingredientId,
+          displayName: safeString(pickField(ingredient, ['displayName'], '')) || 'Nguyên liệu',
+          canonicalName: ingredientId ? safeString(pickField(canonical, ['canonicalName'], '')) || null : null,
+          resolutionStatus: toResolutionStatus(pickField(ingredient, ['resolutionStatus'], 'UNKNOWN')),
+          amount: safeNumber(pickField(ingredient, ['amount'], 0)),
+          unit: safeString(pickField(ingredient, ['unit'], 'g')) || 'g',
+        };
+      }
+    );
 
-    const calories = pickField<unknown>(dto, ['userCalories', 'calories', 'calculatedCalories'], null);
+    const tags = safeArray<CustomMealTagDto | string | null, string>(pickField(dto, ['tags'], []), (tag) =>
+      typeof tag === 'string' ? tag : safeString(pickField(tag, ['tag'], ''))
+    ).filter((tag) => tag.length > 0);
+
+    const coverage = safeString(pickField(dto, ['nutritionCoverage'], '')).toUpperCase();
+
     return {
       id: safeString(pickField(dto, ['id'], '')),
-      name: safeString(pickField(dto, ['name'], 'Bua an tuy chinh')),
+      name: safeString(pickField(dto, ['name'], 'Bữa ăn tùy chỉnh')),
       notes: safeString(pickField(dto, ['notes'], '')) || null,
       servings: Math.max(1, safeNumber(pickField(dto, ['servings'], 1), 1)),
       sourceNote: safeString(pickField(dto, ['sourceNote'], '')) || null,
-      calories: calories === null ? null : safeNumber(calories, 0),
-      proteinGrams: safeNumber(pickField(dto, ['userProteinGrams', 'userProtein'], 0), 0) || null,
-      carbsGrams: safeNumber(pickField(dto, ['userCarbsGrams', 'userCarbs'], 0), 0) || null,
-      fatGrams: safeNumber(pickField(dto, ['userFatGrams', 'userFat'], 0), 0) || null,
-      coverageRatio: safeNumber(pickField(dto, ['coverageRatio'], 0), 0),
-      isFullyCovered: safeBoolean(pickField(dto, ['isFullyCovered'], false)),
-      unmatchedIngredientCount: safeNumber(pickField(dto, ['unmatchedIngredientCount'], 0), 0),
-      tags: safeArray<string, string>(pickField(dto, ['tags'], []), (tag) => safeString(tag)).filter(Boolean),
+      calories: nullableNumber(pickField(dto, ['userCalories'], null)),
+      proteinGrams: nullableNumber(pickField(dto, ['userProteinGrams'], null)),
+      carbsGrams: nullableNumber(pickField(dto, ['userCarbsGrams'], null)),
+      fatGrams: nullableNumber(pickField(dto, ['userFatGrams'], null)),
+      fiberGrams: nullableNumber(pickField(dto, ['userFiberGrams'], null)),
+      nutritionCoverage: coverage,
+      nutritionCoverageLabel: COVERAGE_LABELS[coverage] ?? 'Chưa rõ mức dữ liệu dinh dưỡng',
+      tags,
       photos,
-      coverPhotoUrl: safeString(pickField(dto, ['coverPhotoUrl'], coverPhoto?.url ?? '')) || null,
-      photoCount: safeNumber(pickField(dto, ['photoCount'], photos.length), photos.length),
-      ingredientCount: safeNumber(pickField(dto, ['ingredientCount'], ingredients.length), ingredients.length),
+      coverPhotoUrl: photos[0]?.url ?? null,
+      photoCount: photos.length,
+      ingredientCount: ingredients.length,
+      unlinkedIngredientCount: ingredients.filter((ingredient) => ingredient.ingredientId === null).length,
       ingredients,
       createdAt: safeString(pickField(dto, ['createdAt'], '')),
       updatedAt: safeString(pickField(dto, ['updatedAt'], '')),
@@ -54,42 +97,41 @@ export class CustomMealMapper extends BaseMapper<CustomMealDto, CustomMeal> {
 
   toListModel(dto: CustomMealListResponseDto | null | undefined): CustomMealListResult {
     const data = dto?.data;
-    const itemsRaw = data?.records ?? data?.items ?? [];
-    const meta = data?.pagination ?? dto?.meta ?? {};
-    const items = this.toModelList(itemsRaw);
+    const items = this.toModelList(data?.records ?? []);
+    const meta = data?.pagination ?? {};
     return {
       items,
       pagination: {
-        page: safeNumber(meta?.page, 1),
-        limit: safeNumber(meta?.limit, 20),
-        totalItems: safeNumber(meta?.totalItems ?? meta?.total, items.length),
-        totalPages: safeNumber(meta?.totalPages, 1),
+        page: safeNumber(meta.page, 1),
+        limit: safeNumber(meta.limit, 20),
+        totalItems: safeNumber(meta.total, items.length),
+        totalPages: safeNumber(meta.totalPages, 1),
       },
-      availableTags: safeArray<unknown, { name: string; count: number }>(data?.availableTags, (tag) => {
-        const item = tag as Record<string, unknown>;
-        return { name: safeString(item.name), count: safeNumber(item.count, 0) };
-      }).filter((tag) => tag.name.length > 0),
     };
   }
 
   toCreateDto(values: CustomMealFormValues): CreateCustomMealRequestDto {
+    const optional = <K extends string>(key: K, value: number | null): { [P in K]?: number } =>
+      value === null ? {} : ({ [key]: value } as { [P in K]?: number });
+
     return {
       name: values.name.trim(),
       notes: values.notes.trim() || null,
       servings: values.servings,
       sourceNote: values.sourceNote.trim() || null,
-      userCalories: values.userCalories,
-      userProteinGrams: values.userProteinGrams,
-      userCarbsGrams: values.userCarbsGrams,
-      userFatGrams: values.userFatGrams,
+      ...optional('userCalories', values.userCalories),
+      ...optional('userProteinGrams', values.userProteinGrams),
+      ...optional('userCarbsGrams', values.userCarbsGrams),
+      ...optional('userFatGrams', values.userFatGrams),
+      ...optional('userFiberGrams', values.userFiberGrams),
       deletePolicy: 'BLOCK',
       tags: values.tags,
       ingredients: values.ingredients.map((ingredient, index) => ({
-        position: index + 1,
+        position: index,
         displayName: ingredient.displayName.trim(),
         amount: ingredient.amount,
         unit: ingredient.unit.trim(),
-        ingredientId: ingredient.ingredientId,
+        ...(ingredient.ingredientId ? { ingredientId: ingredient.ingredientId } : {}),
       })),
     };
   }

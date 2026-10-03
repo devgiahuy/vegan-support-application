@@ -7,6 +7,15 @@ export interface RecipeAuthor {
   avatarUrl?: string | null;
 }
 
+/** Một bước nấu có cấu trúc (khi tác giả nhập từng bước); rỗng với công thức chỉ có phần mô tả văn bản. */
+export interface RecipeInstructionStep {
+  position: number;
+  instruction: string;
+  durationMinutes: number | null;
+  temperatureCelsius: number | null;
+  cookingMethodName: string | null;
+}
+
 export interface RecipeIngredient {
   ingredientId: string | null;
   name: string;
@@ -15,13 +24,14 @@ export interface RecipeIngredient {
   notes: string;
 }
 
+/** Mỗi chỉ số `null` = backend chưa có dữ liệu (không phải 0). UI phải hiển thị "chưa có". */
 export interface NutritionFact {
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  fiber: number;
-  vitaminB12: number;
+  calories: number | null;
+  protein: number | null;
+  carbs: number | null;
+  fat: number | null;
+  fiber: number | null;
+  vitaminB12: number | null;
 }
 
 export interface TraditionWarning {
@@ -62,7 +72,9 @@ export interface Recipe {
   mealPlannerEligible: boolean;
   nutrition: NutritionFact;
   ingredients: RecipeIngredient[];
-  /** Hướng dẫn nấu dạng văn bản — backend chưa trả steps có cấu trúc, chỉ có `revision.body`. */
+  /** Các bước nấu có cấu trúc (nếu có). */
+  steps: RecipeInstructionStep[];
+  /** Hướng dẫn nấu dạng văn bản (`revision.body`), dùng khi chưa có bước có cấu trúc. */
   body: string;
   tags: string[];
   publishedAt: Date | null;

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { ActivityIndicator, Alert, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, Switch, Text, View } from 'react-native';
 import { Link, type Href } from 'expo-router';
 import {
   Activity,
@@ -7,6 +7,7 @@ import {
   BadgeCheck,
   Bookmark,
   BookOpen,
+  Bell,
   CalendarDays,
   CheckCircle2,
   ChevronRight,
@@ -16,8 +17,13 @@ import {
   LogOut,
   RefreshCw,
   ShieldCheck,
+  Sparkles,
+  Store,
+  Trash2,
+  UtensilsCrossed,
   UserRound,
 } from 'lucide-react-native';
+import { useQueryClient } from '@tanstack/react-query';
 
 import {
   ActivityLevel,
@@ -31,6 +37,13 @@ import { useDetailedProfileQuery, useUpdateBasicProfileMutation } from '@/featur
 import { useSaveHealthProfileMutation } from '@/features/profile/queries/health.queries';
 import type { HealthProfile } from '@/features/profile/types/health.model';
 import { useLogoutMutation } from '@/features/auth/queries/auth.queries';
+import {
+  usePersonalizationConsentQuery,
+  useSetPersonalizationConsentMutation,
+  RECOMMENDATION_QUERY_KEYS,
+} from '@/features/recommendation/queries/recommendation.queries';
+import { useDeleteBehaviorHistoryMutation } from '@/features/safety/queries/safety.queries';
+import { getApiErrorMessage } from '@/lib/api-error';
 import { useAuthStore } from '@/store/useAuthStore';
 import { formatDate } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
@@ -365,7 +378,9 @@ export default function ProfileScreen() {
             <>
               <View className="flex-row items-center gap-2">
                 <Leaf size={18} color={colors.primary} />
-                <Text className="text-base font-bold text-foreground">{diet.dietPatternLabel}</Text>
+                <Text numberOfLines={1} className="flex-1 text-base font-bold text-foreground">
+                  {diet.dietPatternLabel}
+                </Text>
               </View>
               <View className="mt-3 gap-2">
                 <ProfileRow label="Lịch thực hành" value={diet.practiceScheduleLabel} />
@@ -473,6 +488,54 @@ export default function ProfileScreen() {
               <ChevronRight size={16} color={colors.mutedForeground} />
             </Pressable>
           </Link>
+          <Link href={'/meal-plans/saved' as Href} asChild>
+            <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <UtensilsCrossed size={18} color={colors.primary} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-semibold text-foreground">Thực đơn đã lưu</Text>
+                <Text className="mt-0.5 text-xs text-muted-foreground">Các thực đơn tuần bạn đã tạo, kèm cảnh báo và phân tích.</Text>
+              </View>
+              <ChevronRight size={16} color={colors.mutedForeground} />
+            </Pressable>
+          </Link>
+          <Link href={'/restaurants/mine' as Href} asChild>
+            <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <Store size={18} color={colors.primary} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-semibold text-foreground">Quán chay tôi đề xuất</Text>
+                <Text className="mt-0.5 text-xs text-muted-foreground">Theo dõi trạng thái duyệt các quán bạn đã gửi.</Text>
+              </View>
+              <ChevronRight size={16} color={colors.mutedForeground} />
+            </Pressable>
+          </Link>
+          <Link href={'/ai-knowledge' as Href} asChild>
+            <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <Sparkles size={18} color={colors.primary} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-semibold text-foreground">Tri thức AI công khai</Text>
+                <Text className="mt-0.5 text-xs text-muted-foreground">Câu trả lời AI do cộng đồng chia sẻ và được thẩm định.</Text>
+              </View>
+              <ChevronRight size={16} color={colors.mutedForeground} />
+            </Pressable>
+          </Link>
+          <Link href={'/notifications' as Href} asChild>
+            <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <Bell size={18} color={colors.primary} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-semibold text-foreground">Thông báo</Text>
+                <Text className="mt-0.5 text-xs text-muted-foreground">Kết quả duyệt bài, quán và các cập nhật liên quan.</Text>
+              </View>
+              <ChevronRight size={16} color={colors.mutedForeground} />
+            </Pressable>
+          </Link>
           <Link href="/categories" asChild>
             <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
               <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
@@ -505,6 +568,8 @@ export default function ProfileScreen() {
           </Link>
         </View>
 
+        <PrivacySection />
+
         <SectionTitle title="Tài khoản & hệ thống" subtitle="Quản lý phiên đăng nhập trên thiết bị này." />
         <View className="overflow-hidden rounded-2xl border border-border bg-card">
           <Pressable
@@ -530,6 +595,109 @@ export default function ProfileScreen() {
         <View className="h-6" />
       </View>
     </SiteScreen>
+  );
+}
+
+/**
+ * Cá nhân hoá & dữ liệu — bật/tắt gợi ý theo hành vi (`PUT /users/me/personalization`) và xoá
+ * toàn bộ lịch sử hành vi (`DELETE /users/me/behavior-history`). Đồng bộ tab "Cá nhân hoá & Dữ liệu"
+ * của web.
+ */
+function PrivacySection() {
+  const colors = useIconColors();
+  const queryClient = useQueryClient();
+  const consentQuery = usePersonalizationConsentQuery();
+  const setConsent = useSetPersonalizationConsentMutation();
+  const deleteHistory = useDeleteBehaviorHistoryMutation();
+  const consent = consentQuery.data;
+
+  const toggleConsent = (enabled: boolean) => {
+    if (!consent?.consentVersion) return;
+    setConsent.mutate(
+      { enabled, consentVersion: consent.consentVersion },
+      {
+        onError: (error) => {
+          Alert.alert('Không cập nhật được', getApiErrorMessage(error, 'Vui lòng thử lại.'));
+          void consentQuery.refetch();
+        },
+      }
+    );
+  };
+
+  const confirmDeleteHistory = () => {
+    Alert.alert(
+      'Xóa toàn bộ lịch sử hành vi?',
+      'Mọi bản ghi hành vi dùng để cá nhân hóa gợi ý sẽ bị xóa vĩnh viễn và không thể khôi phục. Gợi ý sẽ chuyển sang chế độ phổ biến. Muốn dừng hẳn, hãy tắt cá nhân hóa.',
+      [
+        { text: 'Hủy', style: 'cancel' },
+        {
+          text: 'Xác nhận xóa',
+          style: 'destructive',
+          onPress: () => {
+            deleteHistory.mutate(undefined, {
+              onSuccess: (result) => {
+                void queryClient.invalidateQueries({ queryKey: RECOMMENDATION_QUERY_KEYS.all });
+                Alert.alert('Đã xóa', `Đã xóa ${result.deletedCount} bản ghi hành vi.`);
+              },
+              onError: (error) => Alert.alert('Không xóa được', getApiErrorMessage(error, 'Vui lòng thử lại.')),
+            });
+          },
+        },
+      ]
+    );
+  };
+
+  return (
+    <>
+      <SectionTitle
+        title="Cá nhân hóa & dữ liệu"
+        subtitle="Kiểm soát việc dùng hành vi của bạn để gợi ý món ăn."
+      />
+      <View className="overflow-hidden rounded-2xl border border-border bg-card">
+        <View className="flex-row items-start gap-3 border-b border-border p-4">
+          <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+            <ShieldCheck size={18} color={colors.primary} />
+          </View>
+          <View className="flex-1">
+            <Text className="text-sm font-semibold text-foreground">Gợi ý món theo hành vi</Text>
+            <Text className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+              Cho phép dùng món bạn xem, lưu, đánh giá để tinh chỉnh gợi ý. Khi tắt, bạn vẫn thấy gợi ý phổ biến.
+              {consent?.consentVersion ? ` Phiên bản điều khoản: ${consent.consentVersion}.` : ''}
+            </Text>
+            {consentQuery.isError ? (
+              <Text className="mt-1 text-xs text-destructive">Không tải được cài đặt gợi ý.</Text>
+            ) : null}
+          </View>
+          {consentQuery.isLoading ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : (
+            <Switch
+              value={consent?.enabled ?? false}
+              disabled={!consent?.consentVersion || setConsent.isPending}
+              onValueChange={toggleConsent}
+              accessibilityLabel="Bật hoặc tắt gợi ý cá nhân hóa"
+            />
+          )}
+        </View>
+        <Pressable
+          onPress={confirmDeleteHistory}
+          disabled={deleteHistory.isPending}
+          className="flex-row items-center gap-3 p-4 active:bg-muted">
+          <View className="h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
+            <Trash2 size={18} color={colors.destructive} />
+          </View>
+          <View className="flex-1">
+            <Text className="text-sm font-semibold text-destructive">
+              {deleteHistory.isPending ? 'Đang xóa...' : 'Xóa lịch sử hành vi'}
+            </Text>
+            <Text className="mt-0.5 text-xs text-muted-foreground">
+              Xóa vĩnh viễn dữ liệu dùng để cá nhân hóa gợi ý.
+            </Text>
+          </View>
+          <ChevronRight size={16} color={colors.mutedForeground} />
+        </Pressable>
+      </View>
+    </>
   );
 }
 

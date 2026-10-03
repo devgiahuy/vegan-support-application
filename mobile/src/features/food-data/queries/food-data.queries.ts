@@ -7,6 +7,7 @@ export const FOOD_DATA_KEYS = {
     [...FOOD_DATA_KEYS.all, 'nutrients', ingredientId, params] as const,
   referenceIntakes: (params?: FoodDataQueryParams) =>
     [...FOOD_DATA_KEYS.all, 'reference-intakes', params] as const,
+  guidelines: (params?: FoodDataQueryParams) => [...FOOD_DATA_KEYS.all, 'guidelines', params] as const,
   cookingMethods: (params?: { page?: number; limit?: number }) =>
     [...FOOD_DATA_KEYS.all, 'cooking-methods', params] as const,
   interactions: (params?: FoodDataQueryParams) => [...FOOD_DATA_KEYS.all, 'interactions', params] as const,
@@ -31,6 +32,15 @@ export const useReferenceIntakesQuery = (params?: FoodDataQueryParams) => {
   return useQuery({
     queryKey: FOOD_DATA_KEYS.referenceIntakes(params),
     queryFn: () => foodDataApi.listReferenceIntakes(params),
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
+/** Hướng dẫn định lượng và tần suất an toàn của nguyên liệu. */
+export const useIngredientGuidelinesQuery = (params?: FoodDataQueryParams) => {
+  return useQuery({
+    queryKey: FOOD_DATA_KEYS.guidelines(params),
+    queryFn: () => foodDataApi.listGuidelines(params),
     staleTime: 5 * 60 * 1000,
   });
 };

@@ -6,12 +6,14 @@ import type {
   FoodDataListResponseDto,
   FoodDataRecordResponseDto,
   IngredientInteractionRuleDto,
+  IngredientIntakeGuidelineDto,
   IngredientNutrientsDataDto,
   NutrientReferenceIntakeDto,
 } from '../types/food-data.dto';
 import type {
   CookingMethodItem,
   FoodInteractionRuleItem,
+  IngredientGuidelineItem,
   IngredientNutritionFact,
   ReferenceIntakeItem,
 } from '../types/food-data.model';
@@ -49,6 +51,17 @@ export const foodDataApi = {
       { params: params || {} }
     );
     const items = foodDataMapper.toReferenceIntakeList(res.data?.data);
+    const metadata = mapPageMeta(res.data?.meta);
+    return { items, metadata };
+  },
+
+  /** Hướng dẫn định lượng và tần suất của nguyên liệu (`GET /food-data/ingredient-guidelines`). */
+  listGuidelines: async (params?: FoodDataQueryParams): Promise<PaginationResult<IngredientGuidelineItem>> => {
+    const res = await api.get<FoodDataListResponseDto<IngredientIntakeGuidelineDto>>(
+      API_ENDPOINTS.FOOD_DATA.GUIDELINES,
+      { params: params || {} }
+    );
+    const items = foodDataMapper.toGuidelineList(res.data?.data);
     const metadata = mapPageMeta(res.data?.meta);
     return { items, metadata };
   },

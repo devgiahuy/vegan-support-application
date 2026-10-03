@@ -1,8 +1,10 @@
 import { BaseMapper, pickField, safeArray, safeEnum, safeNumber, safeString } from '@/lib/mapper';
 import type { PaginationResult } from '@/types/api';
-import type { IngredientDto, IngredientListResponseDto } from '../types/ingredient.dto';
-import type { Ingredient, IngredientAlias } from '../types/ingredient.model';
-import { FoodGroup } from '@/common/enums';
+import type { IngredientDto, IngredientListResponseDto, IngredientResolveResponseDto } from '../types/ingredient.dto';
+import type { Ingredient, IngredientAlias, IngredientResolution, ResolvedIngredient } from '../types/ingredient.model';
+import { FoodGroup, ResolutionMatch } from '@/common/enums';
+
+const DIET_LABELS: Record<string, string> = { VEGAN: 'Thuần chay', LACTO_OVO: 'Chay có trứng sữa' };
 
 const FOOD_GROUP_LABELS: Record<FoodGroup, string> = {
   [FoodGroup.GRAINS]: 'Ngũ cốc',
@@ -67,6 +69,31 @@ export class IngredientMapper extends BaseMapper<IngredientDto, Ingredient> {
         hasNextPage: page < totalPages,
         hasPrevPage: page > 1,
       },
+    };
+  }
+
+  /** `GET /ingredients/resolve` → NONE/EXACT/AMBIGUOUS kèm ứng viên. */
+  toResolution(dto: IngredientResolveResponseDto | null | undefined): IngredientResolution {
+    const data = pickField<NonNullable<IngredientResolveResponseDto['data']> | null>(dto, ['data'], null);
+    const rawCandidates = pickField<NonNullable<NonNullable<IngredientResolveResponseDto['data']>['candidates']>>(data, ['candidates'], []);
+    const candidates = safeArray<(typeof rawCandidates)[number] | null, ResolvedIngredient>(rawCandidates, (item) => ({
+      ...this.toModel(item),
+      dietCompatibilities: safeArray<{ dietPattern?: string; compatible?: boolean } | null, { label: string; compatible: boolean }>(
+        pickField(item, ['dietCompatibilities'], null),
+        (entry) => ({
+          label: DIET_LABELS[safeString(entry?.dietPattern)] ?? safeString(entry?.dietPattern),
+          compatible: entry?.compatible === true,
+        })
+      ).filter((entry) => entry.label.length > 0),
+      traditionWarnings: safeArray<{ label?: string } | null, string>(
+        pickField(item, ['traditionWarnings'], null),
+        (entry) => safeString(entry?.label)
+      ).filter((label) => label.length > 0),
+    })).filter((item) => item.id.length > 0);
+    return {
+      query: safeString(pickField(data, ['query'], '')),
+      match: safeEnum(pickField(data, ['match'], 'NONE'), ResolutionMatch, ResolutionMatch.NONE),
+      candidates,
     };
   }
 }

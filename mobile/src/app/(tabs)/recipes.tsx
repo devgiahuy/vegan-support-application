@@ -1,7 +1,7 @@
 import * as React from 'react';
-import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { Pressable, Text, TextInput, View } from 'react-native';
 import { Link, type Href, useLocalSearchParams } from 'expo-router';
-import { PlusCircle, Search, Sparkles } from 'lucide-react-native';
+import { PlusCircle, Search, ShieldCheck, Sparkles } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -21,8 +21,23 @@ const DIFFICULTIES = [
   { label: 'Nâng cao', value: 'HARD' },
 ];
 
-function notifyComingSoon(feature: string) {
-  Alert.alert('Sắp ra mắt', `${feature} đang được VeggieConnect hoàn thiện, quay lại sau nhé!`);
+function getDietPatternLabel(pattern: string | null | undefined): string {
+  switch (pattern) {
+    case 'VEGAN':
+      return 'Thuần chay';
+    case 'LACTO_OVO':
+      return 'Chay có trứng & sữa';
+    case 'LACTO':
+      return 'Chay có sữa';
+    case 'OVO':
+      return 'Chay có trứng';
+    case 'PESCATARIAN':
+      return 'Ăn chay kèm cá';
+    case 'FLEXITARIAN':
+      return 'Bán chay (linh hoạt)';
+    default:
+      return pattern ?? '';
+  }
 }
 
 /**
@@ -60,6 +75,7 @@ export default function RecipesScreen() {
   const totalItems = recipesPagination?.metadata?.totalItems ?? recipes.length;
   const selectedCategoryName = categoryId ? findCategoryById(categoryTree, categoryId)?.name : null;
   const hasFilters = Boolean(categoryId || difficulty || query);
+  const constraints = recipesPagination?.metadata?.appliedConstraints;
 
   const resetFilters = () => {
     setCategoryId(null);
@@ -164,6 +180,43 @@ export default function RecipesScreen() {
             })}
           </View>
         </View>
+
+        {/* Bộ lọc an toàn cá nhân hoá theo hồ sơ (backend áp dụng, mobile chỉ hiển thị) */}
+        {constraints?.authenticated ? (
+          <View className="mt-5 rounded-2xl border border-primary/25 bg-primary/5 p-4">
+            <View className="flex-row items-center gap-2">
+              <ShieldCheck size={16} color={colors.primary} />
+              <Text className="text-sm font-semibold text-foreground">Bộ lọc an toàn theo hồ sơ của bạn</Text>
+            </View>
+            <View className="mt-2 flex-row flex-wrap gap-1.5">
+              {constraints.dietPattern ? (
+                <View className="rounded-full bg-primary/10 px-2.5 py-1">
+                  <Text className="text-xs font-medium text-primary">
+                    {getDietPatternLabel(constraints.dietPattern)}
+                  </Text>
+                </View>
+              ) : null}
+              {constraints.allergyCount > 0 ? (
+                <View className="rounded-full bg-muted px-2.5 py-1">
+                  <Text className="text-xs text-foreground">Tránh {constraints.allergyCount} chất dị ứng</Text>
+                </View>
+              ) : null}
+              {constraints.ingredientExclusionCount > 0 ? (
+                <View className="rounded-full bg-muted px-2.5 py-1">
+                  <Text className="text-xs text-foreground">Kiêng {constraints.ingredientExclusionCount} nguyên liệu</Text>
+                </View>
+              ) : null}
+            </View>
+            <Text className="mt-2 text-xs leading-relaxed text-muted-foreground">
+              Hệ thống chỉ hiển thị món có nguyên liệu chuẩn hóa và phù hợp với hồ sơ ăn kiêng của bạn.
+            </Text>
+            <Link href={'/profile' as Href} asChild>
+              <Pressable className="mt-2 self-start">
+                <Text className="text-xs font-semibold text-primary underline">Quản lý hồ sơ</Text>
+              </Pressable>
+            </Link>
+          </View>
+        ) : null}
 
         {/* Danh sách công thức — 4 trạng thái */}
         <View className="mt-6">

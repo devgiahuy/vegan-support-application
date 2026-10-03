@@ -22,6 +22,7 @@ export const API_ENDPOINTS = {
     DETAIL: (idOrSlug: string) => `/posts/${idOrSlug}`,
     RELATED: (id: string) => `/posts/${id}/related`,
     SUBMIT: (id: string) => `/posts/${id}/submit`,
+    REVIEW_HISTORY: (id: string) => `/posts/${id}/review-history`,
   },
   COMMUNITY: {
     COMMENTS: (postId: string) => `/posts/${postId}/comments`,
@@ -37,6 +38,7 @@ export const API_ENDPOINTS = {
     LIST: '/meal-plans',
     DETAIL: (id: string) => `/meal-plans/${id}`,
     SWAP: (planId: string, itemId: string) => `/meal-plans/${planId}/items/${itemId}/swap`,
+    MANUAL_ADD: (planId: string, itemId: string) => `/meal-plans/${planId}/items/${itemId}/manual-add`,
     DELETE: (id: string) => `/meal-plans/${id}`,
     ANALYZE: (id: string) => `/meal-plans/${id}/analyze`,
     ANALYSIS: (id: string) => `/meal-plans/${id}/analysis`,
@@ -67,12 +69,42 @@ export const API_ENDPOINTS = {
     SESSION_MESSAGES: (id: string) => `/chat/sessions/${id}/messages`,
     MESSAGE_FEEDBACK: (id: string) => `/chat/messages/${id}/feedback`,
   },
+  AI_ARTIFACTS: {
+    BASE: '/ai-artifacts',
+    PUBLIC: '/ai-artifacts/public',
+    VISIBILITY: (id: string) => `/ai-artifacts/${id}/visibility`,
+    SUBMIT: (id: string) => `/ai-artifacts/${id}/submit`,
+  },
   CONTRIBUTOR: {
     APPLICATIONS: '/contributor-applications',
     APPLICATIONS_ME: '/contributor-applications/me',
   },
   INGREDIENTS: {
     LIST: '/ingredients',
+    RESOLVE: '/ingredients/resolve',
+  },
+  RECIPE_NUTRITION: {
+    PREVIEW: (id: string) => `/posts/${id}/nutrition/preview`,
+    RECALCULATE: (id: string) => `/posts/${id}/nutrition/recalculate`,
+    CURRENT: (id: string) => `/posts/${id}/nutrition/current`,
+    HISTORY: (id: string) => `/posts/${id}/nutrition/history`,
+    STATUS: (id: string) => `/posts/${id}/nutrition/status`,
+  },
+  RESTAURANTS: {
+    NEARBY: '/restaurants/nearby',
+    SEARCH: '/restaurants/search',
+    MINE: '/restaurants/mine',
+    DETAIL: (id: string) => `/restaurants/${encodeURIComponent(id)}`,
+    SUBMIT: '/restaurants',
+  },
+  LOCATION: {
+    GEOCODE: '/location/geocode',
+  },
+  NOTIFICATIONS: {
+    LIST: '/notifications',
+    UNREAD_COUNT: '/notifications/unread-count',
+    READ: (id: string) => `/notifications/${id}/read`,
+    READ_ALL: '/notifications/read-all',
   },
   FOOD_DATA: {
     NUTRIENTS: (ingredientId: string) => `/food-data/ingredients/${ingredientId}/nutrients`,
