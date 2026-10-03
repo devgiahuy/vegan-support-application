@@ -73,9 +73,9 @@ export const CustomMealNutritionBar: React.FC<CustomMealNutritionBarProps> = ({
           <span className="text-xs text-muted-foreground font-medium block mb-1">Năng lượng</span>
           <span className="text-base font-bold text-foreground">
             {calculatedCalories !== null
-              ? `${Math.round(calculatedCalories)} kcal`
+              ? `~${Math.round(calculatedCalories)} kcal`
               : userCalories !== null && userCalories !== undefined
-                ? `${Math.round(userCalories)} kcal`
+                ? `~${Math.round(userCalories)} kcal`
                 : '--'}
           </span>
           {userCalories !== null && userCalories !== undefined && calculatedCalories === null && (
@@ -88,7 +88,7 @@ export const CustomMealNutritionBar: React.FC<CustomMealNutritionBarProps> = ({
           </span>
           <span className="text-base font-bold text-foreground">
             {calculatedProtein !== undefined && calculatedProtein !== null
-              ? `${calculatedProtein.toFixed(1)} g`
+              ? `~${calculatedProtein.toFixed(1)} g`
               : '--'}
           </span>
         </div>
@@ -98,7 +98,7 @@ export const CustomMealNutritionBar: React.FC<CustomMealNutritionBarProps> = ({
           </span>
           <span className="text-base font-bold text-foreground">
             {calculatedCarbs !== undefined && calculatedCarbs !== null
-              ? `${calculatedCarbs.toFixed(1)} g`
+              ? `~${calculatedCarbs.toFixed(1)} g`
               : '--'}
           </span>
         </div>
@@ -108,7 +108,7 @@ export const CustomMealNutritionBar: React.FC<CustomMealNutritionBarProps> = ({
           </span>
           <span className="text-base font-bold text-foreground">
             {calculatedFat !== undefined && calculatedFat !== null
-              ? `${calculatedFat.toFixed(1)} g`
+              ? `~${calculatedFat.toFixed(1)} g`
               : '--'}
           </span>
         </div>

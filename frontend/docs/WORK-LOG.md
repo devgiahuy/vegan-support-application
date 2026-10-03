@@ -16,6 +16,178 @@
 - Còn lại / rủi ro:
 ```
 
+## [2026-10-03] — Cập nhật màu sắc trực quan cho các ô thông tin dinh dưỡng tại trang chi tiết thực đơn (/meal-plans/[id])
+
+- Mục tiêu:
+  - Thêm màu sắc phân biệt trực quan và hài hòa cho 4 ô chỉ số dinh dưỡng mục tiêu mỗi ngày (Đạm, Béo, Xơ, Bột) và các huy hiệu dinh dưỡng ngày theo yêu cầu người dùng.
+- Đã làm:
+  - Cập nhật 4 ô thông tin dinh dưỡng mục tiêu tại `src/app/(site)/meal-plans/[id]/page.tsx`:
+    - Đạm (Protein): Tông Emerald (`bg-emerald-50/60`, viền `border-emerald-200/80`, dot `bg-emerald-500`, dark mode `dark:bg-emerald-950/25`).
+    - Chất béo (Fat): Tông Sky (`bg-sky-50/60`, viền `border-sky-200/80`, dot `bg-sky-500`, dark mode `dark:bg-sky-950/25`).
+    - Chất xơ (Fiber): Tông Purple (`bg-purple-50/60`, viền `border-purple-200/80`, dot `bg-purple-500`, dark mode `dark:bg-purple-950/25`).
+    - Tinh bột (Carbs): Tông Amber (`bg-amber-50/60`, viền `border-amber-200/80`, dot `bg-amber-500`, dark mode `dark:bg-amber-950/25`).
+    - Nâng cấp typography, visual hierarchy và hover state nhẹ nhàng cho các ô chỉ số.
+    - Cải thiện header khối với Badge hiển thị dung sai cho phép rõ ràng.
+  - Đồng bộ hệ màu tương ứng cho các huy hiệu dinh dưỡng tổng hàng ngày trong `DayGrid` (`src/features/meal-plan/components/day-grid.tsx`): Calo (Orange), Đạm (Emerald), Béo (Sky), Xơ (Purple), Bột (Amber) khi chưa vượt ngưỡng, và chuyển cảnh báo Rose khi vượt ngưỡng.
+- File tạo/sửa:
+  - `src/app/(site)/meal-plans/[id]/page.tsx`
+  - `src/features/meal-plan/components/day-grid.tsx`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi typecheck.
+  - `npm test`: 46 test files, 526/526 tests pass (100%).
+  - `npm run build`: Turbopack build thành công 46/46 pages.
+- PROGRESS: Giữ nguyên tiến độ hoàn thành các tính năng cốt lõi, cải thiện thẩm mỹ UI/UX theo phản hồi người dùng.
+- Còn lại / rủi ro: Không có rủi ro; tương thích đầy đủ với cả light mode và dark mode.
+
+## [2026-10-03] — Convergence lần 3 `/restaurants`: đưa `providerLabel`/`locationStored` tới UI, gỡ code chết, xử lý mâu thuẫn US3/AC4 (spec 006 Phase 9, T071–T073)
+
+- Mục tiêu:
+  - Đóng 3 khoảng trống còn lại sau 2 lượt hội tụ trước (T071–T073).
+- Đã làm:
+  - **T071 — xử lý mâu thuẫn giữa `US3/AC4` và mục `## Phạm vi`**:
+    - **Vấn đề**: `US3/AC4` yêu cầu *"đề xuất bị từ chối → lý do từ chối hiển thị rõ ràng bằng tiếng Việt"*, nhưng `## Phạm vi` loại danh sách "quán của tôi" (`GET /restaurants/mine`) khỏi đợt này. Từ chối xảy ra **bất đồng bộ** bởi quản trị viên nên không có bề mặt nào trong phạm vi để hiện lý do từ chối. Đây là hệ quả của `/speckit-clarify` Q1 (chọn phạm vi hẹp): khi bỏ User Story 4 và thu gọn User Story 3, AC4 cũ của US3 bị sót lại.
+    - **Quyết định**: giữ nguyên phạm vi (không thêm `mine`), làm phần trong phạm vi và **nói rõ với người dùng** kết quả sẽ được thông báo sau:
+      - `restaurant.queries.ts` — toast thành công nay ghi rõ *"Kết quả duyệt — kể cả lý do nếu bị từ chối — sẽ được thông báo cho bạn sau"*, tăng `duration` lên 6000ms để người dùng đọc kịp.
+      - `submit-form.tsx` — ghi chú trong hộp thoại cũng nêu rõ điều tương tự, để thông tin xuất hiện **trước khi** gửi chứ không chỉ sau khi gửi.
+    - **Kênh thông báo thực tế**: backend đã phát notification cho quyết định duyệt đề xuất quán của thành viên (Phase 25, `BACKEND_INTEGRATION.md`). Vì vậy lý do từ chối **sẽ** tới người dùng qua kênh notification, không phải qua trang khám phá.
+    - **Việc còn lại**: hiển thị lý do từ chối ngay trong trang khám phá cần `GET /restaurants/mine` → tách sang đợt sau cùng "quán của tôi". `US3/AC4` giữ nguyên trong spec làm acceptance scenario cho đợt đó.
+  - **T072 — đưa `providerLabel` và `locationStored` tới giao diện**:
+    - `locationStored` và `providerLabel` trước đó được `toDiscoveryMeta` map ra và có test nhưng **không `.tsx` nào dùng**, trái với ý định ghi ở `data-model.md` §2.2.
+    - Thêm `DiscoveryNoticeKind` `'PRIVACY'`; `buildNotices` sinh cam kết *"Vị trí bạn dùng để tìm kiếm chỉ dùng cho lần tìm này và không được lưu giữ"* khi `meta.locationStored === false` — đây là bằng chứng hiển thị cho `SC-007`.
+    - Thông báo `ATTRIBUTION` nay **nêu đích danh nhà cung cấp** (`Google Maps` / `SerpApi` / `dữ liệu minh hoạ`) thay vì nói chung "nhà cung cấp bên ngoài".
+    - `result-notice.tsx` render `PRIVACY` với kiểu nhạt (chữ 11px, không nền cảnh báo) vì đây là thông tin điều kiện chứ không phải cảnh báo — tránh gây nhiễu.
+    - Bổ sung 2 test; **cập nhật 2 test cũ** vì backend luôn trả `locationStored: false` nên `PRIVACY` luôn xuất hiện (trước đó 2 test giả định không có notice nào).
+  - **T073 — gỡ code chết, nhưng chọn nối vào dùng thay vì xoá khi có giá trị thực**:
+    - **Nối vào dùng**: `formatBoundsLabel` được hiển thị trên `page.tsx` khi đang ở chế độ tìm theo vùng, để người dùng biết chính xác vùng đang tìm (`FR-006`).
+    - **Xoá**: `estimateBoundsRadiusM` (thừa vì đã có `meta.providerResultLimit`), `boundsSchema`, `advancedFiltersSchema`, `locationQuerySchema` và biến `radiusM` sinh ra từ nó, `GeocodeLocation`, `RestaurantReviewAction`.
+    - **An toàn**: đã xác minh ràng buộc của bộ lọc nâng cao được thực thi ở `restaurant.mapper.toDiscoveryParams` (`toIntInRange`/`toNumberInRange`) và bounds ở `isBoundsUsable`, nên xoá schema thừa **không làm mất validation nào**. UI dùng `Select` giá trị cố định nên zod không tham gia vào đường nhập liệu.
+- File tạo/sửa:
+  - `src/features/restaurant/queries/restaurant.queries.ts` (T071)
+  - `src/features/restaurant/components/submit-form.tsx` (T071)
+  - `src/features/restaurant/types/restaurant.model.ts` (T072 — thêm kind `PRIVACY`; T073 — gỡ 2 type chết)
+  - `src/features/restaurant/mappers/restaurant.mapper.ts` (T072 — sinh `PRIVACY` + nêu tên provider)
+  - `src/features/restaurant/components/result-notice.tsx` (T072 — render `PRIVACY`)
+  - `src/features/restaurant/mappers/restaurant.mapper.test.ts` (T072 — +2 test, cập nhật 1 test)
+  - `src/features/restaurant/api/restaurant.api.test.ts` (T072 — cập nhật 1 test)
+  - `src/features/restaurant/utils/restaurant-bounds.ts` (T073 — gỡ `estimateBoundsRadiusM`)
+  - `src/features/restaurant/utils/restaurant-bounds.test.ts` (T073 — gỡ test tương ứng)
+  - `src/features/restaurant/schemas/restaurant.schema.ts` (T073 — gỡ 3 schema + 1 biến chết)
+  - `src/app/(site)/restaurants/page.tsx` (T073 — nối `formatBoundsLabel`)
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi.
+  - `npm test`: 46 test files, **526/526** tests pass (100%). Lượt trước 527 → **-1** do gỡ test của hàm đã xoá; **+2** test mới cho `PRIVACY`/`providerLabel`; **+1** test cho `emptyStateCopy` ở Phase 8. Không regress.
+  - `npm run build`: Turbopack compile thành công, 46/46 static pages.
+  - `npm run lint` riêng phạm vi đã sửa: **4 error, 3 warning — bằng đúng baseline**; không file mới/sửa nào tạo thêm lint error.
+  - Test tay: **vẫn chưa chạy được** — backend chưa khởi động ở `localhost:4000`. VS-14 là kịch bản kiểm chứng phần trong phạm vi của T071.
+- PROGRESS: Task #8 (UC-12) giữ 100% — hoàn thiện ý định đã nêu trong data-model và dọn code chết, không thêm capability mới; không thêm dòng `Lịch sử cập nhật` vì `%` không đổi.
+- Còn lại / rủi ro:
+  - **T003 + T056 + VS-01..VS-18 vẫn chưa chạy** vì backend chưa chạy. Đây là hạng mục bàn giao duy nhất còn mở sau 3 lượt hội tụ.
+  - `US3/AC4` được giữ nguyên trong spec làm acceptance scenario cho đợt sau; nếu quyết định chuyển sang kênh notification vĩnh viễn thì cần sửa spec ở lần `/speckit-clarify` sau (ngoài phạm vi `/speckit-converge` vì lệnh này không được sửa `spec.md`).
+  - Cam kết riêng tư (`PRIVACY`) hiện hiển thị ở mọi lần tìm vì backend luôn trả `locationStored: false`. Nếu sau này thấy gây nhiễu, có thể chỉ hiện ở lần tìm đầu tiên của phiên.
+  - 4 lint error `react-hooks/set-state-in-effect` còn lại **có sẵn từ trước tính năng này** ở `restaurant-map.tsx`, `use-google-maps.ts`, `review-restaurant-dialog.tsx`; chưa xử lý vì ngoài phạm vi.
+
+## [2026-10-03] — Convergence lần 2 `/restaurants`: nút xoá từ khoá, trạng thái nút tìm vùng, điện thoại trên thẻ quán (spec 006 Phase 8, T067–T070)
+
+- Mục tiêu:
+  - Đóng 4 khoảng trống mà `/speckit-converge` lượt 2 phát hiện sau Phase 7 (T067–T070). Tất cả đều là khoảng trống mức UX/a11y, không phải sai logic dữ liệu.
+- Đã làm:
+  - **T067 — nút xoá nhanh từ khoá (MEDIUM, `US2/AC3`)**: ô "Tìm theo tên quán hoặc món ăn" giờ có icon tìm kiếm bên trái và nút `X` bên phải (chỉ hiện khi có từ khoá, `aria-label` tiếng Việt). Hỗ trợ thêm phím `Escape` để xoá. Trước đây người dùng phải xoá tầm từng ký tự vì nút "Xoá tất cả" reset cả bán kính và trường phái ăn — không phải cùng ý nghĩa.
+  - **T068 — nút "Tìm trong vùng đang xem" có trạng thái (MEDIUM, `FR-005`/`SC-005`)**: thêm prop `canSearchThisArea` cho cả `RestaurantMap` và `MapFallback`; nút bị vô hiệu hoá khi bản đồ chưa có khung vùng hợp lệ, kèm `title` giải thích "Hãy kéo hoặc thu phóng bản đồ để chọn vùng cần tìm". Trước đó nút luôn bật còn `handleSearchThisArea` im lặng `return` → người dùng bấm mà không có phản hồi. `page.tsx` thêm state mirror `hasViewBounds` (không nằm trong `searchState` nên không đổi `queryKey`) và được reset cùng `boundsRef` ở mọi đường đổi vị trí.
+  - **T069 — số điện thoại trên thẻ quán (LOW, `FR-007`)**: `FR-007` liệt kê "thông tin liên hệ" là nội dung bắt buộc của thẻ trong danh sách nhưng thẻ chỉ có ở trang chi tiết. Thêm link `tel:` kèm `stopPropagation` để không kích hoạt chọn quán, và `aria-label` nêu rõ tên quán.
+  - **T070 — hành động gợi ý khi rỗng nhất quán (LOW, `FR-010`)**: `emptyStateCopy('KEYWORD')` bổ sung "Đổi vị trí" để cả ba chế độ đều cho lối thoát; `page.tsx` tách gate của "Xoá bộ lọc" và "Xoá bộ lọc nâng cao" — trước đó cả hai dùng chung `hasFilters` khiến nút "Xoá bộ lọc nâng cao" hiện cả khi không có bộ lọc nâng cao nào, bấm vào không làm gì. Nay dùng `countActiveAdvancedFilters`. Bổ sung 1 test.
+- File tạo/sửa:
+  - `src/features/restaurant/components/restaurant-filters.tsx` (T067)
+  - `src/features/restaurant/components/restaurant-map.tsx` (T068)
+  - `src/features/restaurant/components/map-fallback.tsx` (T068)
+  - `src/app/(site)/restaurants/page.tsx` (T068, T070)
+  - `src/features/restaurant/components/restaurant-card.tsx` (T069)
+  - `src/features/restaurant/utils/restaurant-search.ts` (T070)
+  - `src/features/restaurant/utils/restaurant-search.test.ts` (T070 — thêm 1 test)
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi.
+  - `npm test`: 46 test files, **527/527** tests pass (100%). Lượt trước 526 → +1 test. Không regress.
+  - `npm run build`: Turbopack compile thành công, 46/46 static pages.
+  - `npm run lint` riêng phạm vi đã sửa: **4 error, 3 warning — bằng đúng baseline**; không file mới/sửa nào tạo thêm lint error.
+  - Test tay: **vẫn chưa chạy được** — backend chưa khởi động ở `localhost:4000`. VS-06 (xoá từ khoá quay lại chế độ lân cận) và VS-08 (tìm theo vùng) là hai kịch bản chứng minh T067/T068.
+- PROGRESS: Task #8 (UC-12) giữ 100% — hoàn thiện trải nghiệm và a11y, không thêm capability mới; không thêm dòng `Lịch sử cập nhật` vì `%` không đổi.
+- Còn lại / rủi ro:
+  - **T003 + T056 + VS-01..VS-18 vẫn chưa chạy** vì backend chưa chạy. Đây là hạng mục bàn giao duy nhất còn mở sau 3 lượt hội tụ.
+  - `handleBoundsChange` giờ gọi `setHasViewBounds` — đây là setState trong callback của bản đồ (không phải trong thân effect) nên không vi phạm `react-hooks/set-state-in-effect`.
+  - 4 lint error `react-hooks/set-state-in-effect` còn lại **có sẵn từ trước tính năng này** ở `restaurant-map.tsx`, `use-google-maps.ts`, `review-restaurant-dialog.tsx`; chưa xử lý vì ngoài phạm vi.
+
+## [2026-10-03] — Convergence `/restaurants`: sửa bug chế độ BOUNDS, debounce từ khoá, a11y bàn phím, dọn code chết
+
+- Mục tiêu:
+  - Đóng 8 khoảng trống mà `/speckit-converge` phát hiện sau khi `spec 006` đã triển khai xong (Phase 7, T059–T066).
+  - Trọng tâm là **F1**: bug làm chế độ tìm theo vùng bản đồ không hoạt động, lọt qua 4 gate tự động vì nằm trong file `.tsx` mà `vitest` không chạy.
+- Đã làm:
+  - **T059 — sửa bug BOUNDS (HIGH, `contradicts`)**: `page.tsx` hardcode `mode: 'NEARBY'` trong `searchState`. `restaurantMapper.toDiscoveryParams` rẽ nhánh theo `state.mode` và `restaurantApi.getNearby` giữ nguyên mode, nên chế độ BOUNDS gửi `lat`/`lng` thay vì `north`/`south`/`east`/`west`. Hệ quả: nút "Tìm trong vùng đang xem" chỉ đổi cache key mà **không** đổi request → người dùng thấy y hệt kết quả cũ. Sửa bằng cách tính `resolvedMode` qua `resolveSearchMode` và truyền vào `searchState`.
+  - **T060 — debounce từ khoá (HIGH, `partial`)**: dùng `useDebounce` đã có sẵn ở `src/hooks/useDebounce` (400ms) cho `debouncedQuery`; ô nhập vẫn phản hồi tức thì vì gắn vào `query`. Giữ nguyên ngưỡng ≥2 ký tự của `resolveSearchMode`.
+  - **T061 — nội dung trạng thái rỗng theo chế độ (MEDIUM)**: `emptyStateCopy(mode)` trước đó chỉ có test, không nơi nào dùng nên mọi chế độ rỗng đều rơi về một chuỗi mặc định. Nay `page.tsx` truyền `emptyTitle`/`emptyDescription` xuống `RestaurantList`, và nút hành động được lọc theo chế độ: "Nới bán kính" chỉ hiện khi không phải BOUNDS và còn dưới trần 50km; "Xoá từ khoá" chỉ hiện khi từ khoá đã đủ 2 ký tự.
+  - **T062 — vòng tròn bán kính trên Google Maps thật (MEDIUM)**: `MapFallback` đã vẽ vòng bán kính nhưng `RestaurantMap` không vẽ, nên bản đồ thật không phản ánh ranh giới khu vực tìm (FR-004). Thêm `google.maps.Circle` trong ref, dùng `setMap(null)` khi dọn, bỏ qua lỗi không dùng setState trong effect, và ẩn khi đang ở chế độ tìm theo vùng.
+  - **T063 — thao tác bàn phím cho thẻ quán (MEDIUM, SC-004)**: `RestaurantCard` trước đó chỉ có `onClick` chuột, không chọn được bằng bàn phím. Thêm `tabIndex={0}`, `aria-current`, xử lý Enter/Space (chặn Space để không cuộn trang) và vòng focus hiển thị.
+  - **T064 — một nguồn sự thật cho ngày trong tuần (LOW)**: thay string literal `'mon' | 'tue' | ...` bằng `RestaurantWeekday` enum trong `advanced-filters.tsx`, `restaurant.mapper.toDiscoveryParams` và `sanitizeAdvancedFilters`.
+  - **T065 — notice `STALE` (LOW)**: `DiscoveryNoticeKind` khai báo `'STALE'` nhưng không nơi nào sinh. Nay `toDiscoveryModel` sinh notice khi có quán quá 30 ngày chưa cập nhật, kèm số lượng; bổ sung 1 test.
+  - **T066 — dọn code chết (LOW, `unrequested`)**: gỡ `hasUsableBounds` và `clearPersistedFilters` (định nghĩa nhưng không dùng). `RestaurantPriceLevel` và `RestaurantWeekday` được đưa vào sử dụng thật ở T064 thay vì xoá.
+- File tạo/sửa:
+  - `src/app/(site)/restaurants/page.tsx` (T059, T060, T061)
+  - `src/features/restaurant/components/restaurant-map.tsx` (T062)
+  - `src/features/restaurant/components/restaurant-card.tsx` (T063)
+  - `src/features/restaurant/components/advanced-filters.tsx` (T064, T066)
+  - `src/features/restaurant/mappers/restaurant.mapper.ts` (T064, T065)
+  - `src/features/restaurant/mappers/restaurant.mapper.test.ts` (T065 — thêm 1 test notice `STALE`)
+  - `src/features/restaurant/utils/restaurant-search.ts` (T064, T066)
+  - `src/features/restaurant/utils/use-restaurant-search-session.ts` (T066)
+  - `src/common/enums/index.ts` (T066 — bổ sung tài liệu cho `RestaurantPriceLevel`)
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi.
+  - `npm test`: 46 test files, **526/526** tests pass (100%). Lượt trước 525 → +1 test (notice `STALE`). Không regress.
+  - `npm run build`: Turbopack compile thành công, 46/46 static pages.
+  - `npm run lint` riêng phạm vi đã sửa: **4 error, 3 warning — bằng đúng baseline**; không file mới/sửa nào tạo thêm lint error.
+  - Test tay: **vẫn chưa chạy được** — backend chưa khởi động ở `localhost:4000`. Riêng VS-08 (kiểm chứng tìm theo vùng) là kịch bản chứng minh bug T059 đã hết; cần chạy khi backend sẵn sàng.
+- PROGRESS: Task #8 (UC-12) giữ 100% — sửa lỗi và hoàn thiện trải nghiệm, không thêm capability mới; chưa thêm dòng `Lịch sử cập nhật` vì `%` không đổi, chỉ bổ sung nội dung vào entry redesign ngày 2026-10-03.
+- Còn lại / rủi ro:
+  - **T003 + T056 + VS-01..VS-18 vẫn chưa chạy** vì backend chưa chạy. Đây là hạng mục bàn giao duy nhất còn mở.
+  - Bug T059 lọt qua cả 4 gate tự động vì `page.tsx` là `.tsx` và `vitest.config.ts` chỉ chạy `.test.ts` trong env node. Mọi logic quyết định ở trang phải tiếp tục đẩy xuống `utils/*.ts` để có test.
+  - `restaurant-map.tsx`, `use-google-maps.ts`, `review-restaurant-dialog.tsx` còn 4 lint error `react-hooks/set-state-in-effect` **có sẵn từ trước tính năng này**; chưa xử lý vì ngoài phạm vi.
+
+## [2026-10-03] — Redesign toàn bộ giao diện `/restaurants` + gắn đủ endpoint Phase 24 (spec `006-restaurants-discovery-redesign`)
+
+- Mục tiêu:
+  - Thiết kế lại toàn bộ trải nghiệm tìm quán chay theo vị trí / theo địa điểm / theo món ăn trên route `/restaurants` (UC-12 / BL-16), và nối đầy đủ các endpoint `READY` sẵn có mà giao diện cũ chưa dùng tới.
+  - Ba lỗi trình bày dữ liệu sai có sẵn được phát hiện trong lúc đối chiếu contract và phải sửa, không phải thiếu sót giao diện.
+- Đã làm:
+  - **Đối chiếu contract**: đọc `backend/src/modules/restaurants/restaurant.openapi.ts` + `restaurant.schemas.ts` + `prisma/schema.prisma` vì `docs/api/restaurants.md` bị sinh tự động và cắt cụt (`"_truncated": true`), không đủ xác định `meta`.
+  - **Tầng enum**: `RestaurantSource` đổi thành đúng 4 giá trị contract (`INTERNAL`/`GOOGLE`/`SERPAPI`/`FAKE`, bỏ `GOOGLE_PLACES`); thêm `RestaurantOpenState`, `RestaurantDietTag`, `RestaurantWeekday`, `RestaurantPriceLevel`.
+  - **DTO**: `RestaurantDto` mở rộng lên 36 field có alias `pickField` (tọa độ `latitude/longitude`, `rating`, `reviewCount`, `price`, `openState`, `operatingHours`, `phone`, `website`, `thumbnailUrl`, `mapsUrl`, `externalPlaceId`, `attribution`, `matchReasons`, `dietaryReviewed`); `meta` bổ sung 5 trường provider; `GeocodeResponseDto` theo `data.address`; `SubmitRestaurantRequestDto` viết lại theo `submitRestaurantSchema`.
+  - **Model**: thêm 13 field có nhãn tiếng Việt chuẩn bị sẵn, 2 cờ dữ liệu `isExternal` / `requiresDietaryWarning`, `hasCoordinates`; thêm `RestaurantDiscoveryMeta`, `RestaurantDiscoveryResult`, `DiscoveryNotice`, `RestaurantSearchState`, `RestaurantBounds`, `RestaurantAdvancedFilters`, `RestaurantGeocodeResult`.
+  - **Mapper**: `toDiscoveryModel` (map 8 field meta + sinh `notices` UNAVAILABLE/TRUNCATED/ATTRIBUTION), `toDiscoveryParams` (phân nhánh NEARBY/BOUNDS/KEYWORD, clamp `radiusMeters` 100–50000, chỉ gửi 6 tham số lọc nâng cao ở mode KEYWORD, **không** gửi `page`/`limit`), `toGeocodeResult` (`isAvailable: false` khi `data: null`), `toSubmitDto` (chỉ field trong schema, lọc `dietTags` ngoài enum). Bỏ suy đoán `totalPages` — backend không gửi field này nên `hasNextPage` luôn sai trước đây.
+  - **Sửa 3 lỗi dữ liệu sai**:
+    1. `RestaurantSource` cũ chỉ có 2 giá trị và mapper gộp mọi nguồn lạ về `INTERNAL` → quán `FAKE`/`SERPAPI` bị hiển thị với nhãn "Cộng đồng VeggieConnect", tức bị trình bày như quán nội bộ đã kiểm duyệt.
+    2. `address-form.tsx` khi geocode trả `data: null` dùng tọa độ trung tâm Hà Nội (21.0285, 105.8542) → người dùng ở TP.HCM thấy kết quả hoàn toàn không liên quan mà không hiểu vì sao.
+    3. `dietPattern` gửi `LACTO_VEGETARIAN`/`OVO_VEGETARIAN` trong khi Prisma `enum DietPattern` chỉ có `VEGAN`/`LACTO_OVO` và là chuỗi đơn → lọc cứng trường phái ăn không hoạt động đúng ý nghĩa.
+  - **Logic thuần tách ra module riêng** (`utils/restaurant-bounds.ts`, `utils/restaurant-search.ts`): `vitest.config.ts` đặt `environment: 'node'` + `include: ['src/**/*.test.ts']` nên không test được component `.tsx`; các quy tắc quyết định (chế độ tìm, đếm bộ lọc, hợp lệ bounds, loại tọa độ khỏi dữ liệu phiên) phải nằm ở module `.ts` thuần.
+  - **Ràng buộc riêng tư**: `sanitizePersistedFilters` là điểm chặn duy nhất giữa dữ liệu phiên và tọa độ người dùng; dùng `sessionStorage` (không `localStorage`), chỉ ghi `{query, radiusM, dietPattern, advanced}`. Vị trí chỉ nằm trong state của trang → mỗi lần mở trang phải xác nhận lại.
+  - **Giao diện**: viết lại `page.tsx` (shell split-view, bounds nằm trong ref để kéo/zoom không phát sinh request), `restaurant-filters.tsx` (3 lọc cơ bản + badge đếm), `restaurant-card.tsx` (rating/giá/trạng thái mở cửa/attribution/cảnh báo chế độ ăn/dữ liệu cũ), `restaurant-list.tsx` (4 trạng thái + skeleton đúng chiều cao thẻ + nút hành động khi rỗng), `restaurant-map.tsx` + `map-fallback.tsx` (phát bounds, nút "Tìm trong vùng đang xem"), `address-form.tsx` (bỏ bịa tọa độ), `submit-form.tsx` (payload mới, `latitude`/`longitude` bắt buộc).
+  - **Tạo mới**: `components/result-notice.tsx`, `components/advanced-filters.tsx` (`Sheet` của shadcn, mọi điều khiển là giá trị cố định đúng ràng buộc backend), `utils/restaurant-bounds.ts`, `utils/restaurant-search.ts` và 2 file test tương ứng.
+  - **Phạm vi giữ nguyên**: trang chi tiết `/restaurants/[id]` và khu vực kiểm duyệt trong bảng quản trị chỉ vá tối thiểu (nhãn `dietaryTagLabels`, `priceLabel`, cảnh báo chế độ ăn), không thiết kế lại bố cục.
+- File tạo/sửa:
+  - Tạo: `src/features/restaurant/utils/restaurant-bounds.ts`, `src/features/restaurant/utils/restaurant-bounds.test.ts`, `src/features/restaurant/utils/restaurant-search.ts`, `src/features/restaurant/utils/restaurant-search.test.ts`, `src/features/restaurant/utils/use-restaurant-search-session.ts`, `src/features/restaurant/components/result-notice.tsx`, `src/features/restaurant/components/advanced-filters.tsx`.
+  - Sửa: `src/common/enums/index.ts`, `src/features/restaurant/types/restaurant.dto.ts`, `src/features/restaurant/types/restaurant.model.ts`, `src/features/restaurant/mappers/restaurant.mapper.ts`, `src/features/restaurant/mappers/restaurant.mapper.test.ts`, `src/features/restaurant/api/restaurant.api.ts`, `src/features/restaurant/api/restaurant.api.test.ts`, `src/features/restaurant/queries/restaurant.queries.ts`, `src/features/restaurant/schemas/restaurant.schema.ts`, `src/features/restaurant/__fixtures__/restaurant-fixtures.ts`, `src/features/restaurant/components/location-prompt.tsx`, `src/features/restaurant/components/address-form.tsx`, `src/features/restaurant/components/restaurant-filters.tsx`, `src/features/restaurant/components/restaurant-list.tsx`, `src/features/restaurant/components/restaurant-card.tsx`, `src/features/restaurant/components/restaurant-map.tsx`, `src/features/restaurant/components/map-fallback.tsx`, `src/features/restaurant/components/submit-form.tsx`, `src/features/restaurant/components/restaurant-detail.tsx`, `src/app/(site)/restaurants/page.tsx`, `docs/PROGRESS.md`.
+  - Tài liệu spec: `specs/006-restaurants-discovery-redesign/` (spec, plan, research, data-model, contracts, quickstart, tasks, checklists).
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi.
+  - `npm test`: 46 test files, 525/525 tests pass (100%). Baseline trước khi sửa: 44 files / 427 tests → **+2 file, +98 test**, không regress.
+  - `npm run build`: Turbopack compile thành công, 46/46 static pages.
+  - `npm run lint` (Gate 4): repo có **116 lỗi pre-existing** không thuộc phạm vi này (ví dụ `src/lib/mapper/field-helpers.ts` dùng `any`). Lint riêng `src/features/restaurant` + `src/app/(site)/restaurants` + `src/common/enums/index.ts`: **4 error, 3 warning — bằng đúng baseline** của các file đó (đã xác minh bằng `git stash` và lint lại bản gốc). **Không file mới/sửa nào của tính năng này tạo thêm lint error.**
+  - Test tay: **chưa chạy được** — backend chưa khởi động ở `localhost:4000` (`BACKEND_UNREACHABLE`) nên bỏ trống 18 kịch bản VS-01..VS-18 trong `quickstart.md`. Các kiểm tra thay thế đã chạy: xác nhận tọa độ không lưu qua `sanitizePersistedFilters` (có test riêng), geocode `data: null` trả `isAvailable: false` (có test riêng), nguồn `FAKE`/`SERPAPI` không mang nhãn nội bộ (có test riêng), payload đề xuất đúng tên field (có test riêng), không gửi `page`/`limit` (có test riêng).
+- PROGRESS: Task #8 (UC-12) giữ 100% — không phải thêm capability mà nâng cấp chất lượng hiện có; thêm 1 dòng vào `Lịch sử cập nhật` mô tả 3 lỗi đã sửa và danh sách năng lực mới.
+- Còn lại / rủi ro:
+  - **18 kịch bản kiểm chứng tay (VS-01..VS-18) chưa chạy** vì backend chưa chạy. Cần chạy lại khi backend `:4000` sẵn sàng; đặc biệt VS-05 (không còn bịa tọa độ Hà Nội), VS-09 (quán ngoài không mang nhãn nội bộ), VS-15 (session storage không chứa tọa độ), VS-18 (trang chi tiết + bảng quản trị không hỏng).
+  - Chưa có quà hoàn toàn hợp lệ để kiểm tra kích hoạt `resultsTruncated` và `externalDataUnavailable` từ phía backend — hiện đã có test đơn vị cho đúng nhánh sinh notice.
+  - `minPrice`/`maxPrice` là thang 4 mức của provider, không phải số tiền VND; UI đã ghi rõ trong nhãn nhưng cần kiểm lại khi có dữ liệu thật.
+  - Danh sách "quán của tôi" (`GET /restaurants/mine`), lịch sử kiểm duyệt và chỉnh sửa quán nội bộ của quản trị viên vẫn `READY` nhưng nằm ngoài phạm vi đợt này.
+
 ## [2026-09-28] — Ẩn bảng phân tích dinh dưỡng tĩnh (mock) tại sidebar trang /recipes/[id]
 
 - Mục tiêu:

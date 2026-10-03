@@ -3,77 +3,107 @@
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { getApiErrorCode } from '@/lib/api-error';
+import { RestaurantDietTag } from '@/common/enums';
 import { useSubmitRestaurantMutation } from '../queries/restaurant.queries';
 import {
-  MAX_DISHES,
   submitRestaurantSchema,
   type SubmitRestaurantFormValues,
 } from '../schemas/restaurant.schema';
 
-const DIETARY_SUGGESTIONS = ['VEGAN', 'LACTO_VEGETARIAN', 'OVO_VEGETARIAN'];
+const DIET_TAG_OPTIONS: { value: RestaurantDietTag; label: string }[] = [
+  { value: RestaurantDietTag.VEGAN, label: 'Thuần chay (Vegan)' },
+  { value: RestaurantDietTag.LACTO_OVO, label: 'Chay có sữa và trứng' },
+  { value: RestaurantDietTag.BUDDHIST, label: 'Chay kiểng Phật' },
+  { value: RestaurantDietTag.CHRISTIAN, label: 'Chay kiểng Kitô' },
+];
+
+/** Nhãn mã trùng lặp → thông báo tiếng Việt. */
+const DUPLICATE_MESSAGES: Record<string, string> = {
+  DUPLICATE_RESTAURANT:
+    'Quán này đã có trong hệ thống. Bạn vẫn có thể gửi để chúng tôi kiểm tra thêm.',
+  RESTAURANT_ALREADY_EXISTS:
+    'Quán này đã có trong hệ thống. Bạn vẫn có thể gửi để chúng tôi kiểm tra thêm.',
+};
+
+function splitList(value: string): string[] {
+  return value
+    .split(',')
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0)
+    .slice(0, 30);
+}
 
 /**
- * Form gửi đề xuất quán mới do Thành viên đóng góp (FR-009).
- * Quán lưu ở trạng thái PENDING, không hiện công khai cho đến khi Admin duyệt.
+ * Form gửi đề xuất quán mới (FR-032..FR-036).
+ *
+ * Bám đúng `submitRestaurantSchema` của backend (`.strict()`):
+ * `name`, `address`, `latitude`, `longitude` là bắt buộc; `dietTags` chỉ nhận 4 giá trị enum.
+ * Quán lưu ở trạng thái chờ duyệt, không hiện công khai cho đến khi quản trị viên duyệt.
  */
 export function SubmitForm({ onDone }: { onDone?: () => void }) {
   const submitMutation = useSubmitRestaurantMutation();
-  const [duplicateWarning, setDuplicateWarning] = React.useState<string | null>(null);
+  const [submitError, setSubmitError] = React.useState<string | null>(null);
 
   const form = useForm<SubmitRestaurantFormValues>({
     resolver: zodResolver(submitRestaurantSchema),
     defaultValues: {
       name: '',
       address: '',
-      dietaryTags: ['VEGAN'],
-      dishes: [],
-      openingHours: '',
-      priceRange: '',
-      phoneNumber: '',
-      note: '',
+      latitude: 0,
+      longitude: 0,
+      categories: [],
+      dietTags: [RestaurantDietTag.VEGAN],
+      allergenFreeCodes: [],
+      excludedIngredients: [],
     },
   });
 
-  const selectedDietary = form.watch('dietaryTags') ?? [];
+  const selectedDietTags = form.watch('dietTags') ?? [];
+  const latitude = form.watch('latitude');
+  const longitude = form.watch('longitude');
+  const hasCoordinates =
+    Number.isFinite(latitude) && Number.isFinite(longitude) && (latitude !== 0 || longitude !== 0);
 
-  const toggleDietary = (tag: string) => {
-    if (selectedDietary.includes(tag)) {
-      form.setValue(
-        'dietaryTags',
-        selectedDietary.filter((t) => t !== tag)
-      );
-    } else {
-      form.setValue('dietaryTags', [...selectedDietary, tag]);
-    }
+  const toggleDietTag = (tag: RestaurantDietTag) => {
+    form.setValue(
+      'dietTags',
+      selectedDietTags.includes(tag)
+        ? selectedDietTags.filter((item) => item !== tag)
+        : [...selectedDietTags, tag]
+    );
   };
 
   const onSubmit = async (values: SubmitRestaurantFormValues) => {
-    setDuplicateWarning(null);
+    setSubmitError(null);
     try {
       await submitMutation.mutateAsync({
         name: values.name,
         address: values.address,
-        dietaryTags: values.dietaryTags,
-        dishes: values.dishes,
-        openingHours: values.openingHours || undefined,
-        priceRange: values.priceRange || undefined,
-        phoneNumber: values.phoneNumber || undefined,
-        note: values.note || undefined,
+        latitude: values.latitude,
+        longitude: values.longitude,
+        categories: values.categories,
+        dietTags: values.dietTags,
+        allergenFreeCodes: values.allergenFreeCodes,
+        excludedIngredients: values.excludedIngredients,
       });
       form.reset();
       onDone?.();
     } catch (error) {
-      if (getApiErrorCode(error) === 'VALIDATION_ERROR') {
-        setDuplicateWarning('Thông tin chưa hợp lệ, vui lòng kiểm tra lại.');
-      } else {
-        setDuplicateWarning('Có lỗi xảy ra khi gửi thông tin đề xuất quán.');
-      }
+      const code = getApiErrorCode(error);
+      const duplicateMessage = code ? DUPLICATE_MESSAGES[code] : undefined;
+      setSubmitError(
+        duplicateMessage ??
+          (code === 'VALIDATION_ERROR'
+            ? 'Thông tin chưa hợp lệ, vui lòng kiểm tra lại.'
+            : 'Có lỗi xảy ra khi gửi thông tin đề xuất quán.')
+      );
     }
   };
 
@@ -108,89 +138,107 @@ export function SubmitForm({ onDone }: { onDone?: () => void }) {
       </div>
 
       <div className="flex flex-col gap-1.5">
+        <Label htmlFor="submit-latitude">Vĩ độ *</Label>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="relative">
+            <MapPin className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              id="submit-latitude"
+              className="pl-9"
+              placeholder="10.776"
+              {...form.register('latitude')}
+            />
+          </div>
+          <Input placeholder="106.700" {...form.register('longitude')} aria-label="Kinh độ" />
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Quán phải có vị trí để hiển thị trên bản đồ. Nhập tọa độ lấy từ Google Maps nếu quán chưa
+          có trong hệ thống.
+        </p>
+        {!hasCoordinates && (
+          <p className="text-xs text-destructive">
+            Vui lòng nhập tọa độ quán trước khi gửi đề xuất.
+          </p>
+        )}
+        {(form.formState.errors.latitude?.message ?? form.formState.errors.longitude?.message) && (
+          <p className="text-xs text-destructive">
+            {form.formState.errors.latitude?.message ?? form.formState.errors.longitude?.message}
+          </p>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-1.5">
         <Label>Trường phái ăn chay áp dụng</Label>
         <div className="flex flex-wrap gap-1.5 pt-1">
-          {DIETARY_SUGGESTIONS.map((tag) => {
-            const isSelected = selectedDietary.includes(tag);
+          {DIET_TAG_OPTIONS.map((option) => {
+            const isSelected = selectedDietTags.includes(option.value);
             return (
               <Badge
-                key={tag}
+                key={option.value}
                 variant={isSelected ? 'default' : 'outline'}
                 className="cursor-pointer select-none"
-                onClick={() => toggleDietary(tag)}
+                onClick={() => toggleDietTag(option.value)}
               >
-                {tag === 'VEGAN' ? 'Thuần chay (Vegan)' : tag}
+                {option.label}
               </Badge>
             );
           })}
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="submit-hours">Giờ hoạt động</Label>
-          <Input
-            id="submit-hours"
-            placeholder="VD: 07:00 - 21:00"
-            {...form.register('openingHours')}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="submit-price">Khoảng giá</Label>
-          <Input
-            id="submit-price"
-            placeholder="VD: 25.000đ - 50.000đ"
-            {...form.register('priceRange')}
-          />
-        </div>
-      </div>
-
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="submit-phone">Số điện thoại liên hệ</Label>
-        <Input id="submit-phone" placeholder="VD: 0901234567" {...form.register('phoneNumber')} />
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="submit-dishes">
-          Món nổi bật (cách nhau bởi dấu phẩy, tối đa {MAX_DISHES} món)
-        </Label>
+        <Label htmlFor="submit-categories">Phân loại (cách nhau bởi dấu phẩy)</Label>
         <Input
-          id="submit-dishes"
-          placeholder="VD: Cơm sườn chay, Bún riêu chay, Lẩu nấm..."
+          id="submit-categories"
+          placeholder="VD: quán ăn, cà phê, takeaway"
           defaultValue=""
           onChange={(e) =>
-            form.setValue(
-              'dishes',
-              e.target.value
-                .split(',')
-                .map((dish) => dish.trim())
-                .filter((dish) => dish.length > 0),
-              { shouldValidate: true }
-            )
+            form.setValue('categories', splitList(e.target.value), { shouldValidate: true })
           }
         />
-        {form.formState.errors.dishes && (
-          <p className="text-xs text-destructive">{form.formState.errors.dishes.message}</p>
-        )}
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="submit-note">Ghi chú bổ sung</Label>
-        <Textarea
-          id="submit-note"
-          rows={2}
-          placeholder="Ví dụ: Có chỗ đậu xe máy rộng rãi, ngày rằm có tiệc buffet..."
-          {...form.register('note')}
+        <Label htmlFor="submit-allergens">Mã dị ứng được loại trừ (tùy chọn)</Label>
+        <Input
+          id="submit-allergens"
+          placeholder="VD: GLUTEN, PEANUT"
+          defaultValue=""
+          onChange={(e) =>
+            form.setValue('allergenFreeCodes', splitList(e.target.value), {
+              shouldValidate: true,
+            })
+          }
         />
       </div>
 
-      {duplicateWarning && <p className="text-xs text-destructive">{duplicateWarning}</p>}
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="submit-excluded">Nguyên liệu bị loại trừ (tùy chọn)</Label>
+        <Textarea
+          id="submit-excluded"
+          rows={2}
+          placeholder="Ví dụ: nước mắm có cá, nước dừa tươi"
+          defaultValue=""
+          onChange={(e) =>
+            form.setValue('excludedIngredients', splitList(e.target.value), {
+              shouldValidate: true,
+            })
+          }
+        />
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        Quán sẽ ở trạng thái chờ duyệt và không hiển thị công khai cho tới khi quản trị viên xác
+        nhận. Kết quả duyệt, kể cả lý do nếu quán bị từ chối, sẽ được thông báo cho bạn sau.
+      </p>
+
+      {submitError && <p className="text-xs text-destructive">{submitError}</p>}
 
       <div className="flex justify-end gap-2 pt-2">
         <Button type="button" variant="ghost" onClick={() => onDone?.()}>
           Hủy
         </Button>
-        <Button type="submit" disabled={submitMutation.isPending}>
+        <Button type="submit" disabled={submitMutation.isPending || !hasCoordinates}>
           {submitMutation.isPending ? 'Đang gửi...' : 'Gửi đề xuất quán'}
         </Button>
       </div>

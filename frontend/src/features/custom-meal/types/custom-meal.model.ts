@@ -44,6 +44,7 @@ export interface CustomMeal {
   userProtein: number | null;
   userCarbs: number | null;
   userFat: number | null;
+  userFiber: number | null;
 
   // Dinh dưỡng tính toán từ nguyên liệu chuẩn
   calculatedCalories: number | null;
@@ -72,6 +73,7 @@ export interface CustomMealListItem {
   servings: number;
   sourceNote: string | null;
   userCalories: number | null;
+  userFiber?: number | null;
   calculatedCalories: number | null;
   coverageRatio: number;
   isFullyCovered: boolean;

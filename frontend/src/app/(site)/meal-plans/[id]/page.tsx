@@ -15,7 +15,7 @@ import {
   useSwapMealItemMutation,
   useManualAddMealItemMutation,
 } from '@/features/meal-plan/queries/meal-plan.queries';
-import { DayGrid } from '@/features/meal-plan/components/day-grid';
+import { DayGrid, formatDayLabel } from '@/features/meal-plan/components/day-grid';
 import { ShoppingList } from '@/features/meal-plan/components/shopping-list';
 import { WarningsBanner } from '@/features/meal-plan/components/warnings-banner';
 import { SwapMealItemDialog } from '@/features/meal-plan/components/swap-dialog';
@@ -24,36 +24,18 @@ import {
   MealPlanItemSelector,
   type SelectedMealItem,
 } from '@/features/meal-plan/components/meal-plan-item-selector';
-import type { MealSlot } from '@/features/meal-plan/types/meal-plan.model';
+import type {
+  EstimatedNutritionTargets,
+  MealSlot,
+} from '@/features/meal-plan/types/meal-plan.model';
 
-import {
-  MealAnalysisSummaryBar,
-  MealAnalysisAlerts,
-  MealAnalysisDetailDialog,
-  MealAnalysisSwapDialog,
-  MealAnalysisBadge,
-  IncompleteDataBanner,
-  useMealAnalysisQuery,
-  useAnalyzeMealPlanMutation,
-  type MealWarning,
-  type SwapSuggestion,
-} from '@/features/meal-analysis';
-
-/** Chi tiết 1 phiên bản thực đơn: 21 ô + đi chợ + cảnh báo + dinh dưỡng + phân tích tương thích. */
+/** Chi tiết 1 phiên bản thực đơn: 21 ô + đi chợ + cảnh báo dinh dưỡng. */
 function MealPlanDetailContent({ id }: { id: string }) {
   const { data: plan, isLoading, isError, error, refetch } = useMealPlanDetailQuery(id);
   const [swapSlot, setSwapSlot] = React.useState<MealSlot | null>(null);
   const [selectorSlot, setSelectorSlot] = React.useState<MealSlot | null>(null);
   const [deleteOpen, setDeleteOpen] = React.useState(false);
 
-  // States cho phân tích tương thích và vi chất (Phase 18)
-  const [selectedDetailWarning, setSelectedDetailWarning] = React.useState<MealWarning | null>(
-    null
-  );
-  const [selectedSwapWarning, setSelectedSwapWarning] = React.useState<MealWarning | null>(null);
-
-  const { data: analysis } = useMealAnalysisQuery(plan?.id, plan?.lockVersion);
-  const analyzeMutation = useAnalyzeMealPlanMutation(plan?.id ?? '', plan?.lockVersion);
   const swapMutation = useSwapMealItemMutation();
   const manualAddMutation = useManualAddMealItemMutation();
 
@@ -69,38 +51,29 @@ function MealPlanDetailContent({ id }: { id: string }) {
       }));
   }, [plan?.items]);
 
-  // Bản đồ cảnh báo theo ô bữa ăn để hiển thị Badge trực quan trong DayGrid
-  const warningsBySlotId = React.useMemo(() => {
-    const map = new Map<string, MealWarning[]>();
-    if (!analysis || analysis.isStale) return map;
-    for (const warning of analysis.warnings) {
-      for (const item of warning.affectedItems) {
-        if (item.planItemId) {
-          const list = map.get(item.planItemId) ?? [];
-          list.push(warning);
-          map.set(item.planItemId, list);
-        }
-      }
+  // Mục tiêu dinh dưỡng đa lượng hàng ngày: ưu tiên từ backend, fallback chuẩn theo calo TDEE (20% Đạm, 30% Béo, 50% Bột, 14g xơ/1000kcal)
+  const dailyNutritionTargets: EstimatedNutritionTargets = React.useMemo(() => {
+    if (plan?.estimatedNutritionTargets) {
+      return plan.estimatedNutritionTargets;
     }
-    return map;
-  }, [analysis]);
-
-  const handleApplySwap = async (planItemId: string, swap: SwapSuggestion) => {
-    if (!plan) return;
-    const updated = await swapMutation.mutateAsync({
-      planId: plan.id,
-      itemId: planItemId,
-      expectedVersion: plan.lockVersion,
-      idempotencyKey: `swap-suggestion-${planItemId}-${swap.suggestedDishId}-${Date.now()}`,
-    });
-    // Kích hoạt phân tích lại sau khi đổi món thành công
-    analyzeMutation.mutate({ expectedPlanVersion: updated.lockVersion });
-  };
+    const cal = plan?.targetCalories && plan.targetCalories > 0 ? plan.targetCalories : 2000;
+    return {
+      proteinGrams: Math.round(((cal * 0.2) / 4) * 100) / 100,
+      fatGrams: Math.round(((cal * 0.3) / 9) * 100) / 100,
+      carbohydrateGrams: Math.round(((cal * 0.5) / 4) * 100) / 100,
+      fiberGrams: Math.round((cal / 1000) * 14 * 100) / 100,
+      tolerancePercent: 15,
+      estimated: true,
+      source: 'FALLBACK_TDEE',
+      sourceDetail:
+        'Mục tiêu được ước tính từ thông tin sức khỏe và mục tiêu bạn đã chọn. Đây là khoảng tham khảo, không phải số đo chính xác.',
+    };
+  }, [plan?.estimatedNutritionTargets, plan?.targetCalories]);
 
   const handleManualSelect = async (item: SelectedMealItem) => {
     if (!plan || !selectorSlot) return;
     try {
-      const updatedPlan = await manualAddMutation.mutateAsync({
+      await manualAddMutation.mutateAsync({
         planId: plan.id,
         itemId: selectorSlot.id,
         body: {
@@ -112,8 +85,6 @@ function MealPlanDetailContent({ id }: { id: string }) {
           servings: item.servings,
         },
       });
-      // Tự động phân tích lại thực đơn với phiên bản mới
-      analyzeMutation.mutate({ expectedPlanVersion: updatedPlan.lockVersion });
     } catch {
       // Lỗi đã được xử lý bằng toast ở query layer
     }
@@ -150,7 +121,7 @@ function MealPlanDetailContent({ id }: { id: string }) {
               </h1>
               <p className="mt-1 flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
                 <Flame className="size-4" />
-                Mục tiêu {plan.targetCalories} kcal/ngày — {plan.filledSlots}/{plan.totalSlots} bữa
+                Mục tiêu ~{plan.targetCalories} kcal/ngày — {plan.filledSlots}/{plan.totalSlots} bữa
                 đã lấp
               </p>
             </div>
@@ -170,26 +141,113 @@ function MealPlanDetailContent({ id }: { id: string }) {
             </Button>
           </div>
 
-          {/* Banner cảnh báo phát sinh từ tạo thực đơn cơ bản */}
-          <WarningsBanner warnings={plan.warnings} />
-
-          {/* Module Phân tích Khẩu phần & Tương thích Dinh dưỡng (Phase 18) */}
-          <MealAnalysisSummaryBar
-            analysis={analysis}
-            isLoading={analyzeMutation.isPending}
-            onAnalyze={() => analyzeMutation.mutate({ expectedPlanVersion: plan.lockVersion })}
-          />
-
-          {analysis?.hasIncompleteData && (
-            <IncompleteDataBanner
-              confidence={analysis.overallConfidence}
-              notes={analysis.incompleteDataNotes}
-            />
+          {/* Banner tóm tắt kế hoạch người dùng (Phase 18) */}
+          {plan.userSummary && (
+            <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-1.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-semibold text-foreground">
+                  {plan.userSummary.title || 'Tóm tắt kế hoạch thực đơn'}
+                </h3>
+                {plan.userSummary.hardConstraintsPreserved && (
+                  <Badge
+                    variant="outline"
+                    className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs"
+                  >
+                    ✓ Bảo toàn ràng buộc ăn kiêng
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground">{plan.userSummary.detail}</p>
+              {plan.userSummary.suggestion && (
+                <p className="text-xs text-muted-foreground italic">
+                  💡 {plan.userSummary.suggestion}
+                </p>
+              )}
+            </div>
           )}
 
-          {/* Lưới lịch tuần có nhúng Huy hiệu cảnh báo trên từng ô bữa ăn */}
+          {/* Mục tiêu dinh dưỡng đa lượng TDEE */}
+          <div className="rounded-xl border bg-card p-4 space-y-3 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 text-xs">
+              <div className="space-y-0.5">
+                <span className="font-semibold text-foreground">
+                  Mục tiêu 4 chỉ số dinh dưỡng mỗi ngày
+                </span>{' '}
+                <span className="text-muted-foreground text-xs">
+                  ({dailyNutritionTargets.sourceDetail})
+                </span>
+              </div>
+              <Badge
+                variant="outline"
+                className="self-start sm:self-center shrink-0 text-[11px] font-normal border-border/80 bg-muted/20"
+              >
+                Dung sai cho phép: ±{dailyNutritionTargets.tolerancePercent}%
+              </Badge>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+              {/* Đạm (Protein) */}
+              <div className="rounded-xl border border-emerald-200/80 bg-emerald-50/60 p-3 text-center transition-all hover:border-emerald-300 hover:shadow-xs dark:border-emerald-800/40 dark:bg-emerald-950/25 dark:hover:border-emerald-700">
+                <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-emerald-800 dark:text-emerald-300">
+                  <span className="size-2 rounded-full bg-emerald-500 shadow-xs" />
+                  Đạm (Protein)
+                </div>
+                <div className="mt-1 text-base sm:text-lg font-bold tracking-tight text-emerald-950 dark:text-emerald-100">
+                  {dailyNutritionTargets.proteinGrams !== null
+                    ? `~${dailyNutritionTargets.proteinGrams}g`
+                    : '—'}
+                </div>
+              </div>
+
+              {/* Chất béo (Fat) */}
+              <div className="rounded-xl border border-sky-200/80 bg-sky-50/60 p-3 text-center transition-all hover:border-sky-300 hover:shadow-xs dark:border-sky-800/40 dark:bg-sky-950/25 dark:hover:border-sky-700">
+                <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-sky-800 dark:text-sky-300">
+                  <span className="size-2 rounded-full bg-sky-500 shadow-xs" />
+                  Chất béo (Fat)
+                </div>
+                <div className="mt-1 text-base sm:text-lg font-bold tracking-tight text-sky-950 dark:text-sky-100">
+                  {dailyNutritionTargets.fatGrams !== null
+                    ? `~${dailyNutritionTargets.fatGrams}g`
+                    : '—'}
+                </div>
+              </div>
+
+              {/* Chất xơ (Fiber) */}
+              <div className="rounded-xl border border-purple-200/80 bg-purple-50/60 p-3 text-center transition-all hover:border-purple-300 hover:shadow-xs dark:border-purple-800/40 dark:bg-purple-950/25 dark:hover:border-purple-700">
+                <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-purple-800 dark:text-purple-300">
+                  <span className="size-2 rounded-full bg-purple-500 shadow-xs" />
+                  Chất xơ (Fiber)
+                </div>
+                <div className="mt-1 text-base sm:text-lg font-bold tracking-tight text-purple-950 dark:text-purple-100">
+                  {dailyNutritionTargets.fiberGrams !== null
+                    ? `~${dailyNutritionTargets.fiberGrams}g`
+                    : '—'}
+                </div>
+              </div>
+
+              {/* Tinh bột (Carbs) */}
+              <div className="rounded-xl border border-amber-200/80 bg-amber-50/60 p-3 text-center transition-all hover:border-amber-300 hover:shadow-xs dark:border-amber-800/40 dark:bg-amber-950/25 dark:hover:border-amber-700">
+                <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300">
+                  <span className="size-2 rounded-full bg-amber-500 shadow-xs" />
+                  Tinh bột (Carbs)
+                </div>
+                <div className="mt-1 text-base sm:text-lg font-bold tracking-tight text-amber-950 dark:text-amber-100">
+                  {dailyNutritionTargets.carbohydrateGrams !== null
+                    ? `~${dailyNutritionTargets.carbohydrateGrams}g`
+                    : '—'}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Banner cảnh báo phát sinh từ tạo thực đơn cơ bản */}
+          <WarningsBanner warnings={plan.warnings} warningDetails={plan.warningDetails} />
+
+          {/* Lưới lịch 7 ngày × 3 bữa: hiển thị Calo, Protein, Chất béo, Chất xơ từng ngày kèm cảnh báo vượt ngưỡng */}
           <DayGrid
             items={plan.items}
+            days={plan.days}
+            targetCalories={plan.targetCalories}
+            nutritionTargets={dailyNutritionTargets}
             actions={(slot) => (
               <div className="flex items-center gap-1.5 pt-1">
                 {slot.filled ? (
@@ -226,26 +284,7 @@ function MealPlanDetailContent({ id }: { id: string }) {
                 )}
               </div>
             )}
-            slotBadge={(slot) => {
-              const warnings = warningsBySlotId.get(slot.id);
-              if (!warnings || warnings.length === 0) return null;
-              return (
-                <MealAnalysisBadge
-                  warnings={warnings}
-                  onClick={(ws) => setSelectedDetailWarning(ws[0])}
-                />
-              );
-            }}
           />
-
-          {/* Module Chi tiết Cảnh báo Dinh dưỡng (Phase 18) */}
-          {analysis && !analysis.isStale && (
-            <MealAnalysisAlerts
-              warnings={analysis.warnings}
-              onViewDetails={setSelectedDetailWarning}
-              onViewSwaps={setSelectedSwapWarning}
-            />
-          )}
 
           <ShoppingList items={plan.shoppingList} planMeals={planMeals} />
 
@@ -271,7 +310,7 @@ function MealPlanDetailContent({ id }: { id: string }) {
               if (!open) setSelectorSlot(null);
             }}
             onSelect={handleManualSelect}
-            dayLabel={selectorSlot?.date}
+            dayLabel={selectorSlot ? formatDayLabel(selectorSlot.date) : undefined}
             mealTypeLabel={selectorSlot?.mealTypeLabel}
           />
 
@@ -281,26 +320,6 @@ function MealPlanDetailContent({ id }: { id: string }) {
             expectedVersion={plan.lockVersion}
             open={deleteOpen}
             onOpenChange={setDeleteOpen}
-          />
-
-          {/* Hộp thoại xem chi tiết cơ sở khoa học & nguồn tài liệu */}
-          <MealAnalysisDetailDialog
-            warning={selectedDetailWarning}
-            open={selectedDetailWarning !== null}
-            onOpenChange={(open) => {
-              if (!open) setSelectedDetailWarning(null);
-            }}
-          />
-
-          {/* Hộp thoại gợi ý đổi món khắc phục cảnh báo */}
-          <MealAnalysisSwapDialog
-            warning={selectedSwapWarning}
-            open={selectedSwapWarning !== null}
-            onOpenChange={(open) => {
-              if (!open) setSelectedSwapWarning(null);
-            }}
-            onSelectSwap={handleApplySwap}
-            isSwapping={swapMutation.isPending}
           />
         </>
       )}

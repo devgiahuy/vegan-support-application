@@ -239,6 +239,8 @@ Thêm recipe hoặc private custom meal vào slot
           "algorithmVersion",
           "recommendationVersion",
           "warnings",
+          "warningDetails",
+          "userSummary",
           "nutritionDataQuality",
           "micronutrientSummary",
           "explanation",
@@ -291,6 +293,14 @@ Thêm recipe hoặc private custom meal vào slot
             "type": "array",
             "_truncated": true
           },
+          "warningDetails": {
+            "type": "array",
+            "_truncated": true
+          },
+          "userSummary": {
+            "type": "object",
+            "_truncated": true
+          },
           "nutritionDataQuality": {
             "type": "string",
             "_truncated": true
@@ -330,20 +340,6 @@ Thêm recipe hoặc private custom meal vào slot
       "type": "object",
       "required": [
         "page",
-        "limit",
-        "total",
-        "totalPages"
-      ],
-      "properties": {
-        "page": {
-          "type": "integer"
-        },
-        "limit": {
-          "type": "integer"
-        },
-        "total": {
-          "type": "integer"
-        },
   …(truncated — xem api-catalog.json)
 ```
 
@@ -376,6 +372,8 @@ Thêm recipe hoặc private custom meal vào slot
         "algorithmVersion",
         "recommendationVersion",
         "warnings",
+        "warningDetails",
+        "userSummary",
         "nutritionDataQuality",
         "micronutrientSummary",
         "explanation",
@@ -386,7 +384,9 @@ Thêm recipe hoặc private custom meal vào slot
         "constraintSnapshot",
         "items",
         "shoppingList",
-        "analysis"
+        "analysis",
+        "days",
+        "estimatedNutritionTargets"
       ],
       "properties": {
         "id": {
@@ -433,62 +433,54 @@ Thêm recipe hoặc private custom meal vào slot
             "_truncated": true
           }
         },
-        "nutritionDataQuality": {
-          "type": "string",
-          "enum": [
-            "COMPLETE",
-            "PARTIAL",
-            "UNAVAILABLE"
-          ]
+        "warningDetails": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "_truncated": true
+          }
         },
-        "micronutrientSummary": {
+        "userSummary": {
           "type": "object",
           "required": [
-            "vitaminB12Mcg",
-            "recipesWithData",
-            "filledRecipeCount"
+            "status",
+            "title",
+            "detail",
+            "suggestion",
+            "hardConstraintsPreserved"
           ],
           "properties": {
-            "vitaminB12Mcg": {
+            "status": {
+              "type": "string",
+              "_truncated": true
+            },
+            "title": {
+              "type": "string",
+              "_truncated": true
+            },
+            "detail": {
+              "type": "string",
+              "_truncated": true
+            },
+            "suggestion": {
               "type": [
-                "number",
+                "string",
                 "null"
               ],
               "_truncated": true
             },
-            "recipesWithData": {
-              "type": "integer",
-              "_truncated": true
-            },
-            "filledRecipeCount": {
-              "type": "integer",
+            "hardConstraintsPreserved": {
+              "type": "boolean",
               "_truncated": true
             }
           },
           "additionalProperties": false
         },
-        "explanation": {
-          "type": [
-            "string",
-            "null"
-          ]
-        },
-        "filledSlots": {
-          "type": "integer"
-        },
-        "totalSlots": {
-          "type": "number",
+        "nutritionDataQuality": {
+          "type": "string",
           "enum": [
-            21
-          ]
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format"
+            "COMPLETE",
+            "PARTIAL",
   …(truncated — xem api-catalog.json)
 ```
 
