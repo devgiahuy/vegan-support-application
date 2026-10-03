@@ -1260,5 +1260,5 @@ export async function seedComprehensiveData(
     });
   }
 
-  console.info('Successfully seeded comprehensive VeggieConnect sample dataset with 60+ ingredients, 13 recipes, 4 handbooks, 3 videos, community, pantry, and media assets.');
+  console.info('Successfully seeded comprehensive VeggieConnect sample dataset with 60+ ingredients, 25 recipes, 4 handbooks, 3 videos, community, pantry, and media assets.');
 }
