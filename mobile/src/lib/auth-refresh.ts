@@ -4,15 +4,14 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { API_BASE_URL } from './env';
 
 /**
- * TODO(mobile-auth): Backend chỉ đặt refreshToken qua HttpOnly cookie
- * (`backend/src/modules/auth/auth.controller.ts`), không trả trong JSON body.
- * RN không có `document.cookie`/localStorage như web nên cơ chế "sống sót qua khi
- * kill app" của cookie native chưa được kiểm chứng ổn định trên mọi thiết bị.
- * Hàm dưới đây gọi `/auth/refresh` với `withCredentials: true` (dựa vào cookie jar
- * native của RN còn hiệu lực trong phiên app đang mở). Cần quyết định chiến lược
- * lâu dài (cookie-jar lib riêng, hay đổi hợp đồng BE cho mobile) trước khi coi
- * luồng "giữ đăng nhập sau khi tắt app" là hoàn thiện.
+ * Backend chỉ đặt refreshToken qua HttpOnly cookie, không trả trong JSON body. Mobile dựa vào
+ * kho cookie gốc của hệ điều hành (Android CookieManager / iOS NSHTTPCookieStorage): cookie được
+ * lưu xuống đĩa khi đăng nhập và tự gửi lại ở `/auth/refresh` nhờ `withCredentials: true`, kể cả
+ * sau khi tắt/mở lại app. Việc khôi phục phiên lúc khởi động nằm ở `restoreSession`
+ * (`features/auth/lib/restore-session.ts`). Cần kiểm chứng trên thiết bị thật.
  */
+
+const REFRESH_TIMEOUT_MS = 10000;
 
 let refreshPromise: Promise<string | null> | null = null;
 
@@ -25,7 +24,7 @@ export async function sharedRefresh(): Promise<string | null> {
       const res = await axios.post<{ data?: { accessToken?: string } }>(
         `${API_BASE_URL}${API_ENDPOINTS.AUTH.REFRESH}`,
         {},
-        { withCredentials: true }
+        { withCredentials: true, timeout: REFRESH_TIMEOUT_MS }
       );
       const accessToken = res.data?.data?.accessToken;
       if (!accessToken) {

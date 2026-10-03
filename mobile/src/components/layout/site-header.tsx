@@ -2,6 +2,7 @@ import { Pressable, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, type Href, usePathname, useRouter } from 'expo-router';
 import { ChevronLeft, LogIn, Search } from 'lucide-react-native';
+import { NotificationBell } from '@/features/notification/components/notification-bell';
 import { useIconColors } from '@/lib/theme-colors';
 import { useAuthStore } from '@/store/useAuthStore';
 import { ThemeToggle } from './theme-toggle';
@@ -70,6 +71,7 @@ export function SiteHeader() {
             </Pressable>
           </Link>
           <ThemeToggle />
+          <NotificationBell />
           {!isAuthenticated ? (
             <Link href={'/(auth)/login' as Href} asChild>
               <Pressable className="flex-row items-center gap-1.5 rounded-full bg-primary px-3 py-1.5">

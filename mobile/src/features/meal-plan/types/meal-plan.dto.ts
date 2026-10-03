@@ -1,3 +1,7 @@
+/**
+ * DTO meal plans — khớp OpenAPI backend (`MealPlanResponse`). Các field mới của contract 2026-09-28
+ * (`days`, `userSummary`, `warningDetails`, `estimatedNutritionTargets`) đều optional để tương thích ngược.
+ */
 export interface MealSlotDto {
   id?: string;
   itemId?: string;
@@ -7,10 +11,12 @@ export interface MealSlotDto {
   meal_type?: string;
   position?: number | string;
   status?: string;
+  sourceType?: string;
   targetCalories?: number | string;
   target_calories?: number | string;
-  calories?: number | string;
-  tolerancePercent?: number | string;
+  servings?: number | string | null;
+  calories?: number | string | null;
+  tolerancePercent?: number | string | null;
   reasonCodes?: (string | null)[] | null;
   warningCodes?: (string | null)[] | null;
   reason?: string;
@@ -23,11 +29,16 @@ export interface MealSlotDto {
     name?: string;
     coverImageUrl?: string;
     difficulty?: string;
-    calories?: number | string;
-    protein?: number | string;
-    carbs?: number | string;
-    fat?: number | string;
-    servings?: number | string;
+  } | null;
+  customMeal?: {
+    id?: string;
+    name?: string;
+    nutritionCoverage?: string;
+  } | null;
+  unresolved?: {
+    code?: string;
+    reason?: string;
+    hardConstraintsPreserved?: boolean;
   } | null;
 }
 
@@ -44,6 +55,41 @@ export interface ShoppingListItemDto {
   sourceItemCount?: number | string;
 }
 
+export interface MealPlanWarningDetailDto {
+  code?: string;
+  severity?: string;
+  severityLabel?: string;
+  message?: string;
+  detail?: string;
+  suggestion?: string;
+  advisory?: boolean;
+  affectedSlots?: {
+    itemId?: string;
+    date?: string;
+    mealType?: string;
+    name?: string;
+  }[];
+}
+
+export interface EstimatedMacroDto {
+  proteinGrams?: number | string | null;
+  fiberGrams?: number | string | null;
+  fatGrams?: number | string | null;
+  carbohydrateGrams?: number | string | null;
+}
+
+export interface MealPlanDayDto {
+  date?: string;
+  dayOfWeek?: string;
+  estimatedTotals?:
+    | (EstimatedMacroDto & {
+        estimated?: boolean;
+        confidence?: number | string;
+        uncertaintyNotes?: (string | null)[] | null;
+      })
+    | null;
+}
+
 export interface MealPlanDto {
   id?: string;
   weekStart?: string;
@@ -58,6 +104,14 @@ export interface MealPlanDto {
   algorithmVersion?: string;
   recommendationVersion?: string;
   warnings?: (string | null)[] | null;
+  warningDetails?: (MealPlanWarningDetailDto | null)[] | null;
+  userSummary?: {
+    status?: string;
+    title?: string;
+    detail?: string;
+    suggestion?: string | null;
+    hardConstraintsPreserved?: boolean;
+  } | null;
   nutritionDataQuality?: string;
   nutrition_data_quality?: string;
   micronutrientSummary?: {
@@ -78,6 +132,15 @@ export interface MealPlanDto {
   items?: (MealSlotDto | null)[] | null;
   shoppingList?: (ShoppingListItemDto | null)[] | null;
   shopping_list?: (ShoppingListItemDto | null)[] | null;
+  days?: (MealPlanDayDto | null)[] | null;
+  estimatedNutritionTargets?:
+    | (EstimatedMacroDto & {
+        estimated?: boolean;
+        source?: string;
+        sourceDetail?: string;
+        tolerancePercent?: number | string;
+      })
+    | null;
 }
 
 export interface GenerateMealPlanRequestDto {
@@ -92,6 +155,16 @@ export interface SwapMealPlanItemRequestDto {
   expectedVersion: number;
   idempotencyKey: string;
   seed?: string;
+}
+
+/** Body `PATCH /meal-plans/:id/items/:itemId/manual-add`. */
+export interface ManualAddMealItemRequestDto {
+  expectedVersion: number;
+  idempotencyKey: string;
+  sourceType: 'RECIPE' | 'CUSTOM_MEAL';
+  recipeId?: string;
+  customMealId?: string;
+  servings?: number;
 }
 
 export interface MealPlanResponseDto {

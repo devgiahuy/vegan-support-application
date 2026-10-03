@@ -46,8 +46,8 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      // Chỉ persist user. Token chỉ giữ in-memory (mất khi kill app) — xem TODO
-      // trong `lib/auth-refresh.ts` về chiến lược khôi phục phiên trên mobile.
+      // Chỉ persist user. Token chỉ giữ in-memory (mất khi kill app); lúc khởi động
+      // `restoreSession` lấy lại access token bằng cookie refresh token.
       partialize: (state) => ({ user: state.user }) as AuthState,
     }
   )

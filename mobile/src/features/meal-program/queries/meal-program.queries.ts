@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { mealProgramApi, type MealProgramQueryParams } from '../api/meal-program.api';
-import type { CreateMealProgramInput } from '../types/meal-program.model';
+import type { CreateMealProgramInput, MealProgramAction } from '../types/meal-program.model';
 import { useAuthStore } from '@/store/useAuthStore';
 
 export const MEAL_PROGRAM_QUERY_KEYS = {
@@ -37,13 +37,15 @@ export function useCreateMealProgramMutation() {
   });
 }
 
-export function useConfirmMealProgramMutation(id: string) {
+/** Mọi hành động sửa lộ trình đều đi qua một mutation; thành công thì cập nhật chi tiết tại chỗ. */
+export function useUpdateMealProgramMutation(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (expectedVersion: number) => mealProgramApi.confirm(id, expectedVersion),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: MEAL_PROGRAM_QUERY_KEYS.all });
+    mutationFn: (vars: { action: MealProgramAction; expectedVersion: number }) =>
+      mealProgramApi.update(id, vars.action, vars.expectedVersion),
+    onSuccess: (program) => {
+      queryClient.setQueryData(MEAL_PROGRAM_QUERY_KEYS.detail(id), program);
+      void queryClient.invalidateQueries({ queryKey: [...MEAL_PROGRAM_QUERY_KEYS.all, 'list'] });
     },
   });
 }
-

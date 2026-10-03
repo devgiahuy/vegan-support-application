@@ -1,15 +1,19 @@
-import { Alert, Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { Link, type Href } from 'expo-router';
 import {
   ArrowRight,
-  CalendarDays,
   CheckCircle2,
+  ChefHat,
+  Layers,
   Leaf,
   MapPin,
   Navigation,
+  Scale,
+  ShieldAlert,
   Sparkles,
   TrendingUp,
   UtensilsCrossed,
+  type LucideIcon,
 } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
@@ -25,16 +29,48 @@ const STATS = [
   { icon: TrendingUp, value: '100%', label: 'Đo Calo & Đạm' },
 ];
 
-/** Các tính năng chưa dựng màn hình thật — chỉ báo "sắp ra mắt" thay vì điều hướng vỡ route. */
-function notifyComingSoon(feature: string) {
-  Alert.alert('Sắp ra mắt', `${feature} đang được VeggieConnect hoàn thiện, quay lại sau nhé!`);
-}
+/** Bốn lối vào tra cứu dinh dưỡng — đồng bộ khối "Tra cứu Dinh dưỡng & Kiến thức Khoa học" của web. */
+const KNOWLEDGE_CARDS: {
+  tab: 'INGREDIENT' | 'INTERACTION' | 'COOKING' | 'INTAKE';
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  action: string;
+}[] = [
+  {
+    tab: 'INGREDIENT',
+    icon: Scale,
+    title: 'Dinh dưỡng chuẩn 100g',
+    description: 'Đạm, béo, xơ và vi chất, minh bạch nguồn kiểm định.',
+    action: 'Tra cứu ngay',
+  },
+  {
+    tab: 'INTERACTION',
+    icon: Layers,
+    title: 'Kiêng kỵ thực phẩm',
+    description: 'Quy tắc phối hợp nguyên liệu: cùng món, cùng bữa, cùng ngày.',
+    action: 'Xem quy tắc',
+  },
+  {
+    tab: 'COOKING',
+    icon: ChefHat,
+    title: 'Phương pháp nấu nướng',
+    description: 'Hệ số hao hụt khối lượng và bảo tồn vi chất khi luộc, hấp, xào.',
+    action: 'Khám phá',
+  },
+  {
+    tab: 'INTAKE',
+    icon: ShieldAlert,
+    title: 'Nhu cầu khuyến nghị & UL',
+    description: 'Chuẩn RDA/AI hằng ngày và giới hạn dung nạp tối đa theo nhóm đối tượng.',
+    action: 'Đối chiếu',
+  },
+];
 
 /**
  * Trang chủ mobile — bố cục & nội dung đồng bộ `frontend/src/app/(site)/page.tsx`
- * (Hero → Món xu hướng → AI chat & Thực đơn tuần → Quán chay). Phần Hero Remotion,
- * "Gợi ý cho bạn" (recommendation) và bản đồ quán ăn thật chưa dựng ở mobile —
- * xem TODO tương ứng bên dưới.
+ * (Hero → Gợi ý cho bạn → Món xu hướng → Tra cứu dinh dưỡng → Quán chay). Hero Remotion
+ * của web không có ở mobile. Các khối AI chat / thực đơn tuần viết cứng đã bị bỏ giống web.
  */
 export default function HomeScreen() {
   const colors = useIconColors();
@@ -52,11 +88,12 @@ export default function HomeScreen() {
           </Text>
         </View>
 
-        <Text className="mt-4 text-3xl font-extrabold leading-tight tracking-tight text-foreground">
-          Ăn chay <Text className="text-primary">đủ chất,</Text>
-        </Text>
-        <Text className="text-3xl font-extrabold leading-tight tracking-tight text-foreground">
-          dễ dàng mỗi ngày
+        <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
+          className="mt-4 text-2xl font-extrabold leading-tight tracking-tight text-foreground">
+          Ăn chay <Text className="text-primary">đủ chất,</Text> dễ dàng mỗi ngày
         </Text>
 
         <Text className="mt-3 text-sm leading-relaxed text-muted-foreground">
@@ -137,85 +174,42 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* AI chat teaser */}
+      {/* Tra cứu dinh dưỡng & kiến thức khoa học */}
       <View className="mt-8 px-5">
-        <View className="rounded-2xl border border-border bg-card p-4">
-          <View className="flex-row items-center gap-2.5">
-            <View className="h-9 w-9 items-center justify-center rounded-full bg-cta/15">
-              <Sparkles size={16} color={colors.cta} />
-            </View>
-            <View>
-              <Text className="text-[11px] font-semibold uppercase tracking-wide text-cta">
-                ChayXanh AI Chat
-              </Text>
-              <Text className="text-base font-bold text-foreground">Hỏi AI Dinh Dưỡng Thực Vật</Text>
-            </View>
-          </View>
-
-          <View className="mt-3.5 rounded-xl border border-border bg-muted/40 p-3">
-            <Text className="text-xs font-semibold text-foreground">Gợi ý hoàn hảo cho bạn:</Text>
-            <Text className="mt-1.5 text-sm font-medium text-foreground">
-              Canh bí đỏ hầm đậu hũ non & hạt phỉ
-            </Text>
-            <Text className="mt-1 text-xs text-muted-foreground">
-              Nấu chỉ 18 phút. Cung cấp 17.5g protein thực vật, giàu Vitamin A và kẽm.
-            </Text>
-          </View>
-
-          <View className="mt-3.5">
-            <Link href={'/assistant' as Href} asChild>
-              <PrimaryButton
-                label="Hỏi bất kỳ nguyên liệu hoặc mục tiêu..."
-                variant="outline"
-                icon={<ArrowRight size={15} color={colors.foreground} />}
-              />
-            </Link>
-          </View>
-        </View>
-      </View>
-
-      {/* Weekly meal plan teaser */}
-      <View className="mt-4 px-5">
-        <View className="rounded-2xl border border-border bg-card p-4">
-          <Text className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Kế hoạch ăn uống
+        <View className="flex-row items-center gap-1.5">
+          <Layers size={14} color={colors.primary} />
+          <Text className="text-xs font-semibold uppercase tracking-wide text-primary">
+            Cơ sở dữ liệu chuẩn hóa
           </Text>
-          <Text className="mt-0.5 text-base font-bold text-foreground">Thực đơn tuần cân bằng</Text>
+        </View>
+        <Text className="mt-1 text-xl font-bold text-foreground">Tra cứu dinh dưỡng & kiến thức</Text>
+        <Text className="mt-1 text-sm text-muted-foreground">
+          Số liệu 100g có nguồn gốc, quy tắc kiêng kỵ và phương pháp bảo tồn vi chất.
+        </Text>
 
-          <View className="mt-3.5 gap-2.5">
-            <View className="flex-row items-center justify-between rounded-xl border border-border p-3">
-              <View className="flex-1 pr-2">
-                <Text className="text-xs text-muted-foreground">☀️ Bữa trưa thuần khiết</Text>
-                <Text className="text-sm font-medium text-foreground">
-                  Cơm gạo lứt + Nấm kho tiêu + Canh cải bẹ xanh
-                </Text>
-              </View>
-              <Text className="text-xs font-semibold text-foreground">480 kcal</Text>
-            </View>
-            <View className="flex-row items-center justify-between rounded-xl border border-border p-3">
-              <View className="flex-1 pr-2">
-                <Text className="text-xs text-muted-foreground">🌙 Bữa tối thanh nhẹ</Text>
-                <Text className="text-sm font-medium text-foreground">
-                  Phở nấm rơm rau củ quả ngọt lành
-                </Text>
-              </View>
-              <Text className="text-xs font-semibold text-foreground">320 kcal</Text>
-            </View>
-          </View>
-
-          <View className="mt-3.5">
-            <Link href={'/meal-plans' as Href} asChild>
-              <PrimaryButton
-              label="Tạo thực đơn 7 ngày của riêng bạn"
-              icon={<CalendarDays size={16} color={colors.primaryForeground} />}
-              />
+        <View className="mt-4 flex-row flex-wrap gap-3">
+          {KNOWLEDGE_CARDS.map((card) => (
+            <Link key={card.tab} href={`/food-data?tab=${card.tab}` as Href} asChild>
+              <Pressable className="w-[47%] justify-between rounded-2xl border border-border bg-card p-4">
+                <View>
+                  <View className="h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
+                    <card.icon size={18} color={colors.primary} />
+                  </View>
+                  <Text className="mt-3 text-sm font-bold text-foreground">{card.title}</Text>
+                  <Text className="mt-1 text-xs leading-relaxed text-muted-foreground">{card.description}</Text>
+                </View>
+                <View className="mt-3 flex-row items-center gap-1">
+                  <Text className="text-xs font-semibold text-primary">{card.action}</Text>
+                  <ArrowRight size={13} color={colors.primary} />
+                </View>
+              </Pressable>
             </Link>
-          </View>
+          ))}
         </View>
       </View>
 
-      {/* Restaurants teaser */}
-      <View className="mt-4 px-5">
+      {/* Restaurants */}
+      <View className="mt-8 px-5">
         <View className="flex-row items-center gap-1.5">
           <MapPin size={14} color={colors.primary} />
           <Text className="text-xs font-semibold uppercase tracking-wide text-primary">
@@ -224,20 +218,18 @@ export default function HomeScreen() {
         </View>
         <Text className="mt-1 text-xl font-bold text-foreground">Khám phá quán chay quanh bạn</Text>
 
-        <View className="mt-3.5 items-center rounded-2xl border border-dashed border-border p-6">
-          <Text className="text-center font-semibold text-foreground">
-            Đang hoàn thiện bản đồ quán chay
+        <View className="mt-3.5 rounded-2xl border border-border bg-card p-4">
+          <Text className="text-sm text-muted-foreground">
+            Cho phép vị trí hoặc nhập địa chỉ để xem quán chay gần bạn và tìm theo món.
           </Text>
-          <Text className="mt-1 text-center text-sm text-muted-foreground">
-            Danh sách quán ăn sẽ hiển thị ngay khi API địa điểm sẵn sàng.
-          </Text>
-          <View className="mt-4 w-full">
-            <PrimaryButton
-              label="Mở bản đồ quán ăn"
-              variant="outline"
-              icon={<Navigation size={16} color={colors.foreground} />}
-              onPress={() => notifyComingSoon('Bản đồ quán chay')}
-            />
+          <View className="mt-4">
+            <Link href={'/restaurants' as Href} asChild>
+              <PrimaryButton
+                label="Mở bản đồ quán"
+                variant="outline"
+                icon={<Navigation size={16} color={colors.foreground} />}
+              />
+            </Link>
           </View>
         </View>
       </View>

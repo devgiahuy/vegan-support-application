@@ -19,8 +19,10 @@ export function PostCard({ post }: { post: Article }) {
         <Image source={{ uri: post.coverImageUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
         {/* Màu cố định (không theo theme) — nền là ảnh bìa bài viết, độ sáng thay đổi tuỳ
             ảnh, không thể dựa vào token sáng/tối để đảm bảo tương phản. */}
-        <View className="absolute left-2.5 top-2.5 rounded-full bg-black/70 px-2.5 py-1">
-          <Text className="text-xs font-medium text-white">{post.category.name}</Text>
+        <View className="absolute left-2.5 top-2.5 max-w-[85%] flex-row rounded-full bg-black/70 px-2.5 py-1">
+          <Text numberOfLines={1} className="shrink text-xs font-medium text-white">
+            {post.category.name}
+          </Text>
         </View>
       </View>
 

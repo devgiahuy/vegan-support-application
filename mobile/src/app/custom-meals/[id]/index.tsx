@@ -5,7 +5,7 @@ import { Pencil, Trash2, Utensils } from 'lucide-react-native';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { useCustomMealDetailQuery, useDeleteCustomMealMutation } from '@/features/custom-meal/queries/custom-meal.queries';
-import { getApiErrorMessage } from '@/lib/api-error';
+import { getCustomMealErrorMessage } from '@/features/custom-meal/utils/custom-meal-errors';
 import { useIconColors } from '@/lib/theme-colors';
 
 export default function CustomMealDetailScreen() {
@@ -17,18 +17,18 @@ export default function CustomMealDetailScreen() {
 
   const confirmDelete = () => {
     if (!meal) return;
-    Alert.alert('Xoa bua an', 'Neu bua an dang duoc dung trong meal plan, backend co the chan xoa de giu snapshot.', [
-      { text: 'Huy', style: 'cancel' },
+    Alert.alert('Xóa bữa ăn', 'Nếu bữa ăn đang được dùng trong thực đơn, hệ thống có thể chặn xóa để giữ bản ghi thực đơn.', [
+      { text: 'Hủy', style: 'cancel' },
       {
-        text: 'Xoa',
+        text: 'Xóa',
         style: 'destructive',
         onPress: async () => {
           try {
             await deleteMutation.mutateAsync(meal.id);
-            Alert.alert('Da xoa', 'Bua an da duoc xoa.');
+            Alert.alert('Đã xóa', 'Bữa ăn đã được xóa.');
             router.replace('/custom-meals' as Href);
           } catch (error) {
-            Alert.alert('Khong xoa duoc', getApiErrorMessage(error));
+            Alert.alert('Không xóa được', getCustomMealErrorMessage(error));
           }
         },
       },
@@ -38,7 +38,7 @@ export default function CustomMealDetailScreen() {
   if (isLoading) {
     return (
       <SiteScreen>
-        <View className="px-5 pt-8"><Text className="text-sm text-muted-foreground">Dang tai bua an...</Text></View>
+        <View className="px-5 pt-8"><Text className="text-sm text-muted-foreground">Đang tải bữa ăn...</Text></View>
       </SiteScreen>
     );
   }
@@ -47,8 +47,8 @@ export default function CustomMealDetailScreen() {
     return (
       <SiteScreen>
         <View className="items-center px-5 pt-8">
-          <Text className="font-bold text-foreground">Khong tim thay bua an</Text>
-          <PrimaryButton label="Thu lai" className="mt-4 w-full" onPress={() => void refetch()} />
+          <Text className="font-bold text-foreground">Không tìm thấy bữa ăn</Text>
+          <PrimaryButton label="Thử lại" className="mt-4 w-full" onPress={() => void refetch()} />
         </View>
       </SiteScreen>
     );
@@ -83,16 +83,37 @@ export default function CustomMealDetailScreen() {
           </View>
         </View>
         <View className="flex-row gap-2">
-          <Metric label="Phan" value={String(meal.servings)} />
-          <Metric label="Calo" value={meal.calories === null ? '-' : String(meal.calories)} />
-          <Metric label="Nguyen lieu" value={String(meal.ingredientCount)} />
+          <Metric label="Phần" value={String(meal.servings)} />
+          <Metric label="Calo" value={meal.calories === null ? 'Chưa nhập' : String(meal.calories)} />
+          <Metric label="Nguyên liệu" value={String(meal.ingredientCount)} />
+        </View>
+        <View className="gap-2 rounded-2xl border border-border p-4">
+          <Text className="font-bold text-foreground">Dinh dưỡng bạn nhập (mỗi bữa)</Text>
+          <View className="flex-row gap-2">
+            <Metric label="Đạm" value={formatGrams(meal.proteinGrams)} />
+            <Metric label="Carb" value={formatGrams(meal.carbsGrams)} />
+          </View>
+          <View className="flex-row gap-2">
+            <Metric label="Béo" value={formatGrams(meal.fatGrams)} />
+            <Metric label="Xơ" value={formatGrams(meal.fiberGrams)} />
+          </View>
+          <Text className="text-[11px] text-muted-foreground">
+            {meal.nutritionCoverageLabel}. Chỉ số để trống nghĩa là chưa có dữ liệu, không phải 0.
+          </Text>
         </View>
         {meal.tags.length ? <Text className="text-sm text-muted-foreground">#{meal.tags.join(' #')}</Text> : null}
         <View className="gap-2 rounded-2xl border border-border p-4">
-          <Text className="font-bold text-foreground">Nguyen lieu</Text>
+          <Text className="font-bold text-foreground">Nguyên liệu</Text>
           {meal.ingredients.map((item) => (
-            <View key={item.id} className="flex-row justify-between rounded-xl bg-muted/50 px-3 py-2">
-              <Text className="flex-1 text-sm text-foreground">{item.displayName}</Text>
+            <View key={item.id} className="flex-row items-center justify-between gap-2 rounded-xl bg-muted/50 px-3 py-2">
+              <View className="flex-1">
+                <Text className="text-sm text-foreground">{item.displayName}</Text>
+                <Text className="text-[11px] text-muted-foreground">
+                  {item.ingredientId
+                    ? `Nguyên liệu chuẩn${item.canonicalName ? `: ${item.canonicalName}` : ''}`
+                    : 'Tên tự nhập (chưa liên kết danh mục)'}
+                </Text>
+              </View>
               <Text className="text-sm font-semibold text-primary">{item.amount} {item.unit}</Text>
             </View>
           ))}
@@ -100,6 +121,10 @@ export default function CustomMealDetailScreen() {
       </View>
     </SiteScreen>
   );
+}
+
+function formatGrams(value: number | null): string {
+  return value === null ? 'Chưa nhập' : `${value} g`;
 }
 
 function Metric({ label, value }: { label: string; value: string }) {
@@ -110,4 +135,3 @@ function Metric({ label, value }: { label: string; value: string }) {
     </View>
   );
 }
-

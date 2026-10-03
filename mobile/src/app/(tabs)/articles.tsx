@@ -22,6 +22,14 @@ const DIET_SCHOOL_FILTERS: { value: DietSchool; label: string }[] = [
   { value: 'THUAN_CHAY', label: 'Thuần chay (Vegan)' },
 ];
 
+type SortOrder = 'newest' | 'oldest';
+
+/** Chỉ sắp xếp theo ngày xuất bản (dữ liệu thật). Lượt xem/vote chưa có từ backend nên không đưa vào. */
+const SORT_OPTIONS: { value: SortOrder; label: string }[] = [
+  { value: 'newest', label: 'Mới nhất' },
+  { value: 'oldest', label: 'Cũ nhất' },
+];
+
 /**
  * "Cẩm nang" — đồng bộ bố cục/nội dung `frontend/src/app/(site)/articles/page.tsx`
  * (hero banner, tìm kiếm, pill trường phái/chủ đề, grid bài viết, callout kiểm chứng).
@@ -34,6 +42,7 @@ export default function ArticlesScreen() {
   const [query, setQuery] = React.useState('');
   const [categoryId, setCategoryId] = React.useState<string | null>(params.category ?? null);
   const [dietSchool, setDietSchool] = React.useState<DietSchool>('ALL');
+  const [sortOrder, setSortOrder] = React.useState<SortOrder>('newest');
 
   const {
     data: categoryTree = [],
@@ -52,7 +61,14 @@ export default function ArticlesScreen() {
     category: categoryId || undefined,
   });
 
-  const articles = articlesPagination?.items ?? [];
+  const articles = React.useMemo(() => {
+    const list = [...(articlesPagination?.items ?? [])];
+    const time = (date: Date | null) => (date ? date.getTime() : 0);
+    list.sort((a, b) =>
+      sortOrder === 'newest' ? time(b.publishedAt) - time(a.publishedAt) : time(a.publishedAt) - time(b.publishedAt)
+    );
+    return list;
+  }, [articlesPagination?.items, sortOrder]);
   const hasFilters = Boolean(categoryId || query || dietSchool !== 'ALL');
 
   const resetFilters = () => {
@@ -107,6 +123,28 @@ export default function ArticlesScreen() {
               <Text className="text-xs font-semibold text-foreground">Danh mục</Text>
             </Pressable>
           </Link>
+        </View>
+
+        {/* Sắp xếp */}
+        <View className="flex-row items-center gap-2">
+          <Text className="text-xs font-medium text-muted-foreground">Sắp xếp:</Text>
+          {SORT_OPTIONS.map((option) => {
+            const selected = sortOrder === option.value;
+            return (
+              <Pressable
+                key={option.value}
+                onPress={() => setSortOrder(option.value)}
+                className={cn('rounded-full px-3 py-1.5', selected ? 'bg-primary' : 'bg-muted')}>
+                <Text
+                  className={cn(
+                    'text-xs font-medium',
+                    selected ? 'text-primary-foreground' : 'text-muted-foreground'
+                  )}>
+                  {option.label}
+                </Text>
+              </Pressable>
+            );
+          })}
         </View>
 
         {/* Trường phái */}

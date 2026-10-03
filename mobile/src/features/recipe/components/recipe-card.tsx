@@ -36,11 +36,11 @@ export function RecipeCard({ recipe, className }: { recipe: Recipe; className?: 
 
         <View className="gap-2 p-3.5">
           <View className="flex-row items-center gap-3">
-            {kcal > 0 ? (
+            {kcal !== null && kcal > 0 ? (
               <View className="flex-row items-center gap-1">
                 <Flame size={13} color={colors.mutedForeground} />
                 <Text className="text-xs text-muted-foreground">
-                  {kcal} kcal{protein > 0 ? ` • ${protein}g Đạm` : ''}
+                  {kcal} kcal{protein !== null && protein > 0 ? ` • ${protein}g Đạm` : ''}
                 </Text>
               </View>
             ) : null}

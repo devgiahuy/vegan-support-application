@@ -5,12 +5,14 @@ import { type Href, useRouter } from 'expo-router';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { RecipeForm } from '@/features/recipe/components/recipe-form';
 import { useCreateRecipeMutation } from '@/features/recipe/queries/recipe.queries';
-import { getApiErrorMessage } from '@/lib/api-error';
+import { PostStatus } from '@/common/enums';
+import { getContentErrorMessage } from '@/features/recipe/utils/recipe-errors';
 import { useAuthStore } from '@/store/useAuthStore';
 
 /**
  * Đăng công thức mới — `POST /posts` (type=RECIPE) + `POST /posts/:id/submit` ngay
- * sau đó để gửi duyệt. Chưa hỗ trợ ảnh bìa (cần luồng upload Cloudinary riêng).
+ * sau đó để gửi duyệt. Nguyên liệu gắn nguyên liệu chuẩn và các bước nấu có cấu trúc.
+ * Chưa hỗ trợ ảnh bìa (cần luồng upload riêng).
  */
 export default function CreateRecipeScreen() {
   const router = useRouter();
@@ -35,10 +37,17 @@ export default function CreateRecipeScreen() {
           onSubmit={async (values) => {
             try {
               const created = await createMutation.mutateAsync(values);
-              Alert.alert('Đã gửi công thức', 'Công thức đã được gửi cho Ban biên tập kiểm duyệt.');
+              if (created.status === PostStatus.DRAFT) {
+                Alert.alert(
+                  'Đã lưu bản nháp',
+                  'Công thức đã được lưu nhưng chưa gửi duyệt được. Mở lại công thức, chọn sửa và gửi lại để Ban biên tập kiểm duyệt.'
+                );
+              } else {
+                Alert.alert('Đã gửi công thức', 'Công thức đã được gửi cho Ban biên tập kiểm duyệt.');
+              }
               router.replace(`/recipes/${created.id}` as Href);
             } catch (error) {
-              Alert.alert('Không đăng được công thức', getApiErrorMessage(error, 'Vui lòng kiểm tra dữ liệu và thử lại.'));
+              Alert.alert('Không đăng được công thức', getContentErrorMessage(error));
             }
           }}
         />

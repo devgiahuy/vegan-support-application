@@ -1,17 +1,32 @@
 import { MealPlanGoal, MealType, NutritionDataQuality } from '@/common/enums';
-import { BaseMapper, pickField, safeArray, safeDate, safeEnum, safeNumber, safeString } from '@/lib/mapper';
+import { BaseMapper, pickField, safeArray, safeBoolean, safeDate, safeEnum, safeNumber, safeString } from '@/lib/mapper';
 import type { PaginationResult } from '@/types/api';
 import type {
   DeleteMealPlanResponseDto,
+  EstimatedMacroDto,
   GenerateMealPlanRequestDto,
+  ManualAddMealItemRequestDto,
+  MealPlanDayDto,
   MealPlanDto,
   MealPlanListResponseDto,
   MealPlanResponseDto,
+  MealPlanWarningDetailDto,
   MealSlotDto,
   ShoppingListItemDto,
   SwapMealPlanItemRequestDto,
 } from '../types/meal-plan.dto';
-import type { GenerateMealPlanInput, MealPlan, MealSlot, PlanWarning, ShoppingListItem } from '../types/meal-plan.model';
+import type {
+  EstimatedMacros,
+  GenerateMealPlanInput,
+  ManualAddMealInput,
+  MealPlan,
+  MealPlanDay,
+  MealSlot,
+  MealSourceType,
+  PlanUserSummary,
+  PlanWarning,
+  ShoppingListItem,
+} from '../types/meal-plan.model';
 
 const GOAL_LABELS: Record<MealPlanGoal, string> = {
   [MealPlanGoal.MAINTAIN]: 'Giữ cân',
@@ -38,12 +53,24 @@ const WARNING_MESSAGES: Record<string, string> = {
   MICRONUTRIENT_DATA_PARTIAL: 'Dữ liệu vi chất chưa đầy đủ cho một số món.',
   MICRONUTRIENT_DATA_UNAVAILABLE: 'Chưa có dữ liệu vi chất để phân tích cho thực đơn này.',
   UNFILLED_SLOT: 'Có bữa chưa tìm được món phù hợp với luật ăn của bạn.',
+  NUTRITION_TARGET_OUTSIDE_TOLERANCE: 'Một số ngày có ước tính dinh dưỡng lệch so với mục tiêu tham khảo.',
 };
+
+const WEEKDAY_LABELS = ['Chủ nhật', 'Thứ hai', 'Thứ ba', 'Thứ tư', 'Thứ năm', 'Thứ sáu', 'Thứ bảy'];
 
 function toDateLabel(date: string): string {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
   if (!match) return date;
   return `${match[3]}/${match[2]}`;
+}
+
+/** `Thứ hai, 29/09` — tính theo UTC để không lệch ngày theo múi giờ máy. */
+function toDayLabel(date: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(date);
+  if (!match) return date;
+  const value = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+  if (Number.isNaN(value.getTime())) return date;
+  return `${WEEKDAY_LABELS[value.getUTCDay()]}, ${match[3]}/${match[2]}`;
 }
 
 function toWeekRange(weekStart: string): string {
@@ -55,6 +82,28 @@ function toWeekRange(weekStart: string): string {
   const fmt = (date: Date): string =>
     `${String(date.getUTCDate()).padStart(2, '0')}/${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
   return `${fmt(start)} - ${fmt(end)}`;
+}
+
+function nullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const parsed = safeNumber(value, Number.NaN);
+  return Number.isNaN(parsed) ? null : parsed;
+}
+
+function toMacros(dto: EstimatedMacroDto | null | undefined): EstimatedMacros | null {
+  if (!dto || typeof dto !== 'object') return null;
+  return {
+    proteinGrams: nullableNumber(dto.proteinGrams),
+    fiberGrams: nullableNumber(dto.fiberGrams),
+    fatGrams: nullableNumber(dto.fatGrams),
+    carbohydrateGrams: nullableNumber(dto.carbohydrateGrams),
+  };
+}
+
+function stringList(value: unknown): string[] {
+  return safeArray<string | null, string>(value as (string | null)[] | null | undefined, (item) => safeString(item)).filter(
+    (item) => item.length > 0
+  );
 }
 
 export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
@@ -89,7 +138,10 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
       shoppingList: this.toShoppingList(
         pickField(dto, ['shoppingList', 'shopping_list'], null) as (ShoppingListItemDto | null)[] | null
       ),
-      warnings: this.toWarnings(pickField(dto, ['warnings'], null)),
+      warnings: this.toWarnings(pickField(dto, ['warningDetails'], null), pickField(dto, ['warnings'], null)),
+      userSummary: this.toUserSummary(pickField(dto, ['userSummary'], null)),
+      days: this.toDays(pickField(dto, ['days'], null)),
+      estimatedTargets: toMacros(pickField(dto, ['estimatedNutritionTargets'], null)),
       nutritionDataQuality: quality,
       nutritionDataQualityLabel: QUALITY_LABELS[quality],
       vitaminB12Mcg: Number.isNaN(b12Raw) ? null : b12Raw,
@@ -104,11 +156,17 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
 
   private toSlot(dto: MealSlotDto | null | undefined): MealSlot {
     const recipe = pickField(dto, ['recipe'], null) as MealSlotDto['recipe'];
+    const customMeal = pickField(dto, ['customMeal'], null) as MealSlotDto['customMeal'];
+    const hasRecipe = recipe !== null && typeof recipe === 'object';
+    const hasCustomMeal = customMeal !== null && typeof customMeal === 'object';
     const status = safeString(pickField(dto, ['status'], '')).toUpperCase();
-    const filled = recipe !== null && typeof recipe === 'object' && status !== 'UNFILLED';
+    const filled = (hasRecipe || hasCustomMeal) && status !== 'UNFILLED';
     const mealType = safeEnum(pickField(dto, ['mealType', 'meal_type'], 'BREAKFAST'), MealType, MealType.BREAKFAST);
     const date = safeString(pickField(dto, ['date'], ''));
-    const calories = filled ? safeNumber(pickField(dto, ['calories'], pickField(recipe, ['calories'], 0))) : 0;
+    const calories = filled ? safeNumber(pickField(dto, ['calories'], 0)) : 0;
+    const unresolved = pickField(dto, ['unresolved'], null) as MealSlotDto['unresolved'];
+    const sourceType: MealSourceType | null = !filled ? null : hasCustomMeal ? 'CUSTOM_MEAL' : 'RECIPE';
+    const servings = nullableNumber(pickField(dto, ['servings'], null));
 
     return {
       id: safeString(pickField(dto, ['id', 'itemId', 'item_id'], '')),
@@ -119,15 +177,27 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
       filled,
       unfilledReason: filled
         ? null
-        : safeString(pickField(dto, ['reason', 'unfilledReason'], 'Không có món phù hợp với luật ăn của bạn.')),
-      recipeId: filled ? safeString(pickField(recipe, ['id'], '')) : '',
-      recipeTitle: filled ? safeString(pickField(recipe, ['title', 'name'], 'Món chay')) : '',
+        : safeString(
+            pickField(unresolved, ['reason'], pickField(dto, ['reason', 'unfilledReason'], '')),
+            'Không có món phù hợp với luật ăn của bạn.'
+          ) || 'Không có món phù hợp với luật ăn của bạn.',
+      sourceType,
+      isCustomMeal: sourceType === 'CUSTOM_MEAL',
+      recipeId: filled && hasRecipe ? safeString(pickField(recipe, ['id'], '')) : '',
+      customMealId: filled && hasCustomMeal ? safeString(pickField(customMeal, ['id'], '')) : '',
+      recipeTitle: !filled
+        ? ''
+        : hasCustomMeal
+          ? safeString(pickField(customMeal, ['name'], 'Món tự tạo'))
+          : safeString(pickField(recipe, ['title', 'name'], 'Món chay')),
+      coverImageUrl: filled && hasRecipe ? safeString(pickField(recipe, ['coverImageUrl'], '')) || null : null,
+      servings,
+      customMealCoverage:
+        filled && hasCustomMeal ? safeString(pickField(customMeal, ['nutritionCoverage'], '')) || null : null,
       calories,
       formattedCalories: `${calories} kcal`,
       targetCalories: safeNumber(pickField(dto, ['targetCalories', 'target_calories'], 0)),
-      warningCodes: safeArray<string | null, string>(pickField(dto, ['warningCodes'], null), (code) => safeString(code)).filter(
-        (code) => code.length > 0
-      ),
+      warningCodes: stringList(pickField(dto, ['warningCodes'], null)),
     };
   }
 
@@ -148,14 +218,71 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
     }).filter((item) => item.displayLine.length > 0);
   }
 
-  private toWarnings(value: unknown): PlanWarning[] {
-    return safeArray<string | null, PlanWarning>(value, (code) => {
-      const normalized = safeString(code);
+  /** Ưu tiên `warningDetails` (có diễn giải, gợi ý, ô bị ảnh hưởng); fallback về mã cảnh báo cũ. */
+  private toWarnings(details: unknown, codes: unknown): PlanWarning[] {
+    const detailed = safeArray<MealPlanWarningDetailDto | null, PlanWarning>(
+      details as (MealPlanWarningDetailDto | null)[] | null | undefined,
+      (warning) => {
+        const code = safeString(pickField(warning, ['code'], ''));
+        const severity = safeString(pickField(warning, ['severity'], 'INFO')).toUpperCase();
+        const affected = safeArray<
+          { itemId?: string; date?: string; mealType?: string; name?: string },
+          { itemId: string; date: string; mealTypeLabel: string; name: string }
+        >(pickField(warning, ['affectedSlots'], null), (slot) => {
+          const mealType = safeEnum(pickField(slot, ['mealType'], 'BREAKFAST'), MealType, MealType.BREAKFAST);
+          return {
+            itemId: safeString(pickField(slot, ['itemId'], '')),
+            date: safeString(pickField(slot, ['date'], '')),
+            mealTypeLabel: MEAL_TYPE_LABELS[mealType],
+            name: safeString(pickField(slot, ['name'], '')),
+          };
+        });
+        return {
+          code,
+          message: safeString(pickField(warning, ['message'], '')) || WARNING_MESSAGES[code] || code,
+          severityLabel: safeString(pickField(warning, ['severityLabel'], '')) || 'Thông tin',
+          isWarning: severity === 'WARNING',
+          detail: safeString(pickField(warning, ['detail'], '')) || null,
+          suggestion: safeString(pickField(warning, ['suggestion'], '')) || null,
+          affectedSlots: affected,
+        };
+      }
+    ).filter((warning) => warning.code.length > 0);
+    if (detailed.length > 0) return detailed;
+
+    return stringList(codes).map((code) => ({
+      code,
+      message: WARNING_MESSAGES[code] ?? code,
+      severityLabel: 'Thông tin',
+      isWarning: false,
+      detail: null,
+      suggestion: null,
+      affectedSlots: [],
+    }));
+  }
+
+  private toUserSummary(dto: MealPlanDto['userSummary'] | null | undefined): PlanUserSummary | null {
+    if (!dto || typeof dto !== 'object') return null;
+    const raw = safeString(pickField(dto, ['status'], 'NO_SERIOUS_ISSUE')).toUpperCase();
+    const status: PlanUserSummary['status'] =
+      raw === 'ADVISORY_ADJUSTMENTS' || raw === 'HARD_CONSTRAINT_BLOCKED' ? raw : 'NO_SERIOUS_ISSUE';
+    return {
+      status,
+      title: safeString(pickField(dto, ['title'], '')),
+      detail: safeString(pickField(dto, ['detail'], '')),
+      suggestion: safeString(pickField(dto, ['suggestion'], '')) || null,
+    };
+  }
+
+  private toDays(dtos: (MealPlanDayDto | null)[] | null | undefined): MealPlanDay[] {
+    return safeArray<MealPlanDayDto | null, MealPlanDay>(dtos, (day) => {
+      const date = safeString(pickField(day, ['date'], ''));
       return {
-        code: normalized,
-        message: WARNING_MESSAGES[normalized] ?? normalized,
+        date,
+        dateLabel: toDayLabel(date),
+        estimatedTotals: toMacros(pickField(day, ['estimatedTotals'], null)),
       };
-    }).filter((warning) => warning.code.length > 0);
+    }).filter((day) => day.date.length > 0);
   }
 
   toListModel(dto: MealPlanListResponseDto | null | undefined): PaginationResult<MealPlan> {
@@ -188,7 +315,7 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
     const data = pickField(dto, ['data'], null) as DeleteMealPlanResponseDto['data'];
     return {
       id: safeString(pickField(data, ['id'], '')),
-      deleted: Boolean(pickField(data, ['deleted'], false)),
+      deleted: safeBoolean(pickField(data, ['deleted'], false)),
     };
   }
 
@@ -204,6 +331,17 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
 
   toSwapDto(expectedVersion: number, idempotencyKey: string): SwapMealPlanItemRequestDto {
     return { expectedVersion, idempotencyKey };
+  }
+
+  toManualAddDto(input: ManualAddMealInput): ManualAddMealItemRequestDto {
+    return {
+      expectedVersion: input.expectedVersion,
+      idempotencyKey: input.idempotencyKey,
+      sourceType: input.sourceType,
+      ...(input.sourceType === 'RECIPE' && input.recipeId ? { recipeId: input.recipeId } : {}),
+      ...(input.sourceType === 'CUSTOM_MEAL' && input.customMealId ? { customMealId: input.customMealId } : {}),
+      ...(input.servings ? { servings: input.servings } : {}),
+    };
   }
 }
 

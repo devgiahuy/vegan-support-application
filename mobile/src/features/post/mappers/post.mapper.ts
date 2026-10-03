@@ -1,3 +1,4 @@
+import { FALLBACK_ARTICLE_COVER_URL } from '@/lib/env';
 import { BaseMapper, pickField, safeArray, safeDate, safeNumber, safeString } from '@/lib/mapper';
 import { formatDate } from '@/lib/utils';
 import { PaginationResult } from '@/types/api';
@@ -10,8 +11,6 @@ function estimateReadingMinutes(body: string): number {
   return Math.max(1, Math.round(words / 200));
 }
 
-const ARTICLE_FALLBACK_COVER =
-  'https://images.unsplash.com/photo-1490645935967-10de6ba17061?w=800&auto=format&fit=crop&q=80';
 
 /** PostMapper cho Cẩm nang — bản đọc, đồng bộ `frontend/.../post.mapper.ts`. */
 export class PostMapper extends BaseMapper<BasePostDto, Article> {
@@ -32,7 +31,7 @@ export class PostMapper extends BaseMapper<BasePostDto, Article> {
       category: firstCategory(dto),
       coverImageUrl: coverUrlFromMedia(
         pickField<PostMediaDto[]>(dto, ['media'], []),
-        ARTICLE_FALLBACK_COVER
+        FALLBACK_ARTICLE_COVER_URL
       ),
       excerpt: safeString(revision?.excerpt),
       content: body,

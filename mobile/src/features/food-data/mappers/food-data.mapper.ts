@@ -6,6 +6,7 @@ import type {
   HouseholdConversionDto,
   IngredientFoodProfileDto,
   IngredientInteractionRuleDto,
+  IngredientIntakeGuidelineDto,
   IngredientNutrientsDataDto,
   IngredientNutrientValueDto,
   NutrientDto,
@@ -20,8 +21,10 @@ import {
   type CookingMethodItem,
   type EvidenceGrade,
   type FoodInteractionRuleItem,
+  type GuidelinePeriod,
   type FoodRuleSeverity,
   type HouseholdConversion,
+  type IngredientGuidelineItem,
   type IngredientNutritionFact,
   type InteractionDirection,
   type InteractionScope,
@@ -217,6 +220,56 @@ export class FoodDataMapper extends BaseMapper<IngredientNutrientsDataDto, Ingre
   ): ReferenceIntakeItem[] {
     return safeArray<NutrientReferenceIntakeDto | null | undefined, ReferenceIntakeItem>(dtos, (item) =>
       this.toReferenceIntakeModel(item)
+    );
+  }
+
+  toGuidelineModel(dto: IngredientIntakeGuidelineDto | null | undefined): IngredientGuidelineItem {
+    const ingredient = pickField(dto, ['ingredient'], null);
+    const source = pickField(dto, ['source'], null);
+    const severity = safeEnum(
+      pickField(dto, ['severity'], 'NOTICE') as string,
+      { WARNING: 'WARNING', NOTICE: 'NOTICE', COMPATIBLE: 'COMPATIBLE' },
+      'NOTICE'
+    ) as FoodRuleSeverity;
+    const period = safeEnum(
+      pickField(dto, ['period'], 'DAY') as string,
+      { DAY: 'DAY', WEEK: 'WEEK', MONTH: 'MONTH' },
+      'DAY'
+    ) as GuidelinePeriod;
+    const periodLabels: Record<GuidelinePeriod, string> = {
+      DAY: 'mỗi ngày',
+      WEEK: 'mỗi tuần',
+      MONTH: 'mỗi tháng',
+    };
+
+    return {
+      id: safeString(pickField(dto, ['id'], '')),
+      ingredientId: safeString(pickField(dto, ['ingredientId', 'ingredient_id'], '')),
+      ingredientName: safeString(pickField(ingredient, ['canonicalName', 'canonical_name'], 'Nguyên liệu')),
+      populationCode: safeString(pickField(dto, ['populationCode', 'population_code'], 'GENERAL_ADULT')),
+      amount: safeNumber(pickField(dto, ['amount'], 0), 0),
+      unit: safeString(pickField(dto, ['unit'], 'g')),
+      frequency: safeNumber(pickField(dto, ['frequency'], 1), 1),
+      period,
+      periodLabel: periodLabels[period],
+      advisoryOnly: safeBoolean(pickField(dto, ['advisoryOnly', 'advisory_only'], true)),
+      evidenceGrade: safeEnum(
+        pickField(dto, ['evidenceGrade', 'evidence_grade'], 'MODERATE') as string,
+        { STRONG: 'STRONG', MODERATE: 'MODERATE', PRELIMINARY: 'PRELIMINARY', INSUFFICIENT: 'INSUFFICIENT' },
+        'MODERATE'
+      ) as EvidenceGrade,
+      severity,
+      severityLabel: SEVERITY_LABELS[severity] || 'Lưu ý',
+      explanation: safeString(pickField(dto, ['explanation'], '')),
+      sourceName: safeString(pickField(source, ['name'], 'Tài liệu tham chiếu')),
+    };
+  }
+
+  toGuidelineList(
+    dtos: (IngredientIntakeGuidelineDto | null | undefined)[] | null | undefined
+  ): IngredientGuidelineItem[] {
+    return safeArray<IngredientIntakeGuidelineDto | null | undefined, IngredientGuidelineItem>(dtos, (item) =>
+      this.toGuidelineModel(item)
     );
   }
 

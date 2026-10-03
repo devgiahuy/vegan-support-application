@@ -19,6 +19,7 @@ import { CommentStatus } from '@/common/enums';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { useIconColors } from '@/lib/theme-colors';
 import { cn } from '@/lib/utils';
+import { useTrackBehaviorEvent } from '@/hooks/use-track-behavior-event';
 import { useAuthStore } from '@/store/useAuthStore';
 
 function StarRow({
@@ -78,6 +79,7 @@ export function CommunityPanel({
   });
   const voteMutation = useVoteMutation();
   const bookmarkMutation = useBookmarkMutation();
+  const trackEvent = useTrackBehaviorEvent();
   const ratingMutation = useRatingMutation();
   const createCommentMutation = useCreateCommentMutation();
   const comments = commentsPagination?.items ?? [];
@@ -108,7 +110,10 @@ export function CommunityPanel({
   const toggleBookmark = async () => {
     if (!requireLogin('Bạn cần đăng nhập để lưu lại.')) return;
     try {
-      await bookmarkMutation.mutateAsync({ postId, bookmarked: !(summary?.viewerBookmarked ?? false) });
+      const nextBookmarked = !(summary?.viewerBookmarked ?? false);
+      await bookmarkMutation.mutateAsync({ postId, bookmarked: nextBookmarked });
+      // Behavior event chỉ áp dụng cho công thức (panel có chấm điểm = công thức).
+      if (nextBookmarked && showRating) trackEvent({ type: 'BOOKMARK', entityId: postId });
     } catch (error) {
       Alert.alert('Không thể lưu', getApiErrorMessage(error));
     }

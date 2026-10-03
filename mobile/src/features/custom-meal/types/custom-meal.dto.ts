@@ -1,24 +1,28 @@
+/** DTO bữa ăn tự tạo — khớp OpenAPI backend (`CustomMealResponse`, `CustomMealListResponse`). */
 export interface CustomMealPhotoDto {
   id?: string;
-  url?: string;
-  secureUrl?: string;
-  sortOrder?: number | string;
+  assetId?: string;
   position?: number | string;
-  isCover?: boolean;
-  fileSizeBytes?: number | string;
-  mimeType?: string;
-  createdAt?: string;
+  secureUrl?: string;
+  mimeType?: string | null;
+  width?: number | null;
+  height?: number | null;
 }
 
 export interface CustomMealIngredientDto {
   id?: string;
-  ingredientId?: string | null;
-  name?: string;
+  position?: number | string;
   displayName?: string;
-  quantity?: number | string;
   amount?: number | string;
   unit?: string;
-  isCustom?: boolean;
+  resolutionStatus?: string;
+  ingredientId?: string | null;
+  ingredient?: { id?: string; canonicalName?: string } | null;
+}
+
+export interface CustomMealTagDto {
+  tag?: string;
+  normalizedTag?: string;
 }
 
 export interface CustomMealDto {
@@ -29,52 +33,31 @@ export interface CustomMealDto {
   servings?: number | string;
   sourceNote?: string | null;
   userCalories?: number | string | null;
-  userProtein?: number | string | null;
   userProteinGrams?: number | string | null;
-  userCarbs?: number | string | null;
   userCarbsGrams?: number | string | null;
-  userFat?: number | string | null;
   userFatGrams?: number | string | null;
-  calculatedCalories?: number | string | null;
-  coverageRatio?: number | string;
-  isFullyCovered?: boolean;
-  unmatchedIngredientCount?: number | string;
-  tags?: string[];
-  photos?: CustomMealPhotoDto[];
-  coverPhotoUrl?: string | null;
-  photoCount?: number | string;
-  ingredientCount?: number | string;
-  ingredients?: CustomMealIngredientDto[];
+  userFiberGrams?: number | string | null;
+  nutritionCoverage?: string;
+  deletePolicy?: string;
+  tags?: (CustomMealTagDto | string | null)[];
+  photos?: (CustomMealPhotoDto | null)[];
+  ingredients?: (CustomMealIngredientDto | null)[];
   createdAt?: string;
   updatedAt?: string;
-}
-
-export interface CustomMealTagDto {
-  name?: string;
-  count?: number | string;
 }
 
 export interface CustomMealListResponseDto {
   success?: true;
   data?: {
-    records?: CustomMealDto[];
-    items?: CustomMealDto[];
+    records?: (CustomMealDto | null)[];
     pagination?: {
       page?: number;
       limit?: number;
       total?: number;
-      totalItems?: number;
       totalPages?: number;
     };
-    availableTags?: CustomMealTagDto[];
   };
-  meta?: {
-    page?: number;
-    limit?: number;
-    total?: number;
-    totalItems?: number;
-    totalPages?: number;
-  } | null;
+  meta?: null;
 }
 
 export interface CustomMealResponseDto {
@@ -88,7 +71,7 @@ export interface CreateCustomMealIngredientRequestDto {
   displayName: string;
   amount: number;
   unit: string;
-  ingredientId?: string | null;
+  ingredientId?: string;
 }
 
 export interface CreateCustomMealRequestDto {
@@ -96,14 +79,14 @@ export interface CreateCustomMealRequestDto {
   notes?: string | null;
   servings?: number;
   sourceNote?: string | null;
-  userCalories?: number | null;
-  userProteinGrams?: number | null;
-  userCarbsGrams?: number | null;
-  userFatGrams?: number | null;
+  userCalories?: number;
+  userProteinGrams?: number;
+  userCarbsGrams?: number;
+  userFatGrams?: number;
+  userFiberGrams?: number;
   deletePolicy?: 'BLOCK' | 'RETAIN_SNAPSHOT';
   ingredients?: CreateCustomMealIngredientRequestDto[];
   tags?: string[];
 }
 
 export type UpdateCustomMealRequestDto = Partial<CreateCustomMealRequestDto>;
-
