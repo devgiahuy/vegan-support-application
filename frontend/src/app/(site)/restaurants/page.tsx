@@ -108,8 +108,8 @@ export default function RestaurantMapPage() {
         ? {
             lat: location.lat,
             lng: location.lng,
-            locationSource: location.source,
-            locationConsent: location.source === 'DEVICE',
+            // locationSource: location.source,
+            // locationConsent: location.source === 'DEVICE',
           }
         : {}),
       ...(searchingArea && activeBounds ? { bounds: activeBounds } : {}),
@@ -128,8 +128,8 @@ export default function RestaurantMapPage() {
         ? {
             lat: location.lat,
             lng: location.lng,
-            locationSource: location.source,
-            locationConsent: location.source === 'DEVICE',
+            // locationSource: location.source,
+            // locationConsent: location.source === 'DEVICE',
           }
         : {}),
       ...(searchingArea && activeBounds ? { bounds: activeBounds } : {}),

@@ -22,6 +22,7 @@ export interface MealSlot {
   protein: number;
   carbs: number;
   fat: number;
+  fiber: number;
   servings: number;
 }
 

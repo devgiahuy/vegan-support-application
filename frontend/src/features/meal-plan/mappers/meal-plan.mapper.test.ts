@@ -430,4 +430,36 @@ describe('MealPlanMapper', () => {
     expect(slot.unresolvedCode).toBe('UNFILLED_SLOT');
     expect(slot.unfilledReason).toContain('Không có món phù hợp');
   });
+
+  it('map đúng các chỉ số dinh dưỡng macro ở slot-level (proteinGrams, fiberGrams, fatGrams, carbohydrateGrams)', () => {
+    const plan = mealPlanMapper.toModel({
+      id: 'plan-slot-macros',
+      weekStart: '2026-10-05',
+      items: [
+        {
+          id: 'slot-1',
+          date: '2026-10-05',
+          mealType: 'BREAKFAST',
+          status: 'FILLED',
+          calories: 560,
+          proteinGrams: 19,
+          fiberGrams: 15,
+          fatGrams: 12,
+          carbohydrateGrams: 91,
+          recipe: {
+            id: 'r-1',
+            title: 'Cháo Hạt Sen Đậu Đỏ Yến Mạch',
+          },
+        },
+      ],
+    });
+
+    const slot = plan.items[0];
+    expect(slot.filled).toBe(true);
+    expect(slot.calories).toBe(560);
+    expect(slot.protein).toBe(19);
+    expect(slot.fiber).toBe(15);
+    expect(slot.fat).toBe(12);
+    expect(slot.carbs).toBe(91);
+  });
 });

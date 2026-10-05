@@ -18,6 +18,14 @@ export interface MealSlotDto {
   targetCalories?: number | string;
   calories?: number | string;
   tolerancePercent?: number | string;
+  proteinGrams?: number | string | null;
+  fiberGrams?: number | string | null;
+  fatGrams?: number | string | null;
+  carbohydrateGrams?: number | string | null;
+  protein_grams?: number | string | null;
+  fiber_grams?: number | string | null;
+  fat_grams?: number | string | null;
+  carbohydrate_grams?: number | string | null;
   reasonCodes?: (string | null)[] | null;
   warningCodes?: (string | null)[] | null;
   reason?: string;

@@ -192,9 +192,31 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
     const calories = filled
       ? safeNumber(pickField(dto, ['calories'], pickField(recipe, ['calories'], customMealCal)))
       : 0;
-    const protein = filled ? safeNumber(pickField(recipe, ['protein'], 0)) : 0;
-    const carbs = filled ? safeNumber(pickField(recipe, ['carbs'], 0)) : 0;
-    const fat = filled ? safeNumber(pickField(recipe, ['fat'], 0)) : 0;
+    const protein = filled
+      ? safeNumber(
+          pickField(dto, ['proteinGrams', 'protein_grams'], pickField(recipe, ['protein'], 0)),
+          0
+        )
+      : 0;
+    const fiber = filled
+      ? safeNumber(
+          pickField(dto, ['fiberGrams', 'fiber_grams'], pickField(recipe, ['fiber'], 0)),
+          0
+        )
+      : 0;
+    const carbs = filled
+      ? safeNumber(
+          pickField(
+            dto,
+            ['carbohydrateGrams', 'carbohydrate_grams'],
+            pickField(recipe, ['carbs'], 0)
+          ),
+          0
+        )
+      : 0;
+    const fat = filled
+      ? safeNumber(pickField(dto, ['fatGrams', 'fat_grams'], pickField(recipe, ['fat'], 0)), 0)
+      : 0;
 
     const dishTitle = isCustomMeal
       ? safeString(pickField(customMeal, ['name'], 'Món ăn cá nhân'), 'Món ăn cá nhân')
@@ -250,6 +272,7 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
       protein,
       carbs,
       fat,
+      fiber,
       servings: filled
         ? safeNumber(pickField(dto, ['servings'], pickField(recipe, ['servings'], 1)), 1)
         : 0,

@@ -285,10 +285,10 @@ review proposal vẫn là `PLANNED` cho tới Phase 07; frontend chưa được 
 
 | Method | Path                                 | Status  | Backend updated | FE integrated    | Ghi chú                                                                   |
 | ------ | ------------------------------------ | ------- | --------------- | ---------------- | ------------------------------------------------------------------------- |
-| POST   | `/meal-plans/generate`               | `READY` | 2026-09-28      | Yes (contract update pending) | Auth; Monday–Sunday 7×3; hard-safe fallback fills compatible slots; four-macro estimated targets |
+| POST   | `/meal-plans/generate`               | `READY` | 2026-10-03      | Yes (2026-10-03) | Auth; Monday–Sunday 7×3; hard-safe fallback fills compatible slots; four-macro estimated targets; slot nutrition (proteinGrams, fiberGrams, fatGrams, carbohydrateGrams) |
 | GET    | `/meal-plans`                        | `READY` | 2026-09-16      | Yes (2026-09-16) | Auth; own plans, pagination/filter tuần                                   |
-| GET    | `/meal-plans/:id`                    | `READY` | 2026-09-28      | Yes (contract update pending) | Existing `items` retained; additive `days` 7×3, explicit unresolved reason, estimated four-macro targets/totals |
-| PATCH  | `/meal-plans/:id/items/:itemId/swap` | `READY` | 2026-09-16      | Yes (2026-09-16) | Auth + ownership; expectedVersion/idempotency; hard-safe candidate        |
+| GET    | `/meal-plans/:id`                    | `READY` | 2026-10-03      | Yes (2026-10-03) | Existing `items` with slot nutrition (proteinGrams, fiberGrams, fatGrams, carbohydrateGrams); additive `days` 7×3, explicit unresolved reason, estimated four-macro targets/totals |
+| PATCH  | `/meal-plans/:id/items/:itemId/swap` | `READY` | 2026-10-03      | Yes (2026-10-03) | Auth + ownership; expectedVersion/idempotency; hard-safe candidate; slot nutrition |
 | DELETE | `/meal-plans/:id`                    | `READY` | 2026-09-16      | Yes (2026-09-16) | Auth + ownership; idempotent soft-delete với expectedVersion              |
 | POST   | `/behavior-events`                   | `READY` | 2026-09-16      | Yes (2026-09-16) | Auth + active consent; allowlist metadata, idempotency và 5-minute dedupe |
 | GET    | `/users/me/personalization`          | `READY` | 2026-09-16      | Yes (2026-09-16) | Auth; đọc consent + consentVersion (verify live, bổ sung registry)        |

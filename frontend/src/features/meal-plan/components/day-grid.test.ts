@@ -75,6 +75,7 @@ describe('DayGrid Helpers & Logic', () => {
       protein,
       carbs,
       fat,
+      fiber: 0,
       servings: 1,
     });
 

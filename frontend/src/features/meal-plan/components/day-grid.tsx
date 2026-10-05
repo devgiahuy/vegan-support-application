@@ -71,6 +71,7 @@ function createPlaceholderSlot(date: string, mealType: MealType): MealSlot {
     protein: 0,
     carbs: 0,
     fat: 0,
+    fiber: 0,
     servings: 1,
   };
 }
@@ -123,9 +124,10 @@ function SlotCard({
             <p className="text-sm font-semibold leading-snug text-foreground line-clamp-2">
               {slot.recipeTitle}
             </p>
-            {slot.protein > 0 || slot.carbs > 0 || slot.fat > 0 ? (
+            {slot.protein > 0 || slot.carbs > 0 || slot.fat > 0 || slot.fiber > 0 ? (
               <p className="text-xs text-muted-foreground">
                 Đạm {slot.protein}g · Bột {slot.carbs}g · Béo {slot.fat}g
+                {slot.fiber > 0 && ` · Xơ ${slot.fiber}g`}
                 {slot.servings > 0 && ` · ${slot.servings} khẩu phần`}
               </p>
             ) : (
@@ -184,6 +186,7 @@ export function computeDayNutrition(
   const slotProtein = slotList.reduce((sum, s) => sum + (s.protein || 0), 0);
   const slotFat = slotList.reduce((sum, s) => sum + (s.fat || 0), 0);
   const slotCarbs = slotList.reduce((sum, s) => sum + (s.carbs || 0), 0);
+  const slotFiber = slotList.reduce((sum, s) => sum + (s.fiber || 0), 0);
 
   const protein =
     estimatedTotals?.proteinGrams !== null && estimatedTotals?.proteinGrams !== undefined
@@ -198,7 +201,9 @@ export function computeDayNutrition(
   const fiber =
     estimatedTotals?.fiberGrams !== null && estimatedTotals?.fiberGrams !== undefined
       ? estimatedTotals.fiberGrams
-      : null;
+      : slotFiber > 0
+        ? slotFiber
+        : null;
 
   const carbs =
     estimatedTotals?.carbohydrateGrams !== null && estimatedTotals?.carbohydrateGrams !== undefined
