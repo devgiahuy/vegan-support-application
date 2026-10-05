@@ -5,7 +5,6 @@ interface WarningLocationItem {
   mealType: MealType;
   name: string;
 }
-
 export type MacroWarningDirection = 'ABOVE' | 'BELOW';
 export type MacroWarningCode = 'PROTEIN' | 'FIBER' | 'FAT' | 'CARBS';
 
@@ -18,13 +17,11 @@ const WEEKDAY_LABELS = [
   'Thứ Sáu',
   'Thứ Bảy',
 ] as const;
-
 const MEAL_TYPE_LABELS: Record<MealType, string> = {
   [MealType.BREAKFAST]: 'Bữa sáng',
   [MealType.LUNCH]: 'Bữa trưa',
   [MealType.DINNER]: 'Bữa tối',
 };
-
 const MACRO_LABELS: Record<MacroWarningCode, string> = {
   PROTEIN: 'Chất đạm',
   FIBER: 'Chất xơ',

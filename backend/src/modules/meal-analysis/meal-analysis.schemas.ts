@@ -120,6 +120,14 @@ export const mealAnalysisDataSchema = z
       .strict(),
     confidence: z.number().min(0).max(1),
     incompleteData: z.array(z.string()),
+    incompleteDataSummary: z
+      .object({
+        affectedMealCount: z.number().int().nonnegative(),
+        title: z.string().nullable(),
+        detail: z.string().nullable(),
+        suggestion: z.string().nullable(),
+      })
+      .strict(),
     estimatedNutrition: z
       .object({
         estimated: z.literal(true),

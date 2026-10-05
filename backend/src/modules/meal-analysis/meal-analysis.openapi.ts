@@ -38,9 +38,9 @@ export function registerMealAnalysisOpenApi(registry: OpenAPIRegistry, errorSche
     method: 'post',
     path: '/api/v1/meal-plans/{id}/analyze',
     tags: ['Meal Analysis'],
-    summary: 'Phân tích khẩu phần và các điểm cần lưu ý trong thực đơn',
+    summary: 'Ph�n t�ch kh?u ph?n v� c�c di?m c?n luu � trong th?c don',
     description:
-      'Phân tích món và khẩu phần đã chọn. Cảnh báo dinh dưỡng dành cho người dùng chỉ tập trung vào chất đạm, chất xơ, chất béo và tinh bột, luôn được diễn đạt là số liệu ước tính. Kết quả có tiêu đề, giải thích vị trí/ngày/bữa, ý nghĩa và gợi ý điều chỉnh bằng tiếng Việt. Thông tin nguồn và mã vẫn được giữ để kiểm tra nội bộ; dị ứng và các yêu cầu ăn uống bắt buộc không thay đổi.',
+      'Ph�n t�ch m�n v� kh?u ph?n d� ch?n. C?nh b�o dinh du?ng d�nh cho ngu?i d�ng ch? t?p trung v�o ch?t d?m, ch?t xo, ch?t b�o v� tinh b?t, lu�n du?c di?n d?t l� s? li?u u?c t�nh. K?t qu? c� ti�u d?, gi?i th�ch v? tr�/ng�y/b?a, � nghia v� g?i � di?u ch?nh b?ng ti?ng Vi?t. Th�ng tin ngu?n v� m� v?n du?c gi? d? ki?m tra n?i b?; d? ?ng v� c�c y�u c?u an u?ng b?t bu?c kh�ng thay d?i.',
     operationId: 'analyzeMealPlan',
     security,
     request: {
@@ -60,49 +60,49 @@ export function registerMealAnalysisOpenApi(registry: OpenAPIRegistry, errorSche
     },
     responses: {
       201: {
-        description: 'Kết quả phân tích mới với cảnh báo và gợi ý dễ hiểu cho người dùng',
+        description: 'K?t qu? ph�n t�ch m?i v?i c?nh b�o v� g?i � d? hi?u cho ngu?i d�ng',
         content: { 'application/json': { schema: response } },
       },
-      400: error(errorSchema, 'Selection hoặc portion không hợp lệ', [
+      400: error(errorSchema, 'Selection ho?c portion kh�ng h?p l?', [
         'VALIDATION_ERROR',
         'MEAL_ANALYSIS_ITEM_UNFILLED',
         'MEAL_ANALYSIS_SOURCE_MISSING',
       ]),
-      401: error(errorSchema, 'Yêu cầu đăng nhập', [
+      401: error(errorSchema, 'Y�u c?u dang nh?p', [
         'AUTH_REQUIRED',
         'INVALID_ACCESS_TOKEN',
         'TOKEN_EXPIRED',
       ]),
-      403: error(errorSchema, 'Tài khoản bị cấm', ['ACCOUNT_BANNED']),
-      404: error(errorSchema, 'Không tìm thấy owned plan/item', ['NOT_FOUND']),
-      409: error(errorSchema, 'Plan version đã thay đổi', ['MEAL_ANALYSIS_STALE']),
+      403: error(errorSchema, 'T�i kho?n b? c?m', ['ACCOUNT_BANNED']),
+      404: error(errorSchema, 'Kh�ng t�m th?y owned plan/item', ['NOT_FOUND']),
+      409: error(errorSchema, 'Plan version d� thay d?i', ['MEAL_ANALYSIS_STALE']),
     },
   });
   registry.registerPath({
     method: 'get',
     path: '/api/v1/meal-plans/{id}/analysis',
     tags: ['Meal Analysis'],
-    summary: 'Đọc kết quả phân tích hiện hành',
+    summary: '�?c k?t qu? ph�n t�ch hi?n h�nh',
     description:
-      'Trả kết quả còn phù hợp với thực đơn hiện tại. Nếu món, khẩu phần hoặc thông tin liên quan đã thay đổi, yêu cầu phân tích lại thay vì trả kết quả cũ.',
+      'Tr? k?t qu? c�n ph� h?p v?i th?c don hi?n t?i. N?u m�n, kh?u ph?n ho?c th�ng tin li�n quan d� thay d?i, y�u c?u ph�n t�ch l?i thay v� tr? k?t qu? cu.',
     operationId: 'getCurrentMealAnalysis',
     security,
     request: { params: mealAnalysisParamsSchema },
     responses: {
       200: {
         description:
-          'Kết quả hiện hành với nội dung cảnh báo tiếng Việt và thông tin kiểm tra nội bộ',
+          'K?t qu? hi?n h�nh v?i n?i dung c?nh b�o ti?ng Vi?t v� th�ng tin ki?m tra n?i b?',
         content: { 'application/json': { schema: response } },
       },
-      400: error(errorSchema, 'Meal plan ID không hợp lệ', ['VALIDATION_ERROR']),
-      401: error(errorSchema, 'Yêu cầu đăng nhập', [
+      400: error(errorSchema, 'Meal plan ID kh�ng h?p l?', ['VALIDATION_ERROR']),
+      401: error(errorSchema, 'Y�u c?u dang nh?p', [
         'AUTH_REQUIRED',
         'INVALID_ACCESS_TOKEN',
         'TOKEN_EXPIRED',
       ]),
-      403: error(errorSchema, 'Tài khoản bị cấm', ['ACCOUNT_BANNED']),
-      404: error(errorSchema, 'Không có owned plan/analysis', ['NOT_FOUND']),
-      409: error(errorSchema, 'Analysis không còn current', ['MEAL_ANALYSIS_STALE']),
+      403: error(errorSchema, 'T�i kho?n b? c?m', ['ACCOUNT_BANNED']),
+      404: error(errorSchema, 'Kh�ng c� owned plan/analysis', ['NOT_FOUND']),
+      409: error(errorSchema, 'Analysis kh�ng c�n current', ['MEAL_ANALYSIS_STALE']),
     },
   });
 }

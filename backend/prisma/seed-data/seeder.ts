@@ -48,6 +48,10 @@ function postTagRows(tags: readonly string[]) {
   return tags.map((tag) => ({ tag, normalizedTag: normalizeVietnameseText(tag) }));
 }
 
+function hasMojibake(value: string | null): boolean {
+  return value !== null && /[ÃÄÆ]/u.test(value);
+}
+
 export async function seedComprehensiveData(
   prisma: PrismaClient,
   options: {
@@ -84,23 +88,23 @@ export async function seedComprehensiveData(
 
     const category = existing
       ? await prisma.category.update({
-          where: { id: existing.id },
-          data: {
-            name: definition.name,
-            sortOrder: definition.sortOrder,
-            status: CatalogStatus.ACTIVE,
-          },
-        })
+        where: { id: existing.id },
+        data: {
+          name: definition.name,
+          sortOrder: definition.sortOrder,
+          status: CatalogStatus.ACTIVE,
+        },
+      })
       : await prisma.category.create({
-          data: {
-            type: definition.type,
-            name: definition.name,
-            slug: definition.slug,
-            sortOrder: definition.sortOrder,
-            status: CatalogStatus.ACTIVE,
-            ...(parentId ? { parentId } : {}),
-          },
-        });
+        data: {
+          type: definition.type,
+          name: definition.name,
+          slug: definition.slug,
+          sortOrder: definition.sortOrder,
+          status: CatalogStatus.ACTIVE,
+          ...(parentId ? { parentId } : {}),
+        },
+      });
 
     categoryIdMap.set(`${definition.type}:${definition.slug}`, category.id);
   }
@@ -626,7 +630,7 @@ export async function seedComprehensiveData(
   for (const rDef of recipeDefinitions) {
     const author = userMap.get(rDef.authorEmail.toLowerCase()) ?? { id: adminId };
     const catId = categoryIdMap.get(`${CategoryType.FOOD_TYPE}:${rDef.categorySlug}`) ??
-                  categoryIdMap.get(`${CategoryType.RECIPE_GROUP}:${rDef.categorySlug}`);
+      categoryIdMap.get(`${CategoryType.RECIPE_GROUP}:${rDef.categorySlug}`);
 
     let post = await prisma.post.findUnique({ where: { slug: rDef.slug } });
     if (!post) {
@@ -653,77 +657,91 @@ export async function seedComprehensiveData(
           postId: post.id,
           createdById: author.id,
           version: 1,
-        status: PostRevisionStatus.PUBLISHED,
-        title: rDef.title,
-        normalizedTitle: normalizeVietnameseText(rDef.title),
-        excerpt: rDef.excerpt,
-        normalizedExcerpt: normalizeVietnameseText(rDef.excerpt),
-        body: rDef.body,
-        normalizedBody: normalizeVietnameseText(rDef.body),
-        ...(catId ? { categories: { create: [{ categoryId: catId }] } } : {}),
-        tags: { create: postTagRows(rDef.tags) },
-        media: {
-          create: {
-            kind: MediaKind.COVER_IMAGE,
-            provider: MediaProvider.CLOUDINARY,
-            secureUrl: rDef.coverMedia.secureUrl,
-            publicId: rDef.coverMedia.publicId,
-            width: rDef.coverMedia.width,
-            height: rDef.coverMedia.height,
-            position: 0,
+          status: PostRevisionStatus.PUBLISHED,
+          title: rDef.title,
+          normalizedTitle: normalizeVietnameseText(rDef.title),
+          excerpt: rDef.excerpt,
+          normalizedExcerpt: normalizeVietnameseText(rDef.excerpt),
+          body: rDef.body,
+          normalizedBody: normalizeVietnameseText(rDef.body),
+          ...(catId ? { categories: { create: [{ categoryId: catId }] } } : {}),
+          tags: { create: postTagRows(rDef.tags) },
+          media: {
+            create: {
+              kind: MediaKind.COVER_IMAGE,
+              provider: MediaProvider.CLOUDINARY,
+              secureUrl: rDef.coverMedia.secureUrl,
+              publicId: rDef.coverMedia.publicId,
+              width: rDef.coverMedia.width,
+              height: rDef.coverMedia.height,
+              position: 0,
+            },
+          },
+          recipeDetail: {
+            create: {
+              servings: rDef.servings,
+              prepTimeMinutes: rDef.prepTimeMinutes,
+              cookTimeMinutes: rDef.cookTimeMinutes,
+              difficulty: rDef.difficulty,
+              calories: rDef.calories,
+              proteinGrams: rDef.proteinGrams,
+              carbsGrams: rDef.carbsGrams,
+              fatGrams: rDef.fatGrams,
+              fiberGrams: rDef.fiberGrams,
+              vitaminB12Mcg: rDef.vitaminB12Mcg ?? null,
+              mealPlannerEligible: rDef.mealPlannerEligible,
+              allergenCodes: rDef.allergenCodes,
+              traditionWarnings: rDef.traditionWarnings,
+            },
+          },
+          ingredients: {
+            create: rDef.ingredients.map((ing, idx) => {
+              const canonical = ingredientMap.get(ing.ingredientNormalizedName);
+              return {
+                position: idx,
+                ingredientId: canonical?.id,
+                displayName: ing.displayName,
+                normalizedName: normalizeVietnameseText(ing.displayName),
+                amount: ing.amount,
+                unit: ing.unit,
+                resolutionStatus: canonical ? IngredientResolutionStatus.EXACT : IngredientResolutionStatus.UNKNOWN,
+              };
+            }),
+          },
+          recipeSteps: {
+            create: rDef.steps.map((st) => {
+              const method = st.cookingMethodCode ? cookingMethodMap.get(st.cookingMethodCode) : undefined;
+              return {
+                position: st.position,
+                instruction: st.instruction,
+                durationMinutes: st.durationMinutes,
+                cookingMethodId: method?.id,
+                affectedIngredientPositions: st.affectedIngredientPositions,
+              };
+            }),
+          },
+          dietCompatibility: {
+            create: [
+              { dietPattern: DietPattern.VEGAN, compatible: true, reasonCodes: [] },
+              { dietPattern: DietPattern.LACTO_OVO, compatible: true, reasonCodes: [] },
+            ],
           },
         },
-        recipeDetail: {
-          create: {
-            servings: rDef.servings,
-            prepTimeMinutes: rDef.prepTimeMinutes,
-            cookTimeMinutes: rDef.cookTimeMinutes,
-            difficulty: rDef.difficulty,
-            calories: rDef.calories,
-            proteinGrams: rDef.proteinGrams,
-            carbsGrams: rDef.carbsGrams,
-            fatGrams: rDef.fatGrams,
-            fiberGrams: rDef.fiberGrams,
-            vitaminB12Mcg: rDef.vitaminB12Mcg ?? null,
-            mealPlannerEligible: rDef.mealPlannerEligible,
-            allergenCodes: rDef.allergenCodes,
-            traditionWarnings: rDef.traditionWarnings,
-          },
+      });
+    }
+
+    if (hasMojibake(revision.title)) {
+      revision = await prisma.postRevision.update({
+        where: { id: revision.id },
+        data: {
+          title: rDef.title,
+          normalizedTitle: normalizeVietnameseText(rDef.title),
+          excerpt: rDef.excerpt,
+          normalizedExcerpt: normalizeVietnameseText(rDef.excerpt),
+          body: rDef.body,
+          normalizedBody: normalizeVietnameseText(rDef.body),
         },
-        ingredients: {
-          create: rDef.ingredients.map((ing, idx) => {
-            const canonical = ingredientMap.get(ing.ingredientNormalizedName);
-            return {
-              position: idx,
-              ingredientId: canonical?.id,
-              displayName: ing.displayName,
-              normalizedName: normalizeVietnameseText(ing.displayName),
-              amount: ing.amount,
-              unit: ing.unit,
-              resolutionStatus: canonical ? IngredientResolutionStatus.EXACT : IngredientResolutionStatus.UNKNOWN,
-            };
-          }),
-        },
-        recipeSteps: {
-          create: rDef.steps.map((st) => {
-            const method = st.cookingMethodCode ? cookingMethodMap.get(st.cookingMethodCode) : undefined;
-            return {
-              position: st.position,
-              instruction: st.instruction,
-              durationMinutes: st.durationMinutes,
-              cookingMethodId: method?.id,
-              affectedIngredientPositions: st.affectedIngredientPositions,
-            };
-          }),
-        },
-        dietCompatibility: {
-          create: [
-            { dietPattern: DietPattern.VEGAN, compatible: true, reasonCodes: [] },
-            { dietPattern: DietPattern.LACTO_OVO, compatible: true, reasonCodes: [] },
-          ],
-        },
-      },
-    });
+      });
     }
 
     if (post.status === PostStatus.PUBLISHED && post.publishedRevisionId !== revision.id) {
@@ -777,6 +795,10 @@ export async function seedComprehensiveData(
         },
       });
     }
+
+    // Older local databases can contain seed text written by a historical
+    // non-UTF-8 import. Repair only known seed revisions and only when the
+    // stored title has that signature; never rewrite user-authored content.
     postMap.set(hDef.slug, post);
 
     let revision = await prisma.postRevision.findUnique({
@@ -809,6 +831,20 @@ export async function seedComprehensiveData(
               position: 0,
             },
           },
+        },
+      });
+    }
+    // Repair only known seeded handbook revisions that contain historical mojibake.
+    if (hasMojibake(revision.title)) {
+      revision = await prisma.postRevision.update({
+        where: { id: revision.id },
+        data: {
+          title: hDef.title,
+          normalizedTitle: normalizeVietnameseText(hDef.title),
+          excerpt: hDef.excerpt,
+          normalizedExcerpt: normalizeVietnameseText(hDef.excerpt),
+          body: hDef.body,
+          normalizedBody: normalizeVietnameseText(hDef.body),
         },
       });
     }
@@ -850,7 +886,7 @@ export async function seedComprehensiveData(
   for (const vDef of videoDefinitions) {
     const author = userMap.get(vDef.authorEmail.toLowerCase()) ?? { id: adminId };
     const catId = categoryIdMap.get(`${CategoryType.RECIPE_GROUP}:${vDef.categorySlug}`) ??
-                  categoryIdMap.get(`${CategoryType.CONTENT_TOPIC}:${vDef.categorySlug}`);
+      categoryIdMap.get(`${CategoryType.CONTENT_TOPIC}:${vDef.categorySlug}`);
 
     let post = await prisma.post.findUnique({ where: { slug: vDef.slug } });
     if (!post) {
