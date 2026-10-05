@@ -3,6 +3,54 @@
 > Agent BẮT BUỘC append 1 entry sau mỗi task xong (xem `ARCHITECTURE.md` mục 7).
 > Mỗi entry ghi: đã làm gì, file đổi, cách verify, % PROGRESS đổi ra sao.
 
+## [2026-10-05] — Redesign giao diện tải ảnh quét tủ lạnh trang /pantry/scan (in-frame showcase, Lightbox zoom, hỗ trợ 1–6 ảnh các ngăn tủ)
+
+- Mục tiêu:
+  - Khắc phục lỗi tương tự trang scan hóa đơn trên trang quét tủ lạnh `/pantry/scan`: ảnh sau khi tải lên bị rơi ra ngoài khung dropzone, khung rỗng chiếm diện tích phía trên, thiếu công cụ xem trước chi tiết (Lightbox phóng to/xoay/kiểm tra nét thực phẩm).
+  - Tái thiết kế toàn bộ khu vực tải và duyệt ảnh tủ lạnh (`FridgeUploadZone`) theo chuẩn UI/UX cao cấp, tích hợp ảnh hiển thị trực tiếp trong khung làm việc, hỗ trợ kiểm kê đa ngăn tủ (1 đến 6 ảnh).
+- Đã làm:
+  - **Tái thiết kế `FridgeUploadZone` (`src/features/ingredient-vision/components/fridge-upload-zone.tsx`)**:
+    - Chuyển đổi trạng thái linh hoạt: Khung kéo thả đứt nét rỗng ban đầu tự động biến đổi thành bàn làm việc ảnh tủ lạnh tích hợp khi đã chọn từ 1 đến 6 ảnh.
+    - Hỗ trợ xem ảnh đơn nổi bật: Layout rộng rãi, hiển thị ảnh toàn cảnh/ngăn chính bằng `object-contain`, tên tệp co giãn tự động `min-w-0 flex-1 truncate`, nút "Phóng to" ngắn gọn, thông số dung lượng và trạng thái rõ ràng.
+    - Dải mời thêm ngăn tủ tiếp theo (ngăn rau củ, ngăn đông, cánh tủ...) nằm ngang co giãn linh hoạt toàn màn hình.
+    - Bố cục lưới đa ảnh (2–6 ảnh): Hỗ trợ đổi thứ tự các ảnh (`←` / `→`), nút xóa từng ảnh, ô thêm ảnh tiếp theo với hiệu ứng kéo thả mượt mà.
+    - Tích hợp Lightbox Preview Dialog: Bấm trực tiếp vào ảnh hoặc nút "Phóng to" để mở modal phóng to, thu nhỏ, xoay 90°, đặt lại góc nhìn giúp người dùng kiểm tra rõ từng loại rau củ, thực phẩm trước khi khởi tạo AI.
+    - Thanh tiến trình tải lên chi tiết và nút CTA "Bắt đầu nhận diện AI (X ảnh)" kèm loading spinner.
+- File tạo/sửa:
+  - `src/features/ingredient-vision/components/fridge-upload-zone.tsx`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 46 test files, 527/527 tests pass (100%).
+  - `npm run build`: Turbopack build thành công 46/46 routes tĩnh và động.
+- PROGRESS: Trải nghiệm quét tủ lạnh tại `/pantry/scan` hoàn thiện cao cấp, 100% responsive và đồng bộ thiết kế với `/receipts/scan`.
+- Còn lại / rủi ro: Không có.
+
+## [2026-10-05] — Redesign giao diện tải ảnh hóa đơn trang /receipts/scan (hiển thị trực tiếp trong khung làm việc, Lightbox zoom, sắp xếp đoạn ảnh)
+
+- Mục tiêu:
+  - Khắc phục lỗi trải nghiệm khi người dùng tải ảnh hóa đơn lên trang `/receipts/scan`: ảnh bị hiển thị ngoài khung dropzone ("bị hiển thị ngoài khung"), khung dropzone trống cũ vẫn chiếm nửa trên màn hình gây thừa thãi, ảnh hóa đơn dài bị cắt mép do `object-cover`, tên tệp bị đè che chữ trên hóa đơn.
+  - Tái thiết kế toàn bộ khu vực tải và xem trước ảnh hóa đơn theo chuẩn UI/UX cao cấp, tích hợp ảnh trực tiếp vào khung làm việc liền mạch (in-frame showcase).
+- Đã làm:
+  - **Tái thiết kế `ReceiptUploadZone` (`src/features/receipt/components/receipt-upload-zone.tsx`)**:
+    - Chuyển đổi trạng thái linh hoạt: Khi chưa chọn ảnh, hiển thị khung kéo thả & nút chọn ảnh / chụp camera thân thiện. Khi đã chọn từ 1 đến 4 ảnh, khung tải biến đổi thành bàn làm việc trực quan ngay trong khung (không còn khung đứt nét rỗng thừa thãi phía trên).
+    - Hỗ trợ xem ảnh 1 hóa đơn nổi bật: Layout 2 cột rộng rãi, ảnh hóa đơn hiển thị bằng `object-contain` giữ trọn vẹn 100% tỉ lệ hóa đơn không bị xén viền, thanh thông số tách rời sạch sẽ bên dưới ảnh (không đè text lên hóa đơn).
+    - Bố cục đa đoạn (2–4 ảnh): Hiển thị lưới thẻ theo từng đoạn, hỗ trợ đổi vị trí thứ tự các đoạn (chuyển trước / sau) để AI ghép nối đúng chiều từ trên xuống dưới, kèm ô thêm đoạn tiếp theo trực quan.
+    - Tích hợp Lightbox Preview Dialog: Cho phép người dùng bấm vào ảnh hoặc nút "Phóng to xem nét chữ" để phóng to, thu nhỏ, xoay 90°, đặt lại góc nhìn nhằm kiểm tra độ rõ nét của chữ trên hóa đơn trước khi bóc tách.
+    - Hỗ trợ kéo thả ảnh ở mọi trạng thái: Kéo thả tệp ảnh đè lên vùng làm việc để thêm đoạn tiếp theo với hiệu ứng drag-over mượt mà.
+    - Tối ưu thanh hành động & tiến trình: Thanh tiến trình chi tiết khi upload, nút Hủy / Chọn lại và nút CTA "Bắt đầu bóc tách hóa đơn (X ảnh)" với hiệu ứng loading spinner.
+    - Sửa triệt để lỗi responsive: Loại bỏ bố cục 2 cột gây ép chiều ngang khiến chữ bị tràn "Phóng to xem nét ch...", chuyển sang bố cục đơn cột rộng rãi, file name có `min-w-0 flex-1 truncate` không đẩy nút ra ngoài, đổi nút thành "Phóng to" ngắn gọn, di chuyển tooltip hover xuống góc dưới tránh che chữ món ăn trên hóa đơn, dải thêm đoạn 2 co giãn linh hoạt toàn màn hình.
+  - **Cập nhật `ReceiptScanClientView` (`src/app/(site)/receipts/scan/receipt-scan-client-view.tsx`)**:
+    - Loại bỏ thẻ bọc viền thừa ngoài `ReceiptUploadZone` để tránh tình trạng lồng 2 lớp viền (card inside card).
+- File tạo/sửa:
+  - `src/features/receipt/components/receipt-upload-zone.tsx`
+  - `src/app/(site)/receipts/scan/receipt-scan-client-view.tsx`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 46 test files, 527/527 tests pass (100%).
+  - `npm run build`: Turbopack build thành công 46/46 routes tĩnh và động.
+- PROGRESS: Trải nghiệm quét hóa đơn tại `/receipts/scan` hoàn thiện cao cấp, 100% responsive trên mọi kích thước màn hình.
+- Còn lại / rủi ro: Không có.
+
 ## [2026-10-03] — Switch development scan providers to real OpenAI
 
 - User explicitly requested real providers after completing fake-provider acceptance. Restarted only the dedicated backend/mobile dev processes on ports 4003/8084 with VISION_PROVIDER=openai, RECEIPT_PROVIDER=openai and matching EXPO_PUBLIC_SCAN_PROVIDER=openai. No shared .env, API key or model changes.
