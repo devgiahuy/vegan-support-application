@@ -27,16 +27,13 @@ export default function DietScheduleScreen() {
   const { data: profile, isLoading } = useDetailedProfileQuery();
   const saveMutation = useSaveDietScheduleMutation();
 
-  const [dates, setDates] = React.useState<string[]>([]);
+  const [datesDraft, setDatesDraft] = React.useState<{ source: string; dates: string[] }>({
+    source: '',
+    dates: [],
+  });
   const [dateInput, setDateInput] = React.useState('');
-  const [hydrated, setHydrated] = React.useState(false);
-
-  React.useEffect(() => {
-    if (profile?.diet && !hydrated) {
-      setDates(profile.diet.scheduleDates);
-      setHydrated(true);
-    }
-  }, [profile?.diet, hydrated]);
+  const scheduleSource = profile?.diet?.scheduleDates.join('|') ?? '';
+  const dates = datesDraft.source === scheduleSource ? datesDraft.dates : profile?.diet?.scheduleDates ?? [];
 
   const addDate = () => {
     const value = dateInput.trim();
@@ -48,7 +45,7 @@ export default function DietScheduleScreen() {
       Alert.alert('Đã tồn tại', 'Ngày này đã có trong danh sách.');
       return;
     }
-    setDates((prev) => [...prev, value].sort());
+    setDatesDraft({ source: scheduleSource, dates: [...dates, value].sort() });
     setDateInput('');
   };
 
@@ -111,7 +108,7 @@ export default function DietScheduleScreen() {
             Cần lưu lựa chọn chế độ ăn trước khi sửa lịch chay kỳ.
           </Text>
           <View className="mt-6">
-            <Link href="/diet-preferences" asChild>
+              <Link href={'/diet-preferences' as Href} asChild>
               <PrimaryButton label="Thiết lập chế độ ăn" />
             </Link>
           </View>
@@ -126,11 +123,12 @@ export default function DietScheduleScreen() {
         <View className="items-center px-5 py-16">
           <Text className="mt-4 text-xl font-bold text-foreground">Không áp dụng</Text>
           <Text className="mt-2 text-center text-sm text-muted-foreground">
-            Lịch ngày chỉ áp dụng khi lịch thực hành đang chọn là "Chay kỳ". Hiện bạn đang chọn "
-            {profile.diet.practiceScheduleLabel}".
+            Lịch ngày chỉ áp dụng khi lịch thực hành đang chọn là {'"'}Chay kỳ{'"'}. Hiện bạn đang chọn{' "'}
+            {profile.diet.practiceScheduleLabel}
+            {'".'}
           </Text>
           <View className="mt-6">
-            <Link href="/diet-preferences" asChild>
+              <Link href={'/diet-preferences' as Href} asChild>
               <PrimaryButton label="Đổi lịch thực hành" variant="outline" />
             </Link>
           </View>
@@ -160,7 +158,7 @@ export default function DietScheduleScreen() {
               {dates.map((d) => (
                 <View key={d} className="flex-row items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1">
                   <Text className="text-xs font-medium text-primary">{d}</Text>
-                  <Pressable onPress={() => setDates((prev) => prev.filter((x) => x !== d))}>
+                  <Pressable onPress={() => setDatesDraft({ source: scheduleSource, dates: dates.filter((x) => x !== d) })}>
                     <X size={11} color={colors.primary} />
                   </Pressable>
                 </View>

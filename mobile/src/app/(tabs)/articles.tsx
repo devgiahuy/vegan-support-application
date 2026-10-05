@@ -236,7 +236,7 @@ export default function ArticlesScreen() {
             </View>
           </View>
           <View className="mt-4">
-            <Link href="/contributor-status" asChild>
+              <Link href={'/contributor-status' as Href} asChild>
               <PrimaryButton label="Tham gia đóng góp bài viết" variant="outline" />
             </Link>
           </View>
