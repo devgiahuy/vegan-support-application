@@ -273,8 +273,8 @@ export class FakeAiProvider implements AiProvider {
     if (input.signal.aborted) throw input.signal.reason;
     const question = input.messages.at(-1)?.content ?? '';
     const answer =
-      `Gợi ý demo: hãy ưu tiên nguồn đạm thực vật đa dạng như đậu hũ, các loại đậu, nấm và ngũ cốc nguyên hạt. ` +
-      `Với câu hỏi “${question.slice(0, 120)}”, bạn nên đối chiếu khẩu phần với mục tiêu năng lượng và các dị ứng đã khai báo.`;
+      `G?i � demo: h�y uu ti�n ngu?n d?m th?c v?t da d?ng nhu d?u hu, c�c lo?i d?u, n?m v� ngu c?c nguy�n h?t. ` +
+      `V?i c�u h?i �${question.slice(0, 120)}�, b?n n�n d?i chi?u kh?u ph?n v?i m?c ti�u nang lu?ng v� c�c d? ?ng d� khai b�o.`;
     for (const delta of answer.match(/.{1,48}(?:\s|$)/gu) ?? [answer]) {
       if (input.signal.aborted) throw input.signal.reason;
       yield { type: 'delta', delta };
@@ -293,7 +293,7 @@ export class FakeAiProvider implements AiProvider {
     }
     const normalized = input.toLocaleLowerCase('vi');
     return Promise.resolve({
-      flagged: ['tự tử', 'tu tu', 'giết người', 'giet nguoi'].some((term) =>
+      flagged: ['t? t?', 'tu tu', 'gi?t ngu?i', 'giet nguoi'].some((term) =>
         normalized.includes(term),
       ),
     });
@@ -311,7 +311,7 @@ export class FakeAiProvider implements AiProvider {
         ? input.steps.flatMap((step) => {
             const normalized = step.instruction.toLocaleLowerCase('vi');
             return !step.cookingMethodCode &&
-              ['luộc', 'luoc', 'nấu', 'nau', 'sôi', 'soi'].some((term) => normalized.includes(term))
+              ['lu?c', 'luoc', 'n?u', 'nau', 's�i', 'soi'].some((term) => normalized.includes(term))
               ? [
                   {
                     stepPosition: step.position,
@@ -341,7 +341,7 @@ export class FakeAiProvider implements AiProvider {
       fatGrams: null,
       fiberGrams: null,
       confidence: 0,
-      uncertaintyNote: 'Bộ cung cấp thử nghiệm không ước tính dinh dưỡng khi thiếu dữ liệu chuẩn.',
+      uncertaintyNote: 'B? cung c?p th? nghi?m kh�ng u?c t�nh dinh du?ng khi thi?u d? li?u chu?n.',
     });
   }
 }

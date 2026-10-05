@@ -38,12 +38,12 @@ const errorResponse = (schema: ZodType, description: string, codes: string[]) =>
   },
 });
 const authErrors = (schema: ZodType) => ({
-  401: errorResponse(schema, 'Yêu cầu access token hợp lệ', [
+  401: errorResponse(schema, 'Y�u c?u access token h?p l?', [
     'AUTH_REQUIRED',
     'INVALID_ACCESS_TOKEN',
     'TOKEN_EXPIRED',
   ]),
-  403: errorResponse(schema, 'Tài khoản bị cấm', ['ACCOUNT_BANNED']),
+  403: errorResponse(schema, 'T�i kho?n b? c?m', ['ACCOUNT_BANNED']),
 });
 
 export function registerMealPlanOpenApi(registry: OpenAPIRegistry, errorSchema: ZodType): void {
@@ -64,9 +64,9 @@ export function registerMealPlanOpenApi(registry: OpenAPIRegistry, errorSchema: 
     method: 'post',
     path: '/api/v1/meal-plans/generate',
     tags: ['Meal Plans'],
-    summary: 'Tạo hoặc regenerate weekly meal plan',
+    summary: 'T?o ho?c regenerate weekly meal plan',
     description:
-      'Tạo Monday–Sunday, 3 bữa/ngày. MAINTAIN/LOSE/GAIN dùng TDEE × goal factor; protein, fiber, fat và carbohydrate là target ước tính từ cấu hình. Backend hard-filter trước scoring, ưu tiên tolerance nhưng vẫn dùng candidate hard-compatible ngoài tolerance. Chỉ UNFILLED khi không còn candidate hard-compatible và luôn trả unresolved reason. seed cho kết quả deterministic; supersedesMealPlanId liên kết version regenerate.',
+      'T?o Monday�Sunday, 3 b?a/ng�y. MAINTAIN/LOSE/GAIN d�ng TDEE � goal factor; protein, fiber, fat v� carbohydrate l� target u?c t�nh t? c?u h�nh. Backend hard-filter tru?c scoring, uu ti�n tolerance nhung v?n d�ng candidate hard-compatible ngo�i tolerance. Ch? UNFILLED khi kh�ng c�n candidate hard-compatible v� lu�n tr? unresolved reason. seed cho k?t qu? deterministic; supersedesMealPlanId li�n k?t version regenerate.',
     operationId: 'generateMealPlan',
     security: authenticated,
     request: {
@@ -88,12 +88,12 @@ export function registerMealPlanOpenApi(registry: OpenAPIRegistry, errorSchema: 
     responses: {
       201: {
         description:
-          'Thực đơn tuần mới cùng danh sách mua sắm, tóm tắt dễ hiểu và các lưu ý dành cho người dùng',
+          'Th?c don tu?n m?i c�ng danh s�ch mua s?m, t�m t?t d? hi?u v� c�c luu � d�nh cho ngu?i d�ng',
         content: { 'application/json': { schema: planResponse } },
       },
-      400: errorResponse(errorSchema, 'Payload generate không hợp lệ', ['VALIDATION_ERROR']),
+      400: errorResponse(errorSchema, 'Payload generate kh�ng h?p l?', ['VALIDATION_ERROR']),
       ...authErrors(errorSchema),
-      409: errorResponse(errorSchema, 'Profile, schedule, supersedes hoặc idempotency conflict', [
+      409: errorResponse(errorSchema, 'Profile, schedule, supersedes ho?c idempotency conflict', [
         'HEALTH_PROFILE_INCOMPLETE',
         'DIET_SCHEDULE_REQUIRED',
         'MEAL_PLAN_SUPERSEDES_INVALID',
@@ -106,16 +106,16 @@ export function registerMealPlanOpenApi(registry: OpenAPIRegistry, errorSchema: 
     method: 'get',
     path: '/api/v1/meal-plans',
     tags: ['Meal Plans'],
-    summary: 'List meal plan versions của current user',
+    summary: 'List meal plan versions c?a current user',
     operationId: 'listMealPlans',
     security: authenticated,
     request: { query: mealPlanListQuerySchema },
     responses: {
       200: {
-        description: 'Meal plan summaries phân trang',
+        description: 'Meal plan summaries ph�n trang',
         content: { 'application/json': { schema: listResponse } },
       },
-      400: errorResponse(errorSchema, 'Query list không hợp lệ', ['VALIDATION_ERROR']),
+      400: errorResponse(errorSchema, 'Query list kh�ng h?p l?', ['VALIDATION_ERROR']),
       ...authErrors(errorSchema),
     },
   });
@@ -124,19 +124,19 @@ export function registerMealPlanOpenApi(registry: OpenAPIRegistry, errorSchema: 
     method: 'get',
     path: '/api/v1/meal-plans/{id}',
     tags: ['Meal Plans'],
-    summary: 'Đọc meal plan version thuộc current user',
+    summary: '�?c meal plan version thu?c current user',
     operationId: 'getMealPlan',
     security: authenticated,
     request: { params: mealPlanParamsSchema },
     responses: {
       200: {
         description:
-          'Existing 21-item list plus additive Monday–Sunday day/slot view, explicit unresolved state, estimated four-macro targets/totals, shopping list and analysis',
+          'Existing 21-item list plus additive Monday�Sunday day/slot view, explicit unresolved state, estimated four-macro targets/totals, shopping list and analysis',
         content: { 'application/json': { schema: planResponse } },
       },
-      400: errorResponse(errorSchema, 'Meal plan ID không hợp lệ', ['VALIDATION_ERROR']),
+      400: errorResponse(errorSchema, 'Meal plan ID kh�ng h?p l?', ['VALIDATION_ERROR']),
       ...authErrors(errorSchema),
-      404: errorResponse(errorSchema, 'Không tìm thấy owned meal plan', ['NOT_FOUND']),
+      404: errorResponse(errorSchema, 'Kh�ng t�m th?y owned meal plan', ['NOT_FOUND']),
     },
   });
 
@@ -144,9 +144,9 @@ export function registerMealPlanOpenApi(registry: OpenAPIRegistry, errorSchema: 
     method: 'patch',
     path: '/api/v1/meal-plans/{id}/items/{itemId}/swap',
     tags: ['Meal Plans'],
-    summary: 'Swap một meal slot an toàn',
+    summary: 'Swap m?t meal slot an to�n',
     description:
-      'Chỉ chọn published eligible Recipe còn thỏa hard constraints của ngày. Ưu tiên calorie trong ±100 kcal so với món cũ; nếu không có dùng ±20% target và trả warning. expectedVersion chống concurrent update, idempotencyKey chống apply lặp.',
+      'Ch? ch?n published eligible Recipe c�n th?a hard constraints c?a ng�y. Uu ti�n calorie trong �100 kcal so v?i m�n cu; n?u kh�ng c� d�ng �20% target v� tr? warning. expectedVersion ch?ng concurrent update, idempotencyKey ch?ng apply l?p.',
     operationId: 'swapMealPlanItem',
     security: authenticated,
     request: {
@@ -158,13 +158,13 @@ export function registerMealPlanOpenApi(registry: OpenAPIRegistry, errorSchema: 
     },
     responses: {
       200: {
-        description: 'Meal plan sau swap và shopping list đã tính lại',
+        description: 'Meal plan sau swap v� shopping list d� t�nh l?i',
         content: { 'application/json': { schema: planResponse } },
       },
-      400: errorResponse(errorSchema, 'Payload swap không hợp lệ', ['VALIDATION_ERROR']),
+      400: errorResponse(errorSchema, 'Payload swap kh�ng h?p l?', ['VALIDATION_ERROR']),
       ...authErrors(errorSchema),
-      404: errorResponse(errorSchema, 'Không tìm thấy plan hoặc item thuộc user', ['NOT_FOUND']),
-      409: errorResponse(errorSchema, 'Không có candidate hoặc version/idempotency conflict', [
+      404: errorResponse(errorSchema, 'Kh�ng t�m th?y plan ho?c item thu?c user', ['NOT_FOUND']),
+      409: errorResponse(errorSchema, 'Kh�ng c� candidate ho?c version/idempotency conflict', [
         'NO_ELIGIBLE_RECIPE',
         'MEAL_PLAN_VERSION_CONFLICT',
         'MEAL_PLAN_IDEMPOTENCY_CONFLICT',
@@ -176,9 +176,9 @@ export function registerMealPlanOpenApi(registry: OpenAPIRegistry, errorSchema: 
     method: 'patch',
     path: '/api/v1/meal-plans/{id}/items/{itemId}/manual-add',
     tags: ['Meal Plans'],
-    summary: 'Thêm recipe hoặc private custom meal vào slot',
+    summary: 'Th�m recipe ho?c private custom meal v�o slot',
     description:
-      'Hệ thống kiểm tra dị ứng, nguyên liệu cần tránh, chế độ ăn và quy tắc truyền thống trước khi lưu. Món phù hợp vẫn được lưu khi các chỉ số chất đạm, chất xơ, chất béo hoặc tinh bột ước tính lệch khỏi khoảng mục tiêu; các lưu ý này chỉ là gợi ý điều chỉnh và không chặn thao tác.',
+      'H? th?ng ki?m tra d? ?ng, nguy�n li?u c?n tr�nh, ch? d? an v� quy t?c truy?n th?ng tru?c khi luu. M�n ph� h?p v?n du?c luu khi c�c ch? s? ch?t d?m, ch?t xo, ch?t b�o ho?c tinh b?t u?c t�nh l?ch kh?i kho?ng m?c ti�u; c�c luu � n�y ch? l� g?i � di?u ch?nh v� kh�ng ch?n thao t�c.',
     operationId: 'manualAddMealPlanItem',
     security: authenticated,
     request: {
@@ -187,13 +187,13 @@ export function registerMealPlanOpenApi(registry: OpenAPIRegistry, errorSchema: 
     },
     responses: {
       200: {
-        description: 'Meal plan và analysis đã cập nhật',
+        description: 'Meal plan v� analysis d� c?p nh?t',
         content: { 'application/json': { schema: planResponse } },
       },
-      400: errorResponse(errorSchema, 'Payload manual-add không hợp lệ', ['VALIDATION_ERROR']),
+      400: errorResponse(errorSchema, 'Payload manual-add kh�ng h?p l?', ['VALIDATION_ERROR']),
       ...authErrors(errorSchema),
-      404: errorResponse(errorSchema, 'Không tìm thấy owned plan, slot hoặc source', ['NOT_FOUND']),
-      409: errorResponse(errorSchema, 'Hard constraint, version hoặc idempotency conflict', [
+      404: errorResponse(errorSchema, 'Kh�ng t�m th?y owned plan, slot ho?c source', ['NOT_FOUND']),
+      409: errorResponse(errorSchema, 'Hard constraint, version ho?c idempotency conflict', [
         'MEAL_PLAN_HARD_CONSTRAINT_VIOLATION',
         'MEAL_PLAN_VERSION_CONFLICT',
         'MEAL_PLAN_IDEMPOTENCY_CONFLICT',
@@ -211,12 +211,12 @@ export function registerMealPlanOpenApi(registry: OpenAPIRegistry, errorSchema: 
     request: { params: mealPlanParamsSchema, query: deleteMealPlanQuerySchema },
     responses: {
       200: {
-        description: 'Delete idempotent; plan không còn xuất hiện trong list/detail',
+        description: 'Delete idempotent; plan kh�ng c�n xu?t hi?n trong list/detail',
         content: { 'application/json': { schema: deleteResponse } },
       },
-      400: errorResponse(errorSchema, 'ID hoặc expectedVersion không hợp lệ', ['VALIDATION_ERROR']),
+      400: errorResponse(errorSchema, 'ID ho?c expectedVersion kh�ng h?p l?', ['VALIDATION_ERROR']),
       ...authErrors(errorSchema),
-      404: errorResponse(errorSchema, 'Không tìm thấy owned meal plan', ['NOT_FOUND']),
+      404: errorResponse(errorSchema, 'Kh�ng t�m th?y owned meal plan', ['NOT_FOUND']),
       409: errorResponse(errorSchema, 'Meal plan version conflict', ['MEAL_PLAN_VERSION_CONFLICT']),
     },
   });

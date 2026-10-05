@@ -40,7 +40,7 @@ export function estimateMealMacroTargets(
     estimated: true,
     source: 'HEALTH_PROFILE_TDEE_GOAL_CONFIG',
     sourceDetail:
-      'Mục tiêu được ước tính từ thông tin sức khỏe và mục tiêu bạn đã chọn. Đây là khoảng tham khảo, không phải số đo chính xác.',
+      'M?c ti�u du?c u?c t�nh t? th�ng tin s?c kh?e v� m?c ti�u b?n d� ch?n. ��y l� kho?ng tham kh?o, kh�ng ph?i s? do ch�nh x�c.',
     tolerancePercent: config.tolerancePercent,
   };
 }
@@ -88,6 +88,27 @@ export function macroDistance(values: MealMacroValues, targets: MealMacroValues)
   );
   if (!comparable.length) return Number.POSITIVE_INFINITY;
   return comparable.reduce((sum, [value, target]) => sum + Math.abs(value - target) / target, 0);
+}
+
+/** A bounded, unitless daily score across the four selectable macros. */
+export function macroTargetDeviationScore(
+  values: MealMacroValues,
+  targets: MealMacroValues,
+  tolerancePercent: number,
+): number {
+  const pairs = [
+    [values.proteinGrams, targets.proteinGrams],
+    [values.fiberGrams, targets.fiberGrams],
+    [values.fatGrams, targets.fatGrams],
+    [values.carbohydrateGrams, targets.carbohydrateGrams],
+  ] as const;
+  const tolerance = tolerancePercent / 100;
+  return pairs.reduce((score, [value, target]) => {
+    if (value === null || target === null || target <= 0) return score;
+    const deviation = (value - target) / target;
+    const outsideBand = Math.max(0, Math.abs(deviation) - tolerance);
+    return score + Math.min(12, Math.abs(deviation) * 0.15 + outsideBand * (deviation > 0 ? 3 : 1));
+  }, 0);
 }
 
 export function isMacroOverTarget(

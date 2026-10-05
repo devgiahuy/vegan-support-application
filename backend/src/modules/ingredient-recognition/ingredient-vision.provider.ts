@@ -96,7 +96,7 @@ export class FakeIngredientVisionProvider implements IngredientVisionProvider {
           candidates: [],
           error: {
             code: 'IMAGE_PROCESSING_FAILED',
-            message: 'Không thể phân tích một ảnh; kết quả từ các ảnh khác vẫn được giữ lại.',
+            message: 'Kh�ng th? ph�n t�ch m?t ?nh; k?t qu? t? c�c ?nh kh�c v?n du?c gi? l?i.',
           },
         };
       }
@@ -105,22 +105,22 @@ export class FakeIngredientVisionProvider implements IngredientVisionProvider {
           inputId: input.id,
           candidates: [
             {
-              name: 'đậu hũ',
+              name: 'd?u hu',
               quantity: 120,
               unit: 'g',
               freshnessObservation:
-                'Bề mặt có vẻ hơi khô trong ảnh; hãy tự kiểm tra kỹ trước khi sử dụng.',
+                'B? m?t c� v? hoi kh� trong ?nh; h�y t? ki?m tra k? tru?c khi s? d?ng.',
               confidence: 0.92,
-              uncertaintyNote: 'Số lượng được ước tính theo kích thước nhìn thấy trong ảnh.',
+              uncertaintyNote: 'S? lu?ng du?c u?c t�nh theo k�ch thu?c nh�n th?y trong ?nh.',
             },
             {
-              name: 'táo',
+              name: 't�o',
               quantity: 2,
-              unit: 'quả',
+              unit: 'qu?',
               freshnessObservation:
-                'Không thấy dấu hiệu bất thường rõ ràng qua ảnh, nhưng ảnh không đủ để kết luận về độ an toàn.',
+                'Kh�ng th?y d?u hi?u b?t thu?ng r� r�ng qua ?nh, nhung ?nh kh�ng d? d? k?t lu?n v? d? an to�n.',
               confidence: 0.48,
-              uncertaintyNote: 'Một phần nguyên liệu bị che khuất.',
+              uncertaintyNote: 'M?t ph?n nguy�n li?u b? che khu?t.',
             },
           ],
           error: null,
@@ -130,20 +130,20 @@ export class FakeIngredientVisionProvider implements IngredientVisionProvider {
         inputId: input.id,
         candidates: [
           {
-            name: 'đậu hũ',
+            name: 'd?u hu',
             quantity: 80,
             unit: 'g',
-            freshnessObservation: 'Màu sắc quan sát được có thể bị ảnh hưởng bởi ánh sáng.',
+            freshnessObservation: 'M�u s?c quan s�t du?c c� th? b? ?nh hu?ng b?i �nh s�ng.',
             confidence: 0.84,
-            uncertaintyNote: 'Đây có thể là cùng phần đậu hũ xuất hiện trong ảnh khác.',
+            uncertaintyNote: '��y c� th? l� c�ng ph?n d?u hu xu?t hi?n trong ?nh kh�c.',
           },
           {
-            name: 'rau lá chưa xác định',
+            name: 'rau l� chua x�c d?nh',
             quantity: null,
             unit: null,
             freshnessObservation: null,
             confidence: 0.31,
-            uncertaintyNote: 'Chưa có đủ chi tiết nhìn thấy để đề xuất một nguyên liệu chuẩn.',
+            uncertaintyNote: 'Chua c� d? chi ti?t nh�n th?y d? d? xu?t m?t nguy�n li?u chu?n.',
           },
         ],
         error: null,
@@ -190,7 +190,7 @@ export class OpenAiIngredientVisionProvider implements IngredientVisionProvider 
               'Write every user-facing generated string in natural Vietnamese, including name, freshnessObservation, and uncertaintyNote. Keep IDs, numeric values, and enum-like values unchanged.',
               'confidence is a subjective 0 to 1 estimate, not a calibrated probability. Return an empty array if no food is visible.',
             ].join(' '),
-            prompt: 'Trích xuất các nguyên liệu có thể chỉnh sửa từ ảnh tủ lạnh này.',
+            prompt: 'Tr�ch xu?t c�c nguy�n li?u c� th? ch?nh s?a t? ?nh t? l?nh n�y.',
           });
           const payload = openAiVisionPayloadSchema.parse(JSON.parse(output) as unknown);
           return visionImageResultSchema.parse({
@@ -204,7 +204,7 @@ export class OpenAiIngredientVisionProvider implements IngredientVisionProvider 
             candidates: [],
             error: {
               code: 'IMAGE_PROCESSING_FAILED',
-              message: 'Không thể phân tích ảnh này. Hãy thử lại hoặc nhập nguyên liệu thủ công.',
+              message: 'Kh�ng th? ph�n t�ch ?nh n�y. H�y th? l?i ho?c nh?p nguy�n li?u th? c�ng.',
             },
           });
         }

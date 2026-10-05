@@ -904,6 +904,9 @@ export class MealAnalysisService {
     const incompleteData = Array.isArray(record.incompleteData)
       ? record.incompleteData.filter((item): item is string => typeof item === 'string')
       : [];
+    const incompleteMealCount = new Set(
+      incompleteData.map((note) => note.split(':', 1)[0]?.trim()).filter(Boolean),
+    ).size;
     const ruleVersions = Array.isArray(record.ruleVersions)
       ? record.ruleVersions.filter((item): item is string => typeof item === 'string')
       : [];
@@ -959,6 +962,14 @@ export class MealAnalysisService {
       },
       confidence: Number(record.confidence),
       incompleteData,
+      incompleteDataSummary: incompleteData.length
+        ? {
+            affectedMealCount: incompleteMealCount,
+            title: 'Một số món chưa có đủ dữ liệu dinh dưỡng',
+            detail: `${incompleteMealCount}/${itemValues.length} món chưa thể ước tính đầy đủ chất đạm, chất xơ, chất béo và tinh bột. Các chỉ số hiện tại chỉ mang tính tham khảo.`,
+            suggestion: 'Bạn có thể xem danh sách các món cần kiểm tra hoặc chọn món khác có dữ liệu đầy đủ hơn.',
+          }
+        : { affectedMealCount: 0, title: null, detail: null, suggestion: null },
       estimatedNutrition: summary.estimatedNutrition,
       ruleVersions,
       disclaimer: record.disclaimer,
