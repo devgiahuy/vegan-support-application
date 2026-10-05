@@ -3591,3 +3591,28 @@
   - `npm test`: 25 test files, 236/236 unit tests pass 100%.
 - PROGRESS: Giữ nguyên (tạo task guide & documentation scaffolding).
 - Còn lại: Lần lượt chọn task trong `frontend/docs/tasks/` để thực thi (ưu tiên Phase 15 và Phase 16).
+
+## [2026-10-06] — Khu vực Quản lý nội dung admin recipes/articles/video (spec 029-admin-content-crud)
+
+- Mục tiêu:
+  - Quản trị viên tạo/sửa/xoá/gửi duyệt công thức, bài viết và video của chính mình ngay trong dashboard, không rời sang khu vực thành viên.
+  - Danh sách đầy đủ có bộ lọc tác giả/trạng thái/thời gian; ẩn/khôi phục kèm lý do.
+- Đã làm:
+  - **Khung 7 tầng `src/features/admin-content/`**: `types/` (DTO riêng + `AdminContentRow` 26 trường + `source: published-only/admin-list` + options 8 trạng thái **không `ARCHIVED`**), `schemas/admin-content.schema.ts` (dùng thật qua react-hook-form), `mappers/` + 47 unit tests, `api/` (7 hàm, chỉ dùng `API_ENDPOINTS.POSTS.*` + `CONTENT_REVIEW.*`, không fixture fallback), `queries/` (8 hooks, invalidate cả key công khai).
+  - **Điều hướng**: tab `content` trong `dashboard/page.tsx` (union + parseTabParam + mảng tabs + khối render) và mục "Nội dung" trong `NAV_MAIN` của `admin/layout.tsx` — không trang mồ côi.
+  - **Bốn trạng thái**: skeleton + `ErrorState` (thử lại) + `EmptyState` (phân biệt rỗng/lỗi) + bảng. Tiêu đề bảng ghi rõ "nội dung đã xuất bản"; bộ lọc Trạng thái/Tác giả/Thời gian vô hiệu hoá kèm lý do.
+  - **Tạo/sửa**: `admin-content-editor-dialog.tsx` 3 nhánh. RECIPE tái dùng `RecipeEditorForm` (uỷ quyền `onSubmit`, không điều hướng). BLOG/VIDEO dùng schema gốc `postFormSchema`/`videoFormSchema` với biểu mẫu riêng — `PostEditorForm` sở hữu mutation và `router.push()` nên không tái dùng được. `expectedVersion` trong thân PATCH / tham số query DELETE.
+  - **Xoá mềm** có xác nhận nêu hậu quả không hoàn tác; **không** viết nút Ẩn/Khôi phục giả (CG-02).
+  - **Gửi duyệt** kèm chặn tự duyệt (`AdminContentSelfReviewNotice` + `SELF_APPROVAL_FORBIDDEN`); lịch sử duyệt timeline; tín hiệu kiểm duyệt chỉ hiển thị dạng tham chiếu.
+  - **Media/quota**: `ImageUploader`/`VideoUploader` trong biểu mẫu, `StorageQuotaWidget` compact, nút Gửi duyệt vô hiệu hoá khi video chưa có nguồn.
+  - **Hợp đồng**: `specs/029-admin-content-crud/contracts/cg-01-admin-content-list.md` và `cg-02-author-hide-restore.md` (phát hiện qua đọc mã nguồn BE, có DoD và kế hoạch FE sau READY).
+- File tạo/sửa:
+  - Tạo: `src/features/admin-content/**` (15 tệp), 8 tài liệu spec (`spec.md`, `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, `tasks.md`, 2 contracts).
+  - Sửa: `src/app/(admin)/admin/dashboard/page.tsx`, `src/app/(admin)/admin/layout.tsx`, `frontend/docs/BACKEND_INTEGRATION.md` (changelog v5.4), `docs/PROGRESS.md`, `docs/WORK-LOG.md`.
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi.
+  - `npm test`: 47/47 mapper tests mới pass; toàn suite 572 pass / 2 fail (2 fail là `pantry.mapper.test.ts` phụ thuộc ngày hiện tại, có từ nền, không liên quan).
+  - `npm run build`: thành công.
+  - `npm run lint`: 0 lỗi/0 cảnh báo trong file mới (repo có 91 lỗi nền sẵn, không chạm).
+- PROGRESS: Task #16: 0% → 85%.
+- Còn lại / rủi ro: V-01..V-15 cần backend có phiên admin để chạy tay; Phase 9 (US1 đầy đủ) chặn bởi CG-01; Ẩn/Khôi phục chặn bởi CG-02. Nhánh `029-admin-content-crud` đã tạo.

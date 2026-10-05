@@ -23,6 +23,7 @@ import {
   Store,
   Bot,
   Database,
+  Newspaper,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -65,9 +66,11 @@ import {
   FeaturesAuditTable,
 } from '@/features/ai-governance';
 import { AiVerificationTable } from '@/features/ai-artifacts';
+import { AdminContentManager } from '@/features/admin-content/components/admin-content-manager';
 
 type Tab =
   | 'queue'
+  | 'content'
   | 'users'
   | 'categories'
   | 'ingredients'
@@ -94,6 +97,7 @@ export default function AdminDashboardPage() {
 function parseTabParam(value: string | null): Tab {
   if (
     value === 'queue' ||
+    value === 'content' ||
     value === 'users' ||
     value === 'categories' ||
     value === 'ingredients' ||
@@ -190,6 +194,7 @@ function AdminDashboardContent() {
 
   const tabs: { id: Tab; label: string; icon: React.ElementType; badge?: string }[] = [
     { id: 'queue', label: 'Kiểm duyệt', icon: ClipboardCheck },
+    { id: 'content', label: 'Quản lý nội dung', icon: Newspaper },
     { id: 'reports', label: 'Báo cáo', icon: Flag },
     { id: 'users', label: 'Người dùng & Roles', icon: Users },
     { id: 'mod-users', label: 'Kiểm soát TK', icon: UserCog },
@@ -300,6 +305,13 @@ function AdminDashboardContent() {
           >
             {/* TAB: QUEUE — hàng chờ kiểm duyệt thật (features/review) */}
             {tab === 'queue' && <ReviewQueueTable />}
+
+            {/* TAB: CONTENT — quản trị nội dung của chính quản trị viên (features/admin-content) */}
+            {tab === 'content' && (
+              <div>
+                <AdminContentManager />
+              </div>
+            )}
 
             {/* TAB: REPORTS — hàng chờ báo cáo (features/moderation) */}
             {tab === 'reports' && <ReportsTable />}

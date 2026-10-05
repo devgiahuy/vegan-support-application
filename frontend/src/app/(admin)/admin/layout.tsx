@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   HardDrive,
   Database,
+  Newspaper,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
@@ -28,6 +29,7 @@ import { useSearchParams } from 'next/navigation';
 const NAV_MAIN = [
   { label: 'Tổng quan', href: '/admin/dashboard', icon: LayoutDashboard },
   { label: 'Duyệt bài', href: '/admin/dashboard?tab=queue', icon: ClipboardCheck, badge: '12' },
+  { label: 'Nội dung', href: '/admin/dashboard?tab=content', icon: Newspaper },
   { label: 'Người dùng', href: '/admin/dashboard?tab=users', icon: Users },
   { label: 'Chuyên mục', href: '/admin/dashboard?tab=categories', icon: FolderTree },
   { label: 'Dữ liệu dinh dưỡng', href: '/admin/dashboard?tab=food-data', icon: Database },

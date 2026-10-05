@@ -969,6 +969,12 @@ Không được mô tả endpoint là READY chỉ vì route đã tồn tại n�
 
 Thêm entry mới nhất ở trên cùng.
 
+Change 2026-10-06 (v5.4): Khu vực Quản lý nội dung trong dashboard quản trị (`features/admin-content`, tab `content`):
+- Tái sử dụng 7 endpoint READY sẵn có, không thêm endpoint mới: `GET/POST /posts`, `GET /posts/:idOrSlug`, `PATCH/DELETE /posts/:id`, `POST /posts/:id/submit`, `GET /posts/:id/review-history`. Quản trị viên tạo/sửa/xoá nội dung của chính mình với tư cách tác giả; nội dung tạo ra luôn là bản nháp và vẫn phải qua hàng đợi duyệt (cấm tự duyệt).
+- Ghi nhận 2 khoảng trống hợp đồng qua nghiên cứu mã nguồn máy chủ: CG-01 (`GET /api/v1/posts` là `listPublished`, không có bộ lọc author/status — chặn bảng danh sách đầy đủ) và CG-02 (không có endpoint ẩn/khôi phục cho tác giả, `HIDDEN` chỉ do kiểm duyệt đặt — chặn phần Ẩn/Khôi phục). Cả hai đã có hợp đồng đề xuất và định nghĩa thỏa điều kiện tại `specs/029-admin-content-crud/contracts/`.
+- Không bọc hai tầng response, không fixture fallback trong khu vực quản trị, phân nhánh lỗi chỉ theo `error.code`.
+- Cổng: `npx tsc --noEmit` 0 lỗi, `npm test` pass (trừ 2 test pantry ngày-hiện-tại có sẵn từ nền), `npm run build` thành công.
+
 Change 2026-10-03 (v4.19): Hoàn tất đồng bộ frontend theo cập nhật backend IMPLEMENTATION_PLAN (Rules 9–12) và OpenAPI catalog:
 - Meal Plan: hỗ trợ cấu trúc 21 slot (7 ngày × 3 bữa: Sáng, Trưa, Tối) với day-level estimated totals, macro targets từ TDEE (protein, carbs, fat, fiber guidance), danh sách warning advisory chi tiết (`PlanWarningDetail`, `PlanUserSummary`), và lý do chưa xếp được món (`unresolvedCode`, `unfilledReason`).
 - Meal Analysis: chuyển đổi phân tích dinh dưỡng sang 4 chỉ số ước tính (protein, chất xơ, chất béo, carbs) với so sánh mục tiêu (`targetComparison`: `ABOVE`/`BELOW`), loại bỏ cảnh báo chặn vi chất (micronutrient completeness không còn là warning/blocker), giữ nguyên các ràng buộc cứng (dị ứng, loại trừ thành phần, diet pattern, truyền thống).
