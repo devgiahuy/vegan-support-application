@@ -33,23 +33,23 @@ function defaultArtifactPresentation(content: z.infer<typeof artifactContentSche
   switch (content.type) {
     case AiArtifactType.CHAT_ANSWER:
       return {
-        title: 'Câu trả lời dinh dưỡng từ AI',
+        title: 'C�u tr? l?i dinh du?ng t? AI',
         summary: content.answer.slice(0, 5_000),
       };
     case AiArtifactType.RECIPE_NUTRITION:
       return {
         title: content.recipe.title.slice(0, 160),
-        summary: 'Ước tính dinh dưỡng cho công thức, có kèm nguồn gốc và độ không chắc chắn.',
+        summary: 'U?c t�nh dinh du?ng cho c�ng th?c, c� k�m ngu?n g?c v� d? kh�ng ch?c ch?n.',
       };
     case AiArtifactType.FRIDGE_RECOGNITION:
       return {
-        title: 'Kết quả nhận diện nguyên liệu',
-        summary: 'Các nguyên liệu được AI đề xuất từ ảnh và cần người dùng kiểm tra lại.',
+        title: 'K?t qu? nh?n di?n nguy�n li?u',
+        summary: 'C�c nguy�n li?u du?c AI d? xu?t t? ?nh v� c?n ngu?i d�ng ki?m tra l?i.',
       };
     case AiArtifactType.RECEIPT_EXTRACTION:
       return {
-        title: 'Kết quả phân tích hóa đơn',
-        summary: 'Các mặt hàng được AI trích xuất từ hóa đơn và cần người dùng kiểm tra lại.',
+        title: 'K?t qu? ph�n t�ch h�a don',
+        summary: 'C�c m?t h�ng du?c AI tr�ch xu?t t? h�a don v� c?n ngu?i d�ng ki?m tra l?i.',
       };
   }
 }
