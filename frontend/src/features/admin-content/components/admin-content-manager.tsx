@@ -4,7 +4,8 @@ import * as React from 'react';
 import { AlertCircle, Plus } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PostType } from '@/common/enums';
 import { toast } from 'sonner';
@@ -100,35 +101,46 @@ export function AdminContentManager() {
   const isEmpty = !isLoading && !isError && rows.length === 0;
 
   return (
-    <Card>
-      <CardHeader className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <CardTitle className="text-base">Quản lý nội dung</CardTitle>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Công thức, bài viết và video do bạn đăng.{' '}
-            <span className="font-medium text-foreground">
-              {totalItems.toLocaleString('vi-VN')}
-            </span>{' '}
-            bản ghi.
+    <Card className="overflow-hidden border-border/80 shadow-sm">
+      {/* Header khu vực quản lý nội dung - canh lề chuẩn xác, responsive */}
+      <div className="flex flex-col gap-4 border-b border-border/80 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6 bg-card">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-lg font-bold tracking-tight text-foreground sm:text-xl">
+              Quản lý nội dung
+            </h2>
+            <Badge variant="secondary" className="rounded-full px-2.5 py-0.5 text-xs font-semibold">
+              {totalItems.toLocaleString('vi-VN')} bản ghi
+            </Badge>
+          </div>
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            Quản lý công thức, bài viết và video do bạn đăng tải
           </p>
         </div>
+
         <Button
           type="button"
           onClick={() => setEditorState({ open: true, type: null, mode: 'create', row: null })}
           disabled={busy}
+          className="w-full sm:w-auto shrink-0 shadow-xs"
         >
           <Plus className="mr-2 h-4 w-4" aria-hidden="true" />
           Tạo nội dung
         </Button>
-      </CardHeader>
+      </div>
 
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 p-4 sm:p-6">
         <AdminContentSelfReviewNotice visible={sessionUserId.length > 0} />
 
         {source === 'published-only' && (
-          <Alert role="status">
-            <AlertCircle className="h-4 w-4" aria-hidden="true" />
-            <AlertDescription>{ADMIN_CONTENT_PUBLISHED_ONLY_NOTE}</AlertDescription>
+          <Alert
+            role="status"
+            className="border-sky-500/30 bg-sky-500/10 text-sky-950 dark:text-sky-200 [&>svg]:text-sky-600 dark:[&>svg]:text-sky-400"
+          >
+            <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <AlertDescription className="text-xs sm:text-sm font-medium">
+              {ADMIN_CONTENT_PUBLISHED_ONLY_NOTE}
+            </AlertDescription>
           </Alert>
         )}
 
@@ -140,10 +152,10 @@ export function AdminContentManager() {
         />
 
         {isLoading && (
-          <div className="space-y-2" aria-busy="true" aria-live="polite">
+          <div className="space-y-3" aria-busy="true" aria-live="polite">
             <span className="sr-only">Đang tải danh sách nội dung...</span>
             {Array.from({ length: 5 }).map((_, index) => (
-              <Skeleton key={index} className="h-12 w-full" />
+              <Skeleton key={index} className="h-16 w-full rounded-xl" />
             ))}
           </div>
         )}
@@ -195,7 +207,9 @@ export function AdminContentManager() {
               onShowHistory={setHistoryTarget}
               busy={busy}
             />
-            <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+            <div className="pt-2">
+              <Pagination page={page} totalPages={totalPages} onChange={setPage} />
+            </div>
           </>
         )}
       </CardContent>

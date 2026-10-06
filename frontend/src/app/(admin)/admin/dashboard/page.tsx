@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import {
   ClipboardCheck,
@@ -118,9 +118,20 @@ function parseTabParam(value: string | null): Tab {
 
 /** Nội dung trang admin dashboard. Nhận `?tab=` để link trực tiếp tới tab (vd `/admin/dashboard?tab=queue`). */
 function AdminDashboardContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = React.useState<Tab>(() => parseTabParam(searchParams.get('tab')));
   const shouldReduceMotion = useReducedMotion();
+
+  const handleTabChange = React.useCallback(
+    (newTab: Tab) => {
+      setTab(newTab);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('tab', newTab);
+      router.replace(`/admin/dashboard?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams]
+  );
 
   // Queries cho 4 chỉ số KPI thực tế
   const {
@@ -266,7 +277,7 @@ function AdminDashboardContent() {
                 key={t.id}
                 type="button"
                 whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
-                onClick={() => setTab(t.id)}
+                onClick={() => handleTabChange(t.id)}
                 className={cn(
                   'relative z-10 flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary',
                   isActive

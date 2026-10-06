@@ -3,6 +3,48 @@
 > Agent BẮT BUỘC append 1 entry sau mỗi task xong (xem `ARCHITECTURE.md` mục 7).
 > Mỗi entry ghi: đã làm gì, file đổi, cách verify, % PROGRESS đổi ra sao.
 
+## [2026-10-06] — Redesign và khắc phục lỗi responsive, sidebar phần /admin/dashboard?tab=content
+
+- Mục tiêu:
+  - Khắc phục triệt để lỗi sidebar desktop bị cuộn trôi khỏi màn hình tạo khoảng trắng khổng lồ (media_1791224719019.png) do thiếu `sticky` và cố định `h-screen`.
+  - Khắc phục lỗi sidebar mobile: menu bị drop inline gây vỡ giao diện; chuyển sang Sheet Drawer (`side="left"`) chuẩn mực, có backdrop và đóng tự động khi bấm link.
+  - Sửa lỗi căn giữa vô lý ở tiêu đề bảng và nút "Tạo nội dung" trong `AdminContentManager` (media_1791224721038.png).
+  - Khắc phục lỗi bảng nội dung bị cuộn tràn mất cột "Tiêu đề" bên trái và các nút thao tác "Lịch sử", "Xoá", "Sửa" bị ép hẹp chồng lên nhau thành 3 hàng dọc.
+  - Thiết kế kiến trúc hiển thị kép cho `AdminContentTable`: Giao diện Desktop bảng dữ liệu chuẩn chống tràn với DropdownMenu thao tác gọn gàng + Giao diện Mobile Cards tối ưu màn hình cảm ứng.
+  - Tối ưu bộ lọc `AdminContentFilters` theo lưới chuẩn 4 cột, nút xoá từ khoá nhanh và đồng bộ tab URL qua `useRouter`.
+- Đã làm:
+  - **Tối ưu Admin Layout (`src/app/(admin)/admin/layout.tsx`)**:
+    - Chuyển sidebar desktop sang `sticky top-0 h-screen overflow-y-auto` đảm bảo luôn bám sát màn hình khi cuộn trang, triệt tiêu hoàn toàn khoảng trắng vô tận ở giữa.
+    - Tích hợp `Sheet` drawer chuẩn Radix/shadcn cho mobile/tablet kèm nút hamburger trên header, hiển thị trọn vẹn danh mục, đo lường dung lượng DB và thông tin Admin thật từ `useAuthStore`.
+    - Đồng bộ tiêu đề Breadcrumb động theo tab đang xem (Quản lý nội dung, Kiểm duyệt, v.v.).
+  - **Đồng bộ Tab Navigation (`src/app/(admin)/admin/dashboard/page.tsx`)**:
+    - Dùng `useRouter` để khi người dùng click tab trên dashboard sẽ cập nhật URL `?tab=...`, giữ sidebar và nội dung đồng bộ hai chiều 100%.
+  - **Tái thiết kế `AdminContentManager` (`admin-content-manager.tsx`)**:
+    - Thay thế header căn giữa bằng bố cục ngang phân cách rõ nét: Tiêu đề + badge số lượng bên trái, nút "Tạo nội dung" bên phải.
+    - Chuẩn hóa style cho Alert cảnh báo tự duyệt và Alert danh sách nội dung xuất bản với nền màu dịu mắt, icon đồng điệu.
+  - **Tối ưu `AdminContentFilters` (`admin-content-filters.tsx`)**:
+    - Bố cục lưới 4 cột (Từ khoá tìm kiếm, Loại nội dung, Chuyên mục, Trạng thái) với nút X xoá từ khoá nhanh.
+    - Khu vực bộ lọc nâng cao (Tác giả, Khoảng ngày) hiển thị gọn gàng, có nhãn ghi chú "Chờ CG-01" và giải thích rõ ràng theo FR-003.
+    - Nút "Xoá bộ lọc" tích hợp huy hiệu đếm số lượng bộ lọc đang kích hoạt.
+  - **Tái thiết kế `AdminContentTable` (`admin-content-table.tsx`)**:
+    - Bảng desktop có chiều rộng các cột cố định (`min-w`), đường viền gọn gàng.
+    - Cột "Thao tác" dùng nút "Sửa" trực tiếp + DropdownMenu (`...`) cho các hành động phụ (Gửi duyệt, Lịch sử, Xoá) giúp chiều rộng luôn cố định ~100px, tuyệt đối không bị ngắt thành 3 dòng.
+    - Bổ sung giao diện thẻ Mobile Card cho màn hình nhỏ (`< md`), loại bỏ việc phải cuộn ngang bất tiện trên điện thoại.
+- File tạo/sửa:
+  - `src/app/(admin)/admin/layout.tsx`
+  - `src/app/(admin)/admin/dashboard/page.tsx`
+  - `src/features/admin-content/components/admin-content-manager.tsx`
+  - `src/features/admin-content/components/admin-content-filters.tsx`
+  - `src/features/admin-content/components/admin-content-table.tsx`
+  - `src/features/admin-content/components/admin-content-self-review-notice.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npx vitest run src/features/admin-content`: 47/47 tests pass 100%.
+  - `npm run build`: Turbopack build thành công 46/46 routes tĩnh và dynamic.
+- PROGRESS: Giao diện Quản trị viên và Quản lý nội dung (`/admin/dashboard?tab=content`) hoàn thiện 100% chuẩn responsive và desktop UX.
+- Còn lại / rủi ro: Không có.
+
 ## [2026-10-05] — Redesign giao diện tải ảnh quét tủ lạnh trang /pantry/scan (in-frame showcase, Lightbox zoom, hỗ trợ 1–6 ảnh các ngăn tủ)
 
 - Mục tiêu:
