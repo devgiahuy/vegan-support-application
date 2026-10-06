@@ -16,7 +16,7 @@ Create a confirmed manual pantry item
 - Responses: `201` → PantryAdjustmentEnvelope, `400` → ErrorResponse, `401` → ErrorResponse, `409` → ErrorResponse, `422` → ErrorResponse, `423` → ErrorResponse
 
 ```json
-{"type":"object","required":["quantity","unit","idempotencyKey"],"properties":{"ingredientId":{"type":"string","format":"uuid"},"unmatchedText":{"type":"string"},"quantity":{"type":"number"},"unit":{"type":"string"},"confidence":{"type":"number"},"purchasedAt":{"type":["string","null"]},"openedAt":{"type":["string","null"]},"expiresAt":{"type":["string","null"]},"freshnessNote":{"type":"string"},"idempotencyKey":{"type":"string"}},"additionalProperties":false}
+{"type":"object","required":["quantity","unit","idempotencyKey"],"properties":{"ingredientId":{"type":"string","format":"uuid"},"unmatchedText":{"type":"string"},"quantity":{"type":"number"},"unit":{"type":"string"},"confidence":{"type":"number"},"purchasedAt":{"type":["string","null"]},"openedAt":{"type":["string","null"]},"expiresAt":{"type":["string","null"]},"freshnessNote":{"type":["string","null"],"anyOf":[{"type":"string"},{"type":"string"},{"type":"null"}]},"idempotencyKey":{"type":"string"}},"additionalProperties":false}
 ```
 
 ## GET `/api/v1/pantry/items/expiring-soon`
@@ -63,7 +63,7 @@ Update pantry observations with optimistic concurrency
 - Responses: `200` → PantryItemEnvelope, `400` → ErrorResponse, `401` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `422` → ErrorResponse, `423` → ErrorResponse
 
 ```json
-{"type":"object","required":["expectedVersion"],"properties":{"expectedVersion":{"type":"integer"},"confidence":{"type":"number"},"purchasedAt":{"type":["string","null"]},"openedAt":{"type":["string","null"]},"expiresAt":{"type":["string","null"]},"freshnessNote":{"type":["string","null"]}},"additionalProperties":false}
+{"type":"object","required":["expectedVersion"],"properties":{"expectedVersion":{"type":"integer"},"confidence":{"type":"number"},"purchasedAt":{"type":["string","null"]},"openedAt":{"type":["string","null"]},"expiresAt":{"type":["string","null"]},"freshnessNote":{"type":["string","null"],"anyOf":[{"type":"string"},{"type":"string"},{"type":"null"}]}},"additionalProperties":false}
 ```
 
 ## DELETE `/api/v1/pantry/items/{id}`
@@ -88,7 +88,7 @@ Consume, restore, or adjust pantry quantity
 - Responses: `200` → PantryAdjustmentEnvelope, `400` → ErrorResponse, `401` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `422` → ErrorResponse, `423` → ErrorResponse
 
 ```json
-{"oneOf":[{"type":"object","required":["type","quantity","unit","expectedVersion","idempotencyKey"],"properties":{"type":{"type":"string","enum":["CONSUME"]},"quantity":{"type":"number"},"unit":{"type":"string"},"expectedVersion":{"type":"integer"},"idempotencyKey":{"type":"string"},"reason":{"type":"string"}},"additionalProperties":false},{"type":"object","required":["type","quantity","unit","expectedVersion","idempotencyKey"],"properties":{"type":{"type":"string","enum":["RESTORE"]},"quantity":{"type":"number"},"unit":{"type":"string"},"expectedVersion":{"type":"integer"},"idempotencyKey":{"type":"string"},"reason":{"type":"string"}},"additionalProperties":false},{"type":"object","required":["type","deltaQuantity","unit","expectedVersion","idempotencyKey","reason"],"properties":{"type":{"type":"string","enum":["ADJUST"]},"deltaQuantity":{"type":"number"},"unit":{"type":"string"},"expectedVersion":{"type":"integer"},"idempotencyKey":{"type":"string"},"reason":{"type":"string"}},"additionalProperties":false}]}
+{"oneOf":[{"type":"object","required":["type","quantity","unit","expectedVersion","idempotencyKey"],"properties":{"type":{"type":"string","enum":["CONSUME"]},"quantity":{"type":"number"},"unit":{"type":"string"},"expectedVersion":{"type":"integer"},"idempotencyKey":{"type":"string"},"reason":{"type":["string","null"],"anyOf":[{"type":"string","_truncated":true},{"type":"string","_truncated":true},{"type":"null","_truncated":true}]}},"additionalProperties":false},{"type":"object","required":["type","quantity","unit","expectedVersion","idempotencyKey"],"properties":{"type":{"type":"string","enum":["RESTORE"]},"quantity":{"type":"number"},"unit":{"type":"string"},"expectedVersion":{"type":"integer"},"idempotencyKey":{"type":"string"},"reason":{"type":["string","null"],"anyOf":[{"type":"string","_truncated":true},{"type":"string","_truncated":true},{"type":"null","_truncated":true}]}},"additionalProperties":false},{"type":"object","required":["type","deltaQuantity","unit","expectedVersion","idempotencyKey","reason"],"properties":{"type":{"type":"string","enum":["ADJUST"]},"deltaQuantity":{"type":"number"},"unit":{"type":"string"},"expectedVersion":{"type":"integer"},"idempotencyKey":{"type":"string"},"reason":{"type":"string"}},"additionalProperties":false}]}
 ```
 
 ---
@@ -175,6 +175,9 @@ Consume, restore, or adjust pantry quantity
             "openedAt",
             "expiresAt",
             "freshnessNote",
+            "expiryStatus",
+            "daysUntilExpiry",
+            "expiryStatusAsOf",
             "version"
           ],
           "properties": {
@@ -248,27 +251,22 @@ Consume, restore, or adjust pantry quantity
               ],
               "_truncated": true
             },
-            "version": {
-              "type": "integer",
+            "expiryStatus": {
+              "type": [
+                "string",
+                "null"
+              ],
               "_truncated": true
-            }
-          }
-        },
-        "adjustment": {
-          "type": "object",
-          "required": [
-            "id",
-            "type",
-            "input",
-            "appliedDelta",
-            "balance",
-            "versionBefore",
-            "versionAfter",
-            "reason",
-            "mergedFromItemId",
-            "createdAt"
-          ],
-          "properties": {
+            },
+            "daysUntilExpiry": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "_truncated": true
+            },
+            "expiryStatusAsOf": {
+              "type": [
   …(truncated — xem api-catalog.json)
 ```
 
@@ -412,6 +410,9 @@ Consume, restore, or adjust pantry quantity
         "openedAt",
         "expiresAt",
         "freshnessNote",
+        "expiryStatus",
+        "daysUntilExpiry",
+        "expiryStatusAsOf",
         "version"
       ],
       "properties": {
@@ -525,10 +526,7 @@ Consume, restore, or adjust pantry quantity
             "null"
           ]
         },
-        "expiresAt": {
-          "type": [
-            "string",
-            "null"
+        "e
   …(truncated — xem api-catalog.json)
 ```
 
@@ -566,6 +564,9 @@ Consume, restore, or adjust pantry quantity
           "openedAt",
           "expiresAt",
           "freshnessNote",
+          "expiryStatus",
+          "daysUntilExpiry",
+          "expiryStatusAsOf",
           "version"
         ],
         "properties": {
@@ -639,6 +640,27 @@ Consume, restore, or adjust pantry quantity
             ],
             "_truncated": true
           },
+          "expiryStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "_truncated": true
+          },
+          "daysUntilExpiry": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "_truncated": true
+          },
+          "expiryStatusAsOf": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "_truncated": true
+          },
           "version": {
             "type": "integer",
             "_truncated": true
@@ -650,27 +672,7 @@ Consume, restore, or adjust pantry quantity
       "type": "object",
       "required": [
         "page",
-        "limit",
-        "total",
-        "totalPages"
-      ],
-      "properties": {
-        "page": {
-          "type": "integer"
-        },
-        "limit": {
-          "type": "integer"
-        },
-        "total": {
-          "type": "integer"
-        },
-        "totalPages": {
-          "type": "integer"
-        }
-      }
-    }
-  }
-}
+  …(truncated — xem api-catalog.json)
 ```
 
 #### PantryMergePreviewEnvelope

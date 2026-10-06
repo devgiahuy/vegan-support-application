@@ -27,7 +27,8 @@ async function cleanup(ownerId: string): Promise<void> {
     job.candidates.flatMap((candidate) => (candidate.pantryItemId ? [candidate.pantryItemId] : [])),
   );
   await prisma.$transaction(async (transaction) => {
-    if (jobIds.length) await transaction.recognitionJob.deleteMany({ where: { id: { in: jobIds } } });
+    if (jobIds.length)
+      await transaction.recognitionJob.deleteMany({ where: { id: { in: jobIds } } });
     if (pantryItemIds.length) {
       await transaction.pantryAdjustment.deleteMany({
         where: { ownerId, pantryItemId: { in: pantryItemIds } },
@@ -66,7 +67,10 @@ async function main(): Promise<void> {
     select: { owner: true },
   });
   const member = fixtureOwner.owner;
-  const admin = await prisma.user.findFirstOrThrow({ where: { role: 'ADMIN' }, orderBy: { id: 'asc' } });
+  const admin = await prisma.user.findFirstOrThrow({
+    where: { role: 'ADMIN' },
+    orderBy: { id: 'asc' },
+  });
   await cleanup(member.id);
   try {
     const normalAssetIds = [
@@ -91,6 +95,9 @@ async function main(): Promise<void> {
       (candidate) => candidate.ingredientId === null && candidate.quantity === null,
     );
     assert(unknown, 'fake fixture must contain an unknown ingredient');
+    assert.equal(unknown.detectedName, 'rau lá chưa xác định');
+    assert.match(unknown.uncertaintyNote ?? '', /Chưa có đủ chi tiết/);
+    assert.match(tofu.freshnessObservation ?? '', /ảnh|ánh sáng/);
     assert.equal(
       await prisma.pantryItem.count({ where: { ownerId: member.id, sourceReferenceId: ready.id } }),
       0,
@@ -99,8 +106,8 @@ async function main(): Promise<void> {
     const edited = await service.updateCandidate(member.id, ready.id, unknown.id, {
       expectedVersion: unknown.version,
       quantity: 3,
-      unit: 'bunch',
-      detectedName: 'unknown green vegetable',
+      unit: 'bó',
+      detectedName: 'rau xanh chưa xác định',
       decision: 'KEEP',
     });
     const editedUnknown = edited.candidates.find((candidate) => candidate.id === unknown.id);
@@ -115,7 +122,10 @@ async function main(): Promise<void> {
       candidates: [{ id: unknown.id, expectedVersion: editedUnknown.version }],
       idempotencyKey: `${acceptancePrefix}confirm`,
     });
-    assert.equal(confirmReplay.pantryChanges[0]?.pantryItem.id, confirmed.pantryChanges[0]?.pantryItem.id);
+    assert.equal(
+      confirmReplay.pantryChanges[0]?.pantryItem.id,
+      confirmed.pantryChanges[0]?.pantryItem.id,
+    );
 
     const partial = await service.create(member.id, {
       imageAssetIds: [normalAssetIds[0]!, '21000000-0000-4000-8000-000000000003'],
@@ -123,13 +133,20 @@ async function main(): Promise<void> {
     });
     const partialDone = await waitForTerminal(member.id, partial.id);
     assert.equal(partialDone.status, RecognitionJobStatus.PARTIAL_FAILED);
-    assert(partialDone.candidates.length > 0, 'partial provider failure must retain successful results');
+    assert(
+      partialDone.candidates.length > 0,
+      'partial provider failure must retain successful results',
+    );
     await service.retry(member.id, partial.id, { idempotencyKey: `${acceptancePrefix}retry` });
     const retried = await waitForTerminal(member.id, partial.id);
     const retryReplay = await service.retry(member.id, partial.id, {
       idempotencyKey: `${acceptancePrefix}retry`,
     });
-    assert.equal(retryReplay.attempt, retried.attemptCount, 'retry idempotency must not add an attempt');
+    assert.equal(
+      retryReplay.attempt,
+      retried.attemptCount,
+      'retry idempotency must not add an attempt',
+    );
 
     const cancellable = await service.create(member.id, {
       imageAssetIds: normalAssetIds,

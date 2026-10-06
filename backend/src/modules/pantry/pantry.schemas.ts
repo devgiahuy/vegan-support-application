@@ -4,7 +4,11 @@ import {
   PantryConversionStatus,
   PantryItemSource,
 } from '@prisma/client';
-import { z } from '../../common/validation/zod.js';
+import {
+  optionalNullableTrimmedTextSchema,
+  optionalTrimmedTextSchema,
+  z,
+} from '../../common/validation/zod.js';
 import { dateOnlySchema } from '../profile/profile.schemas.js';
 
 const quantitySchema = z.number().min(0).max(999_999_999);
@@ -36,7 +40,7 @@ export const createPantryItemSchema = z
     unit: z.string().trim().min(1).max(40),
     confidence: z.number().min(0).max(1).default(1),
     ...dateFields,
-    freshnessNote: z.string().trim().min(1).max(1000).optional(),
+    freshnessNote: optionalTrimmedTextSchema(1, 5_000),
     idempotencyKey: idempotencyKeySchema,
   })
   .strict()
@@ -49,7 +53,7 @@ export const updatePantryItemSchema = z
     expectedVersion: z.number().int().positive(),
     confidence: z.number().min(0).max(1).optional(),
     ...dateFields,
-    freshnessNote: z.string().trim().min(1).max(1000).nullable().optional(),
+    freshnessNote: optionalNullableTrimmedTextSchema(1, 5_000),
   })
   .strict();
 
@@ -90,7 +94,7 @@ export const createAdjustmentSchema = z.discriminatedUnion('type', [
       unit: z.string().trim().min(1).max(40),
       expectedVersion: z.number().int().positive(),
       idempotencyKey: idempotencyKeySchema,
-      reason: z.string().trim().min(1).max(1000).optional(),
+      reason: optionalTrimmedTextSchema(1, 5_000),
     })
     .strict(),
   z
@@ -100,7 +104,7 @@ export const createAdjustmentSchema = z.discriminatedUnion('type', [
       unit: z.string().trim().min(1).max(40),
       expectedVersion: z.number().int().positive(),
       idempotencyKey: idempotencyKeySchema,
-      reason: z.string().trim().min(1).max(1000).optional(),
+      reason: optionalTrimmedTextSchema(1, 5_000),
     })
     .strict(),
   z
@@ -114,7 +118,7 @@ export const createAdjustmentSchema = z.discriminatedUnion('type', [
       unit: z.string().trim().min(1).max(40),
       expectedVersion: z.number().int().positive(),
       idempotencyKey: idempotencyKeySchema,
-      reason: z.string().trim().min(1).max(1000),
+      reason: z.string().trim().min(1).max(5_000),
     })
     .strict(),
 ]);
@@ -178,6 +182,9 @@ export const pantryItemResponseSchema = z.object({
   openedAt: z.string().nullable(),
   expiresAt: z.string().nullable(),
   freshnessNote: z.string().nullable(),
+  expiryStatus: z.enum(['GOOD', 'WARNING', 'ALERT', 'EXPIRED']).nullable(),
+  daysUntilExpiry: z.number().int().nullable(),
+  expiryStatusAsOf: z.string().nullable(),
   version: z.number().int().positive(),
 });
 

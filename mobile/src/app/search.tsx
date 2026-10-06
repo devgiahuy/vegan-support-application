@@ -10,6 +10,7 @@ import { VideoCard } from '@/features/video/components/video-card';
 import { useArticlesQuery } from '@/features/post/queries/post.queries';
 import { useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
 import { useVideosQuery } from '@/features/video/queries/video.queries';
+import { useTrackBehaviorEvent } from '@/hooks/use-track-behavior-event';
 import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
 
@@ -41,6 +42,7 @@ export default function SearchScreen() {
   const [query, setQuery] = React.useState(params.q ?? '');
   const [submittedQuery, setSubmittedQuery] = React.useState(params.q ?? '');
   const [tab, setTab] = React.useState<Tab>('all');
+  const trackEvent = useTrackBehaviorEvent();
 
   const hasQuery = submittedQuery.trim().length > 0;
   const limit = tab === 'all' ? 4 : 20;
@@ -61,7 +63,13 @@ export default function SearchScreen() {
   const isLoading = isRecipesLoading || isArticlesLoading || isVideosLoading;
   const totalResults = recipes.length + articles.length + videos.length;
 
-  const submit = () => setSubmittedQuery(query.trim());
+  const runSearch = (keyword: string) => {
+    const trimmed = keyword.trim();
+    setSubmittedQuery(trimmed);
+    if (trimmed.length > 0) trackEvent({ type: 'SEARCH', query: trimmed });
+  };
+
+  const submit = () => runSearch(query);
 
   return (
     <SiteScreen>
@@ -102,7 +110,7 @@ export default function SearchScreen() {
                   key={kw}
                   onPress={() => {
                     setQuery(kw);
-                    setSubmittedQuery(kw);
+                    runSearch(kw);
                   }}
                   className="rounded-full border border-border bg-card px-3 py-1.5">
                   <Text className="text-xs font-medium text-foreground">{kw}</Text>

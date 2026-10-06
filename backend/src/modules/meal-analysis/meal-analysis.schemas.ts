@@ -2,7 +2,7 @@ import { EvidenceGrade, FoodRuleSeverity, InteractionScope, MealType } from '@pr
 import { z } from '../../common/validation/zod.js';
 import { dateOnlySchema } from '../profile/profile.schemas.js';
 
-export const MEAL_ANALYSIS_ALGORITHM_VERSION = 'meal-analysis-v1' as const;
+export const MEAL_ANALYSIS_ALGORITHM_VERSION = 'meal-analysis-v3-user-facing-warnings' as const;
 
 export const mealAnalysisParamsSchema = z.object({ id: z.string().uuid() }).strict();
 
@@ -53,6 +53,8 @@ export const mealAnalysisWarningSchema = z
       'INGREDIENT_GUIDELINE_EXCEEDED',
       'INGREDIENT_INTERACTION',
       'PORTION_MULTIPLIER_HIGH',
+      'MACRO_TARGET_EXCEEDED',
+      'MACRO_TARGET_BELOW_RANGE',
     ]),
     severity: z.enum(FoodRuleSeverity),
     scope: z.enum(InteractionScope),
@@ -76,6 +78,14 @@ export const mealAnalysisWarningSchema = z
     confidence: z.number().min(0).max(1),
     advisory: z.boolean(),
     incompleteDataNotes: z.array(z.string()),
+    title: z.string(),
+    detail: z.string(),
+    suggestion: z.string(),
+    severityLabel: z.enum(['Thông tin', 'Nên lưu ý']),
+    scopeLabel: z.string(),
+    targetDate: dateOnlySchema,
+    mealType: z.enum(MealType).nullable(),
+    targetComparison: z.enum(['ABOVE', 'BELOW']).nullable(),
   })
   .strict();
 
@@ -96,10 +106,61 @@ export const mealAnalysisDataSchema = z
         cautionCount: z.number().int().nonnegative(),
         infoCount: z.number().int().nonnegative(),
         selectedItemCount: z.number().int().nonnegative(),
+        userStatus: z.enum([
+          'NO_SERIOUS_ISSUE',
+          'ADVISORY_ADJUSTMENTS',
+          'HARD_CONSTRAINT_VIOLATION',
+        ]),
+        title: z.string(),
+        detail: z.string(),
+        advisoryCount: z.number().int().nonnegative(),
+        hardConstraintViolationCount: z.number().int().nonnegative(),
+        hardConstraintsPreserved: z.boolean(),
       })
       .strict(),
     confidence: z.number().min(0).max(1),
     incompleteData: z.array(z.string()),
+    incompleteDataSummary: z
+      .object({
+        affectedMealCount: z.number().int().nonnegative(),
+        title: z.string().nullable(),
+        detail: z.string().nullable(),
+        suggestion: z.string().nullable(),
+      })
+      .strict(),
+    estimatedNutrition: z
+      .object({
+        estimated: z.literal(true),
+        targetSource: z.literal('HEALTH_PROFILE_TDEE_GOAL_CONFIG'),
+        targetSourceDetail: z.string(),
+        tolerancePercent: z.number().positive(),
+        targets: z
+          .object({
+            proteinGrams: z.number().nonnegative(),
+            fiberGrams: z.number().nonnegative(),
+            fatGrams: z.number().nonnegative(),
+            carbohydrateGrams: z.number().nonnegative(),
+          })
+          .strict(),
+        days: z.array(
+          z
+            .object({
+              date: dateOnlySchema,
+              totals: z
+                .object({
+                  proteinGrams: z.number().nonnegative().nullable(),
+                  fiberGrams: z.number().nonnegative().nullable(),
+                  fatGrams: z.number().nonnegative().nullable(),
+                  carbohydrateGrams: z.number().nonnegative().nullable(),
+                })
+                .strict(),
+              confidence: z.number().min(0).max(1),
+              uncertaintyNotes: z.array(z.string()),
+            })
+            .strict(),
+        ),
+      })
+      .strict(),
     ruleVersions: z.array(z.string()),
     disclaimer: z.string(),
     createdAt: z.string().datetime(),

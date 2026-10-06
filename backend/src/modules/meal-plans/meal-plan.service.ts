@@ -10,8 +10,16 @@ import {
   type Prisma,
 } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
+import {
+  addMealMacroValues,
+  emptyMealMacroValues,
+  estimateMealMacroTargets,
+  macroTargetDeviationScore,
+  scaleMealMacroValues,
+  type MealMacroValues,
+} from '../../common/nutrition/meal-macros.js';
+import { normalizeAggregationUnit } from '../../common/units/unit-normalization.js';
 import type { AppConfig } from '../../config/env.js';
-import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 import type { ContentRepository, PublishedPostRecord } from '../content/content.repository.js';
 import { buildAuthenticatedSearchConstraints } from '../content/search-constraints.js';
 import { RECOMMENDATION_SCORING_VERSION } from '../recommendations/recommendation.schemas.js';
@@ -34,20 +42,30 @@ import {
   type MealPlanWarningCode,
   type SwapMealPlanItemInput,
 } from './meal-plan.schemas.js';
+import { buildWeeklySlotBlueprint, WEEKLY_MEAL_ORDER } from './weekly-plan.js';
 
-const STRICT_TOLERANCE = 0.15;
 const EXPANDED_TOLERANCE = 0.2;
 const MAX_RECIPE_USES = 2;
 const TOTAL_SLOTS = 21 as const;
+const GENERATED_SERVING_OPTIONS = [0.75, 1, 1.25] as const;
+const MAX_DAILY_COMBINATION_CANDIDATES = 24;
+const INCOMPLETE_MACRO_SCORE_PENALTY = 2;
+const WEEKLY_REUSE_SCORE_PENALTY = 0.35;
+const SAME_DAY_REPEAT_SCORE_PENALTY = 1.2;
 const MEAL_SPLITS: Record<MealType, number> = {
   [MealType.BREAKFAST]: 0.25,
   [MealType.LUNCH]: 0.4,
   [MealType.DINNER]: 0.35,
 };
-const MEAL_ORDER = [MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER] as const;
 
 interface RevisionNutritionSnapshot {
-  recipeDetail: { vitaminB12Mcg: Prisma.Decimal | null } | null;
+  recipeDetail: {
+    vitaminB12Mcg: Prisma.Decimal | null;
+    proteinGrams: Prisma.Decimal | null;
+    fiberGrams: Prisma.Decimal | null;
+    fatGrams: Prisma.Decimal | null;
+    carbsGrams: Prisma.Decimal | null;
+  } | null;
   ingredients: Array<{
     ingredientId: string | null;
     amount: Prisma.Decimal;
@@ -59,6 +77,13 @@ interface RevisionNutritionSnapshot {
 interface PlannedSlot {
   data: MealPlanItemData;
   revision: RevisionNutritionSnapshot | null;
+}
+
+interface GeneratedCandidateSelection {
+  post: PublishedPostRecord;
+  servings: number;
+  reasonCodes: string[];
+  warningCodes: MealPlanWarningCode[];
 }
 
 function sha256(value: unknown): string {
@@ -73,10 +98,16 @@ function dateOnly(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
-function addDays(date: Date, days: number): Date {
-  const next = new Date(date);
-  next.setUTCDate(next.getUTCDate() + days);
-  return next;
+function planSlotLabel(date: Date, mealType: MealType): string {
+  const weekday = ['Ch? Nh?t', 'Th? Hai', 'Th? Ba', 'Th? Tu', 'Th? Nam', 'Th? S�u', 'Th? B?y'][
+    date.getUTCDay()
+  ];
+  const meal = {
+    [MealType.BREAKFAST]: 'b?a s�ng',
+    [MealType.LUNCH]: 'b?a trua',
+    [MealType.DINNER]: 'b?a t?i',
+  }[mealType];
+  return `${meal} ${weekday} (${String(date.getUTCDate()).padStart(2, '0')}/${String(date.getUTCMonth() + 1).padStart(2, '0')})`;
 }
 
 function stringList(value: Prisma.JsonValue): string[] {
@@ -93,19 +124,55 @@ function warningList(value: Prisma.JsonValue): MealPlanWarningCode[] {
     'SHOPPING_UNIT_NOT_COMBINED',
     'MICRONUTRIENT_DATA_PARTIAL',
     'MICRONUTRIENT_DATA_UNAVAILABLE',
+    'NUTRITION_TARGET_OUTSIDE_TOLERANCE',
   ]);
   return stringList(value).filter((code): code is MealPlanWarningCode =>
     allowed.has(code as MealPlanWarningCode),
   );
 }
 
-function normalizedUnit(unit: string): { unit: string; factor: number } {
-  const normalized = normalizeVietnameseText(unit);
-  if (['kg', 'kilogram'].includes(normalized)) return { unit: 'g', factor: 1_000 };
-  if (['g', 'gram'].includes(normalized)) return { unit: 'g', factor: 1 };
-  if (['l', 'lit', 'liter'].includes(normalized)) return { unit: 'ml', factor: 1_000 };
-  if (['ml', 'mililit'].includes(normalized)) return { unit: 'ml', factor: 1 };
-  return { unit: normalized || unit.trim().toLowerCase(), factor: 1 };
+const USER_FACING_PLAN_WARNING_CODES = new Set<MealPlanWarningCode>([
+  'RECIPE_REPEATED',
+  'UNFILLED_SLOT',
+  'SHOPPING_UNIT_NOT_COMBINED',
+]);
+
+function userFacingWarningList(value: Prisma.JsonValue): MealPlanWarningCode[] {
+  return warningList(value).filter((code) => USER_FACING_PLAN_WARNING_CODES.has(code));
+}
+
+export function mealPlanWarningCopy(code: MealPlanWarningCode) {
+  return {
+    RECIPE_REPEATED: {
+      severity: 'INFO' as const,
+      severityLabel: 'Thông tin' as const,
+      message: 'M?t s? m�n du?c l?p l?i trong tu?n',
+      detail:
+        'S? m�n ph� h?p v?i y�u c?u an u?ng c?a b?n hi?n c�n h?n ch?, n�n m?t v�i m�n du?c d�ng l?i d? ho�n th�nh th?c don.',
+      suggestion: 'B?n c� th? d?i m?t b?a sang m�n ph� h?p kh�c n?u mu?n th?c don da d?ng hon.',
+    },
+    UNFILLED_SLOT: {
+      severity: 'WARNING' as const,
+      severityLabel: 'Nên lưu ý' as const,
+      message: 'M?t s? b?a chua c� m�n ph� h?p',
+      detail:
+        'H? th?ng chua t�m th?y m�n d�p ?ng d?ng th?i d? ?ng, nguy�n li?u c?n tr�nh, ch? d? an v� quy t?c truy?n th?ng c?a b?n.',
+      suggestion:
+        'B?n c� th? th�m m?t m�n ph� h?p ho?c b? sung c�ng th?c m?i r?i t?o l?i th?c don.',
+    },
+    SHOPPING_UNIT_NOT_COMBINED: {
+      severity: 'INFO' as const,
+      severityLabel: 'Thông tin' as const,
+      message: 'M?t s? nguy�n li?u du?c t�ch th�nh nhi?u d�ng mua s?m',
+      detail:
+        'C�ng m?t nguy�n li?u dang d�ng c�c don v? kh�c nhau v� chua d? th�ng tin d? c?ng l?i ch�nh x�c.',
+      suggestion: 'B?n c� th? ki?m tra t?ng d�ng v� quy d?i v? c�ng m?t don v? tru?c khi mua.',
+    },
+    CALORIE_TOLERANCE_WIDENED: null,
+    MICRONUTRIENT_DATA_PARTIAL: null,
+    MICRONUTRIENT_DATA_UNAVAILABLE: null,
+    NUTRITION_TARGET_OUTSIDE_TOLERANCE: null,
+  }[code];
 }
 
 function nutritionSummary(revisions: Array<RevisionNutritionSnapshot | null>) {
@@ -136,12 +203,17 @@ function nutritionSummary(revisions: Array<RevisionNutritionSnapshot | null>) {
       recipesWithData: withData.length,
       filledRecipeCount: filled.length,
     },
-    warning:
-      quality === NutritionDataQuality.UNAVAILABLE
-        ? ('MICRONUTRIENT_DATA_UNAVAILABLE' as const)
-        : quality === NutritionDataQuality.PARTIAL
-          ? ('MICRONUTRIENT_DATA_PARTIAL' as const)
-          : null,
+    warning: null,
+  };
+}
+
+function revisionMacros(revision: RevisionNutritionSnapshot | null): MealMacroValues {
+  const detail = revision?.recipeDetail;
+  return {
+    proteinGrams: detail?.proteinGrams == null ? null : Number(detail.proteinGrams),
+    fiberGrams: detail?.fiberGrams == null ? null : Number(detail.fiberGrams),
+    fatGrams: detail?.fatGrams == null ? null : Number(detail.fatGrams),
+    carbohydrateGrams: detail?.carbsGrams == null ? null : Number(detail.carbsGrams),
   };
 }
 
@@ -155,7 +227,7 @@ function shoppingList(revisions: Array<RevisionNutritionSnapshot | null>): {
     if (!revision) continue;
     for (const ingredient of revision.ingredients) {
       if (!ingredient.ingredientId || !ingredient.ingredient) continue;
-      const conversion = normalizedUnit(ingredient.unit);
+      const conversion = normalizeAggregationUnit(ingredient.unit);
       const key = `${ingredient.ingredientId}:${conversion.unit}`;
       const current = groups.get(key);
       const amount = Number(ingredient.amount) * conversion.factor;
@@ -207,11 +279,13 @@ export class MealPlanService {
       throw new AppError({
         statusCode: 409,
         code: 'HEALTH_PROFILE_INCOMPLETE',
-        message: 'Cần hoàn thiện health profile trước khi tạo meal plan',
+        message: 'B?n c?n b? sung th�ng tin s?c kh?e tru?c khi t?o th?c don tu?n.',
       });
     }
     const weekStart = dateFromDateOnly(input.weekStart);
-    const dates = Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
+    const dates = buildWeeklySlotBlueprint(weekStart)
+      .filter((slot) => slot.mealType === MealType.BREAKFAST)
+      .map((slot) => slot.date);
     const profile = await this.contentRepository.findSearchProfile(userId);
     this.assertPeriodicSchedule(profile, dates);
 
@@ -222,7 +296,7 @@ export class MealPlanService {
         throw new AppError({
           statusCode: 409,
           code: 'MEAL_PLAN_SUPERSEDES_INVALID',
-          message: 'Plan được regenerate phải thuộc cùng user và cùng tuần',
+          message: 'Plan du?c regenerate ph?i thu?c c�ng user v� c�ng tu?n',
         });
       }
     }
@@ -230,6 +304,7 @@ export class MealPlanService {
     const targetCalories = Math.round(
       Number(health.tdee) * this.config.mealPlanGoalFactors[input.goal],
     );
+    const macroTargets = estimateMealMacroTargets(targetCalories, this.config.mealPlanMacroTargets);
     const dayContexts = await Promise.all(
       dates.map(async (date) => {
         const day = dateOnly(date);
@@ -254,17 +329,19 @@ export class MealPlanService {
     const slots: PlannedSlot[] = [];
     let position = 0;
     for (const dayContext of dayContexts) {
-      for (const mealType of MEAL_ORDER) {
+      const selectedDay = this.selectDailyCombination(
+        dayContext.candidates,
+        ranking,
+        useCounts,
+        coveredIngredients,
+        seedHash,
+        dayContext.day,
+        targetCalories,
+        macroTargets,
+      );
+      for (const [index, mealType] of WEEKLY_MEAL_ORDER.entries()) {
         const target = Math.round(targetCalories * MEAL_SPLITS[mealType]);
-        const selected = this.selectCandidate(
-          dayContext.candidates,
-          target,
-          ranking,
-          useCounts,
-          coveredIngredients,
-          seedHash,
-          `${dayContext.day}:${mealType}`,
-        );
+        const selected = selectedDay?.[index] ?? null;
         if (!selected) {
           slots.push({
             data: {
@@ -273,7 +350,7 @@ export class MealPlanService {
               position: position++,
               status: MealSlotStatus.UNFILLED,
               targetCalories: target,
-              reasonCodes: [],
+              reasonCodes: ['NO_HARD_COMPATIBLE_CANDIDATE'],
               warningCodes: ['UNFILLED_SLOT'],
             },
             revision: null,
@@ -281,7 +358,9 @@ export class MealPlanService {
           continue;
         }
         const revision = selected.post.publishedRevision!;
-        const calories = revision.recipeDetail!.calories!;
+        const baseCalories = revision.recipeDetail!.calories;
+        const calories =
+          baseCalories === null ? null : Math.max(1, Math.round(baseCalories * selected.servings));
         useCounts.set(selected.post.id, (useCounts.get(selected.post.id) ?? 0) + 1);
         for (const ingredient of revision.ingredients) {
           if (ingredient.ingredientId) coveredIngredients.add(ingredient.ingredientId);
@@ -294,9 +373,16 @@ export class MealPlanService {
             status: MealSlotStatus.FILLED,
             recipeId: selected.post.id,
             recipeRevisionId: revision.id,
+            servings: selected.servings,
             targetCalories: target,
-            calories,
-            tolerancePercent: Number(((Math.abs(calories - target) / target) * 100).toFixed(2)),
+            ...(calories === null ? {} : { calories }),
+            ...(calories === null
+              ? {}
+              : {
+                  tolerancePercent: Number(
+                    ((Math.abs(calories - target) / target) * 100).toFixed(2),
+                  ),
+                }),
             reasonCodes: selected.reasonCodes,
             warningCodes: selected.warningCodes,
           },
@@ -311,6 +397,7 @@ export class MealPlanService {
       days: dayContexts.map(({ day, context }) => ({ date: day, ...context.summary })),
       calorieTolerance: { initialPercent: 15, maximumPercent: 20 },
       maxRecipeUses: MAX_RECIPE_USES,
+      estimatedNutritionTargets: macroTargets,
     };
     const explanation = this.explanation(slots, targetCalories, input.goal);
     try {
@@ -325,7 +412,7 @@ export class MealPlanService {
         seedHash,
         algorithmVersion: MEAL_PLAN_ALGORITHM_VERSION,
         recommendationVersion: RECOMMENDATION_SCORING_VERSION,
-        constraintSnapshot,
+        constraintSnapshot: constraintSnapshot as unknown as Prisma.InputJsonValue,
         warnings: aggregate.warnings,
         nutritionDataQuality: aggregate.nutrition.quality,
         micronutrientSummary: aggregate.nutrition.summary,
@@ -402,27 +489,30 @@ export class MealPlanService {
         counts.set(current.recipeId, (counts.get(current.recipeId) ?? 0) + 1);
     }
     const originalCalories = item.calories ?? item.targetCalories;
-    const strict = candidates.filter(
-      (candidate) =>
-        Math.abs(candidate.publishedRevision!.recipeDetail!.calories! - originalCalories) <= 100,
-    );
+    const strict = candidates.filter((candidate) => {
+      const candidateCalories = candidate.publishedRevision!.recipeDetail!.calories;
+      return candidateCalories !== null && Math.abs(candidateCalories - originalCalories) <= 100;
+    });
     let widened = false;
     let pool = strict.filter((candidate) => (counts.get(candidate.id) ?? 0) < MAX_RECIPE_USES);
     if (!pool.length) {
       widened = true;
       pool = candidates.filter((candidate) => {
-        const calories = candidate.publishedRevision!.recipeDetail!.calories!;
+        const calories = candidate.publishedRevision!.recipeDetail!.calories;
         return (
+          calories !== null &&
           Math.abs(calories - item.targetCalories) / item.targetCalories <= EXPANDED_TOLERANCE &&
           (counts.get(candidate.id) ?? 0) < MAX_RECIPE_USES
         );
       });
     }
+    if (!pool.length) pool = candidates;
     if (!pool.length) {
       throw new AppError({
         statusCode: 409,
         code: 'NO_ELIGIBLE_RECIPE',
-        message: 'Không có recipe thay thế nào giữ được hard constraints và calorie tolerance',
+        message:
+          'Chua t�m th?y m�n thay th? v?a ph� h?p v?i y�u c?u an u?ng c?a b?n v?a g?n m?c nang lu?ng c?a b?a hi?n t?i.',
       });
     }
     const seedHash = sha256(input.seed ?? `${plan.seedHash}:${item.id}:${input.idempotencyKey}`);
@@ -431,15 +521,24 @@ export class MealPlanService {
       const bRanking = ranking.get(b.id)?.score ?? 0;
       const behavior = bRanking - aRanking;
       if (behavior) return behavior;
+      const aCalories = a.publishedRevision!.recipeDetail!.calories;
+      const bCalories = b.publishedRevision!.recipeDetail!.calories;
       const calorie =
-        Math.abs(a.publishedRevision!.recipeDetail!.calories! - item.targetCalories) -
-        Math.abs(b.publishedRevision!.recipeDetail!.calories! - item.targetCalories);
+        (aCalories === null
+          ? Number.POSITIVE_INFINITY
+          : Math.abs(aCalories - item.targetCalories)) -
+        (bCalories === null ? Number.POSITIVE_INFINITY : Math.abs(bCalories - item.targetCalories));
       return calorie || sha256(`${seedHash}:${a.id}`).localeCompare(sha256(`${seedHash}:${b.id}`));
     });
     const replacement = pool[0]!;
     const revision = replacement.publishedRevision!;
-    const calories = revision.recipeDetail!.calories!;
+    const calories = revision.recipeDetail!.calories;
     const replacementWarnings: MealPlanWarningCode[] = widened ? ['CALORIE_TOLERANCE_WIDENED'] : [];
+    if (
+      calories === null ||
+      Math.abs(calories - item.targetCalories) / item.targetCalories > EXPANDED_TOLERANCE
+    )
+      replacementWarnings.push('NUTRITION_TARGET_OUTSIDE_TOLERANCE');
     if ((counts.get(replacement.id) ?? 0) > 0) replacementWarnings.push('RECIPE_REPEATED');
     const slots = plan.items.map<PlannedSlot>((current) => ({
       data: {
@@ -463,7 +562,13 @@ export class MealPlanService {
         current.recipeRevision ??
         (current.customMeal
           ? {
-              recipeDetail: { vitaminB12Mcg: null },
+              recipeDetail: {
+                vitaminB12Mcg: null,
+                proteinGrams: current.customMeal.userProteinGrams,
+                fiberGrams: current.customMeal.userFiberGrams,
+                fatGrams: current.customMeal.userFatGrams,
+                carbsGrams: current.customMeal.userCarbsGrams,
+              },
               ingredients: current.customMeal.ingredients.flatMap((ingredient) =>
                 ingredient.ingredientId && ingredient.ingredient
                   ? [
@@ -489,10 +594,14 @@ export class MealPlanService {
         recipeId: replacement.id,
         recipeRevisionId: revision.id,
         targetCalories: item.targetCalories,
-        calories,
-        tolerancePercent: Number(
-          ((Math.abs(calories - item.targetCalories) / item.targetCalories) * 100).toFixed(2),
-        ),
+        ...(calories === null ? {} : { calories }),
+        ...(calories === null
+          ? {}
+          : {
+              tolerancePercent: Number(
+                ((Math.abs(calories - item.targetCalories) / item.targetCalories) * 100).toFixed(2),
+              ),
+            }),
         reasonCodes: [
           ...(ranking.get(replacement.id)?.reasonCodes.slice(0, 2) ?? []),
           'SWAP_CALORIE_MATCH',
@@ -539,71 +648,181 @@ export class MealPlanService {
     }
   }
 
-  private selectCandidate(
+  private selectDailyCombination(
     candidates: PublishedPostRecord[],
-    target: number,
     ranking: Map<string, { score: number; reasonCodes: string[] }>,
     useCounts: Map<string, number>,
     coveredIngredients: Set<string>,
     seedHash: string,
-    slotKey: string,
-  ): {
-    post: PublishedPostRecord;
-    reasonCodes: string[];
-    warningCodes: MealPlanWarningCode[];
-  } | null {
-    const within = (candidate: PublishedPostRecord, tolerance: number) =>
-      Math.abs(candidate.publishedRevision!.recipeDetail!.calories! - target) / target <= tolerance;
-    const choose = (pool: PublishedPostRecord[], widened: boolean, repeated: boolean) => {
-      pool.sort((a, b) => {
-        const newIngredients = (candidate: PublishedPostRecord) =>
-          candidate.publishedRevision!.ingredients.filter(
-            (ingredient) =>
-              ingredient.ingredientId && !coveredIngredients.has(ingredient.ingredientId),
-          ).length;
-        const coverage = newIngredients(b) - newIngredients(a);
-        if (coverage) return coverage;
+    day: string,
+    targetCalories: number,
+    macroTargets: MealMacroValues,
+  ): GeneratedCandidateSelection[] | null {
+    if (!candidates.length) return null;
+
+    const incompleteCount = (values: MealMacroValues) =>
+      Object.values(values).filter((value) => value === null).length;
+    const candidateScore = (candidate: PublishedPostRecord) =>
+      Math.min(
+        ...GENERATED_SERVING_OPTIONS.map((servings) => {
+          const values = scaleMealMacroValues(revisionMacros(candidate.publishedRevision), servings);
+          return (
+            macroTargetDeviationScore(
+              values,
+              scaleMealMacroValues(macroTargets, 1 / WEEKLY_MEAL_ORDER.length),
+              this.config.mealPlanMacroTargets.tolerancePercent,
+            ) +
+            incompleteCount(values) * INCOMPLETE_MACRO_SCORE_PENALTY +
+            (useCounts.get(candidate.id) ?? 0) * WEEKLY_REUSE_SCORE_PENALTY
+          );
+        }),
+      );
+    const shortlist = [...candidates]
+      .sort((a, b) => {
+        const score = candidateScore(a) - candidateScore(b);
+        if (score) return score;
         const behavior = (ranking.get(b.id)?.score ?? 0) - (ranking.get(a.id)?.score ?? 0);
         if (behavior) return behavior;
-        const calorie =
-          Math.abs(a.publishedRevision!.recipeDetail!.calories! - target) -
-          Math.abs(b.publishedRevision!.recipeDetail!.calories! - target);
-        if (calorie) return calorie;
-        return sha256(`${seedHash}:${slotKey}:${a.id}`).localeCompare(
-          sha256(`${seedHash}:${slotKey}:${b.id}`),
-        );
-      });
-      const post = pool[0]!;
-      const reasons = ranking.get(post.id)?.reasonCodes.slice(0, 2) ?? [];
-      if (!reasons.includes('INGREDIENT_COVERAGE')) reasons.push('INGREDIENT_COVERAGE');
-      return {
+        return sha256(`${seedHash}:${day}:${a.id}`).localeCompare(sha256(`${seedHash}:${day}:${b.id}`));
+      })
+      .slice(0, MAX_DAILY_COMBINATION_CANDIDATES);
+    const options = shortlist.flatMap((post) =>
+      GENERATED_SERVING_OPTIONS.map((servings) => ({
         post,
-        reasonCodes: reasons.slice(0, 3),
-        warningCodes: [
-          ...(widened ? (['CALORIE_TOLERANCE_WIDENED'] as const) : []),
-          ...(repeated ? (['RECIPE_REPEATED'] as const) : []),
-        ],
+        servings,
+        macros: scaleMealMacroValues(revisionMacros(post.publishedRevision), servings),
+      })),
+    );
+
+    const totalMacros = (combination: typeof options): MealMacroValues => {
+      const total = (key: keyof MealMacroValues) => {
+        const values = combination.map((option) => option.macros[key]);
+        return values.some((value) => value === null)
+          ? null
+          : Number(values.reduce<number>((sum, value) => sum + Number(value), 0).toFixed(2));
+      };
+      return {
+        proteinGrams: total('proteinGrams'),
+        fiberGrams: total('fiberGrams'),
+        fatGrams: total('fatGrams'),
+        carbohydrateGrams: total('carbohydrateGrams'),
       };
     };
-    const strictUnused = candidates.filter(
-      (candidate) => within(candidate, STRICT_TOLERANCE) && !useCounts.has(candidate.id),
-    );
-    if (strictUnused.length) return choose(strictUnused, false, false);
-    const expandedUnused = candidates.filter(
-      (candidate) => within(candidate, EXPANDED_TOLERANCE) && !useCounts.has(candidate.id),
-    );
-    if (expandedUnused.length) return choose(expandedUnused, true, false);
-    const strictRepeat = candidates.filter(
-      (candidate) =>
-        within(candidate, STRICT_TOLERANCE) && (useCounts.get(candidate.id) ?? 0) < MAX_RECIPE_USES,
-    );
-    if (strictRepeat.length) return choose(strictRepeat, false, true);
-    const expandedRepeat = candidates.filter(
-      (candidate) =>
-        within(candidate, EXPANDED_TOLERANCE) &&
-        (useCounts.get(candidate.id) ?? 0) < MAX_RECIPE_USES,
-    );
-    return expandedRepeat.length ? choose(expandedRepeat, true, true) : null;
+    const coverage = (combination: typeof options) =>
+      combination.reduce(
+        (count, option) =>
+          count +
+          option.post.publishedRevision!.ingredients.filter(
+            (ingredient) => ingredient.ingredientId && !coveredIngredients.has(ingredient.ingredientId),
+          ).length,
+        0,
+      );
+
+    let best:
+      | {
+          combination: typeof options;
+          score: number;
+          coverage: number;
+          behavior: number;
+          calorieDeviation: number;
+        }
+      | undefined;
+    for (const breakfast of options) {
+      for (const lunch of options) {
+        for (const dinner of options) {
+          const combination = [breakfast, lunch, dinner];
+          const macros = totalMacros(combination);
+          const counts = new Map<string, number>();
+          for (const option of combination)
+            counts.set(option.post.id, (counts.get(option.post.id) ?? 0) + 1);
+          const varietyPenalty =
+            combination.reduce(
+              (sum, option) => sum + (useCounts.get(option.post.id) ?? 0),
+              0,
+            ) * WEEKLY_REUSE_SCORE_PENALTY +
+            [...counts.values()].reduce(
+              (sum, count) => sum + Math.max(0, count - 1) * SAME_DAY_REPEAT_SCORE_PENALTY,
+              0,
+            );
+          const score =
+            macroTargetDeviationScore(
+              macros,
+              macroTargets,
+              this.config.mealPlanMacroTargets.tolerancePercent,
+            ) +
+            incompleteCount(macros) * INCOMPLETE_MACRO_SCORE_PENALTY +
+            varietyPenalty;
+          const candidateCoverage = coverage(combination);
+          const behavior = combination.reduce(
+            (sum, option) => sum + (ranking.get(option.post.id)?.score ?? 0),
+            0,
+          );
+          const calorieDeviation = combination.reduce((sum, option, index) => {
+            const calories = option.post.publishedRevision!.recipeDetail!.calories;
+            const target = Math.round(targetCalories * MEAL_SPLITS[WEEKLY_MEAL_ORDER[index]!]);
+            return (
+              sum +
+              (calories === null
+                ? Number.POSITIVE_INFINITY
+                : Math.abs(calories * option.servings - target) / target)
+            );
+          }, 0);
+          const isBetter =
+            !best ||
+            score < best.score ||
+            (score === best.score &&
+              (candidateCoverage > best.coverage ||
+                (candidateCoverage === best.coverage &&
+                  (behavior > best.behavior ||
+                    (behavior === best.behavior && calorieDeviation < best.calorieDeviation)))));
+          const isExactTie =
+            best &&
+            score === best.score &&
+            candidateCoverage === best.coverage &&
+            behavior === best.behavior &&
+            calorieDeviation === best.calorieDeviation;
+          const resolvesExactTie =
+            isExactTie &&
+            best !== undefined &&
+            sha256(
+              `${seedHash}:${day}:${combination
+                .map((option) => `${option.post.id}:${option.servings}`)
+                .join(':')}`,
+            ) <
+              sha256(
+                `${seedHash}:${day}:${best.combination
+                  .map((option) => `${option.post.id}:${option.servings}`)
+                  .join(':')}`,
+              );
+          if (isBetter || resolvesExactTie) {
+            best = { combination, score, coverage: candidateCoverage, behavior, calorieDeviation };
+          }
+        }
+      }
+    }
+    if (!best) return null;
+
+    const runningUses = new Map(useCounts);
+    return best.combination.map((option, index) => {
+      const previousUses = runningUses.get(option.post.id) ?? 0;
+      runningUses.set(option.post.id, previousUses + 1);
+      const target = Math.round(targetCalories * MEAL_SPLITS[WEEKLY_MEAL_ORDER[index]!]);
+      const calories = option.post.publishedRevision!.recipeDetail!.calories;
+      const reasons = ranking.get(option.post.id)?.reasonCodes.slice(0, 2) ?? [];
+      if (!reasons.includes('INGREDIENT_COVERAGE')) reasons.push('INGREDIENT_COVERAGE');
+      return {
+        post: option.post,
+        servings: option.servings,
+        reasonCodes: reasons.slice(0, 3),
+        warningCodes: [
+          ...(previousUses > 0 ? (['RECIPE_REPEATED'] as const) : []),
+          ...(calories === null ||
+          Math.abs(calories * option.servings - target) / target > EXPANDED_TOLERANCE
+            ? (['CALORIE_TOLERANCE_WIDENED'] as const)
+            : []),
+        ],
+      };
+    });
   }
 
   private aggregate(slots: PlannedSlot[]) {
@@ -630,14 +849,15 @@ export class MealPlanService {
     throw new AppError({
       statusCode: 409,
       code: 'DIET_SCHEDULE_REQUIRED',
-      message: 'Cần chọn ngày PERIODIC trong tuần trước khi tạo meal plan',
+      message: 'Vui l�ng ch?n ng�y �p d?ng ch? d? an theo l?ch trong tu?n tru?c khi t?o th?c don.',
       fields: { availableDates: [...weekDates] },
     });
   }
 
   private explanation(slots: PlannedSlot[], targetCalories: number, goal: MealGoal): string {
     const filled = slots.filter((slot) => slot.data.status === MealSlotStatus.FILLED).length;
-    return `Kế hoạch ${goal} deterministic: ${filled}/${TOTAL_SLOTS} bữa được lấp đầy theo mục tiêu ${targetCalories} kcal/ngày; hard constraints luôn được áp dụng trước scoring.`;
+    const goalLabel = { MAINTAIN: 'gi? c�n', LOSE: 'gi?m c�n', GAIN: 'tang c�n' }[goal];
+    return `Th?c don d� x?p ${filled}/${TOTAL_SLOTS} b?a cho m?c ti�u ${goalLabel}, d?a tr�n m?c nang lu?ng kho?ng ${targetCalories} kcal m?i ng�y. D? ?ng, nguy�n li?u c?n tr�nh, ch? d? an v� quy t?c truy?n th?ng c?a b?n lu�n du?c ki?m tra tru?c khi ch?n m�n.`;
   }
 
   private assertNoHardViolation(reasons: string[]): void {
@@ -647,9 +867,71 @@ export class MealPlanService {
       statusCode: 409,
       code: 'MEAL_PLAN_HARD_CONSTRAINT_VIOLATION',
       message:
-        'Món đã chọn vi phạm allergy, explicit exclusion, diet pattern hoặc enabled tradition rule',
+        'M�n n�y kh�ng ph� h?p v?i �t nh?t m?t y�u c?u an u?ng b?t bu?c c?a b?n, nhu d? ?ng, nguy�n li?u c?n tr�nh, ch? d? an ho?c quy t?c truy?n th?ng. Vui l�ng ch?n m�n kh�c.',
       fields: { reasons: unique },
     });
+  }
+
+  private warningDetails(plan: MealPlanRecord, warnings: MealPlanWarningCode[]) {
+    return warnings.flatMap((code) => {
+      const copy = mealPlanWarningCopy(code);
+      if (!copy) return [];
+      const affectedSlots = plan.items
+        .filter((item) => warningList(item.warningCodes).includes(code))
+        .map((item) => ({
+          itemId: item.id,
+          date: dateOnly(item.date),
+          mealType: item.mealType,
+          name: item.recipeRevision?.title ?? item.customMeal?.name ?? null,
+        }));
+      const locations = plan.items
+        .filter((item) => warningList(item.warningCodes).includes(code))
+        .map((item) => planSlotLabel(item.date, item.mealType));
+      const locationDetail = locations.length
+        ? ` V? tr�: ${locations.join(', ')}.`
+        : ' Luu � n�y �p d?ng cho danh s�ch mua s?m c?a c? tu?n.';
+      return [
+        {
+          code,
+          ...copy,
+          detail: `${copy.detail}${locationDetail}`,
+          suggestion: copy.suggestion,
+          advisory: true as const,
+          affectedSlots,
+        },
+      ];
+    });
+  }
+
+  private userSummary(warnings: MealPlanWarningCode[]) {
+    if (warnings.includes('UNFILLED_SLOT')) {
+      return {
+        status: 'HARD_CONSTRAINT_BLOCKED' as const,
+        title: 'M?t s? b?a du?c d? tr?ng d? b?o v? y�u c?u an u?ng c?a b?n',
+        detail:
+          'H? th?ng kh�ng dua m�n kh�ng ph� h?p v�o th?c don. D? ?ng, nguy�n li?u c?n tr�nh, ch? d? an v� quy t?c truy?n th?ng v?n du?c gi? nguy�n.',
+        suggestion: 'B?n c� th? th�m m?t m�n ph� h?p ho?c t?o l?i th?c don khi c� th�m c�ng th?c.',
+        hardConstraintsPreserved: true as const,
+      };
+    }
+    if (warnings.length > 0) {
+      return {
+        status: 'ADVISORY_ADJUSTMENTS' as const,
+        title: 'Th?c don c� v�i g?i � b?n c� th? di?u ch?nh',
+        detail:
+          'Kh�ng c� m�n n�o vi ph?m y�u c?u an u?ng b?t bu?c. C�c luu � c�n l?i ch? nh?m gi�p th?c don thu?n ti?n v� da d?ng hon.',
+        suggestion: 'B?n c� th? xem t?ng luu � v� di?u ch?nh n?u th?y ph� h?p.',
+        hardConstraintsPreserved: true as const,
+      };
+    }
+    return {
+      status: 'NO_SERIOUS_ISSUE' as const,
+      title: 'Chua th?y v?n d? nghi�m tr?ng trong th?c don',
+      detail:
+        'C�c m�n d� ch?n ph� h?p v?i y�u c?u an u?ng b?t bu?c theo th�ng tin hi?n c�. Ch? s? dinh du?ng v?n l� s? li?u u?c t�nh.',
+      suggestion: null,
+      hardConstraintsPreserved: true as const,
+    };
   }
 
   private summary(plan: MealPlanRecord) {
@@ -659,6 +941,7 @@ export class MealPlanService {
       !Array.isArray(plan.micronutrientSummary)
         ? plan.micronutrientSummary
         : {};
+    const warnings = userFacingWarningList(plan.warnings);
     return {
       id: plan.id,
       weekStart: dateOnly(plan.weekStart),
@@ -669,7 +952,9 @@ export class MealPlanService {
       supersedesMealPlanId: plan.supersedesMealPlanId,
       algorithmVersion: plan.algorithmVersion,
       recommendationVersion: plan.recommendationVersion,
-      warnings: warningList(plan.warnings),
+      warnings,
+      warningDetails: this.warningDetails(plan, warnings),
+      userSummary: this.userSummary(warnings),
       nutritionDataQuality: plan.nutritionDataQuality,
       micronutrientSummary: {
         vitaminB12Mcg:
@@ -700,10 +985,10 @@ export class MealPlanService {
       !Array.isArray(plan.constraintSnapshot)
         ? plan.constraintSnapshot
         : {};
-    return {
-      ...this.summary(plan),
-      constraintSnapshot,
-      items: plan.items.map((item) => ({
+    const items = plan.items.map((item) => {
+      const reasonCodes = stringList(item.reasonCodes);
+      const macros = this.itemMacros(item);
+      return {
         id: item.id,
         date: dateOnly(item.date),
         mealType: item.mealType,
@@ -714,6 +999,10 @@ export class MealPlanService {
         targetCalories: item.targetCalories,
         calories: item.calories,
         tolerancePercent: item.tolerancePercent ? Number(item.tolerancePercent) : null,
+        proteinGrams: macros.proteinGrams,
+        fiberGrams: macros.fiberGrams,
+        fatGrams: macros.fatGrams,
+        carbohydrateGrams: macros.carbohydrateGrams,
         recipe:
           item.recipe && item.recipeRevision?.recipeDetail
             ? {
@@ -734,9 +1023,74 @@ export class MealPlanService {
               nutritionCoverage: item.customMeal.nutritionCoverage,
             }
           : null,
-        reasonCodes: stringList(item.reasonCodes),
-        warningCodes: warningList(item.warningCodes),
-      })),
+        reasonCodes,
+        warningCodes: userFacingWarningList(item.warningCodes),
+        unresolved:
+          item.status === MealSlotStatus.UNFILLED
+            ? {
+                code: reasonCodes[0] ?? 'NO_HARD_COMPATIBLE_CANDIDATE',
+                reason:
+                  'Chua t�m th?y m�n ph� h?p v?i d? ?ng, nguy�n li?u c?n tr�nh, ch? d? an v� quy t?c truy?n th?ng c?a b?n. B?a n�y du?c d? tr?ng thay v� t? th�m m�n kh�ng ph� h?p.',
+                hardConstraintsPreserved: true as const,
+              }
+            : null,
+      };
+    });
+    const dayNames = [
+      'MONDAY',
+      'TUESDAY',
+      'WEDNESDAY',
+      'THURSDAY',
+      'FRIDAY',
+      'SATURDAY',
+      'SUNDAY',
+    ] as const;
+    const dates = buildWeeklySlotBlueprint(plan.weekStart)
+      .filter((slot) => slot.mealType === MealType.BREAKFAST)
+      .map((slot) => slot.date);
+    const estimatedNutritionTargets = estimateMealMacroTargets(
+      plan.targetCalories,
+      this.config.mealPlanMacroTargets,
+    );
+    const days = dates.map((date, index) => {
+      const dateValue = dateOnly(date);
+      const records = plan.items.filter((item) => dateOnly(item.date) === dateValue);
+      const outputItems = items.filter((item) => item.date === dateValue);
+      const findSlot = (mealType: MealType) =>
+        outputItems.find((item) => item.mealType === mealType)!;
+      const macroValues = records.reduce(
+        (total, item) => addMealMacroValues(total, this.itemMacros(item)),
+        emptyMealMacroValues(),
+      );
+      const knownMetricCount = Object.values(macroValues).filter((value) => value !== null).length;
+      const estimatedTotals = {
+        ...macroValues,
+        estimated: true as const,
+        confidence: knownMetricCount === 4 ? 0.9 : knownMetricCount > 0 ? 0.6 : 0.2,
+        uncertaintyNotes:
+          knownMetricCount === 4
+            ? []
+            : [
+                'M?t s? m�n chua c� d? d? li?u d? u?c t�nh ch?t d?m, ch?t xo, ch?t b�o v� tinh b?t. C�c ch? s? trong ng�y c� th? th?p hon th?c t?.',
+              ],
+      };
+      return {
+        date: dateValue,
+        dayOfWeek: dayNames[index]!,
+        slots: {
+          breakfast: findSlot(MealType.BREAKFAST),
+          lunch: findSlot(MealType.LUNCH),
+          dinner: findSlot(MealType.DINNER),
+        },
+        estimatedTotals,
+      };
+    });
+    return {
+      ...this.summary(plan),
+      constraintSnapshot,
+      items,
+      days,
+      estimatedNutritionTargets,
       shoppingList: plan.shoppingItems.map((item) => ({
         ingredientId: item.ingredientId,
         canonicalName: item.canonicalName,
@@ -745,6 +1099,28 @@ export class MealPlanService {
         sourceItemCount: item.sourceItemCount,
       })),
     };
+  }
+
+  private itemMacros(item: MealPlanRecord['items'][number]): MealMacroValues {
+    if (item.recipeRevision?.recipeDetail) {
+      return scaleMealMacroValues(revisionMacros(item.recipeRevision), Number(item.servings));
+    }
+    if (item.customMeal) {
+      const values: MealMacroValues = {
+        proteinGrams:
+          item.customMeal.userProteinGrams === null
+            ? null
+            : Number(item.customMeal.userProteinGrams),
+        fiberGrams:
+          item.customMeal.userFiberGrams === null ? null : Number(item.customMeal.userFiberGrams),
+        fatGrams:
+          item.customMeal.userFatGrams === null ? null : Number(item.customMeal.userFatGrams),
+        carbohydrateGrams:
+          item.customMeal.userCarbsGrams === null ? null : Number(item.customMeal.userCarbsGrams),
+      };
+      return scaleMealMacroValues(values, Number(item.servings) / item.customMeal.servings);
+    }
+    return emptyMealMacroValues();
   }
 
   async manualAdd(
@@ -815,10 +1191,10 @@ export class MealPlanService {
       )
         hardReasons.push('TRADITION_RULE');
       this.assertNoHardViolation(hardReasons);
-      const calories = Math.max(
-        1,
-        Math.round((revision.recipeDetail.calories ?? target.targetCalories) * input.servings),
-      );
+      const calories =
+        revision.recipeDetail.calories === null
+          ? null
+          : Math.max(1, Math.round(revision.recipeDetail.calories * input.servings));
       replacement = {
         data: {
           date: target.date,
@@ -830,10 +1206,17 @@ export class MealPlanService {
           recipeRevisionId: revision.id,
           servings: input.servings,
           targetCalories: target.targetCalories,
-          calories,
-          tolerancePercent: Number(
-            ((Math.abs(calories - target.targetCalories) / target.targetCalories) * 100).toFixed(2),
-          ),
+          ...(calories === null ? {} : { calories }),
+          ...(calories === null
+            ? {}
+            : {
+                tolerancePercent: Number(
+                  (
+                    (Math.abs(calories - target.targetCalories) / target.targetCalories) *
+                    100
+                  ).toFixed(2),
+                ),
+              }),
           reasonCodes: ['MANUAL_ADD'],
           warningCodes: [],
         },
@@ -876,7 +1259,7 @@ export class MealPlanService {
       this.assertNoHardViolation(hardReasons);
       const calories =
         custom.userCalories === null
-          ? target.targetCalories
+          ? null
           : Math.max(1, Math.round((custom.userCalories / custom.servings) * input.servings));
       const snapshot = {
         id: custom.id,
@@ -901,15 +1284,28 @@ export class MealPlanService {
           customMealSnapshot: snapshot,
           servings: input.servings,
           targetCalories: target.targetCalories,
-          calories,
-          tolerancePercent: Number(
-            ((Math.abs(calories - target.targetCalories) / target.targetCalories) * 100).toFixed(2),
-          ),
+          ...(calories === null ? {} : { calories }),
+          ...(calories === null
+            ? {}
+            : {
+                tolerancePercent: Number(
+                  (
+                    (Math.abs(calories - target.targetCalories) / target.targetCalories) *
+                    100
+                  ).toFixed(2),
+                ),
+              }),
           reasonCodes: ['MANUAL_ADD'],
           warningCodes: [],
         },
         revision: {
-          recipeDetail: { vitaminB12Mcg: null },
+          recipeDetail: {
+            vitaminB12Mcg: null,
+            proteinGrams: custom.userProteinGrams,
+            fiberGrams: custom.userFiberGrams,
+            fatGrams: custom.userFatGrams,
+            carbsGrams: custom.userCarbsGrams,
+          },
           ingredients: custom.ingredients.flatMap((ingredient) =>
             ingredient.ingredientId && ingredient.ingredient
               ? [
@@ -947,7 +1343,13 @@ export class MealPlanService {
         current.recipeRevision ??
         (current.customMeal
           ? {
-              recipeDetail: { vitaminB12Mcg: null },
+              recipeDetail: {
+                vitaminB12Mcg: null,
+                proteinGrams: current.customMeal.userProteinGrams,
+                fiberGrams: current.customMeal.userFiberGrams,
+                fatGrams: current.customMeal.userFatGrams,
+                carbsGrams: current.customMeal.userCarbsGrams,
+              },
               ingredients: current.customMeal.ingredients.flatMap((ingredient) =>
                 ingredient.ingredientId && ingredient.ingredient
                   ? [
@@ -1008,7 +1410,7 @@ export class MealPlanService {
     return new AppError({
       statusCode: 404,
       code: 'NOT_FOUND',
-      message: 'Không tìm thấy meal plan',
+      message: 'Kh�ng t�m th?y th?c don',
     });
   }
 
@@ -1016,7 +1418,7 @@ export class MealPlanService {
     return new AppError({
       statusCode: 409,
       code: 'MEAL_PLAN_VERSION_CONFLICT',
-      message: 'Meal plan đã thay đổi, vui lòng tải lại trước khi thao tác',
+      message: 'Th?c don d� thay d?i. Vui l�ng t?i l?i tru?c khi thao t�c.',
     });
   }
 
@@ -1024,7 +1426,7 @@ export class MealPlanService {
     return new AppError({
       statusCode: 409,
       code: 'MEAL_PLAN_IDEMPOTENCY_CONFLICT',
-      message: 'Idempotency key đã được dùng cho payload khác',
+      message: 'Y�u c?u n�y d� du?c g?i tru?c d� v?i n?i dung kh�c. Vui l�ng t?i l?i r?i th? l?i.',
     });
   }
 }

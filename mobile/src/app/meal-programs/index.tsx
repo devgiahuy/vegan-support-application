@@ -1,83 +1,85 @@
 import { Text, View } from 'react-native';
 import { Link, type Href } from 'expo-router';
 import { CalendarRange, Plus } from 'lucide-react-native';
-import { SiteScreen } from '@/components/layout/site-screen';
-import { PrimaryButton } from '@/components/ui/primary-button';
-import { useMealProgramsQuery } from '@/features/meal-program/queries/meal-program.queries';
-import { useIconColors } from '@/lib/theme-colors';
 
+import { SiteScreen } from '@/components/layout/site-screen';
+import { EmptyState, ErrorState, LoadingState } from '@/components/shared/state-views';
+import { PrimaryButton } from '@/components/ui/primary-button';
+import { ProgramCard } from '@/features/meal-program/components/program-card';
+import { useMealProgramsQuery } from '@/features/meal-program/queries/meal-program.queries';
+import { getMealProgramErrorMessage } from '@/features/meal-program/utils/meal-program-errors';
+import { useIconColors } from '@/lib/theme-colors';
+import { useAuthStore } from '@/store/useAuthStore';
+
+/** Danh sách lộ trình nhiều tuần của người dùng — đồng bộ `meal-programs` của web. */
 export default function MealProgramsScreen() {
   const colors = useIconColors();
-  const { data, isLoading, isError, refetch } = useMealProgramsQuery({ limit: 20 });
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const { data, error, isLoading, isError, refetch } = useMealProgramsQuery({ limit: 20 });
   const programs = data?.items ?? [];
+
+  if (!isAuthenticated) {
+    return (
+      <SiteScreen>
+        <View className="px-5 pt-8">
+          <View className="items-center rounded-3xl border border-border bg-card p-6">
+            <Text className="text-center text-xl font-bold text-foreground">Đăng nhập để tạo lộ trình</Text>
+            <Text className="mt-2 text-center text-sm text-muted-foreground">
+              Lộ trình nhiều tuần dùng hồ sơ sức khỏe và chế độ ăn của bạn nên cần tài khoản.
+            </Text>
+            <View className="mt-5 w-full">
+              <Link href={'/(auth)/login' as Href} asChild>
+                <PrimaryButton label="Đăng nhập ngay" />
+              </Link>
+            </View>
+          </View>
+        </View>
+      </SiteScreen>
+    );
+  }
 
   return (
     <SiteScreen>
       <View className="gap-5 px-5 pt-4">
         <View className="flex-row items-center justify-between gap-3">
           <View className="flex-1">
-            <Text className="text-2xl font-extrabold text-foreground">Chuong trinh an nhieu tuan</Text>
+            <Text className="text-2xl font-extrabold text-foreground">Lộ trình nhiều tuần</Text>
             <Text className="mt-1 text-sm text-muted-foreground">
-              Tao lo trinh 2-12 tuan, theo doi trang thai sinh ke hoach va phan tich tich luy.
+              Tạo lộ trình 2-12 tuần, chọn phương án cho từng tuần và xem phân tích tích lũy.
             </Text>
           </View>
           <Link href={'/meal-programs/new' as Href} asChild>
-            <PrimaryButton label="Tao" icon={<Plus size={16} color={colors.primaryForeground} />} />
+            <PrimaryButton label="Tạo" icon={<Plus size={16} color={colors.primaryForeground} />} />
           </Link>
         </View>
 
         {isLoading ? (
-          [1, 2, 3].map((item) => <View key={item} className="h-36 rounded-2xl border border-border bg-muted" />)
+          <LoadingState message="Đang tải lộ trình..." />
         ) : isError ? (
-          <View className="items-center rounded-2xl border border-destructive/30 bg-destructive/5 p-6">
-            <Text className="font-semibold text-destructive">Khong tai duoc chuong trinh.</Text>
-            <PrimaryButton label="Thu lai" variant="outline" className="mt-3 w-full" onPress={() => void refetch()} />
-          </View>
+          <ErrorState
+            title="Không tải được lộ trình."
+            description={getMealProgramErrorMessage(error)}
+            onRetry={() => void refetch()}
+          />
         ) : programs.length === 0 ? (
-          <View className="items-center rounded-2xl border border-dashed border-border p-8">
-            <CalendarRange size={28} color={colors.primary} />
-            <Text className="mt-3 text-center font-bold text-foreground">Chua co chuong trinh nao</Text>
-            <Text className="mt-1 text-center text-sm text-muted-foreground">
-              Bat dau bang lo trinh 2 tuan de backend tao cac phuong an moi tuan.
-            </Text>
-            <Link href={'/meal-programs/new' as Href} asChild>
-              <PrimaryButton label="Tao chuong trinh" className="mt-4 w-full" />
-            </Link>
-          </View>
+          <EmptyState
+            title="Chưa có lộ trình nào"
+            description="Bắt đầu bằng lộ trình 2 tuần để hệ thống tạo các phương án thực đơn mỗi tuần."
+            icon={<CalendarRange size={26} color={colors.primary} />}
+            action={
+              <Link href={'/meal-programs/new' as Href} asChild>
+                <PrimaryButton label="Tạo lộ trình" />
+              </Link>
+            }
+          />
         ) : (
-          programs.map((program) => (
-            <Link key={program.id} href={`/meal-programs/${program.id}` as Href} asChild>
-              <View className="rounded-2xl border border-border bg-card p-4">
-                <View className="flex-row items-start justify-between gap-3">
-                  <View className="flex-1">
-                    <Text className="text-base font-bold text-foreground">{program.title}</Text>
-                    <Text className="mt-1 text-xs text-muted-foreground">
-                      {program.startDate} - {program.endDate || 'dang tao'} · {program.goalLabel}
-                    </Text>
-                  </View>
-                  <Text className="rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
-                    {program.statusLabel}
-                  </Text>
-                </View>
-                <View className="mt-3 flex-row gap-2">
-                  <Metric label="Tuan" value={String(program.horizonWeeks)} />
-                  <Metric label="San sang" value={String(program.readyWeeks)} />
-                  <Metric label="Can xu ly" value={String(program.failedWeeks + program.warningCount)} />
-                </View>
-              </View>
-            </Link>
-          ))
+          <View className="gap-3">
+            {programs.map((program) => (
+              <ProgramCard key={program.id} program={program} />
+            ))}
+          </View>
         )}
       </View>
     </SiteScreen>
-  );
-}
-
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <View className="flex-1 rounded-xl bg-muted/60 p-2.5">
-      <Text className="text-[11px] text-muted-foreground">{label}</Text>
-      <Text className="text-base font-bold text-foreground">{value}</Text>
-    </View>
   );
 }

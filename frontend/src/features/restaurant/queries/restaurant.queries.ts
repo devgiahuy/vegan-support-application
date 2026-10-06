@@ -2,52 +2,88 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { toastApiError } from '@/lib/api-error';
 import { restaurantApi } from '../api/restaurant.api';
-import type { LocationQuery, SubmitRestaurantInput } from '../types/restaurant.model';
+import { resolveSearchMode } from '../utils/restaurant-search';
+import type { RestaurantSearchState, SubmitRestaurantInput } from '../types/restaurant.model';
 
+/**
+ * Query Key Factory — bắt buộc theo docs/ARCHITECTURE.md §4.
+ * `all` là gốc để `invalidateQueries` xoá được mọi biến thể.
+ */
 export const RESTAURANT_KEYS = {
   all: ['restaurants'] as const,
-  nearby: (query: LocationQuery) => [...RESTAURANT_KEYS.all, 'nearby', query] as const,
-  search: (query: LocationQuery) => [...RESTAURANT_KEYS.all, 'search', query] as const,
+  nearby: (state: RestaurantSearchState) =>
+    [
+      ...RESTAURANT_KEYS.all,
+      'nearby',
+      state.mode,
+      state.radiusM,
+      state.lat,
+      state.lng,
+      state.dietPattern,
+    ] as const,
+  bounds: (state: RestaurantSearchState) =>
+    [...RESTAURANT_KEYS.all, 'bounds', state.bounds, state.dietPattern] as const,
+  search: (state: RestaurantSearchState) =>
+    [
+      ...RESTAURANT_KEYS.all,
+      'search',
+      state.query,
+      state.radiusM,
+      state.dietPattern,
+      state.advanced,
+    ] as const,
   detail: (id: string) => [...RESTAURANT_KEYS.all, 'detail', id] as const,
   queue: () => [...RESTAURANT_KEYS.all, 'queue'] as const,
 };
 
-/** Quán gần vị trí/tọa độ (GET /restaurants/nearby). */
-export function useNearbyRestaurantsQuery(query: LocationQuery, enabled = true) {
+/** Quán gần vị trí/tọa độ hoặc theo khung vùng bản đồ (GET /restaurants/nearby). */
+export function useNearbyRestaurantsQuery(state: RestaurantSearchState, enabled = true) {
+  const mode = resolveSearchMode(state);
   return useQuery({
-    queryKey: RESTAURANT_KEYS.nearby(query),
-    queryFn: () => restaurantApi.getNearby(query),
+    queryKey:
+      state.mode === 'BOUNDS' ? RESTAURANT_KEYS.bounds(state) : RESTAURANT_KEYS.nearby(state),
+    queryFn: () => restaurantApi.getNearby(state),
     staleTime: 2 * 60 * 1000,
-    enabled,
+    enabled: enabled && (mode === 'NEARBY' || mode === 'BOUNDS'),
   });
 }
 
-/** Tìm theo món ăn (GET /restaurants/search). */
-export function useRestaurantSearchQuery(query: LocationQuery, enabled = true) {
+/** Tìm theo món ăn/tên quán (GET /restaurants/search). */
+export function useRestaurantSearchQuery(state: RestaurantSearchState, enabled = true) {
+  const mode = resolveSearchMode(state);
   return useQuery({
-    queryKey: RESTAURANT_KEYS.search(query),
-    queryFn: () => restaurantApi.search(query),
+    queryKey: RESTAURANT_KEYS.search(state),
+    queryFn: () => restaurantApi.search(state),
     staleTime: 2 * 60 * 1000,
-    enabled,
+    enabled: enabled && mode === 'KEYWORD',
   });
 }
 
 /**
- * Hook tìm quán khám phá hợp nhất (tự động phân nhánh nearby vs search):
- * - Nếu query có từ khóa >= 2 ký tự: gọi search endpoint (/restaurants/search).
- * - Ngược lại: gọi nearby endpoint (/restaurants/nearby).
+ * Hook khám phá hợp nhất — tự phân nhánh theo `resolveSearchMode`:
+ * - KEYWORD (từ khóa ≥ 2 ký tự) → `/restaurants/search`
+ * - BOUNDS (đủ bốn mốc bản đồ) → `/restaurants/nearby` + north/south/east/west
+ * - NEARBY (đủ cặp lat/lng)   → `/restaurants/nearby` + radiusMeters
+ * - Trạng thái không hợp lệ    → không gọi request nào (enabled = false)
  */
-export function useRestaurantDiscoveryQuery(query: LocationQuery, enabled = true) {
-  const hasKeyword = Boolean(query.query && query.query.trim().length >= 2);
+export function useRestaurantDiscoveryQuery(state: RestaurantSearchState, enabled = true) {
+  const mode = resolveSearchMode(state);
+  const isKeyword = mode === 'KEYWORD';
+  const isBounds = mode === 'BOUNDS';
+
   return useQuery({
-    queryKey: hasKeyword ? RESTAURANT_KEYS.search(query) : RESTAURANT_KEYS.nearby(query),
-    queryFn: () => (hasKeyword ? restaurantApi.search(query) : restaurantApi.getNearby(query)),
+    queryKey: isKeyword
+      ? RESTAURANT_KEYS.search(state)
+      : isBounds
+        ? RESTAURANT_KEYS.bounds(state)
+        : RESTAURANT_KEYS.nearby(state),
+    queryFn: () => (isKeyword ? restaurantApi.search(state) : restaurantApi.getNearby(state)),
     staleTime: 2 * 60 * 1000,
-    enabled,
+    enabled: enabled && mode !== null,
   });
 }
 
-/** Chi tiết 1 quán (fixture). */
+/** Chi tiết 1 quán. */
 export function useRestaurantDetailQuery(id: string) {
   return useQuery({
     queryKey: RESTAURANT_KEYS.detail(id),
@@ -57,20 +93,27 @@ export function useRestaurantDetailQuery(id: string) {
   });
 }
 
-/** Gửi quán mới vào chờ (không hiện công khai). */
+/** Gửi quán mới vào hàng chờ duyệt (không hiện công khai). */
 export function useSubmitRestaurantMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: SubmitRestaurantInput) => restaurantApi.submitRestaurant(input),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: RESTAURANT_KEYS.queue() });
-      toast.success('Đã gửi quán mới!', { description: 'Quán đang chờ duyệt trước khi hiển thị.' });
+      queryClient.invalidateQueries({ queryKey: RESTAURANT_KEYS.all });
+      // Nêu rõ điều sẽ xảy ra tiếp theo: kết quả duyệt (kể cả lý do từ chối nếu có) do quản
+      // trị viên quyết định và sẽ được thông báo cho thành viên, không phải hiển thị tại đây —
+      // trang khám phá không có bề mặt "quán của tôi" trong phạm vi đợt này (US3/AC4).
+      toast.success('Đã gửi quán mới!', {
+        description:
+          'Quán đang chờ duyệt. Kết quả duyệt — kể cả lý do nếu bị từ chối — sẽ được thông báo cho bạn sau.',
+        duration: 6000,
+      });
     },
     onError: (err: unknown) => toastApiError(err, 'Không thể gửi quán'),
   });
 }
 
-/** Geocode địa chỉ text (fixture vài mẫu). */
+/** Phân giải địa chỉ người dùng nhập thành tọa độ. */
 export function useGeocodeMutation() {
   return useMutation({
     mutationFn: (address: string) => restaurantApi.geocode(address),
@@ -78,7 +121,7 @@ export function useGeocodeMutation() {
   });
 }
 
-/** Hàng chờ admin (fixture). */
+/** Hàng chờ duyệt của quản trị viên (ngoài phạm vi redesign trang khám phá). */
 export function useRestaurantQueueQuery() {
   return useQuery({
     queryKey: RESTAURANT_KEYS.queue(),
@@ -87,14 +130,13 @@ export function useRestaurantQueueQuery() {
   });
 }
 
-/** Admin duyệt/từ chối (fixture). */
+/** Quản trị viên duyệt/từ chối quán (ngoài phạm vi redesign trang khám phá). */
 export function useReviewRestaurantMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (vars: { id: string; decision: 'APPROVE' | 'REJECT'; reason?: string }) =>
       restaurantApi.reviewRestaurant(vars.id, vars.decision, vars.reason),
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: RESTAURANT_KEYS.queue() });
       queryClient.invalidateQueries({ queryKey: RESTAURANT_KEYS.all });
       toast.success(vars.decision === 'APPROVE' ? 'Đã duyệt quán.' : 'Đã từ chối quán.');
     },

@@ -37,7 +37,6 @@ Edit, regenerate, reanalyze, or confirm a program
 {
   "type": "object",
   "required": [
-    "title",
     "goal",
     "startDate",
     "timezone",
@@ -46,7 +45,21 @@ Edit, regenerate, reanalyze, or confirm a program
   ],
   "properties": {
     "title": {
-      "type": "string"
+      "type": [
+        "string",
+        "null"
+      ],
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "goal": {
       "type": "string",

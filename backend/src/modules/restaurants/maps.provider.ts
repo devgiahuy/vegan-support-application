@@ -295,6 +295,9 @@ const serpApiResponseSchema = z.object({
 
 export class SerpApiMapsProvider implements MapsProvider {
   readonly name = 'SERPAPI';
+  private readonly minimumDiscoveryRadiusMeters = 20_000;
+  private readonly searchCacheTtlMs = 5 * 60_000;
+  private readonly searchCache = new Map<string, { expiresAt: number; places: ExternalPlace[] }>();
 
   constructor(
     private readonly apiKey: string,
@@ -350,9 +353,14 @@ export class SerpApiMapsProvider implements MapsProvider {
     };
   }
 
-  private zoomForRadius(radiusMeters: number): string {
+  private zoomLevelForRadius(radiusMeters: number): number {
     const zoom = Math.max(3, Math.min(30, Math.round(Math.log2(40_075_017 / radiusMeters))));
-    return `${zoom}z`;
+    return zoom;
+  }
+
+  private searchZooms(radiusMeters: number): number[] {
+    const base = this.zoomLevelForRadius(radiusMeters);
+    return [...new Set([base + 1, base, base - 1].filter((zoom) => zoom >= 3 && zoom <= 30))];
   }
 
   private async searchPage(
@@ -361,8 +369,9 @@ export class SerpApiMapsProvider implements MapsProvider {
     lng: number,
     radiusMeters: number,
     filters: MapsSearchFilters | undefined,
+    zoom: string,
     start: number,
-  ): Promise<{ places: ExternalPlace[]; hasNext: boolean }> {
+  ): Promise<{ places: ExternalPlace[]; hasNext: boolean; rawCount: number }> {
     const filterParams: Record<string, string> = {};
     for (const [key, value] of Object.entries({
       min_price: filters?.minPrice,
@@ -376,18 +385,23 @@ export class SerpApiMapsProvider implements MapsProvider {
     }
     const raw = await this.request({
       q: query,
-      ll: `@${lat},${lng},${this.zoomForRadius(radiusMeters)}`,
+      ll: `@${lat},${lng},${zoom}`,
       type: 'search',
       no_cache: 'false',
       ...(start > 0 ? { start: String(start) } : {}),
       ...filterParams,
     });
     const parsed = serpApiResponseSchema.parse(raw);
-    const places = (parsed.local_results ?? [])
+    const rawPlaces = parsed.local_results ?? [];
+    const places = rawPlaces
       .map((item) => this.place(item))
       .filter((item): item is ExternalPlace => item !== null)
       .filter((item) => distanceMeters(lat, lng, item.latitude, item.longitude) <= radiusMeters);
-    return { places, hasNext: Boolean(parsed.serpapi_pagination?.next) };
+    return {
+      places,
+      hasNext: Boolean(parsed.serpapi_pagination?.next),
+      rawCount: rawPlaces.length,
+    };
   }
 
   async search(
@@ -397,20 +411,45 @@ export class SerpApiMapsProvider implements MapsProvider {
     radiusMeters: number,
     filters?: MapsSearchFilters,
   ): Promise<ExternalPlace[]> {
+    const discoveryRadiusMeters = Math.max(radiusMeters, this.minimumDiscoveryRadiusMeters);
+    const cacheKey = JSON.stringify({
+      query,
+      lat: lat.toFixed(5),
+      lng: lng.toFixed(5),
+      radiusMeters: discoveryRadiusMeters,
+      filters: filters ?? {},
+    });
+    const cached = this.searchCache.get(cacheKey);
+    if (cached && cached.expiresAt > Date.now()) return cached.places;
+
     const places: ExternalPlace[] = [];
     const seen = new Set<string>();
     const pageSize = 20;
-    const maxPages = 10;
-    for (let page = 0; page < maxPages; page += 1) {
-      const result = await this.searchPage(query, lat, lng, radiusMeters, filters, page * pageSize);
-      for (const place of result.places) {
-        if (!seen.has(place.placeId)) {
-          seen.add(place.placeId);
-          places.push(place);
+    const maxPagesPerZoom = 3;
+    for (const zoomLevel of this.searchZooms(discoveryRadiusMeters)) {
+      for (let page = 0; page < maxPagesPerZoom; page += 1) {
+        const result = await this.searchPage(
+          query,
+          lat,
+          lng,
+          discoveryRadiusMeters,
+          filters,
+          `${zoomLevel}z`,
+          page * pageSize,
+        );
+        for (const place of result.places) {
+          if (!seen.has(place.placeId)) {
+            seen.add(place.placeId);
+            places.push(place);
+          }
         }
+        if (!result.hasNext || result.rawCount < pageSize) break;
       }
-      if (!result.hasNext || result.places.length < pageSize) break;
     }
+    this.searchCache.set(cacheKey, {
+      expiresAt: Date.now() + this.searchCacheTtlMs,
+      places,
+    });
     return places;
   }
 

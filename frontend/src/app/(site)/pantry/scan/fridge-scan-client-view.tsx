@@ -86,7 +86,11 @@ export function FridgeScanClientView() {
   };
 
   return (
-    <div className="container max-w-5xl mx-auto px-4 py-6 sm:py-8 space-y-6">
+    <div
+      className={`container mx-auto px-4 py-6 sm:py-8 space-y-6 transition-all duration-300 ${
+        job?.isReadyForReview ? 'max-w-7xl' : 'max-w-5xl'
+      }`}
+    >
       {/* Header thanh điều hướng */}
       <div className="flex items-center justify-between gap-4">
         <Button
@@ -116,17 +120,20 @@ export function FridgeScanClientView() {
       ) : activeJobId && job ? (
         /* Giai đoạn 2 & 3: Đang phân tích hoặc Đã có kết quả duyệt */
         <div className="space-y-6">
-          <RecognitionProgressTracker
-            job={job}
-            onCancel={handleCancel}
-            onRetry={handleRetry}
-            isCancelling={cancelMutation.isPending}
-            isRetrying={retryMutation.isPending}
-          />
+          {!job.isReadyForReview && (
+            <RecognitionProgressTracker
+              job={job}
+              onCancel={handleCancel}
+              onRetry={handleRetry}
+              isCancelling={cancelMutation.isPending}
+              isRetrying={retryMutation.isPending}
+            />
+          )}
 
           {job.isReadyForReview && (
             <CandidateReviewScreen
               job={job}
+              onConfirmSuccess={(diff) => setConfirmationDiff(diff)}
               onConfirm={handleConfirm}
               onCancel={handleCancel}
               onRetry={handleRetry}

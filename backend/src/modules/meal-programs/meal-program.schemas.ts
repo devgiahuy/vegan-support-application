@@ -1,5 +1,5 @@
 import { MealGoal, MealProgramStatus, MealProgramWeekStatus } from '@prisma/client';
-import { z } from '../../common/validation/zod.js';
+import { optionalTrimmedTextSchema, z } from '../../common/validation/zod.js';
 import { dateOnlySchema } from '../profile/profile.schemas.js';
 
 export const MEAL_PROGRAM_ALGORITHM_VERSION = 'multi-week-program-v1' as const;
@@ -24,7 +24,7 @@ const mondaySchema = dateOnlySchema.refine(
 
 export const createMealProgramRequestSchema = z
   .object({
-    title: z.string().trim().min(1).max(200),
+    title: optionalTrimmedTextSchema(1, 200),
     goal: z.enum(MealGoal),
     startDate: mondaySchema,
     timezone: z.string().trim().min(1).max(64).refine(validTimeZone, 'timezone IANA không hợp lệ'),

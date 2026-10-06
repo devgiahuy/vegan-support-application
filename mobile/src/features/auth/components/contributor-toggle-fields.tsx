@@ -161,7 +161,7 @@ export function ContributorToggleFields({
             <TextInput
               value={referenceLinks}
               onChangeText={(text) => setValue('referenceLinks', text)}
-              placeholder={'Mỗi dòng một link, tối đa 5 link\nhttps://...'}
+              placeholder="Mỗi dòng một link tham khảo, tối đa 5 link"
               placeholderTextColor={colors.mutedForeground}
               multiline
               numberOfLines={2}

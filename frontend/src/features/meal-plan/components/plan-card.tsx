@@ -29,7 +29,7 @@ export function PlanCard({ plan }: { plan: MealPlan }) {
       <CardContent>
         <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
           <Flame className="size-4" />
-          Mục tiêu {plan.targetCalories} kcal/ngày
+          Mục tiêu ~{plan.targetCalories} kcal/ngày
         </p>
       </CardContent>
       <CardFooter>

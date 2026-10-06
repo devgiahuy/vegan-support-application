@@ -81,7 +81,7 @@ export const updateStoragePolicyRequestSchema = z
 export const createStorageAdjustmentRequestSchema = z
   .object({
     deltaBytes: z.number().int().min(-10_000_000_000_000).max(10_000_000_000_000),
-    reason: z.string().trim().min(10).max(1000),
+    reason: z.string().trim().min(10).max(5_000),
     idempotencyKey: z.string().trim().min(8).max(120),
   })
   .strict()

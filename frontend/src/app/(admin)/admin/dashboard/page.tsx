@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import {
   ClipboardCheck,
@@ -23,6 +23,7 @@ import {
   Store,
   Bot,
   Database,
+  Newspaper,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -65,9 +66,11 @@ import {
   FeaturesAuditTable,
 } from '@/features/ai-governance';
 import { AiVerificationTable } from '@/features/ai-artifacts';
+import { AdminContentManager } from '@/features/admin-content/components/admin-content-manager';
 
 type Tab =
   | 'queue'
+  | 'content'
   | 'users'
   | 'categories'
   | 'ingredients'
@@ -94,6 +97,7 @@ export default function AdminDashboardPage() {
 function parseTabParam(value: string | null): Tab {
   if (
     value === 'queue' ||
+    value === 'content' ||
     value === 'users' ||
     value === 'categories' ||
     value === 'ingredients' ||
@@ -114,9 +118,20 @@ function parseTabParam(value: string | null): Tab {
 
 /** Nội dung trang admin dashboard. Nhận `?tab=` để link trực tiếp tới tab (vd `/admin/dashboard?tab=queue`). */
 function AdminDashboardContent() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = React.useState<Tab>(() => parseTabParam(searchParams.get('tab')));
   const shouldReduceMotion = useReducedMotion();
+
+  const handleTabChange = React.useCallback(
+    (newTab: Tab) => {
+      setTab(newTab);
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('tab', newTab);
+      router.replace(`/admin/dashboard?${params.toString()}`, { scroll: false });
+    },
+    [router, searchParams]
+  );
 
   // Queries cho 4 chỉ số KPI thực tế
   const {
@@ -190,6 +205,7 @@ function AdminDashboardContent() {
 
   const tabs: { id: Tab; label: string; icon: React.ElementType; badge?: string }[] = [
     { id: 'queue', label: 'Kiểm duyệt', icon: ClipboardCheck },
+    { id: 'content', label: 'Quản lý nội dung', icon: Newspaper },
     { id: 'reports', label: 'Báo cáo', icon: Flag },
     { id: 'users', label: 'Người dùng & Roles', icon: Users },
     { id: 'mod-users', label: 'Kiểm soát TK', icon: UserCog },
@@ -261,7 +277,7 @@ function AdminDashboardContent() {
                 key={t.id}
                 type="button"
                 whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
-                onClick={() => setTab(t.id)}
+                onClick={() => handleTabChange(t.id)}
                 className={cn(
                   'relative z-10 flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary',
                   isActive
@@ -300,6 +316,13 @@ function AdminDashboardContent() {
           >
             {/* TAB: QUEUE — hàng chờ kiểm duyệt thật (features/review) */}
             {tab === 'queue' && <ReviewQueueTable />}
+
+            {/* TAB: CONTENT — quản trị nội dung của chính quản trị viên (features/admin-content) */}
+            {tab === 'content' && (
+              <div>
+                <AdminContentManager />
+              </div>
+            )}
 
             {/* TAB: REPORTS — hàng chờ báo cáo (features/moderation) */}
             {tab === 'reports' && <ReportsTable />}

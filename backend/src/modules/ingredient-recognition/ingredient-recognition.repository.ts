@@ -44,6 +44,7 @@ export interface DeduplicatedCandidateData {
 
 export class RecognitionConflictError extends Error {}
 export class RecognitionVersionConflictError extends Error {}
+export class RecognitionIncompleteError extends Error {}
 
 export class IngredientRecognitionRepository {
   constructor(private readonly prisma: PrismaClient) {}
@@ -341,11 +342,12 @@ export class IngredientRecognitionRepository {
       for (const candidate of selected) {
         if (
           candidate.version !== requested.get(candidate.id) ||
-          candidate.status === RecognitionCandidateStatus.REJECTED ||
-          candidate.quantity === null ||
-          !candidate.unit
+          candidate.status === RecognitionCandidateStatus.REJECTED
         ) {
           throw new RecognitionVersionConflictError();
+        }
+        if (candidate.quantity === null || !candidate.unit) {
+          throw new RecognitionIncompleteError();
         }
         const quantity = candidate.quantity.toNumber();
         const unit = candidate.unit;

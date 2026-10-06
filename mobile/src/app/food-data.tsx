@@ -18,11 +18,13 @@ import {
   X,
 } from 'lucide-react-native';
 import * as Linking from 'expo-linking';
+import { useLocalSearchParams } from 'expo-router';
 
 import { SiteScreen } from '@/components/layout/site-screen';
 import { useIngredientsQuery } from '@/features/ingredient/queries/ingredient.queries';
 import {
   useCookingMethodsQuery,
+  useIngredientGuidelinesQuery,
   useIngredientNutrientsQuery,
   useInteractionRulesQuery,
   useReferenceIntakesQuery,
@@ -32,6 +34,7 @@ import type {
   CookingMethodItem,
   FoodInteractionRuleItem,
   FoodRuleSeverity,
+  IngredientGuidelineItem,
   InteractionScope,
   NutrientItem,
   ProvenanceInfo,
@@ -40,12 +43,13 @@ import type {
 import { FoodGroup } from '@/common/enums';
 import { useIconColors } from '@/lib/theme-colors';
 
-type Tab = 'INGREDIENT' | 'COOKING' | 'INTAKE' | 'INTERACTION';
+type Tab = 'INGREDIENT' | 'COOKING' | 'INTAKE' | 'GUIDELINE' | 'INTERACTION';
 
 const TABS: { value: Tab; label: string }[] = [
   { value: 'INGREDIENT', label: 'Nguyên liệu' },
   { value: 'COOKING', label: 'Phương pháp nấu' },
   { value: 'INTAKE', label: 'Khuyến nghị' },
+  { value: 'GUIDELINE', label: 'Định lượng' },
   { value: 'INTERACTION', label: 'Tương kỵ' },
 ];
 
@@ -597,6 +601,102 @@ function IntakeTab() {
   );
 }
 
+const EVIDENCE_LABELS: Record<IngredientGuidelineItem['evidenceGrade'], string> = {
+  STRONG: 'Bằng chứng mạnh',
+  MODERATE: 'Bằng chứng trung bình',
+  PRELIMINARY: 'Bằng chứng sơ bộ',
+  INSUFFICIENT: 'Chưa đủ bằng chứng',
+};
+
+function GuidelineCard({ item }: { item: IngredientGuidelineItem }) {
+  const sev = severityBadgeClasses(item.severity);
+  return (
+    <View className="rounded-2xl border border-border bg-card p-3.5">
+      <View className="flex-row items-start justify-between gap-2">
+        <Text className="flex-1 text-sm font-semibold text-foreground">{item.ingredientName}</Text>
+        <View className={`rounded-full px-2 py-0.5 ${sev.bg}`}>
+          <Text className={`text-[10px] font-semibold ${sev.text}`}>{item.severityLabel}</Text>
+        </View>
+      </View>
+
+      <Text className="mt-1.5 text-sm font-bold text-primary">
+        Tối đa {item.amount} {item.unit} × {item.frequency} lần {item.periodLabel}
+      </Text>
+
+      <View className="mt-1.5 flex-row flex-wrap items-center gap-2">
+        <View className="rounded-full border border-border px-2 py-0.5">
+          <Text className="text-[10px] text-muted-foreground">{POPULATION_LABELS[item.populationCode] || item.populationCode}</Text>
+        </View>
+        <View className="rounded-full border border-border px-2 py-0.5">
+          <Text className="text-[10px] text-muted-foreground">{EVIDENCE_LABELS[item.evidenceGrade]}</Text>
+        </View>
+        <Text className="text-[11px] text-muted-foreground">Nguồn: {item.sourceName}</Text>
+      </View>
+
+      {item.explanation ? (
+        <Text className="mt-2 text-xs leading-relaxed text-muted-foreground">{item.explanation}</Text>
+      ) : null}
+      {item.advisoryOnly ? (
+        <Text className="mt-2 text-[11px] italic text-muted-foreground">
+          Chỉ mang tính tham khảo, không thay thế tư vấn của chuyên gia dinh dưỡng/y tế.
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
+function GuidelineTab() {
+  const [population, setPopulation] = React.useState('ALL');
+  const [keyword, setKeyword] = React.useState('');
+  const colors = useIconColors();
+
+  const { data, isLoading, isError, refetch } = useIngredientGuidelinesQuery({
+    populationCode: population === 'ALL' ? undefined : population,
+    limit: 50,
+  });
+
+  const items = React.useMemo(() => {
+    const list = data?.items ?? [];
+    if (!keyword.trim()) return list;
+    const q = keyword.trim().toLowerCase();
+    return list.filter((i) => i.ingredientName.toLowerCase().includes(q) || i.explanation.toLowerCase().includes(q));
+  }, [data?.items, keyword]);
+
+  return (
+    <View className="gap-3">
+      <View className="flex-row items-center gap-2 rounded-xl border border-input bg-background px-3">
+        <Search size={16} color={colors.mutedForeground} />
+        <TextInput
+          value={keyword}
+          onChangeText={setKeyword}
+          placeholder="Tìm theo tên nguyên liệu..."
+          placeholderTextColor={colors.mutedForeground}
+          className="flex-1 py-2.5 text-sm text-foreground"
+        />
+      </View>
+      <View className="flex-row items-center gap-1.5">
+        <Users size={13} color={colors.mutedForeground} />
+        <Text className="text-xs text-muted-foreground">Nhóm đối tượng:</Text>
+      </View>
+      <FilterPills options={POPULATION_OPTIONS} value={population} onChange={setPopulation} />
+
+      {isLoading ? (
+        <SectionLoading />
+      ) : isError ? (
+        <SectionError onRetry={() => void refetch()} />
+      ) : items.length === 0 ? (
+        <SectionEmpty title="Chưa có hướng dẫn định lượng phù hợp" description="Thử từ khoá khác hoặc đổi nhóm đối tượng." />
+      ) : (
+        <View className="gap-2.5">
+          {items.map((item) => (
+            <GuidelineCard key={item.id} item={item} />
+          ))}
+        </View>
+      )}
+    </View>
+  );
+}
+
 function InteractionCard({ rule }: { rule: FoodInteractionRuleItem }) {
   const sev = severityBadgeClasses(rule.severity);
   const SeverityIcon = rule.severity === 'WARNING' ? AlertTriangle : rule.severity === 'COMPATIBLE' ? CheckCircle2 : Info;
@@ -687,13 +787,15 @@ function InteractionTab() {
 /**
  * Công cụ tra cứu dữ liệu dinh dưỡng chuẩn — đồng bộ nhóm công cụ trên
  * `frontend/src/app/(site)/categories/page.tsx` (IngredientSearch + NutritionFactsPanel,
- * CookingMethodCards, ReferenceIntakeExplorer, FoodInteractionTable). Bỏ phần
- * "Hướng dẫn định lượng an toàn" (ingredient-guidelines) vì bản FE cũng chưa có UI tiêu
- * thụ endpoint này.
+ * CookingMethodCards, ReferenceIntakeExplorer, FoodInteractionTable) và thêm tab
+ * "Định lượng" (`GET /food-data/ingredient-guidelines`) mà bản FE chưa có UI tiêu thụ.
  */
 export default function FoodDataScreen() {
   const colors = useIconColors();
-  const [tab, setTab] = React.useState<Tab>('INGREDIENT');
+  const params = useLocalSearchParams<{ tab?: string }>();
+  const [tab, setTab] = React.useState<Tab>(() =>
+    TABS.some((item) => item.value === params.tab) ? (params.tab as Tab) : 'INGREDIENT'
+  );
 
   return (
     <SiteScreen>
@@ -713,6 +815,7 @@ export default function FoodDataScreen() {
         {tab === 'INGREDIENT' ? <IngredientTab colors={colors} /> : null}
         {tab === 'COOKING' ? <CookingMethodTab /> : null}
         {tab === 'INTAKE' ? <IntakeTab /> : null}
+        {tab === 'GUIDELINE' ? <GuidelineTab /> : null}
         {tab === 'INTERACTION' ? <InteractionTab /> : null}
       </View>
     </SiteScreen>

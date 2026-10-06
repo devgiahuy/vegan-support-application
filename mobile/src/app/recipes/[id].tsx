@@ -10,6 +10,7 @@ import {
   Dumbbell,
   Flame,
   Hourglass,
+  History,
   Leaf,
   Minus,
   Pencil,
@@ -24,18 +25,23 @@ import {
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { RecipeCard } from '@/features/recipe/components/recipe-card';
-import { useRecipeDetailQuery, useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
+import { useRecipeDetailQuery, useRelatedRecipesQuery } from '@/features/recipe/queries/recipe.queries';
+import { RecipeNutritionCard } from '@/features/recipe-nutrition/components/recipe-nutrition-card';
+import { ReviewHistorySheet } from '@/features/review/components/review-history-sheet';
 import { useDeletePostMutation } from '@/features/post/queries/post.queries';
 import { CommunityPanel } from '@/features/community/components/community-panel';
+import { AddToMealPlanSheet } from '@/features/meal-plan/components/add-to-meal-plan-sheet';
 import { ReportButton } from '@/features/safety/components/report-button';
-import { PostStatus } from '@/common/enums';
+import { PostStatus, UserRole } from '@/common/enums';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
+import { useTrackBehaviorEvent } from '@/hooks/use-track-behavior-event';
 import { useAuthStore } from '@/store/useAuthStore';
 
-function notifyComingSoon(feature: string) {
-  Alert.alert('Sắp ra mắt', `${feature} đang được VeggieConnect hoàn thiện, quay lại sau nhé!`);
+/** Chỉ số thiếu dữ liệu hiển thị "Chưa có", không bịa số hay đổi thành 0. */
+function formatNutrient(value: number | null, unit: string): string {
+  return value === null ? 'Chưa có' : `${value}${unit}`;
 }
 
 /**
@@ -49,15 +55,29 @@ export default function RecipeDetailScreen() {
   const colors = useIconColors();
   const router = useRouter();
   const currentUserId = useAuthStore((state) => state.user?.id);
+  const currentRole = useAuthStore((state) => state.user?.role);
   const { data: recipe, isLoading, isError, refetch } = useRecipeDetailQuery(id ?? '');
-  const { data: recipesPagination } = useRecipesQuery({ limit: 6 });
-  const relatedRecipes = (recipesPagination?.items ?? []).filter((r) => r.id !== id).slice(0, 3);
+  const { data: relatedData } = useRelatedRecipesQuery(id ?? '');
+  const relatedRecipes = (relatedData ?? []).filter((r) => r.id !== id).slice(0, 4);
   const deleteMutation = useDeletePostMutation();
+  const trackEvent = useTrackBehaviorEvent();
+
+  // Ghi VIEW_RECIPE ngầm một lần khi chi tiết thật tải xong (fire-and-forget, tự kiểm tra consent).
+  const trackedIdRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (recipe && trackedIdRef.current !== recipe.id) {
+      trackedIdRef.current = recipe.id;
+      trackEvent({ type: 'VIEW_RECIPE', entityId: recipe.id });
+    }
+  }, [recipe, trackEvent]);
 
   const [servings, setServings] = React.useState<number | null>(null);
+  const [addToPlanOpen, setAddToPlanOpen] = React.useState(false);
+  const [historyPostId, setHistoryPostId] = React.useState<string | null>(null);
   const [checked, setChecked] = React.useState<string[]>([]);
 
   const isOwner = !!currentUserId && recipe?.author.id === currentUserId;
+  const canManageNutrition = isOwner || currentRole === UserRole.ADMIN;
 
   const toggleIngredient = (name: string) => {
     setChecked((prev) => (prev.includes(name) ? prev.filter((i) => i !== name) : [...prev, name]));
@@ -185,6 +205,12 @@ export default function RecipeDetailScreen() {
           </View>
           {isOwner ? (
             <View className="flex-row gap-1.5">
+              <Pressable
+                onPress={() => setHistoryPostId(recipe.id)}
+                accessibilityLabel="Lịch sử duyệt"
+                className="h-9 w-9 items-center justify-center rounded-full bg-muted">
+                <History size={15} color={colors.foreground} />
+              </Pressable>
               <Link href={`/recipes/${recipe.id}/edit` as Href} asChild>
                 <Pressable className="h-9 w-9 items-center justify-center rounded-full bg-muted">
                   <Pencil size={15} color={colors.foreground} />
@@ -206,7 +232,7 @@ export default function RecipeDetailScreen() {
             <Text className="text-xs font-medium text-foreground">Chia sẻ</Text>
           </Pressable>
           <Pressable
-            onPress={() => notifyComingSoon('Thực đơn tuần')}
+            onPress={() => setAddToPlanOpen(true)}
             className="flex-row items-center gap-1.5 rounded-full bg-primary px-3 py-1.5">
             <CalendarPlus size={14} color={colors.primaryForeground} />
             <Text className="text-xs font-semibold text-primary-foreground">Thêm vào thực đơn</Text>
@@ -223,17 +249,17 @@ export default function RecipeDetailScreen() {
           <View className="min-w-[47%] flex-1 items-center gap-1 rounded-2xl border border-border bg-muted/30 p-3">
             <Flame size={16} color="#ea580c" />
             <Text className="text-xs text-muted-foreground">Lượng Calo</Text>
-            <Text className="text-base font-bold text-foreground">{recipe.nutrition.calories} kcal</Text>
+            <Text className="text-base font-bold text-foreground">{formatNutrient(recipe.nutrition.calories, ' kcal')}</Text>
           </View>
           <View className="min-w-[47%] flex-1 items-center gap-1 rounded-2xl border border-border bg-muted/30 p-3">
             <Dumbbell size={16} color={colors.primary} />
             <Text className="text-xs text-muted-foreground">Chất đạm</Text>
-            <Text className="text-base font-bold text-foreground">{recipe.nutrition.protein}g</Text>
+            <Text className="text-base font-bold text-foreground">{formatNutrient(recipe.nutrition.protein, 'g')}</Text>
           </View>
           <View className="min-w-[47%] flex-1 items-center gap-1 rounded-2xl border border-border bg-muted/30 p-3">
             <Utensils size={16} color={colors.cta} />
             <Text className="text-xs text-muted-foreground">Carbohydrate</Text>
-            <Text className="text-base font-bold text-foreground">{recipe.nutrition.carbs || 35}g</Text>
+            <Text className="text-base font-bold text-foreground">{formatNutrient(recipe.nutrition.carbs, 'g')}</Text>
           </View>
           <View className="min-w-[47%] flex-1 items-center gap-1 rounded-2xl border border-border bg-muted/30 p-3">
             <Clock size={16} color={colors.mutedForeground} />
@@ -305,11 +331,46 @@ export default function RecipeDetailScreen() {
         {/* Steps */}
         <View className="gap-3">
           <Text className="text-lg font-bold text-foreground">Các bước thực hiện</Text>
-          <View className="rounded-2xl border border-border p-4">
-            <Text className="text-sm leading-relaxed text-foreground">
-              {recipe.body || 'Đang cập nhật hướng dẫn từng bước cho công thức này...'}
-            </Text>
-          </View>
+          {recipe.steps.length > 0 ? (
+            <View className="gap-2.5">
+              {recipe.steps.map((step, index) => (
+                <View key={`${step.position}-${index}`} className="flex-row gap-3 rounded-2xl border border-border p-3.5">
+                  <View className="h-7 w-7 items-center justify-center rounded-full bg-primary">
+                    <Text className="text-xs font-bold text-primary-foreground">{index + 1}</Text>
+                  </View>
+                  <View className="flex-1 gap-1.5">
+                    <Text className="text-sm leading-relaxed text-foreground">{step.instruction}</Text>
+                    {step.durationMinutes !== null || step.temperatureCelsius !== null || step.cookingMethodName ? (
+                      <View className="flex-row flex-wrap gap-1.5">
+                        {step.cookingMethodName ? (
+                          <View className="rounded-full bg-muted px-2 py-0.5">
+                            <Text className="text-[11px] text-muted-foreground">{step.cookingMethodName}</Text>
+                          </View>
+                        ) : null}
+                        {step.durationMinutes !== null ? (
+                          <View className="flex-row items-center gap-1 rounded-full bg-muted px-2 py-0.5">
+                            <Clock size={10} color={colors.mutedForeground} />
+                            <Text className="text-[11px] text-muted-foreground">{step.durationMinutes} phút</Text>
+                          </View>
+                        ) : null}
+                        {step.temperatureCelsius !== null ? (
+                          <View className="rounded-full bg-muted px-2 py-0.5">
+                            <Text className="text-[11px] text-muted-foreground">{step.temperatureCelsius}°C</Text>
+                          </View>
+                        ) : null}
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View className="rounded-2xl border border-border p-4">
+              <Text className="text-sm leading-relaxed text-foreground">
+                {recipe.body || 'Đang cập nhật hướng dẫn từng bước cho công thức này...'}
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Compatibility */}
@@ -346,26 +407,8 @@ export default function RecipeDetailScreen() {
           </View>
         ) : null}
 
-        {/* Nutrition breakdown */}
-        <View className="overflow-hidden rounded-2xl border border-border">
-          <View className="border-b border-border bg-primary/5 p-4">
-            <Text className="text-sm font-bold text-foreground">Phân tích dinh dưỡng (1 khẩu phần)</Text>
-          </View>
-          <View className="gap-2.5 p-4">
-            {[
-              ['Tổng năng lượng', `${recipe.nutrition.calories} kcal`],
-              ['Chất đạm thực vật', `${recipe.nutrition.protein}g`],
-              ['Carbohydrate', `${recipe.nutrition.carbs || 35}g`],
-              ['Chất béo thực vật', `${recipe.nutrition.fat || 8}g`],
-              ['Chất xơ tự nhiên', `${recipe.nutrition.fiber || 6}g`],
-            ].map(([label, value]) => (
-              <View key={label} className="flex-row items-center justify-between border-b border-border/60 pb-2">
-                <Text className="text-sm text-muted-foreground">{label}</Text>
-                <Text className="text-sm font-semibold text-foreground">{value}</Text>
-              </View>
-            ))}
-          </View>
-        </View>
+        {/* Dinh dưỡng theo cách nấu (backend tính, có nguồn gốc số liệu) */}
+        <RecipeNutritionCard postId={recipe.id} canManage={canManageNutrition} />
 
         {!isOwner ? <ReportButton targetType="POST" targetId={recipe.id} /> : null}
 
@@ -388,6 +431,14 @@ export default function RecipeDetailScreen() {
           </View>
         ) : null}
       </View>
+
+      <ReviewHistorySheet postId={historyPostId} title={recipe.title} onClose={() => setHistoryPostId(null)} />
+      <AddToMealPlanSheet
+        visible={addToPlanOpen}
+        recipeId={recipe.id}
+        recipeTitle={recipe.title}
+        onClose={() => setAddToPlanOpen(false)}
+      />
     </SiteScreen>
   );
 }

@@ -9,10 +9,10 @@ import type { ReportReasonCode, ReportTargetType } from '../types/safety.model';
 
 const REASONS: { code: ReportReasonCode; label: string }[] = [
   { code: 'SPAM', label: 'Spam' },
-  { code: 'HARMFUL_HEALTH', label: 'Thong tin suc khoe gay hai' },
-  { code: 'MISINFORMATION', label: 'Thong tin sai lech' },
-  { code: 'COPYRIGHT', label: 'Ban quyen' },
-  { code: 'OTHER', label: 'Khac' },
+  { code: 'HARMFUL_HEALTH', label: 'Thông tin sức khỏe gây hại' },
+  { code: 'MISINFORMATION', label: 'Thông tin sai lệch' },
+  { code: 'COPYRIGHT', label: 'Bản quyền' },
+  { code: 'OTHER', label: 'Khác' },
 ];
 
 export function ReportButton({ targetType, targetId }: { targetType: ReportTargetType; targetId: string }) {
@@ -22,18 +22,18 @@ export function ReportButton({ targetType, targetId }: { targetType: ReportTarge
   const submit = async (reasonCode: ReportReasonCode) => {
     try {
       await mutation.mutateAsync({ targetType, targetId, reasonCode });
-      Alert.alert('Da gui bao cao', 'Cam on ban da giup cong dong an toan hon.');
+      Alert.alert('Đã gửi báo cáo', 'Cảm ơn bạn đã giúp cộng đồng an toàn hơn.');
     } catch (error) {
-      Alert.alert('Khong gui duoc bao cao', getApiErrorMessage(error, 'Vui long thu lai sau.'));
+      Alert.alert('Không gửi được báo cáo', getApiErrorMessage(error, 'Vui lòng thử lại sau.'));
     }
   };
 
   const openReasonPicker = () => {
     Alert.alert(
-      'Bao cao vi pham',
-      'Chon ly do phu hop nhat. Bao cao la tin hieu cho quan tri vien, khong tu dong xoa noi dung.',
+      'Báo cáo vi phạm',
+      'Chọn lý do phù hợp nhất. Báo cáo là tín hiệu cho quản trị viên, không tự động xóa nội dung.',
       [
-        { text: 'Huy', style: 'cancel' },
+        { text: 'Hủy', style: 'cancel' },
         ...REASONS.map((reason) => ({
           text: reason.label,
           onPress: () => void submit(reason.code),
@@ -44,7 +44,7 @@ export function ReportButton({ targetType, targetId }: { targetType: ReportTarge
 
   return (
     <PrimaryButton
-      label={mutation.isPending ? 'Dang gui bao cao...' : 'Bao cao vi pham'}
+      label={mutation.isPending ? 'Đang gửi báo cáo...' : 'Báo cáo vi phạm'}
       variant="outline"
       loading={mutation.isPending}
       icon={<Flag size={16} color={colors.foreground} />}

@@ -219,3 +219,37 @@ export enum RestaurantStatus {
   PENDING = 'PENDING',
   PUBLISHED = 'PUBLISHED',
 }
+
+/** Loại nguồn tạo bản ghi tri thức AI. */
+export enum AiArtifactType {
+  CHAT_ANSWER = 'CHAT_ANSWER',
+  RECIPE_NUTRITION = 'RECIPE_NUTRITION',
+  FRIDGE_RECOGNITION = 'FRIDGE_RECOGNITION',
+  RECEIPT_EXTRACTION = 'RECEIPT_EXTRACTION',
+}
+
+/** Trạng thái vòng đời của AI Artifact. */
+export enum AiArtifactStatus {
+  DRAFT = 'DRAFT',
+  SUBMITTED = 'SUBMITTED',
+}
+
+/** Chế độ hiển thị của AI Artifact. */
+export enum AiArtifactVisibility {
+  PRIVATE = 'PRIVATE',
+  PUBLIC = 'PUBLIC',
+}
+
+/** Kết luận thẩm định của Contributor/Admin. */
+export enum AiVerificationConclusion {
+  VERIFIED = 'VERIFIED',
+  CORRECTION_NEEDED = 'CORRECTION_NEEDED',
+  REJECTED = 'REJECTED',
+}
+
+/** Trạng thái hiệu lực của bản thẩm định. */
+export enum AiVerificationStatus {
+  ACTIVE = 'ACTIVE',
+  SUPERSEDED = 'SUPERSEDED',
+  REVOKED = 'REVOKED',
+}

@@ -1,8 +1,8 @@
 import api from '@/lib/axios';
 import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
 import type { PaginationResult } from '@/types/api';
-import type { IngredientListResponseDto } from '../types/ingredient.dto';
-import type { Ingredient } from '../types/ingredient.model';
+import type { IngredientListResponseDto, IngredientResolveResponseDto } from '../types/ingredient.dto';
+import type { Ingredient, IngredientResolution } from '../types/ingredient.model';
 import type { FoodGroup } from '@/common/enums';
 import { ingredientMapper } from '../mappers/ingredient.mapper';
 
@@ -22,5 +22,13 @@ export const ingredientApi = {
       silent: true,
     });
     return ingredientMapper.toListModel(res.data);
+  },
+  /** Phân giải tên (có/không dấu) về nguyên liệu chuẩn: NONE / EXACT / AMBIGUOUS. */
+  resolveIngredient: async (query: string): Promise<IngredientResolution> => {
+    const res = await api.get<IngredientResolveResponseDto>(API_ENDPOINTS.INGREDIENTS.RESOLVE, {
+      params: { query },
+      silent: true,
+    });
+    return ingredientMapper.toResolution(res.data);
   },
 };

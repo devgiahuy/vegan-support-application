@@ -25,7 +25,7 @@ export function CustomMealCard({ meal }: { meal: CustomMeal }) {
           <View className="flex-row flex-wrap gap-2">
             <View className="flex-row items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1">
               <Utensils size={12} color={colors.primary} />
-              <Text className="text-xs font-semibold text-primary">{meal.servings} phan</Text>
+              <Text className="text-xs font-semibold text-primary">{meal.servings} phần</Text>
             </View>
             {meal.calories !== null ? (
               <View className="flex-row items-center gap-1 rounded-full bg-muted px-2.5 py-1">

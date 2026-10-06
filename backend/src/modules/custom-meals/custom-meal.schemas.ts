@@ -1,12 +1,17 @@
 import { CustomMealDeletePolicy, IngredientResolutionStatus } from '@prisma/client';
-import { z } from '../../common/validation/zod.js';
+import {
+  optionalNullableTrimmedTextSchema,
+  optionalTrimmedTextSchema,
+  z,
+} from '../../common/validation/zod.js';
 
 const positiveInt = z.number().int().min(1);
 const positiveDecimal = z.number().positive().max(99_999);
+const nonnegativeDecimal = z.number().nonnegative().max(99_999);
 
 export const customMealIngredientInputSchema = z
   .object({
-    position: z.number().int().min(0).max(199),
+    position: z.number().int().min(0).max(199).optional(),
     displayName: z.string().trim().min(1).max(160),
     amount: positiveDecimal,
     unit: z.string().trim().min(1).max(40),
@@ -17,39 +22,38 @@ export const customMealIngredientInputSchema = z
 export const createCustomMealSchema = z
   .object({
     name: z.string().trim().min(1).max(200),
-    notes: z.string().trim().min(1).max(5_000).optional(),
+    notes: optionalTrimmedTextSchema(1, 5_000),
     servings: positiveInt.max(99).default(1),
-    sourceNote: z.string().trim().min(1).max(500).optional(),
+    sourceNote: optionalTrimmedTextSchema(1, 2_000),
     userCalories: z.number().int().min(0).max(99_999).optional(),
-    userProteinGrams: positiveDecimal.optional(),
-    userCarbsGrams: positiveDecimal.optional(),
-    userFatGrams: positiveDecimal.optional(),
+    userProteinGrams: nonnegativeDecimal.optional(),
+    userCarbsGrams: nonnegativeDecimal.optional(),
+    userFatGrams: nonnegativeDecimal.optional(),
+    userFiberGrams: nonnegativeDecimal.optional(),
     deletePolicy: z.nativeEnum(CustomMealDeletePolicy).default(CustomMealDeletePolicy.BLOCK),
     ingredients: z
       .array(customMealIngredientInputSchema)
       .max(100)
       .default([])
       .refine(
-        (ings) => new Set(ings.map((i) => i.position)).size === ings.length,
+        (ings) => new Set(ings.map((i, index) => i.position ?? index)).size === ings.length,
         'Vị trí nguyên liệu không được trùng lặp',
       ),
-    tags: z
-      .array(z.string().trim().min(1).max(80))
-      .max(30)
-      .default([]),
+    tags: z.array(z.string().trim().min(1).max(80)).max(30).default([]),
   })
   .strict();
 
 export const updateCustomMealSchema = z
   .object({
     name: z.string().trim().min(1).max(200).optional(),
-    notes: z.string().trim().min(1).max(5_000).nullable().optional(),
+    notes: optionalNullableTrimmedTextSchema(1, 5_000),
     servings: positiveInt.max(99).optional(),
-    sourceNote: z.string().trim().min(1).max(500).nullable().optional(),
+    sourceNote: optionalNullableTrimmedTextSchema(1, 2_000),
     userCalories: z.number().int().min(0).max(99_999).nullable().optional(),
-    userProteinGrams: positiveDecimal.nullable().optional(),
-    userCarbsGrams: positiveDecimal.nullable().optional(),
-    userFatGrams: positiveDecimal.nullable().optional(),
+    userProteinGrams: nonnegativeDecimal.nullable().optional(),
+    userCarbsGrams: nonnegativeDecimal.nullable().optional(),
+    userFatGrams: nonnegativeDecimal.nullable().optional(),
+    userFiberGrams: nonnegativeDecimal.nullable().optional(),
     deletePolicy: z.nativeEnum(CustomMealDeletePolicy).optional(),
     ingredients: z
       .array(customMealIngredientInputSchema)
@@ -58,13 +62,10 @@ export const updateCustomMealSchema = z
       .refine(
         (ings) =>
           ings === undefined ||
-          new Set(ings.map((i) => i.position)).size === ings.length,
+          new Set(ings.map((i, index) => i.position ?? index)).size === ings.length,
         'Vị trí nguyên liệu không được trùng lặp',
       ),
-    tags: z
-      .array(z.string().trim().min(1).max(80))
-      .max(30)
-      .optional(),
+    tags: z.array(z.string().trim().min(1).max(80)).max(30).optional(),
   })
   .strict();
 
@@ -72,12 +73,8 @@ export const customMealIdParamsSchema = z.object({ id: z.string().uuid() }).stri
 
 export const customMealListQuerySchema = z
   .object({
-    page: z
-      .preprocess((v) => Number(v), z.number().int().min(1))
-      .default(1),
-    limit: z
-      .preprocess((v) => Number(v), z.number().int().min(1).max(50))
-      .default(20),
+    page: z.preprocess((v) => Number(v), z.number().int().min(1)).default(1),
+    limit: z.preprocess((v) => Number(v), z.number().int().min(1).max(50)).default(20),
     tag: z.string().trim().min(1).max(80).optional(),
   })
   .strict();
@@ -99,10 +96,7 @@ export const reorderPhotosSchema = z
       .array(z.string().uuid())
       .min(1)
       .max(10)
-      .refine(
-        (ids) => new Set(ids).size === ids.length,
-        'Asset IDs không được trùng lặp',
-      ),
+      .refine((ids) => new Set(ids).size === ids.length, 'Asset IDs không được trùng lặp'),
   })
   .strict();
 
@@ -150,6 +144,7 @@ export const customMealResponseSchema = z.object({
   userProteinGrams: z.number().nullable(),
   userCarbsGrams: z.number().nullable(),
   userFatGrams: z.number().nullable(),
+  userFiberGrams: z.number().nullable(),
   nutritionCoverage: z.string(),
   deletePolicy: z.nativeEnum(CustomMealDeletePolicy),
   ingredients: z.array(customMealIngredientResponseSchema),

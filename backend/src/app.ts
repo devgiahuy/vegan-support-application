@@ -87,7 +87,11 @@ import { createAiProvider } from './modules/chat/ai-provider.js';
 import { AiGovernanceService } from './modules/ai-governance/ai-governance.service.js';
 import { AiGovernanceController } from './modules/ai-governance/ai-governance.controller.js';
 import { createAiGovernanceRouter } from './modules/ai-governance/ai-governance.router.js';
-import { governAiProvider, governReceiptProvider, governVisionProvider } from './modules/ai-governance/ai-governance.providers.js';
+import {
+  governAiProvider,
+  governReceiptProvider,
+  governVisionProvider,
+} from './modules/ai-governance/ai-governance.providers.js';
 import { ChatController } from './modules/chat/chat.controller.js';
 import { ChatIdentityService } from './modules/chat/chat.identity.js';
 import { ChatRepository } from './modules/chat/chat.repository.js';
@@ -199,7 +203,10 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
     contentRepository,
   );
   const recommendationController = new RecommendationController(recommendationService);
-  const mealAnalysisService = new MealAnalysisService(new MealAnalysisRepository(database.client));
+  const mealAnalysisService = new MealAnalysisService(
+    new MealAnalysisRepository(database.client),
+    config,
+  );
   const mealAnalysisController = new MealAnalysisController(mealAnalysisService);
   const mealPlanService = new MealPlanService(
     new MealPlanRepository(database.client),
@@ -226,7 +233,7 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
     new RecipeNutritionService(new RecipeNutritionRepository(database.client), aiProvider),
   );
   const customMealController = new CustomMealController(
-    new CustomMealService(new CustomMealRepository(database.client), storageRepository),
+    new CustomMealService(new CustomMealRepository(database.client), storageRepository, aiProvider),
   );
   const pantryController = new PantryController(
     new PantryService(new PantryRepository(database.client)),
@@ -251,7 +258,9 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   const restaurantController = new RestaurantController(
     new RestaurantService(database.client, createMapsProvider(config)),
   );
-  const notificationController = new NotificationController(new NotificationService(database.client));
+  const notificationController = new NotificationController(
+    new NotificationService(database.client),
+  );
 
   app.disable('x-powered-by');
   app.use(helmet());
@@ -312,7 +321,10 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/admin', createModerationAdminRouter(moderationController, authentication));
   app.use('/api/v1/admin', createStorageAdminRouter(storageController, authentication));
   app.use('/api/v1/admin', createAiReviewAdminRouter(aiReviewController, authentication));
-  app.use('/api/v1/admin', createAiGovernanceRouter(new AiGovernanceController(aiGovernance), authentication));
+  app.use(
+    '/api/v1/admin',
+    createAiGovernanceRouter(new AiGovernanceController(aiGovernance), authentication),
+  );
   app.use('/api/v1/admin', createRestaurantAdminRouter(restaurantController, authentication));
   app.use('/api/v1/review-queue', createReviewQueueRouter(moderationController, authentication));
   app.use('/api/v1/reports', createReportsRouter(moderationController, authentication));
@@ -341,7 +353,10 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
     createIngredientRecognitionRouter(ingredientRecognitionController, authentication),
   );
   app.use('/api/v1/restaurants', createRestaurantRouter(restaurantController, authentication));
-  app.use('/api/v1/notifications', createNotificationRouter(notificationController, authentication));
+  app.use(
+    '/api/v1/notifications',
+    createNotificationRouter(notificationController, authentication),
+  );
   app.use('/api/v1/location', createLocationRouter(restaurantController, authentication));
   app.use('/api/v1', createReceiptRouter(receiptController, authentication));
   app.use('/api/v1', createAiReviewRouter(aiReviewController, authentication));

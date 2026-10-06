@@ -18,10 +18,23 @@ export interface MealSlotDto {
   targetCalories?: number | string;
   calories?: number | string;
   tolerancePercent?: number | string;
+  proteinGrams?: number | string | null;
+  fiberGrams?: number | string | null;
+  fatGrams?: number | string | null;
+  carbohydrateGrams?: number | string | null;
+  protein_grams?: number | string | null;
+  fiber_grams?: number | string | null;
+  fat_grams?: number | string | null;
+  carbohydrate_grams?: number | string | null;
   reasonCodes?: (string | null)[] | null;
   warningCodes?: (string | null)[] | null;
   reason?: string;
   unfilledReason?: string;
+  unresolved?: {
+    code?: string;
+    reason?: string;
+    hardConstraintsPreserved?: boolean;
+  } | null;
   servings?: number | string;
   sourceType?: 'RECIPE' | 'CUSTOM_MEAL' | string;
   source_type?: 'RECIPE' | 'CUSTOM_MEAL' | string;
@@ -56,6 +69,64 @@ export interface MealSlotDto {
   } | null;
 }
 
+export interface MealPlanDaySlotsDto {
+  breakfast?: MealSlotDto | null;
+  lunch?: MealSlotDto | null;
+  dinner?: MealSlotDto | null;
+}
+
+export interface DayEstimatedTotalsDto {
+  proteinGrams?: number | null;
+  fiberGrams?: number | null;
+  fatGrams?: number | null;
+  carbohydrateGrams?: number | null;
+  estimated?: boolean;
+  confidence?: number;
+  uncertaintyNotes?: string[];
+}
+
+export interface MealPlanDayDto {
+  date?: string;
+  dayOfWeek?: string;
+  slots?: MealPlanDaySlotsDto | null;
+  estimatedTotals?: DayEstimatedTotalsDto | null;
+}
+
+export interface EstimatedNutritionTargetsDto {
+  proteinGrams?: number | null;
+  fiberGrams?: number | null;
+  fatGrams?: number | null;
+  carbohydrateGrams?: number | null;
+  estimated?: boolean;
+  source?: string;
+  sourceDetail?: string;
+  tolerancePercent?: number;
+}
+
+export interface PlanWarningAffectedSlotDto {
+  itemId?: string;
+  date?: string;
+  mealType?: string;
+}
+
+export interface PlanWarningDetailDto {
+  code?: string;
+  severity?: 'INFO' | 'CAUTION' | 'HIGH' | string;
+  severityLabel?: string;
+  title?: string;
+  detail?: string;
+  suggestion?: string | null;
+  affectedSlots?: PlanWarningAffectedSlotDto[];
+}
+
+export interface PlanUserSummaryDto {
+  status?: string;
+  title?: string;
+  detail?: string;
+  suggestion?: string | null;
+  hardConstraintsPreserved?: boolean;
+}
+
 /** Dòng danh sách đi chợ (thô). Shape thật: `{ingredientId,canonicalName,amount,unit,sourceItemCount}`. */
 export interface ShoppingListItemDto {
   ingredientId?: string | null;
@@ -85,6 +156,8 @@ export interface MealPlanDto {
   algorithmVersion?: string;
   recommendationVersion?: string;
   warnings?: (string | null)[] | null;
+  warningDetails?: (PlanWarningDetailDto | null)[] | null;
+  userSummary?: PlanUserSummaryDto | null;
   nutritionDataQuality?: string;
   micronutrientSummary?: {
     vitaminB12Mcg?: number | string | null;
@@ -102,6 +175,8 @@ export interface MealPlanDto {
   items?: (MealSlotDto | null)[] | null;
   shoppingList?: (ShoppingListItemDto | null)[] | null;
   shopping_list?: (ShoppingListItemDto | null)[] | null;
+  days?: (MealPlanDayDto | null)[] | null;
+  estimatedNutritionTargets?: EstimatedNutritionTargetsDto | null;
 }
 
 /** `POST /meal-plans/generate` — `weekStart` (Thứ Hai), `goal`, `idempotencyKey` bắt buộc. */

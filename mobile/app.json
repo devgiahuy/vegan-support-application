@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "mobile",
+    "name": "VeggieConnect",
     "slug": "mobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -34,6 +34,14 @@
         }
       ],
       "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Cho phép VeggieConnect chọn ảnh từ thư viện của bạn.",
+          "cameraPermission": "Cho phép VeggieConnect chụp ảnh đại diện.",
+          "microphonePermission": false
+        }
+      ],
       [
         "expo-location",
         {

@@ -12,7 +12,7 @@ import {
   NutrientReferenceType,
   UnitDimension,
 } from '@prisma/client';
-import { z } from '../../common/validation/zod.js';
+import { optionalNullableTrimmedTextSchema, z } from '../../common/validation/zod.js';
 import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 
 const decimalSchema = z
@@ -85,7 +85,7 @@ const sourceDataSchema = z
     sourceUrl: z.string().url().max(2048).nullable().optional(),
     licenseName: z.string().trim().min(1).max(200),
     licenseUrl: z.string().url().max(2048).nullable().optional(),
-    attribution: z.string().trim().min(1).max(1000),
+    attribution: z.string().trim().min(1).max(5_000),
     defaultLocale: localeSchema.default('en-US'),
     active: z.boolean().default(true),
   })
@@ -102,7 +102,7 @@ const nutrientDataSchema = z
     name: z.string().trim().min(1).max(160),
     defaultUnit: z.string().trim().min(1).max(20),
     unitDimension: z.enum(UnitDimension),
-    description: z.string().trim().max(1000).nullable().optional(),
+    description: optionalNullableTrimmedTextSchema(1, 5_000),
     active: z.boolean().default(true),
   })
   .strict();
@@ -205,7 +205,7 @@ const guidelineDataSchema = z
     advisoryOnly: z.boolean().default(true),
     evidenceGrade: z.enum(EvidenceGrade),
     severity: z.enum(FoodRuleSeverity),
-    explanation: z.string().trim().min(1).max(2000),
+    explanation: z.string().trim().min(1).max(5_000),
     ...provenanceFields,
   })
   .strict();
@@ -219,7 +219,7 @@ const cookingMethodDataSchema = z
       .max(80)
       .regex(/^[A-Z0-9_]+$/),
     name: z.string().trim().min(1).max(160),
-    description: z.string().trim().max(1000).nullable().optional(),
+    description: optionalNullableTrimmedTextSchema(1, 5_000),
     active: z.boolean().default(true),
   })
   .strict();
@@ -255,8 +255,8 @@ const interactionRuleDataSchema = z
     severity: z.enum(FoodRuleSeverity),
     evidenceGrade: z.enum(EvidenceGrade),
     applicability: applicabilitySchema,
-    explanation: z.string().trim().min(1).max(2000),
-    suggestedAction: z.string().trim().max(1000).nullable().optional(),
+    explanation: z.string().trim().min(1).max(5_000),
+    suggestedAction: optionalNullableTrimmedTextSchema(1, 5_000),
     hardRule: z.boolean().default(false),
     ...provenanceFields,
   })
@@ -287,7 +287,7 @@ const suggestionDataSchema = z
     suggestionType: z.enum(FoodDataSuggestionType),
     provider: z.literal(FoodDataProvider.AI_SUGGESTION).default(FoodDataProvider.AI_SUGGESTION),
     payload: z.record(z.string(), z.unknown()),
-    rationale: z.string().trim().max(2000).nullable().optional(),
+    rationale: optionalNullableTrimmedTextSchema(1, 5_000),
     confidence: factorSchema.nullable().optional(),
   })
   .strict();

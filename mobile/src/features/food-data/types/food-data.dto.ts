@@ -119,6 +119,26 @@ export interface NutrientReferenceIntakeDto {
   source?: FoodDataSourceDto | null;
 }
 
+export interface IngredientIntakeGuidelineDto {
+  id?: string;
+  ingredientId?: string;
+  ingredient_id?: string;
+  populationCode?: string;
+  population_code?: string;
+  amount?: string | number;
+  unit?: string;
+  frequency?: string | number;
+  period?: string;
+  advisoryOnly?: boolean;
+  advisory_only?: boolean;
+  evidenceGrade?: string;
+  evidence_grade?: string;
+  severity?: string;
+  explanation?: string;
+  ingredient?: { id?: string; canonicalName?: string; canonical_name?: string } | null;
+  source?: FoodDataSourceDto | null;
+}
+
 export interface RetentionFactorDto {
   factor?: string | number;
   nutrient?: NutrientDto | null;

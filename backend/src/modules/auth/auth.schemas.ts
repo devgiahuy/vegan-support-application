@@ -13,7 +13,7 @@ export const contributorRequestSchema = z
       ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
     ]),
     organizationClaim: z.string().trim().min(2).max(500).optional(),
-    experience: z.string().trim().min(20).max(2_000),
+    experience: z.string().trim().min(20).max(5_000),
     referenceLinks: z.array(z.string().url()).max(5).default([]),
   })
   .strict()

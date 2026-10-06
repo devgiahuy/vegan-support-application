@@ -29,6 +29,7 @@ import { AllergySeverity, DietPattern, PracticeSchedule, Tradition } from '@/com
 import { getApiErrorCode, getApiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
+import { IngredientPicker } from '@/features/ingredient/components/ingredient-picker';
 import { useAuthStore } from '@/store/useAuthStore';
 
 const PATTERN_OPTIONS: { value: DietPattern; label: string; note: string }[] = [
@@ -109,6 +110,7 @@ export default function DietPreferencesScreen() {
   const [allergenLabel, setAllergenLabel] = React.useState('');
   const [allergenSeverity, setAllergenSeverity] = React.useState<AllergySeverity>(AllergySeverity.MODERATE);
   const [exclusionName, setExclusionName] = React.useState('');
+  const [exclusionIngredientId, setExclusionIngredientId] = React.useState<string | null>(null);
   const [exclusionReason, setExclusionReason] = React.useState('');
   const [dateInput, setDateInput] = React.useState('');
 
@@ -171,8 +173,16 @@ export default function DietPreferencesScreen() {
       Alert.alert('Thiếu thông tin', 'Vui lòng nhập tên nguyên liệu cần loại trừ.');
       return;
     }
-    setExclusions((prev) => [...prev, { ingredientName: name, reason: exclusionReason.trim() || undefined }]);
+    setExclusions((prev) => [
+      ...prev,
+      {
+        ingredientName: name,
+        ...(exclusionIngredientId ? { ingredientId: exclusionIngredientId } : {}),
+        reason: exclusionReason.trim() || undefined,
+      },
+    ]);
     setExclusionName('');
+    setExclusionIngredientId(null);
     setExclusionReason('');
   };
 
@@ -397,12 +407,13 @@ export default function DietPreferencesScreen() {
                   ))}
                 </View>
               ) : null}
-              <TextInput
-                value={exclusionName}
-                onChangeText={setExclusionName}
+              <IngredientPicker
                 placeholder="Tên nguyên liệu (VD: Nấm hương)"
-                placeholderTextColor={colors.mutedForeground}
-                className="rounded-xl border border-input bg-background p-2.5 text-sm text-foreground"
+                value={{ displayName: exclusionName, ingredientId: exclusionIngredientId }}
+                onChange={(next) => {
+                  setExclusionName(next.displayName);
+                  setExclusionIngredientId(next.ingredientId);
+                }}
               />
               <TextInput
                 value={exclusionReason}

@@ -56,6 +56,20 @@ Override or revoke an active verification with an audit reason
           "type": [
             "string",
             "null"
+          ],
+          "anyOf": [
+            {
+              "type": "string",
+              "_truncated": true
+            },
+            {
+              "type": "string",
+              "_truncated": true
+            },
+            {
+              "type": "null",
+              "_truncated": true
+            }
           ]
         }
       },

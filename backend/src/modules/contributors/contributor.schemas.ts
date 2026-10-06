@@ -36,14 +36,14 @@ const approveApplicationSchema = z
   .object({
     decision: z.literal('APPROVE'),
     approvalBasis: z.enum(ContributorApprovalBasis),
-    reviewNote: z.string().trim().min(10).max(2_000),
+    reviewNote: z.string().trim().min(10).max(5_000),
   })
   .strict();
 
 const rejectApplicationSchema = z
   .object({
     decision: z.literal('REJECT'),
-    reviewNote: z.string().trim().min(10).max(2_000),
+    reviewNote: z.string().trim().min(10).max(5_000),
   })
   .strict();
 
@@ -55,12 +55,12 @@ export const reviewContributorApplicationRequestSchema = z.discriminatedUnion('d
 export const inviteContributorRequestSchema = z
   .object({
     userId: z.string().uuid(),
-    reason: z.string().trim().min(10).max(2_000),
+    reason: z.string().trim().min(10).max(5_000),
   })
   .strict();
 
 export const revokeContributorRequestSchema = z
-  .object({ reason: z.string().trim().min(10).max(2_000) })
+  .object({ reason: z.string().trim().min(10).max(5_000) })
   .strict();
 
 const contributorApplicationUserSchema = z

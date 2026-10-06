@@ -6,6 +6,7 @@ import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 import type { IngredientVisionProvider, VisionImageResult } from './ingredient-vision.provider.js';
 import {
   RecognitionConflictError,
+  RecognitionIncompleteError,
   RecognitionVersionConflictError,
   type DeduplicatedCandidateData,
   type IngredientRecognitionRepository,
@@ -21,7 +22,7 @@ import type {
 const ALLOWED_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/avif']);
 const OPENAI_IMAGE_MIME_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const FRESHNESS_DISCLAIMER =
-  'Freshness observations are visual estimates only. Check the ingredient yourself before use; this is not a food-safety decision.';
+  'Nhận xét về độ tươi chỉ là ước tính từ hình ảnh. Hãy tự kiểm tra nguyên liệu trước khi sử dụng; đây không phải là kết luận về an toàn thực phẩm.';
 
 function hash(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
@@ -56,7 +57,11 @@ export class IngredientRecognitionService {
       if (
         !asset ||
         !asset.mimeType ||
-        !(this.config.vision.provider === 'openai' ? OPENAI_IMAGE_MIME_TYPES : ALLOWED_IMAGE_MIME_TYPES).has(asset.mimeType) ||
+        !(
+          this.config.vision.provider === 'openai'
+            ? OPENAI_IMAGE_MIME_TYPES
+            : ALLOWED_IMAGE_MIME_TYPES
+        ).has(asset.mimeType) ||
         asset.bytes > BigInt(this.config.vision.maxImageBytes)
       ) {
         throw this.invalidImage();
@@ -225,7 +230,12 @@ export class IngredientRecognitionService {
   async retry(ownerId: string, id: string, input: RetryRecognitionJobInput) {
     this.ensureEnabled();
     try {
-      const result = await this.repository.queueRetry(ownerId, id, input.idempotencyKey, hash({ id }));
+      const result = await this.repository.queueRetry(
+        ownerId,
+        id,
+        input.idempotencyKey,
+        hash({ id }),
+      );
       if (!result) throw this.notFound();
       if (!result.replay) this.schedule(ownerId, id);
       return this.serializeJob(result.job);
@@ -237,7 +247,11 @@ export class IngredientRecognitionService {
   async process(ownerId: string, id: string): Promise<void> {
     const job = await this.repository.startProcessing(ownerId, id);
     if (!job) return;
-    if (job.provider !== this.provider.name || job.modelId !== this.provider.model || job.templateVersion !== this.provider.templateVersion) {
+    if (
+      job.provider !== this.provider.name ||
+      job.modelId !== this.provider.model ||
+      job.templateVersion !== this.provider.templateVersion
+    ) {
       await this.repository.markFailed(
         job.id,
         'RECOGNITION_PROVIDER_UNAVAILABLE',
@@ -317,7 +331,7 @@ export class IngredientRecognitionService {
           existing.confidence = candidate.confidence;
           existing.freshnessObservation = candidate.freshnessObservation;
         }
-        existing.uncertaintyNote = `Combined from ${String(existing.evidence.length + 1)} images; review quantity and observations before confirming.`;
+        existing.uncertaintyNote = `Đã tổng hợp từ ${String(existing.evidence.length + 1)} ảnh; hãy kiểm tra lại số lượng và nhận xét trước khi xác nhận.`;
         existing.evidence.push(evidence);
       }
     }
@@ -365,7 +379,7 @@ export class IngredientRecognitionService {
       })),
       attempt: job.attemptCount,
       issue: job.errorCode
-        ? { code: job.errorCode, message: job.errorMessage ?? 'Recognition could not be completed.' }
+        ? { code: job.errorCode, message: job.errorMessage ?? 'Không thể hoàn tất nhận diện.' }
         : null,
       freshnessDisclaimer: FRESHNESS_DISCLAIMER,
       createdAt: job.createdAt.toISOString(),
@@ -389,7 +403,8 @@ export class IngredientRecognitionService {
     return new AppError({
       statusCode: 422,
       code: 'RECOGNITION_IMAGE_INVALID',
-      message: 'Every image must be an owned, committed fridge image with a supported type and size.',
+      message:
+        'Every image must be an owned, committed fridge image with a supported type and size.',
     });
   }
 
@@ -408,6 +423,13 @@ export class IngredientRecognitionService {
         statusCode: 409,
         code: 'RECOGNITION_VERSION_CONFLICT',
         message: 'Recognition candidate changed; refresh before continuing.',
+      });
+    }
+    if (error instanceof RecognitionIncompleteError) {
+      return new AppError({
+        statusCode: 422,
+        code: 'RECOGNITION_CANDIDATE_INCOMPLETE',
+        message: 'Vui lòng bổ sung đầy đủ số lượng và đơn vị cho các mục được chọn.',
       });
     }
     if (error instanceof RecognitionConflictError) {
