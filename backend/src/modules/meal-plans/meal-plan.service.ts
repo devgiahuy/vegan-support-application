@@ -47,10 +47,10 @@ const MEAL_SPLITS: Record<MealType, number> = {
 const MEAL_ORDER = [MealType.BREAKFAST, MealType.LUNCH, MealType.DINNER] as const;
 
 interface RevisionNutritionSnapshot {
-  recipeDetail: { vitaminB12Mcg: Prisma.Decimal | null } | null;
+  recipeDetail: { vitaminB12Mcg: number | null } | null;
   ingredients: Array<{
     ingredientId: string | null;
-    amount: Prisma.Decimal;
+    amount: number;
     unit: string;
     ingredient: { canonicalName: string } | null;
   }>;

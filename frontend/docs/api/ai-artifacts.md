@@ -182,9 +182,7 @@ List submitted public AI artifacts using a strict privacy-safe allowlist
   "type": "object",
   "required": [
     "type",
-    "sourceId",
-    "title",
-    "summary"
+    "sourceId"
   ],
   "properties": {
     "type": {

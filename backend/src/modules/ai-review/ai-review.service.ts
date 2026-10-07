@@ -22,8 +22,8 @@ function hash(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }
 
-function decimal(value: { toNumber(): number } | null): number | null {
-  return value?.toNumber() ?? null;
+function decimal(value: number | null): number | null {
+  return value ?? null;
 }
 
 function defaultArtifactPresentation(content: z.infer<typeof artifactContentSchema>): {
@@ -251,11 +251,11 @@ export class AiReviewService {
               type,
               recipe: { title: source.revision.title, servings: source.servings },
               totals: {
-                rawGrams: source.totalRawGrams.toNumber(),
-                cookedGrams: source.totalCookedGrams.toNumber(),
+                rawGrams: source.totalRawGrams,
+                cookedGrams: source.totalCookedGrams,
               },
               perServingNutrients: nutrientSnapshot(source.perServingNutrients),
-              confidence: source.confidence.toNumber(),
+              confidence: source.confidence,
               disclaimer: source.disclaimer,
             },
           }
@@ -273,7 +273,7 @@ export class AiReviewService {
               items: source.candidates.map((candidate) => ({
                 name: candidate.detectedName,
                 quantity: { value: decimal(candidate.quantity), unit: candidate.unit },
-                confidence: candidate.confidence.toNumber(),
+                confidence: candidate.confidence,
                 status: candidate.status,
               })),
             },
@@ -291,7 +291,7 @@ export class AiReviewService {
             items: source.candidates.map((candidate) => ({
               name: candidate.detectedName,
               quantity: { value: decimal(candidate.quantity), unit: candidate.unit },
-              confidence: candidate.confidence.toNumber(),
+              confidence: candidate.confidence,
               status: candidate.status,
             })),
           },

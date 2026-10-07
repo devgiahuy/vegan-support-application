@@ -1,13 +1,14 @@
+import { createPrismaClient } from '../../database/client.js';
 import 'dotenv/config';
 import assert from 'node:assert/strict';
-import { PrismaClient, ReceiptJobStatus } from '@prisma/client';
+import { ReceiptJobStatus } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
 import { loadConfig } from '../../config/env.js';
 import { createReceiptExtractionProvider } from './receipt.provider.js';
 import { ReceiptRepository } from './receipt.repository.js';
 import { ReceiptService } from './receipt.service.js';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const config = loadConfig();
 const repository = new ReceiptRepository(prisma);
 const service = new ReceiptService(repository, createReceiptExtractionProvider(config), config);

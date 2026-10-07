@@ -27,9 +27,9 @@ function hash(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }
 
-function decimal(value: { toNumber(): number } | number | null): number | null {
+function decimal(value: number | null): number | null {
   if (value === null) return null;
-  return typeof value === 'number' ? value : value.toNumber();
+  return typeof value === 'number' ? value : value;
 }
 
 export class IngredientRecognitionService {
@@ -201,10 +201,10 @@ export class IngredientRecognitionService {
                 ? { id: item.ingredient.id, name: item.ingredient.canonicalName }
                 : null,
               unmatchedText: item.unmatchedText ?? null,
-              quantity: item.quantity.toNumber(),
+              quantity: item.quantity,
               unit: item.unit,
               source: item.source,
-              confidence: item.confidence.toNumber(),
+              confidence: item.confidence,
               confirmationStatus: item.confirmationStatus,
               version: item.version,
             },

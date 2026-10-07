@@ -47,15 +47,17 @@ export class CommunityRepository {
     windowStart: Date,
     limit: number,
   ): Promise<boolean> {
-    const result = await this.prisma.$queryRaw<Array<{ count: number }>>`
-      INSERT INTO "community_rate_limit_buckets" ("user_id", "action", "window_start", "count")
-      VALUES (${userId}::uuid, CAST(${action} AS "community_action"), ${windowStart}, 1)
-      ON CONFLICT ("user_id", "action", "window_start")
-      DO UPDATE SET "count" = "community_rate_limit_buckets"."count" + 1
-      WHERE "community_rate_limit_buckets"."count" < ${limit}
-      RETURNING "count"
-    `;
-    return result.length === 1;
+    return this.prisma.$transaction(async (transaction) => {
+      const where = { userId_action_windowStart: { userId, action, windowStart } };
+      const existing = await transaction.communityRateLimitBucket.findUnique({ where });
+      if (existing && existing.count >= limit) return false;
+      await transaction.communityRateLimitBucket.upsert({
+        where,
+        create: { userId, action, windowStart, count: 1 },
+        update: { count: { increment: 1 } },
+      });
+      return true;
+    });
   }
 
   async listComments(
@@ -74,16 +76,18 @@ export class CommunityRepository {
       ],
     };
     const direction = query.order === 'oldest' ? 'asc' : 'desc';
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.comment.findMany({
-        where,
-        include: commentInclude,
-        orderBy: [{ createdAt: direction }, { id: direction }],
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-      this.prisma.comment.count({ where }),
-    ]);
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.comment.findMany({
+          where,
+          include: commentInclude,
+          orderBy: [{ createdAt: direction }, { id: direction }],
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+        transaction.comment.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 
@@ -198,30 +202,32 @@ export class CommunityRepository {
         type: query.type ? query.type : { in: [PostType.RECIPE, PostType.VIDEO] },
       },
     };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.postBookmark.findMany({
-        where,
-        include: {
-          post: {
-            include: {
-              publishedRevision: {
-                include: {
-                  media: {
-                    where: { kind: MediaKind.COVER_IMAGE },
-                    orderBy: { position: 'asc' },
-                    take: 1,
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.postBookmark.findMany({
+          where,
+          include: {
+            post: {
+              include: {
+                publishedRevision: {
+                  include: {
+                    media: {
+                      where: { kind: MediaKind.COVER_IMAGE },
+                      orderBy: { position: 'asc' },
+                      take: 1,
+                    },
                   },
                 },
               },
             },
           },
-        },
-        orderBy: [{ createdAt: 'desc' }, { postId: 'desc' }],
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-      this.prisma.postBookmark.count({ where }),
-    ]);
+          orderBy: [{ createdAt: 'desc' }, { postId: 'desc' }],
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+        transaction.postBookmark.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 }

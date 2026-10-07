@@ -36,9 +36,9 @@ const MASS_UNITS = new Map<string, number>([
   ['kilograms', 1000],
 ]);
 
-function number(value: { toNumber(): number } | number | null): number | null {
+function number(value: number | null): number | null {
   if (value === null) return null;
-  return typeof value === 'number' ? value : value.toNumber();
+  return typeof value === 'number' ? value : value;
 }
 
 function dateOnly(value: Date | null): string | null {

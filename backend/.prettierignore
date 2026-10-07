@@ -2,3 +2,5 @@ node_modules/
 dist/
 coverage/
 openapi.json
+
+prisma/mongodb-validators.json

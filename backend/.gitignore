@@ -8,3 +8,6 @@ env*
 coverage/
 *.log
 .DS_Store
+
+# Database exports contain private data and credentials.
+backups/

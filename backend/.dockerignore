@@ -8,3 +8,4 @@ openapi.json
 coverage
 *.log
 .DS_Store
+backups

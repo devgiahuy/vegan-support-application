@@ -1,8 +1,8 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.17
+**Version:** 4.18
 
-**Cập nhật:** 28/09/2026
+**Cập nhật:** 07/10/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
@@ -199,7 +199,7 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 
 | Method | Path             | Status  | Backend updated | FE integrated | Ghi chú                                                                |
 | ------ | ---------------- | ------- | --------------- | ------------- | ---------------------------------------------------------------------- |
-| GET    | `/health`        | `READY` | 2026-09-15      | No            | Public; kiểm tra API/PostgreSQL, trả request ID; 503 khi database down |
+| GET    | `/health`        | `READY` | 2026-09-15      | No            | Public; kiểm tra API/MongoDB replica set, trả request ID; 503 khi database down |
 | GET    | `/api-docs.json` | `READY` | 2026-09-15      | No            | Public OpenAPI 3.1 source; catalog frontend đã sync                    |
 
 ### 6.2 Auth và Profile
@@ -963,6 +963,8 @@ Không được mô tả endpoint là READY chỉ vì route đã tồn tại n�
 ## 11. Integration changelog
 
 Thêm entry mới nhất ở trên cùng.
+
+Change 2026-10-07 (v4.18): backend chuyển persistence sang MongoDB replica set + Prisma theo yêu cầu người dùng. Giữ UUID, request/response DTO, enum, mã lỗi, phân quyền và state machine; không có frontend migration action ngoài sync Swagger. `/health` kiểm tra MongoDB và yêu cầu replica set/sharded cluster; 503 khi database không khả dụng. Search/related dùng aggregation, giữ scoring và hard diet/allergy filters trước phân trang. Notification event được ghi cùng transaction nghiệp vụ; quota/rate limit dùng write conflict + bounded retry. Seed vẫn idempotent; SQL migration history được lưu tại `backend/prisma/legacy-postgresql/`. Provision schema bằng `npm run prisma:push`; không chạy raw Prisma Migrate/db push. Không đổi các trạng thái capability hiện có hoặc các giới hạn production AI image. Xem `backend/docs/MONGODB_MIGRATION.md` cho gate evidence và vận hành.
 
 Runtime note 2026-09-28 (v4.16): local Phase 21/22 startup now enables the configured OpenAI-compatible image adapters by default, uses the canonical `fake` identity for deterministic governed fixtures, and rebuilds backend output before `npm start`. API shapes and confirmation boundaries are unchanged; shared/production environments should remain disabled until representative-image validation passes.
 

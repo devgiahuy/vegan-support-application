@@ -1,7 +1,11 @@
 # Reviewed MVP release checklist
 
-**Audit date:** 2026-09-27  
+**Audit date:** 2026-09-27; persistence update 2026-10-07
 **Gate:** `IN_PROGRESS` — Phase 27 must not be marked complete or committed as the release commit while the P0 item below remains.
+
+The matrix below is the original release audit. Current PostgreSQL-specific entries are superseded
+by [MONGODB_MIGRATION.md](MONGODB_MIGRATION.md); its verification does not close the existing AI
+image evaluation or production load/backup requirements. Set `RUN_SEED=true` for a fresh Docker demo.
 
 ## Gate matrix
 
@@ -30,7 +34,7 @@ The ten scenarios in `docs/IMPLEMENTATION_PLAN.md` §10 were exercised at API/se
 | **P0** | OpenAI image adapters now send committed image URLs to a vision-capable model, but real fridge photos and Vietnamese receipts have not been evaluated. The job routes cannot yet be claimed production READY. | Run a representative consented image set through the configured OpenAI account, measure omissions/incorrect quantities and line prices, check partial failures and retention, then restore READY status if the gate passes. Keep the capabilities disabled in shared/production environments until then. |
 | **P1** | Legacy Contributor migration was applied only to an empty database. A historical rejected application with a null reviewer may violate the new check constraint. | Rehearse the migration against a scrubbed legacy snapshot and repair data or migration if needed. |
 | **P1** | OpenAPI was structurally checked, but examples and every error response were not semantically validated against the generated schemas. | Run a full contract validator and review the READY route error catalog before release signoff. |
-| **P2** | The index review is static and demo data is small; high-volume latency, queue scans, and retention job scheduling were not measured in a production-like environment. | Capture `EXPLAIN ANALYZE` and load metrics with representative data, schedule cleanup/reconciliation, and verify backup/restore and retention operations. |
+| **P2** | The index review is static and demo data is small; high-volume latency, queue scans, and retention job scheduling were not measured in a production-like environment. | Capture MongoDB `explain("executionStats")` and load metrics with representative data, schedule cleanup/reconciliation, and verify backup/restore and retention operations. |
 
 ## Demo startup
 
@@ -40,4 +44,4 @@ From `backend/`, copy `.env.example` to `.env`, set distinct `SEED_MEMBER_PASSWO
 docker compose -f docker-compose.yml up --build
 ```
 
-The API is then at `http://localhost:4000/api/v1/health`, with Swagger at `http://localhost:4000/api-docs` and JSON at `http://localhost:4000/api-docs.json`. To use host processes instead, start PostgreSQL, then run `npm ci`, `npm run prisma:migrate:deploy`, `npm run seed`, and `npm run dev` from `backend/`. Daily maintenance: `npm run storage:cleanup`, `npm run notifications:cleanup`, `npm run ai-governance:cleanup`; inspect `npm run storage:reconcile` before any `-- --apply` run.
+The API is then at `http://localhost:4000/api/v1/health`, with Swagger at `http://localhost:4000/api-docs` and JSON at `http://localhost:4000/api-docs.json`. To use host processes instead, start the MongoDB replica set, then run `npm ci`, `npm run prisma:generate`, `npm run prisma:push`, `npm run seed`, and `npm run dev` from `backend/`. Daily maintenance: `npm run storage:cleanup`, `npm run notifications:cleanup`, `npm run ai-governance:cleanup`; inspect `npm run storage:reconcile` before any `-- --apply` run.

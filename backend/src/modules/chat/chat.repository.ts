@@ -1,3 +1,4 @@
+import { lockDocument } from '../../database/locking.js';
 import {
   AiRequestStatus,
   ChatMessageRole,
@@ -37,14 +38,16 @@ export class ChatRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async purgeExpiredGuestHistory(now: Date): Promise<void> {
-    await this.prisma.$transaction([
-      this.prisma.chatSession.deleteMany({
-        where: { guestIdHash: { not: null }, expiresAt: { lte: now } },
-      }),
-      this.prisma.aiRateLimitBucket.deleteMany({
-        where: { windowStart: { lt: new Date(now.getTime() - 86_400_000) } },
-      }),
-    ]);
+    await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.chatSession.deleteMany({
+          where: { guestIdHash: { not: null }, expiresAt: { lte: now } },
+        }),
+        transaction.aiRateLimitBucket.deleteMany({
+          where: { windowStart: { lt: new Date(now.getTime() - 86_400_000) } },
+        }),
+      ]),
+    );
   }
 
   createSession(identity: ChatIdentity, title: string, expiresAt: Date | null) {
@@ -60,15 +63,17 @@ export class ChatRepository {
 
   async listSessions(userId: string, page: number, limit: number) {
     const where = { userId, deletedAt: null };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.chatSession.findMany({
-        where,
-        orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      this.prisma.chatSession.count({ where }),
-    ]);
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.chatSession.findMany({
+          where,
+          orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        transaction.chatSession.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 
@@ -85,16 +90,18 @@ export class ChatRepository {
       sessionId,
       status: { in: [ChatMessageStatus.COMPLETED, ChatMessageStatus.FAILED] },
     };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.chatMessage.findMany({
-        where,
-        include: messageInclude,
-        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      this.prisma.chatMessage.count({ where }),
-    ]);
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.chatMessage.findMany({
+          where,
+          include: messageInclude,
+          orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        transaction.chatMessage.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 
@@ -108,9 +115,7 @@ export class ChatRepository {
     staleBefore: Date,
   ): Promise<PreparedTurn | null> {
     return this.prisma.$transaction(async (transaction) => {
-      await transaction.$queryRaw<Array<{ id: string }>>`
-        SELECT "id" FROM "chat_sessions" WHERE "id" = ${sessionId}::uuid FOR UPDATE
-      `;
+      await lockDocument(transaction, 'chatSession', { id: sessionId });
       const session = await transaction.chatSession.findFirst({
         where: { id: sessionId, deletedAt: null, ...sessionOwnerWhere(identity) },
         select: { id: true },
@@ -227,40 +232,24 @@ export class ChatRepository {
     reservationKey: string,
     reservationExpiresAt: Date,
   ): Promise<QuotaBucketState> {
-    const rows = await this.prisma.$queryRaw<QuotaBucketState[]>`
-      INSERT INTO "ai_quota_buckets" (
-        "subject_key", "usage_date", "successful_count", "quota_limit",
-        "reservation_key", "reservation_expires_at", "created_at", "updated_at"
-      ) VALUES (
-        ${subjectKey}, ${usageDate}, 0, ${quotaLimit}, ${reservationKey},
-        ${reservationExpiresAt}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    return this.prisma.$transaction(async (transaction) => {
+      const where = { subjectKey_usageDate: { subjectKey, usageDate } };
+      const existing = await transaction.aiQuotaBucket.findUnique({ where });
+      const now = new Date();
+      if (
+        existing &&
+        (existing.successfulCount >= quotaLimit ||
+          (existing.reservationKey !== null &&
+            existing.reservationKey !== reservationKey &&
+            existing.reservationExpiresAt !== null &&
+            existing.reservationExpiresAt > now))
       )
-      ON CONFLICT ("subject_key", "usage_date") DO UPDATE SET
-        "quota_limit" = EXCLUDED."quota_limit",
-        "reservation_key" = EXCLUDED."reservation_key",
-        "reservation_expires_at" = EXCLUDED."reservation_expires_at",
-        "updated_at" = CURRENT_TIMESTAMP
-      WHERE "ai_quota_buckets"."successful_count" < EXCLUDED."quota_limit"
-        AND (
-          "ai_quota_buckets"."reservation_key" IS NULL
-          OR "ai_quota_buckets"."reservation_expires_at" <= CURRENT_TIMESTAMP
-          OR "ai_quota_buckets"."reservation_key" = EXCLUDED."reservation_key"
-        )
-      RETURNING
-        "successful_count" AS "successfulCount",
-        "quota_limit" AS "quotaLimit",
-        "reservation_key" AS "reservationKey",
-        "reservation_expires_at" AS "reservationExpiresAt"
-    `;
-    if (rows[0]) return rows[0];
-    return this.prisma.aiQuotaBucket.findUniqueOrThrow({
-      where: { subjectKey_usageDate: { subjectKey, usageDate } },
-      select: {
-        successfulCount: true,
-        quotaLimit: true,
-        reservationKey: true,
-        reservationExpiresAt: true,
-      },
+        return existing;
+      return transaction.aiQuotaBucket.upsert({
+        where,
+        create: { subjectKey, usageDate, quotaLimit, reservationKey, reservationExpiresAt },
+        update: { quotaLimit, reservationKey, reservationExpiresAt },
+      });
     });
   }
 
@@ -269,23 +258,20 @@ export class ChatRepository {
     usageDate: Date,
     reservationKey: string,
   ): Promise<QuotaBucketState> {
-    const rows = await this.prisma.$queryRaw<QuotaBucketState[]>`
-      UPDATE "ai_quota_buckets"
-      SET "successful_count" = "successful_count" + 1,
-          "reservation_key" = NULL,
-          "reservation_expires_at" = NULL,
-          "updated_at" = CURRENT_TIMESTAMP
-      WHERE "subject_key" = ${subjectKey}
-        AND "usage_date" = ${usageDate}
-        AND "reservation_key" = ${reservationKey}
-        AND "successful_count" < "quota_limit"
-      RETURNING
-        "successful_count" AS "successfulCount",
-        "quota_limit" AS "quotaLimit",
-        "reservation_key" AS "reservationKey",
-        "reservation_expires_at" AS "reservationExpiresAt"
-    `;
-    return rows[0] ?? this.quotaState(subjectKey, usageDate);
+    return this.prisma.$transaction(async (transaction) => {
+      const where = { subjectKey_usageDate: { subjectKey, usageDate } };
+      const bucket = await transaction.aiQuotaBucket.findUniqueOrThrow({ where });
+      if (bucket.reservationKey !== reservationKey || bucket.successfulCount >= bucket.quotaLimit)
+        return bucket;
+      return transaction.aiQuotaBucket.update({
+        where,
+        data: {
+          successfulCount: { increment: 1 },
+          reservationKey: null,
+          reservationExpiresAt: null,
+        },
+      });
+    });
   }
 
   async releaseQuota(subjectKey: string, usageDate: Date, reservationKey: string): Promise<void> {
@@ -320,17 +306,17 @@ export class ChatRepository {
   }
 
   async consumeGuestRateLimit(keyHash: string, windowStart: Date, limit: number): Promise<number> {
-    const rows = await this.prisma.$queryRaw<Array<{ count: number }>>`
-      INSERT INTO "ai_rate_limit_buckets" (
-        "key_hash", "window_start", "count", "created_at", "updated_at"
-      ) VALUES (${keyHash}, ${windowStart}, 1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-      ON CONFLICT ("key_hash", "window_start") DO UPDATE SET
-        "count" = "ai_rate_limit_buckets"."count" + 1,
-        "updated_at" = CURRENT_TIMESTAMP
-      WHERE "ai_rate_limit_buckets"."count" < ${limit}
-      RETURNING "count"
-    `;
-    return rows[0]?.count ?? 0;
+    return this.prisma.$transaction(async (transaction) => {
+      const where = { keyHash_windowStart: { keyHash, windowStart } };
+      const existing = await transaction.aiRateLimitBucket.findUnique({ where });
+      if (existing && existing.count >= limit) return 0;
+      const bucket = await transaction.aiRateLimitBucket.upsert({
+        where,
+        create: { keyHash, windowStart, count: 1 },
+        update: { count: { increment: 1 } },
+      });
+      return bucket.count;
+    });
   }
 
   upsertRequestLog(data: {
@@ -416,24 +402,23 @@ export class ChatRepository {
     outputTokens: number | null;
   }): Promise<{ message: ChatMessageRecord; quota: QuotaBucketState }> {
     return this.prisma.$transaction(async (transaction) => {
-      const rows = await transaction.$queryRaw<QuotaBucketState[]>`
-        UPDATE "ai_quota_buckets"
-        SET "successful_count" = "successful_count" + 1,
-            "reservation_key" = NULL,
-            "reservation_expires_at" = NULL,
-            "updated_at" = CURRENT_TIMESTAMP
-        WHERE "subject_key" = ${data.subjectKey}
-          AND "usage_date" = ${data.usageDate}
-          AND "reservation_key" = ${data.reservationKey}
-          AND "successful_count" < "quota_limit"
-        RETURNING
-          "successful_count" AS "successfulCount",
-          "quota_limit" AS "quotaLimit",
-          "reservation_key" AS "reservationKey",
-          "reservation_expires_at" AS "reservationExpiresAt"
-      `;
-      const quota = rows[0];
-      if (!quota) throw new Error('AI_QUOTA_RESERVATION_LOST');
+      const where = {
+        subjectKey_usageDate: { subjectKey: data.subjectKey, usageDate: data.usageDate },
+      };
+      const bucket = await transaction.aiQuotaBucket.findUniqueOrThrow({ where });
+      if (
+        bucket.reservationKey !== data.reservationKey ||
+        bucket.successfulCount >= bucket.quotaLimit
+      )
+        throw new Error('AI_QUOTA_RESERVATION_LOST');
+      const quota = await transaction.aiQuotaBucket.update({
+        where,
+        data: {
+          successfulCount: { increment: 1 },
+          reservationKey: null,
+          reservationExpiresAt: null,
+        },
+      });
       const message = await transaction.chatMessage.update({
         where: { id: data.assistantMessageId },
         data: {
@@ -510,15 +495,22 @@ export class ChatRepository {
         },
       });
       const completedAt = new Date();
-      await transaction.aiGovernanceEvent.create({ data: {
-        capability: 'CHAT', provider: data.provider, modelId: data.modelId,
-        templateVersion: data.provider === 'local-rule' ? data.modelId : null,
-        correlationId: aiCorrelationId(),
-        status: data.requestStatus === AiRequestStatus.BLOCKED ? 'BLOCKED' : 'FALLBACK',
-        errorClass: data.errorCode ?? null,
-        safetyOutcome: data.requestStatus === AiRequestStatus.BLOCKED ? 'LOCAL_BLOCK' : 'STATIC_ADVISORY',
-        latencyMs: data.latencyMs, startedAt: new Date(completedAt.getTime() - data.latencyMs), completedAt,
-      } });
+      await transaction.aiGovernanceEvent.create({
+        data: {
+          capability: 'CHAT',
+          provider: data.provider,
+          modelId: data.modelId,
+          templateVersion: data.provider === 'local-rule' ? data.modelId : null,
+          correlationId: aiCorrelationId(),
+          status: data.requestStatus === AiRequestStatus.BLOCKED ? 'BLOCKED' : 'FALLBACK',
+          errorClass: data.errorCode ?? null,
+          safetyOutcome:
+            data.requestStatus === AiRequestStatus.BLOCKED ? 'LOCAL_BLOCK' : 'STATIC_ADVISORY',
+          latencyMs: data.latencyMs,
+          startedAt: new Date(completedAt.getTime() - data.latencyMs),
+          completedAt,
+        },
+      });
       return message;
     });
   }

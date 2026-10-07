@@ -37,7 +37,6 @@ Edit, regenerate, reanalyze, or confirm a program
 {
   "type": "object",
   "required": [
-    "title",
     "goal",
     "startDate",
     "timezone",

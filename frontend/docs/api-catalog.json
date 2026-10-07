@@ -1,7 +1,7 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
-  "source": "../backend/openapi.json",
-  "generatedAt": "2026-09-27T07:27:12.283Z",
+  "source": "http://localhost:4000/api-docs.json",
+  "generatedAt": "2026-10-07T10:22:16.518Z",
   "stats": {
     "operations": 168,
     "groups": 39,
@@ -12,7 +12,7 @@
       "method": "GET",
       "path": "/api/v1/health",
       "group": "Foundation",
-      "summary": "Kiểm tra trạng thái API và PostgreSQL",
+      "summary": "Kiểm tra trạng thái API và MongoDB",
       "operationId": "getHealth",
       "params": [],
       "request": null,
@@ -5792,7 +5792,6 @@
               "items": {
                 "type": "object",
                 "required": [
-                  "position",
                   "displayName",
                   "amount",
                   "unit"
@@ -5933,7 +5932,6 @@
               "items": {
                 "type": "object",
                 "required": [
-                  "position",
                   "displayName",
                   "amount",
                   "unit"

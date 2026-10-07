@@ -287,7 +287,7 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     tags: ['Users', 'Diet Rules'],
     summary: 'Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC',
     description:
-      'Date-only YYYY-MM-DD được lưu bằng PostgreSQL DATE với semantic Asia/Ho_Chi_Minh; backend không tự tính lịch âm/ngày lễ.',
+      'Date-only YYYY-MM-DD được lưu trong MongoDB bằng UTC midnight với semantic Asia/Ho_Chi_Minh; backend không tự tính lịch âm/ngày lễ.',
     operationId: 'updateDietSchedule',
     security: authenticated,
     request: {

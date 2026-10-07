@@ -1,3 +1,4 @@
+import { lockDocument } from '../../database/locking.js';
 import {
   FoodDataReviewStatus,
   PantryAdjustmentType,
@@ -182,16 +183,18 @@ export class PantryRepository {
           }
         : {}),
     };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.pantryItem.findMany({
-        where,
-        include: pantryItemInclude,
-        orderBy: [{ expiresAt: 'asc' }, { updatedAt: 'desc' }, { id: 'asc' }],
-        skip: (input.page - 1) * input.limit,
-        take: input.limit,
-      }),
-      this.prisma.pantryItem.count({ where }),
-    ]);
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.pantryItem.findMany({
+          where,
+          include: pantryItemInclude,
+          orderBy: [{ expiresAt: 'asc' }, { updatedAt: 'desc' }, { id: 'asc' }],
+          skip: (input.page - 1) * input.limit,
+          take: input.limit,
+        }),
+        transaction.pantryItem.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 
@@ -203,16 +206,18 @@ export class PantryRepository {
       quantity: { gt: 0 },
       expiresAt: { gte: from, lte: to },
     };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.pantryItem.findMany({
-        where,
-        include: pantryItemInclude,
-        orderBy: [{ expiresAt: 'asc' }, { id: 'asc' }],
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      this.prisma.pantryItem.count({ where }),
-    ]);
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.pantryItem.findMany({
+          where,
+          include: pantryItemInclude,
+          orderBy: [{ expiresAt: 'asc' }, { id: 'asc' }],
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        transaction.pantryItem.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 
@@ -454,15 +459,17 @@ export class PantryRepository {
     });
     if (!owned) return null;
     const where = { pantryItemId: itemId, ownerId };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.pantryAdjustment.findMany({
-        where,
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      this.prisma.pantryAdjustment.count({ where }),
-    ]);
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.pantryAdjustment.findMany({
+          where,
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        transaction.pantryAdjustment.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 
@@ -569,8 +576,6 @@ export class PantryRepository {
   }
 
   private async lockOwner(transaction: Prisma.TransactionClient, ownerId: string): Promise<void> {
-    await transaction.$queryRaw<
-      Array<{ id: string }>
-    >`SELECT "id" FROM "users" WHERE "id" = ${ownerId}::uuid FOR UPDATE`;
+    await lockDocument(transaction, 'user', { id: ownerId });
   }
 }

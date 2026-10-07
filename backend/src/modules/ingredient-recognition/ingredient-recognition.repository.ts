@@ -1,3 +1,5 @@
+import { lockDocument } from '../../database/locking.js';
+import type { Prisma } from '@prisma/client';
 import {
   MediaAssetStatus,
   MediaKind,
@@ -8,7 +10,6 @@ import {
   RecognitionCandidateStatus,
   RecognitionInputStatus,
   RecognitionJobStatus,
-  Prisma,
   type PrismaClient,
 } from '@prisma/client';
 
@@ -107,7 +108,13 @@ export class IngredientRecognitionRepository {
         where: {
           id,
           ownerId,
-          status: { in: [RecognitionJobStatus.QUEUED, RecognitionJobStatus.FAILED, RecognitionJobStatus.PARTIAL_FAILED] },
+          status: {
+            in: [
+              RecognitionJobStatus.QUEUED,
+              RecognitionJobStatus.FAILED,
+              RecognitionJobStatus.PARTIAL_FAILED,
+            ],
+          },
         },
         data: {
           status: RecognitionJobStatus.PROCESSING,
@@ -136,7 +143,10 @@ export class IngredientRecognitionRepository {
     return this.prisma.$transaction(async (transaction) => {
       const current = await transaction.recognitionJob.findUniqueOrThrow({ where: { id: jobId } });
       if (current.status !== RecognitionJobStatus.PROCESSING) {
-        return transaction.recognitionJob.findUniqueOrThrow({ where: { id: jobId }, include: jobInclude });
+        return transaction.recognitionJob.findUniqueOrThrow({
+          where: { id: jobId },
+          include: jobInclude,
+        });
       }
       for (const result of inputResults) {
         await transaction.recognitionInput.update({
@@ -186,7 +196,10 @@ export class IngredientRecognitionRepository {
               : null,
         },
       });
-      return transaction.recognitionJob.findUniqueOrThrow({ where: { id: jobId }, include: jobInclude });
+      return transaction.recognitionJob.findUniqueOrThrow({
+        where: { id: jobId },
+        include: jobInclude,
+      });
     });
   }
 
@@ -209,7 +222,11 @@ export class IngredientRecognitionRepository {
     });
     if (direct) return direct;
     const alias = await this.prisma.ingredientAlias.findFirst({
-      where: { normalizedAlias: normalizedName, reviewStatus: 'APPROVED', ingredient: { status: 'ACTIVE' } },
+      where: {
+        normalizedAlias: normalizedName,
+        reviewStatus: 'APPROVED',
+        ingredient: { status: 'ACTIVE' },
+      },
       select: { ingredient: { select: { id: true, canonicalName: true } } },
     });
     return alias?.ingredient ?? null;
@@ -243,7 +260,10 @@ export class IngredientRecognitionRepository {
         data: { ...data, version: { increment: 1 } },
       });
       if (!updated.count) throw new RecognitionVersionConflictError();
-      return transaction.recognitionJob.findUniqueOrThrow({ where: { id: jobId }, include: jobInclude });
+      return transaction.recognitionJob.findUniqueOrThrow({
+        where: { id: jobId },
+        include: jobInclude,
+      });
     });
   }
 
@@ -275,7 +295,10 @@ export class IngredientRecognitionRepository {
       if (job.lastRetryKey === idempotencyKey) {
         if (job.lastRetryHash !== requestHash) throw new RecognitionConflictError();
         return {
-          job: await transaction.recognitionJob.findUniqueOrThrow({ where: { id }, include: jobInclude }),
+          job: await transaction.recognitionJob.findUniqueOrThrow({
+            where: { id },
+            include: jobInclude,
+          }),
           replay: true,
         };
       }
@@ -294,7 +317,10 @@ export class IngredientRecognitionRepository {
         },
       });
       return {
-        job: await transaction.recognitionJob.findUniqueOrThrow({ where: { id }, include: jobInclude }),
+        job: await transaction.recognitionJob.findUniqueOrThrow({
+          where: { id },
+          include: jobInclude,
+        }),
         replay: false,
       };
     });
@@ -306,16 +332,22 @@ export class IngredientRecognitionRepository {
     candidates: Array<{ id: string; expectedVersion: number }>;
     idempotencyKey: string;
     requestHash: string;
-  }): Promise<{ job: RecognitionJobRecord; changes: Array<{ candidateId: string; action: 'CREATED' | 'UPDATED' }> }> {
+  }): Promise<{
+    job: RecognitionJobRecord;
+    changes: Array<{ candidateId: string; action: 'CREATED' | 'UPDATED' }>;
+  }> {
     return this.prisma.$transaction(async (transaction) => {
-      await transaction.$queryRaw(Prisma.sql`SELECT id FROM users WHERE id = ${data.ownerId}::uuid FOR UPDATE`);
+      await lockDocument(transaction, 'user', { id: data.ownerId });
       const job = await transaction.recognitionJob.findFirst({
         where: { id: data.jobId, ownerId: data.ownerId },
         include: jobInclude,
       });
       if (!job) throw new RecognitionConflictError();
       if (job.status === RecognitionJobStatus.CONFIRMED) {
-        if (job.confirmationKey !== data.idempotencyKey || job.confirmationHash !== data.requestHash) {
+        if (
+          job.confirmationKey !== data.idempotencyKey ||
+          job.confirmationHash !== data.requestHash
+        ) {
           throw new RecognitionConflictError();
         }
         return {
@@ -324,7 +356,8 @@ export class IngredientRecognitionRepository {
             .filter((candidate) => candidate.status === RecognitionCandidateStatus.CONFIRMED)
             .map((candidate) => ({
               candidateId: candidate.id,
-              action: candidate.pantryAction === 'UPDATED' ? ('UPDATED' as const) : ('CREATED' as const),
+              action:
+                candidate.pantryAction === 'UPDATED' ? ('UPDATED' as const) : ('CREATED' as const),
             })),
         };
       }
@@ -334,7 +367,9 @@ export class IngredientRecognitionRepository {
       ) {
         throw new RecognitionConflictError();
       }
-      const requested = new Map(data.candidates.map((candidate) => [candidate.id, candidate.expectedVersion]));
+      const requested = new Map(
+        data.candidates.map((candidate) => [candidate.id, candidate.expectedVersion]),
+      );
       const selected = job.candidates.filter((candidate) => requested.has(candidate.id));
       if (selected.length !== requested.size) throw new RecognitionConflictError();
       const changes: Array<{ candidateId: string; action: 'CREATED' | 'UPDATED' }> = [];
@@ -347,7 +382,7 @@ export class IngredientRecognitionRepository {
         ) {
           throw new RecognitionVersionConflictError();
         }
-        const quantity = candidate.quantity.toNumber();
+        const quantity = candidate.quantity;
         const unit = candidate.unit;
         const massFactor = this.massFactor(unit);
         const deltaGrams = massFactor === null ? null : quantity * massFactor;
@@ -365,16 +400,17 @@ export class IngredientRecognitionRepository {
         });
         let pantryItemId: string;
         if (existing) {
-          const beforeQuantity = existing.quantity.toNumber();
+          const beforeQuantity = existing.quantity;
           const afterQuantity = beforeQuantity + quantity;
-          const beforeGrams = existing.normalizedGrams?.toNumber() ?? null;
-          const afterGrams = beforeGrams !== null && deltaGrams !== null ? beforeGrams + deltaGrams : null;
+          const beforeGrams = existing.normalizedGrams ?? null;
+          const afterGrams =
+            beforeGrams !== null && deltaGrams !== null ? beforeGrams + deltaGrams : null;
           const updated = await transaction.pantryItem.update({
             where: { id: existing.id },
             data: {
               quantity: afterQuantity,
               normalizedGrams: afterGrams,
-              confidence: Math.min(existing.confidence.toNumber(), candidate.confidence.toNumber()),
+              confidence: Math.min(existing.confidence, candidate.confidence),
               freshnessNote: candidate.freshnessObservation,
               version: { increment: 1 },
             },
@@ -412,7 +448,9 @@ export class IngredientRecognitionRepository {
               unit,
               normalizedGrams: deltaGrams,
               conversionStatus:
-                deltaGrams === null ? PantryConversionStatus.UNKNOWN : PantryConversionStatus.CONVERTED,
+                deltaGrams === null
+                  ? PantryConversionStatus.UNKNOWN
+                  : PantryConversionStatus.CONVERTED,
               conversionSource: deltaGrams === null ? null : 'SYSTEM_MASS',
               conversionVersion: deltaGrams === null ? null : 'UCUM-MASS-V1',
               conversionConfidence: deltaGrams === null ? null : 1,
@@ -473,7 +511,10 @@ export class IngredientRecognitionRepository {
         },
       });
       return {
-        job: await transaction.recognitionJob.findUniqueOrThrow({ where: { id: job.id }, include: jobInclude }),
+        job: await transaction.recognitionJob.findUniqueOrThrow({
+          where: { id: job.id },
+          include: jobInclude,
+        }),
         changes,
       };
     });

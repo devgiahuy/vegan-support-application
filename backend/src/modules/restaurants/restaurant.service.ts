@@ -518,31 +518,35 @@ export class RestaurantService {
 
   async adminList(query: AdminListQuery) {
     const where = { status: query.status };
-    const [total, data] = await this.prisma.$transaction([
-      this.prisma.restaurant.count({ where }),
-      this.prisma.restaurant.findMany({
-        where,
-        include: { externalRefs: true },
-        orderBy: { createdAt: 'asc' },
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-    ]);
+    const [total, data] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.restaurant.count({ where }),
+        transaction.restaurant.findMany({
+          where,
+          include: { externalRefs: true },
+          orderBy: { createdAt: 'asc' },
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+      ]),
+    );
     return { data, meta: { total, page: query.page, limit: query.limit } };
   }
 
   async mine(userId: string, query: { page: number; limit: number }) {
     const where = { submitterId: userId };
-    const [total, data] = await this.prisma.$transaction([
-      this.prisma.restaurant.count({ where }),
-      this.prisma.restaurant.findMany({
-        where,
-        include: { externalRefs: true },
-        orderBy: { createdAt: 'desc' },
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-    ]);
+    const [total, data] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.restaurant.count({ where }),
+        transaction.restaurant.findMany({
+          where,
+          include: { externalRefs: true },
+          orderBy: { createdAt: 'desc' },
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+      ]),
+    );
     return { data, meta: { total, page: query.page, limit: query.limit } };
   }
 

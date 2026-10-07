@@ -16,6 +16,15 @@
 - Còn lại / rủi ro:
 ```
 
+## [2026-10-07] — Đồng bộ contract khi backend chuyển MongoDB
+
+- Mục tiêu: duy trì tương thích frontend sau thay đổi persistence đã được người dùng duyệt.
+- Đã làm: sync Swagger từ OpenAPI backend (168 operations); cập nhật registry v4.18, health/date-only descriptions và tài liệu tiến độ. UUID, DTO/Model/Mapper và quyền nghiệp vụ giữ nguyên.
+- File tạo/sửa: `docs/BACKEND_INTEGRATION.md`, `docs/API-CATALOG.md`, `docs/api-catalog.json`, các catalog API bị ảnh hưởng, `docs/PROGRESS.md`, `docs/WORK-LOG.md`.
+- Verify: `npx tsc --noEmit` pass; `npm test` 42 files / 408 tests pass; `npm run build` pass. Dependencies local được cài lại bằng `npm ci` để khôi phục package Maps đã có trong lockfile; không đổi source UI.
+- PROGRESS: task tài liệu 100%; phần trăm feature giữ nguyên vì không thêm consumer hoặc UI.
+- Còn lại / rủi ro: giới hạn production AI image và kiểm tra tải được giữ nguyên; xem `backend/docs/MONGODB_MIGRATION.md`.
+
 ## [2026-09-28] — Ẩn bảng phân tích dinh dưỡng tĩnh (mock) tại sidebar trang /recipes/[id]
 
 - Mục tiêu:

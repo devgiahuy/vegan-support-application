@@ -3,7 +3,7 @@
   "info": {
     "title": "Vegan Support Application API",
     "version": "0.1.0",
-    "description": "REST API contract for the Vegan Support Application."
+    "description": "REST API contract for the Vegan Support Application. Persistence: MongoDB replica set with Prisma; public identifiers remain UUID strings."
   },
   "servers": [
     {
@@ -25897,11 +25897,11 @@
         "tags": [
           "Foundation"
         ],
-        "summary": "Kiểm tra trạng thái API và PostgreSQL",
+        "summary": "Kiểm tra trạng thái API và MongoDB",
         "operationId": "getHealth",
         "responses": {
           "200": {
-            "description": "API và PostgreSQL hoạt động bình thường",
+            "description": "API và MongoDB hoạt động bình thường",
             "content": {
               "application/json": {
                 "schema": {
@@ -25911,7 +25911,7 @@
             }
           },
           "503": {
-            "description": "PostgreSQL không khả dụng",
+            "description": "MongoDB không khả dụng",
             "content": {
               "application/json": {
                 "schema": {
@@ -26923,7 +26923,7 @@
           "Diet Rules"
         ],
         "summary": "Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC",
-        "description": "Date-only YYYY-MM-DD được lưu bằng PostgreSQL DATE với semantic Asia/Ho_Chi_Minh; backend không tự tính lịch âm/ngày lễ.",
+        "description": "Date-only YYYY-MM-DD được lưu trong MongoDB bằng UTC midnight với semantic Asia/Ho_Chi_Minh; backend không tự tính lịch âm/ngày lễ.",
         "operationId": "updateDietSchedule",
         "security": [
           {

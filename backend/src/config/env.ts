@@ -3,8 +3,8 @@ import { z } from 'zod';
 const databaseUrlSchema = z
   .string()
   .url()
-  .refine((value) => value.startsWith('postgresql://') || value.startsWith('postgres://'), {
-    message: 'must be a PostgreSQL URL',
+  .refine((value) => value.startsWith('mongodb://') || value.startsWith('mongodb+srv://'), {
+    message: 'must be a MongoDB URL',
   });
 
 const bodyLimitSchema = z.string().regex(/^\d+(?:b|kb|mb)$/i, 'must use a byte, kb, or mb suffix');

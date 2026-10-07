@@ -1,3 +1,5 @@
+import { lockDocument } from '../../database/locking.js';
+import type { Prisma } from '@prisma/client';
 import {
   MealProgramAnalysisStatus,
   MealProgramMutationType,
@@ -5,7 +7,6 @@ import {
   MealProgramStatus,
   MealProgramWeekStatus,
   type MealGoal,
-  Prisma,
   type PrismaClient,
 } from '@prisma/client';
 
@@ -46,16 +47,18 @@ export class MealProgramRepository {
 
   async list(userId: string, page: number, limit: number, status?: MealProgramStatus) {
     const where = { userId, ...(status ? { status } : {}) };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.mealProgram.findMany({
-        where,
-        include: programInclude,
-        orderBy: [{ startDate: 'desc' }, { createdAt: 'desc' }, { id: 'asc' }],
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      this.prisma.mealProgram.count({ where }),
-    ]);
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.mealProgram.findMany({
+          where,
+          include: programInclude,
+          orderBy: [{ startDate: 'desc' }, { createdAt: 'desc' }, { id: 'asc' }],
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        transaction.mealProgram.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 
@@ -72,9 +75,7 @@ export class MealProgramRepository {
     weeks: Array<{ weekIndex: number; weekStart: Date }>;
   }): Promise<MealProgramRecord> {
     return this.prisma.$transaction(async (transaction) => {
-      await transaction.$queryRaw<Array<{ id: string }>>`
-        SELECT "id" FROM "users" WHERE "id" = ${data.userId}::uuid FOR UPDATE
-      `;
+      await lockDocument(transaction, 'user', { id: data.userId });
       const existing = await transaction.mealProgram.findUnique({
         where: {
           userId_idempotencyKey: { userId: data.userId, idempotencyKey: data.idempotencyKey },
@@ -126,7 +127,7 @@ export class MealProgramRepository {
         data: {
           status: MealProgramWeekStatus.READY,
           selectedAlternativeRank: week.selectedAlternativeRank ?? rank,
-          failure: Prisma.DbNull,
+          failure: null,
         },
       });
     });
@@ -164,7 +165,7 @@ export class MealProgramRepository {
       .map((week) => ({ weekIndex: week.weekIndex, failure: week.failure }));
     return this.prisma.mealProgram.update({
       where: { id: programId },
-      data: { status, failureSummary: failures.length ? failures : Prisma.DbNull },
+      data: { status, failureSummary: failures.length ? failures : null },
       include: programInclude,
     });
   }
@@ -245,7 +246,7 @@ export class MealProgramRepository {
         where: { id: week.id },
         data: {
           status: MealProgramWeekStatus.READY,
-          failure: Prisma.DbNull,
+          failure: null,
           ...(data.selectGenerated ? { selectedAlternativeRank: data.rank } : {}),
         },
       });
@@ -292,9 +293,7 @@ export class MealProgramRepository {
     weeklyAnalyses: Prisma.InputJsonValue;
   }): Promise<MealProgramAnalysisRecord> {
     return this.prisma.$transaction(async (transaction) => {
-      await transaction.$queryRaw<Array<{ id: string }>>`
-        SELECT "id" FROM "meal_programs" WHERE "id" = ${data.programId}::uuid FOR UPDATE
-      `;
+      await lockDocument(transaction, 'mealProgram', { id: data.programId });
       const latest = await transaction.mealProgramAnalysis.findFirst({
         where: { mealProgramId: data.programId },
         orderBy: { version: 'desc' },
@@ -337,9 +336,7 @@ export class MealProgramRepository {
     apply: (transaction: Prisma.TransactionClient) => Promise<void>,
   ): Promise<MealProgramRecord> {
     return this.prisma.$transaction(async (transaction) => {
-      await transaction.$queryRaw<Array<{ id: string }>>`
-        SELECT "id" FROM "meal_programs" WHERE "id" = ${data.programId}::uuid FOR UPDATE
-      `;
+      await lockDocument(transaction, 'mealProgram', { id: data.programId });
       const existing = await transaction.mealProgramMutation.findUnique({
         where: {
           userId_idempotencyKey: { userId: data.userId, idempotencyKey: data.idempotencyKey },

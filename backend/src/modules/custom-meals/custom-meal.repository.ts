@@ -97,16 +97,18 @@ export class CustomMealRepository {
         ? { tags: { some: { normalizedTag: normalizeVietnameseText(query.tag) } } }
         : {}),
     };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.customMeal.findMany({
-        where,
-        include: customMealInclude,
-        orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-      this.prisma.customMeal.count({ where }),
-    ]);
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.customMeal.findMany({
+          where,
+          include: customMealInclude,
+          orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+        transaction.customMeal.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 
@@ -288,12 +290,14 @@ export class CustomMealRepository {
   ): Promise<CustomMealRecord | null> {
     const existing = await this.findOwned(ownerId, id);
     if (!existing) return null;
-    await this.prisma.$transaction(
-      orderedAssetIds.map((assetId, index) =>
-        this.prisma.customMealPhoto.updateMany({
-          where: { customMealId: id, assetId },
-          data: { position: index },
-        }),
+    await this.prisma.$transaction(async (transaction) =>
+      Promise.all(
+        orderedAssetIds.map((assetId, index) =>
+          transaction.customMealPhoto.updateMany({
+            where: { customMealId: id, assetId },
+            data: { position: index },
+          }),
+        ),
       ),
     );
     return this.findOwned(ownerId, id);
