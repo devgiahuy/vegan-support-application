@@ -10,7 +10,6 @@ import {
   Minus,
   Navigation,
   Plus,
-  Sparkles,
   Utensils,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -222,7 +221,7 @@ export function MapFallback({
           <div className="absolute inset-x-4 top-1/2 z-20 flex -translate-y-1/2 flex-col items-center justify-center rounded-xl border border-dashed bg-background/90 p-4 text-center shadow-xs backdrop-blur-xs">
             <MapPin className="size-6 text-muted-foreground" />
             <p className="mt-1.5 text-xs font-semibold">
-              Chưa có quán chay trong bán kính{' '}
+              Chưa có kết quả phù hợp trong bán kính{' '}
               {radiusM >= 1000 ? `${radiusM / 1000} km` : `${radiusM} m`}
             </p>
             <p className="mt-0.5 text-[11px] text-muted-foreground">

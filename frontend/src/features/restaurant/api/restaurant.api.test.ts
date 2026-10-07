@@ -44,6 +44,7 @@ describe('restaurantApi Live REST Client & Query Translation', () => {
         lng: 106.6381,
         radiusMeters: 3000,
       },
+      signal: undefined,
     });
 
     expect(result.items.length).toBe(1);
@@ -84,6 +85,7 @@ describe('restaurantApi Live REST Client & Query Translation', () => {
         radiusMeters: 2000,
         q: 'phở',
       },
+      signal: undefined,
     });
 
     expect(result.items.length).toBe(1);
@@ -111,6 +113,7 @@ describe('restaurantApi Live REST Client & Query Translation', () => {
         lng: 106.6381,
         radiusMeters: 2000,
       },
+      signal: undefined,
     });
   });
 });

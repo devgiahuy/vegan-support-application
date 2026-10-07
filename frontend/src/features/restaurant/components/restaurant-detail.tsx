@@ -150,7 +150,7 @@ export function RestaurantDetail({ id }: { id: string }) {
           )}
 
           <p className="text-[11px] text-muted-foreground border-t pt-2">
-            Nguồn dữ liệu: <strong>{restaurant.sourceLabel}</strong>.
+            Nguồn dữ liệu: <strong>{restaurant.sourceLabel}</strong>. {restaurant.attribution}
             {restaurant.fetchedAt &&
               ` Cập nhật lần cuối: ${restaurant.fetchedAt.toLocaleDateString('vi-VN')}.`}
           </p>

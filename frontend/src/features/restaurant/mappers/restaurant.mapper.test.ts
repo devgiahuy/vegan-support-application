@@ -123,17 +123,20 @@ describe('RestaurantMapper single/queue/review', () => {
   it('toSubmitDto và toReviewDto chuẩn hóa đúng payload', () => {
     const submitDto = restaurantMapper.toSubmitDto({
       name: 'Quán chay Mới',
+      lat: 10.8,
+      lng: 106.7,
       address: '123 Phố Huế',
       dietaryTags: ['VEGAN'],
       dishes: ['Cơm chay'],
       note: 'Quán mới mở',
     });
     expect(submitDto.name).toBe('Quán chay Mới');
-    expect(submitDto.dietaryTags).toEqual(['VEGAN']);
-    expect(submitDto.dishes).toEqual(['Cơm chay']);
+    expect(submitDto.dietTags).toEqual(['VEGAN']);
+    expect(submitDto.latitude).toBe(10.8);
+    expect(submitDto).not.toHaveProperty('dishes');
 
     const reviewDto = restaurantMapper.toReviewDto('REJECT', 'Quán không phục vụ đồ chay');
-    expect(reviewDto.decision).toBe('REJECT');
+    expect(reviewDto.decision).toBe('REJECTED');
     expect(reviewDto.reason).toBe('Quán không phục vụ đồ chay');
   });
 
@@ -170,6 +173,77 @@ describe('RestaurantMapper single/queue/review', () => {
     });
     expect(emptyQuery).toEqual({
       radiusMeters: 3000,
+    });
+  });
+});
+
+describe('Live discovery contract regressions', () => {
+  it('retains empty-result degradation and dietary suppression', () => {
+    const result = restaurantMapper.toListModel({
+      success: true,
+      data: [],
+      meta: {
+        page: 1,
+        limit: 20,
+        total: 0,
+        externalDataUnavailable: true,
+        externalResultsSuppressed: true,
+        resultsTruncated: false,
+      },
+    });
+    expect(result.externalDataUnavailable).toBe(true);
+    expect(result.externalResultsSuppressed).toBe(true);
+    expect(result.metadata.totalPages).toBe(0);
+  });
+  it('computes pagination and attributes SerpApi data correctly', () => {
+    const result = restaurantMapper.toListModel({
+      data: [
+        {
+          id: 'serpapi:abc',
+          source: 'SERPAPI',
+          attribution: 'Google Maps data via SerpApi',
+          dietaryReviewed: false,
+          status: 'APPROVED',
+        },
+      ],
+      meta: { page: 1, limit: 20, total: 41 },
+    });
+    expect(result.metadata.totalPages).toBe(3);
+    expect(result.metadata.hasNextPage).toBe(true);
+    expect(result.items[0].source).toBe(RestaurantSource.SERPAPI);
+    expect(result.items[0].attribution).toBe('Google Maps data via SerpApi');
+    expect(result.items[0].dietaryReviewed).toBe(false);
+    expect(result.items[0].status).toBe(RestaurantStatus.PUBLISHED);
+  });
+  it('preserves exact reported coordinates and device consent', () => {
+    expect(
+      restaurantMapper.toLocationQuery({
+        lat: 10.875178124459689,
+        lng: 106.80076348780484,
+        radiusM: 5000,
+        locationSource: 'DEVICE',
+        locationConsent: true,
+        page: 2,
+        limit: 20,
+      })
+    ).toEqual({
+      lat: 10.875178124459689,
+      lng: 106.80076348780484,
+      radiusMeters: 5000,
+      locationSource: 'DEVICE',
+      locationConsent: 'true',
+      page: 2,
+      limit: 20,
+    });
+  });
+  it('requires coordinates and a reason for both decisions', () => {
+    expect(() =>
+      restaurantMapper.toSubmitDto({ name: 'Quán mới', address: 'Địa chỉ quán', dishes: [] })
+    ).toThrow();
+    expect(() => restaurantMapper.toReviewDto('APPROVE')).toThrow();
+    expect(restaurantMapper.toReviewDto('APPROVE', 'Đã xem xét')).toEqual({
+      decision: 'APPROVED',
+      reason: 'Đã xem xét',
     });
   });
 });

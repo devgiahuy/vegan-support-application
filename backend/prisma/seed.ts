@@ -986,7 +986,9 @@ async function main(): Promise<void> {
         kind: ContributorApprovalBasis.ADMIN_INVITED,
         capturedAt: '2026-09-15T00:00:00.000Z',
         snapshotVersion: 'seed-admin-invitation-v1',
+        inviter: { id: admin.id, displayName: admin.displayName },
         invitationReason: 'Seed profile for equal-permission verification acceptance.',
+        verificationStatus: 'ADMIN_INVITATION_RECORDED',
       },
     },
   ] as const;

@@ -1,4 +1,6 @@
 import * as React from 'react';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { EmptyState } from '@/components/shared/empty-state';
 import { ErrorState } from '@/components/shared/error-state';
@@ -51,19 +53,29 @@ export function RestaurantList({
 
   if (items.length === 0) {
     return (
-      <EmptyState
-        title="Không tìm thấy quán phù hợp"
-        description="Thử mở rộng bán kính tìm kiếm (ví dụ: 10km, 20km) hoặc đổi từ khóa tìm kiếm."
-      />
+      <div className="flex flex-col gap-3">
+        {externalNotice && (
+          <Alert>
+            <AlertDescription>{externalNotice}</AlertDescription>
+          </Alert>
+        )}
+        <EmptyState
+          title="Chưa có quán phù hợp trong kết quả"
+          description="Thử mở rộng bán kính hoặc đổi từ khóa. Các ràng buộc ăn uống của bạn vẫn được áp dụng."
+        />
+        <Button variant="outline" onClick={onRetry}>
+          Thử tìm lại
+        </Button>
+      </div>
     );
   }
 
   return (
     <div className="space-y-3">
       {externalNotice && (
-        <p className="rounded-xl border bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
-          {externalNotice}
-        </p>
+        <Alert>
+          <AlertDescription>{externalNotice}</AlertDescription>
+        </Alert>
       )}
       <div className="grid grid-cols-1 gap-3">
         {items.map((restaurant) => (

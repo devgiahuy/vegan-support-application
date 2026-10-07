@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { MapPin, Navigation, Plus, RotateCcw } from 'lucide-react';
+import { MapPin, Plus, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -36,6 +36,8 @@ import { SubmitForm } from '@/features/restaurant/components/submit-form';
 export default function RestaurantMapPage() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [coords, setCoords] = React.useState<UserCoordinates | null>(null);
+  const [locationSource, setLocationSource] = React.useState<'MANUAL' | 'DEVICE'>('MANUAL');
+  const [page, setPage] = React.useState(1);
   const [placeLabel, setPlaceLabel] = React.useState('');
   const [deniedMessage, setDeniedMessage] = React.useState<string | null>(null);
   const [query, setQuery] = React.useState('');
@@ -50,6 +52,10 @@ export default function RestaurantMapPage() {
     radiusM,
     query: query.trim(),
     dietaryTags,
+    page,
+    limit: 20,
+    locationSource,
+    ...(locationSource === 'DEVICE' ? { locationConsent: true } : {}),
   };
 
   // Sử dụng hook discovery tự động chuyển đổi an toàn giữa Nearby và Search
@@ -59,22 +65,6 @@ export default function RestaurantMapPage() {
   );
 
   const restaurants = data?.items ?? [];
-
-  React.useEffect(() => {
-    if (coords) {
-      console.log('[Page /restaurants] 📍 Tọa độ vị trí người dùng:', coords);
-    }
-  }, [coords]);
-
-  React.useEffect(() => {
-    if (data) {
-      console.log('[Page /restaurants] 📊 Dữ liệu quán nhận được từ Backend:', {
-        count: data.items.length,
-        items: data.items,
-        metadata: data.metadata,
-      });
-    }
-  }, [data]);
 
   return (
     <div className="mx-auto max-w-[1400px] space-y-4 px-4 py-6 lg:px-6">
@@ -120,6 +110,8 @@ export default function RestaurantMapPage() {
           <LocationPrompt
             onLocated={(position) => {
               setCoords(position);
+              setLocationSource('DEVICE');
+              setPage(1);
               setPlaceLabel('Vị trí hiện tại của bạn');
               setDeniedMessage(null);
               setIsChangingLocation(false);
@@ -130,6 +122,8 @@ export default function RestaurantMapPage() {
           <AddressForm
             onResolved={(position, label) => {
               setCoords(position);
+              setLocationSource('MANUAL');
+              setPage(1);
               setPlaceLabel(label);
               setDeniedMessage(null);
               setIsChangingLocation(false);
@@ -145,9 +139,18 @@ export default function RestaurantMapPage() {
             query={query}
             radiusM={radiusM}
             dietaryTags={dietaryTags}
-            onQueryChange={setQuery}
-            onRadiusChange={setRadiusM}
-            onDietaryTagsChange={setDietaryTags}
+            onQueryChange={(value) => {
+              setQuery(value);
+              setPage(1);
+            }}
+            onRadiusChange={(value) => {
+              setRadiusM(value);
+              setPage(1);
+            }}
+            onDietaryTagsChange={(value) => {
+              setDietaryTags(value);
+              setPage(1);
+            }}
           />
 
           {/* Layout Split View phong cách Google Maps / GrabFood */}
@@ -161,7 +164,10 @@ export default function RestaurantMapPage() {
                   radiusM={radiusM}
                   selectedId={selectedId}
                   onSelectRestaurant={setSelectedId}
-                  onRadiusChange={setRadiusM}
+                  onRadiusChange={(value) => {
+                    setRadiusM(value);
+                    setPage(1);
+                  }}
                 />
               </div>
             </div>
@@ -170,7 +176,7 @@ export default function RestaurantMapPage() {
             <div className="flex flex-col space-y-3 lg:col-span-5 xl:col-span-5">
               <div className="flex items-center justify-between gap-2 bg-background/95 pb-1 backdrop-blur-xs">
                 <h2 className="text-base font-bold text-foreground">
-                  Quán chay lân cận ({restaurants.length})
+                  Quán chay lân cận ({data?.metadata.totalItems ?? 0})
                 </h2>
                 {isAuthenticated ? (
                   <Dialog open={submitOpen} onOpenChange={setSubmitOpen}>
@@ -207,8 +213,42 @@ export default function RestaurantMapPage() {
                   isError={isError}
                   selectedId={selectedId}
                   onSelect={setSelectedId}
+                  externalNotice={[
+                    data?.externalDataUnavailable
+                      ? 'Nguồn bản đồ đang chậm hoặc lỗi; danh sách có thể chưa đầy đủ. Bạn có thể thử lại.'
+                      : '',
+                    data?.externalResultsSuppressed
+                      ? 'Đang áp dụng chế độ ăn, dị ứng hoặc quy tắc của bạn. Chỉ hiển thị quán có thông tin phù hợp đã được quản trị viên xem xét.'
+                      : '',
+                    data?.resultsTruncated
+                      ? 'Danh sách đã đạt giới hạn tìm kiếm của nguồn bản đồ.'
+                      : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
                   onRetry={() => void refetch()}
                 />
+                {data && data.metadata.totalPages > 1 && (
+                  <nav aria-label="Phân trang quán" className="flex items-center gap-3 py-3">
+                    <Button
+                      variant="outline"
+                      disabled={page <= 1}
+                      onClick={() => setPage(page - 1)}
+                    >
+                      Trang trước
+                    </Button>
+                    <span className="text-sm tabular-nums">
+                      {page} / {data.metadata.totalPages}
+                    </span>
+                    <Button
+                      variant="outline"
+                      disabled={!data.metadata.hasNextPage}
+                      onClick={() => setPage(page + 1)}
+                    >
+                      Trang sau
+                    </Button>
+                  </nav>
+                )}
               </div>
             </div>
           </div>

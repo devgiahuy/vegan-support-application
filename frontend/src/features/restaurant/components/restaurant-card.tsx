@@ -53,7 +53,7 @@ export function RestaurantCard({
             variant={restaurant.source === 'INTERNAL' ? 'secondary' : 'outline'}
             className="text-[10px] font-normal px-1.5 py-0 h-5"
           >
-            {restaurant.source === 'INTERNAL' ? 'VeggieConnect' : 'Google Places'}
+            {restaurant.sourceLabel}
           </Badge>
         </div>
 
@@ -88,6 +88,14 @@ export function RestaurantCard({
           </p>
         )}
 
+        {restaurant.attribution && (
+          <p className="text-xs text-muted-foreground">{restaurant.attribution}</p>
+        )}
+        {!restaurant.dietaryReviewed && restaurant.source !== 'INTERNAL' && (
+          <p className="text-xs text-muted-foreground">
+            Thông tin chế độ ăn và dị ứng chưa được xem xét.
+          </p>
+        )}
         {/* Chân thẻ: Giờ mở cửa + Nút xem chi tiết */}
         <div className="mt-auto flex items-center justify-between gap-2 pt-2 border-t border-border/50">
           <span className="flex items-center gap-1 text-[11px] text-muted-foreground">

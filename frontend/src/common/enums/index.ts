@@ -328,4 +328,6 @@ export enum AiVerificationAdminActionType {
 export enum RestaurantSource {
   INTERNAL = 'INTERNAL',
   GOOGLE_PLACES = 'GOOGLE_PLACES',
+  SERPAPI = 'SERPAPI',
+  FAKE = 'FAKE',
 }

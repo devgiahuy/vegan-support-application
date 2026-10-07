@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuthStore } from '@/store/useAuthStore';
 import { toast } from 'sonner';
 import { toastApiError } from '@/lib/api-error';
 import { restaurantApi } from '../api/restaurant.api';
@@ -14,9 +15,11 @@ export const RESTAURANT_KEYS = {
 
 /** Quán gần vị trí/tọa độ (GET /restaurants/nearby). */
 export function useNearbyRestaurantsQuery(query: LocationQuery, enabled = true) {
+  const user = useAuthStore((state) => state.user);
+  const identity = user?.id ?? 'guest';
   return useQuery({
-    queryKey: RESTAURANT_KEYS.nearby(query),
-    queryFn: () => restaurantApi.getNearby(query),
+    queryKey: [...RESTAURANT_KEYS.nearby(query), identity],
+    queryFn: ({ signal }) => restaurantApi.getNearby(query, signal),
     staleTime: 2 * 60 * 1000,
     enabled,
   });
@@ -24,9 +27,11 @@ export function useNearbyRestaurantsQuery(query: LocationQuery, enabled = true) 
 
 /** Tìm theo món ăn (GET /restaurants/search). */
 export function useRestaurantSearchQuery(query: LocationQuery, enabled = true) {
+  const user = useAuthStore((state) => state.user);
+  const identity = user?.id ?? 'guest';
   return useQuery({
-    queryKey: RESTAURANT_KEYS.search(query),
-    queryFn: () => restaurantApi.search(query),
+    queryKey: [...RESTAURANT_KEYS.search(query), identity],
+    queryFn: ({ signal }) => restaurantApi.search(query, signal),
     staleTime: 2 * 60 * 1000,
     enabled,
   });
@@ -39,18 +44,26 @@ export function useRestaurantSearchQuery(query: LocationQuery, enabled = true) {
  */
 export function useRestaurantDiscoveryQuery(query: LocationQuery, enabled = true) {
   const hasKeyword = Boolean(query.query && query.query.trim().length >= 2);
+  const user = useAuthStore((state) => state.user);
+  const identity = user?.id ?? 'guest';
   return useQuery({
-    queryKey: hasKeyword ? RESTAURANT_KEYS.search(query) : RESTAURANT_KEYS.nearby(query),
-    queryFn: () => (hasKeyword ? restaurantApi.search(query) : restaurantApi.getNearby(query)),
+    queryKey: [
+      ...(hasKeyword ? RESTAURANT_KEYS.search(query) : RESTAURANT_KEYS.nearby(query)),
+      identity,
+    ],
+    queryFn: ({ signal }) =>
+      hasKeyword ? restaurantApi.search(query, signal) : restaurantApi.getNearby(query, signal),
     staleTime: 2 * 60 * 1000,
     enabled,
   });
 }
 
-/** Chi tiết 1 quán (fixture). */
+/** Chi tiết 1 quán. */
 export function useRestaurantDetailQuery(id: string) {
+  const user = useAuthStore((state) => state.user);
+  const identity = user?.id ?? 'guest';
   return useQuery({
-    queryKey: RESTAURANT_KEYS.detail(id),
+    queryKey: [...RESTAURANT_KEYS.detail(id), identity],
     queryFn: () => restaurantApi.getDetail(id),
     staleTime: 2 * 60 * 1000,
     enabled: id.length > 0,
@@ -70,7 +83,7 @@ export function useSubmitRestaurantMutation() {
   });
 }
 
-/** Geocode địa chỉ text (fixture vài mẫu). */
+/** Geocode địa chỉ text. */
 export function useGeocodeMutation() {
   return useMutation({
     mutationFn: (address: string) => restaurantApi.geocode(address),
@@ -78,16 +91,18 @@ export function useGeocodeMutation() {
   });
 }
 
-/** Hàng chờ admin (fixture). */
+/** Hàng chờ admin. */
 export function useRestaurantQueueQuery() {
+  const user = useAuthStore((state) => state.user);
+  const identity = user?.id ?? 'guest';
   return useQuery({
-    queryKey: RESTAURANT_KEYS.queue(),
+    queryKey: [...RESTAURANT_KEYS.queue(), identity],
     queryFn: () => restaurantApi.getQueue(),
     staleTime: 30 * 1000,
   });
 }
 
-/** Admin duyệt/từ chối (fixture). */
+/** Admin duyệt/từ chối. */
 export function useReviewRestaurantMutation() {
   const queryClient = useQueryClient();
   return useMutation({

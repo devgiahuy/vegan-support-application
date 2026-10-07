@@ -9,36 +9,32 @@ import type {
   ReviewRestaurantResponseDto,
   SubmitRestaurantResponseDto,
 } from '../types/restaurant.dto';
-import type { LocationQuery, Restaurant, SubmitRestaurantInput } from '../types/restaurant.model';
+import type {
+  LocationQuery,
+  Restaurant,
+  RestaurantDiscovery,
+  SubmitRestaurantInput,
+} from '../types/restaurant.model';
 import { restaurantMapper } from '../mappers/restaurant.mapper';
 
 /**
  * Service API Quán Chay & Bản Đồ (Phase 24 - 100% Live REST Endpoints).
- * Đã loại bỏ hoàn toàn mock/fixtures, gọi trực tiếp Backend và in chi tiết console.log.
+ * Đã loại bỏ hoàn toàn mock/fixtures, gọi Backend qua DTO/Mapper.
  */
 export const restaurantApi = {
   /**
    * `GET /restaurants/nearby` (UC-12 / FR-001)
    * Tìm kiếm quán chay theo tọa độ GPS và bán kính.
    */
-  getNearby: async (query: LocationQuery): Promise<PaginationResult<Restaurant>> => {
+  getNearby: async (query: LocationQuery, signal?: AbortSignal): Promise<RestaurantDiscovery> => {
     const params = restaurantMapper.toLocationQuery(query);
-    console.log('[Restaurant API] 📡 Request GET /restaurants/nearby:', {
-      endpoint: API_ENDPOINTS.RESTAURANTS.NEARBY,
-      params,
-    });
 
     const response = await api.get<RestaurantListResponseDto>(API_ENDPOINTS.RESTAURANTS.NEARBY, {
       params,
+      signal,
     });
-    console.log('[Restaurant API] 📥 Response GET /restaurants/nearby raw DTO:', response.data);
 
     const result = restaurantMapper.toListModel(response.data);
-    console.log('[Restaurant API] 🗺️ Mapped restaurants for Map & List:', {
-      count: result.items.length,
-      items: result.items,
-      metadata: result.metadata,
-    });
     return result;
   },
 
@@ -47,27 +43,18 @@ export const restaurantApi = {
    * Tìm kiếm theo từ khóa món ăn và áp dụng lọc cứng chế độ ăn.
    * Nếu query trống hoặc < 2 ký tự, an toàn chuyển tiếp sang getNearby.
    */
-  search: async (query: LocationQuery): Promise<PaginationResult<Restaurant>> => {
+  search: async (query: LocationQuery, signal?: AbortSignal): Promise<RestaurantDiscovery> => {
     if (!query.query || query.query.trim().length < 2) {
-      return restaurantApi.getNearby(query);
+      return restaurantApi.getNearby(query, signal);
     }
     const params = restaurantMapper.toLocationQuery(query);
-    console.log('[Restaurant API] 📡 Request GET /restaurants/search:', {
-      endpoint: API_ENDPOINTS.RESTAURANTS.SEARCH,
-      params,
-    });
 
     const response = await api.get<RestaurantListResponseDto>(API_ENDPOINTS.RESTAURANTS.SEARCH, {
       params,
+      signal,
     });
-    console.log('[Restaurant API] 📥 Response GET /restaurants/search raw DTO:', response.data);
 
     const result = restaurantMapper.toListModel(response.data);
-    console.log('[Restaurant API] 🔍 Mapped search results for Map & List:', {
-      count: result.items.length,
-      items: result.items,
-      metadata: result.metadata,
-    });
     return result;
   },
 
@@ -76,16 +63,9 @@ export const restaurantApi = {
    * Chi tiết quán ăn chay.
    */
   getDetail: async (id: string): Promise<Restaurant> => {
-    console.log('[Restaurant API] 📡 Request GET /restaurants/:id:', {
-      id,
-      endpoint: API_ENDPOINTS.RESTAURANTS.DETAIL(id),
-    });
-
     const response = await api.get<RestaurantResponseDto>(API_ENDPOINTS.RESTAURANTS.DETAIL(id));
-    console.log('[Restaurant API] 📥 Response GET /restaurants/:id raw DTO:', response.data);
 
     const result = restaurantMapper.toSingleModel(response.data);
-    console.log('[Restaurant API] 🍴 Mapped detail restaurant:', result);
     return result;
   },
 
@@ -95,19 +75,13 @@ export const restaurantApi = {
    */
   submitRestaurant: async (input: SubmitRestaurantInput): Promise<Restaurant> => {
     const payload = restaurantMapper.toSubmitDto(input);
-    console.log('[Restaurant API] 📡 Request POST /restaurants:', {
-      endpoint: API_ENDPOINTS.RESTAURANTS.SUBMIT,
-      payload,
-    });
 
     const response = await api.post<SubmitRestaurantResponseDto>(
       API_ENDPOINTS.RESTAURANTS.SUBMIT,
       payload
     );
-    console.log('[Restaurant API] 📥 Response POST /restaurants raw DTO:', response.data);
 
     const result = restaurantMapper.toSingleModel(response.data);
-    console.log('[Restaurant API] 📝 Mapped submitted restaurant:', result);
     return result;
   },
 
@@ -118,18 +92,11 @@ export const restaurantApi = {
   geocode: async (
     address: string
   ): Promise<{ lat: number | null; lng: number | null; label: string }> => {
-    console.log('[Restaurant API] 📡 Request GET /location/geocode:', {
-      endpoint: API_ENDPOINTS.LOCATION.GEOCODE,
-      address,
-    });
-
     const response = await api.get<GeocodeResponseDto>(API_ENDPOINTS.LOCATION.GEOCODE, {
       params: { address: address.trim() },
     });
-    console.log('[Restaurant API] 📥 Response GET /location/geocode raw DTO:', response.data);
 
     const mapped = restaurantMapper.toCoordinates(response.data);
-    console.log('[Restaurant API] 📍 Mapped geocode coordinates:', mapped);
     return mapped;
   },
 
@@ -138,17 +105,11 @@ export const restaurantApi = {
    * Hàng chờ kiểm duyệt quán ăn dành cho Admin.
    */
   getQueue: async (): Promise<PaginationResult<Restaurant>> => {
-    console.log('[Restaurant API] 📡 Request GET /admin/restaurants:', {
-      endpoint: API_ENDPOINTS.ADMIN_RESTAURANTS.LIST,
-    });
-
     const response = await api.get<AdminRestaurantListResponseDto>(
       API_ENDPOINTS.ADMIN_RESTAURANTS.LIST
     );
-    console.log('[Restaurant API] 📥 Response GET /admin/restaurants raw DTO:', response.data);
 
     const result = restaurantMapper.toQueueModel(response.data);
-    console.log('[Restaurant API] 📋 Mapped admin queue:', result);
     return result;
   },
 
@@ -162,20 +123,13 @@ export const restaurantApi = {
     reason?: string
   ): Promise<Restaurant> => {
     const payload = restaurantMapper.toReviewDto(decision, reason);
-    console.log('[Restaurant API] 📡 Request PATCH /admin/restaurants/:id/review:', {
-      endpoint: API_ENDPOINTS.ADMIN_RESTAURANTS.REVIEW(id),
-      id,
-      payload,
-    });
 
     const response = await api.patch<ReviewRestaurantResponseDto>(
       API_ENDPOINTS.ADMIN_RESTAURANTS.REVIEW(id),
       payload
     );
-    console.log('[Restaurant API] 📥 Response PATCH review raw DTO:', response.data);
 
     const result = restaurantMapper.toReviewedModel(response.data);
-    console.log('[Restaurant API] ⚖️ Mapped review decision result:', result);
     return result;
   },
 };

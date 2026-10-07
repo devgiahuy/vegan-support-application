@@ -128,3 +128,7 @@ Roadmap Phase 2 features are tracked only in `/docs/ROADMAP_PHASE_2.md`; they mu
 ## 2026-10-07 — Persistence contract synchronization
 
 Backend chuyển sang MongoDB; registry và catalog Swagger đã đồng bộ. Không đổi DTO/Model/Mapper hoặc tỷ lệ hoàn thành feature. Đây là task tài liệu và kiểm tra tương thích, không triển khai thêm UI. Xem WORK-LOG và backend/docs/MONGODB_MIGRATION.md.
+
+## Audit nghiệp vụ 2026-10-07
+
+Restaurant integration giữ 100%: sửa request submission/review theo contract, query cache theo identity và invalidate khi diet/schedule đổi, consent, pagination, attribution và trạng thái provider partial/suppressed. Sửa proxy mặc định 8080 → 4000. Tọa độ người dùng đã được kiểm tra qua mapper/API và HTTP live; trình duyệt kiểm tra manual address → geocode → nearby. Các feature khác giữ nguyên phần trăm; audit không nâng các capability PLANNED. Chi tiết gate và phạm vi tại `backend/docs/ENDPOINT_BUSINESS_AUDIT.md`.

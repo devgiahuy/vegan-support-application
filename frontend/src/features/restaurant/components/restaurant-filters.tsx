@@ -17,8 +17,7 @@ const RADIUS_OPTIONS = [500, 1000, 3000, 5000, 10000, 20000, 50000];
 
 const DIETARY_OPTIONS = [
   { value: 'VEGAN', label: 'Thuần chay (Vegan)' },
-  { value: 'LACTO_VEGETARIAN', label: 'Chay có sữa (Lacto)' },
-  { value: 'OVO_VEGETARIAN', label: 'Chay có trứng (Ovo)' },
+  { value: 'LACTO_OVO', label: 'Chay có sữa và trứng' },
 ];
 
 /**
@@ -44,7 +43,7 @@ export function RestaurantFilters({
     if (dietaryTags.includes(tag)) {
       onDietaryTagsChange(dietaryTags.filter((t) => t !== tag));
     } else {
-      onDietaryTagsChange([...dietaryTags, tag]);
+      onDietaryTagsChange([tag]);
     }
   };
 

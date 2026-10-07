@@ -30,6 +30,10 @@ export interface RestaurantDto {
   website_url?: string | null;
   website?: string | null;
   source?: string; // 'INTERNAL' | 'GOOGLE_PLACES'
+  attribution?: string;
+  dietaryReviewed?: boolean;
+  rating?: number | null;
+  price?: string | null;
   fetchedAt?: string | null;
   fetched_at?: string | null;
   status?: string; // 'PENDING' | 'PUBLISHED' | 'REJECTED' | 'ARCHIVED'
@@ -47,6 +51,8 @@ export interface RestaurantListResponseDto {
     totalPages?: number;
     total_pages?: number;
     externalDataUnavailable?: boolean;
+    externalResultsSuppressed?: boolean;
+    resultsTruncated?: boolean;
   } | null;
 }
 
@@ -61,14 +67,10 @@ export interface RestaurantResponseDto {
 export interface SubmitRestaurantRequestDto {
   name: string;
   address: string;
-  lat?: number;
-  lng?: number;
-  dietaryTags?: string[];
-  dishes?: string[];
-  openingHours?: string;
-  priceRange?: string;
-  phoneNumber?: string;
-  note?: string;
+  latitude: number;
+  longitude: number;
+  dietTags: ('VEGAN' | 'LACTO_OVO' | 'BUDDHIST' | 'CHRISTIAN')[];
+  categories: string[];
 }
 
 /** `POST /restaurants` → phản hồi sau khi gửi đề xuất quán. */
@@ -105,8 +107,8 @@ export interface AdminRestaurantListResponseDto {
 
 /** `PATCH /admin/restaurants/:id/review` — yêu cầu phê duyệt hoặc từ chối quán. */
 export interface ReviewRestaurantRequestDto {
-  decision: 'APPROVE' | 'REJECT' | string;
-  reason?: string;
+  decision: 'APPROVED' | 'REJECTED';
+  reason: string;
 }
 
 /** `PATCH /admin/restaurants/:id/review` → kết quả sau khi duyệt. */

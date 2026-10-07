@@ -3338,3 +3338,12 @@
   - `npm test`: 25 test files, 236/236 unit tests pass 100%.
 - PROGRESS: Giữ nguyên (tạo task guide & documentation scaffolding).
 - Còn lại: Lần lượt chọn task trong `frontend/docs/tasks/` để thực thi (ưu tiên Phase 15 và Phase 16).
+
+## [2026-10-07] — Audit endpoints và sửa discovery quán chay
+
+- Mục tiêu: kiểm tra nghiệp vụ sau Mongo migration và lỗi nearby trả 200 rỗng/chờ lâu, gồm FE gọi thật.
+- Đã làm: DTO submit/review đúng enum/field; kiểm tra tọa độ/radius/consent; phân trang thực; query cache theo identity và invalidate diet/schedule; hiển thị SerpApi attribution, partial/suppressed/truncated, unreviewed; sửa default API proxy/server URL sang 4000. Backend sửa song song/deadline/zoom, constraint/cache bypass, SerpApi detail và nullable references cho checked nested creates; seed evidence/alias được sửa có phạm vi.
+- File sửa: `features/restaurant/*`, restaurants page, enums, diet query invalidation, `next.config.ts`, `lib/env.ts`, `.env.example`, integration registry và generated API catalogs.
+- Verify: `npx tsc --noEmit`, `npm test` 42 files / 412 tests, `npm run build`; Swagger sync 168 operations. HTTP/business audit và browser evidence ghi tại `backend/docs/ENDPOINT_BUSINESS_AUDIT.md`.
+- PROGRESS: Restaurant integration 100% → 100% (sửa lỗi); các phần trăm feature khác không đổi.
+- Giới hạn: nguồn bản đồ vẫn có thể thiếu dữ liệu và có cap; hard diet/allergy constraints được giữ. Không suy luận an toàn ăn uống từ nhãn provider.

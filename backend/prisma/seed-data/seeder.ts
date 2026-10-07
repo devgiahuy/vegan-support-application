@@ -17,6 +17,7 @@ import {
   PostRevisionStatus,
   PostStatus,
   PostType,
+  type Prisma,
   type PrismaClient,
   Tradition,
 } from '@prisma/client';
@@ -235,9 +236,12 @@ export async function seedComprehensiveData(
 
     // Aliases
     await prisma.ingredientAlias.deleteMany({ where: { ingredientId: ingredient.id } });
-    if (def.aliases.length > 0) {
+    const aliases = [...new Map(
+      [def.canonicalName, ...def.aliases].map(alias => [normalizeVietnameseText(alias), alias]),
+    ).values()];
+    if (aliases.length > 0) {
       await prisma.ingredientAlias.createMany({
-        data: def.aliases.map((alias) => ({
+        data: aliases.map((alias) => ({
           ingredientId: ingredient.id,
           alias,
           normalizedAlias: normalizeVietnameseText(alias),
@@ -545,6 +549,18 @@ export async function seedComprehensiveData(
     // Contributor profile & decision
     if (uDef.contributorProfile) {
       const c = uDef.contributorProfile;
+      const approvalEvidence: Prisma.InputJsonValue =
+        c.source === ContributorApplicationSource.ADMIN_INVITATION
+          ? {
+              ...(c.approvalEvidence as Prisma.InputJsonObject),
+              inviter: {
+                id: adminId,
+                displayName: (await prisma.user.findUniqueOrThrow({ where: { id: adminId } }))
+                  .displayName,
+              },
+              verificationStatus: 'ADMIN_INVITATION_RECORDED',
+            }
+          : c.approvalEvidence;
       const app = await prisma.contributorApplication.upsert({
         where: { id: c.applicationId },
         update: {
@@ -558,7 +574,7 @@ export async function seedComprehensiveData(
           experience: c.experience,
           invitationReason: c.invitationReason ?? null,
           status: ContributorApplicationStatus.APPROVED,
-          reviewEvidence: c.approvalEvidence,
+          reviewEvidence: approvalEvidence,
           reviewNote: 'Hồ sơ đạt tiêu chuẩn đóng góp nội dung chất lượng cao theo quy chế VeggieConnect.',
           reviewedById: adminId,
           reviewedAt: new Date('2026-09-15T00:00:00.000Z'),
@@ -575,7 +591,7 @@ export async function seedComprehensiveData(
           experience: c.experience,
           invitationReason: c.invitationReason ?? null,
           status: ContributorApplicationStatus.APPROVED,
-          reviewEvidence: c.approvalEvidence,
+          reviewEvidence: approvalEvidence,
           reviewNote: 'Hồ sơ đạt tiêu chuẩn đóng góp nội dung chất lượng cao theo quy chế VeggieConnect.',
           reviewedById: adminId,
           reviewedAt: new Date('2026-09-15T00:00:00.000Z'),
@@ -586,7 +602,7 @@ export async function seedComprehensiveData(
         where: { userId: user.id },
         update: {
           approvalBasis: c.approvalBasis,
-          approvalEvidence: c.approvalEvidence,
+          approvalEvidence,
           approvedById: adminId,
           approvedAt: new Date('2026-09-15T00:00:00.000Z'),
           sourceApplicationId: app.id,
@@ -594,7 +610,7 @@ export async function seedComprehensiveData(
         create: {
           userId: user.id,
           approvalBasis: c.approvalBasis,
-          approvalEvidence: c.approvalEvidence,
+          approvalEvidence,
           approvedById: adminId,
           approvedAt: new Date('2026-09-15T00:00:00.000Z'),
           sourceApplicationId: app.id,
@@ -611,7 +627,7 @@ export async function seedComprehensiveData(
           actorId: adminId,
           decision: ContributorDecisionType.APPROVED,
           approvalBasis: c.approvalBasis,
-          evidence: c.approvalEvidence,
+          evidence: approvalEvidence,
           reason: 'Approved profile for VeggieConnect plant-based community.',
           createdAt: new Date('2026-09-15T00:00:00.000Z'),
         },

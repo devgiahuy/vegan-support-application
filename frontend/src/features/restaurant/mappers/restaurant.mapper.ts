@@ -6,6 +6,7 @@ import {
   safeEnum,
   safeNumber,
   safeString,
+  safeBoolean,
 } from '@/lib/mapper';
 import type { PaginationResult } from '@/types/api';
 import type {
@@ -18,13 +19,20 @@ import type {
   ReviewRestaurantResponseDto,
   SubmitRestaurantRequestDto,
 } from '../types/restaurant.dto';
-import type { LocationQuery, Restaurant, SubmitRestaurantInput } from '../types/restaurant.model';
+import type {
+  LocationQuery,
+  Restaurant,
+  RestaurantDiscovery,
+  SubmitRestaurantInput,
+} from '../types/restaurant.model';
 import { RestaurantStatus, RestaurantSource } from '@/common/enums';
 
 const SOURCE_LABELS: Record<string, string> = {
   INTERNAL: 'Cộng đồng VeggieConnect',
   GOOGLE_PLACES: 'Google Places',
   GOOGLE: 'Google Places',
+  SERPAPI: 'Google Maps qua SerpApi',
+  FAKE: 'Dữ liệu minh họa',
 };
 
 const STATUS_LABELS: Record<RestaurantStatus, string> = {
@@ -57,7 +65,9 @@ function toPageMeta(
   const page = safeNumber(pickField(meta, ['page'], 1));
   const limit = safeNumber(pickField(meta, ['limit'], 10));
   const totalItems = safeNumber(pickField(meta, ['total'], fallbackTotal));
-  const totalPages = safeNumber(pickField(meta, ['totalPages', 'total_pages'], 1));
+  const totalPages = safeNumber(
+    pickField(meta, ['totalPages', 'total_pages'], Math.ceil(totalItems / Math.max(1, limit)))
+  );
   return {
     page,
     limit,
@@ -87,7 +97,9 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
       return Number.isNaN(parsed) ? null : parsed;
     };
     const status = safeEnum(
-      pickField(dto, ['status'], 'PUBLISHED'),
+      safeString(dto?.status) === 'APPROVED'
+        ? 'PUBLISHED'
+        : pickField(dto, ['status'], 'PUBLISHED'),
       RestaurantStatus,
       RestaurantStatus.PUBLISHED
     );
@@ -95,7 +107,11 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
     const source =
       rawSource === 'GOOGLE' || rawSource === 'GOOGLE_PLACES'
         ? RestaurantSource.GOOGLE_PLACES
-        : RestaurantSource.INTERNAL;
+        : rawSource === 'SERPAPI'
+          ? RestaurantSource.SERPAPI
+          : rawSource === 'FAKE'
+            ? RestaurantSource.FAKE
+            : RestaurantSource.INTERNAL;
     const fetchedAt = safeDate(pickField(dto, ['fetchedAt', 'fetched_at'], null));
     const distanceM = toNum(pickField(dto, ['distanceMeters', 'distanceM', 'distance_m'], null));
     const submitter = pickField(dto, ['submittedBy'], null) as RestaurantDto['submittedBy'];
@@ -127,11 +143,14 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
         safeString(dish)
       ).filter((dish) => dish.length > 0),
       openingHours,
-      priceRange: safeString(pickField(dto, ['priceRange', 'price_range'], '')) || null,
+      priceRange: safeString(pickField(dto, ['priceRange', 'price_range', 'price'], '')) || null,
       phoneNumber: safeString(pickField(dto, ['phoneNumber', 'phone_number', 'phone'], '')) || null,
       websiteUrl: safeString(pickField(dto, ['websiteUrl', 'website_url', 'website'], '')) || null,
       source,
       sourceLabel: SOURCE_LABELS[source] ?? 'Quán chay',
+      attribution: safeString(dto?.attribution),
+      dietaryReviewed: safeBoolean(dto?.dietaryReviewed, false),
+      rating: toNum(dto?.rating),
       fetchedAt,
       isStale: fetchedAt !== null && Date.now() - fetchedAt.getTime() > STALE_AFTER_MS,
       status,
@@ -144,7 +163,7 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
   }
 
   /** Nearby/search/detail list — sắp xếp do tầng api đảm nhiệm. */
-  toListModel(dto: RestaurantListResponseDto | null | undefined): PaginationResult<Restaurant> {
+  toListModel(dto: RestaurantListResponseDto | null | undefined): RestaurantDiscovery {
     const rawItems = pickField(dto, ['data'], null) as (RestaurantDto | null)[] | null;
     const items = this.toModelList(
       safeArray<RestaurantDto | null, RestaurantDto | null>(rawItems, (item) => item)
@@ -152,6 +171,9 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
     const meta = pickField(dto, ['meta'], null) as RestaurantListResponseDto['meta'];
     return {
       items,
+      externalDataUnavailable: dto?.meta?.externalDataUnavailable === true,
+      externalResultsSuppressed: dto?.meta?.externalResultsSuppressed === true,
+      resultsTruncated: dto?.meta?.resultsTruncated === true,
       metadata: meta
         ? toPageMeta(meta, items.length)
         : { ...emptyPageMeta(), totalItems: items.length },
@@ -207,24 +229,24 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
   }
 
   toSubmitDto(input: SubmitRestaurantInput): SubmitRestaurantRequestDto {
+    if (input.lat === undefined || input.lng === undefined) {
+      throw new Error('Vui lòng xác định tọa độ của quán trước khi gửi.');
+    }
+    const supported = ['VEGAN', 'LACTO_OVO', 'BUDDHIST', 'CHRISTIAN'] as const;
     return {
-      name: input.name,
-      address: input.address,
-      ...(input.lat !== undefined ? { lat: input.lat } : {}),
-      ...(input.lng !== undefined ? { lng: input.lng } : {}),
-      ...(input.dietaryTags && input.dietaryTags.length > 0
-        ? { dietaryTags: input.dietaryTags }
-        : {}),
-      ...(input.dishes.length > 0 ? { dishes: input.dishes } : {}),
-      ...(input.openingHours ? { openingHours: input.openingHours } : {}),
-      ...(input.priceRange ? { priceRange: input.priceRange } : {}),
-      ...(input.phoneNumber ? { phoneNumber: input.phoneNumber } : {}),
-      ...(input.note ? { note: input.note } : {}),
+      name: input.name.trim(),
+      address: input.address.trim(),
+      latitude: input.lat,
+      longitude: input.lng,
+      dietTags: supported.filter((tag) => input.dietaryTags?.includes(tag)),
+      categories: ['restaurant'],
     };
   }
 
   toReviewDto(decision: 'APPROVE' | 'REJECT', reason?: string): ReviewRestaurantRequestDto {
-    return { decision, ...(reason ? { reason } : {}) };
+    if (!reason || reason.trim().length < 3)
+      throw new Error('Vui lòng nhập lý do quyết định (tối thiểu 3 ký tự).');
+    return { decision: decision === 'APPROVE' ? 'APPROVED' : 'REJECTED', reason: reason.trim() };
   }
 
   toLocationQuery(query: LocationQuery): Record<string, string | number> {
@@ -251,6 +273,10 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
         base.dietPattern = 'LACTO_OVO';
       }
     }
+    if (query.locationSource) base.locationSource = query.locationSource;
+    if (query.locationConsent !== undefined) base.locationConsent = String(query.locationConsent);
+    if (query.page !== undefined) base.page = query.page;
+    if (query.limit !== undefined) base.limit = query.limit;
     return base;
   }
 }

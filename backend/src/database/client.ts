@@ -70,10 +70,8 @@ async function touchReference(
 /** Materialize nullable fields so SQL-style null filters retain their meaning in MongoDB. */
 function normalizeData(model: Model, value: unknown, creating: boolean): void {
   for (const data of list(value)) {
-    const connectedFields = new Set(
-      model.fields
-        .filter((field) => field.kind === 'object' && data[field.name] !== undefined)
-        .flatMap((field) => field.relationFromFields ?? []),
+    const foreignKeyFields = new Set(
+      model.fields.flatMap((field) => field.relationFromFields ?? []),
     );
     for (const field of model.fields) {
       if (!creating && field.isId) {
@@ -102,7 +100,7 @@ function normalizeData(model: Model, value: unknown, creating: boolean): void {
         !field.isRequired &&
         !field.hasDefaultValue &&
         data[field.name] === undefined &&
-        !connectedFields.has(field.name)
+        !foreignKeyFields.has(field.name)
       )
         data[field.name] = null;
       if (
@@ -139,6 +137,78 @@ function normalizeData(model: Model, value: unknown, creating: boolean): void {
       const maxLength = policies[model.name]?.lengths[field.name];
       if (maxLength && typeof scalar === 'string' && [...scalar].length > maxLength)
         throw new Error(`String value too long: ${model.name}.${field.name}`);
+    }
+  }
+}
+
+/** Checked nested creates cannot accept scalar foreign keys. Backfill absent nullable keys in
+ * the same transaction so subsequent Mongo null predicates still behave like SQL. */
+async function materializeNullableReferences(
+  tx: Prisma.TransactionClient,
+  model: Model,
+  ids: string[],
+  data: unknown,
+): Promise<void> {
+  if (!ids.length) return;
+  const nullableKeys = model.fields.filter(
+    (field) =>
+      !field.isRequired &&
+      model.fields.some((relation) => relation.relationFromFields?.includes(field.name)),
+  );
+  if (nullableKeys.length) {
+    const result = await tx.$runCommandRaw({
+      update: model.dbName ?? model.name,
+      updates: [
+        {
+          q: { _id: { $in: ids } },
+          u: [
+            {
+              $set: Object.fromEntries(
+                nullableKeys.map((field) => [
+                  field.dbName ?? field.name,
+                  { $ifNull: [`$${field.dbName ?? field.name}`, null] },
+                ]),
+              ),
+            },
+          ],
+          multi: true,
+        },
+      ],
+    });
+    if (result.ok !== 1 || (Array.isArray(result.writeErrors) && result.writeErrors.length))
+      throw new Error(`Unable to materialize nullable references for ${model.name}`);
+  }
+  for (const input of list(data)) {
+    for (const relation of model.fields.filter((field) => field.kind === 'object')) {
+      const operation = object(input[relation.name]);
+      if (
+        !operation ||
+        !(list(operation.create).length || object(operation.createMany) || operation.upsert)
+      )
+        continue;
+      const child = models.find((item) => item.name === relation.type);
+      const backReference = child?.fields.find(
+        (field) => field.relationName === relation.relationName && field.relationFromFields?.length,
+      );
+      if (!child || !backReference || relation.relationFromFields?.length) continue;
+      const childId = child.fields.find((field) => field.isId)!.name;
+      const children = list(
+        await delegate(tx, child).findMany!({
+          where: { [backReference.relationFromFields![0]!]: { in: ids } },
+          select: { [childId]: true },
+        }),
+      );
+      const nestedData = [
+        ...list(operation.create),
+        ...list(object(operation.createMany)?.data),
+        ...list(operation.upsert).flatMap((item) => [item.create, item.update]),
+      ];
+      await materializeNullableReferences(
+        tx,
+        child,
+        children.map((row) => String(row[childId])),
+        nestedData,
+      );
     }
   }
 }
@@ -322,6 +392,19 @@ function wrapTransaction(tx: Prisma.TransactionClient): Prisma.TransactionClient
               if (!list(args.data).length) return { count: 0 };
               for (const row of list(args.data)) await validateReferences(tx, model, row);
               const rows = list(args.data);
+              // createMany always takes scalar (unchecked) inputs, so nullable FK keys are safe here.
+              for (const row of rows) {
+                for (const field of model.fields) {
+                  if (
+                    !field.isRequired &&
+                    model.fields.some((relation) =>
+                      relation.relationFromFields?.includes(field.name),
+                    )
+                  ) {
+                    row[field.name] ??= null;
+                  }
+                }
+              }
               if (eventModels.has(model.name)) {
                 for (const row of rows) row[idField] ??= randomUUID();
               }
@@ -376,6 +459,7 @@ function wrapTransaction(tx: Prisma.TransactionClient): Prisma.TransactionClient
               operation === 'updateMany'
                 ? previous.map((row) => row[id])
                 : list(result).map((row) => row[id]);
+            await materializeNullableReferences(tx, model, changedIds.map(String), data);
             if (eventModels.has(model.name)) {
               for (const row of list(
                 await raw.findMany!({ where: { [id]: { in: changedIds } } }),

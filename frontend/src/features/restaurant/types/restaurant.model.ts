@@ -27,6 +27,9 @@ export interface Restaurant {
   source: RestaurantSource;
   /** Nhãn nguồn hiển thị ('Cộng đồng VeggieConnect' | 'Google Places'). */
   sourceLabel: string;
+  attribution: string;
+  dietaryReviewed: boolean;
+  rating: number | null;
   /** Thời điểm cập nhật dữ liệu gần nhất. */
   fetchedAt: Date | null;
   /** Cờ báo dữ liệu cũ (> 30 ngày) cần cảnh báo thân thiện. */
@@ -71,6 +74,18 @@ export interface LocationQuery {
   query?: string;
   /** Danh sách trường phái ăn chay lọc cứng (ví dụ: ['VEGAN']). */
   dietaryTags?: string[];
+  locationSource?: 'MANUAL' | 'DEVICE';
+  locationConsent?: boolean;
+  page?: number;
+  limit?: number;
+}
+
+export interface RestaurantDiscovery {
+  items: Restaurant[];
+  metadata: import('@/types/api').PaginationMetadata;
+  externalDataUnavailable: boolean;
+  externalResultsSuppressed: boolean;
+  resultsTruncated: boolean;
 }
 
 /** Bộ lọc tìm kiếm quán ăn. */

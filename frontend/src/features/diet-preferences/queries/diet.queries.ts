@@ -7,6 +7,7 @@ import type {
 } from '../types/diet.dto';
 import { PROFILE_QUERY_KEYS } from '@/features/profile/queries/profile.queries';
 import { toast } from 'sonner';
+import { RESTAURANT_KEYS } from '@/features/restaurant/queries/restaurant.queries';
 
 export const DIET_QUERY_KEYS = {
   all: ['diet'] as const,
@@ -37,6 +38,7 @@ export const useSaveDietPreferencesMutation = () => {
       queryClient.setQueryData(DIET_QUERY_KEYS.preference(), preference);
       queryClient.invalidateQueries({ queryKey: DIET_QUERY_KEYS.all });
       queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEYS.detail() });
+      queryClient.invalidateQueries({ queryKey: RESTAURANT_KEYS.all });
       toast.success('Đã lưu lựa chọn chế độ ăn.');
     },
   });
@@ -51,6 +53,7 @@ export const useSaveDietScheduleMutation = () => {
       queryClient.setQueryData(DIET_QUERY_KEYS.schedule(), schedule);
       queryClient.invalidateQueries({ queryKey: DIET_QUERY_KEYS.all });
       queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEYS.detail() });
+      queryClient.invalidateQueries({ queryKey: RESTAURANT_KEYS.all });
       toast.success('Đã lưu lịch chay kỳ.');
     },
   });
