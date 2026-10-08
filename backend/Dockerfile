@@ -22,6 +22,7 @@ COPY --from=build /app/node_modules ./node_modules
 RUN npm prune --omit=dev --ignore-scripts --no-audit --no-fund
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/scripts ./scripts
+RUN sed -i 's/\r$//' ./scripts/docker-entrypoint.sh && chmod +x ./scripts/docker-entrypoint.sh
 COPY --from=build /app/src/database/legacy-policy.json ./src/database/legacy-policy.json
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/dist-seed ./dist-seed
