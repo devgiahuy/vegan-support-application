@@ -49,15 +49,17 @@ export class CatalogRepository {
       ...(query.type ? { type: query.type } : {}),
       ...(query.status ? { status: query.status } : {}),
     };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.category.findMany({
-        where,
-        orderBy: [{ type: 'asc' }, { parentId: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }],
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-      this.prisma.category.count({ where }),
-    ]);
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.category.findMany({
+          where,
+          orderBy: [{ type: 'asc' }, { parentId: 'asc' }, { sortOrder: 'asc' }, { name: 'asc' }],
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+        transaction.category.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 
@@ -188,16 +190,18 @@ export class CatalogRepository {
           }
         : {}),
     };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.ingredient.findMany({
-        where,
-        include: ingredientInclude,
-        orderBy: [{ canonicalName: 'asc' }],
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-      this.prisma.ingredient.count({ where }),
-    ]);
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.ingredient.findMany({
+          where,
+          include: ingredientInclude,
+          orderBy: [{ canonicalName: 'asc' }],
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+        transaction.ingredient.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 

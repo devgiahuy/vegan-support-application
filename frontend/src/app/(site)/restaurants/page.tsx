@@ -108,8 +108,8 @@ export default function RestaurantMapPage() {
         ? {
             lat: location.lat,
             lng: location.lng,
-            // locationSource: location.source,
-            // locationConsent: location.source === 'DEVICE',
+            locationSource: location.source,
+            locationConsent: location.source === 'DEVICE',
           }
         : {}),
       ...(searchingArea && activeBounds ? { bounds: activeBounds } : {}),
@@ -117,7 +117,7 @@ export default function RestaurantMapPage() {
     return mode ?? 'NEARBY';
   }, [radiusM, debouncedQuery, dietPattern, advanced, location, searchingArea, activeBounds]);
 
-  const searchState: RestaurantSearchState = React.useMemo(
+  const baseSearchState: RestaurantSearchState = React.useMemo(
     () => ({
       mode: resolvedMode,
       radiusM,
@@ -128,8 +128,8 @@ export default function RestaurantMapPage() {
         ? {
             lat: location.lat,
             lng: location.lng,
-            // locationSource: location.source,
-            // locationConsent: location.source === 'DEVICE',
+            locationSource: location.source,
+            locationConsent: location.source === 'DEVICE',
           }
         : {}),
       ...(searchingArea && activeBounds ? { bounds: activeBounds } : {}),
@@ -145,6 +145,11 @@ export default function RestaurantMapPage() {
       activeBounds,
     ]
   );
+
+  const [pagination, setPagination] = React.useState({ scope: '', page: 1 });
+  const searchScope = JSON.stringify(baseSearchState);
+  const page = pagination.scope === searchScope ? pagination.page : 1;
+  const searchState = { ...baseSearchState, page, limit: 20 };
 
   const { data, isLoading, isError, refetch } = useRestaurantDiscoveryQuery(
     searchState,
@@ -369,7 +374,7 @@ export default function RestaurantMapPage() {
                       ? 'Quán trong vùng đang xem'
                       : 'Quán chay lân cận'}
                   <span className="ml-1.5 text-sm font-medium text-muted-foreground">
-                    ({restaurants.length})
+                    ({data?.meta.totalItems ?? restaurants.length})
                   </span>
                 </h2>
 
@@ -413,6 +418,19 @@ export default function RestaurantMapPage() {
                   emptyActions={emptyActions}
                 />
               </div>
+              {data && data.meta.totalPages > 1 && (
+                <nav aria-label="Phân trang quán" className="flex items-center justify-center gap-3">
+                  <Button variant="outline" size="sm" disabled={!data.meta.hasPrevPage || isLoading}
+                    onClick={() => setPagination({ scope: searchScope, page: page - 1 })}>
+                    Trang trước
+                  </Button>
+                  <span className="text-sm tabular-nums" aria-live="polite">{page} / {data.meta.totalPages}</span>
+                  <Button variant="outline" size="sm" disabled={!data.meta.hasNextPage || isLoading}
+                    onClick={() => setPagination({ scope: searchScope, page: page + 1 })}>
+                    Trang sau
+                  </Button>
+                </nav>
+              )}
             </div>
           </div>
         </>

@@ -33,7 +33,7 @@ export const restaurantApi = {
    * `GET /restaurants/nearby` — quán lân cận theo tọa độ HOẶC theo khung vùng bản đồ.
    * `state.mode` quyết định gửi `lat`+`lng` hay `north`/`south`/`east`/`west`.
    */
-  getNearby: async (state: RestaurantSearchState): Promise<RestaurantDiscoveryResult> => {
+  getNearby: async (state: RestaurantSearchState, signal?: AbortSignal): Promise<RestaurantDiscoveryResult> => {
     const params = restaurantMapper.toDiscoveryParams({
       ...state,
       mode: state.mode === 'KEYWORD' ? 'NEARBY' : state.mode,
@@ -41,6 +41,7 @@ export const restaurantApi = {
     const response = await api.get<RestaurantListResponseDto>(API_ENDPOINTS.RESTAURANTS.NEARBY, {
       params,
       silent: true,
+      ...(signal ? { signal } : {}),
     });
     return restaurantMapper.toDiscoveryModel(response.data);
   },
@@ -49,14 +50,15 @@ export const restaurantApi = {
    * `GET /restaurants/search` — tìm theo từ khóa món ăn/tên quán kèm bộ lọc nâng cao.
    * Backend yêu cầu `q` bắt buộc 2..160 ký tự; từ khóa không hợp lệ thì chuyển an toàn sang `nearby`.
    */
-  search: async (state: RestaurantSearchState): Promise<RestaurantDiscoveryResult> => {
+  search: async (state: RestaurantSearchState, signal?: AbortSignal): Promise<RestaurantDiscoveryResult> => {
     if (state.query.trim().length < 2) {
-      return restaurantApi.getNearby({ ...state, mode: 'NEARBY' });
+      return restaurantApi.getNearby({ ...state, mode: 'NEARBY' }, signal);
     }
     const params = restaurantMapper.toDiscoveryParams({ ...state, mode: 'KEYWORD' });
     const response = await api.get<RestaurantListResponseDto>(API_ENDPOINTS.RESTAURANTS.SEARCH, {
       params,
       silent: true,
+      ...(signal ? { signal } : {}),
     });
     return restaurantMapper.toDiscoveryModel(response.data);
   },

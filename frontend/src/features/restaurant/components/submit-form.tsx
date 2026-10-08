@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { MapPin } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -65,9 +65,9 @@ export function SubmitForm({ onDone }: { onDone?: () => void }) {
     },
   });
 
-  const selectedDietTags = form.watch('dietTags') ?? [];
-  const latitude = form.watch('latitude');
-  const longitude = form.watch('longitude');
+  const selectedDietTags = useWatch({ control: form.control, name: 'dietTags' }) ?? [];
+  const latitude = useWatch({ control: form.control, name: 'latitude' });
+  const longitude = useWatch({ control: form.control, name: 'longitude' });
   const hasCoordinates =
     Number.isFinite(latitude) && Number.isFinite(longitude) && (latitude !== 0 || longitude !== 0);
 

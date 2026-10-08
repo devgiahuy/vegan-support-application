@@ -40,7 +40,7 @@ export function estimateMealMacroTargets(
     estimated: true,
     source: 'HEALTH_PROFILE_TDEE_GOAL_CONFIG',
     sourceDetail:
-      'M?c ti�u du?c u?c t�nh t? th�ng tin s?c kh?e v� m?c ti�u b?n d� ch?n. ��y l� kho?ng tham kh?o, kh�ng ph?i s? do ch�nh x�c.',
+      'Mục tiêu được ước tính từ thông tin sức khỏe và mục tiêu bạn đã chọn. Đây là khoảng tham khảo, không phải số đo chính xác.',
     tolerancePercent: config.tolerancePercent,
   };
 }

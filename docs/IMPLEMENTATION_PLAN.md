@@ -1,8 +1,8 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.1
+**Version:** 4.2
 
-**Updated:** 2026-09-28
+**Updated:** 2026-10-08
 
 **Status:** Approved implementation baseline
 
@@ -24,7 +24,7 @@ The current API contract may still contain legacy Contributor subtype fields unt
 | D4 | Vegetarian rules | Keep `dietPattern`, `practiceSchedule`, and `tradition`. MVP traditions: Buddhist and Christian. The system proposes rules and the user confirms/toggles each rule. |
 | D5 | Publication | Recipes, handbooks, and videos require manual Admin approval. AI flags and reports are evidence for review, never automatic deletion. |
 | D6 | Health data | MVP web uses user-entered measurements. HealthKit/Health Connect/wearables/phone-sensor research remains in Roadmap Phase 2. |
-| D7 | Persistence | PostgreSQL + Prisma. |
+| D7 | Persistence | MongoDB replica set + Prisma; UUID API identifiers retained. Approved by user on 2026-10-07; preservation of historical database data is not required. |
 | D8 | Backend | Node.js + Express + TypeScript, OpenAPI-first. |
 | D9 | Maps | Internal restaurant records plus a provider adapter for Google Maps/Places/Geocoding. |
 | D10 | Media | Cloudinary and permitted external video URLs; enforce per-file and per-account quotas before payments. |
@@ -541,5 +541,8 @@ A phase is complete only when:
 
 ## 13. Change record
 
+- **4.2 — 2026-10-08:** Reconcile dev estimated-macro planning/analysis updates with MongoDB persistence; preserve both approved decisions.
+
+- **4.1 — 2026-10-07:** User-approved persistence replacement with MongoDB. Preserve existing API shapes, dietary constraints, authorization and state machines; move SQL checks/indexes, transactional event dispatch and concurrency controls to MongoDB/application equivalents. Fresh schema + seed is the acceptance baseline; historical PostgreSQL data is optional. See `backend/docs/MONGODB_MIGRATION.md`.
 - **4.1 — 2026-09-28:** Clarified four-macro estimated weekly planning/analysis, target provenance, non-blocking manual over-target warnings, and explicit 21-slot/unresolved behavior.
 - **4.0 — 2026-09-18:** Consolidated product decisions after Phase 11 review; added food database, cooking-aware nutrition, unified Contributor, quota, video parity, custom meals/tags, compatibility, multi-week planning, pantry, fridge and receipt workflows; expanded phases to 27; moved all deferred work into the complete Phase 2 roadmap.

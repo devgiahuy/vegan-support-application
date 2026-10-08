@@ -24,8 +24,17 @@ export class NotificationService {
   constructor(private readonly prisma: PrismaClient) {}
 
   private async databaseNow(): Promise<Date> {
-    const rows = await this.prisma.$queryRaw<{ now: Date }[]>`SELECT CURRENT_TIMESTAMP AS now`;
-    return rows[0]!.now;
+    const result = await this.prisma.$runCommandRaw({ hello: 1 });
+    const localTime = result.localTime;
+    if (
+      !localTime ||
+      typeof localTime !== 'object' ||
+      Array.isArray(localTime) ||
+      !('$date' in localTime) ||
+      typeof localTime.$date !== 'string'
+    )
+      throw new Error('MongoDB did not return localTime');
+    return new Date(localTime.$date);
   }
 
   async list(ownerId: string, query: NotificationListQuery) {
@@ -35,23 +44,34 @@ export class NotificationService {
       expiresAt: { gt: now },
       ...(query.unreadOnly === 'true' ? { readAt: null } : {}),
     };
-    const [total, rows] = await this.prisma.$transaction([
-      this.prisma.notification.count({ where }),
-      this.prisma.notification.findMany({
-        where,
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-    ]);
+    const [total, rows] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.notification.count({ where }),
+        transaction.notification.findMany({
+          where,
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+      ]),
+    );
     return {
       data: rows.map(output),
-      meta: { page: query.page, limit: query.limit, total, totalPages: Math.ceil(total / query.limit) },
+      meta: {
+        page: query.page,
+        limit: query.limit,
+        total,
+        totalPages: Math.ceil(total / query.limit),
+      },
     };
   }
 
   async unreadCount(ownerId: string) {
-    return { count: await this.prisma.notification.count({ where: { ownerId, readAt: null, expiresAt: { gt: await this.databaseNow() } } }) };
+    return {
+      count: await this.prisma.notification.count({
+        where: { ownerId, readAt: null, expiresAt: { gt: await this.databaseNow() } },
+      }),
+    };
   }
 
   async markRead(ownerId: string, id: string) {
@@ -61,22 +81,26 @@ export class NotificationService {
       data: { readAt: now },
     });
     if (updated.count === 0) {
-      const existing = await this.prisma.notification.findFirst({ where: { id, ownerId, expiresAt: { gt: now } }, select: { id: true } });
-      if (!existing) throw new AppError({ statusCode: 404, code: 'NOTIFICATION_NOT_FOUND', message: 'Không tìm thấy thông báo' });
+      const existing = await this.prisma.notification.findFirst({
+        where: { id, ownerId, expiresAt: { gt: now } },
+        select: { id: true },
+      });
+      if (!existing)
+        throw new AppError({
+          statusCode: 404,
+          code: 'NOTIFICATION_NOT_FOUND',
+          message: 'Không tìm thấy thông báo',
+        });
     }
     return { id, read: true as const };
   }
 
   async markAllRead(ownerId: string) {
-    // One UPDATE statement takes one database snapshot. A notification committed
-    // after that snapshot remains unread, even when a request races this call.
-    // Use the database clock for both predicates and the read timestamp. The
-    // app and database clocks can differ by a few milliseconds in development.
-    const updatedCount = await this.prisma.$executeRaw`
-      UPDATE notifications SET read_at = CURRENT_TIMESTAMP
-      WHERE owner_id = ${ownerId}::uuid AND read_at IS NULL
-        AND expires_at > CURRENT_TIMESTAMP AND created_at <= CURRENT_TIMESTAMP
-    `;
-    return { updatedCount };
+    const now = await this.databaseNow();
+    const result = await this.prisma.notification.updateMany({
+      where: { ownerId, readAt: null, expiresAt: { gt: now }, createdAt: { lte: now } },
+      data: { readAt: now },
+    });
+    return { updatedCount: result.count };
   }
 }

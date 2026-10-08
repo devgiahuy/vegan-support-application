@@ -2,10 +2,12 @@ import {
   DietPattern,
   RestaurantSource,
   RestaurantStatus,
+  PracticeSchedule,
   type PrismaClient,
   type Restaurant,
 } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
+import { dateOnlyInSearchTimezone } from '../content/search-constraints.js';
 import {
   distanceMeters,
   type ExternalPlace,
@@ -129,12 +131,6 @@ function fromExternal(
   };
 }
 
-function cachedOperatingHours(value: unknown): Record<string, string> | undefined {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) return undefined;
-  const entries = Object.entries(value).filter(([, item]) => typeof item === 'string');
-  return entries.length > 0 ? Object.fromEntries(entries) : undefined;
-}
-
 function conflict(code: string, message: string): never {
   throw new AppError({ statusCode: 409, code, message });
 }
@@ -151,6 +147,7 @@ export class RestaurantService {
           where: { id: userId },
           include: {
             dietPreference: true,
+            dietScheduleDates: { where: { enabled: true } },
             dietPreferenceRules: { where: { enabled: true }, include: { ruleDefinition: true } },
             allergies: { where: { active: true } },
             ingredientExclusions: { where: { active: true } },
@@ -162,9 +159,21 @@ export class RestaurantService {
       requested === DietPattern.VEGAN || pattern === DietPattern.VEGAN
         ? DietPattern.VEGAN
         : (requested ?? pattern);
+    const scheduleApplies =
+      user?.dietPreference?.practiceSchedule === PracticeSchedule.PERMANENT ||
+      (user?.dietPreference?.practiceSchedule === PracticeSchedule.PERIODIC &&
+        user.dietScheduleDates.some(
+          (date) => date.date.toISOString().slice(0, 10) === dateOnlyInSearchTimezone(new Date()),
+        ));
     const traditions =
-      user?.dietPreferenceRules
-        .filter((r) => r.ruleDefinition.source === 'TRADITION' && r.ruleDefinition.tradition)
+      (scheduleApplies ? user?.dietPreferenceRules : [])
+        ?.filter(
+          (r) =>
+            r.ruleDefinition.source === 'TRADITION' &&
+            r.ruleDefinition.active &&
+            r.ruleDefinition.hardConstraint &&
+            r.ruleDefinition.tradition,
+        )
         .map((r) => r.ruleDefinition.tradition as string) ?? [];
     return {
       pattern: effectivePattern,
@@ -178,7 +187,12 @@ export class RestaurantService {
     place: Restaurant,
     constraints: Awaited<ReturnType<RestaurantService['constraints']>>,
   ): boolean {
-    if (constraints.pattern && !place.dietTags.includes(constraints.pattern)) return false;
+    if (
+      constraints.pattern &&
+      !place.dietTags.includes(constraints.pattern) &&
+      !(constraints.pattern === DietPattern.LACTO_OVO && place.dietTags.includes('VEGAN'))
+    )
+      return false;
     if (constraints.traditions.some((tag) => !place.dietTags.includes(tag))) return false;
     if (constraints.allergens.some((code) => !place.allergenFreeCodes.includes(code))) return false;
     if (constraints.exclusions.some((name) => !place.excludedIngredients.includes(name)))
@@ -201,58 +215,6 @@ export class RestaurantService {
         message: 'Device location requires explicit consent',
       });
     }
-  }
-
-  private async cacheProviderPlaces(places: ExternalPlace[]): Promise<void> {
-    const now = new Date();
-    const expiresAt = new Date(now.getTime() + 5 * 60_000);
-    await Promise.all(
-      places.map((place) =>
-        this.prisma.restaurantProviderPlace.upsert({
-          where: { provider_placeId: { provider: this.provider.name, placeId: place.placeId } },
-          create: {
-            provider: this.provider.name,
-            placeId: place.placeId,
-            name: place.name,
-            address: place.address,
-            latitude: place.latitude,
-            longitude: place.longitude,
-            categories: place.categories,
-            rating: place.rating ?? null,
-            reviewCount: place.reviewCount ?? null,
-            price: place.price ?? null,
-            openState: place.openState ?? null,
-            ...(place.operatingHours ? { operatingHours: place.operatingHours } : {}),
-            phone: place.phone ?? null,
-            website: place.website ?? null,
-            thumbnailUrl: place.thumbnailUrl ?? null,
-            mapsUrl: place.mapsUrl ?? null,
-            attribution: place.attribution,
-            fetchedAt: new Date(place.fetchedAt),
-            expiresAt,
-          },
-          update: {
-            name: place.name,
-            address: place.address,
-            latitude: place.latitude,
-            longitude: place.longitude,
-            categories: place.categories,
-            rating: place.rating ?? null,
-            reviewCount: place.reviewCount ?? null,
-            price: place.price ?? null,
-            openState: place.openState ?? null,
-            ...(place.operatingHours ? { operatingHours: place.operatingHours } : {}),
-            phone: place.phone ?? null,
-            website: place.website ?? null,
-            thumbnailUrl: place.thumbnailUrl ?? null,
-            mapsUrl: place.mapsUrl ?? null,
-            attribution: place.attribution,
-            fetchedAt: new Date(place.fetchedAt),
-            expiresAt,
-          },
-        }),
-      ),
-    );
   }
 
   async discover(query: NearbyQuery | SearchQuery, userId?: string) {
@@ -298,57 +260,24 @@ export class RestaurantService {
           !text ||
           normalize(`${p.name} ${p.address} ${p.categories.join(' ')}`).includes(normalize(text)),
       )
-      .map((p) => fromInternal(p, lat, lng));
-    const activeProviderCache = await this.prisma.restaurantProviderPlace.findMany({
-      where: {
-        provider: this.provider.name,
-        expiresAt: { gt: new Date() },
-        latitude: { gte: lat - latDelta, lte: lat + latDelta },
-        longitude: { gte: lng - lngDelta, lte: lng + lngDelta },
-      },
-      orderBy: { fetchedAt: 'desc' },
-      take: 1000,
-    });
-    let externalDataUnavailable = false;
-    const externalByPlaceId = new Map<string, ResultPlace>();
-    for (const place of activeProviderCache) {
-      if (
-        !inArea(Number(place.latitude), Number(place.longitude)) ||
-        (text &&
-          !normalize(`${place.name} ${place.address} ${place.categories.join(' ')}`).includes(
-            normalize(text),
-          ))
+      .filter(
+        () =>
+          !(
+            'q' in query &&
+            [
+              query.minPrice,
+              query.maxPrice,
+              query.minRating,
+              query.openState,
+              query.openOnDay,
+              query.openAtHour,
+            ].some((value) => value !== undefined)
+          ),
       )
-        continue;
-      const operatingHours = cachedOperatingHours(place.operatingHours);
-      externalByPlaceId.set(
-        place.placeId,
-        fromExternal(
-          {
-            placeId: place.placeId,
-            name: place.name,
-            address: place.address,
-            latitude: Number(place.latitude),
-            longitude: Number(place.longitude),
-            categories: place.categories,
-            ...(place.rating !== null ? { rating: Number(place.rating) } : {}),
-            ...(place.reviewCount !== null ? { reviewCount: place.reviewCount } : {}),
-            ...(place.price !== null ? { price: place.price } : {}),
-            ...(place.openState !== null ? { openState: place.openState } : {}),
-            ...(operatingHours ? { operatingHours } : {}),
-            ...(place.phone !== null ? { phone: place.phone } : {}),
-            ...(place.website !== null ? { website: place.website } : {}),
-            ...(place.thumbnailUrl !== null ? { thumbnailUrl: place.thumbnailUrl } : {}),
-            ...(place.mapsUrl !== null ? { mapsUrl: place.mapsUrl } : {}),
-            attribution: place.attribution,
-            fetchedAt: place.fetchedAt.toISOString(),
-          },
-          place.provider,
-          lat,
-          lng,
-        ),
-      );
-    }
+      .map((p) => fromInternal(p, lat, lng));
+    let externalDataUnavailable = false;
+    let providerTruncated = false;
+    const externalByPlaceId = new Map<string, ResultPlace>();
     const providerResultLimit = 200;
     const mapsFilters: MapsSearchFilters =
       'q' in query
@@ -374,31 +303,31 @@ export class RestaurantService {
       const providerQueries = text
         ? [`vegetarian ${text}`]
         : ['chay restaurant', 'vegan restaurant', 'vegetarian restaurant'];
-      let successfulQueries = 0;
-      for (const providerQuery of providerQueries) {
-        try {
-          const places = await this.provider.search(
-            providerQuery,
-            lat,
-            lng,
-            radiusMeters,
-            mapsFilters,
-          );
-          await this.cacheProviderPlaces(places);
-          successfulQueries += 1;
-          for (const place of places) {
-            if (inArea(place.latitude, place.longitude)) {
-              externalByPlaceId.set(
-                place.placeId,
-                fromExternal(place, this.provider.name, lat, lng),
-              );
+      const responses = await Promise.allSettled(
+        providerQueries.map((providerQuery) =>
+          this.provider.search(providerQuery, lat, lng, radiusMeters, mapsFilters),
+        ),
+      );
+      for (const response of responses) {
+        if (response.status === 'rejected') {
+          externalDataUnavailable = true;
+          continue;
+        }
+        externalDataUnavailable ||= response.value.partialFailure;
+        providerTruncated ||= response.value.truncated;
+        for (const place of response.value.places) {
+          if (inArea(place.latitude, place.longitude)) {
+            if (
+              externalByPlaceId.size >= providerResultLimit &&
+              !externalByPlaceId.has(place.placeId)
+            ) {
+              providerTruncated = true;
+              continue;
             }
+            externalByPlaceId.set(place.placeId, fromExternal(place, this.provider.name, lat, lng));
           }
-        } catch {
-          // Keep partial results when one provider query fails.
         }
       }
-      externalDataUnavailable = successfulQueries === 0;
     }
     const external = [...externalByPlaceId.values()];
     const result = [...selected];
@@ -435,7 +364,8 @@ export class RestaurantService {
         page: query.page,
         limit: query.limit,
         total: result.length,
-        resultsTruncated: resultsTruncated || external.length >= providerResultLimit,
+        resultsTruncated: resultsTruncated || providerTruncated,
+        externalResultsSuppressed: hardConstraints,
         externalDataUnavailable,
         provider: this.provider.name,
         providerResultLimit,
@@ -445,7 +375,7 @@ export class RestaurantService {
   }
 
   async get(id: string, userId?: string) {
-    if (id.startsWith('google:') || id.startsWith('fake:')) {
+    if (id.startsWith('google:') || id.startsWith('serpapi:') || id.startsWith('fake:')) {
       const prefix = `${this.provider.name.toLowerCase()}:`;
       if (!id.startsWith(prefix))
         throw new AppError({ statusCode: 404, code: 'NOT_FOUND', message: 'Place not found' });
@@ -518,31 +448,35 @@ export class RestaurantService {
 
   async adminList(query: AdminListQuery) {
     const where = { status: query.status };
-    const [total, data] = await this.prisma.$transaction([
-      this.prisma.restaurant.count({ where }),
-      this.prisma.restaurant.findMany({
-        where,
-        include: { externalRefs: true },
-        orderBy: { createdAt: 'asc' },
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-    ]);
+    const [total, data] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.restaurant.count({ where }),
+        transaction.restaurant.findMany({
+          where,
+          include: { externalRefs: true },
+          orderBy: { createdAt: 'asc' },
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+      ]),
+    );
     return { data, meta: { total, page: query.page, limit: query.limit } };
   }
 
   async mine(userId: string, query: { page: number; limit: number }) {
     const where = { submitterId: userId };
-    const [total, data] = await this.prisma.$transaction([
-      this.prisma.restaurant.count({ where }),
-      this.prisma.restaurant.findMany({
-        where,
-        include: { externalRefs: true },
-        orderBy: { createdAt: 'desc' },
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-    ]);
+    const [total, data] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.restaurant.count({ where }),
+        transaction.restaurant.findMany({
+          where,
+          include: { externalRefs: true },
+          orderBy: { createdAt: 'desc' },
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+      ]),
+    );
     return { data, meta: { total, page: query.page, limit: query.limit } };
   }
 

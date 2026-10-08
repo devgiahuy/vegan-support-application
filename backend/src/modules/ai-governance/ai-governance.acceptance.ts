@@ -1,9 +1,10 @@
+import { createPrismaClient } from '../../database/client.js';
 import 'dotenv/config';
 import assert from 'node:assert/strict';
 import { createServer } from 'node:http';
 import { once } from 'node:events';
 import { randomUUID } from 'node:crypto';
-import { PrismaClient, Role } from '@prisma/client';
+import { Role } from '@prisma/client';
 import pino from 'pino';
 import { createApp } from '../../app.js';
 import { loadConfig } from '../../config/env.js';
@@ -16,7 +17,7 @@ import { UnavailableAiProvider, type AiProvider } from '../chat/ai-provider.js';
 
 async function main(): Promise<void> {
   const config = loadConfig();
-  const db = new PrismaClient();
+  const db = createPrismaClient();
   const database = new PrismaDatabase(db);
   const governance = new AiGovernanceService(db, config);
   const [admin, member] = await Promise.all([

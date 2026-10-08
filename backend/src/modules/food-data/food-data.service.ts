@@ -1,3 +1,4 @@
+import legacyPolicy from '../../database/legacy-policy.json' with { type: 'json' };
 import { createHash } from 'node:crypto';
 import { FoodDataImportStatus, Prisma } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
@@ -282,13 +283,28 @@ function serialize(value: unknown): Record<string, unknown> {
   return serialized as Record<string, unknown>;
 }
 
-function serializeValue(value: unknown): unknown {
+const decimalFields = new Set(
+  Object.values(legacyPolicy).flatMap((policy) => Object.keys(policy.decimals)),
+);
+
+const jsonFields = new Set(
+  Prisma.dmmf.datamodel.models.flatMap((model) =>
+    model.fields.filter((field) => field.type === 'Json').map((field) => field.name),
+  ),
+);
+
+function serializeValue(value: unknown, fieldName?: string): unknown {
+  if (fieldName && jsonFields.has(fieldName)) return value;
+  if (typeof value === 'number' && fieldName && decimalFields.has(fieldName))
+    return value.toString();
   if (value instanceof Date) return value.toISOString();
   if (Prisma.Decimal.isDecimal(value)) return value.toString();
-  if (Array.isArray(value)) return value.map(serializeValue);
+  if (Array.isArray(value)) return value.map((item) => serializeValue(item));
   if (value && typeof value === 'object') {
     return Object.fromEntries(
-      Object.entries(value).map(([key, child]) => [key, serializeValue(child)]),
+      Object.entries(value)
+        .filter(([key]) => !['referenceVersion', 'transactionVersion'].includes(key))
+        .map(([key, child]) => [key, serializeValue(child, key)]),
     );
   }
   return value;

@@ -103,18 +103,18 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     method: 'get',
     path: '/api/v1/users/me',
     tags: ['Users'],
-    summary: 'L?y h? so ngu?i d�ng hi?n t?i',
+    summary: 'Lấy hồ sơ người dùng hiện tại',
     description:
-      'Tr? role backend-authoritative, health data MANUAL, diet snapshot v� effective constraints; kh�ng tr? password/session fields.',
+      'Trả role backend-authoritative, health data MANUAL, diet snapshot và effective constraints; không trả password/session fields.',
     operationId: 'getMe',
     security: authenticated,
     responses: {
       200: {
-        description: 'H? so hi?n t?i',
+        description: 'Hồ sơ hiện tại',
         content: { 'application/json': { schema: profileResponse } },
       },
-      401: errorResponse(errorSchema, 'Y�u c?u dang nh?p', 'AUTH_REQUIRED'),
-      403: errorResponse(errorSchema, 'T�i kho?n d� b? c?m', 'ACCOUNT_BANNED'),
+      401: errorResponse(errorSchema, 'Yêu cầu đăng nhập', 'AUTH_REQUIRED'),
+      403: errorResponse(errorSchema, 'Tài khoản đã bị cấm', 'ACCOUNT_BANNED'),
     },
   });
 
@@ -122,7 +122,7 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     method: 'patch',
     path: '/api/v1/users/me',
     tags: ['Users'],
-    summary: 'C?p nh?t h? so co b?n',
+    summary: 'Cập nhật hồ sơ cơ bản',
     operationId: 'updateMe',
     security: authenticated,
     request: {
@@ -131,19 +131,19 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
         content: {
           'application/json': {
             schema: updateBasicProfileRequest,
-            example: { displayName: 'Nguy?n An', avatarUrl: 'https://cdn.example.com/avatar.jpg' },
+            example: { displayName: 'Nguyễn An', avatarUrl: 'https://cdn.example.com/avatar.jpg' },
           },
         },
       },
     },
     responses: {
       200: {
-        description: 'H? so d� c?p nh?t',
+        description: 'Hồ sơ đã cập nhật',
         content: { 'application/json': { schema: profileResponse } },
       },
-      400: errorResponse(errorSchema, 'D? li?u kh�ng h?p l?', 'VALIDATION_ERROR'),
-      401: errorResponse(errorSchema, 'Y�u c?u dang nh?p', 'AUTH_REQUIRED'),
-      403: errorResponse(errorSchema, 'T�i kho?n d� b? c?m', 'ACCOUNT_BANNED'),
+      400: errorResponse(errorSchema, 'Dữ liệu không hợp lệ', 'VALIDATION_ERROR'),
+      401: errorResponse(errorSchema, 'Yêu cầu đăng nhập', 'AUTH_REQUIRED'),
+      403: errorResponse(errorSchema, 'Tài khoản đã bị cấm', 'ACCOUNT_BANNED'),
     },
   });
 
@@ -151,9 +151,9 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     method: 'put',
     path: '/api/v1/users/me/health-profile',
     tags: ['Users'],
-    summary: 'Luu d? li?u s?c kh?e th? c�ng v� t�nh BMI/BMR/TDEE',
+    summary: 'Lưu dữ liệu sức khỏe thủ công và tính BMI/BMR/TDEE',
     description:
-      'D�ng c�ng th?c Mifflin�St Jeor; activity factors SEDENTARY/LIGHTLY_ACTIVE/MODERATELY_ACTIVE/VERY_ACTIVE/EXTRA_ACTIVE l?n lu?t l� 1.2/1.375/1.55/1.725/1.9. dataSource lu�n l� MANUAL v� k?t qu? l�m tr�n hai ch? s?.',
+      'Dùng công thức Mifflin–St Jeor; activity factors SEDENTARY/LIGHTLY_ACTIVE/MODERATELY_ACTIVE/VERY_ACTIVE/EXTRA_ACTIVE lần lượt là 1.2/1.375/1.55/1.725/1.9. dataSource luôn là MANUAL và kết quả làm tròn hai chữ số.',
     operationId: 'updateHealthProfile',
     security: authenticated,
     request: {
@@ -175,12 +175,12 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     },
     responses: {
       200: {
-        description: 'Health profile v� ch? s? d� t�nh',
+        description: 'Health profile và chỉ số đã tính',
         content: { 'application/json': { schema: healthProfileResponse } },
       },
-      400: errorResponse(errorSchema, 'D? li?u s?c kh?e kh�ng h?p l?', 'VALIDATION_ERROR'),
-      401: errorResponse(errorSchema, 'Y�u c?u dang nh?p', 'AUTH_REQUIRED'),
-      403: errorResponse(errorSchema, 'T�i kho?n d� b? c?m', 'ACCOUNT_BANNED'),
+      400: errorResponse(errorSchema, 'Dữ liệu sức khỏe không hợp lệ', 'VALIDATION_ERROR'),
+      401: errorResponse(errorSchema, 'Yêu cầu đăng nhập', 'AUTH_REQUIRED'),
+      403: errorResponse(errorSchema, 'Tài khoản đã bị cấm', 'ACCOUNT_BANNED'),
     },
   });
 
@@ -188,9 +188,9 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     method: 'post',
     path: '/api/v1/diet-rules/preview',
     tags: ['Diet Rules'],
-    summary: 'Xem tru?c b? quy t?c diet/tradition hi?n h�nh',
+    summary: 'Xem trước bộ quy tắc diet/tradition hiện hành',
     description:
-      'Tradition rules l� t�y ch?n do user x�c nh?n; allergy v� explicit exclusions kh�ng n?m trong danh s�ch toggle n�y.',
+      'Tradition rules là tùy chọn do user xác nhận; allergy và explicit exclusions không nằm trong danh sách toggle này.',
     operationId: 'previewDietRules',
     security: authenticated,
     request: {
@@ -210,13 +210,13 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     },
     responses: {
       200: {
-        description: 'Rule set c� version v� default toggle',
+        description: 'Rule set có version và default toggle',
         content: { 'application/json': { schema: dietRulePreviewResponse } },
       },
-      400: errorResponse(errorSchema, 'L?a ch?n kh�ng h?p l?', 'VALIDATION_ERROR'),
-      401: errorResponse(errorSchema, 'Y�u c?u dang nh?p', 'AUTH_REQUIRED'),
-      403: errorResponse(errorSchema, 'T�i kho?n d� b? c?m', 'ACCOUNT_BANNED'),
-      503: errorResponse(errorSchema, 'B? quy t?c chua s?n s�ng', 'DIET_RULES_UNAVAILABLE'),
+      400: errorResponse(errorSchema, 'Lựa chọn không hợp lệ', 'VALIDATION_ERROR'),
+      401: errorResponse(errorSchema, 'Yêu cầu đăng nhập', 'AUTH_REQUIRED'),
+      403: errorResponse(errorSchema, 'Tài khoản đã bị cấm', 'ACCOUNT_BANNED'),
+      503: errorResponse(errorSchema, 'Bộ quy tắc chưa sẵn sàng', 'DIET_RULES_UNAVAILABLE'),
     },
   });
 
@@ -224,9 +224,9 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     method: 'put',
     path: '/api/v1/users/me/diet-preferences',
     tags: ['Users', 'Diet Rules'],
-    summary: 'X�c nh?n diet preferences, rules v� hard constraints c� nh�n',
+    summary: 'Xác nhận diet preferences, rules và hard constraints cá nhân',
     description:
-      'Rule IDs ph?i kh?p to�n b? preview/version. Diet-pattern rule kh�ng th? t?t. PERIODIC b?t bu?c c� scheduleDates theo Asia/Ho_Chi_Minh. Ingredient exclusion nh?n optional canonical ingredientId; free-text v?n du?c gi? khi chua map. Allergies v� exclusions lu�n l� hard constraints.',
+      'Rule IDs phải khớp toàn bộ preview/version. Diet-pattern rule không thể tắt. PERIODIC bắt buộc có scheduleDates theo Asia/Ho_Chi_Minh. Ingredient exclusion nhận optional canonical ingredientId; free-text vẫn được giữ khi chưa map. Allergies và exclusions luôn là hard constraints.',
     operationId: 'saveDietPreferences',
     security: authenticated,
     request: {
@@ -249,8 +249,8 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
               ingredientExclusions: [
                 {
                   ingredientId: '33333333-3333-4333-8333-333333333333',
-                  ingredientName: '�?u hu',
-                  reason: 'Kh�ng th�ch',
+                  ingredientName: 'Đậu hũ',
+                  reason: 'Không thích',
                 },
               ],
             },
@@ -260,24 +260,24 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     },
     responses: {
       200: {
-        description: 'Snapshot preference v� effective constraints d� luu',
+        description: 'Snapshot preference và effective constraints đã lưu',
         content: { 'application/json': { schema: dietPreferenceResponse } },
       },
-      400: multipleErrorResponse(errorSchema, 'Rule ho?c preference kh�ng h?p l?', [
+      400: multipleErrorResponse(errorSchema, 'Rule hoặc preference không hợp lệ', [
         'VALIDATION_ERROR',
         'INVALID_DIET_RULE_SELECTION',
         'DIET_RULE_REQUIRED',
         'INVALID_INGREDIENT_EXCLUSIONS',
         'DIET_SCHEDULE_NOT_APPLICABLE',
       ]),
-      401: errorResponse(errorSchema, 'Y�u c?u dang nh?p', 'AUTH_REQUIRED'),
-      403: errorResponse(errorSchema, 'T�i kho?n d� b? c?m', 'ACCOUNT_BANNED'),
+      401: errorResponse(errorSchema, 'Yêu cầu đăng nhập', 'AUTH_REQUIRED'),
+      403: errorResponse(errorSchema, 'Tài khoản đã bị cấm', 'ACCOUNT_BANNED'),
       409: multipleErrorResponse(
         errorSchema,
-        'B? quy t?c d� thay d?i ho?c l?ch PERIODIC chua c� ng�y',
+        'Bộ quy tắc đã thay đổi hoặc lịch PERIODIC chưa có ngày',
         ['DIET_RULE_RECONFIRMATION_REQUIRED', 'DIET_SCHEDULE_REQUIRED'],
       ),
-      503: errorResponse(errorSchema, 'B? quy t?c chua s?n s�ng', 'DIET_RULES_UNAVAILABLE'),
+      503: errorResponse(errorSchema, 'Bộ quy tắc chưa sẵn sàng', 'DIET_RULES_UNAVAILABLE'),
     },
   });
 
@@ -285,9 +285,9 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     method: 'put',
     path: '/api/v1/users/me/diet-schedule',
     tags: ['Users', 'Diet Rules'],
-    summary: 'Thay th? danh s�ch ng�y �p d?ng tradition rules cho PERIODIC',
+    summary: 'Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC',
     description:
-      'Date-only YYYY-MM-DD du?c luu b?ng PostgreSQL DATE v?i semantic Asia/Ho_Chi_Minh; backend kh�ng t? t�nh l?ch �m/ng�y l?.',
+      'Date-only YYYY-MM-DD được lưu trong MongoDB bằng UTC midnight với semantic Asia/Ho_Chi_Minh; backend không tự tính lịch âm/ngày lễ.',
     operationId: 'updateDietSchedule',
     security: authenticated,
     request: {
@@ -303,15 +303,15 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     },
     responses: {
       200: {
-        description: 'L?ch PERIODIC d� c?p nh?t',
+        description: 'Lịch PERIODIC đã cập nhật',
         content: { 'application/json': { schema: dietScheduleResponse } },
       },
-      400: errorResponse(errorSchema, 'Danh s�ch ng�y kh�ng h?p l?', 'VALIDATION_ERROR'),
-      401: errorResponse(errorSchema, 'Y�u c?u dang nh?p', 'AUTH_REQUIRED'),
-      403: errorResponse(errorSchema, 'T�i kho?n d� b? c?m', 'ACCOUNT_BANNED'),
+      400: errorResponse(errorSchema, 'Danh sách ngày không hợp lệ', 'VALIDATION_ERROR'),
+      401: errorResponse(errorSchema, 'Yêu cầu đăng nhập', 'AUTH_REQUIRED'),
+      403: errorResponse(errorSchema, 'Tài khoản đã bị cấm', 'ACCOUNT_BANNED'),
       409: multipleErrorResponse(
         errorSchema,
-        'C?n diet preference PERIODIC v� �t nh?t m?t ng�y h?p l?',
+        'Cần diet preference PERIODIC và ít nhất một ngày hợp lệ',
         ['DIET_PREFERENCES_REQUIRED', 'DIET_SCHEDULE_NOT_APPLICABLE', 'DIET_SCHEDULE_REQUIRED'],
       ),
     },

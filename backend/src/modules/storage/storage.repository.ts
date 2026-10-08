@@ -1,7 +1,9 @@
+import { lockDocument } from '../../database/locking.js';
+import { z } from 'zod';
+import type { Prisma } from '@prisma/client';
 import {
   MediaAssetStatus,
   PostStatus,
-  Prisma,
   StorageReservationStatus,
   type MediaKind,
   type MediaResourceType,
@@ -223,7 +225,11 @@ export class StorageRepository {
         where: { userId },
         data: { reservedBytes },
       });
-      return { kind: 'released' as const, reservation: released, account: { ...account, reservedBytes } };
+      return {
+        kind: 'released' as const,
+        reservation: released,
+        account: { ...account, reservedBytes },
+      };
     });
   }
 
@@ -242,13 +248,16 @@ export class StorageRepository {
 
   async prepareAssetDeletion(userId: string, assetId: string, idempotencyKey: string) {
     return this.prisma.$transaction(async (transaction) => {
-      const rows = await transaction.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-        SELECT "id" FROM "media_assets" WHERE "id" = ${assetId}::uuid FOR UPDATE
-      `);
-      if (!rows[0]) return { kind: 'not-found' as const };
-      const asset = await transaction.mediaAsset.findFirst({ where: { id: assetId, ownerId: userId } });
+      const locked = await lockDocument(transaction, 'mediaAsset', { id: assetId });
+      if (!locked) return { kind: 'not-found' as const };
+      const asset = await transaction.mediaAsset.findFirst({
+        where: { id: assetId, ownerId: userId },
+      });
       if (!asset) return { kind: 'not-found' as const };
-      if (asset.status === MediaAssetStatus.DELETED || asset.status === MediaAssetStatus.PROVIDER_MISSING) {
+      if (
+        asset.status === MediaAssetStatus.DELETED ||
+        asset.status === MediaAssetStatus.PROVIDER_MISSING
+      ) {
         return asset.deletionIdempotencyKey === idempotencyKey
           ? { kind: 'deleted' as const, asset }
           : { kind: 'conflict' as const, asset };
@@ -266,7 +275,9 @@ export class StorageRepository {
         where: { assetId, customMeal: { deletedAt: null } },
       });
       if (customMealPhotoReferences > 0) return { kind: 'in-use' as const, asset };
-      const recognitionReferences = await transaction.recognitionInput.count({ where: { assetId } });
+      const recognitionReferences = await transaction.recognitionInput.count({
+        where: { assetId },
+      });
       if (recognitionReferences > 0) return { kind: 'in-use' as const, asset };
       const receiptReferences = await transaction.receiptInput.count({ where: { assetId } });
       if (receiptReferences > 0) return { kind: 'in-use' as const, asset };
@@ -282,9 +293,14 @@ export class StorageRepository {
     return this.prisma.$transaction(async (transaction) => {
       await this.ensureAccount(transaction, userId);
       const account = await this.lockAccount(transaction, userId);
-      const asset = await transaction.mediaAsset.findFirst({ where: { id: assetId, ownerId: userId } });
+      const asset = await transaction.mediaAsset.findFirst({
+        where: { id: assetId, ownerId: userId },
+      });
       if (!asset) return null;
-      if (asset.status === MediaAssetStatus.DELETED || asset.status === MediaAssetStatus.PROVIDER_MISSING) {
+      if (
+        asset.status === MediaAssetStatus.DELETED ||
+        asset.status === MediaAssetStatus.PROVIDER_MISSING
+      ) {
         return { asset, account };
       }
       const deleted = await transaction.mediaAsset.update({
@@ -306,33 +322,66 @@ export class StorageRepository {
 
   async listAccounts(query: StorageAccountListQuery) {
     if (query.overQuota !== undefined) {
-      const nameFilter = query.q
-        ? Prisma.sql`AND (position(lower(${query.q}) in lower(u."email")) > 0 OR position(lower(${query.q}) in lower(u."display_name")) > 0)`
-        : Prisma.empty;
-      const comparison = query.overQuota ? Prisma.sql`>` : Prisma.sql`<=`;
-      const filter = Prisma.sql`
-        FROM "storage_accounts" sa
-        JOIN "storage_policies" sp ON sp."id" = sa."policy_id"
-        JOIN "users" u ON u."id" = sa."user_id"
-        WHERE sa."used_bytes" + sa."reserved_bytes" ${comparison} sp."quota_bytes" + sa."quota_adjustment_bytes"
-        ${nameFilter}
-      `;
-      return this.prisma.$transaction(async (transaction) => {
-        const [count] = await transaction.$queryRaw<Array<{ total: number }>>(
-          Prisma.sql`SELECT count(*)::int AS total ${filter}`,
-        );
-        const page = await transaction.$queryRaw<Array<{ userId: string }>>(
-          Prisma.sql`SELECT sa."user_id" AS "userId" ${filter}
-            ORDER BY sa."used_bytes" DESC, sa."user_id" ASC
-            LIMIT ${query.limit} OFFSET ${(query.page - 1) * query.limit}`,
-        );
-        const records = await transaction.storageAccount.findMany({
-          where: { userId: { in: page.map((row) => row.userId) } },
-          include: accountInclude,
-          orderBy: [{ usedBytes: 'desc' }, { userId: 'asc' }],
+      const comparison = query.overQuota ? '$gt' : '$lte';
+      const pipeline: Prisma.InputJsonObject[] = [
+        {
+          $lookup: {
+            from: 'storage_policies',
+            localField: 'policy_id',
+            foreignField: '_id',
+            as: 'policy',
+          },
+        },
+        { $unwind: '$policy' },
+        { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'user' } },
+        { $unwind: '$user' },
+        {
+          $match: {
+            $expr: {
+              [comparison]: [
+                { $add: ['$used_bytes', '$reserved_bytes'] },
+                { $add: ['$policy.quota_bytes', '$quota_adjustment_bytes'] },
+              ],
+            },
+          },
+        },
+      ];
+      if (query.q) {
+        const regex = query.q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        pipeline.push({
+          $match: {
+            $or: [
+              { 'user.email': { $regex: regex, $options: 'i' } },
+              { 'user.display_name': { $regex: regex, $options: 'i' } },
+            ],
+          },
         });
-        return { records, total: count?.total ?? 0 };
+      }
+      pipeline.push({
+        $facet: {
+          total: [{ $count: 'count' }],
+          records: [
+            { $sort: { used_bytes: -1, _id: 1 } },
+            { $skip: (query.page - 1) * query.limit },
+            { $limit: query.limit },
+            { $project: { _id: 0, userId: '$_id' } },
+          ],
+        },
       });
+      const result = z
+        .array(
+          z.object({
+            total: z.array(z.object({ count: z.number() })),
+            records: z.array(z.object({ userId: z.string() })),
+          }),
+        )
+        .parse(await this.prisma.storageAccount.aggregateRaw({ pipeline }))[0];
+      const records = await this.prisma.storageAccount.findMany({
+        where: { userId: { in: result?.records.map((row) => row.userId) ?? [] } },
+        include: accountInclude,
+        orderBy: [{ usedBytes: 'desc' }, { userId: 'asc' }],
+      });
+      return { records, total: result?.total[0]?.count ?? 0 };
     }
     const where: Prisma.StorageAccountWhereInput = {
       ...(query.q
@@ -346,30 +395,34 @@ export class StorageRepository {
           }
         : {}),
     };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.storageAccount.findMany({
-        where,
-        include: accountInclude,
-        orderBy: [{ usedBytes: 'desc' }, { userId: 'asc' }],
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-      this.prisma.storageAccount.count({ where }),
-    ]);
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.storageAccount.findMany({
+          where,
+          include: accountInclude,
+          orderBy: [{ usedBytes: 'desc' }, { userId: 'asc' }],
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+        transaction.storageAccount.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 
   async listPolicies(query: StoragePolicyListQuery) {
     const where = query.active === undefined ? {} : { active: query.active };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.storagePolicy.findMany({
-        where,
-        orderBy: [{ isDefault: 'desc' }, { code: 'asc' }],
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-      this.prisma.storagePolicy.count({ where }),
-    ]);
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.storagePolicy.findMany({
+          where,
+          orderBy: [{ isDefault: 'desc' }, { code: 'asc' }],
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+        transaction.storagePolicy.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 
@@ -442,15 +495,17 @@ export class StorageRepository {
 
   async listAdjustments(query: StorageAdjustmentListQuery) {
     const where = query.userId ? { userId: query.userId } : {};
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.storageAdjustment.findMany({
-        where,
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-      this.prisma.storageAdjustment.count({ where }),
-    ]);
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.storageAdjustment.findMany({
+          where,
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+        transaction.storageAdjustment.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 
@@ -466,7 +521,9 @@ export class StorageRepository {
       for (const candidate of candidates) {
         await this.ensureAccount(transaction, candidate.userId);
         const account = await this.lockAccount(transaction, candidate.userId);
-        const current = await transaction.storageReservation.findUnique({ where: { id: candidate.id } });
+        const current = await transaction.storageReservation.findUnique({
+          where: { id: candidate.id },
+        });
         if (!current || current.status !== StorageReservationStatus.RESERVED) continue;
         await this.expireReservation(transaction, current);
         await transaction.storageAccount.update({
@@ -516,15 +573,16 @@ export class StorageRepository {
     metadata: ProviderAssetMetadata | null,
   ): Promise<void> {
     await this.prisma.$transaction(async (transaction) => {
-      const rows = await transaction.$queryRaw<Array<{ id: string }>>(Prisma.sql`
-        SELECT "id" FROM "media_assets" WHERE "id" = ${assetId}::uuid FOR UPDATE
-      `);
-      if (!rows[0]) return;
+      const locked = await lockDocument(transaction, 'mediaAsset', { id: assetId });
+      if (!locked) return;
       const asset = await transaction.mediaAsset.findUniqueOrThrow({ where: { id: assetId } });
       await this.ensureAccount(transaction, asset.ownerId);
       const account = await this.lockAccount(transaction, asset.ownerId);
       if (!metadata) {
-        if (!([MediaAssetStatus.ACTIVE, MediaAssetStatus.DELETING] as string[]).includes(asset.status)) return;
+        if (
+          !([MediaAssetStatus.ACTIVE, MediaAssetStatus.DELETING] as string[]).includes(asset.status)
+        )
+          return;
         await transaction.mediaAsset.update({
           where: { id: asset.id },
           data: {
@@ -555,44 +613,47 @@ export class StorageRepository {
           reconciledAt: new Date(),
         },
       });
-      await transaction.storageAccount.update({ where: { userId: asset.ownerId }, data: { usedBytes } });
+      await transaction.storageAccount.update({
+        where: { userId: asset.ownerId },
+        data: { usedBytes },
+      });
     });
   }
 
-  private async ensureAccount(transaction: Prisma.TransactionClient, userId: string): Promise<void> {
+  private async ensureAccount(
+    transaction: Prisma.TransactionClient,
+    userId: string,
+  ): Promise<void> {
     const policy = await transaction.storagePolicy.findFirst({
       where: { isDefault: true, active: true },
       orderBy: { createdAt: 'asc' },
     });
     if (!policy) throw new Error('No active default storage policy');
-    await transaction.$executeRaw(Prisma.sql`
-      INSERT INTO "storage_accounts" ("user_id", "policy_id")
-      VALUES (${userId}::uuid, ${policy.id}::uuid)
-      ON CONFLICT ("user_id") DO NOTHING
-    `);
+    await transaction.storageAccount.upsert({
+      where: { userId },
+      create: { userId, policyId: policy.id },
+      update: {},
+    });
   }
 
   private async lockAccount(
     transaction: Prisma.TransactionClient,
     userId: string,
   ): Promise<LockedAccountRow> {
-    const rows = await transaction.$queryRaw<LockedAccountRow[]>(Prisma.sql`
-      SELECT
-        sa."user_id" AS "userId",
-        sa."used_bytes" AS "usedBytes",
-        sa."reserved_bytes" AS "reservedBytes",
-        sa."quota_adjustment_bytes" AS "quotaAdjustmentBytes",
-        sp."quota_bytes" AS "quotaBytes",
-        sp."warning_percent" AS "warningPercent",
-        sp."reservation_ttl_seconds" AS "reservationTtlSeconds"
-      FROM "storage_accounts" sa
-      JOIN "storage_policies" sp ON sp."id" = sa."policy_id"
-      WHERE sa."user_id" = ${userId}::uuid
-      FOR UPDATE OF sa
-    `);
-    const account = rows[0];
-    if (!account) throw new Error('Storage account was not created');
-    return account;
+    await lockDocument(transaction, 'storageAccount', { userId });
+    const account = await transaction.storageAccount.findUniqueOrThrow({
+      where: { userId },
+      include: { policy: true },
+    });
+    return {
+      userId,
+      usedBytes: account.usedBytes,
+      reservedBytes: account.reservedBytes,
+      quotaAdjustmentBytes: account.quotaAdjustmentBytes,
+      quotaBytes: account.policy.quotaBytes,
+      warningPercent: account.policy.warningPercent,
+      reservationTtlSeconds: account.policy.reservationTtlSeconds,
+    };
   }
 
   private async expireOwnedReservations(
@@ -609,7 +670,10 @@ export class StorageRepository {
     if (expired.length === 0) return account;
     const released = expired.reduce((sum, item) => sum + item.declaredBytes, 0n);
     await transaction.storageReservation.updateMany({
-      where: { id: { in: expired.map((item) => item.id) }, status: StorageReservationStatus.RESERVED },
+      where: {
+        id: { in: expired.map((item) => item.id) },
+        status: StorageReservationStatus.RESERVED,
+      },
       data: {
         status: StorageReservationStatus.EXPIRED,
         releasedAt: new Date(),
@@ -617,14 +681,14 @@ export class StorageRepository {
       },
     });
     const reservedBytes = this.subtractFloor(account.reservedBytes, released);
-    await transaction.storageAccount.update({ where: { userId: account.userId }, data: { reservedBytes } });
+    await transaction.storageAccount.update({
+      where: { userId: account.userId },
+      data: { reservedBytes },
+    });
     return { ...account, reservedBytes };
   }
 
-  private expireReservation(
-    transaction: Prisma.TransactionClient,
-    reservation: { id: string },
-  ) {
+  private expireReservation(transaction: Prisma.TransactionClient, reservation: { id: string }) {
     return transaction.storageReservation.update({
       where: { id: reservation.id },
       data: {

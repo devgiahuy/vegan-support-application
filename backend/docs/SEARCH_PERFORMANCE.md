@@ -1,6 +1,19 @@
 # Search v1 — Index and Query-Plan Evidence
 
-**Verified:** 2026-09-15
+**Updated:** 2026-10-07
+
+## Current MongoDB implementation
+
+Persistence now uses MongoDB 7 replica sets. `content-search.mongo.ts` performs native collection joins,
+hard dietary predicates, weighted search and pg_trgm-style padded word similarity before pagination.
+Related scoring retains category/ingredient/tag weights 5/4/3. Foreign-key and structured-filter indexes
+are provisioned by `npm run prisma:push`. Substring search and similarity are aggregation expressions;
+they do not use a PostgreSQL GIN index. Seed-level correctness checks do not establish production latency.
+Use MongoDB `explain("executionStats")` and representative workloads before making performance claims.
+
+## Historical PostgreSQL evidence (2026-09-15)
+
+The evidence below describes the archived PostgreSQL implementation, not the current query plan.
 
 ## Strategy
 

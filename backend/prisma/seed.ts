@@ -1,3 +1,4 @@
+import { createPrismaClient } from '../src/database/client.js';
 import 'dotenv/config';
 import {
   ActivityLevel,
@@ -35,7 +36,6 @@ import {
   PostStatus,
   PostType,
   PracticeSchedule,
-  PrismaClient,
   RecipeDifficulty,
   RestaurantSource,
   RestaurantStatus,
@@ -58,7 +58,7 @@ import { normalizeVietnameseText } from '../src/modules/catalog/catalog.normaliz
 import { seedScenarioData } from './seed-scenarios.js';
 import { seedComprehensiveData } from './seed-data/seeder.js';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const passwordService = new PasswordService();
 const dietRuleSetVersion = 1;
 
@@ -767,52 +767,54 @@ async function main(): Promise<void> {
     passwordService.hash(seedEnvironment.SEED_ADMIN_PASSWORD),
   ]);
 
-  await prisma.$transaction([
-    prisma.user.upsert({
-      where: { email: seedEnvironment.SEED_MEMBER_EMAIL.toLowerCase() },
-      update: {
-        passwordHash: memberPasswordHash,
-        displayName: 'Demo Member',
-        role: Role.MEMBER,
-        status: UserStatus.ACTIVE,
-      },
-      create: {
-        email: seedEnvironment.SEED_MEMBER_EMAIL.toLowerCase(),
-        passwordHash: memberPasswordHash,
-        displayName: 'Demo Member',
-        role: Role.MEMBER,
-        status: UserStatus.ACTIVE,
-      },
-    }),
-    prisma.user.upsert({
-      where: { email: seedEnvironment.SEED_ADMIN_EMAIL.toLowerCase() },
-      update: {
-        passwordHash: adminPasswordHash,
-        displayName: 'Demo Admin',
-        role: Role.ADMIN,
-        status: UserStatus.ACTIVE,
-      },
-      create: {
-        email: seedEnvironment.SEED_ADMIN_EMAIL.toLowerCase(),
-        passwordHash: adminPasswordHash,
-        displayName: 'Demo Admin',
-        role: Role.ADMIN,
-        status: UserStatus.ACTIVE,
-      },
-    }),
-    ...dietRuleDefinitions.map((definition) =>
-      prisma.dietRuleDefinition.upsert({
-        where: {
-          code_ruleSetVersion: {
-            code: definition.code,
-            ruleSetVersion: dietRuleSetVersion,
-          },
+  await prisma.$transaction(async (transaction) =>
+    Promise.all([
+      transaction.user.upsert({
+        where: { email: seedEnvironment.SEED_MEMBER_EMAIL.toLowerCase() },
+        update: {
+          passwordHash: memberPasswordHash,
+          displayName: 'Demo Member',
+          role: Role.MEMBER,
+          status: UserStatus.ACTIVE,
         },
-        update: { ...definition, active: true },
-        create: { ...definition, ruleSetVersion: dietRuleSetVersion, active: true },
+        create: {
+          email: seedEnvironment.SEED_MEMBER_EMAIL.toLowerCase(),
+          passwordHash: memberPasswordHash,
+          displayName: 'Demo Member',
+          role: Role.MEMBER,
+          status: UserStatus.ACTIVE,
+        },
       }),
-    ),
-  ]);
+      transaction.user.upsert({
+        where: { email: seedEnvironment.SEED_ADMIN_EMAIL.toLowerCase() },
+        update: {
+          passwordHash: adminPasswordHash,
+          displayName: 'Demo Admin',
+          role: Role.ADMIN,
+          status: UserStatus.ACTIVE,
+        },
+        create: {
+          email: seedEnvironment.SEED_ADMIN_EMAIL.toLowerCase(),
+          passwordHash: adminPasswordHash,
+          displayName: 'Demo Admin',
+          role: Role.ADMIN,
+          status: UserStatus.ACTIVE,
+        },
+      }),
+      ...dietRuleDefinitions.map((definition) =>
+        transaction.dietRuleDefinition.upsert({
+          where: {
+            code_ruleSetVersion: {
+              code: definition.code,
+              ruleSetVersion: dietRuleSetVersion,
+            },
+          },
+          update: { ...definition, active: true },
+          create: { ...definition, ruleSetVersion: dietRuleSetVersion, active: true },
+        }),
+      ),
+    ]),
+  );
 
   for (const allergen of allergenDefinitions) {
     await prisma.allergenDefinition.upsert({
@@ -984,7 +986,9 @@ async function main(): Promise<void> {
         kind: ContributorApprovalBasis.ADMIN_INVITED,
         capturedAt: '2026-09-15T00:00:00.000Z',
         snapshotVersion: 'seed-admin-invitation-v1',
+        inviter: { id: admin.id, displayName: admin.displayName },
         invitationReason: 'Seed profile for equal-permission verification acceptance.',
+        verificationStatus: 'ADMIN_INVITATION_RECORDED',
       },
     },
   ] as const;

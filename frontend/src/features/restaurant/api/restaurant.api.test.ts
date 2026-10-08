@@ -42,6 +42,16 @@ const listResponse: RestaurantListResponseDto = {
 };
 
 describe('restaurantApi — discovery theo chế độ', () => {
+  it('chuyển AbortSignal tới request để hủy lượt tìm cũ', async () => {
+    const spy = vi.spyOn(api, 'get').mockResolvedValueOnce({ data: listResponse });
+    const controller = new AbortController();
+    await restaurantApi.getNearby(state({ lat: 10.875, lng: 106.8, page: 2, limit: 20 }), controller.signal);
+    expect(spy).toHaveBeenCalledWith(API_ENDPOINTS.RESTAURANTS.NEARBY, {
+      params: { radiusMeters: 5000, lat: 10.875, lng: 106.8, page: 2, limit: 20 },
+      silent: true,
+      signal: controller.signal,
+    });
+  });
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -90,7 +100,7 @@ describe('restaurantApi — discovery theo chế độ', () => {
     );
 
     expect(spy).toHaveBeenCalledWith(API_ENDPOINTS.RESTAURANTS.SEARCH, {
-      params: { radiusMeters: 2000, q: 'phở' },
+      params: { radiusMeters: 2000, q: 'phở', lat: 10.8214, lng: 106.6381 },
       silent: true,
     });
     expect(result.restaurants).toHaveLength(1);
