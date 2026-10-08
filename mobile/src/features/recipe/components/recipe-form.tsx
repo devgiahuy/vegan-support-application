@@ -6,6 +6,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { CategoryType, RecipeDifficulty } from '@/common/enums';
 import { CategoryFilterPills } from '@/features/category/components/category-filter-pills';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
+import { IngredientPicker, type IngredientPickerValue } from '@/features/ingredient/components/ingredient-picker';
 import type { CreateRecipeIngredientInput, CreateRecipeInput } from '../api/recipe.api';
 import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
@@ -16,6 +17,8 @@ const DIFFICULTY_OPTIONS: { value: RecipeDifficulty; label: string }[] = [
   { value: RecipeDifficulty.HARD, label: 'Nâng cao' },
 ];
 
+const MIN_BODY_LENGTH = 20;
+
 function splitTags(value: string): string[] {
   return value.split(',').map((t) => t.trim()).filter(Boolean).slice(0, 15);
 }
@@ -24,10 +27,15 @@ interface DraftIngredient extends CreateRecipeIngredientInput {
   key: string;
 }
 
+interface DraftStep {
+  key: string;
+  instruction: string;
+  duration: string;
+}
+
 export interface RecipeFormInitial {
   title?: string;
   excerpt?: string;
-  body?: string;
   tags?: string[];
   categoryId?: string | null;
   servings?: number;
@@ -36,12 +44,23 @@ export interface RecipeFormInitial {
   difficulty?: RecipeDifficulty;
   calories?: number;
   protein?: number;
-  ingredients?: { displayName: string; amount: number; unit: string }[];
+  ingredients?: { displayName: string; amount: number; unit: string; ingredientId?: string | null }[];
+  steps?: { instruction: string; durationMinutes?: number | null }[];
+}
+
+function toDraftSteps(initial: RecipeFormInitial['steps']): DraftStep[] {
+  if (!initial || initial.length === 0) return [{ key: 'step-0', instruction: '', duration: '' }];
+  return initial.map((step, index) => ({
+    key: `step-${index}`,
+    instruction: step.instruction,
+    duration: step.durationMinutes ? String(step.durationMinutes) : '',
+  }));
 }
 
 /**
- * Form dùng chung cho đăng công thức mới và sửa công thức của chính mình — chỉ khác
- * nhau ở `initial` (giá trị điền sẵn) và `onSubmit`/`submitLabel` do màn gọi cung cấp.
+ * Form dùng chung cho đăng công thức mới và sửa công thức của chính mình. Nguyên liệu có thể liên kết với
+ * nguyên liệu chuẩn (gợi ý tìm kiếm) để backend tính dinh dưỡng và kiểm tra chế độ ăn/dị ứng chính xác hơn;
+ * các bước nấu được nhập từng bước.
  */
 export function RecipeForm({
   initial,
@@ -58,7 +77,6 @@ export function RecipeForm({
 
   const [title, setTitle] = React.useState(initial?.title ?? '');
   const [excerpt, setExcerpt] = React.useState(initial?.excerpt ?? '');
-  const [body, setBody] = React.useState(initial?.body ?? '');
   const [tags, setTags] = React.useState(initial?.tags?.join(', ') ?? '');
   const [categoryId, setCategoryId] = React.useState<string | null>(initial?.categoryId ?? null);
   const [servings, setServings] = React.useState(String(initial?.servings ?? 4));
@@ -69,13 +87,13 @@ export function RecipeForm({
   const [protein, setProtein] = React.useState(initial?.protein ? String(initial.protein) : '');
 
   const [ingredients, setIngredients] = React.useState<DraftIngredient[]>(
-    initial?.ingredients?.length
-      ? initial.ingredients.map((ing, idx) => ({ key: `initial-${idx}`, ...ing }))
-      : [{ key: '1', displayName: '', amount: 0, unit: '' }]
+    (initial?.ingredients ?? []).map((ing, idx) => ({ key: `initial-${idx}`, ...ing }))
   );
-  const [ingName, setIngName] = React.useState('');
+  const [ingredient, setIngredient] = React.useState<IngredientPickerValue>({ displayName: '', ingredientId: null });
   const [ingAmount, setIngAmount] = React.useState('');
   const [ingUnit, setIngUnit] = React.useState('');
+
+  const [steps, setSteps] = React.useState<DraftStep[]>(() => toDraftSteps(initial?.steps));
 
   const {
     data: categoryTree = [],
@@ -85,7 +103,7 @@ export function RecipeForm({
   } = useCategoryTreeQuery(CategoryType.RECIPE_GROUP);
 
   const addIngredient = () => {
-    const name = ingName.trim();
+    const name = ingredient.displayName.trim();
     const amountNum = Number(ingAmount.replace(',', '.'));
     const unit = ingUnit.trim();
     if (!name || !unit || !Number.isFinite(amountNum) || amountNum <= 0) {
@@ -93,10 +111,10 @@ export function RecipeForm({
       return;
     }
     setIngredients((prev) => [
-      ...prev.filter((i) => i.displayName.trim().length > 0),
-      { key: `${Date.now()}`, displayName: name, amount: amountNum, unit },
+      ...prev,
+      { key: `${Date.now()}`, displayName: name, amount: amountNum, unit, ingredientId: ingredient.ingredientId },
     ]);
-    setIngName('');
+    setIngredient({ displayName: '', ingredientId: null });
     setIngAmount('');
     setIngUnit('');
   };
@@ -105,25 +123,29 @@ export function RecipeForm({
     setIngredients((prev) => prev.filter((i) => i.key !== key));
   };
 
+  const updateStep = (key: string, patch: Partial<DraftStep>) => {
+    setSteps((prev) => prev.map((step) => (step.key === key ? { ...step, ...patch } : step)));
+  };
+
   const submit = () => {
     const cleanTitle = title.trim();
-    const cleanBody = body.trim();
-    const validIngredients = ingredients.filter(
-      (i) => i.displayName.trim().length > 0 && i.amount > 0 && i.unit.trim().length > 0
-    );
+    const validSteps = steps
+      .map((step) => ({ instruction: step.instruction.trim(), duration: Number(step.duration) }))
+      .filter((step) => step.instruction.length > 0);
     const servingsNum = Math.trunc(Number(servings));
     const prepNum = Math.trunc(Number(prepTime));
     const cookNum = Math.trunc(Number(cookTime));
+    const bodyLength = validSteps.reduce((total, step) => total + step.instruction.length, 0);
 
     if (cleanTitle.length < 3) {
       Alert.alert('Thiếu tiêu đề', 'Tiêu đề công thức cần ít nhất 3 ký tự.');
       return;
     }
-    if (cleanBody.length < 20) {
-      Alert.alert('Thiếu hướng dẫn', 'Cách chế biến cần mô tả ít nhất 20 ký tự.');
+    if (validSteps.length === 0 || bodyLength < MIN_BODY_LENGTH) {
+      Alert.alert('Thiếu hướng dẫn', `Các bước chế biến cần mô tả ít nhất ${MIN_BODY_LENGTH} ký tự.`);
       return;
     }
-    if (validIngredients.length === 0) {
+    if (ingredients.length === 0) {
       Alert.alert('Thiếu nguyên liệu', 'Vui lòng thêm ít nhất một nguyên liệu.');
       return;
     }
@@ -139,7 +161,6 @@ export function RecipeForm({
     onSubmit({
       title: cleanTitle,
       excerpt: excerpt.trim() || undefined,
-      body: cleanBody,
       categoryIds: categoryId ? [categoryId] : undefined,
       tags: splitTags(tags),
       servings: servingsNum,
@@ -150,7 +171,16 @@ export function RecipeForm({
         calories: calories.trim() ? Number(calories) : undefined,
         proteinGrams: protein.trim() ? Number(protein) : undefined,
       },
-      ingredients: validIngredients.map(({ displayName, amount, unit }) => ({ displayName, amount, unit })),
+      ingredients: ingredients.map(({ displayName, amount, unit, ingredientId }) => ({
+        displayName,
+        amount,
+        unit,
+        ...(ingredientId ? { ingredientId } : {}),
+      })),
+      steps: validSteps.map((step) => ({
+        instruction: step.instruction,
+        ...(Number.isFinite(step.duration) && step.duration > 0 ? { durationMinutes: Math.trunc(step.duration) } : {}),
+      })),
     });
   };
 
@@ -255,44 +285,41 @@ export function RecipeForm({
 
         <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
           <Text className="text-xs font-bold uppercase text-muted-foreground">Nguyên liệu</Text>
-          {ingredients.filter((i) => i.displayName.trim().length > 0).length > 0 ? (
+          {ingredients.length > 0 ? (
             <View className="gap-1.5">
-              {ingredients
-                .filter((i) => i.displayName.trim().length > 0)
-                .map((i) => (
-                  <View key={i.key} className="flex-row items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
-                    <Text className="flex-1 text-xs text-foreground">
+              {ingredients.map((i) => (
+                <View key={i.key} className="flex-row items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
+                  <View className="flex-1">
+                    <Text className="text-xs text-foreground">
                       {i.displayName} — {i.amount} {i.unit}
                     </Text>
-                    <Pressable onPress={() => removeIngredient(i.key)}>
-                      <Trash2 size={14} color={colors.destructive} />
-                    </Pressable>
+                    <Text className="text-[10px] text-muted-foreground">
+                      {i.ingredientId ? 'Nguyên liệu chuẩn' : 'Tên tự nhập'}
+                    </Text>
                   </View>
-                ))}
+                  <Pressable onPress={() => removeIngredient(i.key)}>
+                    <Trash2 size={14} color={colors.destructive} />
+                  </Pressable>
+                </View>
+              ))}
             </View>
           ) : null}
+          <IngredientPicker placeholder="Tên nguyên liệu" value={ingredient} onChange={setIngredient} />
           <View className="flex-row gap-2">
             <TextInput
-              value={ingName}
-              onChangeText={setIngName}
-              placeholder="Tên nguyên liệu"
+              value={ingAmount}
+              onChangeText={setIngAmount}
+              placeholder="Số lượng"
+              keyboardType="numeric"
               placeholderTextColor={colors.mutedForeground}
               className="flex-1 rounded-xl border border-input bg-background px-2.5 py-2.5 text-sm text-foreground"
             />
             <TextInput
-              value={ingAmount}
-              onChangeText={setIngAmount}
-              placeholder="SL"
-              keyboardType="numeric"
-              placeholderTextColor={colors.mutedForeground}
-              className="w-16 rounded-xl border border-input bg-background px-2.5 py-2.5 text-sm text-foreground"
-            />
-            <TextInput
               value={ingUnit}
               onChangeText={setIngUnit}
-              placeholder="Đơn vị"
+              placeholder="Đơn vị (g, muỗng...)"
               placeholderTextColor={colors.mutedForeground}
-              className="w-20 rounded-xl border border-input bg-background px-2.5 py-2.5 text-sm text-foreground"
+              className="flex-1 rounded-xl border border-input bg-background px-2.5 py-2.5 text-sm text-foreground"
             />
           </View>
           <PrimaryButton
@@ -303,16 +330,42 @@ export function RecipeForm({
           />
         </View>
 
-        <View>
-          <Text className="mb-1.5 text-xs font-bold uppercase text-muted-foreground">Cách chế biến</Text>
-          <TextInput
-            value={body}
-            onChangeText={setBody}
-            multiline
-            placeholder="Mô tả từng bước nấu, mẹo và lưu ý dinh dưỡng..."
-            placeholderTextColor={colors.mutedForeground}
-            className="min-h-32 rounded-2xl border border-input bg-card px-3.5 py-3 text-sm leading-relaxed text-foreground"
-            textAlignVertical="top"
+        <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
+          <Text className="text-xs font-bold uppercase text-muted-foreground">Các bước chế biến</Text>
+          {steps.map((step, index) => (
+            <View key={step.key} className="gap-2 rounded-xl border border-border bg-card p-3">
+              <View className="flex-row items-center justify-between">
+                <Text className="text-xs font-semibold text-foreground">Bước {index + 1}</Text>
+                {steps.length > 1 ? (
+                  <Pressable onPress={() => setSteps((prev) => prev.filter((item) => item.key !== step.key))}>
+                    <Trash2 size={14} color={colors.destructive} />
+                  </Pressable>
+                ) : null}
+              </View>
+              <TextInput
+                value={step.instruction}
+                onChangeText={(value) => updateStep(step.key, { instruction: value })}
+                multiline
+                placeholder="Mô tả bước này, ví dụ: Phi thơm hành, cho nấm vào xào lửa lớn..."
+                placeholderTextColor={colors.mutedForeground}
+                textAlignVertical="top"
+                className="min-h-20 rounded-xl border border-input bg-background px-3 py-2.5 text-sm leading-relaxed text-foreground"
+              />
+              <TextInput
+                value={step.duration}
+                onChangeText={(value) => updateStep(step.key, { duration: value })}
+                keyboardType="numeric"
+                placeholder="Thời gian (phút, không bắt buộc)"
+                placeholderTextColor={colors.mutedForeground}
+                className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground"
+              />
+            </View>
+          ))}
+          <PrimaryButton
+            label="Thêm bước"
+            variant="outline"
+            icon={<PlusCircle size={16} color={colors.foreground} />}
+            onPress={() => setSteps((prev) => [...prev, { key: `step-${Date.now()}`, instruction: '', duration: '' }])}
           />
         </View>
 

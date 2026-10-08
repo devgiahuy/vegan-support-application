@@ -13,6 +13,15 @@ export interface RecipeIngredientDto {
   resolutionStatus?: string;
 }
 
+export interface RecipeStepDto {
+  id?: string;
+  position?: number;
+  instruction?: string;
+  durationMinutes?: number | null;
+  temperatureCelsius?: number | null;
+  cookingMethod?: { id?: string; name?: string } | null;
+}
+
 export interface TraditionWarningDto {
   tradition?: string;
   warningCode?: string;
@@ -46,6 +55,7 @@ export interface RecipeDetailDto extends BasePostDto {
     traditionWarnings?: TraditionWarningDto[];
     dietCompatibilities?: DietCompatibilityDto[];
     ingredients?: RecipeIngredientDto[];
+    steps?: (RecipeStepDto | null)[];
   } | null;
 }
 

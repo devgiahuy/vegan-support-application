@@ -33,10 +33,15 @@ export interface MealWarning {
   id: string;
   code: string;
   title: string;
+  detail: string;
+  suggestion: string | null;
   severity: MealWarningSeverity;
+  severityLabel: string;
   scope: MealWarningScope;
+  scopeLabel: string;
   targetDate: string;
   mealType: string | null;
+  targetComparison: 'ABOVE' | 'BELOW' | null;
   evidenceGrade: EvidenceGrade;
   evidenceGradeLabel: string;
   evidenceSource: string;
@@ -56,11 +61,45 @@ export interface AnalysisSummary {
   totalWarnings: number;
   dangerCount: number;
   warningCount: number;
+  userStatus: string;
+  title: string;
+  detail: string;
+  advisoryCount: number;
+  hardConstraintViolationCount: number;
+  hardConstraintsPreserved: boolean;
   dailyLimitViolations: number;
   compatibilityViolations: number;
   sameDishCount: number;
   sameMealCount: number;
   sameDayCount: number;
+}
+
+export interface MacroTargets {
+  proteinGrams: number;
+  fiberGrams: number;
+  fatGrams: number;
+  carbohydrateGrams: number;
+}
+
+export interface DayEstimatedNutrition {
+  date: string;
+  totals: {
+    proteinGrams: number | null;
+    fiberGrams: number | null;
+    fatGrams: number | null;
+    carbohydrateGrams: number | null;
+  };
+  confidence: number;
+  uncertaintyNotes: string[];
+}
+
+export interface EstimatedNutritionAnalysis {
+  estimated: boolean;
+  targetSource: string;
+  targetSourceDetail: string;
+  tolerancePercent: number;
+  targets: MacroTargets;
+  days: DayEstimatedNutrition[];
 }
 
 export interface MealPlanAnalysis {
@@ -76,4 +115,5 @@ export interface MealPlanAnalysis {
   incompleteDataNotes: string | null;
   summary: AnalysisSummary;
   warnings: MealWarning[];
+  estimatedNutrition: EstimatedNutritionAnalysis | null;
 }

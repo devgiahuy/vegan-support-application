@@ -1,6 +1,6 @@
 # MongoDB persistence migration
 
-**Updated:** 2026-10-07
+**Updated:** 2026-10-08
 **Scope:** User-approved replacement of PostgreSQL with MongoDB for the current backend. Historical data preservation is optional and is not an acceptance gate. Product scope and existing release limitations remain unchanged.
 
 ## Architecture and affected behavior

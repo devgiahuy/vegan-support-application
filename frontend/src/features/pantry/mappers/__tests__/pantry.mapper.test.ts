@@ -377,5 +377,40 @@ describe('PantryMapper Unit Tests', () => {
       expect(mergeDto.items).toHaveLength(2);
       expect(mergeDto.idempotencyKey).toBe('idem-merge-1');
     });
+
+    it('consumes backend expiryStatus, daysUntilExpiry, and expiryStatusAsOf correctly', () => {
+      const model = pantryMapper.toModel({
+        id: 'item-alert-1',
+        ingredient: { id: 'ing-1', name: 'Rau bó xôi' },
+        unmatchedText: null,
+        quantity: 100,
+        unit: 'g',
+        conversion: {
+          status: 'EXACT',
+          normalizedGrams: 100,
+          source: 'SYSTEM',
+          version: '1.0',
+          confidence: 1,
+        },
+        source: 'MANUAL',
+        confidence: 1,
+        confirmationStatus: 'CONFIRMED',
+        purchasedAt: '2026-09-20',
+        openedAt: '2026-09-25',
+        expiresAt: '2026-10-04',
+        freshnessNote: null,
+        expiryStatus: 'ALERT',
+        daysUntilExpiry: 1,
+        expiryStatusAsOf: '2026-10-03',
+        version: 1,
+      });
+
+      expect(model.backendExpiryStatus).toBe('ALERT');
+      expect(model.daysUntilExpiry).toBe(1);
+      expect(model.expiryStatusAsOf).toBe('2026-10-03');
+      expect(model.expiryStatus).toBe('ALERT');
+      expect(model.expiryBadgeVariant).toBe('destructive');
+      expect(model.expiryBadgeLabel).toContain('Cảnh báo khẩn');
+    });
   });
 });

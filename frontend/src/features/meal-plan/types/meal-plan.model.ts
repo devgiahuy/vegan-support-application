@@ -9,6 +9,7 @@ export interface MealSlot {
   mealTypeLabel: string;
   filled: boolean;
   unfilledReason: string | null;
+  unresolvedCode: string | null;
   recipeId: string;
   recipeTitle: string;
   sourceType: 'RECIPE' | 'CUSTOM_MEAL';
@@ -21,7 +22,65 @@ export interface MealSlot {
   protein: number;
   carbs: number;
   fat: number;
+  fiber: number;
   servings: number;
+}
+
+export interface DayEstimatedTotals {
+  proteinGrams: number | null;
+  fiberGrams: number | null;
+  fatGrams: number | null;
+  carbohydrateGrams: number | null;
+  estimated: boolean;
+  confidence: number;
+  uncertaintyNotes: string[];
+}
+
+export interface MealPlanDay {
+  date: string;
+  dayOfWeek: string;
+  dayOfWeekLabel: string;
+  slots: {
+    breakfast: MealSlot | null;
+    lunch: MealSlot | null;
+    dinner: MealSlot | null;
+  };
+  estimatedTotals: DayEstimatedTotals | null;
+}
+
+export interface EstimatedNutritionTargets {
+  proteinGrams: number | null;
+  fiberGrams: number | null;
+  fatGrams: number | null;
+  carbohydrateGrams: number | null;
+  estimated: boolean;
+  source: string;
+  sourceDetail: string;
+  tolerancePercent: number;
+}
+
+export interface PlanWarningAffectedSlot {
+  itemId?: string;
+  date: string;
+  mealType: string;
+}
+
+export interface PlanWarningDetail {
+  code: string;
+  severity: string;
+  severityLabel: string;
+  title: string;
+  detail: string;
+  suggestion: string | null;
+  affectedSlots: PlanWarningAffectedSlot[];
+}
+
+export interface PlanUserSummary {
+  status: string;
+  title: string;
+  detail: string;
+  suggestion: string | null;
+  hardConstraintsPreserved: boolean;
 }
 
 /** Dòng danh sách đi chợ đã gộp. */
@@ -59,8 +118,12 @@ export interface MealPlan {
   filledSlots: number;
   totalSlots: number;
   items: MealSlot[];
+  days: MealPlanDay[];
+  estimatedNutritionTargets: EstimatedNutritionTargets | null;
   shoppingList: ShoppingListItem[];
   warnings: PlanWarning[];
+  warningDetails: PlanWarningDetail[];
+  userSummary: PlanUserSummary | null;
   nutritionDataQuality: NutritionDataQuality;
   nutritionDataQualityLabel: string;
   vitaminB12Mcg: number | null;

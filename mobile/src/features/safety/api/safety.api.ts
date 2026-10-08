@@ -7,7 +7,7 @@ import type { DeletionResult, SubmitReportInput, ViolationReport } from '../type
 export const safetyApi = {
   submitReport: async (input: SubmitReportInput): Promise<ViolationReport> => {
     const payload = safetyMapper.toSubmitDto(input);
-    if (!payload) throw new Error('Muc tieu bao cao khong hop le.');
+    if (!payload) throw new Error('Mục tiêu báo cáo không hợp lệ.');
     const res = await api.post<ViolationReportResponseDto>(API_ENDPOINTS.SAFETY.REPORTS, payload);
     return safetyMapper.toSingleReport(res.data);
   },

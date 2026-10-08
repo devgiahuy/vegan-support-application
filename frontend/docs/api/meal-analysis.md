@@ -2,7 +2,7 @@
 # Meal Analysis
 
 ## POST `/api/v1/meal-plans/{id}/analyze`
-Phân tích khẩu phần, giới hạn và tương tác của meal plan
+Phân tích khẩu phần và các điểm cần lưu ý trong thực đơn
 - operationId: `analyzeMealPlan`
 - Params: `path:id* (string)`
 - Request: `MealAnalysisRequest` (required)
@@ -127,6 +127,8 @@ Phân tích khẩu phần, giới hạn và tương tác của meal plan
         "summary",
         "confidence",
         "incompleteData",
+        "incompleteDataSummary",
+        "estimatedNutrition",
         "ruleVersions",
         "disclaimer",
         "createdAt"
@@ -177,7 +179,13 @@ Phân tích khẩu phần, giới hạn và tương tác của meal plan
             "highCount",
             "cautionCount",
             "infoCount",
-            "selectedItemCount"
+            "selectedItemCount",
+            "userStatus",
+            "title",
+            "detail",
+            "advisoryCount",
+            "hardConstraintViolationCount",
+            "hardConstraintsPreserved"
           ],
           "properties": {
             "warningCount": {
@@ -199,41 +207,26 @@ Phân tích khẩu phần, giới hạn và tương tác của meal plan
             "selectedItemCount": {
               "type": "integer",
               "_truncated": true
-            }
-          },
-          "additionalProperties": false
-        },
-        "confidence": {
-          "type": "number"
-        },
-        "incompleteData": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "_truncated": true
-          }
-        },
-        "ruleVersions": {
-          "type": "array",
-          "items": {
-            "type": "string",
-            "_truncated": true
-          }
-        },
-        "disclaimer": {
-          "type": "string"
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      "additionalProperties": false
-    },
-    "meta": {
-      "type": "null"
-    }
-  },
-  "additionalProperties": false
-}
+            },
+            "userStatus": {
+              "type": "string",
+              "_truncated": true
+            },
+            "title": {
+              "type": "string",
+              "_truncated": true
+            },
+            "detail": {
+              "type": "string",
+              "_truncated": true
+            },
+            "advisoryCount": {
+              "type": "integer",
+              "_truncated": true
+            },
+            "hardConstraintViolationCount": {
+              "type": "integer",
+              "_truncated": true
+            },
+  …(truncated — xem api-catalog.json)
 ```

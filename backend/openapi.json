@@ -12640,9 +12640,146 @@
                     "UNFILLED_SLOT",
                     "SHOPPING_UNIT_NOT_COMBINED",
                     "MICRONUTRIENT_DATA_PARTIAL",
-                    "MICRONUTRIENT_DATA_UNAVAILABLE"
+                    "MICRONUTRIENT_DATA_UNAVAILABLE",
+                    "NUTRITION_TARGET_OUTSIDE_TOLERANCE"
                   ]
                 }
+              },
+              "warningDetails": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "enum": [
+                        "CALORIE_TOLERANCE_WIDENED",
+                        "RECIPE_REPEATED",
+                        "UNFILLED_SLOT",
+                        "SHOPPING_UNIT_NOT_COMBINED",
+                        "MICRONUTRIENT_DATA_PARTIAL",
+                        "MICRONUTRIENT_DATA_UNAVAILABLE",
+                        "NUTRITION_TARGET_OUTSIDE_TOLERANCE"
+                      ]
+                    },
+                    "severity": {
+                      "type": "string",
+                      "enum": [
+                        "INFO",
+                        "WARNING"
+                      ]
+                    },
+                    "severityLabel": {
+                      "type": "string",
+                      "enum": [
+                        "Thông tin",
+                        "Nên lưu ý"
+                      ]
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "suggestion": {
+                      "type": "string"
+                    },
+                    "advisory": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "affectedSlots": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "itemId": {
+                            "type": "string",
+                            "format": "uuid"
+                          },
+                          "date": {
+                            "type": "string",
+                            "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                          },
+                          "mealType": {
+                            "type": "string",
+                            "enum": [
+                              "BREAKFAST",
+                              "LUNCH",
+                              "DINNER"
+                            ]
+                          },
+                          "name": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "itemId",
+                          "date",
+                          "mealType",
+                          "name"
+                        ],
+                        "additionalProperties": false
+                      }
+                    }
+                  },
+                  "required": [
+                    "code",
+                    "severity",
+                    "severityLabel",
+                    "message",
+                    "detail",
+                    "suggestion",
+                    "advisory",
+                    "affectedSlots"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "userSummary": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "NO_SERIOUS_ISSUE",
+                      "ADVISORY_ADJUSTMENTS",
+                      "HARD_CONSTRAINT_BLOCKED"
+                    ]
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "detail": {
+                    "type": "string"
+                  },
+                  "suggestion": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "hardConstraintsPreserved": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  }
+                },
+                "required": [
+                  "status",
+                  "title",
+                  "detail",
+                  "suggestion",
+                  "hardConstraintsPreserved"
+                ],
+                "additionalProperties": false
               },
               "nutritionDataQuality": {
                 "type": "string",
@@ -12769,6 +12906,34 @@
                       "minimum": 0,
                       "maximum": 100
                     },
+                    "proteinGrams": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "fiberGrams": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "fatGrams": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "carbohydrateGrams": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
                     "recipe": {
                       "type": [
                         "object",
@@ -12854,9 +13019,36 @@
                           "UNFILLED_SLOT",
                           "SHOPPING_UNIT_NOT_COMBINED",
                           "MICRONUTRIENT_DATA_PARTIAL",
-                          "MICRONUTRIENT_DATA_UNAVAILABLE"
+                          "MICRONUTRIENT_DATA_UNAVAILABLE",
+                          "NUTRITION_TARGET_OUTSIDE_TOLERANCE"
                         ]
                       }
+                    },
+                    "unresolved": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "hardConstraintsPreserved": {
+                          "type": "boolean",
+                          "enum": [
+                            true
+                          ]
+                        }
+                      },
+                      "required": [
+                        "code",
+                        "reason",
+                        "hardConstraintsPreserved"
+                      ],
+                      "additionalProperties": false
                     }
                   },
                   "required": [
@@ -12870,10 +13062,15 @@
                     "servings",
                     "calories",
                     "tolerancePercent",
+                    "proteinGrams",
+                    "fiberGrams",
+                    "fatGrams",
+                    "carbohydrateGrams",
                     "recipe",
                     "customMeal",
                     "reasonCodes",
-                    "warningCodes"
+                    "warningCodes",
+                    "unresolved"
                   ],
                   "additionalProperties": false
                 }
@@ -12959,7 +13156,9 @@
                             "NUTRIENT_LIMIT_EXCEEDED",
                             "INGREDIENT_GUIDELINE_EXCEEDED",
                             "INGREDIENT_INTERACTION",
-                            "PORTION_MULTIPLIER_HIGH"
+                            "PORTION_MULTIPLIER_HIGH",
+                            "MACRO_TARGET_EXCEEDED",
+                            "MACRO_TARGET_BELOW_RANGE"
                           ]
                         },
                         "severity": {
@@ -13152,6 +13351,52 @@
                           "items": {
                             "type": "string"
                           }
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "detail": {
+                          "type": "string"
+                        },
+                        "suggestion": {
+                          "type": "string"
+                        },
+                        "severityLabel": {
+                          "type": "string",
+                          "enum": [
+                            "Thông tin",
+                            "Nên lưu ý"
+                          ]
+                        },
+                        "scopeLabel": {
+                          "type": "string"
+                        },
+                        "targetDate": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "mealType": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "enum": [
+                            "BREAKFAST",
+                            "LUNCH",
+                            "DINNER",
+                            null
+                          ]
+                        },
+                        "targetComparison": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "enum": [
+                            "ABOVE",
+                            "BELOW",
+                            null
+                          ]
                         }
                       },
                       "required": [
@@ -13169,7 +13414,15 @@
                         "suggestedAdjustment",
                         "confidence",
                         "advisory",
-                        "incompleteDataNotes"
+                        "incompleteDataNotes",
+                        "title",
+                        "detail",
+                        "suggestion",
+                        "severityLabel",
+                        "scopeLabel",
+                        "targetDate",
+                        "mealType",
+                        "targetComparison"
                       ],
                       "additionalProperties": false
                     }
@@ -13196,6 +13449,31 @@
                       "selectedItemCount": {
                         "type": "integer",
                         "minimum": 0
+                      },
+                      "userStatus": {
+                        "type": "string",
+                        "enum": [
+                          "NO_SERIOUS_ISSUE",
+                          "ADVISORY_ADJUSTMENTS",
+                          "HARD_CONSTRAINT_VIOLATION"
+                        ]
+                      },
+                      "title": {
+                        "type": "string"
+                      },
+                      "detail": {
+                        "type": "string"
+                      },
+                      "advisoryCount": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "hardConstraintViolationCount": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "hardConstraintsPreserved": {
+                        "type": "boolean"
                       }
                     },
                     "required": [
@@ -13203,7 +13481,13 @@
                       "highCount",
                       "cautionCount",
                       "infoCount",
-                      "selectedItemCount"
+                      "selectedItemCount",
+                      "userStatus",
+                      "title",
+                      "detail",
+                      "advisoryCount",
+                      "hardConstraintViolationCount",
+                      "hardConstraintsPreserved"
                     ],
                     "additionalProperties": false
                   },
@@ -13217,6 +13501,171 @@
                     "items": {
                       "type": "string"
                     }
+                  },
+                  "incompleteDataSummary": {
+                    "type": "object",
+                    "properties": {
+                      "affectedMealCount": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "title": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "detail": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "suggestion": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "affectedMealCount",
+                      "title",
+                      "detail",
+                      "suggestion"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "estimatedNutrition": {
+                    "type": "object",
+                    "properties": {
+                      "estimated": {
+                        "type": "boolean",
+                        "enum": [
+                          true
+                        ]
+                      },
+                      "targetSource": {
+                        "type": "string",
+                        "enum": [
+                          "HEALTH_PROFILE_TDEE_GOAL_CONFIG"
+                        ]
+                      },
+                      "targetSourceDetail": {
+                        "type": "string"
+                      },
+                      "tolerancePercent": {
+                        "type": "number",
+                        "exclusiveMinimum": 0
+                      },
+                      "targets": {
+                        "type": "object",
+                        "properties": {
+                          "proteinGrams": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "fiberGrams": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "fatGrams": {
+                            "type": "number",
+                            "minimum": 0
+                          },
+                          "carbohydrateGrams": {
+                            "type": "number",
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "proteinGrams",
+                          "fiberGrams",
+                          "fatGrams",
+                          "carbohydrateGrams"
+                        ],
+                        "additionalProperties": false
+                      },
+                      "days": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "date": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            "totals": {
+                              "type": "object",
+                              "properties": {
+                                "proteinGrams": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ],
+                                  "minimum": 0
+                                },
+                                "fiberGrams": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ],
+                                  "minimum": 0
+                                },
+                                "fatGrams": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ],
+                                  "minimum": 0
+                                },
+                                "carbohydrateGrams": {
+                                  "type": [
+                                    "number",
+                                    "null"
+                                  ],
+                                  "minimum": 0
+                                }
+                              },
+                              "required": [
+                                "proteinGrams",
+                                "fiberGrams",
+                                "fatGrams",
+                                "carbohydrateGrams"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "confidence": {
+                              "type": "number",
+                              "minimum": 0,
+                              "maximum": 1
+                            },
+                            "uncertaintyNotes": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            }
+                          },
+                          "required": [
+                            "date",
+                            "totals",
+                            "confidence",
+                            "uncertaintyNotes"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "estimated",
+                      "targetSource",
+                      "targetSourceDetail",
+                      "tolerancePercent",
+                      "targets",
+                      "days"
+                    ],
+                    "additionalProperties": false
                   },
                   "ruleVersions": {
                     "type": "array",
@@ -13244,9 +13693,860 @@
                   "summary",
                   "confidence",
                   "incompleteData",
+                  "incompleteDataSummary",
+                  "estimatedNutrition",
                   "ruleVersions",
                   "disclaimer",
                   "createdAt"
+                ],
+                "additionalProperties": false
+              },
+              "days": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "date": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "dayOfWeek": {
+                      "type": "string",
+                      "enum": [
+                        "MONDAY",
+                        "TUESDAY",
+                        "WEDNESDAY",
+                        "THURSDAY",
+                        "FRIDAY",
+                        "SATURDAY",
+                        "SUNDAY"
+                      ]
+                    },
+                    "slots": {
+                      "type": "object",
+                      "properties": {
+                        "breakfast": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "date": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            "mealType": {
+                              "type": "string",
+                              "enum": [
+                                "BREAKFAST",
+                                "LUNCH",
+                                "DINNER"
+                              ]
+                            },
+                            "position": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "FILLED",
+                                "UNFILLED"
+                              ]
+                            },
+                            "sourceType": {
+                              "type": "string",
+                              "enum": [
+                                "RECIPE",
+                                "CUSTOM_MEAL"
+                              ]
+                            },
+                            "targetCalories": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0
+                            },
+                            "servings": {
+                              "type": "number",
+                              "exclusiveMinimum": 0
+                            },
+                            "calories": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "exclusiveMinimum": 0
+                            },
+                            "tolerancePercent": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0,
+                              "maximum": 100
+                            },
+                            "proteinGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fiberGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fatGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "carbohydrateGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "recipe": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "revisionId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "slug": {
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "type": "string"
+                                },
+                                "coverImageUrl": {
+                                  "type": "string",
+                                  "description": "HTTP/HTTPS URL or root-relative path",
+                                  "example": "https://example.com/image.jpg"
+                                },
+                                "difficulty": {
+                                  "type": "string",
+                                  "enum": [
+                                    "EASY",
+                                    "MEDIUM",
+                                    "HARD"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "revisionId",
+                                "slug",
+                                "title",
+                                "coverImageUrl",
+                                "difficulty"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "customMeal": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "nutritionCoverage": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name",
+                                "nutritionCoverage"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "reasonCodes": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "maxItems": 3
+                            },
+                            "warningCodes": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "CALORIE_TOLERANCE_WIDENED",
+                                  "RECIPE_REPEATED",
+                                  "UNFILLED_SLOT",
+                                  "SHOPPING_UNIT_NOT_COMBINED",
+                                  "MICRONUTRIENT_DATA_PARTIAL",
+                                  "MICRONUTRIENT_DATA_UNAVAILABLE",
+                                  "NUTRITION_TARGET_OUTSIDE_TOLERANCE"
+                                ]
+                              }
+                            },
+                            "unresolved": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "hardConstraintsPreserved": {
+                                  "type": "boolean",
+                                  "enum": [
+                                    true
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "reason",
+                                "hardConstraintsPreserved"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "date",
+                            "mealType",
+                            "position",
+                            "status",
+                            "sourceType",
+                            "targetCalories",
+                            "servings",
+                            "calories",
+                            "tolerancePercent",
+                            "proteinGrams",
+                            "fiberGrams",
+                            "fatGrams",
+                            "carbohydrateGrams",
+                            "recipe",
+                            "customMeal",
+                            "reasonCodes",
+                            "warningCodes",
+                            "unresolved"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "lunch": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "date": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            "mealType": {
+                              "type": "string",
+                              "enum": [
+                                "BREAKFAST",
+                                "LUNCH",
+                                "DINNER"
+                              ]
+                            },
+                            "position": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "FILLED",
+                                "UNFILLED"
+                              ]
+                            },
+                            "sourceType": {
+                              "type": "string",
+                              "enum": [
+                                "RECIPE",
+                                "CUSTOM_MEAL"
+                              ]
+                            },
+                            "targetCalories": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0
+                            },
+                            "servings": {
+                              "type": "number",
+                              "exclusiveMinimum": 0
+                            },
+                            "calories": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "exclusiveMinimum": 0
+                            },
+                            "tolerancePercent": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0,
+                              "maximum": 100
+                            },
+                            "proteinGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fiberGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fatGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "carbohydrateGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "recipe": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "revisionId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "slug": {
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "type": "string"
+                                },
+                                "coverImageUrl": {
+                                  "type": "string",
+                                  "description": "HTTP/HTTPS URL or root-relative path",
+                                  "example": "https://example.com/image.jpg"
+                                },
+                                "difficulty": {
+                                  "type": "string",
+                                  "enum": [
+                                    "EASY",
+                                    "MEDIUM",
+                                    "HARD"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "revisionId",
+                                "slug",
+                                "title",
+                                "coverImageUrl",
+                                "difficulty"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "customMeal": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "nutritionCoverage": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name",
+                                "nutritionCoverage"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "reasonCodes": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "maxItems": 3
+                            },
+                            "warningCodes": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "CALORIE_TOLERANCE_WIDENED",
+                                  "RECIPE_REPEATED",
+                                  "UNFILLED_SLOT",
+                                  "SHOPPING_UNIT_NOT_COMBINED",
+                                  "MICRONUTRIENT_DATA_PARTIAL",
+                                  "MICRONUTRIENT_DATA_UNAVAILABLE",
+                                  "NUTRITION_TARGET_OUTSIDE_TOLERANCE"
+                                ]
+                              }
+                            },
+                            "unresolved": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "hardConstraintsPreserved": {
+                                  "type": "boolean",
+                                  "enum": [
+                                    true
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "reason",
+                                "hardConstraintsPreserved"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "date",
+                            "mealType",
+                            "position",
+                            "status",
+                            "sourceType",
+                            "targetCalories",
+                            "servings",
+                            "calories",
+                            "tolerancePercent",
+                            "proteinGrams",
+                            "fiberGrams",
+                            "fatGrams",
+                            "carbohydrateGrams",
+                            "recipe",
+                            "customMeal",
+                            "reasonCodes",
+                            "warningCodes",
+                            "unresolved"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "dinner": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "date": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            "mealType": {
+                              "type": "string",
+                              "enum": [
+                                "BREAKFAST",
+                                "LUNCH",
+                                "DINNER"
+                              ]
+                            },
+                            "position": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "status": {
+                              "type": "string",
+                              "enum": [
+                                "FILLED",
+                                "UNFILLED"
+                              ]
+                            },
+                            "sourceType": {
+                              "type": "string",
+                              "enum": [
+                                "RECIPE",
+                                "CUSTOM_MEAL"
+                              ]
+                            },
+                            "targetCalories": {
+                              "type": "integer",
+                              "exclusiveMinimum": 0
+                            },
+                            "servings": {
+                              "type": "number",
+                              "exclusiveMinimum": 0
+                            },
+                            "calories": {
+                              "type": [
+                                "integer",
+                                "null"
+                              ],
+                              "exclusiveMinimum": 0
+                            },
+                            "tolerancePercent": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0,
+                              "maximum": 100
+                            },
+                            "proteinGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fiberGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fatGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "carbohydrateGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "recipe": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "revisionId": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "slug": {
+                                  "type": "string"
+                                },
+                                "title": {
+                                  "type": "string"
+                                },
+                                "coverImageUrl": {
+                                  "type": "string",
+                                  "description": "HTTP/HTTPS URL or root-relative path",
+                                  "example": "https://example.com/image.jpg"
+                                },
+                                "difficulty": {
+                                  "type": "string",
+                                  "enum": [
+                                    "EASY",
+                                    "MEDIUM",
+                                    "HARD"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "revisionId",
+                                "slug",
+                                "title",
+                                "coverImageUrl",
+                                "difficulty"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "customMeal": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "id": {
+                                  "type": "string",
+                                  "format": "uuid"
+                                },
+                                "name": {
+                                  "type": "string"
+                                },
+                                "nutritionCoverage": {
+                                  "type": "string"
+                                }
+                              },
+                              "required": [
+                                "id",
+                                "name",
+                                "nutritionCoverage"
+                              ],
+                              "additionalProperties": false
+                            },
+                            "reasonCodes": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              },
+                              "maxItems": 3
+                            },
+                            "warningCodes": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "enum": [
+                                  "CALORIE_TOLERANCE_WIDENED",
+                                  "RECIPE_REPEATED",
+                                  "UNFILLED_SLOT",
+                                  "SHOPPING_UNIT_NOT_COMBINED",
+                                  "MICRONUTRIENT_DATA_PARTIAL",
+                                  "MICRONUTRIENT_DATA_UNAVAILABLE",
+                                  "NUTRITION_TARGET_OUTSIDE_TOLERANCE"
+                                ]
+                              }
+                            },
+                            "unresolved": {
+                              "type": [
+                                "object",
+                                "null"
+                              ],
+                              "properties": {
+                                "code": {
+                                  "type": "string"
+                                },
+                                "reason": {
+                                  "type": "string"
+                                },
+                                "hardConstraintsPreserved": {
+                                  "type": "boolean",
+                                  "enum": [
+                                    true
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "reason",
+                                "hardConstraintsPreserved"
+                              ],
+                              "additionalProperties": false
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "date",
+                            "mealType",
+                            "position",
+                            "status",
+                            "sourceType",
+                            "targetCalories",
+                            "servings",
+                            "calories",
+                            "tolerancePercent",
+                            "proteinGrams",
+                            "fiberGrams",
+                            "fatGrams",
+                            "carbohydrateGrams",
+                            "recipe",
+                            "customMeal",
+                            "reasonCodes",
+                            "warningCodes",
+                            "unresolved"
+                          ],
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "breakfast",
+                        "lunch",
+                        "dinner"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "estimatedTotals": {
+                      "type": "object",
+                      "properties": {
+                        "proteinGrams": {
+                          "type": [
+                            "number",
+                            "null"
+                          ],
+                          "minimum": 0
+                        },
+                        "fiberGrams": {
+                          "type": [
+                            "number",
+                            "null"
+                          ],
+                          "minimum": 0
+                        },
+                        "fatGrams": {
+                          "type": [
+                            "number",
+                            "null"
+                          ],
+                          "minimum": 0
+                        },
+                        "carbohydrateGrams": {
+                          "type": [
+                            "number",
+                            "null"
+                          ],
+                          "minimum": 0
+                        },
+                        "estimated": {
+                          "type": "boolean",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        "confidence": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "uncertaintyNotes": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "proteinGrams",
+                        "fiberGrams",
+                        "fatGrams",
+                        "carbohydrateGrams",
+                        "estimated",
+                        "confidence",
+                        "uncertaintyNotes"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "required": [
+                    "date",
+                    "dayOfWeek",
+                    "slots",
+                    "estimatedTotals"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "estimatedNutritionTargets": {
+                "type": "object",
+                "properties": {
+                  "proteinGrams": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0
+                  },
+                  "fiberGrams": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0
+                  },
+                  "fatGrams": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0
+                  },
+                  "carbohydrateGrams": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0
+                  },
+                  "estimated": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "source": {
+                    "type": "string",
+                    "enum": [
+                      "HEALTH_PROFILE_TDEE_GOAL_CONFIG"
+                    ]
+                  },
+                  "sourceDetail": {
+                    "type": "string"
+                  },
+                  "tolerancePercent": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  }
+                },
+                "required": [
+                  "proteinGrams",
+                  "fiberGrams",
+                  "fatGrams",
+                  "carbohydrateGrams",
+                  "estimated",
+                  "source",
+                  "sourceDetail",
+                  "tolerancePercent"
                 ],
                 "additionalProperties": false
               }
@@ -13262,6 +14562,8 @@
               "algorithmVersion",
               "recommendationVersion",
               "warnings",
+              "warningDetails",
+              "userSummary",
               "nutritionDataQuality",
               "micronutrientSummary",
               "explanation",
@@ -13272,7 +14574,9 @@
               "constraintSnapshot",
               "items",
               "shoppingList",
-              "analysis"
+              "analysis",
+              "days",
+              "estimatedNutritionTargets"
             ],
             "additionalProperties": false
           },
@@ -13353,9 +14657,146 @@
                       "UNFILLED_SLOT",
                       "SHOPPING_UNIT_NOT_COMBINED",
                       "MICRONUTRIENT_DATA_PARTIAL",
-                      "MICRONUTRIENT_DATA_UNAVAILABLE"
+                      "MICRONUTRIENT_DATA_UNAVAILABLE",
+                      "NUTRITION_TARGET_OUTSIDE_TOLERANCE"
                     ]
                   }
+                },
+                "warningDetails": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "string",
+                        "enum": [
+                          "CALORIE_TOLERANCE_WIDENED",
+                          "RECIPE_REPEATED",
+                          "UNFILLED_SLOT",
+                          "SHOPPING_UNIT_NOT_COMBINED",
+                          "MICRONUTRIENT_DATA_PARTIAL",
+                          "MICRONUTRIENT_DATA_UNAVAILABLE",
+                          "NUTRITION_TARGET_OUTSIDE_TOLERANCE"
+                        ]
+                      },
+                      "severity": {
+                        "type": "string",
+                        "enum": [
+                          "INFO",
+                          "WARNING"
+                        ]
+                      },
+                      "severityLabel": {
+                        "type": "string",
+                        "enum": [
+                          "Thông tin",
+                          "Nên lưu ý"
+                        ]
+                      },
+                      "message": {
+                        "type": "string"
+                      },
+                      "detail": {
+                        "type": "string"
+                      },
+                      "suggestion": {
+                        "type": "string"
+                      },
+                      "advisory": {
+                        "type": "boolean",
+                        "enum": [
+                          true
+                        ]
+                      },
+                      "affectedSlots": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "itemId": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "date": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                            },
+                            "mealType": {
+                              "type": "string",
+                              "enum": [
+                                "BREAKFAST",
+                                "LUNCH",
+                                "DINNER"
+                              ]
+                            },
+                            "name": {
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "itemId",
+                            "date",
+                            "mealType",
+                            "name"
+                          ],
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "required": [
+                      "code",
+                      "severity",
+                      "severityLabel",
+                      "message",
+                      "detail",
+                      "suggestion",
+                      "advisory",
+                      "affectedSlots"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "userSummary": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "NO_SERIOUS_ISSUE",
+                        "ADVISORY_ADJUSTMENTS",
+                        "HARD_CONSTRAINT_BLOCKED"
+                      ]
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "suggestion": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "hardConstraintsPreserved": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  },
+                  "required": [
+                    "status",
+                    "title",
+                    "detail",
+                    "suggestion",
+                    "hardConstraintsPreserved"
+                  ],
+                  "additionalProperties": false
                 },
                 "nutritionDataQuality": {
                   "type": "string",
@@ -13428,6 +14869,8 @@
                 "algorithmVersion",
                 "recommendationVersion",
                 "warnings",
+                "warningDetails",
+                "userSummary",
                 "nutritionDataQuality",
                 "micronutrientSummary",
                 "explanation",
@@ -13608,7 +15051,9 @@
                         "NUTRIENT_LIMIT_EXCEEDED",
                         "INGREDIENT_GUIDELINE_EXCEEDED",
                         "INGREDIENT_INTERACTION",
-                        "PORTION_MULTIPLIER_HIGH"
+                        "PORTION_MULTIPLIER_HIGH",
+                        "MACRO_TARGET_EXCEEDED",
+                        "MACRO_TARGET_BELOW_RANGE"
                       ]
                     },
                     "severity": {
@@ -13801,6 +15246,52 @@
                       "items": {
                         "type": "string"
                       }
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "suggestion": {
+                      "type": "string"
+                    },
+                    "severityLabel": {
+                      "type": "string",
+                      "enum": [
+                        "Thông tin",
+                        "Nên lưu ý"
+                      ]
+                    },
+                    "scopeLabel": {
+                      "type": "string"
+                    },
+                    "targetDate": {
+                      "type": "string",
+                      "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                    },
+                    "mealType": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "BREAKFAST",
+                        "LUNCH",
+                        "DINNER",
+                        null
+                      ]
+                    },
+                    "targetComparison": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "ABOVE",
+                        "BELOW",
+                        null
+                      ]
                     }
                   },
                   "required": [
@@ -13818,7 +15309,15 @@
                     "suggestedAdjustment",
                     "confidence",
                     "advisory",
-                    "incompleteDataNotes"
+                    "incompleteDataNotes",
+                    "title",
+                    "detail",
+                    "suggestion",
+                    "severityLabel",
+                    "scopeLabel",
+                    "targetDate",
+                    "mealType",
+                    "targetComparison"
                   ],
                   "additionalProperties": false
                 }
@@ -13845,6 +15344,31 @@
                   "selectedItemCount": {
                     "type": "integer",
                     "minimum": 0
+                  },
+                  "userStatus": {
+                    "type": "string",
+                    "enum": [
+                      "NO_SERIOUS_ISSUE",
+                      "ADVISORY_ADJUSTMENTS",
+                      "HARD_CONSTRAINT_VIOLATION"
+                    ]
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "detail": {
+                    "type": "string"
+                  },
+                  "advisoryCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "hardConstraintViolationCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "hardConstraintsPreserved": {
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -13852,7 +15376,13 @@
                   "highCount",
                   "cautionCount",
                   "infoCount",
-                  "selectedItemCount"
+                  "selectedItemCount",
+                  "userStatus",
+                  "title",
+                  "detail",
+                  "advisoryCount",
+                  "hardConstraintViolationCount",
+                  "hardConstraintsPreserved"
                 ],
                 "additionalProperties": false
               },
@@ -13866,6 +15396,171 @@
                 "items": {
                   "type": "string"
                 }
+              },
+              "incompleteDataSummary": {
+                "type": "object",
+                "properties": {
+                  "affectedMealCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "title": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "detail": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "suggestion": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "affectedMealCount",
+                  "title",
+                  "detail",
+                  "suggestion"
+                ],
+                "additionalProperties": false
+              },
+              "estimatedNutrition": {
+                "type": "object",
+                "properties": {
+                  "estimated": {
+                    "type": "boolean",
+                    "enum": [
+                      true
+                    ]
+                  },
+                  "targetSource": {
+                    "type": "string",
+                    "enum": [
+                      "HEALTH_PROFILE_TDEE_GOAL_CONFIG"
+                    ]
+                  },
+                  "targetSourceDetail": {
+                    "type": "string"
+                  },
+                  "tolerancePercent": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "targets": {
+                    "type": "object",
+                    "properties": {
+                      "proteinGrams": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "fiberGrams": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "fatGrams": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "carbohydrateGrams": {
+                        "type": "number",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "proteinGrams",
+                      "fiberGrams",
+                      "fatGrams",
+                      "carbohydrateGrams"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "days": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "date": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                        },
+                        "totals": {
+                          "type": "object",
+                          "properties": {
+                            "proteinGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fiberGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fatGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "carbohydrateGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "proteinGrams",
+                            "fiberGrams",
+                            "fatGrams",
+                            "carbohydrateGrams"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "confidence": {
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 1
+                        },
+                        "uncertaintyNotes": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "date",
+                        "totals",
+                        "confidence",
+                        "uncertaintyNotes"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "estimated",
+                  "targetSource",
+                  "targetSourceDetail",
+                  "tolerancePercent",
+                  "targets",
+                  "days"
+                ],
+                "additionalProperties": false
               },
               "ruleVersions": {
                 "type": "array",
@@ -13893,6 +15588,8 @@
               "summary",
               "confidence",
               "incompleteData",
+              "incompleteDataSummary",
+              "estimatedNutrition",
               "ruleVersions",
               "disclaimer",
               "createdAt"
@@ -13914,9 +15611,28 @@
         "type": "object",
         "properties": {
           "title": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 200
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 0,
+            "maxLength": 200,
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\s*$",
+                "maxLength": 200
+              },
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null and blank strings are accepted as omitted values. Nonblank text must contain 1 to 200 characters after trimming."
           },
           "goal": {
             "type": "string",
@@ -18285,6 +20001,12 @@
               "null"
             ]
           },
+          "userFiberGrams": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
           "nutritionCoverage": {
             "type": "string"
           },
@@ -18448,6 +20170,7 @@
           "userProteinGrams",
           "userCarbsGrams",
           "userFatGrams",
+          "userFiberGrams",
           "nutritionCoverage",
           "deletePolicy",
           "ingredients",
@@ -18519,6 +20242,12 @@
                       ]
                     },
                     "userFatGrams": {
+                      "type": [
+                        "number",
+                        "null"
+                      ]
+                    },
+                    "userFiberGrams": {
                       "type": [
                         "number",
                         "null"
@@ -18687,6 +20416,7 @@
                     "userProteinGrams",
                     "userCarbsGrams",
                     "userFatGrams",
+                    "userFiberGrams",
                     "nutritionCoverage",
                     "deletePolicy",
                     "ingredients",
@@ -18855,6 +20585,31 @@
               "null"
             ]
           },
+          "expiryStatus": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "GOOD",
+              "WARNING",
+              "ALERT",
+              "EXPIRED",
+              null
+            ]
+          },
+          "daysUntilExpiry": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "expiryStatusAsOf": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "version": {
             "type": "integer",
             "exclusiveMinimum": 0
@@ -18874,6 +20629,9 @@
           "openedAt",
           "expiresAt",
           "freshnessNote",
+          "expiryStatus",
+          "daysUntilExpiry",
+          "expiryStatusAsOf",
           "version"
         ]
       },
@@ -19009,6 +20767,31 @@
                   "null"
                 ]
               },
+              "expiryStatus": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "enum": [
+                  "GOOD",
+                  "WARNING",
+                  "ALERT",
+                  "EXPIRED",
+                  null
+                ]
+              },
+              "daysUntilExpiry": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "expiryStatusAsOf": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
               "version": {
                 "type": "integer",
                 "exclusiveMinimum": 0
@@ -19028,6 +20811,9 @@
               "openedAt",
               "expiresAt",
               "freshnessNote",
+              "expiryStatus",
+              "daysUntilExpiry",
+              "expiryStatusAsOf",
               "version"
             ]
           }
@@ -19171,6 +20957,31 @@
                     "null"
                   ]
                 },
+                "expiryStatus": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "enum": [
+                    "GOOD",
+                    "WARNING",
+                    "ALERT",
+                    "EXPIRED",
+                    null
+                  ]
+                },
+                "daysUntilExpiry": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "expiryStatusAsOf": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
                 "version": {
                   "type": "integer",
                   "exclusiveMinimum": 0
@@ -19190,6 +21001,9 @@
                 "openedAt",
                 "expiresAt",
                 "freshnessNote",
+                "expiryStatus",
+                "daysUntilExpiry",
+                "expiryStatusAsOf",
                 "version"
               ]
             }
@@ -19359,6 +21173,31 @@
                       "null"
                     ]
                   },
+                  "expiryStatus": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "GOOD",
+                      "WARNING",
+                      "ALERT",
+                      "EXPIRED",
+                      null
+                    ]
+                  },
+                  "daysUntilExpiry": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ]
+                  },
+                  "expiryStatusAsOf": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
                   "version": {
                     "type": "integer",
                     "exclusiveMinimum": 0
@@ -19378,6 +21217,9 @@
                   "openedAt",
                   "expiresAt",
                   "freshnessNote",
+                  "expiryStatus",
+                  "daysUntilExpiry",
+                  "expiryStatusAsOf",
                   "version"
                 ]
               },
@@ -19832,8 +21674,24 @@
               "string",
               "null"
             ],
-            "minLength": 1,
-            "maxLength": 2000
+            "minLength": 0,
+            "maxLength": 2000,
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\s*$",
+                "maxLength": 2000
+              },
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null and blank strings clear the value. Nonblank text must contain 1 to 2000 characters after trimming."
           },
           "confidence": {
             "type": "number",
@@ -20669,8 +22527,24 @@
               "string",
               "null"
             ],
-            "minLength": 1,
-            "maxLength": 2000
+            "minLength": 0,
+            "maxLength": 2000,
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\s*$",
+                "maxLength": 2000
+              },
+              {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 2000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null and blank strings clear the value. Nonblank text must contain 1 to 2000 characters after trimming."
           },
           "decision": {
             "type": "string",
@@ -21864,14 +23738,52 @@
             "format": "uuid"
           },
           "title": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 160
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 0,
+            "maxLength": 160,
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\s*$",
+                "maxLength": 160
+              },
+              {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 160
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null and blank strings are accepted as omitted values. Nonblank text must contain 3 to 160 characters after trimming."
           },
           "summary": {
-            "type": "string",
-            "minLength": 3,
-            "maxLength": 5000
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 0,
+            "maxLength": 5000,
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\s*$",
+                "maxLength": 5000
+              },
+              {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null and blank strings are accepted as omitted values. Nonblank text must contain 3 to 5000 characters after trimming."
           },
           "authorAnonymous": {
             "type": "boolean",
@@ -21948,8 +23860,24 @@
               "string",
               "null"
             ],
-            "minLength": 3,
-            "maxLength": 10000
+            "minLength": 0,
+            "maxLength": 10000,
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^\\s*$",
+                "maxLength": 10000
+              },
+              {
+                "type": "string",
+                "minLength": 3,
+                "maxLength": 10000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Null and blank strings clear the value. Nonblank text must contain 3 to 10000 characters after trimming."
           }
         },
         "required": [
@@ -22003,8 +23931,24 @@
                   "string",
                   "null"
                 ],
-                "minLength": 3,
-                "maxLength": 10000
+                "minLength": 0,
+                "maxLength": 10000,
+                "anyOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^\\s*$",
+                    "maxLength": 10000
+                  },
+                  {
+                    "type": "string",
+                    "minLength": 3,
+                    "maxLength": 10000
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "description": "Null and blank strings clear the value. Nonblank text must contain 3 to 10000 characters after trimming."
               }
             },
             "required": [
@@ -39142,7 +41086,7 @@
           "Meal Plans"
         ],
         "summary": "Tạo hoặc regenerate weekly meal plan",
-        "description": "Tạo version mới gồm 7 ngày × 3 bữa. MAINTAIN/LOSE/GAIN dùng TDEE × 1/0.9/1.1 từ config. Backend hard-filter theo từng ngày trước scoring, thử calorie ±15% rồi ±20% kèm warning, không lặp nếu pool đủ, tối đa 2 lần/recipe và để UNFILLED nếu không có candidate. seed cho kết quả deterministic; supersedesMealPlanId liên kết version regenerate.",
+        "description": "Tạo Monday–Sunday, 3 bữa/ngày. MAINTAIN/LOSE/GAIN dùng TDEE × goal factor; protein, fiber, fat và carbohydrate là target ước tính từ cấu hình. Backend hard-filter trước scoring, ưu tiên tolerance nhưng vẫn dùng candidate hard-compatible ngoài tolerance. Chỉ UNFILLED khi không còn candidate hard-compatible và luôn trả unresolved reason. seed cho kết quả deterministic; supersedesMealPlanId liên kết version regenerate.",
         "operationId": "generateMealPlan",
         "security": [
           {
@@ -39170,7 +41114,7 @@
         },
         "responses": {
           "201": {
-            "description": "Meal plan version mới cùng shopping list và warnings",
+            "description": "Thực đơn tuần mới cùng danh sách mua sắm, tóm tắt dễ hiểu và các lưu ý dành cho người dùng",
             "content": {
               "application/json": {
                 "schema": {
@@ -39513,7 +41457,7 @@
         ],
         "responses": {
           "200": {
-            "description": "21 slots, constraint snapshot, shopping list và nutrition quality",
+            "description": "Existing 21-item list plus additive Monday–Sunday day/slot view, explicit unresolved state, estimated four-macro targets/totals, shopping list and analysis",
             "content": {
               "application/json": {
                 "schema": {
@@ -40062,7 +42006,7 @@
           "Meal Plans"
         ],
         "summary": "Thêm recipe hoặc private custom meal vào slot",
-        "description": "Backend kiểm tra allergy, explicit exclusion, diet pattern và enabled tradition constraints trước khi ghi. Món hợp lệ được thêm với servings đã chọn, plan version tăng và Phase 18 analysis được tính lại. Compatibility evidence-graded không tự biến thành hard prohibition.",
+        "description": "Hệ thống kiểm tra dị ứng, nguyên liệu cần tránh, chế độ ăn và quy tắc truyền thống trước khi lưu. Món phù hợp vẫn được lưu khi các chỉ số chất đạm, chất xơ, chất béo hoặc tinh bột ước tính lệch khỏi khoảng mục tiêu; các lưu ý này chỉ là gợi ý điều chỉnh và không chặn thao tác.",
         "operationId": "manualAddMealPlanItem",
         "security": [
           {
@@ -40289,8 +42233,8 @@
         "tags": [
           "Meal Analysis"
         ],
-        "summary": "Phân tích khẩu phần, giới hạn và tương tác của meal plan",
-        "description": "Phân tích recipe và private custom meal theo item/servings đã chọn. Trả warning UI-ready cho SAME_DISH, SAME_MEAL, SAME_DAY với evidence, provenance, applicability, measured/limit, confidence và incomplete-data notes. Compatibility có bằng chứng thường là advisory; hard dietary/allergy filtering vẫn có precedence.",
+        "summary": "Phân tích khẩu phần và các điểm cần lưu ý trong thực đơn",
+        "description": "Phân tích món và khẩu phần đã chọn. Cảnh báo dinh dưỡng dành cho người dùng chỉ tập trung vào chất đạm, chất xơ, chất béo và tinh bột, luôn được diễn đạt là số liệu ước tính. Kết quả có tiêu đề, giải thích vị trí/ngày/bữa, ý nghĩa và gợi ý điều chỉnh bằng tiếng Việt. Thông tin nguồn và mã vẫn được giữ để kiểm tra nội bộ; dị ứng và các yêu cầu ăn uống bắt buộc không thay đổi.",
         "operationId": "analyzeMealPlan",
         "security": [
           {
@@ -40332,7 +42276,7 @@
         },
         "responses": {
           "201": {
-            "description": "Kết quả phân tích version mới cho tooltip/dialog",
+            "description": "Kết quả phân tích mới với cảnh báo và gợi ý dễ hiểu cho người dùng",
             "content": {
               "application/json": {
                 "schema": {
@@ -40518,7 +42462,7 @@
           "Meal Analysis"
         ],
         "summary": "Đọc kết quả phân tích hiện hành",
-        "description": "Kiểm tra fingerprint của plan items, portions, recipe nutrition, custom meals, profile và reviewed rules. Trả MEAL_ANALYSIS_STALE thay vì phục vụ kết quả cũ.",
+        "description": "Trả kết quả còn phù hợp với thực đơn hiện tại. Nếu món, khẩu phần hoặc thông tin liên quan đã thay đổi, yêu cầu phân tích lại thay vì trả kết quả cũ.",
         "operationId": "getCurrentMealAnalysis",
         "security": [
           {
@@ -40541,7 +42485,7 @@
         ],
         "responses": {
           "200": {
-            "description": "Kết quả current, có provenance và warning dialog fields",
+            "description": "Kết quả hiện hành với nội dung cảnh báo tiếng Việt và thông tin kiểm tra nội bộ",
             "content": {
               "application/json": {
                 "schema": {
@@ -43293,7 +45237,24 @@
                               "string",
                               "null"
                             ],
-                            "maxLength": 5000
+                            "minLength": 0,
+                            "maxLength": 5000,
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^\\s*$",
+                                "maxLength": 5000
+                              },
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 5000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Null and blank strings clear the value. Nonblank text must contain 1 to 5000 characters after trimming."
                           },
                           "active": {
                             "type": "boolean",
@@ -43937,7 +45898,24 @@
                               "string",
                               "null"
                             ],
-                            "maxLength": 5000
+                            "minLength": 0,
+                            "maxLength": 5000,
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^\\s*$",
+                                "maxLength": 5000
+                              },
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 5000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Null and blank strings clear the value. Nonblank text must contain 1 to 5000 characters after trimming."
                           },
                           "active": {
                             "type": "boolean",
@@ -44236,7 +46214,24 @@
                               "string",
                               "null"
                             ],
-                            "maxLength": 5000
+                            "minLength": 0,
+                            "maxLength": 5000,
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^\\s*$",
+                                "maxLength": 5000
+                              },
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 5000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Null and blank strings clear the value. Nonblank text must contain 1 to 5000 characters after trimming."
                           },
                           "hardRule": {
                             "type": "boolean",
@@ -44346,7 +46341,24 @@
                               "string",
                               "null"
                             ],
-                            "maxLength": 5000
+                            "minLength": 0,
+                            "maxLength": 5000,
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^\\s*$",
+                                "maxLength": 5000
+                              },
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 5000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Null and blank strings clear the value. Nonblank text must contain 1 to 5000 characters after trimming."
                           },
                           "confidence": {
                             "anyOf": [
@@ -44783,7 +46795,24 @@
                               "string",
                               "null"
                             ],
-                            "maxLength": 5000
+                            "minLength": 0,
+                            "maxLength": 5000,
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^\\s*$",
+                                "maxLength": 5000
+                              },
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 5000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Null and blank strings clear the value. Nonblank text must contain 1 to 5000 characters after trimming."
                           },
                           "active": {
                             "type": "boolean",
@@ -45427,7 +47456,24 @@
                               "string",
                               "null"
                             ],
-                            "maxLength": 5000
+                            "minLength": 0,
+                            "maxLength": 5000,
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^\\s*$",
+                                "maxLength": 5000
+                              },
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 5000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Null and blank strings clear the value. Nonblank text must contain 1 to 5000 characters after trimming."
                           },
                           "active": {
                             "type": "boolean",
@@ -45726,7 +47772,24 @@
                               "string",
                               "null"
                             ],
-                            "maxLength": 5000
+                            "minLength": 0,
+                            "maxLength": 5000,
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^\\s*$",
+                                "maxLength": 5000
+                              },
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 5000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Null and blank strings clear the value. Nonblank text must contain 1 to 5000 characters after trimming."
                           },
                           "hardRule": {
                             "type": "boolean",
@@ -45836,7 +47899,24 @@
                               "string",
                               "null"
                             ],
-                            "maxLength": 5000
+                            "minLength": 0,
+                            "maxLength": 5000,
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "pattern": "^\\s*$",
+                                "maxLength": 5000
+                              },
+                              {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 5000
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ],
+                            "description": "Null and blank strings clear the value. Nonblank text must contain 1 to 5000 characters after trimming."
                           },
                           "confidence": {
                             "anyOf": [
@@ -50062,9 +52142,28 @@
                     "maxLength": 200
                   },
                   "notes": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 5000
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 0,
+                    "maxLength": 5000,
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^\\s*$",
+                        "maxLength": 5000
+                      },
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 5000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Null and blank strings are accepted as omitted values. Nonblank text must contain 1 to 5000 characters after trimming."
                   },
                   "servings": {
                     "type": "integer",
@@ -50073,9 +52172,28 @@
                     "default": 1
                   },
                   "sourceNote": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 2000
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 0,
+                    "maxLength": 2000,
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^\\s*$",
+                        "maxLength": 2000
+                      },
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Null and blank strings are accepted as omitted values. Nonblank text must contain 1 to 2000 characters after trimming."
                   },
                   "userCalories": {
                     "type": "integer",
@@ -50093,6 +52211,11 @@
                     "maximum": 99999
                   },
                   "userFatGrams": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 99999
+                  },
+                  "userFiberGrams": {
                     "type": "number",
                     "minimum": 0,
                     "maximum": 99999
@@ -50352,8 +52475,24 @@
                       "string",
                       "null"
                     ],
-                    "minLength": 1,
-                    "maxLength": 5000
+                    "minLength": 0,
+                    "maxLength": 5000,
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^\\s*$",
+                        "maxLength": 5000
+                      },
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 5000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Null and blank strings clear the value. Nonblank text must contain 1 to 5000 characters after trimming."
                   },
                   "servings": {
                     "type": "integer",
@@ -50365,8 +52504,24 @@
                       "string",
                       "null"
                     ],
-                    "minLength": 1,
-                    "maxLength": 2000
+                    "minLength": 0,
+                    "maxLength": 2000,
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^\\s*$",
+                        "maxLength": 2000
+                      },
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 2000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Null and blank strings clear the value. Nonblank text must contain 1 to 2000 characters after trimming."
                   },
                   "userCalories": {
                     "type": [
@@ -50393,6 +52548,14 @@
                     "maximum": 99999
                   },
                   "userFatGrams": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 99999
+                  },
+                  "userFiberGrams": {
                     "type": [
                       "number",
                       "null"
@@ -51183,9 +53346,28 @@
                     "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
                   },
                   "freshnessNote": {
-                    "type": "string",
-                    "minLength": 1,
-                    "maxLength": 5000
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "minLength": 0,
+                    "maxLength": 5000,
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^\\s*$",
+                        "maxLength": 5000
+                      },
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 5000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Null and blank strings are accepted as omitted values. Nonblank text must contain 1 to 5000 characters after trimming."
                   },
                   "idempotencyKey": {
                     "type": "string",
@@ -51281,7 +53463,7 @@
           "Pantry"
         ],
         "summary": "List confirmed items expiring in an inclusive date window",
-        "description": "Expiry is a user-provided observation and is not a food-safety determination.",
+        "description": "Expiry is a user-provided observation and is not a food-safety determination. Confirmed items expose additive date-only severity: more than 3 days GOOD, more than 1 through 3 days WARNING, 1 day or less ALERT, and past dates EXPIRED.",
         "operationId": "listExpiringPantryItems",
         "security": [
           {
@@ -51743,8 +53925,24 @@
                       "string",
                       "null"
                     ],
-                    "minLength": 1,
-                    "maxLength": 5000
+                    "minLength": 0,
+                    "maxLength": 5000,
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "pattern": "^\\s*$",
+                        "maxLength": 5000
+                      },
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 5000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ],
+                    "description": "Null and blank strings clear the value. Nonblank text must contain 1 to 5000 characters after trimming."
                   }
                 },
                 "required": [
@@ -52075,9 +54273,28 @@
                         "maxLength": 160
                       },
                       "reason": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 5000
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "minLength": 0,
+                        "maxLength": 5000,
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^\\s*$",
+                            "maxLength": 5000
+                          },
+                          {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 5000
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Null and blank strings are accepted as omitted values. Nonblank text must contain 1 to 5000 characters after trimming."
                       }
                     },
                     "required": [
@@ -52118,9 +54335,28 @@
                         "maxLength": 160
                       },
                       "reason": {
-                        "type": "string",
-                        "minLength": 1,
-                        "maxLength": 5000
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "minLength": 0,
+                        "maxLength": 5000,
+                        "anyOf": [
+                          {
+                            "type": "string",
+                            "pattern": "^\\s*$",
+                            "maxLength": 5000
+                          },
+                          {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 5000
+                          },
+                          {
+                            "type": "null"
+                          }
+                        ],
+                        "description": "Null and blank strings are accepted as omitted values. Nonblank text must contain 1 to 5000 characters after trimming."
                       }
                     },
                     "required": [

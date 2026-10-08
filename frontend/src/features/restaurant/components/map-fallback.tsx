@@ -10,11 +10,12 @@ import {
   Minus,
   Navigation,
   Plus,
+  Search,
   Utensils,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import type { Restaurant } from '../types/restaurant.model';
+import type { Restaurant, RestaurantBounds } from '../types/restaurant.model';
 
 export interface MapFallbackProps {
   items: Restaurant[];
@@ -23,6 +24,16 @@ export interface MapFallbackProps {
   selectedId?: string | null;
   onSelect?: (id: string) => void;
   onRadiusChange?: (radiusM: number) => void;
+  /**
+   * Báo khung vùng đang xem khi người dùng đổi mức phóng mô phỏng.
+   * Parent lưu vào ref, KHÔNG nối vào `queryKey` (SC-011).
+   */
+  onBoundsChange?: (bounds: RestaurantBounds | null) => void;
+  /** Người dùng bấm nút "Tìm trong vùng đang xem". */
+  onSearchThisArea?: () => void;
+  /** Đã có khung vùng để tìm hay chưa — dùng để vô hiệu hoá nút. */
+  canSearchThisArea?: boolean;
+  isSearchingArea?: boolean;
 }
 
 /**
@@ -39,15 +50,19 @@ export function MapFallback({
   selectedId,
   onSelect,
   onRadiusChange,
+  onBoundsChange,
+  onSearchThisArea,
+  canSearchThisArea = true,
+  isSearchingArea = false,
 }: MapFallbackProps) {
   const [zoomFactor, setZoomFactor] = React.useState(1);
 
-  // Tâm bản đồ: Ưu tiên vị trí người dùng, sau đó là quán đầu tiên có tọa độ, hoặc mặc định Bến Thành (TP.HCM)
+  // Tâm bản đồ: Ưu tiên vị trí người dùng, sau đó là quán đầu tiên có tọa độ, hoặc mặc định Bến Thành
   const center = React.useMemo(() => {
-    if (userLocation?.lat && userLocation?.lng) return userLocation;
-    const firstWithCoords = items.find((i) => i.lat !== null && i.lng !== null);
-    if (firstWithCoords?.lat && firstWithCoords?.lng) {
-      return { lat: firstWithCoords.lat, lng: firstWithCoords.lng };
+    if (userLocation?.lat !== undefined && userLocation?.lng !== undefined) return userLocation;
+    const firstWithCoords = items.find((i) => i.hasCoordinates);
+    if (firstWithCoords?.lat !== null && firstWithCoords?.lat !== undefined) {
+      return { lat: firstWithCoords.lat, lng: firstWithCoords.lng ?? 0 };
     }
     return { lat: 10.7725, lng: 106.698 }; // Mặc định trung tâm TP.HCM
   }, [userLocation, items]);
@@ -59,7 +74,7 @@ export function MapFallback({
 
   // Lấy các quán có tọa độ hợp lệ
   const validPlaces = React.useMemo(() => {
-    return items.filter((item) => item.lat !== null && item.lng !== null);
+    return items.filter((item) => item.hasCoordinates);
   }, [items]);
 
   // Chiếu tọa độ địa lý (Lat, Lng) lên hệ quy chiếu phần trăm (%) trên khung bản đồ
@@ -91,6 +106,24 @@ export function MapFallback({
 
   // Link mở Google Maps ngoài
   const googleMapsUrl = `https://www.google.com/maps/search/qu%C3%A1n+chay/@${center.lat},${center.lng},14z`;
+
+  // Mô phỏng khung vùng đang xem quanh tâm theo tỉ lệ phóng, đủ bốn mốc cho backend.
+  const simulatedBounds = React.useMemo<RestaurantBounds>(() => {
+    const halfSpanMeters = Math.max(2000, radiusM) * zoomFactor;
+    const latSpan = halfSpanMeters / 2 / 110574;
+    const lngSpan = halfSpanMeters / 2 / (111320 * Math.cos((center.lat * Math.PI) / 180));
+    return {
+      north: center.lat + latSpan,
+      south: center.lat - latSpan,
+      east: center.lng + lngSpan,
+      west: center.lng - lngSpan,
+    };
+  }, [center.lat, center.lng, radiusM, zoomFactor]);
+
+  // Chỉ báo khung vùng khi ngư��i dùng chủ động đổi tỉ lệ phóng — không tự gọi khi vẽ.
+  const reportBounds = React.useCallback(() => {
+    onBoundsChange?.(simulatedBounds);
+  }, [onBoundsChange, simulatedBounds]);
 
   return (
     <div
@@ -151,6 +184,30 @@ export function MapFallback({
           </a>
         </div>
       </div>
+
+      {/* Nút tìm trong vùng đang xem — người dùng bấm mới phát sinh truy vấn */}
+      {onSearchThisArea && (
+        <div className="relative z-20 mt-2 flex justify-center">
+          <Button
+            size="sm"
+            className="h-7 gap-1.5 rounded-full px-3 text-xs shadow-lg"
+            onClick={() => {
+              reportBounds();
+              onSearchThisArea();
+            }}
+            disabled={!canSearchThisArea}
+            title={
+              canSearchThisArea
+                ? 'Tìm các quán trong vùng bạn đang xem'
+                : 'Hãy đổi tỉ lệ phóng để chọn vùng cần tìm'
+            }
+            aria-label="Tìm trong vùng đang xem trên bản đồ"
+          >
+            <Search className="size-3.5" aria-hidden="true" />
+            {isSearchingArea ? 'Tìm lại vùng này' : 'Tìm trong vùng đang xem'}
+          </Button>
+        </div>
+      )}
 
       {/* Mặt phẳng hiển thị các Markers */}
       <div className="relative z-10 flex-1">
@@ -221,7 +278,7 @@ export function MapFallback({
           <div className="absolute inset-x-4 top-1/2 z-20 flex -translate-y-1/2 flex-col items-center justify-center rounded-xl border border-dashed bg-background/90 p-4 text-center shadow-xs backdrop-blur-xs">
             <MapPin className="size-6 text-muted-foreground" />
             <p className="mt-1.5 text-xs font-semibold">
-              Chưa có kết quả phù hợp trong bán kính{' '}
+              Chưa có quán chay trong bán kính{' '}
               {radiusM >= 1000 ? `${radiusM / 1000} km` : `${radiusM} m`}
             </p>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
@@ -263,7 +320,10 @@ export function MapFallback({
       <div className="absolute right-3 top-16 z-30 flex flex-col gap-1 rounded-xl border bg-background/90 p-1 shadow-md backdrop-blur-xs">
         <button
           type="button"
-          onClick={() => setZoomFactor((z) => Math.max(0.35, Number((z * 0.75).toFixed(2))))}
+          onClick={() => {
+            setZoomFactor((z) => Math.max(0.35, Number((z * 0.75).toFixed(2))));
+            reportBounds();
+          }}
           className="flex size-7 items-center justify-center rounded-lg hover:bg-muted text-foreground transition-colors"
           title="Phóng to"
         >
@@ -271,7 +331,10 @@ export function MapFallback({
         </button>
         <button
           type="button"
-          onClick={() => setZoomFactor((z) => Math.min(2.5, Number((z * 1.35).toFixed(2))))}
+          onClick={() => {
+            setZoomFactor((z) => Math.min(2.5, Number((z * 1.35).toFixed(2))));
+            reportBounds();
+          }}
           className="flex size-7 items-center justify-center rounded-lg hover:bg-muted text-foreground transition-colors"
           title="Thu nhỏ"
         >
@@ -280,7 +343,10 @@ export function MapFallback({
         {zoomFactor !== 1 && (
           <button
             type="button"
-            onClick={() => setZoomFactor(1)}
+            onClick={() => {
+              setZoomFactor(1);
+              reportBounds();
+            }}
             className="flex size-7 items-center justify-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground border-t transition-colors"
             title="Đặt lại tỉ lệ phóng"
           >

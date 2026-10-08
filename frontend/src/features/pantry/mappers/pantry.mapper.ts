@@ -99,13 +99,29 @@ export class PantryMapper extends BaseMapper<PantryItemDto, PantryItem> {
       safeString(pickField(dto, ['freshnessNote', 'freshness_note'], '')) || null;
     const version = safeNumber(pickField(dto, ['version'], 1));
 
+    const backendExpiryStatusRaw = pickField(dto, ['expiryStatus', 'expiry_status'], null);
+    const backendExpiryStatus =
+      backendExpiryStatusRaw === 'GOOD' ||
+      backendExpiryStatusRaw === 'WARNING' ||
+      backendExpiryStatusRaw === 'ALERT' ||
+      backendExpiryStatusRaw === 'EXPIRED'
+        ? backendExpiryStatusRaw
+        : null;
+    const daysUntilExpiryVal = pickField(dto, ['daysUntilExpiry', 'days_until_expiry'], null);
+    const daysUntilExpiry =
+      daysUntilExpiryVal !== null && daysUntilExpiryVal !== undefined
+        ? safeNumber(daysUntilExpiryVal)
+        : null;
+    const expiryStatusAsOf =
+      safeString(pickField(dto, ['expiryStatusAsOf', 'expiry_status_as_of'], '')) || null;
+
     // Expiry calculation
     const {
       status: expiryStatus,
       variant: expiryBadgeVariant,
       label: expiryBadgeLabel,
       daysRemaining,
-    } = this.calculateExpiryStatus(expiresAt);
+    } = this.calculateExpiryStatus(expiresAt, backendExpiryStatus, daysUntilExpiry);
 
     return {
       id,
@@ -139,18 +155,68 @@ export class PantryMapper extends BaseMapper<PantryItemDto, PantryItem> {
       freshnessNote,
       version,
       expiryStatus,
+      backendExpiryStatus,
+      daysUntilExpiry,
+      expiryStatusAsOf,
       expiryBadgeVariant,
       expiryBadgeLabel,
       daysRemaining,
     };
   }
 
-  private calculateExpiryStatus(expiresAt: string | null): {
+  private calculateExpiryStatus(
+    expiresAt: string | null,
+    backendStatus?: string | null,
+    backendDays?: number | null
+  ): {
     status: ExpiryStatus;
     variant: 'default' | 'secondary' | 'destructive' | 'outline';
     label: string;
     daysRemaining: number | null;
   } {
+    if (backendStatus) {
+      if (backendStatus === 'EXPIRED') {
+        return {
+          status: 'EXPIRED',
+          variant: 'destructive',
+          label:
+            backendDays !== null && backendDays !== undefined
+              ? `Đã quá hạn ${Math.abs(backendDays)} ngày`
+              : 'Đã hết hạn',
+          daysRemaining: backendDays ?? null,
+        };
+      }
+      if (backendStatus === 'ALERT') {
+        return {
+          status: 'ALERT',
+          variant: 'destructive',
+          label:
+            backendDays === 0
+              ? 'Hết hạn hôm nay'
+              : backendDays === 1
+                ? 'Còn 1 ngày (Cảnh báo khẩn)'
+                : `Còn ${backendDays ?? 0} ngày (Cảnh báo khẩn)`,
+          daysRemaining: backendDays ?? null,
+        };
+      }
+      if (backendStatus === 'WARNING') {
+        return {
+          status: 'WARNING',
+          variant: 'secondary',
+          label: `Còn ${backendDays ?? 0} ngày`,
+          daysRemaining: backendDays ?? null,
+        };
+      }
+      if (backendStatus === 'GOOD') {
+        return {
+          status: 'SAFE',
+          variant: 'default',
+          label: `Còn ${backendDays ?? 0} ngày`,
+          daysRemaining: backendDays ?? null,
+        };
+      }
+    }
+
     if (!expiresAt) {
       return {
         status: 'UNKNOWN',

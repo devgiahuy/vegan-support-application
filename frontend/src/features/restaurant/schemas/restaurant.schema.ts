@@ -1,54 +1,42 @@
 import { z } from 'zod';
 
-export const MIN_RADIUS_M = 500;
+/** Backend `radiusMeters` là `z.coerce.number().int().min(100).max(50000).default(5000)`. */
+export const MIN_RADIUS_M = 100;
 export const MAX_RADIUS_M = 50000;
 export const DEFAULT_RADIUS_M = 5000;
-export const MAX_DISHES = 10;
 
-export const locationQuerySchema = z.object({
-  lat: z.number().min(-90, 'Vĩ độ từ -90 đến 90.').max(90, 'Vĩ độ từ -90 đến 90.').optional(),
-  lng: z
-    .number()
-    .min(-180, 'Kinh độ từ -180 đến 180.')
-    .max(180, 'Kinh độ từ -180 đến 180.')
-    .optional(),
-  addressText: z.string().trim().max(500).default(''),
-  radiusM: z
-    .number()
-    .min(MIN_RADIUS_M, `Bán kính tối thiểu ${MIN_RADIUS_M}m.`)
-    .max(MAX_RADIUS_M, `Bán kính tối đa ${MAX_RADIUS_M}m.`)
-    .default(DEFAULT_RADIUS_M),
-  query: z.string().trim().max(160).default(''),
-  dietaryTags: z.array(z.string()).default([]),
-});
-
-export type LocationQueryFormValues = z.infer<typeof locationQuerySchema>;
+/** Backend `searchQuerySchema.q` là `z.string().trim().min(2).max(160)`. */
+export const MAX_QUERY_LENGTH = 160;
 
 export const addressGeocodeSchema = z.object({
   address: z
     .string()
     .trim()
-    .min(5, 'Vui lòng nhập địa chỉ cụ thể hơn (tối thiểu 5 ký tự).')
+    .min(3, 'Vui lòng nhập địa chỉ cụ thể hơn (tối thiểu 3 ký tự).')
     .max(500),
 });
 
 export type AddressGeocodeFormValues = z.infer<typeof addressGeocodeSchema>;
 
+/**
+ * Bám `submitRestaurantSchema` của backend (`.strict()`):
+ * `name` 2..180, `address` 5..500, `latitude`/`longitude` BẮT BUỘC,
+ * `dietTags` chỉ nhận VEGAN | LACTO_OVO | BUDDHIST | CHRISTIAN.
+ */
 export const submitRestaurantSchema = z.object({
   name: z.string().trim().min(2, 'Vui lòng nhập tên quán (tối thiểu 2 ký tự).').max(180),
   address: z.string().trim().min(5, 'Vui lòng nhập địa chỉ đầy đủ (tối thiểu 5 ký tự).').max(500),
-  lat: z.number().min(-90).max(90),
-  lng: z.number().min(-180).max(180),
-  dietaryTags: z.array(z.string()),
-  dishes: z.array(z.string().trim().min(1)).max(MAX_DISHES, `Tối đa ${MAX_DISHES} món.`),
-  openingHours: z.string().trim().max(200).optional(),
-  priceRange: z.string().trim().max(100).optional(),
-  phoneNumber: z.string().trim().max(20).optional(),
-  note: z.string().trim().max(2000).optional(),
+  latitude: z.number('Vui lòng chọn vị trí trên bản đồ.').min(-90).max(90),
+  longitude: z.number('Vui lòng chọn vị trí trên bản đồ.').min(-180).max(180),
+  categories: z.array(z.string().trim().min(1).max(100)).max(30).optional(),
+  dietTags: z.array(z.enum(['VEGAN', 'LACTO_OVO', 'BUDDHIST', 'CHRISTIAN'])).optional(),
+  allergenFreeCodes: z.array(z.string().trim().min(1).max(100)).max(30).optional(),
+  excludedIngredients: z.array(z.string().trim().min(1).max(100)).max(30).optional(),
 });
 
 export type SubmitRestaurantFormValues = z.infer<typeof submitRestaurantSchema>;
 
+/** Ngoài phạm vi redesign trang khám phá — giữ nguyên cho luồng quản trị. */
 export const reviewRestaurantSchema = z.object({
   decision: z.enum(['APPROVE', 'REJECT'], { message: 'Vui lòng chọn quyết định.' }),
   reason: z.string().trim().min(3, 'Vui lòng nhập lý do quyết định (tối thiểu 3 ký tự).').max(1000),

@@ -448,6 +448,17 @@ Retry a failed or partially failed recognition job
       "type": [
         "string",
         "null"
+      ],
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
       ]
     },
     "confidence": {

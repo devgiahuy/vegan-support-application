@@ -64,11 +64,11 @@ export function RestaurantDetail({ id }: { id: string }) {
               </p>
             </div>
             <div className="flex flex-col items-end gap-1.5">
-              <Badge variant={restaurant.source === 'INTERNAL' ? 'secondary' : 'outline'}>
+              <Badge variant={restaurant.isExternal ? 'outline' : 'secondary'}>
                 {restaurant.sourceLabel}
               </Badge>
-              {restaurant.priceRange && (
-                <span className="text-xs font-semibold text-primary">{restaurant.priceRange}</span>
+              {restaurant.priceLabel && (
+                <span className="text-xs font-semibold text-primary">{restaurant.priceLabel}</span>
               )}
             </div>
           </div>
@@ -80,12 +80,22 @@ export function RestaurantDetail({ id }: { id: string }) {
                 Trường phái ẩm thực
               </h3>
               <div className="mt-1 flex flex-wrap gap-1.5">
-                {restaurant.dietaryTags.map((tag) => (
+                {restaurant.dietaryTags.map((tag, index) => (
                   <Badge key={tag} variant="secondary">
-                    {tag}
+                    {restaurant.dietaryTagLabels[index] ?? tag}
                   </Badge>
                 ))}
               </div>
+            </div>
+          )}
+
+          {restaurant.requiresDietaryWarning && (
+            <div className="flex items-start gap-2 rounded-xl border border-amber-500/20 bg-amber-50/50 p-3 text-xs text-amber-700 dark:bg-amber-950/20 dark:text-amber-400">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+              <span>
+                Nhãn chế độ ăn của quán này đến từ nhà cung cấp bản đồ và chưa được người kiểm duyệt
+                xác nhận. Hãy liên hệ quán để chắc chắn trước khi đến.
+              </span>
             </div>
           )}
 
@@ -150,7 +160,7 @@ export function RestaurantDetail({ id }: { id: string }) {
           )}
 
           <p className="text-[11px] text-muted-foreground border-t pt-2">
-            Nguồn dữ liệu: <strong>{restaurant.sourceLabel}</strong>. {restaurant.attribution}
+            Nguồn dữ liệu: <strong>{restaurant.sourceLabel}</strong>.
             {restaurant.fetchedAt &&
               ` Cập nhật lần cuối: ${restaurant.fetchedAt.toLocaleDateString('vi-VN')}.`}
           </p>

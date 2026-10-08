@@ -82,6 +82,14 @@ export interface MealWarningDto {
   explanation?: string;
   suggestedAdjustment?: string | null;
   suggested_adjustment?: string | null;
+  detail?: string;
+  suggestion?: string | null;
+  severityLabel?: string;
+  severity_label?: string;
+  scopeLabel?: string;
+  scope_label?: string;
+  targetComparison?: 'ABOVE' | 'BELOW' | string | null;
+  target_comparison?: 'ABOVE' | 'BELOW' | string | null;
   advisory?: boolean;
   incompleteDataNotes?: string[] | string | null;
   incomplete_data_notes?: string[] | string | null;
@@ -107,6 +115,16 @@ export interface AnalysisSummaryDto {
   info_count?: number | string;
   selectedItemCount?: number | string;
   selected_item_count?: number | string;
+  userStatus?: string;
+  user_status?: string;
+  title?: string;
+  detail?: string;
+  advisoryCount?: number | string;
+  advisory_count?: number | string;
+  hardConstraintViolationCount?: number | string;
+  hard_constraint_violation_count?: number | string;
+  hardConstraintsPreserved?: boolean;
+  hard_constraints_preserved?: boolean;
   dailyLimitViolations?: number | string;
   daily_limit_violations?: number | string;
   compatibilityViolations?: number | string;
@@ -117,6 +135,37 @@ export interface AnalysisSummaryDto {
   same_meal_count?: number | string;
   sameDayCount?: number | string;
   same_day_count?: number | string;
+}
+
+export interface MacroTargetsDto {
+  proteinGrams?: number | null;
+  fiberGrams?: number | null;
+  fatGrams?: number | null;
+  carbohydrateGrams?: number | null;
+}
+
+export interface DayEstimatedNutritionDto {
+  date?: string;
+  totals?: {
+    proteinGrams?: number | null;
+    fiberGrams?: number | null;
+    fatGrams?: number | null;
+    carbohydrateGrams?: number | null;
+  };
+  confidence?: number;
+  uncertaintyNotes?: string[];
+}
+
+export interface EstimatedNutritionAnalysisDto {
+  estimated?: boolean;
+  targetSource?: string;
+  target_source?: string;
+  targetSourceDetail?: string;
+  target_source_detail?: string;
+  tolerancePercent?: number;
+  tolerance_percent?: number;
+  targets?: MacroTargetsDto;
+  days?: DayEstimatedNutritionDto[];
 }
 
 export interface MealPlanAnalysisResponseDto {
@@ -149,6 +198,7 @@ export interface MealPlanAnalysisResponseDto {
   disclaimer?: string | null;
   summary?: AnalysisSummaryDto | null;
   warnings?: MealWarningDto[] | null;
+  estimatedNutrition?: EstimatedNutritionAnalysisDto | null;
 }
 
 /** Payload gửi lên `POST /meal-plans/:id/analyze` */

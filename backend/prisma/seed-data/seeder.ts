@@ -13,11 +13,14 @@ import {
   MediaKind,
   MediaAssetStatus,
   MediaProvider,
+  NutritionValueOrigin,
   PantryAdjustmentType,
   PostRevisionStatus,
   PostStatus,
   PostType,
+  type PostRevision,
   type Prisma,
+  RecipeNutritionEstimateStatus,
   type PrismaClient,
   Tradition,
 } from '@prisma/client';
@@ -49,6 +52,49 @@ function postTagRows(tags: readonly string[]) {
   return tags.map((tag) => ({ tag, normalizedTag: normalizeVietnameseText(tag) }));
 }
 
+function hasEncodingDamage(value: string | null): boolean {
+  return value !== null && /\uFFFD|[ÃÄÆ]|[\p{L}]\?+[\p{L}]|â[\u0080-\u00bf]/u.test(value);
+}
+
+async function repairSeedRevisionText(
+  prisma: PrismaClient,
+  revision: PostRevision,
+  fixture: Pick<PostRevision, 'title' | 'excerpt' | 'body'> & { tags: readonly string[] },
+): Promise<PostRevision> {
+  const data: Prisma.PostRevisionUpdateInput = {};
+  if (hasEncodingDamage(revision.title) || hasEncodingDamage(revision.normalizedTitle)) {
+    data.title = fixture.title;
+    data.normalizedTitle = normalizeVietnameseText(fixture.title);
+  }
+  if (hasEncodingDamage(revision.excerpt) || hasEncodingDamage(revision.normalizedExcerpt)) {
+    data.excerpt = fixture.excerpt;
+    data.normalizedExcerpt = normalizeVietnameseText(fixture.excerpt ?? '');
+  }
+  if (hasEncodingDamage(revision.body) || hasEncodingDamage(revision.normalizedBody)) {
+    data.body = fixture.body;
+    data.normalizedBody = normalizeVietnameseText(fixture.body);
+  }
+  const tags = await prisma.postTag.findMany({ where: { revisionId: revision.id } });
+  const damagedTagIds = tags.filter((tag) => hasEncodingDamage(tag.tag)).map((tag) => tag.id);
+  if (damagedTagIds.length) {
+    await prisma.$transaction(async (transaction) => {
+      await transaction.postTag.deleteMany({ where: { id: { in: damagedTagIds } } });
+      for (const tag of postTagRows(fixture.tags)) {
+        await transaction.postTag.upsert({
+          where: {
+            revisionId_normalizedTag: { revisionId: revision.id, normalizedTag: tag.normalizedTag },
+          },
+          update: {},
+          create: { revisionId: revision.id, ...tag },
+        });
+      }
+    });
+  }
+  return Object.keys(data).length
+    ? prisma.postRevision.update({ where: { id: revision.id }, data })
+    : revision;
+}
+
 export async function seedComprehensiveData(
   prisma: PrismaClient,
   options: {
@@ -66,7 +112,12 @@ export async function seedComprehensiveData(
     await prisma.allergenDefinition.upsert({
       where: { code: allergen.code },
       update: { label: allergen.label, description: allergen.description ?? null, active: true },
-      create: { code: allergen.code, label: allergen.label, description: allergen.description ?? null, active: true },
+      create: {
+        code: allergen.code,
+        label: allergen.label,
+        description: allergen.description ?? null,
+        active: true,
+      },
     });
   }
 
@@ -116,7 +167,8 @@ export async function seedComprehensiveData(
       provider: FoodDataProvider.MANUAL,
       licenseName: 'CC0-1.0',
       licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
-      attribution: 'VeggieConnect scientific plant nutrition dataset; evidence-graded educational references.',
+      attribution:
+        'VeggieConnect scientific plant nutrition dataset; evidence-graded educational references.',
       defaultLocale: 'vi-VN',
       active: true,
     },
@@ -126,7 +178,8 @@ export async function seedComprehensiveData(
       provider: FoodDataProvider.MANUAL,
       licenseName: 'CC0-1.0',
       licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
-      attribution: 'VeggieConnect scientific plant nutrition dataset; evidence-graded educational references.',
+      attribution:
+        'VeggieConnect scientific plant nutrition dataset; evidence-graded educational references.',
       defaultLocale: 'vi-VN',
       active: true,
     },
@@ -216,7 +269,10 @@ export async function seedComprehensiveData(
   // ==========================================
   // 4. CANONICAL INGREDIENTS (60+ items)
   // ==========================================
-  const ingredientMap = new Map<string, { id: string; canonicalName: string; normalizedName: string }>();
+  const ingredientMap = new Map<
+    string,
+    { id: string; canonicalName: string; normalizedName: string }
+  >();
   for (const def of ingredientDefinitions) {
     const ingredient = await prisma.ingredient.upsert({
       where: { normalizedName: def.normalizedName },
@@ -236,9 +292,11 @@ export async function seedComprehensiveData(
 
     // Aliases
     await prisma.ingredientAlias.deleteMany({ where: { ingredientId: ingredient.id } });
-    const aliases = [...new Map(
-      [def.canonicalName, ...def.aliases].map(alias => [normalizeVietnameseText(alias), alias]),
-    ).values()];
+    const aliases = [
+      ...new Map(
+        [def.canonicalName, ...def.aliases].map((alias) => [normalizeVietnameseText(alias), alias]),
+      ).values(),
+    ];
     if (aliases.length > 0) {
       await prisma.ingredientAlias.createMany({
         data: aliases.map((alias) => ({
@@ -265,7 +323,11 @@ export async function seedComprehensiveData(
     await prisma.ingredientDietCompatibility.createMany({
       data: [
         { ingredientId: ingredient.id, dietPattern: DietPattern.VEGAN, compatible: def.vegan },
-        { ingredientId: ingredient.id, dietPattern: DietPattern.LACTO_OVO, compatible: def.lactoOvo },
+        {
+          ingredientId: ingredient.id,
+          dietPattern: DietPattern.LACTO_OVO,
+          compatible: def.lactoOvo,
+        },
       ],
     });
 
@@ -575,7 +637,8 @@ export async function seedComprehensiveData(
           invitationReason: c.invitationReason ?? null,
           status: ContributorApplicationStatus.APPROVED,
           reviewEvidence: approvalEvidence,
-          reviewNote: 'Hồ sơ đạt tiêu chuẩn đóng góp nội dung chất lượng cao theo quy chế VeggieConnect.',
+          reviewNote:
+            'Hồ sơ đạt tiêu chuẩn đóng góp nội dung chất lượng cao theo quy chế VeggieConnect.',
           reviewedById: adminId,
           reviewedAt: new Date('2026-09-15T00:00:00.000Z'),
         },
@@ -592,7 +655,8 @@ export async function seedComprehensiveData(
           invitationReason: c.invitationReason ?? null,
           status: ContributorApplicationStatus.APPROVED,
           reviewEvidence: approvalEvidence,
-          reviewNote: 'Hồ sơ đạt tiêu chuẩn đóng góp nội dung chất lượng cao theo quy chế VeggieConnect.',
+          reviewNote:
+            'Hồ sơ đạt tiêu chuẩn đóng góp nội dung chất lượng cao theo quy chế VeggieConnect.',
           reviewedById: adminId,
           reviewedAt: new Date('2026-09-15T00:00:00.000Z'),
         },
@@ -641,8 +705,9 @@ export async function seedComprehensiveData(
   const postMap = new Map<string, { id: string }>();
   for (const rDef of recipeDefinitions) {
     const author = userMap.get(rDef.authorEmail.toLowerCase()) ?? { id: adminId };
-    const catId = categoryIdMap.get(`${CategoryType.FOOD_TYPE}:${rDef.categorySlug}`) ??
-                  categoryIdMap.get(`${CategoryType.RECIPE_GROUP}:${rDef.categorySlug}`);
+    const catId =
+      categoryIdMap.get(`${CategoryType.FOOD_TYPE}:${rDef.categorySlug}`) ??
+      categoryIdMap.get(`${CategoryType.RECIPE_GROUP}:${rDef.categorySlug}`);
 
     let post = await prisma.post.findUnique({ where: { slug: rDef.slug } });
     if (!post) {
@@ -669,78 +734,146 @@ export async function seedComprehensiveData(
           postId: post.id,
           createdById: author.id,
           version: 1,
-        status: PostRevisionStatus.PUBLISHED,
-        title: rDef.title,
-        normalizedTitle: normalizeVietnameseText(rDef.title),
-        excerpt: rDef.excerpt,
-        normalizedExcerpt: normalizeVietnameseText(rDef.excerpt),
-        body: rDef.body,
-        normalizedBody: normalizeVietnameseText(rDef.body),
-        ...(catId ? { categories: { create: [{ categoryId: catId }] } } : {}),
-        tags: { create: postTagRows(rDef.tags) },
-        media: {
-          create: {
-            kind: MediaKind.COVER_IMAGE,
-            provider: MediaProvider.CLOUDINARY,
-            secureUrl: rDef.coverMedia.secureUrl,
-            publicId: rDef.coverMedia.publicId,
-            width: rDef.coverMedia.width,
-            height: rDef.coverMedia.height,
-            position: 0,
+          status: PostRevisionStatus.PUBLISHED,
+          title: rDef.title,
+          normalizedTitle: normalizeVietnameseText(rDef.title),
+          excerpt: rDef.excerpt,
+          normalizedExcerpt: normalizeVietnameseText(rDef.excerpt),
+          body: rDef.body,
+          normalizedBody: normalizeVietnameseText(rDef.body),
+          ...(catId ? { categories: { create: [{ categoryId: catId }] } } : {}),
+          tags: { create: postTagRows(rDef.tags) },
+          media: {
+            create: {
+              kind: MediaKind.COVER_IMAGE,
+              provider: MediaProvider.CLOUDINARY,
+              secureUrl: rDef.coverMedia.secureUrl,
+              publicId: rDef.coverMedia.publicId,
+              width: rDef.coverMedia.width,
+              height: rDef.coverMedia.height,
+              position: 0,
+            },
+          },
+          recipeDetail: {
+            create: {
+              servings: rDef.servings,
+              prepTimeMinutes: rDef.prepTimeMinutes,
+              cookTimeMinutes: rDef.cookTimeMinutes,
+              difficulty: rDef.difficulty,
+              calories: rDef.calories,
+              proteinGrams: rDef.proteinGrams,
+              carbsGrams: rDef.carbsGrams,
+              fatGrams: rDef.fatGrams,
+              fiberGrams: rDef.fiberGrams,
+              vitaminB12Mcg: rDef.vitaminB12Mcg ?? null,
+              mealPlannerEligible: rDef.mealPlannerEligible,
+              allergenCodes: rDef.allergenCodes,
+              traditionWarnings: rDef.traditionWarnings,
+            },
+          },
+          ingredients: {
+            create: rDef.ingredients.map((ing, idx) => {
+              const canonical = ingredientMap.get(ing.ingredientNormalizedName);
+              return {
+                position: idx,
+                ingredientId: canonical?.id,
+                displayName: ing.displayName,
+                normalizedName: normalizeVietnameseText(ing.displayName),
+                amount: ing.amount,
+                unit: ing.unit,
+                resolutionStatus: canonical
+                  ? IngredientResolutionStatus.EXACT
+                  : IngredientResolutionStatus.UNKNOWN,
+              };
+            }),
+          },
+          recipeSteps: {
+            create: rDef.steps.map((st) => {
+              const method = st.cookingMethodCode
+                ? cookingMethodMap.get(st.cookingMethodCode)
+                : undefined;
+              return {
+                position: st.position,
+                instruction: st.instruction,
+                durationMinutes: st.durationMinutes,
+                cookingMethodId: method?.id,
+                affectedIngredientPositions: st.affectedIngredientPositions,
+              };
+            }),
+          },
+          dietCompatibility: {
+            create: [
+              { dietPattern: DietPattern.VEGAN, compatible: true, reasonCodes: [] },
+              { dietPattern: DietPattern.LACTO_OVO, compatible: true, reasonCodes: [] },
+            ],
           },
         },
-        recipeDetail: {
-          create: {
-            servings: rDef.servings,
-            prepTimeMinutes: rDef.prepTimeMinutes,
-            cookTimeMinutes: rDef.cookTimeMinutes,
-            difficulty: rDef.difficulty,
-            calories: rDef.calories,
-            proteinGrams: rDef.proteinGrams,
-            carbsGrams: rDef.carbsGrams,
-            fatGrams: rDef.fatGrams,
-            fiberGrams: rDef.fiberGrams,
-            vitaminB12Mcg: rDef.vitaminB12Mcg ?? null,
-            mealPlannerEligible: rDef.mealPlannerEligible,
-            allergenCodes: rDef.allergenCodes,
-            traditionWarnings: rDef.traditionWarnings,
+      });
+    }
+
+    revision = await repairSeedRevisionText(prisma, revision, rDef);
+    const storedIngredients = await prisma.recipeIngredient.findMany({
+      where: { revisionId: revision.id },
+    });
+    for (const ingredient of storedIngredients) {
+      const fixture = rDef.ingredients[ingredient.position];
+      if (fixture && hasEncodingDamage(ingredient.displayName)) {
+        await prisma.recipeIngredient.update({
+          where: { id: ingredient.id },
+          data: {
+            displayName: fixture.displayName,
+            normalizedName: normalizeVietnameseText(fixture.displayName),
           },
-        },
-        ingredients: {
-          create: rDef.ingredients.map((ing, idx) => {
-            const canonical = ingredientMap.get(ing.ingredientNormalizedName);
-            return {
-              position: idx,
-              ingredientId: canonical?.id,
-              displayName: ing.displayName,
-              normalizedName: normalizeVietnameseText(ing.displayName),
-              amount: ing.amount,
-              unit: ing.unit,
-              resolutionStatus: canonical ? IngredientResolutionStatus.EXACT : IngredientResolutionStatus.UNKNOWN,
-            };
-          }),
-        },
-        recipeSteps: {
-          create: rDef.steps.map((st) => {
-            const method = st.cookingMethodCode ? cookingMethodMap.get(st.cookingMethodCode) : undefined;
-            return {
-              position: st.position,
-              instruction: st.instruction,
-              durationMinutes: st.durationMinutes,
-              cookingMethodId: method?.id,
-              affectedIngredientPositions: st.affectedIngredientPositions,
-            };
-          }),
-        },
-        dietCompatibility: {
-          create: [
-            { dietPattern: DietPattern.VEGAN, compatible: true, reasonCodes: [] },
-            { dietPattern: DietPattern.LACTO_OVO, compatible: true, reasonCodes: [] },
-          ],
-        },
+        });
+      }
+    }
+    const storedSteps = await prisma.recipeStep.findMany({ where: { revisionId: revision.id } });
+    for (const step of storedSteps) {
+      const fixture = rDef.steps.find((candidate) => candidate.position === step.position);
+      if (fixture && hasEncodingDamage(step.instruction)) {
+        await prisma.recipeStep.update({
+          where: { id: step.id },
+          data: { instruction: fixture.instruction },
+        });
+      }
+    }
+
+    // Keep the compact recipe nutrition fields synchronized on repeat seeds;
+    // previously these values were written only when the revision was new.
+    await prisma.recipeDetail.upsert({
+      where: { revisionId: revision.id },
+      update: {
+        servings: rDef.servings,
+        prepTimeMinutes: rDef.prepTimeMinutes,
+        cookTimeMinutes: rDef.cookTimeMinutes,
+        difficulty: rDef.difficulty,
+        calories: rDef.calories,
+        proteinGrams: rDef.proteinGrams,
+        carbsGrams: rDef.carbsGrams,
+        fatGrams: rDef.fatGrams,
+        fiberGrams: rDef.fiberGrams,
+        vitaminB12Mcg: rDef.vitaminB12Mcg ?? null,
+        mealPlannerEligible: rDef.mealPlannerEligible,
+        allergenCodes: rDef.allergenCodes,
+        traditionWarnings: rDef.traditionWarnings,
+      },
+      create: {
+        revisionId: revision.id,
+        servings: rDef.servings,
+        prepTimeMinutes: rDef.prepTimeMinutes,
+        cookTimeMinutes: rDef.cookTimeMinutes,
+        difficulty: rDef.difficulty,
+        calories: rDef.calories,
+        proteinGrams: rDef.proteinGrams,
+        carbsGrams: rDef.carbsGrams,
+        fatGrams: rDef.fatGrams,
+        fiberGrams: rDef.fiberGrams,
+        vitaminB12Mcg: rDef.vitaminB12Mcg ?? null,
+        mealPlannerEligible: rDef.mealPlannerEligible,
+        allergenCodes: rDef.allergenCodes,
+        traditionWarnings: rDef.traditionWarnings,
       },
     });
-    }
 
     if (post.status === PostStatus.PUBLISHED && post.publishedRevisionId !== revision.id) {
       await prisma.post.update({
@@ -773,6 +906,142 @@ export async function seedComprehensiveData(
     });
   }
 
+  // RecipeDetail keeps the compact macro fields used by meal planning, while
+  // the detail page reads the versioned Phase 13 nutrition estimate. Persist
+  // the recipe definition's curated per-serving values into that contract so
+  // seeded dishes display the same calories/macros declared in recipes.data.
+  for (const rDef of recipeDefinitions) {
+    const recipe = postMap.get(rDef.slug);
+    if (!recipe) continue;
+
+    const revision = await prisma.postRevision.findFirstOrThrow({
+      where: { postId: recipe.id, version: 1 },
+      include: {
+        post: true,
+        ingredients: { orderBy: { position: 'asc' } },
+        recipeSteps: { orderBy: { position: 'asc' } },
+      },
+    });
+    const recipeFingerprint = createHash('sha256')
+      .update(
+        JSON.stringify({
+          calculationVersion: 'recipe-nutrition-v1',
+          revisionId: revision.id,
+          postVersion: revision.post.version,
+          servings: rDef.servings,
+          ingredients: revision.ingredients.map((ingredient) => ({
+            id: ingredient.id,
+            ingredientId: ingredient.ingredientId,
+            amount: ingredient.amount.toString(),
+            unit: ingredient.unit,
+            position: ingredient.position,
+          })),
+          steps: revision.recipeSteps.map((step) => ({
+            cookingMethodId: step.cookingMethodId,
+            durationMinutes: step.durationMinutes,
+            temperatureCelsius: step.temperatureCelsius?.toString() ?? null,
+            affectedIngredientPositions: step.affectedIngredientPositions,
+            position: step.position,
+          })),
+        }),
+      )
+      .digest('hex');
+
+    const currentEstimate = await prisma.recipeNutritionEstimate.findFirst({
+      where: { revisionId: revision.id, status: RecipeNutritionEstimateStatus.CURRENT },
+      orderBy: { version: 'desc' },
+    });
+    if (currentEstimate?.recipeFingerprint === recipeFingerprint) continue;
+
+    const perServingNutrients = [
+      {
+        nutrientCode: 'ENERGY_KCAL',
+        nutrientName: 'Năng lượng',
+        unit: 'kcal',
+        amount: rDef.calories,
+      },
+      { nutrientCode: 'PROTEIN', nutrientName: 'Protein', unit: 'g', amount: rDef.proteinGrams },
+      { nutrientCode: 'CARBS', nutrientName: 'Carbohydrate', unit: 'g', amount: rDef.carbsGrams },
+      { nutrientCode: 'FAT', nutrientName: 'Chất béo', unit: 'g', amount: rDef.fatGrams },
+      { nutrientCode: 'FIBER', nutrientName: 'Chất xơ', unit: 'g', amount: rDef.fiberGrams },
+      ...(rDef.vitaminB12Mcg === undefined
+        ? []
+        : [
+            {
+              nutrientCode: 'VITAMIN_B12',
+              nutrientName: 'Vitamin B12',
+              unit: 'mcg',
+              amount: rDef.vitaminB12Mcg,
+            },
+          ]),
+    ].map((nutrient) => ({
+      ...nutrient,
+      origin: NutritionValueOrigin.USER_PROVIDED,
+      confidence: 0.8,
+      min: Math.round(nutrient.amount * 0.9 * 100) / 100,
+      max: Math.round(nutrient.amount * 1.1 * 100) / 100,
+    }));
+    const totalNutrients = perServingNutrients.map((nutrient) => ({
+      ...nutrient,
+      amount: nutrient.amount * rDef.servings,
+      min: nutrient.min * rDef.servings,
+      max: nutrient.max * rDef.servings,
+    }));
+    const sourceVersions = [
+      {
+        sourceCode: projectSource.code,
+        sourceVersion: '1.0',
+        sourceRecordId: `recipe-seed:${rDef.slug}`,
+        kind: 'CURATED_RECIPE_NUTRITION',
+      },
+    ];
+    const assumptions = [
+      {
+        code: 'CURATED_RECIPE_MACROS',
+        message: 'Per-serving nutrition values are curated seed data declared with the recipe.',
+        origin: NutritionValueOrigin.USER_PROVIDED,
+      },
+    ];
+
+    await prisma.$transaction(async (transaction) => {
+      await transaction.recipeNutritionEstimate.updateMany({
+        where: { revisionId: revision.id, status: RecipeNutritionEstimateStatus.CURRENT },
+        data: { status: RecipeNutritionEstimateStatus.HISTORICAL },
+      });
+      const latest = await transaction.recipeNutritionEstimate.findFirst({
+        where: { revisionId: revision.id },
+        orderBy: { version: 'desc' },
+        select: { version: true },
+      });
+      await transaction.recipeNutritionEstimate.create({
+        data: {
+          revisionId: revision.id,
+          version: (latest?.version ?? 0) + 1,
+          status: RecipeNutritionEstimateStatus.CURRENT,
+          calculationVersion: 'recipe-nutrition-v1',
+          recipeFingerprint,
+          servings: rDef.servings,
+          totalRawGrams: 0,
+          totalCookedGrams: 0,
+          totalNutrients,
+          perServingNutrients,
+          sourceVersions,
+          assumptions,
+          uncoveredIngredients: [],
+          confidence: 0.8,
+          uncertainty: {
+            method: 'CURATED_RECIPE_MACROS',
+            relativeRangePercent: 10,
+          },
+          aiUsed: false,
+          providerDown: false,
+          disclaimer:
+            'Số liệu dinh dưỡng theo khẩu phần là dữ liệu ước tính được biên soạn cho món mẫu và chỉ mang tính tham khảo.',
+        },
+      });
+    });
+  }
+
   // ==========================================
   // 7. HANDBOOKS & ARTICLES
   // ==========================================
@@ -793,6 +1062,8 @@ export async function seedComprehensiveData(
         },
       });
     }
+
+    // Repair damaged text only in version 1 of known seed definitions.
     postMap.set(hDef.slug, post);
 
     let revision = await prisma.postRevision.findUnique({
@@ -828,6 +1099,7 @@ export async function seedComprehensiveData(
         },
       });
     }
+    revision = await repairSeedRevisionText(prisma, revision, hDef);
 
     if (post.status === PostStatus.PUBLISHED && post.publishedRevisionId !== revision.id) {
       await prisma.post.update({
@@ -865,8 +1137,9 @@ export async function seedComprehensiveData(
   // ==========================================
   for (const vDef of videoDefinitions) {
     const author = userMap.get(vDef.authorEmail.toLowerCase()) ?? { id: adminId };
-    const catId = categoryIdMap.get(`${CategoryType.RECIPE_GROUP}:${vDef.categorySlug}`) ??
-                  categoryIdMap.get(`${CategoryType.CONTENT_TOPIC}:${vDef.categorySlug}`);
+    const catId =
+      categoryIdMap.get(`${CategoryType.RECIPE_GROUP}:${vDef.categorySlug}`) ??
+      categoryIdMap.get(`${CategoryType.CONTENT_TOPIC}:${vDef.categorySlug}`);
 
     let post = await prisma.post.findUnique({ where: { slug: vDef.slug } });
     if (!post) {
@@ -916,6 +1189,8 @@ export async function seedComprehensiveData(
         },
       });
     }
+
+    revision = await repairSeedRevisionText(prisma, revision, vDef);
 
     if (post.status === PostStatus.PUBLISHED && post.publishedRevisionId !== revision.id) {
       await prisma.post.update({
@@ -982,7 +1257,13 @@ export async function seedComprehensiveData(
     await prisma.postRating.upsert({
       where: { userId_postId: { userId: user.id, postId: post.id } },
       update: { taste: r.taste, difficulty: r.difficulty, active: true },
-      create: { userId: user.id, postId: post.id, taste: r.taste, difficulty: r.difficulty, active: true },
+      create: {
+        userId: user.id,
+        postId: post.id,
+        taste: r.taste,
+        difficulty: r.difficulty,
+        active: true,
+      },
     });
   }
 
@@ -992,7 +1273,9 @@ export async function seedComprehensiveData(
     const user = userMap.get(c.userEmail.toLowerCase());
     if (!post || !user) continue;
 
-    const parent = c.replyToUserEmail ? commentMap.get(`${c.postSlug}:${c.replyToUserEmail}`) : undefined;
+    const parent = c.replyToUserEmail
+      ? commentMap.get(`${c.postSlug}:${c.replyToUserEmail}`)
+      : undefined;
     let comment = await prisma.comment.findFirst({
       where: { postId: post.id, authorId: user.id, content: c.content },
     });
@@ -1086,7 +1369,9 @@ export async function seedComprehensiveData(
           normalizedName: normalizeVietnameseText(ing.displayName),
           amount: ing.amount,
           unit: ing.unit,
-          resolutionStatus: canonical ? IngredientResolutionStatus.EXACT : IngredientResolutionStatus.UNKNOWN,
+          resolutionStatus: canonical
+            ? IngredientResolutionStatus.EXACT
+            : IngredientResolutionStatus.UNKNOWN,
         };
       }),
     });
@@ -1276,5 +1561,7 @@ export async function seedComprehensiveData(
     });
   }
 
-  console.info('Successfully seeded comprehensive VeggieConnect sample dataset with 60+ ingredients, 13 recipes, 4 handbooks, 3 videos, community, pantry, and media assets.');
+  console.info(
+    'Successfully seeded comprehensive VeggieConnect sample dataset with 60+ ingredients, 25 recipes, 4 handbooks, 3 videos, community, pantry, and media assets.',
+  );
 }

@@ -3,6 +3,7 @@ import { Alert, Pressable, Text, View } from 'react-native';
 import { Plus, Trash2 } from 'lucide-react-native';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextField } from '@/components/ui/text-field';
+import { IngredientPicker } from '@/features/ingredient/components/ingredient-picker';
 import { useIconColors } from '@/lib/theme-colors';
 import { customMealMapper } from '../mappers/custom-meal.mapper';
 import type { CustomMeal, CustomMealFormValues, CustomMealIngredient } from '../types/custom-meal.model';
@@ -11,13 +12,30 @@ function toNumberOrNull(value: string): number | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
   const parsed = Number(trimmed.replace(',', '.'));
-  return Number.isFinite(parsed) ? parsed : null;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
-function ingredient(id: string): CustomMealIngredient {
-  return { id, ingredientId: null, displayName: '', amount: 0, unit: 'g' };
+function numberToText(value: number | null | undefined): string {
+  return value === null || value === undefined ? '' : String(value);
 }
 
+function emptyIngredient(id: string): CustomMealIngredient {
+  return {
+    id,
+    ingredientId: null,
+    displayName: '',
+    canonicalName: null,
+    resolutionStatus: 'UNKNOWN',
+    amount: 0,
+    unit: 'g',
+  };
+}
+
+/**
+ * Form tạo/sửa bữa ăn tự tạo. Mỗi nguyên liệu có thể liên kết với nguyên liệu chuẩn bằng gợi ý tìm kiếm
+ * (gửi kèm `ingredientId`); nếu sửa tên sau khi chọn thì liên kết bị bỏ để tránh lỗi lệch tên-id.
+ * Chỉ số dinh dưỡng là số người dùng tự nhập, để trống = chưa có dữ liệu.
+ */
 export function CustomMealForm({
   initial,
   submitLabel,
@@ -34,13 +52,14 @@ export function CustomMealForm({
   const [notes, setNotes] = React.useState(initial?.notes ?? '');
   const [servings, setServings] = React.useState(String(initial?.servings ?? 1));
   const [sourceNote, setSourceNote] = React.useState(initial?.sourceNote ?? '');
-  const [calories, setCalories] = React.useState(initial?.calories ? String(initial.calories) : '');
-  const [protein, setProtein] = React.useState(initial?.proteinGrams ? String(initial.proteinGrams) : '');
-  const [carbs, setCarbs] = React.useState(initial?.carbsGrams ? String(initial.carbsGrams) : '');
-  const [fat, setFat] = React.useState(initial?.fatGrams ? String(initial.fatGrams) : '');
+  const [calories, setCalories] = React.useState(numberToText(initial?.calories));
+  const [protein, setProtein] = React.useState(numberToText(initial?.proteinGrams));
+  const [carbs, setCarbs] = React.useState(numberToText(initial?.carbsGrams));
+  const [fat, setFat] = React.useState(numberToText(initial?.fatGrams));
+  const [fiber, setFiber] = React.useState(numberToText(initial?.fiberGrams));
   const [tags, setTags] = React.useState((initial?.tags ?? []).join(', '));
   const [ingredients, setIngredients] = React.useState<CustomMealIngredient[]>(
-    initial?.ingredients.length ? initial.ingredients : [ingredient('local-1')]
+    initial?.ingredients.length ? initial.ingredients : [emptyIngredient('local-1')]
   );
 
   const updateIngredient = (index: number, patch: Partial<CustomMealIngredient>) => {
@@ -54,19 +73,19 @@ export function CustomMealForm({
   const submit = async () => {
     const cleanName = name.trim();
     const parsedServings = Math.trunc(Number(servings));
-    if (cleanName.length < 2) {
-      Alert.alert('Thieu ten bua an', 'Ten bua an can co it nhat 2 ky tu.');
+    if (cleanName.length < 1) {
+      Alert.alert('Thiếu tên bữa ăn', 'Vui lòng nhập tên bữa ăn.');
       return;
     }
-    if (!Number.isInteger(parsedServings) || parsedServings < 1) {
-      Alert.alert('So phan khong hop le', 'So phan an phai lon hon 0.');
+    if (!Number.isInteger(parsedServings) || parsedServings < 1 || parsedServings > 99) {
+      Alert.alert('Số phần không hợp lệ', 'Số phần ăn phải từ 1 đến 99.');
       return;
     }
     const cleanIngredients = ingredients
       .map((item) => ({ ...item, displayName: item.displayName.trim(), unit: item.unit.trim() || 'g' }))
       .filter((item) => item.displayName.length > 0 && item.amount > 0);
     if (cleanIngredients.length === 0) {
-      Alert.alert('Thieu nguyen lieu', 'Them it nhat 1 nguyen lieu co so luong.');
+      Alert.alert('Thiếu nguyên liệu', 'Thêm ít nhất 1 nguyên liệu có số lượng.');
       return;
     }
     await onSubmit({
@@ -78,6 +97,7 @@ export function CustomMealForm({
       userProteinGrams: toNumberOrNull(protein),
       userCarbsGrams: toNumberOrNull(carbs),
       userFatGrams: toNumberOrNull(fat),
+      userFiberGrams: toNumberOrNull(fiber),
       tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
       ingredients: cleanIngredients,
     });
@@ -85,11 +105,11 @@ export function CustomMealForm({
 
   return (
     <View className="gap-4">
-      <TextField label="Ten bua an" value={name} onChangeText={setName} placeholder="VD: Com dau hu sot nam" />
-      <TextField label="Ghi chu" value={notes} onChangeText={setNotes} placeholder="Cach nau, cam hung..." multiline className="min-h-20 pt-3" />
+      <TextField label="Tên bữa ăn" value={name} onChangeText={setName} placeholder="VD: Cơm đậu hũ sốt nấm" />
+      <TextField label="Ghi chú" value={notes} onChangeText={setNotes} placeholder="Cách nấu, cảm hứng..." multiline className="min-h-20 pt-3" />
       <View className="flex-row gap-3">
         <View className="flex-1">
-          <TextField label="So phan" value={servings} onChangeText={setServings} keyboardType="numeric" />
+          <TextField label="Số phần" value={servings} onChangeText={setServings} keyboardType="numeric" />
         </View>
         <View className="flex-1">
           <TextField label="Calo" value={calories} onChangeText={setCalories} keyboardType="numeric" />
@@ -97,48 +117,61 @@ export function CustomMealForm({
       </View>
       <View className="flex-row gap-3">
         <View className="flex-1">
-          <TextField label="Dam g" value={protein} onChangeText={setProtein} keyboardType="numeric" />
+          <TextField label="Đạm (g)" value={protein} onChangeText={setProtein} keyboardType="numeric" />
         </View>
         <View className="flex-1">
-          <TextField label="Carb g" value={carbs} onChangeText={setCarbs} keyboardType="numeric" />
-        </View>
-        <View className="flex-1">
-          <TextField label="Fat g" value={fat} onChangeText={setFat} keyboardType="numeric" />
+          <TextField label="Carb (g)" value={carbs} onChangeText={setCarbs} keyboardType="numeric" />
         </View>
       </View>
-      <TextField label="Nguon/ghi chu rieng" value={sourceNote} onChangeText={setSourceNote} placeholder="VD: Shopee tag la tag nguoi dung, khong goi API ngoai" />
-      <TextField label="Tags" value={tags} onChangeText={setTags} placeholder="meal-prep, shopee, bua-trua" />
+      <View className="flex-row gap-3">
+        <View className="flex-1">
+          <TextField label="Béo (g)" value={fat} onChangeText={setFat} keyboardType="numeric" />
+        </View>
+        <View className="flex-1">
+          <TextField label="Xơ (g)" value={fiber} onChangeText={setFiber} keyboardType="numeric" />
+        </View>
+      </View>
+      <Text className="-mt-2 text-[11px] text-muted-foreground">
+        Chỉ số dinh dưỡng là số bạn tự nhập; để trống nếu chưa biết (hệ thống không coi là 0).
+      </Text>
+      <TextField label="Nguồn/ghi chú riêng" value={sourceNote} onChangeText={setSourceNote} placeholder="VD: tag shopee chỉ là tag người dùng tự đặt, không gọi dịch vụ ngoài" />
+      <TextField label="Tags" value={tags} onChangeText={setTags} placeholder="meal-prep, shopee, bữa-trưa" />
 
       <View className="gap-3 rounded-2xl border border-border p-4">
         <View className="flex-row items-center justify-between">
-          <Text className="font-bold text-foreground">Nguyen lieu</Text>
+          <Text className="font-bold text-foreground">Nguyên liệu</Text>
           <Pressable
-            onPress={() => setIngredients((current) => [...current, ingredient(`local-${Date.now()}`)])}
+            onPress={() => setIngredients((current) => [...current, emptyIngredient(`local-${Date.now()}`)])}
             className="flex-row items-center gap-1 rounded-full bg-primary px-3 py-1.5">
             <Plus size={13} color={colors.primaryForeground} />
-            <Text className="text-xs font-semibold text-primary-foreground">Them</Text>
+            <Text className="text-xs font-semibold text-primary-foreground">Thêm</Text>
           </Pressable>
         </View>
         {ingredients.map((item, index) => (
           <View key={item.id} className="gap-2 rounded-xl border border-border p-3">
             <View className="flex-row items-center justify-between">
-              <Text className="text-xs font-semibold text-muted-foreground">Nguyen lieu {index + 1}</Text>
+              <Text className="text-xs font-semibold text-muted-foreground">Nguyên liệu {index + 1}</Text>
               {ingredients.length > 1 ? (
                 <Pressable onPress={() => removeIngredient(index)}>
                   <Trash2 size={15} color={colors.destructive} />
                 </Pressable>
               ) : null}
             </View>
-            <TextField
-              label="Ten"
-              value={item.displayName}
-              onChangeText={(value) => updateIngredient(index, { displayName: value })}
-              placeholder="Dau hu"
+            <IngredientPicker
+              placeholder="VD: Đậu hũ"
+              value={{ displayName: item.displayName, ingredientId: item.ingredientId }}
+              onChange={(next) =>
+                updateIngredient(index, {
+                  displayName: next.displayName,
+                  ingredientId: next.ingredientId,
+                  canonicalName: next.ingredientId ? next.displayName : null,
+                })
+              }
             />
             <View className="flex-row gap-3">
               <View className="flex-1">
                 <TextField
-                  label="Luong"
+                  label="Lượng"
                   value={item.amount ? String(item.amount) : ''}
                   onChangeText={(value) => updateIngredient(index, { amount: Number(value.replace(',', '.')) || 0 })}
                   keyboardType="numeric"
@@ -146,7 +179,7 @@ export function CustomMealForm({
               </View>
               <View className="flex-1">
                 <TextField
-                  label="Don vi"
+                  label="Đơn vị"
                   value={item.unit}
                   onChangeText={(value) => updateIngredient(index, { unit: value })}
                 />
@@ -170,4 +203,3 @@ export function CustomMealForm({
 export function toCustomMealCreateDto(values: CustomMealFormValues) {
   return customMealMapper.toCreateDto(values);
 }
-

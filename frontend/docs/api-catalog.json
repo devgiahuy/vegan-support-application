@@ -1,7 +1,7 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
-  "source": "http://localhost:4000/api-docs.json",
-  "generatedAt": "2026-10-07T14:57:48.364Z",
+  "source": "../backend/openapi.json",
+  "generatedAt": "2026-10-08T06:01:10.836Z",
   "stats": {
     "operations": 168,
     "groups": 39,
@@ -2602,7 +2602,7 @@
       "method": "POST",
       "path": "/api/v1/meal-plans/{id}/analyze",
       "group": "Meal Analysis",
-      "summary": "Phân tích khẩu phần, giới hạn và tương tác của meal plan",
+      "summary": "Phân tích khẩu phần và các điểm cần lưu ý trong thực đơn",
       "operationId": "analyzeMealPlan",
       "params": [
         {
@@ -5760,13 +5760,41 @@
               "type": "string"
             },
             "notes": {
-              "type": "string"
+              "type": [
+                "string",
+                "null"
+              ],
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "servings": {
               "type": "integer"
             },
             "sourceNote": {
-              "type": "string"
+              "type": [
+                "string",
+                "null"
+              ],
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "userCalories": {
               "type": "integer"
@@ -5778,6 +5806,9 @@
               "type": "number"
             },
             "userFatGrams": {
+              "type": "number"
+            },
+            "userFiberGrams": {
               "type": "number"
             },
             "deletePolicy": {
@@ -5885,6 +5916,17 @@
               "type": [
                 "string",
                 "null"
+              ],
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
               ]
             },
             "servings": {
@@ -5894,6 +5936,17 @@
               "type": [
                 "string",
                 "null"
+              ],
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
               ]
             },
             "userCalories": {
@@ -5915,6 +5968,12 @@
               ]
             },
             "userFatGrams": {
+              "type": [
+                "number",
+                "null"
+              ]
+            },
+            "userFiberGrams": {
               "type": [
                 "number",
                 "null"
@@ -6238,7 +6297,21 @@
               ]
             },
             "freshnessNote": {
-              "type": "string"
+              "type": [
+                "string",
+                "null"
+              ],
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "idempotencyKey": {
               "type": "string"
@@ -6462,6 +6535,17 @@
               "type": [
                 "string",
                 "null"
+              ],
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
               ]
             }
           },
@@ -6589,7 +6673,24 @@
                   "type": "string"
                 },
                 "reason": {
-                  "type": "string"
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    {
+                      "type": "null",
+                      "_truncated": true
+                    }
+                  ]
                 }
               },
               "additionalProperties": false
@@ -6623,7 +6724,24 @@
                   "type": "string"
                 },
                 "reason": {
-                  "type": "string"
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    {
+                      "type": "string",
+                      "_truncated": true
+                    },
+                    {
+                      "type": "null",
+                      "_truncated": true
+                    }
+                  ]
                 }
               },
               "additionalProperties": false

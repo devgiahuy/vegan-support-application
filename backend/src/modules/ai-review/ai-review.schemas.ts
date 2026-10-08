@@ -6,14 +6,18 @@ import {
   AiVerificationStatus,
   Role,
 } from '@prisma/client';
-import { z } from '../../common/validation/zod.js';
+import {
+  optionalNullableTrimmedTextSchema,
+  optionalTrimmedTextSchema,
+  z,
+} from '../../common/validation/zod.js';
 
 export const createAiArtifactSchema = z
   .object({
     type: z.nativeEnum(AiArtifactType),
     sourceId: z.string().uuid(),
-    title: z.string().trim().min(3).max(160).optional(),
-    summary: z.string().trim().min(3).max(5_000).optional(),
+    title: optionalTrimmedTextSchema(3, 160),
+    summary: optionalTrimmedTextSchema(3, 5_000),
     authorAnonymous: z.boolean().default(true),
   })
   .strict();
@@ -44,7 +48,7 @@ const verificationFields = {
   conclusion: z.nativeEnum(AiVerificationConclusion),
   scope: z.string().trim().min(3).max(2_000),
   evidenceNote: z.string().trim().min(3).max(10_000),
-  correction: z.string().trim().min(3).max(10_000).nullable().optional(),
+  correction: optionalNullableTrimmedTextSchema(3, 10_000),
 };
 
 export const createAiVerificationSchema = z

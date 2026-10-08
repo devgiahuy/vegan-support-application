@@ -36,3 +36,17 @@ export interface IngredientListResponseDto {
     total_pages?: number;
   } | null;
 }
+
+/** `GET /ingredients/resolve`. */
+export interface IngredientResolveResponseDto {
+  success?: boolean;
+  data?: {
+    query?: string;
+    normalizedQuery?: string;
+    match?: string;
+    candidates?: (IngredientDto & {
+      dietCompatibilities?: { dietPattern?: string; compatible?: boolean }[] | null;
+      traditionWarnings?: { tradition?: string; warningCode?: string; label?: string }[] | null;
+    })[] | null;
+  } | null;
+}

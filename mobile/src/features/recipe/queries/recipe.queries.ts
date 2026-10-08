@@ -27,6 +27,15 @@ export const useRecipeDetailQuery = (idOrSlug: string) => {
   });
 };
 
+export const useRelatedRecipesQuery = (id: string) => {
+  return useQuery({
+    queryKey: [...RECIPE_QUERY_KEYS.all, 'related', id] as const,
+    queryFn: () => recipeApi.getRelatedRecipes(id),
+    enabled: id.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });
+};
+
 export const useCreateRecipeMutation = () => {
   const queryClient = useQueryClient();
   return useMutation({

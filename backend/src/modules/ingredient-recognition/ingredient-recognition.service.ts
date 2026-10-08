@@ -6,6 +6,7 @@ import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 import type { IngredientVisionProvider, VisionImageResult } from './ingredient-vision.provider.js';
 import {
   RecognitionConflictError,
+  RecognitionIncompleteError,
   RecognitionVersionConflictError,
   type DeduplicatedCandidateData,
   type IngredientRecognitionRepository,
@@ -422,6 +423,13 @@ export class IngredientRecognitionService {
         statusCode: 409,
         code: 'RECOGNITION_VERSION_CONFLICT',
         message: 'Recognition candidate changed; refresh before continuing.',
+      });
+    }
+    if (error instanceof RecognitionIncompleteError) {
+      return new AppError({
+        statusCode: 422,
+        code: 'RECOGNITION_CANDIDATE_INCOMPLETE',
+        message: 'Vui lòng bổ sung đầy đủ số lượng và đơn vị cho các mục được chọn.',
       });
     }
     if (error instanceof RecognitionConflictError) {

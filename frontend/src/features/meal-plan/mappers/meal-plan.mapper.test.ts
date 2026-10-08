@@ -241,4 +241,225 @@ describe('MealPlanMapper', () => {
     expect(slot.servings).toBe(2);
     expect(slot.customMealCoverage).toBe('FULL');
   });
+
+  it('Phase 18 v4.1: ánh xạ days 7x3, estimatedNutritionTargets, warningDetails, userSummary, và unresolved slot', () => {
+    const plan = mealPlanMapper.toModel({
+      id: 'plan-v41-1',
+      weekStart: '2026-09-28',
+      days: [
+        {
+          date: '2026-09-28',
+          dayOfWeek: 'MONDAY',
+          slots: {
+            breakfast: {
+              id: 'slot-mon-bf',
+              date: '2026-09-28',
+              mealType: 'BREAKFAST',
+              status: 'UNFILLED',
+              unresolved: {
+                code: 'UNFILLED_SLOT',
+                reason: 'Không còn món hard-compatible nào cho bữa sáng.',
+                hardConstraintsPreserved: true,
+              },
+            },
+            lunch: null,
+            dinner: null,
+          },
+          estimatedTotals: {
+            proteinGrams: 45,
+            fiberGrams: 28,
+            fatGrams: 30,
+            carbohydrateGrams: 160,
+            estimated: true,
+            confidence: 0.95,
+            uncertaintyNotes: ['Ước tính dinh dưỡng theo công thức'],
+          },
+        },
+      ],
+      estimatedNutritionTargets: {
+        proteinGrams: 50,
+        fiberGrams: 30,
+        fatGrams: 35,
+        carbohydrateGrams: 180,
+        estimated: true,
+        source: 'HEALTH_PROFILE_TDEE_GOAL_CONFIG',
+        sourceDetail: 'TDEE 2000 kcal x factor 0.9',
+        tolerancePercent: 15,
+      },
+      warningDetails: [
+        {
+          code: 'MACRO_TARGET_OUTSIDE_TOLERANCE',
+          severity: 'CAUTION',
+          severityLabel: 'Lưu ý',
+          title: 'Chất béo vượt mục tiêu',
+          detail: 'Lượng chất béo ngày Thứ Hai cao hơn mục tiêu ước tính.',
+          suggestion: 'Giảm bớt khẩu phần dầu.',
+          affectedSlots: [{ itemId: 'slot-mon-bf', date: '2026-09-28', mealType: 'BREAKFAST' }],
+        },
+      ],
+      userSummary: {
+        status: 'ADVISORY_ADJUSTMENTS',
+        title: 'Có một số khuyến nghị điều chỉnh',
+        detail: 'Thực đơn tuần có một số lưu ý về tỷ lệ dinh dưỡng.',
+        suggestion: 'Bạn có thể xem chi tiết cảnh báo.',
+        hardConstraintsPreserved: true,
+      },
+    });
+
+    expect(plan.days).toHaveLength(1);
+    expect(plan.days[0].dayOfWeekLabel).toBe('Thứ Hai');
+    expect(plan.days[0].slots.breakfast?.filled).toBe(false);
+    expect(plan.days[0].slots.breakfast?.unresolvedCode).toBe('UNFILLED_SLOT');
+    expect(plan.days[0].slots.breakfast?.unfilledReason).toBe(
+      'Không còn món hard-compatible nào cho bữa sáng.'
+    );
+    expect(plan.days[0].estimatedTotals?.proteinGrams).toBe(45);
+
+    expect(plan.estimatedNutritionTargets?.proteinGrams).toBe(50);
+    expect(plan.estimatedNutritionTargets?.tolerancePercent).toBe(15);
+
+    expect(plan.warningDetails).toHaveLength(1);
+    expect(plan.warningDetails[0].title).toBe('Chất béo vượt mục tiêu');
+    expect(plan.warningDetails[0].severityLabel).toBe('Lưu ý');
+
+    expect(plan.userSummary?.status).toBe('ADVISORY_ADJUSTMENTS');
+    expect(plan.userSummary?.hardConstraintsPreserved).toBe(true);
+  });
+
+  it('chuẩn hóa date khi backend trả về chuỗi ISO có time (split T)', () => {
+    const plan = mealPlanMapper.toModel({
+      id: 'plan-iso',
+      weekStart: '2026-09-28T00:00:00.000Z',
+      items: [
+        {
+          id: 'item-1',
+          date: '2026-09-28T07:30:00.000Z',
+          mealType: 'BREAKFAST',
+          status: 'FILLED',
+          recipe: { id: 'r-1', title: 'Cháo nấm', calories: 300 },
+        },
+      ],
+      days: [
+        {
+          date: '2026-09-28T00:00:00.000Z',
+          dayOfWeek: 'MONDAY',
+          slots: {
+            breakfast: {
+              id: 'item-1',
+              date: '2026-09-28T07:30:00.000Z',
+              mealType: 'BREAKFAST',
+              status: 'FILLED',
+            },
+          },
+        },
+      ],
+    });
+
+    expect(plan.weekStart).toBe('2026-09-28');
+    expect(plan.items[0].date).toBe('2026-09-28');
+    expect(plan.days[0].date).toBe('2026-09-28');
+    expect(plan.days[0].slots.breakfast?.date).toBe('2026-09-28');
+  });
+
+  it('tự động tổng hợp days từ items theo date và mealType khi days rỗng', () => {
+    const plan = mealPlanMapper.toModel({
+      id: 'plan-auto-days',
+      weekStart: '2026-09-28',
+      items: [
+        {
+          id: 'slot-din',
+          date: '2026-09-28',
+          mealType: 'DINNER',
+          status: 'FILLED',
+          recipe: { id: 'r-din', title: 'Canh rau' },
+        },
+        {
+          id: 'slot-bf',
+          date: '2026-09-28',
+          mealType: 'BREAKFAST',
+          status: 'FILLED',
+          recipe: { id: 'r-bf', title: 'Bánh mì' },
+        },
+        {
+          id: 'slot-lu',
+          date: '2026-09-28',
+          mealType: 'LUNCH',
+          status: 'FILLED',
+          recipe: { id: 'r-lu', title: 'Cơm chay' },
+        },
+        {
+          id: 'slot-tue-bf',
+          date: '2026-09-29',
+          mealType: 'BREAKFAST',
+          status: 'FILLED',
+          recipe: { id: 'r-tue-bf', title: 'Phở chay' },
+        },
+      ],
+    });
+
+    expect(plan.days).toHaveLength(2);
+    expect(plan.days[0].date).toBe('2026-09-28');
+    expect(plan.days[0].dayOfWeekLabel).toBe('Thứ Hai');
+    expect(plan.days[0].slots.breakfast?.recipeTitle).toBe('Bánh mì');
+    expect(plan.days[0].slots.lunch?.recipeTitle).toBe('Cơm chay');
+    expect(plan.days[0].slots.dinner?.recipeTitle).toBe('Canh rau');
+
+    expect(plan.days[1].date).toBe('2026-09-29');
+    expect(plan.days[1].dayOfWeekLabel).toBe('Thứ Ba');
+    expect(plan.days[1].slots.breakfast?.recipeTitle).toBe('Phở chay');
+    expect(plan.days[1].slots.lunch).toBeNull();
+  });
+
+  it('map slot UNFILLED fallback unresolvedCode từ warningCodes khi không có unresolved object', () => {
+    const plan = mealPlanMapper.toModel({
+      id: 'plan-unfilled-warning',
+      weekStart: '2026-10-05',
+      items: [
+        {
+          id: 'slot-unfilled-1',
+          date: '2026-10-05',
+          mealType: 'LUNCH',
+          status: 'UNFILLED',
+          warningCodes: ['UNFILLED_SLOT'],
+        },
+      ],
+    });
+
+    const slot = plan.items[0];
+    expect(slot.filled).toBe(false);
+    expect(slot.unresolvedCode).toBe('UNFILLED_SLOT');
+    expect(slot.unfilledReason).toContain('Không có món phù hợp');
+  });
+
+  it('map đúng các chỉ số dinh dưỡng macro ở slot-level (proteinGrams, fiberGrams, fatGrams, carbohydrateGrams)', () => {
+    const plan = mealPlanMapper.toModel({
+      id: 'plan-slot-macros',
+      weekStart: '2026-10-05',
+      items: [
+        {
+          id: 'slot-1',
+          date: '2026-10-05',
+          mealType: 'BREAKFAST',
+          status: 'FILLED',
+          calories: 560,
+          proteinGrams: 19,
+          fiberGrams: 15,
+          fatGrams: 12,
+          carbohydrateGrams: 91,
+          recipe: {
+            id: 'r-1',
+            title: 'Cháo Hạt Sen Đậu Đỏ Yến Mạch',
+          },
+        },
+      ],
+    });
+
+    const slot = plan.items[0];
+    expect(slot.filled).toBe(true);
+    expect(slot.calories).toBe(560);
+    expect(slot.protein).toBe(19);
+    expect(slot.fiber).toBe(15);
+    expect(slot.fat).toBe(12);
+    expect(slot.carbs).toBe(91);
+  });
 });

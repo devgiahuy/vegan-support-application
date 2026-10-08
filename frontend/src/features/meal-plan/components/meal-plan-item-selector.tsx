@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Check, Flame, Search, Utensils, BookOpen, Users } from 'lucide-react';
+import { Check, Flame, Search, Utensils, BookOpen, Users, ShieldAlert } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -97,6 +97,15 @@ export const MealPlanItemSelector: React.FC<MealPlanItemSelectorProps> = ({
             Chọn từ bộ sưu tập món ăn cá nhân của bạn hoặc công thức chuẩn từ cộng đồng.
           </DialogDescription>
         </DialogHeader>
+
+        {/* Thông báo bảo vệ dị ứng & ràng buộc cứng */}
+        <div className="flex items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-800 dark:text-amber-300">
+          <ShieldAlert className="size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+          <span>
+            Hệ thống luôn kiểm tra bảo vệ bạn: Các món vi phạm dị ứng hoặc chế độ ăn sẽ bị từ chối
+            để đảm bảo an toàn tuyệt đối.
+          </span>
+        </div>
 
         {/* Thanh khẩu phần ăn muốn thêm */}
         <div className="flex items-center justify-between bg-muted/30 p-2.5 rounded-lg border border-border/60">

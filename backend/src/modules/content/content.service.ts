@@ -8,6 +8,7 @@ import {
   Role,
 } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
+import { normalizeDisplayUnit } from '../../common/units/unit-normalization.js';
 import { catalogSlug, normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 import {
   ContentVersionConflictError,
@@ -464,7 +465,7 @@ export class ContentService {
         displayName: item.displayName,
         normalizedName,
         amount: item.amount,
-        unit: item.unit,
+        unit: normalizeDisplayUnit(item.unit),
         optional: item.optional,
         resolutionStatus: canonical
           ? IngredientResolutionStatus.EXACT
@@ -623,7 +624,7 @@ export class ContentService {
             displayName: ingredient.displayName,
             normalizedName: ingredient.normalizedName,
             amount: Number(ingredient.amount),
-            unit: ingredient.unit,
+            unit: normalizeDisplayUnit(ingredient.unit),
             optional: ingredient.optional,
             resolutionStatus: ingredient.resolutionStatus,
           })),

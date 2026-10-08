@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Link, type Href, useRouter } from 'expo-router';
-import { BookOpen, ChefHat, FileText, Pencil, Search, Trash2, Video as VideoIcon } from 'lucide-react-native';
+import { BookOpen, ChefHat, FileText, History, Pencil, Search, Trash2, Video as VideoIcon } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -12,6 +12,7 @@ import { useVideosQuery } from '@/features/video/queries/video.queries';
 import { PostStatus } from '@/common/enums';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { useIconColors } from '@/lib/theme-colors';
+import { ReviewHistorySheet } from '@/features/review/components/review-history-sheet';
 import { useAuthStore } from '@/store/useAuthStore';
 
 type ContentType = 'RECIPE' | 'BLOG' | 'VIDEO';
@@ -93,11 +94,13 @@ function MyContentRow({
   item,
   colors,
   onDelete,
+  onHistory,
   isDeleting,
 }: {
   item: MyContentItem;
   colors: ReturnType<typeof useIconColors>;
   onDelete: (item: MyContentItem) => void;
+  onHistory: (item: MyContentItem) => void;
   isDeleting: boolean;
 }) {
   const TypeIcon = typeIcon(item.type);
@@ -130,6 +133,12 @@ function MyContentRow({
         </Pressable>
       </Link>
       <View className="flex-row gap-2 border-t border-border pt-2">
+        <Pressable
+          onPress={() => onHistory(item)}
+          className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl bg-muted py-2">
+          <History size={13} color={colors.foreground} />
+          <Text className="text-xs font-semibold text-foreground">Lịch sử duyệt</Text>
+        </Pressable>
         <Link href={editHref(item)} asChild>
           <Pressable className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl bg-muted py-2">
             <Pencil size={13} color={colors.foreground} />
@@ -164,6 +173,7 @@ export default function MyContentScreen() {
 
   const [search, setSearch] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<'ALL' | PostStatus>('ALL');
+  const [historyItem, setHistoryItem] = React.useState<MyContentItem | null>(null);
 
   const {
     data: recipesPagination,
@@ -305,7 +315,11 @@ export default function MyContentScreen() {
         <View>
           <Text className="text-2xl font-bold tracking-tight text-foreground">Bài viết của tôi</Text>
           <Text className="mt-1 text-sm text-muted-foreground">
-            Công thức, cẩm nang và video bạn đã đăng — theo dõi trạng thái duyệt, sửa hoặc xoá.
+            Công thức, cẩm nang và video bạn đã đăng — xem lịch sử duyệt, sửa hoặc xoá.
+          </Text>
+          <Text className="mt-1 text-xs leading-relaxed text-muted-foreground">
+            Danh sách này lấy từ nội dung đã xuất bản. Bản nháp hoặc bài đang chờ duyệt chưa hiển thị ở đây; hãy
+            mở &quot;Lịch sử duyệt&quot; của bài để xem các bản chỉnh sửa đang chờ.
           </Text>
         </View>
 
@@ -381,12 +395,18 @@ export default function MyContentScreen() {
                 item={item}
                 colors={colors}
                 onDelete={confirmDelete}
+                onHistory={setHistoryItem}
                 isDeleting={deleteMutation.isPending}
               />
             ))}
           </View>
         )}
       </View>
+      <ReviewHistorySheet
+        postId={historyItem?.id ?? null}
+        title={historyItem?.title}
+        onClose={() => setHistoryItem(null)}
+      />
     </SiteScreen>
   );
 }

@@ -8,7 +8,8 @@ export type PantryConfirmationStatus = 'CONFIRMED' | 'PENDING' | 'REJECTED';
 export type PantryConversionStatus = 'EXACT' | 'APPROXIMATE' | 'UNKNOWN';
 export type PantryAdjustmentType = 'CONSUME' | 'RESTORE' | 'ADJUST';
 
-export type ExpiryStatus = 'SAFE' | 'WARNING' | 'EXPIRED' | 'UNKNOWN';
+export type ExpiryStatus = 'SAFE' | 'WARNING' | 'ALERT' | 'EXPIRED' | 'UNKNOWN';
+export type BackendExpiryStatus = 'GOOD' | 'WARNING' | 'ALERT' | 'EXPIRED';
 
 export interface PantryConversion {
   status: PantryConversionStatus;
@@ -42,6 +43,9 @@ export interface PantryItem {
   version: number;
   // UI helpers
   expiryStatus: ExpiryStatus;
+  backendExpiryStatus?: BackendExpiryStatus | null;
+  daysUntilExpiry?: number | null;
+  expiryStatusAsOf?: string | null;
   expiryBadgeVariant: 'default' | 'secondary' | 'destructive' | 'outline';
   expiryBadgeLabel: string;
   daysRemaining: number | null;

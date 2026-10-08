@@ -154,7 +154,12 @@ export async function searchMongoPublished(
               $map: {
                 input: '$ingredients',
                 as: 'item',
-                in: { $ne: ['$$item.resolution_status', 'EXACT'] },
+                in: {
+                  $or: [
+                    { $eq: [{ $ifNull: ['$$item.ingredient_id', null] }, null] },
+                    { $ne: ['$$item.resolution_status', 'EXACT'] },
+                  ],
+                },
               },
             },
           ],

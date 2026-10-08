@@ -23,14 +23,21 @@ export function IncompleteDataBanner({
   const [showTechnicalDetails, setShowTechnicalDetails] = React.useState(false);
   const percent = Math.round(confidence * 100);
 
-  // Phân tích nếu notes chứa danh sách Recipe item UUID từ backend
+  // Phân tích nếu notes chứa danh sách món cần lưu ý từ backend
   const parsedItems = React.useMemo(() => {
     if (!notes) return [];
-    if (!notes.includes('Recipe item')) return [];
     return notes
       .split(';')
       .map((s) => s.trim())
-      .filter(Boolean);
+      .filter(Boolean)
+      .map((item) =>
+        item
+          .replace(
+            /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+            (uuid) => `#${uuid.slice(0, 6)}`
+          )
+          .replace(/Recipe item /gi, 'Món ăn ')
+      );
   }, [notes]);
 
   const hasRawRecipeItems = parsedItems.length > 0;
@@ -44,7 +51,7 @@ export function IncompleteDataBanner({
         <div className="flex-1 space-y-1.5">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="font-semibold text-foreground">
-              Dữ liệu dinh dưỡng chưa hoàn chỉnh (Độ tin cậy: {percent}%)
+              Dữ liệu dinh dưỡng ước tính (Độ tin cậy: {percent}%)
             </span>
             {hasRawRecipeItems && (
               <Button
@@ -57,12 +64,12 @@ export function IncompleteDataBanner({
                 {showTechnicalDetails ? (
                   <>
                     <ChevronUp className="size-3 mr-1" />
-                    Ẩn chi tiết kỹ thuật
+                    Thu gọn
                   </>
                 ) : (
                   <>
                     <ChevronDown className="size-3 mr-1" />
-                    Chi tiết kỹ thuật ({parsedItems.length} món)
+                    Xem danh sách ({parsedItems.length} món)
                   </>
                 )}
               </Button>
@@ -76,8 +83,8 @@ export function IncompleteDataBanner({
                 <strong className="text-foreground font-semibold">
                   {parsedItems.length} món ăn
                 </strong>{' '}
-                chưa có dữ liệu kiểm định vi chất hoặc phân tích nấu nướng chi tiết (cooking-aware).
-                Chỉ số dinh dưỡng tuần hiện được tính dựa trên các thành phần đã có dữ liệu chuẩn.
+                chưa có đủ dữ liệu để ước tính đầy đủ chất đạm, chất xơ, chất béo và tinh bột. Chỉ
+                số dinh dưỡng tuần hiện được tính dựa trên các thành phần đã có dữ liệu chuẩn.
               </>
             ) : (
               (notes ??
@@ -89,9 +96,9 @@ export function IncompleteDataBanner({
             <div className="mt-2 rounded border border-amber-500/20 bg-background/60 p-2.5 max-h-36 overflow-y-auto space-y-1">
               <div className="flex items-center gap-1 text-[11px] font-medium text-amber-700 dark:text-amber-400 mb-1">
                 <Info className="size-3" />
-                Danh sách chi tiết từ máy chủ:
+                Danh sách món cần lưu ý:
               </div>
-              <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-muted-foreground font-mono">
+              <ul className="list-disc pl-4 space-y-0.5 text-[11px] text-muted-foreground font-sans">
                 {parsedItems.map((item, idx) => (
                   <li key={idx} className="break-all">
                     {item}
@@ -103,7 +110,7 @@ export function IncompleteDataBanner({
 
           <p className="text-[11px] font-medium text-amber-700 dark:text-amber-400 pt-0.5">
             ⚠️ Hệ thống tính toán chỉ số dựa trên các thành phần đã kiểm định và{' '}
-            <strong>tuyệt đối không coi các nguyên liệu còn thiếu là 0 calo/0 vi chất</strong>.
+            <strong>tuyệt đối không coi các nguyên liệu còn thiếu là 0 calo/0 dinh dưỡng</strong>.
           </p>
         </div>
       </div>

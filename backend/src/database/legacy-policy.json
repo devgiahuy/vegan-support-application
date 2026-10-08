@@ -167,11 +167,7 @@
       "conversionVersion": 120,
       "freshnessNote": 5000
     },
-    "dates": [
-      "purchasedAt",
-      "openedAt",
-      "expiresAt"
-    ]
+    "dates": ["purchasedAt", "openedAt", "expiresAt"]
   },
   "PantryAdjustment": {
     "relations": {
@@ -324,9 +320,7 @@
       "lastRetryKey": 160,
       "lastRetryHash": 64
     },
-    "dates": [
-      "purchasedAt"
-    ]
+    "dates": ["purchasedAt"]
   },
   "ReceiptInput": {
     "relations": {
@@ -575,9 +569,7 @@
       "algorithmVersion": 80,
       "recommendationVersion": 80
     },
-    "dates": [
-      "weekStart"
-    ]
+    "dates": ["weekStart"]
   },
   "MealAnalysis": {
     "relations": {
@@ -607,9 +599,7 @@
       "idempotencyKey": 120,
       "payloadHash": 64
     },
-    "dates": [
-      "startDate"
-    ]
+    "dates": ["startDate"]
   },
   "MealProgramWeek": {
     "relations": {
@@ -617,9 +607,7 @@
     },
     "decimals": {},
     "lengths": {},
-    "dates": [
-      "weekStart"
-    ]
+    "dates": ["weekStart"]
   },
   "MealProgramWeekAlternative": {
     "relations": {
@@ -672,9 +660,7 @@
       }
     },
     "lengths": {},
-    "dates": [
-      "date"
-    ]
+    "dates": ["date"]
   },
   "MealPlanShoppingItem": {
     "relations": {
@@ -807,9 +793,7 @@
       "subjectKey": 64,
       "reservationKey": 160
     },
-    "dates": [
-      "usageDate"
-    ]
+    "dates": ["usageDate"]
   },
   "AiRateLimitBucket": {
     "relations": {},
@@ -1111,9 +1095,7 @@
       "sourceVersion": 120,
       "payloadHash": 64
     },
-    "dates": [
-      "sourceDate"
-    ]
+    "dates": ["sourceDate"]
   },
   "IngredientFoodProfile": {
     "relations": {
@@ -1137,11 +1119,7 @@
       "preparation": 120,
       "locale": 20
     },
-    "dates": [
-      "sourceDate",
-      "effectiveFrom",
-      "effectiveTo"
-    ]
+    "dates": ["sourceDate", "effectiveFrom", "effectiveTo"]
   },
   "HouseholdConversion": {
     "relations": {
@@ -1196,10 +1174,7 @@
     "lengths": {
       "unit": 20
     },
-    "dates": [
-      "effectiveFrom",
-      "effectiveTo"
-    ]
+    "dates": ["effectiveFrom", "effectiveTo"]
   },
   "NutrientReferenceIntake": {
     "relations": {
@@ -1219,10 +1194,7 @@
       "sourceVersion": 120,
       "locale": 20
     },
-    "dates": [
-      "effectiveFrom",
-      "effectiveTo"
-    ]
+    "dates": ["effectiveFrom", "effectiveTo"]
   },
   "IngredientIntakeGuideline": {
     "relations": {
@@ -1247,10 +1219,7 @@
       "sourceVersion": 120,
       "locale": 20
     },
-    "dates": [
-      "effectiveFrom",
-      "effectiveTo"
-    ]
+    "dates": ["effectiveFrom", "effectiveTo"]
   },
   "CookingMethod": {
     "relations": {},
@@ -1278,10 +1247,7 @@
       "sourceRecordId": 160,
       "sourceVersion": 120
     },
-    "dates": [
-      "effectiveFrom",
-      "effectiveTo"
-    ]
+    "dates": ["effectiveFrom", "effectiveTo"]
   },
   "CookingYieldFactor": {
     "relations": {
@@ -1299,10 +1265,7 @@
       "sourceRecordId": 160,
       "sourceVersion": 120
     },
-    "dates": [
-      "effectiveFrom",
-      "effectiveTo"
-    ]
+    "dates": ["effectiveFrom", "effectiveTo"]
   },
   "IngredientInteractionRule": {
     "relations": {
@@ -1318,10 +1281,7 @@
       "sourceVersion": 120,
       "locale": 20
     },
-    "dates": [
-      "effectiveFrom",
-      "effectiveTo"
-    ]
+    "dates": ["effectiveFrom", "effectiveTo"]
   },
   "FoodDataSuggestion": {
     "relations": {},
@@ -1489,9 +1449,7 @@
     },
     "decimals": {},
     "lengths": {},
-    "dates": [
-      "date"
-    ]
+    "dates": ["date"]
   },
   "UserAllergy": {
     "relations": {
@@ -1531,6 +1489,10 @@
         "scale": 2
       },
       "userFatGrams": {
+        "precision": 8,
+        "scale": 2
+      },
+      "userFiberGrams": {
         "precision": 8,
         "scale": 2
       }

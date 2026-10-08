@@ -1,3 +1,4 @@
+import { buildYoutubeThumbnailUrl, FALLBACK_VIDEO_THUMBNAIL_URL } from '@/lib/env';
 import { BaseMapper, pickField, safeArray, safeDate, safeNumber, safeString } from '@/lib/mapper';
 import { formatDate } from '@/lib/utils';
 import { authorFromDto, coverUrlFromMedia, firstCategory, getPostStatusLabel, parsePostStatus } from '@/features/post/mappers/post-shared';
@@ -5,8 +6,6 @@ import type { PostMediaDto, PostRevisionDto } from '@/features/post/types/post.d
 import type { VideoDetailDto } from '../types/video.dto';
 import type { CookingVideo, VideoPaginationResult } from '../types/video.model';
 
-const VIDEO_FALLBACK_THUMBNAIL =
-  'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=900&auto=format&fit=crop&q=80';
 
 function getYoutubeVideoId(url: string): string {
   if (!url) return '';
@@ -51,9 +50,10 @@ function thumbnailFromMedia(media: PostMediaDto[] | null | undefined): string {
 
   const videoUrl = safeString(videoMediaFromList(media)?.secureUrl);
   const youtubeId = getYoutubeVideoId(videoUrl);
-  if (youtubeId) return `https://img.youtube.com/vi/${youtubeId}/hqdefault.jpg`;
+  const youtubeThumbnail = buildYoutubeThumbnailUrl(youtubeId);
+  if (youtubeThumbnail) return youtubeThumbnail;
 
-  return VIDEO_FALLBACK_THUMBNAIL;
+  return FALLBACK_VIDEO_THUMBNAIL_URL;
 }
 
 export class VideoMapper extends BaseMapper<VideoDetailDto, CookingVideo> {

@@ -10,126 +10,109 @@ import type {
   SubmitRestaurantResponseDto,
 } from '../types/restaurant.dto';
 import type {
-  LocationQuery,
   Restaurant,
-  RestaurantDiscovery,
+  RestaurantDiscoveryResult,
+  RestaurantGeocodeResult,
+  RestaurantSearchState,
   SubmitRestaurantInput,
 } from '../types/restaurant.model';
 import { restaurantMapper } from '../mappers/restaurant.mapper';
 
 /**
- * Service API Quán Chay & Bản Đồ (Phase 24 - 100% Live REST Endpoints).
- * Đã loại bỏ hoàn toàn mock/fixtures, gọi Backend qua DTO/Mapper.
+ * Service API Quán Chay & Bản Đồ (Phase 24).
+ *
+ * Quy tắc bắt buộc:
+ * - Generic của `api.get/post/patch` là **đúng shape body BE trả**.
+ *   `RestaurantListResponseDto` đã là envelope `{success, data, meta}` nên dùng trực tiếp,
+ *   KHÔNG bọc thêm `APIResponse<>` (docs/ARCHITECTURE.md §3).
+ * - Hàm này KHÔNG trả DTO ra ngoài; luôn trả UI Model.
+ * - Không log payload/tọa độ người dùng ra console.
  */
 export const restaurantApi = {
   /**
-   * `GET /restaurants/nearby` (UC-12 / FR-001)
-   * Tìm kiếm quán chay theo tọa độ GPS và bán kính.
+   * `GET /restaurants/nearby` — quán lân cận theo tọa độ HOẶC theo khung vùng bản đồ.
+   * `state.mode` quyết định gửi `lat`+`lng` hay `north`/`south`/`east`/`west`.
    */
-  getNearby: async (query: LocationQuery, signal?: AbortSignal): Promise<RestaurantDiscovery> => {
-    const params = restaurantMapper.toLocationQuery(query);
-
+  getNearby: async (state: RestaurantSearchState, signal?: AbortSignal): Promise<RestaurantDiscoveryResult> => {
+    const params = restaurantMapper.toDiscoveryParams({
+      ...state,
+      mode: state.mode === 'KEYWORD' ? 'NEARBY' : state.mode,
+    });
     const response = await api.get<RestaurantListResponseDto>(API_ENDPOINTS.RESTAURANTS.NEARBY, {
       params,
-      signal,
+      silent: true,
+      ...(signal ? { signal } : {}),
     });
-
-    const result = restaurantMapper.toListModel(response.data);
-    return result;
+    return restaurantMapper.toDiscoveryModel(response.data);
   },
 
   /**
-   * `GET /restaurants/search` (FR-003, FR-004)
-   * Tìm kiếm theo từ khóa món ăn và áp dụng lọc cứng chế độ ăn.
-   * Nếu query trống hoặc < 2 ký tự, an toàn chuyển tiếp sang getNearby.
+   * `GET /restaurants/search` — tìm theo từ khóa món ăn/tên quán kèm bộ lọc nâng cao.
+   * Backend yêu cầu `q` bắt buộc 2..160 ký tự; từ khóa không hợp lệ thì chuyển an toàn sang `nearby`.
    */
-  search: async (query: LocationQuery, signal?: AbortSignal): Promise<RestaurantDiscovery> => {
-    if (!query.query || query.query.trim().length < 2) {
-      return restaurantApi.getNearby(query, signal);
+  search: async (state: RestaurantSearchState, signal?: AbortSignal): Promise<RestaurantDiscoveryResult> => {
+    if (state.query.trim().length < 2) {
+      return restaurantApi.getNearby({ ...state, mode: 'NEARBY' }, signal);
     }
-    const params = restaurantMapper.toLocationQuery(query);
-
+    const params = restaurantMapper.toDiscoveryParams({ ...state, mode: 'KEYWORD' });
     const response = await api.get<RestaurantListResponseDto>(API_ENDPOINTS.RESTAURANTS.SEARCH, {
       params,
-      signal,
+      silent: true,
+      ...(signal ? { signal } : {}),
     });
-
-    const result = restaurantMapper.toListModel(response.data);
-    return result;
+    return restaurantMapper.toDiscoveryModel(response.data);
   },
 
-  /**
-   * `GET /restaurants/:id` (FR-007)
-   * Chi tiết quán ăn chay.
-   */
+  /** `GET /restaurants/:id` — chi tiết quán. */
   getDetail: async (id: string): Promise<Restaurant> => {
-    const response = await api.get<RestaurantResponseDto>(API_ENDPOINTS.RESTAURANTS.DETAIL(id));
-
-    const result = restaurantMapper.toSingleModel(response.data);
-    return result;
+    const response = await api.get<RestaurantResponseDto>(API_ENDPOINTS.RESTAURANTS.DETAIL(id), {
+      silent: true,
+    });
+    return restaurantMapper.toSingleModel(response.data);
   },
 
-  /**
-   * `POST /restaurants` (FR-009)
-   * Thành viên đề xuất quán mới vào hàng chờ duyệt (PENDING).
-   */
+  /** `POST /restaurants` — đề xuất quán mới, ở trạng thái chờ duyệt. */
   submitRestaurant: async (input: SubmitRestaurantInput): Promise<Restaurant> => {
     const payload = restaurantMapper.toSubmitDto(input);
-
     const response = await api.post<SubmitRestaurantResponseDto>(
       API_ENDPOINTS.RESTAURANTS.SUBMIT,
       payload
     );
-
-    const result = restaurantMapper.toSingleModel(response.data);
-    return result;
+    return restaurantMapper.toSingleModel(response.data);
   },
 
   /**
-   * `GET /location/geocode` (FR-002 / EC-01)
-   * Chuyển đổi địa chỉ sang tọa độ địa lý.
+   * `GET /location/geocode` — phân giải địa chỉ người dùng nhập.
+   * Trả `isAvailable: false` khi không phân giải được; caller PHẢI hiển thị lỗi,
+   * tuyệt đối không thay bằng tọa độ mặc định (FR-033).
    */
-  geocode: async (
-    address: string
-  ): Promise<{ lat: number | null; lng: number | null; label: string }> => {
+  geocode: async (address: string): Promise<RestaurantGeocodeResult> => {
     const response = await api.get<GeocodeResponseDto>(API_ENDPOINTS.LOCATION.GEOCODE, {
       params: { address: address.trim() },
+      silent: true,
     });
-
-    const mapped = restaurantMapper.toCoordinates(response.data);
-    return mapped;
+    return restaurantMapper.toGeocodeResult(response.data);
   },
 
-  /**
-   * `GET /admin/restaurants` (FR-010)
-   * Hàng chờ kiểm duyệt quán ăn dành cho Admin.
-   */
+  /** `GET /admin/restaurants` — hàng chờ duyệt (ngoài phạm vi redesign trang khám phá). */
   getQueue: async (): Promise<PaginationResult<Restaurant>> => {
     const response = await api.get<AdminRestaurantListResponseDto>(
       API_ENDPOINTS.ADMIN_RESTAURANTS.LIST
     );
-
-    const result = restaurantMapper.toQueueModel(response.data);
-    return result;
+    return restaurantMapper.toQueueModel(response.data);
   },
 
-  /**
-   * `PATCH /admin/restaurants/:id/review` (FR-010)
-   * Phê duyệt hoặc từ chối quán ăn đề xuất kèm lý do.
-   */
+  /** `PATCH /admin/restaurants/:id/review` — duyệt hoặc từ chối (ngoài phạm vi redesign). */
   reviewRestaurant: async (
     id: string,
     decision: 'APPROVE' | 'REJECT',
     reason?: string
   ): Promise<Restaurant> => {
     const payload = restaurantMapper.toReviewDto(decision, reason);
-
     const response = await api.patch<ReviewRestaurantResponseDto>(
       API_ENDPOINTS.ADMIN_RESTAURANTS.REVIEW(id),
       payload
     );
-
-    const result = restaurantMapper.toReviewedModel(response.data);
-    return result;
+    return restaurantMapper.toReviewedModel(response.data);
   },
 };

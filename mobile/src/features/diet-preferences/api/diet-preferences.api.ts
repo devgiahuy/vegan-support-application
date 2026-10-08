@@ -49,6 +49,7 @@ export const dietPreferencesApi = {
       })),
       ingredientExclusions: input.ingredientExclusions.map((e) => ({
         ingredientName: e.ingredientName,
+        ...(e.ingredientId ? { ingredientId: e.ingredientId } : {}),
         reason: e.reason,
       })),
     };

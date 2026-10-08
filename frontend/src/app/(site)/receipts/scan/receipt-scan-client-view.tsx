@@ -178,9 +178,7 @@ export function ReceiptScanClientView() {
           </div>
 
           {/* Vùng tải ảnh */}
-          <div className="bg-card p-6 sm:p-8 rounded-3xl border border-neutral-200 dark:border-neutral-800 shadow-xs">
-            <ReceiptUploadZone onJobCreated={handleJobCreated} />
-          </div>
+          <ReceiptUploadZone onJobCreated={handleJobCreated} />
         </div>
       )}
 

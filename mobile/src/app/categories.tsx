@@ -4,6 +4,7 @@ import { Link, type Href } from 'expo-router';
 import { ChevronRight, FlaskConical, FolderTree } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
+import { IngredientResolveSearch } from '@/features/ingredient/components/ingredient-resolve-search';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
 import { CategoryType } from '@/common/enums';
 import type { Category } from '@/features/category/types/category.model';
@@ -63,6 +64,14 @@ export default function CategoriesScreen() {
             <ChevronRight size={16} color={colors.mutedForeground} />
           </Pressable>
         </Link>
+
+        <View className="gap-1 rounded-2xl border border-border bg-card p-4">
+          <Text className="text-base font-bold text-foreground">Phân giải tên nguyên liệu</Text>
+          <Text className="mb-2 text-xs text-muted-foreground">
+            Kiểm tra một tên gọi (có hoặc không dấu) tương ứng với nguyên liệu chuẩn nào trong hệ thống.
+          </Text>
+          <IngredientResolveSearch />
+        </View>
 
         <View className="flex-row flex-wrap gap-2">
           {TYPE_OPTIONS.map((option) => {

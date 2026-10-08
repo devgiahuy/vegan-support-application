@@ -64,6 +64,11 @@ const environmentSchema = z
     MEAL_PLAN_MAINTAIN_FACTOR: z.coerce.number().min(0.8).max(1.2).default(1),
     MEAL_PLAN_LOSE_FACTOR: z.coerce.number().min(0.8).max(1).default(0.9),
     MEAL_PLAN_GAIN_FACTOR: z.coerce.number().min(1).max(1.2).default(1.1),
+    MEAL_PLAN_PROTEIN_ENERGY_PERCENT: z.coerce.number().min(5).max(40).default(20),
+    MEAL_PLAN_FAT_ENERGY_PERCENT: z.coerce.number().min(10).max(50).default(30),
+    MEAL_PLAN_CARBOHYDRATE_ENERGY_PERCENT: z.coerce.number().min(20).max(75).default(50),
+    MEAL_PLAN_FIBER_GRAMS_PER_1000_KCAL: z.coerce.number().min(5).max(30).default(14),
+    MEAL_PLAN_MACRO_TOLERANCE_PERCENT: z.coerce.number().min(1).max(50).default(15),
     MEAL_PROGRAM_MAX_WEEKS: z.coerce.number().int().min(2).max(12).default(12),
     MEAL_PROGRAM_MAX_ALTERNATIVES_PER_WEEK: z.coerce.number().int().min(1).max(3).default(3),
     MEAL_PROGRAM_MAX_REGENERATIONS_PER_WEEK: z.coerce.number().int().min(1).max(4).default(2),
@@ -124,6 +129,17 @@ const environmentSchema = z
     MAPS_TIMEOUT_MS: z.coerce.number().int().min(1000).max(30000).default(5000),
   })
   .superRefine((environment, context) => {
+    const macroEnergyPercent =
+      environment.MEAL_PLAN_PROTEIN_ENERGY_PERCENT +
+      environment.MEAL_PLAN_FAT_ENERGY_PERCENT +
+      environment.MEAL_PLAN_CARBOHYDRATE_ENERGY_PERCENT;
+    if (Math.abs(macroEnergyPercent - 100) > Number.EPSILON) {
+      context.addIssue({
+        code: 'custom',
+        path: ['MEAL_PLAN_CARBOHYDRATE_ENERGY_PERCENT'],
+        message: 'meal-plan protein, fat and carbohydrate energy percentages must total 100',
+      });
+    }
     if (
       environment.NODE_ENV === 'production' &&
       environment.VISION_ENABLED &&
@@ -214,6 +230,13 @@ const environmentSchema = z
       MAINTAIN: environment.MEAL_PLAN_MAINTAIN_FACTOR,
       LOSE: environment.MEAL_PLAN_LOSE_FACTOR,
       GAIN: environment.MEAL_PLAN_GAIN_FACTOR,
+    },
+    mealPlanMacroTargets: {
+      proteinEnergyPercent: environment.MEAL_PLAN_PROTEIN_ENERGY_PERCENT,
+      fatEnergyPercent: environment.MEAL_PLAN_FAT_ENERGY_PERCENT,
+      carbohydrateEnergyPercent: environment.MEAL_PLAN_CARBOHYDRATE_ENERGY_PERCENT,
+      fiberGramsPer1000Kcal: environment.MEAL_PLAN_FIBER_GRAMS_PER_1000_KCAL,
+      tolerancePercent: environment.MEAL_PLAN_MACRO_TOLERANCE_PERCENT,
     },
     mealProgramLimits: {
       minWeeks: 2,

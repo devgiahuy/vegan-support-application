@@ -2899,6 +2899,7 @@ model CustomMeal {
   userProteinGrams    Float?                 @map("user_protein_grams")
   userCarbsGrams      Float?                 @map("user_carbs_grams")
   userFatGrams        Float?                 @map("user_fat_grams")
+  userFiberGrams      Float?                 @map("user_fiber_grams")
   nutritionMetadata   Json?                  @map("nutrition_metadata")
   nutritionAnalyzedAt DateTime?              @map("nutrition_analyzed_at")
   nutritionCoverage   NutritionCoverage      @default(UNAVAILABLE) @map("nutrition_coverage")

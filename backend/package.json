@@ -25,6 +25,8 @@
     "receipts:acceptance": "tsx src/modules/receipts/receipt.acceptance.ts",
     "openai-images:acceptance": "tsx src/modules/ai-images/openai-image.acceptance.ts",
     "ai-review:acceptance": "tsx src/modules/ai-review/ai-review.acceptance.ts",
+    "meal-plans:acceptance": "tsx src/modules/meal-plans/meal-plan.acceptance.ts",
+    "meal-analysis:acceptance": "tsx src/modules/meal-analysis/meal-analysis.acceptance.ts",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "npm run prisma:push",
     "prisma:migrate:deploy": "npm run prisma:push",

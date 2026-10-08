@@ -3,11 +3,11 @@ import type { CreateBehaviorEventRequestDto, PersonalizationResponseDto, Recomme
 import type { BehaviorEventInput, PersonalizationConsent, Recommendation, RecommendationMeta } from '../types/recommendation.model';
 
 const REASON_LABELS: Record<string, string> = {
-  MATCHES_DIET: 'Hop khau vi',
-  POPULAR: 'Duoc yeu thich',
-  SIMILAR_TO_SAVED: 'Gan voi mon da luu',
-  MEAL_PLAN_FIT: 'Hop thuc don',
-  COLD_START: 'Goi y khoi dau',
+  MATCHES_DIET: 'Hợp khẩu vị',
+  POPULAR: 'Được yêu thích',
+  SIMILAR_TO_SAVED: 'Gần với món đã lưu',
+  MEAL_PLAN_FIT: 'Hợp thực đơn',
+  COLD_START: 'Gợi ý khởi đầu',
 };
 
 function idempotencyKey(prefix: string): string {
@@ -21,7 +21,7 @@ export class RecommendationMapper extends BaseMapper<RecommendationDto, Recommen
     return {
       id: safeString(pickField(dto, ['id'], '')),
       slug: safeString(pickField(dto, ['slug'], '')),
-      title: safeString(pickField(dto, ['title'], 'Mon chay goi y')),
+      title: safeString(pickField(dto, ['title'], 'Món chay gợi ý')),
       excerpt: safeString(pickField(dto, ['excerpt'], '')) || null,
       coverImageUrl: safeString(pickField(dto, ['coverImageUrl'], '')) || null,
       cookTimeMinutes: safeNumber(pickField(dto, ['cookTimeMinutes'], 0), 0),

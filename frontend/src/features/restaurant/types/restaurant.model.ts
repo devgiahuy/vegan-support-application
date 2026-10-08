@@ -1,102 +1,187 @@
-import type { RestaurantStatus, RestaurantSource } from '@/common/enums';
+import type {
+  DietPattern,
+  RestaurantOpenState,
+  RestaurantSource,
+  RestaurantStatus,
+} from '@/common/enums';
 
-/** Quán chay dùng cho UI (Model sạch). */
+/**
+ * Quán chay — UI Model sạch. Component CHỈ được đọc file này, tuyệt đối không đọc DTO.
+ * Mọi nhãn hiển thị và giá trị đã định dạng đều được mapper chuẩn bị sẵn ở đây
+ * (không format trong JSX — `docs/ARCHITECTURE.md` §4).
+ */
 export interface Restaurant {
   id: string;
   name: string;
   address: string;
   lat: number | null;
   lng: number | null;
-  /** null khi chưa có vị trí để tính khoảng cách. */
+  /** `true` khi có đủ tọa độ để vẽ lên bản đồ. */
+  hasCoordinates: boolean;
+
+  /** null khi không có dữ liệu khoảng cách. */
   distanceM: number | null;
-  /** Chuỗi hiển thị khoảng cách thân thiện: `850 m`, `2,3 km`, rỗng khi null. */
+  /** Chuỗi hiển thị khoảng cách: `850 m`, `2,3 km`, rỗng khi null. */
   distanceLabel: string;
-  /** Danh sách nhãn trường phái ăn chay (ví dụ: 'Thuần chay', 'Chay có sữa'). */
+
+  /** Mã nhãn chế độ ăn (ví dụ `VEGAN`). */
   dietaryTags: string[];
-  /** Danh sách món ăn tiêu biểu. */
+  /** Nhãn tiếng Việt đã dịch, cùng thứ tự với `dietaryTags`. */
+  dietaryTagLabels: string[];
+  /** Món tiêu biểu; có thể rỗng vì backend không còn trả field này. */
   dishes: string[];
-  /** Chuỗi giờ mở cửa / đóng cửa. */
+
+  /** Chuỗi giờ mở cửa đã ghép để hiển thị tức. */
   openingHours: string | null;
-  /** Khoảng giá ước tính (ví dụ: '25.000đ - 60.000đ'). */
-  priceRange: string | null;
-  /** Số điện thoại liên hệ (nếu có). */
+  /** Giờ mở cửa theo từng ngày, ví dụ `{ monday: '08:00-22:00' }`. */
+  operatingHoursByDay: Record<string, string>;
+
+  /** Khoảng giá dạng chuỗi của provider (ví dụ `"$$"`); có thể null. */
+  priceLabel: string | null;
   phoneNumber: string | null;
-  /** Trang web hoặc fanpage của quán. */
   websiteUrl: string | null;
-  /** Nguồn dữ liệu ('INTERNAL' | 'GOOGLE_PLACES'). */
-  source: RestaurantSource;
-  /** Nhãn nguồn hiển thị ('Cộng đồng VeggieConnect' | 'Google Places'). */
-  sourceLabel: string;
-  attribution: string;
-  dietaryReviewed: boolean;
+  /** Ảnh đại diện của quán. */
+  thumbnailUrl: string | null;
+  /** Link mở bản đồ tới quán. */
+  mapsUrl: string | null;
+
+  /** Điểm đánh giá; null khi provider không có. */
   rating: number | null;
-  /** Thời điểm cập nhật dữ liệu gần nhất. */
+  /** `4,5` hoặc rỗng khi chưa có đánh giá. */
+  ratingLabel: string;
+  /** `128 đánh giá` hoặc rỗng. */
+  reviewCountLabel: string;
+
+  openState: RestaurantOpenState | null;
+  /** `Đang mở` / `Mở 24h` / rỗng. */
+  openStateLabel: string;
+
+  source: RestaurantSource;
+  /** Nhãn nguồn tiếng Việt. */
+  sourceLabel: string;
+  /** `true` khi dữ liệu đến từ nhà cung cấp bên ngoài (không phải quán nội bộ đã duyệt). */
+  isExternal: boolean;
+  /** Nghĩa vụ ghi nhận nguồn; bắt buộc hiển thị với dữ liệu bên ngoài. */
+  attribution: string;
+  /** `true` khi chế độ ăn đã được người kiểm duyệt xác nhận. */
+  dietaryReviewed: boolean;
+  /** Điều kiện bắt buộc hiển thị cảnh báo giới hạn dữ liệu chế độ ăn (FR-009). */
+  requiresDietaryWarning: boolean;
+  /** Lý do khớp từ nhà cung cấp. */
+  matchReasons: string[];
+
   fetchedAt: Date | null;
-  /** Cờ báo dữ liệu cũ (> 30 ngày) cần cảnh báo thân thiện. */
+  /** `true` khi dữ liệu quá 30 ngày chưa cập nhật. */
   isStale: boolean;
-  /** Trạng thái kiểm duyệt. */
+
+  /** Trạng thái kiểm duyệt — chỉ dùng cho màn hình quản trị (ngoài phạm vi redesign). */
   status: RestaurantStatus;
-  /** Nhãn trạng thái tiếng Việt. */
   statusLabel: string;
-  /** Tên thành viên đề xuất quán. */
+  /** Tên thành viên đề xuất quán — chỉ dùng cho màn hình quản trị. */
   submittedByName: string | null;
+}
+
+/** Loại cảnh báo hiển thị trên đầu danh sách kết quả. */
+export type DiscoveryNoticeKind = 'UNAVAILABLE' | 'SUPPRESSED' | 'TRUNCATED' | 'ATTRIBUTION' | 'STALE' | 'PRIVACY';
+
+/** Một cảnh báo đã dịch sẵn — nội dung lấy thẳng từ `message`, không format trong JSX. */
+export interface DiscoveryNotice {
+  kind: DiscoveryNoticeKind;
+  message: string;
+  tone: 'info' | 'warning';
+}
+
+/** Metadata phân trang + trạng thái nhà cung cấp của một lần tìm kiếm. */
+export interface RestaurantDiscoveryMeta {
+  page: number;
+  limit: number;
+  totalItems: number;
+  totalPages: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+  /** `true` khi không có nguồn provider nào phản hồi thành công. */
+  externalDataUnavailable: boolean;
+  externalResultsSuppressed: boolean;
+  /** `true` khi kết quả bị cắt bởi giới hạn nhà cung cấp. */
+  resultsTruncated: boolean;
+  provider: string;
+  providerLabel: string;
+  providerResultLimit: number | null;
+  /** Backend luôn trả `false`; dùng để khẳng định vị trí người dùng không được lưu giữ. */
+  locationStored: boolean;
+}
+
+/** Kết quả một lần khám phá quán chay — thay cho `PaginationResult<Restaurant>`. */
+export interface RestaurantDiscoveryResult {
+  restaurants: Restaurant[];
+  meta: RestaurantDiscoveryMeta;
+  /** Cảnh báo đã dịch sẵn; rỗng khi không có gì cần cảnh báo. */
+  notices: DiscoveryNotice[];
+}
+
+/** Chế độ tìm kiếm: quanh một điểm, theo vùng bản đồ, hoặc theo từ khóa. */
+export type RestaurantSearchMode = 'NEARBY' | 'BOUNDS' | 'KEYWORD';
+
+/** Bộ lọc nâng cao — chỉ áp dụng ở chế độ tìm theo từ khóa. */
+export interface RestaurantAdvancedFilters {
+  /** 0..4, thang 4 mức của provider. KHÔNG phải số tiền VND. */
+  minPrice?: number;
+  maxPrice?: number;
+  /** 2..4.5 */
+  minRating?: number;
+  openState?: 'now' | '24h';
+  openOnDay?: 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+  openAtHour?: number;
+}
+
+/** Khung vùng bản đồ — backend yêu cầu đủ cả bốn mốc. */
+export interface RestaurantBounds {
+  north: number;
+  south: number;
+  east: number;
+  west: number;
+}
+
+/** Nguồn vị trí: `DEVICE` bắt buộc kèm cờ đồng ý chia sẻ. */
+export type RestaurantLocationSource = 'MANUAL' | 'DEVICE';
+
+/** Toàn bộ state của một phiên tìm kiếm. Chỉ `lat`/`lng`/`bounds` mới là dữ liệu vị trí. */
+export interface RestaurantSearchState {
+  page?: number;
+  limit?: number;
+  mode: RestaurantSearchMode;
+  lat?: number;
+  lng?: number;
+  bounds?: RestaurantBounds;
+  /** 100..50000, mặc định 5000. */
+  radiusM: number;
+  /** Từ khóa món ăn/tên quán; ≥ 2 ký tự để vào chế độ KEYWORD. */
+  query: string;
+  /** Lọc cứng trường phái ăn. Chỉ nhận `VEGAN` | `LACTO_OVO`. */
+  dietPattern?: DietPattern;
+  advanced: RestaurantAdvancedFilters;
+  locationSource?: RestaurantLocationSource;
+  locationConsent?: boolean;
+}
+
+/** Kết quả phân giải địa chỉ. `isAvailable: false` nghĩa là không tìm được — KHÔNG thay bằng tọa độ mặc định. */
+export interface RestaurantGeocodeResult {
+  lat: number | null;
+  lng: number | null;
+  label: string;
+  placeId: string | null;
+  attribution: string;
+  isAvailable: boolean;
 }
 
 /** Input gửi quán mới từ giao diện người dùng. */
 export interface SubmitRestaurantInput {
   name: string;
   address: string;
-  lat?: number;
-  lng?: number;
-  dietaryTags?: string[];
-  dishes: string[];
-  openingHours?: string;
-  priceRange?: string;
-  phoneNumber?: string;
-  note?: string;
-}
-
-/** Tọa độ và nhãn vị trí geocoding. */
-export interface GeocodeLocation {
-  lat: number;
-  lng: number;
-  label: string;
-}
-
-/** Truy vấn vị trí và bộ lọc tìm kiếm quán chay. */
-export interface LocationQuery {
-  lat?: number;
-  lng?: number;
-  addressText?: string;
-  /** Mặc định 5000, giới hạn 500–50000m. */
-  radiusM: number;
-  /** Từ khóa tên quán hoặc món ăn. */
-  query?: string;
-  /** Danh sách trường phái ăn chay lọc cứng (ví dụ: ['VEGAN']). */
-  dietaryTags?: string[];
-  locationSource?: 'MANUAL' | 'DEVICE';
-  locationConsent?: boolean;
-  page?: number;
-  limit?: number;
-}
-
-export interface RestaurantDiscovery {
-  items: Restaurant[];
-  metadata: import('@/types/api').PaginationMetadata;
-  externalDataUnavailable: boolean;
-  externalResultsSuppressed: boolean;
-  resultsTruncated: boolean;
-}
-
-/** Bộ lọc tìm kiếm quán ăn. */
-export interface RestaurantFilter {
-  query: string;
-  radiusM: number;
-  dietaryTags: string[];
-}
-
-/** Hành động duyệt quán của Admin. */
-export interface RestaurantReviewAction {
-  decision: 'APPROVE' | 'REJECT';
-  reason?: string;
+  latitude: number;
+  longitude: number;
+  categories?: string[];
+  dietTags?: string[];
+  allergenFreeCodes?: string[];
+  excludedIngredients?: string[];
 }

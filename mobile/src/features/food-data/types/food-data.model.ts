@@ -6,6 +6,7 @@
 export type UnitDimension = 'MASS' | 'ENERGY' | 'VOLUME' | 'COUNT' | 'INTERNATIONAL_UNIT';
 export type NutrientReferenceType = 'RDA' | 'AI' | 'UL';
 export type EvidenceGrade = 'STRONG' | 'MODERATE' | 'PRELIMINARY' | 'INSUFFICIENT';
+export type GuidelinePeriod = 'DAY' | 'WEEK' | 'MONTH';
 export type FoodRuleSeverity = 'WARNING' | 'NOTICE' | 'COMPATIBLE';
 export type InteractionScope = 'SAME_DISH' | 'SAME_MEAL' | 'SAME_DAY';
 export type InteractionDirection = 'BIDIRECTIONAL' | 'A_AFFECTS_B' | 'B_AFFECTS_A';
@@ -61,6 +62,24 @@ export interface ReferenceIntakeItem {
   value: number;
   unit: string;
   warningEligible: boolean;
+  sourceName: string;
+}
+
+export interface IngredientGuidelineItem {
+  id: string;
+  ingredientId: string;
+  ingredientName: string;
+  populationCode: string;
+  amount: number;
+  unit: string;
+  frequency: number;
+  period: GuidelinePeriod;
+  periodLabel: string;
+  advisoryOnly: boolean;
+  evidenceGrade: EvidenceGrade;
+  severity: FoodRuleSeverity;
+  severityLabel: string;
+  explanation: string;
   sourceName: string;
 }
 

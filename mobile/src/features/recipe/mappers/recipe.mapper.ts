@@ -1,3 +1,4 @@
+import { FALLBACK_RECIPE_COVER_URL } from '@/lib/env';
 import { BaseMapper, pickField, safeString, safeDate, safeNumber, safeBoolean, safeArray } from '@/lib/mapper';
 import { formatDate } from '@/lib/utils';
 import { RecipeDifficulty } from '@/common/enums';
@@ -11,6 +12,7 @@ import {
 import type {
   RecipeDetailDto,
   RecipeIngredientDto,
+  RecipeStepDto,
   NutritionFactDto,
   TraditionWarningDto,
   DietCompatibilityDto,
@@ -20,11 +22,19 @@ import type { PostMediaDto, PostRevisionDto } from '@/features/post/types/post.d
 import type {
   Recipe,
   RecipeIngredient,
+  RecipeInstructionStep,
   NutritionFact,
   TraditionWarning,
   DietCompatibility,
   RecipePaginationResult,
 } from '../types/recipe.model';
+
+/** Giá trị thiếu/không hợp lệ -> `null` (không đổi thành 0 để không bịa số dinh dưỡng). */
+function nullableNumber(val: unknown): number | null {
+  if (val === null || val === undefined || val === '') return null;
+  const parsed = safeNumber(val, Number.NaN);
+  return Number.isNaN(parsed) ? null : parsed;
+}
 
 function getDifficultyLabel(diff: string): string {
   switch (diff) {
@@ -37,8 +47,6 @@ function getDifficultyLabel(diff: string): string {
   }
 }
 
-const RECIPE_FALLBACK_COVER =
-  'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop&q=80';
 
 /**
  * Mapper cho danh sách/hiển thị công thức, đồng bộ
@@ -65,12 +73,12 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
     const nutritionDto =
       pickField<NutritionFactDto | null>(dto, ['nutrition'], null) ?? detail?.nutrition ?? null;
     const nutrition: NutritionFact = {
-      calories: safeNumber(nutritionDto?.calories, 0),
-      protein: safeNumber(nutritionDto?.proteinGrams, 0),
-      carbs: safeNumber(nutritionDto?.carbsGrams, 0),
-      fat: safeNumber(nutritionDto?.fatGrams, 0),
-      fiber: safeNumber(nutritionDto?.fiberGrams, 0),
-      vitaminB12: safeNumber(nutritionDto?.vitaminB12Mcg, 0),
+      calories: nullableNumber(nutritionDto?.calories),
+      protein: nullableNumber(nutritionDto?.proteinGrams),
+      carbs: nullableNumber(nutritionDto?.carbsGrams),
+      fat: nullableNumber(nutritionDto?.fatGrams),
+      fiber: nullableNumber(nutritionDto?.fiberGrams),
+      vitaminB12: nullableNumber(nutritionDto?.vitaminB12Mcg),
     };
 
     const ingredients: RecipeIngredient[] = safeArray<RecipeIngredientDto>(
@@ -83,9 +91,20 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       notes: '',
     }));
 
+    const steps: RecipeInstructionStep[] = safeArray<RecipeStepDto | null>(detail?.steps)
+      .map((step, index) => ({
+        position: safeNumber(step?.position, index),
+        instruction: safeString(step?.instruction, ''),
+        durationMinutes: nullableNumber(step?.durationMinutes),
+        temperatureCelsius: nullableNumber(step?.temperatureCelsius),
+        cookingMethodName: safeString(step?.cookingMethod?.name, '') || null,
+      }))
+      .filter((step) => step.instruction.length > 0)
+      .sort((a, b) => a.position - b.position);
+
     const coverImageUrl = coverUrlFromMedia(
       pickField<PostMediaDto[]>(dto, ['media'], []),
-      RECIPE_FALLBACK_COVER
+      FALLBACK_RECIPE_COVER_URL
     );
     const author = authorFromDto(dto, 'Bếp Chay An Nhiên');
 
@@ -128,6 +147,7 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       mealPlannerEligible: safeBoolean(detail?.mealPlannerEligible, false),
       nutrition,
       ingredients,
+      steps,
       body,
       tags: safeArray<string>(revision?.tags),
       publishedAt,

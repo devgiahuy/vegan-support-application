@@ -1,4 +1,32 @@
 export const API_ENDPOINTS = {
+  SCANNING: {
+    fridge: {
+      JOBS: '/ingredient-recognition/jobs',
+      JOB: (id: string) => `/ingredient-recognition/jobs/${id}`,
+      CANDIDATE: (id: string, candidateId: string) => `/ingredient-recognition/jobs/${id}/candidates/${candidateId}`,
+      CONFIRM: (id: string) => `/ingredient-recognition/jobs/${id}/confirm`,
+      CANCEL: (id: string) => `/ingredient-recognition/jobs/${id}/cancel`,
+      RETRY: (id: string) => `/ingredient-recognition/jobs/${id}/retry`,
+    },
+    receipt: {
+      JOBS: '/receipt-jobs',
+      JOB: (id: string) => `/receipt-jobs/${id}`,
+      CANDIDATE: (id: string, candidateId: string) => `/receipt-jobs/${id}/candidates/${candidateId}`,
+      CONFIRM: (id: string) => `/receipt-jobs/${id}/confirm`,
+      CANCEL: (id: string) => `/receipt-jobs/${id}/cancel`,
+      RETRY: (id: string) => `/receipt-jobs/${id}/retry`,
+    },
+  },
+  STORAGE: {
+    ME: '/storage/me',
+    RESERVATIONS: '/uploads/reservations',
+    COMMIT: (id: string) => `/uploads/reservations/${id}/commit`,
+    RELEASE: (id: string) => `/uploads/reservations/${id}`,
+    ASSET: (id: string) => `/storage/assets/${id}`,
+  },
+  SHOPPING: {
+    PREVIEW: '/shopping-lists/preview',
+  },
   AUTH: {
     LOGIN: '/auth/login',
     REGISTER: '/auth/register',
@@ -22,6 +50,7 @@ export const API_ENDPOINTS = {
     DETAIL: (idOrSlug: string) => `/posts/${idOrSlug}`,
     RELATED: (id: string) => `/posts/${id}/related`,
     SUBMIT: (id: string) => `/posts/${id}/submit`,
+    REVIEW_HISTORY: (id: string) => `/posts/${id}/review-history`,
   },
   COMMUNITY: {
     COMMENTS: (postId: string) => `/posts/${postId}/comments`,
@@ -37,6 +66,7 @@ export const API_ENDPOINTS = {
     LIST: '/meal-plans',
     DETAIL: (id: string) => `/meal-plans/${id}`,
     SWAP: (planId: string, itemId: string) => `/meal-plans/${planId}/items/${itemId}/swap`,
+    MANUAL_ADD: (planId: string, itemId: string) => `/meal-plans/${planId}/items/${itemId}/manual-add`,
     DELETE: (id: string) => `/meal-plans/${id}`,
     ANALYZE: (id: string) => `/meal-plans/${id}/analyze`,
     ANALYSIS: (id: string) => `/meal-plans/${id}/analysis`,
@@ -67,12 +97,42 @@ export const API_ENDPOINTS = {
     SESSION_MESSAGES: (id: string) => `/chat/sessions/${id}/messages`,
     MESSAGE_FEEDBACK: (id: string) => `/chat/messages/${id}/feedback`,
   },
+  AI_ARTIFACTS: {
+    BASE: '/ai-artifacts',
+    PUBLIC: '/ai-artifacts/public',
+    VISIBILITY: (id: string) => `/ai-artifacts/${id}/visibility`,
+    SUBMIT: (id: string) => `/ai-artifacts/${id}/submit`,
+  },
   CONTRIBUTOR: {
     APPLICATIONS: '/contributor-applications',
     APPLICATIONS_ME: '/contributor-applications/me',
   },
   INGREDIENTS: {
     LIST: '/ingredients',
+    RESOLVE: '/ingredients/resolve',
+  },
+  RECIPE_NUTRITION: {
+    PREVIEW: (id: string) => `/posts/${id}/nutrition/preview`,
+    RECALCULATE: (id: string) => `/posts/${id}/nutrition/recalculate`,
+    CURRENT: (id: string) => `/posts/${id}/nutrition/current`,
+    HISTORY: (id: string) => `/posts/${id}/nutrition/history`,
+    STATUS: (id: string) => `/posts/${id}/nutrition/status`,
+  },
+  RESTAURANTS: {
+    NEARBY: '/restaurants/nearby',
+    SEARCH: '/restaurants/search',
+    MINE: '/restaurants/mine',
+    DETAIL: (id: string) => `/restaurants/${encodeURIComponent(id)}`,
+    SUBMIT: '/restaurants',
+  },
+  LOCATION: {
+    GEOCODE: '/location/geocode',
+  },
+  NOTIFICATIONS: {
+    LIST: '/notifications',
+    UNREAD_COUNT: '/notifications/unread-count',
+    READ: (id: string) => `/notifications/${id}/read`,
+    READ_ALL: '/notifications/read-all',
   },
   FOOD_DATA: {
     NUTRIENTS: (ingredientId: string) => `/food-data/ingredients/${ingredientId}/nutrients`,
@@ -80,5 +140,13 @@ export const API_ENDPOINTS = {
     GUIDELINES: '/food-data/ingredient-guidelines',
     COOKING_METHODS: '/food-data/cooking-methods',
     INTERACTIONS: '/food-data/interaction-rules',
+  },
+  PANTRY: {
+    ITEMS: '/pantry/items',
+    ITEM_DETAIL: (id: string) => `/pantry/items/${id}`,
+    EXPIRING_SOON: '/pantry/items/expiring-soon',
+    ADJUSTMENTS: (id: string) => `/pantry/items/${id}/adjustments`,
+    MERGE_PREVIEW: '/pantry/merge-preview',
+    MERGE: '/pantry/merge',
   },
 } as const;

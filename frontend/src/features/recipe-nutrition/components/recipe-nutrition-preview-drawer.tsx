@@ -133,8 +133,8 @@ export function RecipeNutritionPreviewDrawer({
             <div className="text-center py-12 text-muted-foreground text-xs space-y-2 border border-dashed rounded-xl p-4">
               <p className="font-medium text-foreground">Chưa có dữ liệu xem trước</p>
               <p>
-                Bấm nút "Bắt đầu xem trước dinh dưỡng" ở trên để gửi yêu cầu phân tích tạm thời tới
-                hệ thống.
+                Bấm nút &quot;Bắt đầu xem trước dinh dưỡng&quot; ở trên để gửi yêu cầu phân tích tạm
+                thời tới hệ thống.
               </p>
             </div>
           )}
@@ -156,7 +156,7 @@ export function RecipeNutritionPreviewDrawer({
               )}
 
               {/* Nutrient List Table */}
-              <NutrientListTable nutrients={previewResult.perServingNutrients} />
+              {/* <NutrientListTable nutrients={previewResult.perServingNutrients} /> */}
 
               {/* Educational Disclaimer */}
               <div className="p-3 rounded-xl bg-muted/30 border border-border/50 text-[11px] text-muted-foreground flex items-start gap-2 leading-relaxed">

@@ -4,11 +4,11 @@ import type { DeletionResult, SubmitReportInput, ViolationReport } from '../type
 
 const REASON_LABELS: Record<string, string> = {
   SPAM: 'Spam',
-  HARMFUL_HEALTH: 'Thong tin suc khoe gay hai',
-  HARASSMENT: 'Quay roi',
-  MISINFORMATION: 'Thong tin sai lech',
-  COPYRIGHT: 'Ban quyen',
-  OTHER: 'Khac',
+  HARMFUL_HEALTH: 'Thông tin sức khỏe gây hại',
+  HARASSMENT: 'Quấy rối',
+  MISINFORMATION: 'Thông tin sai lệch',
+  COPYRIGHT: 'Bản quyền',
+  OTHER: 'Khác',
 };
 
 export const safetyMapper = {
@@ -34,7 +34,7 @@ export const safetyMapper = {
       reasonLabel: REASON_LABELS[reasonCode] ?? reasonCode,
       details: safeString(data?.details) || null,
       status,
-      statusLabel: status === 'RESOLVED' ? 'Da xu ly' : 'Dang mo',
+      statusLabel: status === 'RESOLVED' ? 'Đã xử lý' : 'Đang mở',
       priority: safeString(data?.priority, 'NORMAL'),
       activeReporterCount: safeNumber(data?.activeReporterCount, 1),
       createdAt: safeString(data?.createdAt),

@@ -113,7 +113,11 @@ export function useManualAddMealItemMutation() {
     },
     onError: (err: unknown) => {
       const code = getApiErrorCode(err);
-      if (code === 'MEAL_PLAN_HARD_CONSTRAINT_VIOLATION') {
+      if (
+        code === 'MEAL_PLAN_HARD_CONSTRAINT_VIOLATION' ||
+        code === 'ALLERGY_VIOLATION' ||
+        code === 'DIET_CONSTRAINT_VIOLATION'
+      ) {
         toast.error('Không thể chọn món này', {
           description:
             'Món ăn vi phạm quy tắc dị ứng, kiêng kỵ nghiêm ngặt hoặc chế độ ăn của bạn.',
