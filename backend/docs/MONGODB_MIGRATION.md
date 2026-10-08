@@ -34,7 +34,7 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Compose starts MongoDB 7, initializes `rs0`, waits for a writable primary, provisions validators/indexes, then starts the API. Set `RUN_SEED=true` for a fresh demo; it defaults to false. MongoDB's published host port binds to `127.0.0.1`. This single-node replica set is local development infrastructure. Shared deployments should use an authenticated, protected replica set or Atlas and the appropriate MongoDB URI.
+Compose starts MongoDB 7, initializes `rs0`, waits for a writable primary, provisions validators/indexes, runs the compiled seed, then starts the API. `RUN_SEED` defaults to `true` in both Compose and the image startup script. Seeding runs on each container startup and updates known fixtures; set `RUN_SEED=false` to skip those updates. Older `.env` files with `RUN_SEED=false` override the new default and need to be updated explicitly. Seed credentials are required when enabled. Startup logs identify schema, seed and API stages; a schema/seed failure stops startup before serving requests. MongoDB's published host port binds to `127.0.0.1`. This single-node replica set is local development infrastructure. Shared deployments should use an authenticated, protected replica set or Atlas and the appropriate MongoDB URI.
 
 For a host API process:
 
@@ -86,6 +86,23 @@ Verified on local MongoDB 7 `rs0` using a scratch database and configured fake p
 - Docker image build and live HTTP health/OpenAPI/content/catalog checks plus authenticated Member/Admin profile, storage, pantry, meal plans, notifications, review queue and governance; PostgreSQL service is stopped and the API runs against MongoDB.
 
 The backend retains the repository policy of no unit/integration test infrastructure. Existing acceptance scripts and temporary runtime checks were used. Production workload latency, multi-node failover, live AI accuracy and production backup/restore are outside these local verification claims. Search now uses aggregation expressions rather than a PostgreSQL GIN index; see [SEARCH_PERFORMANCE.md](SEARCH_PERFORMANCE.md).
+
+## Docker auto-seed follow-up — 2026-10-08
+
+Docker now seeds by default after schema provisioning and before API startup. `RUN_SEED=false`
+previously disabled seeding in Compose and the local `.env`; both defaults and the local setting
+were updated. Seeded Contributor decisions are updated in place instead of deleted and recreated,
+so re-runs preserve historical decisions and do not generate another seven notifications.
+
+Verification: backend lint/typecheck/build, Docker image build, OpenAPI generation and Swagger sync
+pass. A fresh database contains 100 collections, 18 users, 49 posts and 25 recipe nutrition estimates;
+31 recipes are public. Restarting the container preserves all collection counts and decision/notification
+IDs, including an extra historical decision. Upgrading a database seeded by the previous image also
+preserves those counts/IDs. `RUN_SEED=false` starts the API without fixtures; missing seed credentials
+or an invalid `RUN_SEED` value stop startup. The current local Compose backend was recreated and
+confirmed healthy with 31 public recipes after automatic seeding.
+The existing notification acceptance script passes event triggers, deduplication, ownership/privacy,
+read operations, races, retention and rollback on the seeded audit database.
 
 ## Follow-up business audit — 2026-10-07
 

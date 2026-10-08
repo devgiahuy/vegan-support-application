@@ -1,5 +1,15 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-08] — Tự động seed khi khởi động Docker
+
+- Mục tiêu: Docker chạy seed hiện tại tự động và push thay đổi lên `dev` theo yêu cầu người dùng.
+- Đã làm: mặc định `RUN_SEED=true` ở Compose, image startup và `.env.example`; bật lại trong `.env` local. Entry script chạy schema → compiled seed → API, log rõ từng bước, dừng khi schema/seed lỗi và chuyển tín hiệu shutdown qua `exec`. Bổ sung invited Contributor email vào Compose.
+- Sửa lỗi tìm thấy khi restart: seed giữ ID và cập nhật quyết định Contributor đã có thay vì xóa/tạo lại; không phát thêm 7 thông báo sau mỗi lần seed và không xóa quyết định lịch sử khác.
+- Verify: backend lint/typecheck/build, Docker build, OpenAPI generate + Swagger sync; DB mới có 100 collections, 18 users, 49 posts, 25 nutrition estimates, 31 public recipes. Restart và nâng cấp image giữ counts/IDs; quyết định lịch sử bổ sung vẫn còn. Opt-out không tạo fixtures; thiếu mật khẩu hoặc flag sai dừng trước API. Container local đã chạy seed tự động và health trả 200.
+- File sửa: Dockerfile/Compose/startup script, `.env.example`, ba seed entry points và helper quyết định, README/Mongo migration docs, integration registry/catalogs và nhật ký.
+- PROGRESS: không đổi phần trăm feature; không sửa frontend consumer nên không chạy lại frontend tests/build.
+- Notification acceptance hiện có đã pass triggers/dedupe, privacy/ownership, đọc/đọc tất cả, race, retention và rollback trên DB audit đã seed. Lượt đầu chạy trên DB kiểm tra opt-out dừng vì thiếu storage policy; chạy lại trên DB đã seed đúng prerequisite thì pass.
+
 ## [2026-10-08] — Giải quyết conflict với dev sau MongoDB migration
 
 - Mục tiêu: cập nhật PR #39 trên `codex/migrate-postgres-to-mongodb` để ghép được vào `dev` mới nhất.

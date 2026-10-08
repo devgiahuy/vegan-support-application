@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.25
+**Version:** 4.26
 
 **Cập nhật:** 08/10/2026
 
@@ -974,6 +974,8 @@ Không được mô tả endpoint là READY chỉ vì route đã tồn tại n�
 ## 11. Integration changelog
 
 Thêm entry mới nhất ở trên cùng.
+
+Change 2026-10-08 (v4.26): Docker startup now provisions MongoDB schema, runs the compiled idempotent seed by default, then starts the API. Set `RUN_SEED=false` to skip fixture updates; older `.env` files with that value must be changed explicitly to enable auto-seeding. Schema/seed failures prevent API startup and startup logs identify each stage. Compose also forwards the invited Contributor fixture email. Re-seeding preserves existing fixture decision IDs and updates their data, preventing duplicate Contributor notifications while retaining decision history. No endpoint schema, authorization or readiness status changes.
 
 Change 2026-10-07 (v4.19): audit 168 operations và luồng nghiệp vụ trên MongoDB; sửa checked nested create gây CONTENT_PERSISTENCE_ERROR, evidence ADMIN_INVITED và alias canonical của seed. Restaurant discovery giữ partial data, chạy queries song song, zoom theo bán kính, không dùng cache DB vượt hard constraints; metadata thêm `externalResultsSuppressed`; SerpApi detail hoạt động. Đồng bộ FE submission/review, identity cache, pagination, attribution/empty states và default proxy 4000. Không đổi scope hoặc bỏ diet/allergy constraints. Verification và giới hạn: `backend/docs/ENDPOINT_BUSINESS_AUDIT.md`.
 

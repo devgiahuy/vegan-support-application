@@ -23,8 +23,11 @@ The current stack has no Redis dependency.
 2. Set `SEED_MEMBER_PASSWORD` and `SEED_ADMIN_PASSWORD` to distinct local passwords. Change the
    database, JWT, guest-cookie, and provider credentials before any shared deployment.
 3. For a Docker demo, run `docker compose -f docker-compose.yml up --build`. The backend image
-   initializes a local replica set, provisions collections/validators/indexes, then starts the API.
-   Set `RUN_SEED=true` to load the idempotent demo seed on startup.
+   initializes a local replica set, provisions collections/validators/indexes, runs the idempotent
+   demo seed, then starts the API. Seeding runs on every container startup by default and updates
+   known fixtures. Set `RUN_SEED=false` to skip it. Existing `.env` files with `RUN_SEED=false`
+   must be changed to `true` to enable automatic seeding. A failed seed prevents API startup;
+   check `docker compose logs backend` for the startup stage and error.
 4. For a host demo, run `docker compose up -d mongodb mongo-init` and `docker compose up -d --wait mongodb`,
    then `npm ci`,
    `npm run prisma:generate`, `npm run prisma:push`, `npm run seed`, and `npm run dev` from `backend/`.
@@ -80,7 +83,8 @@ a static safe response without consuming daily quota.
 
 ## Seed data for local API and frontend development
 
-`npm run seed` is idempotent and uses only the existing `SEED_*` credentials. The two approved
+`npm run seed` is idempotent and uses only the existing `SEED_*` credentials. Seeded Contributor
+decisions retain their IDs on re-runs, preventing duplicate decision notifications. The approved
 Contributor fixtures use the same permission set with organization-affiliation and platform-track-record
 approval bases. Basis/evidence is audit and presentation data only; it never participates in RBAC. In
 addition to the configured Member, unified Contributor fixtures, and Admin, the seed derives

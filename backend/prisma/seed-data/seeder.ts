@@ -25,6 +25,7 @@ import {
   Tradition,
 } from '@prisma/client';
 import { createHash } from 'node:crypto';
+import { upsertSeedContributorDecision } from '../seed-contributor-decision.js';
 import { normalizeVietnameseText } from '../../src/modules/catalog/catalog.normalization.js';
 import {
   allergenDefinitions,
@@ -681,20 +682,15 @@ export async function seedComprehensiveData(
         },
       });
 
-      await prisma.contributorDecision.deleteMany({
-        where: { applicationId: app.id, decision: ContributorDecisionType.APPROVED },
-      });
-      await prisma.contributorDecision.create({
-        data: {
-          userId: user.id,
-          applicationId: app.id,
-          actorId: adminId,
-          decision: ContributorDecisionType.APPROVED,
-          approvalBasis: c.approvalBasis,
-          evidence: approvalEvidence,
-          reason: 'Approved profile for VeggieConnect plant-based community.',
-          createdAt: new Date('2026-09-15T00:00:00.000Z'),
-        },
+      await upsertSeedContributorDecision(prisma, {
+        userId: user.id,
+        applicationId: app.id,
+        actorId: adminId,
+        decision: ContributorDecisionType.APPROVED,
+        approvalBasis: c.approvalBasis,
+        evidence: approvalEvidence,
+        reason: 'Approved profile for VeggieConnect plant-based community.',
+        createdAt: new Date('2026-09-15T00:00:00.000Z'),
       });
     }
   }

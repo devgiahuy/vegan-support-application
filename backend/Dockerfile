@@ -28,4 +28,4 @@ COPY --from=build /app/dist-seed ./dist-seed
 
 EXPOSE 4000
 
-CMD ["sh", "-c", "node scripts/mongo-schema.mjs && if [ \"$RUN_SEED\" = \"true\" ]; then node dist-seed/prisma/seed.js; fi && node dist/server.js"]
+CMD ["sh", "scripts/docker-entrypoint.sh"]

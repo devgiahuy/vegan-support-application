@@ -39,7 +39,7 @@ services:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: 4000
       DATABASE_URL: mongodb://mongodb:27017/${MONGODB_DATABASE:-vegan_support}?replicaSet=rs0&directConnection=true
-      RUN_SEED: ${RUN_SEED:-false}
+      RUN_SEED: ${RUN_SEED:-true}
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:3000}
       JSON_BODY_LIMIT: ${JSON_BODY_LIMIT:-1mb}
       SHUTDOWN_TIMEOUT_MS: ${SHUTDOWN_TIMEOUT_MS:-10000}
@@ -96,6 +96,7 @@ services:
       SEED_MEMBER_PASSWORD: ${SEED_MEMBER_PASSWORD}
       SEED_PLATFORM_CONTRIBUTOR_EMAIL: ${SEED_PLATFORM_CONTRIBUTOR_EMAIL:-contributor@example.com}
       SEED_ORGANIZATION_CONTRIBUTOR_EMAIL: ${SEED_ORGANIZATION_CONTRIBUTOR_EMAIL:-expert@example.com}
+      SEED_INVITED_CONTRIBUTOR_EMAIL: ${SEED_INVITED_CONTRIBUTOR_EMAIL:-invited@example.com}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@example.com}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD}
     ports:

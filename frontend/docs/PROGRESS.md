@@ -1,5 +1,13 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Docker seed startup — Updated 2026-10-08
+
+Docker automatically seeds MongoDB before API startup, with an explicit `RUN_SEED=false` opt-out.
+Repeated startup preserves fixture decision IDs and avoids duplicate Contributor notifications.
+Fresh-start, restart, existing-database upgrade, skip and startup-failure checks passed; backend
+lint/typecheck/build, Docker build and OpenAPI generation/sync passed. No frontend consumer or
+feature completion percentage changed.
+
 ## Merge reconciliation — Updated 2026-10-08
 
 Restaurant integration remains 100% → 100%. Reconciled the `dev` redesign with MongoDB migration fixes: real pagination, identity cache, cancellation, location consent, scoped keyword search, partial/suppressed empty notices and correct review payload. Preserve dev admin, macro planning/analysis and mobile features. Backend lint/typecheck/build, frontend typecheck/build and 577 tests pass; Mongo schema/seed and meal/vision/receipt acceptance pass. Mobile native/export checks were not rerun because its imported source has no conflict or additional edits.

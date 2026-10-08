@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import { upsertSeedContributorDecision } from './seed-contributor-decision.js';
 import {
   AiFlagRiskLevel,
   AiFlagStatus,
@@ -436,21 +437,13 @@ export async function seedScenarioData(
       }),
     ]),
   );
-  await prisma.contributorDecision.deleteMany({
-    where: {
-      applicationId: 'a1100000-0000-4000-8000-000000000002',
-      decision: ContributorDecisionType.REJECTED,
-    },
-  });
-  await prisma.contributorDecision.create({
-    data: {
-      userId: rejectedApplicant.id,
-      applicationId: 'a1100000-0000-4000-8000-000000000002',
-      actorId: admin.id,
-      decision: ContributorDecisionType.REJECTED,
-      reason: 'Cần bổ sung mô tả kinh nghiệm và nguồn tham khảo trước khi nộp lại.',
-      createdAt: new Date('2026-09-15T05:30:00.000Z'),
-    },
+  await upsertSeedContributorDecision(prisma, {
+    userId: rejectedApplicant.id,
+    applicationId: 'a1100000-0000-4000-8000-000000000002',
+    actorId: admin.id,
+    decision: ContributorDecisionType.REJECTED,
+    reason: 'Cần bổ sung mô tả kinh nghiệm và nguồn tham khảo trước khi nộp lại.',
+    createdAt: new Date('2026-09-15T05:30:00.000Z'),
   });
 
   await prisma.category.upsert({

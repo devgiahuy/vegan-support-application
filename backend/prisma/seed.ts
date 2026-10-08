@@ -57,6 +57,7 @@ import { PasswordService } from '../src/modules/auth/password.service.js';
 import { normalizeVietnameseText } from '../src/modules/catalog/catalog.normalization.js';
 import { seedScenarioData } from './seed-scenarios.js';
 import { seedComprehensiveData } from './seed-data/seeder.js';
+import { upsertSeedContributorDecision } from './seed-contributor-decision.js';
 
 const prisma = createPrismaClient();
 const passwordService = new PasswordService();
@@ -1072,20 +1073,15 @@ async function main(): Promise<void> {
           sourceApplicationId: application.id,
         },
       });
-      await transaction.contributorDecision.deleteMany({
-        where: { applicationId: application.id, decision: ContributorDecisionType.APPROVED },
-      });
-      await transaction.contributorDecision.create({
-        data: {
-          userId: user.id,
-          applicationId: application.id,
-          actorId: admin.id,
-          decision: ContributorDecisionType.APPROVED,
-          approvalBasis: definition.approvalBasis,
-          evidence: definition.approvalEvidence,
-          reason: 'Approved seed profile for unified Contributor permission validation.',
-          createdAt: seededApprovalAt,
-        },
+      await upsertSeedContributorDecision(transaction, {
+        userId: user.id,
+        applicationId: application.id,
+        actorId: admin.id,
+        decision: ContributorDecisionType.APPROVED,
+        approvalBasis: definition.approvalBasis,
+        evidence: definition.approvalEvidence,
+        reason: 'Approved seed profile for unified Contributor permission validation.',
+        createdAt: seededApprovalAt,
       });
     });
   }
