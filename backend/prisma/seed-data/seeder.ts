@@ -13,10 +13,12 @@ import {
   MediaKind,
   MediaAssetStatus,
   MediaProvider,
+  NutritionValueOrigin,
   PantryAdjustmentType,
   PostRevisionStatus,
   PostStatus,
   PostType,
+  RecipeNutritionEstimateStatus,
   type PrismaClient,
   Tradition,
 } from '@prisma/client';
@@ -744,6 +746,43 @@ export async function seedComprehensiveData(
       });
     }
 
+    // Keep the compact recipe nutrition fields synchronized on repeat seeds;
+    // previously these values were written only when the revision was new.
+    await prisma.recipeDetail.upsert({
+      where: { revisionId: revision.id },
+      update: {
+        servings: rDef.servings,
+        prepTimeMinutes: rDef.prepTimeMinutes,
+        cookTimeMinutes: rDef.cookTimeMinutes,
+        difficulty: rDef.difficulty,
+        calories: rDef.calories,
+        proteinGrams: rDef.proteinGrams,
+        carbsGrams: rDef.carbsGrams,
+        fatGrams: rDef.fatGrams,
+        fiberGrams: rDef.fiberGrams,
+        vitaminB12Mcg: rDef.vitaminB12Mcg ?? null,
+        mealPlannerEligible: rDef.mealPlannerEligible,
+        allergenCodes: rDef.allergenCodes,
+        traditionWarnings: rDef.traditionWarnings,
+      },
+      create: {
+        revisionId: revision.id,
+        servings: rDef.servings,
+        prepTimeMinutes: rDef.prepTimeMinutes,
+        cookTimeMinutes: rDef.cookTimeMinutes,
+        difficulty: rDef.difficulty,
+        calories: rDef.calories,
+        proteinGrams: rDef.proteinGrams,
+        carbsGrams: rDef.carbsGrams,
+        fatGrams: rDef.fatGrams,
+        fiberGrams: rDef.fiberGrams,
+        vitaminB12Mcg: rDef.vitaminB12Mcg ?? null,
+        mealPlannerEligible: rDef.mealPlannerEligible,
+        allergenCodes: rDef.allergenCodes,
+        traditionWarnings: rDef.traditionWarnings,
+      },
+    });
+
     if (post.status === PostStatus.PUBLISHED && post.publishedRevisionId !== revision.id) {
       await prisma.post.update({
         where: { id: post.id },
@@ -772,6 +811,130 @@ export async function seedComprehensiveData(
         bytes: rDef.coverMedia.bytes,
         position: 0,
       },
+    });
+  }
+
+  // RecipeDetail keeps the compact macro fields used by meal planning, while
+  // the detail page reads the versioned Phase 13 nutrition estimate. Persist
+  // the recipe definition's curated per-serving values into that contract so
+  // seeded dishes display the same calories/macros declared in recipes.data.
+  for (const rDef of recipeDefinitions) {
+    const recipe = postMap.get(rDef.slug);
+    if (!recipe) continue;
+
+    const revision = await prisma.postRevision.findFirstOrThrow({
+      where: { postId: recipe.id, version: 1 },
+      include: {
+        post: true,
+        ingredients: { orderBy: { position: 'asc' } },
+        recipeSteps: { orderBy: { position: 'asc' } },
+      },
+    });
+    const recipeFingerprint = createHash('sha256')
+      .update(
+        JSON.stringify({
+          calculationVersion: 'recipe-nutrition-v1',
+          revisionId: revision.id,
+          postVersion: revision.post.version,
+          servings: rDef.servings,
+          ingredients: revision.ingredients.map((ingredient) => ({
+            id: ingredient.id,
+            ingredientId: ingredient.ingredientId,
+            amount: ingredient.amount.toString(),
+            unit: ingredient.unit,
+            position: ingredient.position,
+          })),
+          steps: revision.recipeSteps.map((step) => ({
+            cookingMethodId: step.cookingMethodId,
+            durationMinutes: step.durationMinutes,
+            temperatureCelsius: step.temperatureCelsius?.toString() ?? null,
+            affectedIngredientPositions: step.affectedIngredientPositions,
+            position: step.position,
+          })),
+        }),
+      )
+      .digest('hex');
+
+    const currentEstimate = await prisma.recipeNutritionEstimate.findFirst({
+      where: { revisionId: revision.id, status: RecipeNutritionEstimateStatus.CURRENT },
+      orderBy: { version: 'desc' },
+    });
+    if (currentEstimate?.recipeFingerprint === recipeFingerprint) continue;
+
+    const perServingNutrients = [
+      { nutrientCode: 'ENERGY_KCAL', nutrientName: 'Năng lượng', unit: 'kcal', amount: rDef.calories },
+      { nutrientCode: 'PROTEIN', nutrientName: 'Protein', unit: 'g', amount: rDef.proteinGrams },
+      { nutrientCode: 'CARBS', nutrientName: 'Carbohydrate', unit: 'g', amount: rDef.carbsGrams },
+      { nutrientCode: 'FAT', nutrientName: 'Chất béo', unit: 'g', amount: rDef.fatGrams },
+      { nutrientCode: 'FIBER', nutrientName: 'Chất xơ', unit: 'g', amount: rDef.fiberGrams },
+      ...(rDef.vitaminB12Mcg === undefined
+        ? []
+        : [{ nutrientCode: 'VITAMIN_B12', nutrientName: 'Vitamin B12', unit: 'mcg', amount: rDef.vitaminB12Mcg }]),
+    ].map((nutrient) => ({
+      ...nutrient,
+      origin: NutritionValueOrigin.USER_PROVIDED,
+      confidence: 0.8,
+      min: Math.round(nutrient.amount * 0.9 * 100) / 100,
+      max: Math.round(nutrient.amount * 1.1 * 100) / 100,
+    }));
+    const totalNutrients = perServingNutrients.map((nutrient) => ({
+      ...nutrient,
+      amount: nutrient.amount * rDef.servings,
+      min: nutrient.min * rDef.servings,
+      max: nutrient.max * rDef.servings,
+    }));
+    const sourceVersions = [
+      {
+        sourceCode: projectSource.code,
+        sourceVersion: '1.0',
+        sourceRecordId: `recipe-seed:${rDef.slug}`,
+        kind: 'CURATED_RECIPE_NUTRITION',
+      },
+    ];
+    const assumptions = [
+      {
+        code: 'CURATED_RECIPE_MACROS',
+        message: 'Per-serving nutrition values are curated seed data declared with the recipe.',
+        origin: NutritionValueOrigin.USER_PROVIDED,
+      },
+    ];
+
+    await prisma.$transaction(async (transaction) => {
+      await transaction.recipeNutritionEstimate.updateMany({
+        where: { revisionId: revision.id, status: RecipeNutritionEstimateStatus.CURRENT },
+        data: { status: RecipeNutritionEstimateStatus.HISTORICAL },
+      });
+      const latest = await transaction.recipeNutritionEstimate.findFirst({
+        where: { revisionId: revision.id },
+        orderBy: { version: 'desc' },
+        select: { version: true },
+      });
+      await transaction.recipeNutritionEstimate.create({
+        data: {
+          revisionId: revision.id,
+          version: (latest?.version ?? 0) + 1,
+          status: RecipeNutritionEstimateStatus.CURRENT,
+          calculationVersion: 'recipe-nutrition-v1',
+          recipeFingerprint,
+          servings: rDef.servings,
+          totalRawGrams: 0,
+          totalCookedGrams: 0,
+          totalNutrients,
+          perServingNutrients,
+          sourceVersions,
+          assumptions,
+          uncoveredIngredients: [],
+          confidence: 0.8,
+          uncertainty: {
+            method: 'CURATED_RECIPE_MACROS',
+            relativeRangePercent: 10,
+          },
+          aiUsed: false,
+          providerDown: false,
+          disclaimer:
+            'Số liệu dinh dưỡng theo khẩu phần là dữ liệu ước tính được biên soạn cho món mẫu và chỉ mang tính tham khảo.',
+        },
+      });
     });
   }
 

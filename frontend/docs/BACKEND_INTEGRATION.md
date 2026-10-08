@@ -1,8 +1,8 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.23
+**Version:** 4.24
 
-**Cập nhật:** 03/10/2026
+**Cập nhật:** 08/10/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
@@ -27,6 +27,8 @@
 | `/ingredient-recognition/jobs*`, `/receipt-jobs*` | `IN_PROGRESS`: real-image provider acceptance remains open | Yes, development-only exception approved by user on 2026-10-03: DTO/Model/Mapper/API/Query, `/fridge-scan`, `/receipt-scan`, Pantry links, picker/upload, polling, correction/rejection, confirmation diff, cancel/retry | Successful OpenAI recognition and native camera/permission acceptance; production integration remains disabled |
 
 Approved development exception (2026-10-03): the user first authorized mobile integration with fake providers while these endpoints remain `IN_PROGRESS`, then explicitly requested switching the development preview to real OpenAI. The dedicated backend on port 4003 now uses `VISION_PROVIDER=openai` / `RECEIPT_PROVIDER=openai`; mobile web on port 8084 targets it and labels the configured provider as OpenAI. Newly created fridge and receipt jobs both persist provider `openai`, but recognition fails because the configured account still returns 429 credit_balance_exhausted / insufficient_quota. Existing fake jobs retain their original identity/results; create a new job after the switch. The exception still applies only to an opted-in Expo development runtime (`EXPO_PUBLIC_ENABLE_DEV_SCANS=true` plus `__DEV__`). Routes and API functions enforce this guard; production integration remains disabled. `EXPO_PUBLIC_SCAN_PROVIDER` changes the mobile label only, not backend behavior. Shared backend `.env`, API key and model settings were not changed. Setup: `mobile/docs/SCAN_DEV.md`.
+
+Changelog 2026-10-08 (4.24): comprehensive recipe seed data now persists each recipe definition's curated per-serving calories, protein, carbohydrate, fat, fiber, and optional vitamin B12 into a current Phase 13 nutrition estimate. `/posts/:id/nutrition/current` therefore returns the same macro values declared in `recipes.data.ts`, with explicit `USER_PROVIDED` origin, seed provenance, confidence, uncertainty, and disclaimer instead of `NUTRITION_DATA_INCOMPLETE`. API shapes and frontend consumers are unchanged; rerun `npm run seed` with PostgreSQL available to backfill an existing local database.
 
 Changelog 2026-10-03 (4.23): user-requested switch of both development providers from fake to OpenAI, with a matching configurable mobile label and real-provider restart commands. Confirmed new jobs persist OpenAI identity and fail without changing Pantry; direct provider diagnostic still returns 429 credit_balance_exhausted. Existing fake jobs are not relabeled as real results or migrated; new scans are required. Production guard and IN_PROGRESS endpoint gates remain unchanged. Mobile typecheck, targeted lint and provider-policy tests pass.
 
@@ -390,7 +392,7 @@ Các path dưới đây là contract target để định hướng; phase triể
 | POST       | `/admin/food-data/imports`                       | `READY` | 2026-09-19      | Yes (2026-09-23) | Admin, commits a preview by `importId`; idempotent replay + audit; FE: `features/food-data` (AdminImportManager)                                                         |
 | POST       | `/posts/:id/nutrition/preview`                   | `READY` | 2026-09-27      | Yes (2026-09-27) | Public for published recipe, owner/Admin for draft; unsaved deterministic/partial estimate                                                                               |
 | POST       | `/posts/:id/nutrition/recalculate`               | `READY` | 2026-09-27      | Yes (2026-09-27) | Auth owner/Admin; saves new estimate version and histories prior version                                                                                                 |
-| GET        | `/posts/:id/nutrition/current`                   | `READY` | 2026-09-27      | Yes (2026-09-27) | Current saved estimate; stale/incomplete errors documented                                                                                                               |
+| GET        | `/posts/:id/nutrition/current`                   | `READY` | 2026-10-08      | Yes (2026-09-27) | Current saved estimate; comprehensive recipe seed persists its declared per-serving macros with seed provenance; stale/incomplete errors remain documented               |
 | GET        | `/posts/:id/nutrition/history`                   | `READY` | 2026-09-27      | Yes (2026-09-27) | Paginated estimate versions with `CURRENT/HISTORICAL/STALE` status                                                                                                       |
 | GET        | `/posts/:id/nutrition/status`                    | `READY` | 2026-09-27      | Yes (2026-09-27) | Freshness and latest nutrition AI fallback job status                                                                                                                    |
 
