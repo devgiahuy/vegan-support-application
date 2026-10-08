@@ -64,3 +64,13 @@ export interface ProviderUploadResponseDto {
   version?: number;
   signature?: string;
 }
+
+export interface DeleteMediaAssetRequestDto {
+  idempotencyKey: string;
+}
+
+/** Phản hồi `DELETE /storage/assets/:id` — chỉ dùng `usage` để cập nhật dung lượng. */
+export interface StorageAssetResponseDto {
+  asset: { id: string };
+  usage: StorageUsageDto;
+}

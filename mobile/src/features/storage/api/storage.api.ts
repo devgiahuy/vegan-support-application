@@ -4,7 +4,9 @@ import type { APIResponse } from '@/types/api';
 import { storageMapper } from '../mappers/storage.mapper';
 import type {
   CreateReservationResponseDto,
+  DeleteMediaAssetRequestDto,
   ReservationResponseDto,
+  StorageAssetResponseDto,
   StorageUsageResponseDto,
 } from '../types/storage.dto';
 import type { ProviderUploadReceipt, ReservationInput } from '../types/storage.model';
@@ -29,6 +31,19 @@ export const storageApi = {
       storageMapper.toCommitDto(receipt)
     );
     return storageMapper.toReservation(res.data.data);
+  },
+  /**
+   * `DELETE /storage/assets/:id` — xóa bền vững tệp thuộc tài khoản để giải phóng dung lượng. Bị chặn
+   * (`MEDIA_ASSET_IN_USE`) khi tệp vẫn được nội dung chưa xóa tham chiếu. Trả về dung lượng sau khi xóa.
+   */
+  async deleteAsset(assetId: string, idempotencyKey: string) {
+    const body: DeleteMediaAssetRequestDto = { idempotencyKey };
+    const res = await api.delete<APIResponse<StorageAssetResponseDto>>(API_ENDPOINTS.STORAGE.ASSET(assetId), {
+      data: body,
+    });
+    const data = res.data.data;
+    if (!data) throw new Error('Không nhận được dung lượng sau khi xóa tệp.');
+    return storageMapper.toUsage(data.usage);
   },
   async release(id: string) {
     const res = await api.delete<APIResponse<ReservationResponseDto>>(

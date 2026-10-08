@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { getNextPageNumber } from '@/lib/pagination';
 import {
   recipeApi,
   type CreateRecipeInput,
@@ -16,6 +17,16 @@ export const useRecipesQuery = (params?: RecipeQueryParams) => {
   return useQuery({
     queryKey: RECIPE_QUERY_KEYS.list(params),
     queryFn: () => recipeApi.getRecipes(params),
+  });
+};
+
+/** Danh sách công thức phân trang kiểu "Tải thêm" (màn Khám phá món). `params` không chứa `page`. */
+export const useInfiniteRecipesQuery = (params?: Omit<RecipeQueryParams, 'page'>) => {
+  return useInfiniteQuery({
+    queryKey: [...RECIPE_QUERY_KEYS.all, 'infinite', params ?? {}] as const,
+    queryFn: ({ pageParam }) => recipeApi.getRecipes({ ...params, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: getNextPageNumber,
   });
 };
 

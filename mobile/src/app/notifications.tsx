@@ -4,13 +4,14 @@ import { Link, type Href, useRouter } from 'expo-router';
 import { Bell, CheckCheck } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
+import { LoadMoreButton } from '@/components/shared/load-more-button';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/state-views';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { NotificationItem } from '@/features/notification/components/notification-item';
 import {
   useMarkAllReadMutation,
   useMarkReadMutation,
-  useNotificationsQuery,
+  useInfiniteNotificationsQuery,
 } from '@/features/notification/queries/notification.queries';
 import type { AppNotification } from '@/features/notification/types/notification.model';
 import { getApiErrorMessage } from '@/lib/api-error';
@@ -31,14 +32,15 @@ export default function NotificationsScreen() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [filter, setFilter] = React.useState<Filter>('all');
 
-  const { data, isLoading, isError, refetch, isRefetching } = useNotificationsQuery({
-    limit: 50,
-    unreadOnly: filter === 'unread',
-  });
+  const { data, isLoading, isError, refetch, isRefetching, hasNextPage, fetchNextPage, isFetchingNextPage } =
+    useInfiniteNotificationsQuery({
+      limit: 20,
+      unreadOnly: filter === 'unread',
+    });
   const markRead = useMarkReadMutation();
   const markAll = useMarkAllReadMutation();
 
-  const items = data?.items ?? [];
+  const items = data?.pages.flatMap((page) => page.items) ?? [];
   const unreadCount = items.filter((item) => !item.read).length;
 
   const openItem = (item: AppNotification) => {
@@ -138,6 +140,11 @@ export default function NotificationsScreen() {
             {items.map((item) => (
               <NotificationItem key={item.id} item={item} onOpen={openItem} />
             ))}
+            <LoadMoreButton
+              hasNextPage={hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+              onPress={() => void fetchNextPage()}
+            />
           </View>
         )}
       </View>

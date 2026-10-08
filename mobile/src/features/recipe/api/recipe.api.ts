@@ -12,6 +12,8 @@ export interface RecipeQueryParams {
   /** UUID hoặc slug danh mục (backend `category`, strict — không gửi `categoryId`). */
   category?: string;
   difficulty?: string;
+  /** Chỉ lấy món có thời gian nấu không vượt quá số phút này (backend `maxCookTimeMinutes`, 0–10080). */
+  maxCookTimeMinutes?: number;
   q?: string;
 }
 
@@ -35,6 +37,8 @@ export interface CreateRecipeInput {
   excerpt?: string;
   categoryIds?: string[];
   tags?: string[];
+  /** Id asset ảnh bìa đã tải lên và commit (Phase 15); bỏ trống = không có ảnh bìa. */
+  coverAssetId?: string;
   servings: number;
   prepTimeMinutes: number;
   cookTimeMinutes: number;
@@ -66,7 +70,9 @@ function buildRecipePayload(input: CreateRecipeInput) {
     ...(input.excerpt ? { excerpt: input.excerpt } : {}),
     ...(input.categoryIds?.length ? { categoryIds: input.categoryIds } : {}),
     ...(input.tags?.length ? { tags: input.tags } : {}),
-    media: [],
+    media: input.coverAssetId
+      ? [{ provider: 'CLOUDINARY' as const, kind: 'COVER_IMAGE' as const, assetId: input.coverAssetId }]
+      : [],
     body: stepsToBody(input.steps),
     recipe: {
       servings: input.servings,

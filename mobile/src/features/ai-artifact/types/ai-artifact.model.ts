@@ -74,6 +74,7 @@ export interface AiArtifact {
 
 export interface AiArtifactListResult {
   items: AiArtifact[];
+  page: number;
   total: number;
   totalPages: number;
 }
@@ -88,5 +89,6 @@ export interface CreateAiArtifactInput {
 
 export interface PublicAiArtifactsQuery {
   type?: AiArtifactType;
+  page?: number;
   limit?: number;
 }

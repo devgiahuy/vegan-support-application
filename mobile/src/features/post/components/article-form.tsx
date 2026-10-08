@@ -6,6 +6,8 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { CategoryType } from '@/common/enums';
 import { CategoryFilterPills } from '@/features/category/components/category-filter-pills';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
+import { ImagePickerField } from '@/features/storage/components/image-picker-field';
+import type { PickedImage } from '@/features/storage/types/storage.model';
 import type { CreateArticleInput } from '../api/post.api';
 import { useIconColors } from '@/lib/theme-colors';
 
@@ -17,6 +19,8 @@ export interface ArticleFormInitial {
   title?: string;
   excerpt?: string;
   body?: string;
+  /** Ảnh bìa hiện có (chỉ để xem trước khi sửa). */
+  coverImageUrl?: string | null;
   tags?: string[];
   categoryId?: string | null;
 }
@@ -40,6 +44,8 @@ export function ArticleForm({
   const [title, setTitle] = React.useState(initial?.title ?? '');
   const [excerpt, setExcerpt] = React.useState(initial?.excerpt ?? '');
   const [body, setBody] = React.useState(initial?.body ?? '');
+  const [cover, setCover] = React.useState<PickedImage | null>(null);
+  const [coverBusy, setCoverBusy] = React.useState(false);
   const [tags, setTags] = React.useState(initial?.tags?.join(', ') ?? '');
   const [categoryId, setCategoryId] = React.useState<string | null>(initial?.categoryId ?? null);
 
@@ -51,6 +57,10 @@ export function ArticleForm({
   } = useCategoryTreeQuery(CategoryType.CONTENT_TOPIC);
 
   const submit = () => {
+    if (coverBusy) {
+      Alert.alert('Ảnh đang tải lên', 'Vui lòng đợi ảnh bìa tải xong rồi gửi bài viết.');
+      return;
+    }
     const cleanTitle = title.trim();
     const cleanBody = body.trim();
 
@@ -67,6 +77,7 @@ export function ArticleForm({
       title: cleanTitle,
       excerpt: excerpt.trim() || undefined,
       body: cleanBody,
+      ...(cover ? { coverAssetId: cover.assetId } : {}),
       categoryIds: categoryId ? [categoryId] : undefined,
       tags: splitTags(tags),
     });
@@ -96,6 +107,15 @@ export function ArticleForm({
             className="h-12 rounded-2xl border border-input bg-card px-3.5 text-sm text-foreground"
           />
         </View>
+
+        <ImagePickerField
+          label="Ảnh bìa bài viết"
+          value={cover}
+          onChange={setCover}
+          onBusyChange={setCoverBusy}
+          existingUrl={initial?.coverImageUrl}
+          existingNote="Chọn ảnh mới để thay. Nếu không chọn, bản chỉnh sửa sẽ không có ảnh bìa vì API chưa cho giữ lại ảnh cũ."
+        />
 
         <View>
           <View className="mb-1.5 flex-row items-center justify-between">
@@ -146,6 +166,7 @@ export function ArticleForm({
       <PrimaryButton
         label={isSubmitting ? 'Đang gửi...' : submitLabel}
         loading={isSubmitting}
+        disabled={coverBusy}
         icon={<Send size={16} color={colors.primaryForeground} />}
         onPress={submit}
       />

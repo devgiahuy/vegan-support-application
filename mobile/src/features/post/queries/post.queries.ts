@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { getNextPageNumber } from '@/lib/pagination';
 import {
   deletePost,
   postApi,
@@ -18,6 +19,17 @@ export function useArticlesQuery(params?: ArticleQueryParams) {
   return useQuery({
     queryKey: POST_QUERY_KEYS.articles(params),
     queryFn: () => postApi.getArticles(params),
+    staleTime: 60 * 1000,
+  });
+}
+
+/** Danh sách bài viết phân trang kiểu "Tải thêm" (màn Cẩm nang). `params` không chứa `page`. */
+export function useInfiniteArticlesQuery(params?: Omit<ArticleQueryParams, 'page'>) {
+  return useInfiniteQuery({
+    queryKey: [...POST_QUERY_KEYS.all, 'infinite', params ?? {}] as const,
+    queryFn: ({ pageParam }) => postApi.getArticles({ ...params, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: getNextPageNumber,
     staleTime: 60 * 1000,
   });
 }

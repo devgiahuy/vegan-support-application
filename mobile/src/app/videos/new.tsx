@@ -37,7 +37,7 @@ export default function CreateVideoScreen() {
                 body: values.body,
                 categoryIds: values.categoryIds,
                 tags: values.tags,
-                coverMedia: values.coverMedia,
+                coverAssetId: values.coverAssetId,
               });
               Alert.alert('Đã gửi video', 'Video đã được gửi lên hệ thống nội dung.');
               router.replace(`/videos/${created.id}` as Href);

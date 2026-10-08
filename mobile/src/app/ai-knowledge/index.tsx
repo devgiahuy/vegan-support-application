@@ -5,10 +5,11 @@ import { ArrowRight, Search, Sparkles, User } from 'lucide-react-native';
 
 import { AiArtifactType } from '@/common/enums';
 import { SiteScreen } from '@/components/layout/site-screen';
+import { LoadMoreButton } from '@/components/shared/load-more-button';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/state-views';
 import { AuthRequiredCard } from '@/features/ai-artifact/components/auth-required-card';
 import { VerificationBadge } from '@/features/ai-artifact/components/verification-badge';
-import { usePublicAiArtifactsQuery } from '@/features/ai-artifact/queries/ai-artifact.queries';
+import { useInfinitePublicAiArtifactsQuery } from '@/features/ai-artifact/queries/ai-artifact.queries';
 import type { AiArtifact } from '@/features/ai-artifact/types/ai-artifact.model';
 import { getAiArtifactErrorMessage } from '@/features/ai-artifact/utils/ai-artifact-errors';
 import { getApiErrorCode } from '@/lib/api-error';
@@ -67,14 +68,17 @@ export default function AiKnowledgeScreen() {
   const [tab, setTab] = React.useState(0);
   const [keyword, setKeyword] = React.useState('');
   const activeType = TABS[tab]?.type;
-  const { data, isLoading, isError, error, refetch } = usePublicAiArtifactsQuery({ type: activeType, limit: 50 });
+  const { data, isLoading, isError, error, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } =
+    useInfinitePublicAiArtifactsQuery({ type: activeType, limit: 50 });
+  const loadedCount = data?.pages.reduce((sum, page) => sum + page.items.length, 0) ?? 0;
+  const total = data?.pages[0]?.total ?? loadedCount;
 
   const items = React.useMemo(() => {
-    const all = data?.items ?? [];
+    const all = data?.pages.flatMap((page) => page.items) ?? [];
     const query = keyword.trim().toLowerCase();
     if (query.length === 0) return all;
     return all.filter((item) => item.title.toLowerCase().includes(query) || item.summary.toLowerCase().includes(query));
-  }, [data?.items, keyword]);
+  }, [data?.pages, keyword]);
 
   return (
     <SiteScreen>
@@ -133,9 +137,14 @@ export default function AiKnowledgeScreen() {
             {items.map((artifact) => (
               <ArtifactCard key={artifact.id} artifact={artifact} />
             ))}
-            {data && data.total > (data.items.length) ? (
+            <LoadMoreButton
+              hasNextPage={hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+              onPress={() => void fetchNextPage()}
+            />
+            {total > loadedCount ? (
               <Text className="text-center text-xs text-muted-foreground">
-                Đang hiển thị {data.items.length}/{data.total} bản ghi mới nhất.
+                Đang hiển thị {loadedCount}/{total} bản ghi mới nhất.
               </Text>
             ) : null}
           </View>

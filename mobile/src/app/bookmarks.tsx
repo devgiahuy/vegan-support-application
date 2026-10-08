@@ -5,8 +5,9 @@ import { Link, type Href } from 'expo-router';
 import { Bookmark, ChefHat, Video as VideoIcon } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
+import { LoadMoreButton } from '@/components/shared/load-more-button';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { useMyBookmarksQuery } from '@/features/community/queries/community.queries';
+import { useInfiniteMyBookmarksQuery } from '@/features/community/queries/community.queries';
 import type { BookmarkedItem } from '@/features/community/types/community.model';
 import { formatDate } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
@@ -53,8 +54,9 @@ function BookmarkRow({ item, colors }: { item: BookmarkedItem; colors: ReturnTyp
 export default function BookmarksScreen() {
   const colors = useIconColors();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const { data: pagination, isLoading, isError, refetch } = useMyBookmarksQuery({ limit: 50 });
-  const items = pagination?.items ?? [];
+  const { data, isLoading, isError, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } =
+    useInfiniteMyBookmarksQuery({ limit: 20 });
+  const items = data?.pages.flatMap((page) => page.items) ?? [];
 
   if (!isAuthenticated) {
     return (
@@ -119,6 +121,11 @@ export default function BookmarksScreen() {
             {items.map((item) => (
               <BookmarkRow key={item.postId} item={item} colors={colors} />
             ))}
+            <LoadMoreButton
+              hasNextPage={hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+              onPress={() => void fetchNextPage()}
+            />
           </View>
         )}
       </View>

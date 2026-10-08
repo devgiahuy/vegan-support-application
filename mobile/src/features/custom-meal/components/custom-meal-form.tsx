@@ -6,6 +6,7 @@ import { TextField } from '@/components/ui/text-field';
 import { IngredientPicker } from '@/features/ingredient/components/ingredient-picker';
 import { useIconColors } from '@/lib/theme-colors';
 import { customMealMapper } from '../mappers/custom-meal.mapper';
+import { CustomMealTagInput } from './custom-meal-tag-input';
 import type { CustomMeal, CustomMealFormValues, CustomMealIngredient } from '../types/custom-meal.model';
 
 function toNumberOrNull(value: string): number | null {
@@ -57,7 +58,7 @@ export function CustomMealForm({
   const [carbs, setCarbs] = React.useState(numberToText(initial?.carbsGrams));
   const [fat, setFat] = React.useState(numberToText(initial?.fatGrams));
   const [fiber, setFiber] = React.useState(numberToText(initial?.fiberGrams));
-  const [tags, setTags] = React.useState((initial?.tags ?? []).join(', '));
+  const [tags, setTags] = React.useState<string[]>(initial?.tags ?? []);
   const [ingredients, setIngredients] = React.useState<CustomMealIngredient[]>(
     initial?.ingredients.length ? initial.ingredients : [emptyIngredient('local-1')]
   );
@@ -98,7 +99,7 @@ export function CustomMealForm({
       userCarbsGrams: toNumberOrNull(carbs),
       userFatGrams: toNumberOrNull(fat),
       userFiberGrams: toNumberOrNull(fiber),
-      tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+      tags,
       ingredients: cleanIngredients,
     });
   };
@@ -135,7 +136,7 @@ export function CustomMealForm({
         Chỉ số dinh dưỡng là số bạn tự nhập; để trống nếu chưa biết (hệ thống không coi là 0).
       </Text>
       <TextField label="Nguồn/ghi chú riêng" value={sourceNote} onChangeText={setSourceNote} placeholder="VD: tag shopee chỉ là tag người dùng tự đặt, không gọi dịch vụ ngoài" />
-      <TextField label="Tags" value={tags} onChangeText={setTags} placeholder="meal-prep, shopee, bữa-trưa" />
+      <CustomMealTagInput tags={tags} onChange={setTags} />
 
       <View className="gap-3 rounded-2xl border border-border p-4">
         <View className="flex-row items-center justify-between">

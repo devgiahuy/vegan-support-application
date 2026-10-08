@@ -21,6 +21,7 @@ import type {
   SubmittedRestaurantStatus,
 } from '../types/restaurant.model';
 import { MAX_RADIUS_M, MIN_KEYWORD_LENGTH, MIN_RADIUS_M } from '../schemas/restaurant.schema';
+import { sanitizeAdvancedFilters } from '../utils/restaurant-filters';
 
 const SOURCE_LABELS: Record<string, string> = {
   INTERNAL: 'VeggieConnect',
@@ -235,7 +236,11 @@ export class RestaurantMapper extends BaseMapper<RestaurantPlaceDto, Restaurant>
     };
     if (query.source === 'DEVICE') params.locationConsent = 'true';
     if (query.dietPattern) params.dietPattern = query.dietPattern;
-    if (hasSearchKeyword(query.query)) params.q = query.query.trim();
+    if (hasSearchKeyword(query.query)) {
+      params.q = query.query.trim();
+      // Bộ lọc nâng cao chỉ tồn tại ở endpoint `search`; `nearby` (strict) sẽ từ chối tham số lạ.
+      Object.assign(params, sanitizeAdvancedFilters(query.advanced));
+    }
     return params;
   }
 }
