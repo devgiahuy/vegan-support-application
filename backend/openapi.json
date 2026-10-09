@@ -3,7 +3,7 @@
   "info": {
     "title": "Vegan Support Application API",
     "version": "0.1.0",
-    "description": "REST API contract for the Vegan Support Application."
+    "description": "REST API contract for the Vegan Support Application. Persistence: MongoDB replica set with Prisma; public identifiers remain UUID strings."
   },
   "servers": [
     {
@@ -13502,6 +13502,40 @@
                       "type": "string"
                     }
                   },
+                  "incompleteDataSummary": {
+                    "type": "object",
+                    "properties": {
+                      "affectedMealCount": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "title": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "detail": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      },
+                      "suggestion": {
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "affectedMealCount",
+                      "title",
+                      "detail",
+                      "suggestion"
+                    ],
+                    "additionalProperties": false
+                  },
                   "estimatedNutrition": {
                     "type": "object",
                     "properties": {
@@ -13659,6 +13693,7 @@
                   "summary",
                   "confidence",
                   "incompleteData",
+                  "incompleteDataSummary",
                   "estimatedNutrition",
                   "ruleVersions",
                   "disclaimer",
@@ -15362,6 +15397,40 @@
                   "type": "string"
                 }
               },
+              "incompleteDataSummary": {
+                "type": "object",
+                "properties": {
+                  "affectedMealCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "title": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "detail": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "suggestion": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "affectedMealCount",
+                  "title",
+                  "detail",
+                  "suggestion"
+                ],
+                "additionalProperties": false
+              },
               "estimatedNutrition": {
                 "type": "object",
                 "properties": {
@@ -15519,6 +15588,7 @@
               "summary",
               "confidence",
               "incompleteData",
+              "incompleteDataSummary",
               "estimatedNutrition",
               "ruleVersions",
               "disclaimer",
@@ -25964,10 +26034,16 @@
                 "type": "number"
               },
               "resultsTruncated": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "Provider page or result cap reached; result set may be incomplete"
               },
               "externalDataUnavailable": {
-                "type": "boolean"
+                "type": "boolean",
+                "description": "At least one provider query or page failed; successfully retrieved places remain available"
+              },
+              "externalResultsSuppressed": {
+                "type": "boolean",
+                "description": "Unreviewed external places omitted because hard dietary constraints apply"
               },
               "provider": {
                 "type": "string"
@@ -25988,6 +26064,7 @@
               "total",
               "resultsTruncated",
               "externalDataUnavailable",
+              "externalResultsSuppressed",
               "provider",
               "providerResultLimit",
               "locationStored"
@@ -27771,11 +27848,11 @@
         "tags": [
           "Foundation"
         ],
-        "summary": "Kiểm tra trạng thái API và PostgreSQL",
+        "summary": "Kiểm tra trạng thái API và MongoDB",
         "operationId": "getHealth",
         "responses": {
           "200": {
-            "description": "API và PostgreSQL hoạt động bình thường",
+            "description": "API và MongoDB hoạt động bình thường",
             "content": {
               "application/json": {
                 "schema": {
@@ -27785,7 +27862,7 @@
             }
           },
           "503": {
-            "description": "PostgreSQL không khả dụng",
+            "description": "MongoDB không khả dụng",
             "content": {
               "application/json": {
                 "schema": {
@@ -28797,7 +28874,7 @@
           "Diet Rules"
         ],
         "summary": "Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC",
-        "description": "Date-only YYYY-MM-DD được lưu bằng PostgreSQL DATE với semantic Asia/Ho_Chi_Minh; backend không tự tính lịch âm/ngày lễ.",
+        "description": "Date-only YYYY-MM-DD được lưu trong MongoDB bằng UTC midnight với semantic Asia/Ho_Chi_Minh; backend không tự tính lịch âm/ngày lễ.",
         "operationId": "updateDietSchedule",
         "security": [
           {
@@ -56273,7 +56350,7 @@
           "Restaurants"
         ],
         "summary": "Nearby approved internal and live provider places; hard diet filtering precedes ranking",
-        "description": "Coordinates are explicit. DEVICE requires locationConsent=true. Provider results are dietary-unverified and excluded when hard constraints apply. Google content is live only and must be attributed in the UI.",
+        "description": "Coordinates are explicit. DEVICE requires locationConsent=true. Provider results are dietary-unverified and excluded when hard constraints apply. Live provider content must be attributed in the UI. Nearby keyword queries run concurrently; SerpApi shares MAPS_TIMEOUT_MS across all pages/zooms per query and retains successful pages after a later failure. Results are deduplicated, radius-filtered and paginated (limit <= 20).",
         "operationId": "nearbyRestaurants",
         "parameters": [
           {
@@ -56475,6 +56552,7 @@
           "Restaurants"
         ],
         "summary": "Search nearby restaurants and shops",
+        "description": "Hard dietary constraints exclude all unreviewed external data. Provider price/rating/open filters are forwarded to SerpApi; internal records without those assertions are excluded when such filters are requested. Pagination and partial provider failure metadata match nearby discovery.",
         "operationId": "searchRestaurants",
         "parameters": [
           {

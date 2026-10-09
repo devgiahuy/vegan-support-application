@@ -20,6 +20,12 @@ export interface MediaAsset {
   mimeType: string;
 }
 
+/** Ảnh đã tải lên và commit thành công, dùng để gắn vào bài đăng hoặc món riêng bằng `assetId`. */
+export interface PickedImage {
+  assetId: string;
+  url: string;
+}
+
 export interface UploadConfiguration {
   url: string;
   fields: Record<string, string>;

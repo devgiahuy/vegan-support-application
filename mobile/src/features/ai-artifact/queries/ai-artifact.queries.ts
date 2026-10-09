@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { aiArtifactApi } from '../api/ai-artifact.api';
 import type { CreateAiArtifactInput, PublicAiArtifactsQuery } from '../types/ai-artifact.model';
@@ -13,6 +13,17 @@ export function usePublicAiArtifactsQuery(query: PublicAiArtifactsQuery = {}) {
   return useQuery({
     queryKey: AI_ARTIFACT_KEYS.public(query),
     queryFn: () => aiArtifactApi.listPublic(query),
+    staleTime: 60 * 1000,
+  });
+}
+
+/** Danh sách tri thức AI công khai phân trang kiểu "Tải thêm". `query` không chứa `page`. */
+export function useInfinitePublicAiArtifactsQuery(query: Omit<PublicAiArtifactsQuery, 'page'> = {}) {
+  return useInfiniteQuery({
+    queryKey: [...AI_ARTIFACT_KEYS.all, 'public-infinite', query] as const,
+    queryFn: ({ pageParam }) => aiArtifactApi.listPublic({ ...query, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined),
     staleTime: 60 * 1000,
   });
 }

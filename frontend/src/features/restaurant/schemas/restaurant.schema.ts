@@ -37,14 +37,9 @@ export const submitRestaurantSchema = z.object({
 export type SubmitRestaurantFormValues = z.infer<typeof submitRestaurantSchema>;
 
 /** Ngoài phạm vi redesign trang khám phá — giữ nguyên cho luồng quản trị. */
-export const reviewRestaurantSchema = z
-  .object({
-    decision: z.enum(['APPROVE', 'REJECT'], { message: 'Vui lòng chọn quyết định.' }),
-    reason: z.string().trim().max(2000).optional(),
-  })
-  .refine((data) => data.decision !== 'REJECT' || (data.reason && data.reason.trim().length >= 3), {
-    message: 'Vui lòng nhập lý do từ chối (tối thiểu 3 ký tự).',
-    path: ['reason'],
-  });
+export const reviewRestaurantSchema = z.object({
+  decision: z.enum(['APPROVE', 'REJECT'], { message: 'Vui lòng chọn quyết định.' }),
+  reason: z.string().trim().min(3, 'Vui lòng nhập lý do quyết định (tối thiểu 3 ký tự).').max(1000),
+});
 
 export type ReviewRestaurantFormValues = z.infer<typeof reviewRestaurantSchema>;

@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { getNextPageNumber } from '@/lib/pagination';
 import { communityApi } from '../api/community.api';
 import type { CommunityQueryParams } from '../types/community.model';
 
@@ -90,6 +91,17 @@ export function useRatingMutation() {
     mutationFn: (vars: { postId: string; taste: number; difficulty: number }) =>
       communityApi.putRating(vars.postId, vars.taste, vars.difficulty),
     onSuccess: (_, vars) => invalidatePost(queryClient, vars.postId),
+  });
+}
+
+/** `GET /users/me/bookmarks` phân trang kiểu "Tải thêm" (màn "Đã lưu"). Nằm dưới khóa `bookmarks` nên tự làm mới khi lưu/bỏ lưu. */
+export function useInfiniteMyBookmarksQuery(params?: { limit?: number; type?: 'RECIPE' | 'VIDEO' }) {
+  return useInfiniteQuery({
+    queryKey: [...COMMUNITY_QUERY_KEYS.all, 'bookmarks', 'infinite', params ?? {}] as const,
+    queryFn: ({ pageParam }) => communityApi.getMyBookmarks({ ...params, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: getNextPageNumber,
+    staleTime: 30 * 1000,
   });
 }
 

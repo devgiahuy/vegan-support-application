@@ -72,7 +72,7 @@ function multipleErrorResponse(errorSchema: ZodType, description: string, codes:
 
 function adminErrors(errorSchema: ZodType) {
   return {
-    400: multipleErrorResponse(errorSchema, 'D? li?u catalog kh�ng h?p l?', [
+    400: multipleErrorResponse(errorSchema, 'Dữ liệu catalog không hợp lệ', [
       'VALIDATION_ERROR',
       'INVALID_CATALOG_NAME',
       'INVALID_CATEGORY_PARENT',
@@ -81,10 +81,10 @@ function adminErrors(errorSchema: ZodType) {
       'INVALID_CATEGORY_REPLACEMENT',
       'INVALID_INGREDIENT_METADATA',
     ]),
-    401: errorResponse(errorSchema, 'Y�u c?u dang nh?p', 'AUTH_REQUIRED'),
-    403: errorResponse(errorSchema, 'Ch? Admin du?c qu?n l� catalog', 'FORBIDDEN'),
-    404: errorResponse(errorSchema, 'Kh�ng t�m th?y catalog item', 'NOT_FOUND'),
-    409: multipleErrorResponse(errorSchema, 'Catalog item b? tr�ng ho?c dang du?c tham chi?u', [
+    401: errorResponse(errorSchema, 'Yêu cầu đăng nhập', 'AUTH_REQUIRED'),
+    403: errorResponse(errorSchema, 'Chỉ Admin được quản lý catalog', 'FORBIDDEN'),
+    404: errorResponse(errorSchema, 'Không tìm thấy catalog item', 'NOT_FOUND'),
+    409: multipleErrorResponse(errorSchema, 'Catalog item bị trùng hoặc đang được tham chiếu', [
       'CATEGORY_SLUG_CONFLICT',
       'CATEGORY_REPLACEMENT_REQUIRED',
       'CATEGORY_REPLACEMENT_CONFLICT',
@@ -120,7 +120,7 @@ export function registerCatalogOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     method: 'get',
     path: '/api/v1/categories',
     tags: ['Categories'],
-    summary: 'L?y c�y category active t?i da hai t?ng',
+    summary: 'Lấy cây category active tối đa hai tầng',
     operationId: 'listPublicCategories',
     request: { query: publicCategoryQuerySchema },
     responses: {
@@ -128,7 +128,7 @@ export function registerCatalogOpenApi(registry: OpenAPIRegistry, errorSchema: Z
         description: 'Public category tree',
         content: { 'application/json': { schema: categoryTreeResponse } },
       },
-      400: errorResponse(errorSchema, 'Query kh�ng h?p l?', 'VALIDATION_ERROR'),
+      400: errorResponse(errorSchema, 'Query không hợp lệ', 'VALIDATION_ERROR'),
     },
   });
 
@@ -136,13 +136,13 @@ export function registerCatalogOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     method: 'get',
     path: '/api/v1/admin/categories',
     tags: ['Catalog Admin'],
-    summary: 'List category g?m c? archived',
+    summary: 'List category gồm cả archived',
     operationId: 'listAdminCategories',
     security: adminSecurity,
     request: { query: adminCategoryQuerySchema },
     responses: {
       200: {
-        description: 'Danh s�ch category c� pagination',
+        description: 'Danh sách category có pagination',
         content: { 'application/json': { schema: adminCategoryListResponse } },
       },
       ...adminErrors(errorSchema),
@@ -152,9 +152,9 @@ export function registerCatalogOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     method: 'post',
     path: '/api/v1/admin/categories',
     tags: ['Catalog Admin'],
-    summary: 'T?o category',
+    summary: 'Tạo category',
     description:
-      'Parent v� child ph?i c�ng type; tree t?i da hai t?ng; slug unique trong parent/type.',
+      'Parent và child phải cùng type; tree tối đa hai tầng; slug unique trong parent/type.',
     operationId: 'createCategory',
     security: adminSecurity,
     request: {
@@ -163,14 +163,14 @@ export function registerCatalogOpenApi(registry: OpenAPIRegistry, errorSchema: Z
         content: {
           'application/json': {
             schema: createCategoryRequestSchema,
-            example: { name: 'M�n ch�nh', type: 'FOOD_TYPE', sortOrder: 10 },
+            example: { name: 'Món chính', type: 'FOOD_TYPE', sortOrder: 10 },
           },
         },
       },
     },
     responses: {
       201: {
-        description: 'Category d� t?o',
+        description: 'Category đã tạo',
         content: { 'application/json': { schema: categoryResponse } },
       },
       ...adminErrors(errorSchema),
@@ -180,7 +180,7 @@ export function registerCatalogOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     method: 'patch',
     path: '/api/v1/admin/categories/{id}',
     tags: ['Catalog Admin'],
-    summary: 'C?p nh?t category',
+    summary: 'Cập nhật category',
     operationId: 'updateCategory',
     security: adminSecurity,
     request: {
@@ -192,7 +192,7 @@ export function registerCatalogOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     },
     responses: {
       200: {
-        description: 'Category d� c?p nh?t',
+        description: 'Category đã cập nhật',
         content: { 'application/json': { schema: categoryResponse } },
       },
       ...adminErrors(errorSchema),
@@ -204,13 +204,13 @@ export function registerCatalogOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     tags: ['Catalog Admin'],
     summary: 'Archive category',
     description:
-      'Category c� child active, pending proposal ho?c content reference b?t bu?c replacementId active, c�ng type v� c�ng t?ng. Reparent, thay content reference v� archive ch?y trong m?t transaction.',
+      'Category có child active, pending proposal hoặc content reference bắt buộc replacementId active, cùng type và cùng tầng. Reparent, thay content reference và archive chạy trong một transaction.',
     operationId: 'archiveCategory',
     security: adminSecurity,
     request: { params: idParamsSchema, query: archiveCategoryQuerySchema },
     responses: {
       200: {
-        description: 'Category d� archive',
+        description: 'Category đã archive',
         content: { 'application/json': { schema: archivedResponse } },
       },
       ...adminErrors(errorSchema),
@@ -226,40 +226,40 @@ export function registerCatalogOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     request: { query: publicIngredientQuerySchema },
     responses: {
       200: {
-        description: 'Ingredient list c� metadata v� pagination',
+        description: 'Ingredient list có metadata và pagination',
         content: { 'application/json': { schema: ingredientListResponse } },
       },
-      400: errorResponse(errorSchema, 'Query kh�ng h?p l?', 'VALIDATION_ERROR'),
+      400: errorResponse(errorSchema, 'Query không hợp lệ', 'VALIDATION_ERROR'),
     },
   });
   registry.registerPath({
     method: 'get',
     path: '/api/v1/ingredients/resolve',
     tags: ['Ingredients'],
-    summary: 'Resolve t�n/alias ingredient kh�ng ph�n bi?t d?u',
+    summary: 'Resolve tên/alias ingredient không phân biệt dấu',
     description:
-      'Tr? NONE, EXACT ho?c AMBIGUOUS. Khi ambiguous, client ph?i cho ngu?i d�ng ch?n candidate; backend kh�ng t? ch?n.',
+      'Trả NONE, EXACT hoặc AMBIGUOUS. Khi ambiguous, client phải cho người dùng chọn candidate; backend không tự chọn.',
     operationId: 'resolveIngredient',
     request: { query: resolveIngredientQuerySchema },
     responses: {
       200: {
-        description: 'K?t qu? resolution',
+        description: 'Kết quả resolution',
         content: { 'application/json': { schema: resolutionResponse } },
       },
-      400: errorResponse(errorSchema, 'Query kh�ng h?p l?', 'VALIDATION_ERROR'),
+      400: errorResponse(errorSchema, 'Query không hợp lệ', 'VALIDATION_ERROR'),
     },
   });
   registry.registerPath({
     method: 'get',
     path: '/api/v1/admin/ingredients',
     tags: ['Catalog Admin'],
-    summary: 'List ingredient g?m c? archived',
+    summary: 'List ingredient gồm cả archived',
     operationId: 'listAdminIngredients',
     security: adminSecurity,
     request: { query: adminIngredientQuerySchema },
     responses: {
       200: {
-        description: 'Ingredient list c� pagination',
+        description: 'Ingredient list có pagination',
         content: { 'application/json': { schema: ingredientListResponse } },
       },
       ...adminErrors(errorSchema),
@@ -269,7 +269,7 @@ export function registerCatalogOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     method: 'post',
     path: '/api/v1/admin/ingredients',
     tags: ['Catalog Admin'],
-    summary: 'T?o canonical ingredient v� metadata',
+    summary: 'Tạo canonical ingredient và metadata',
     operationId: 'createIngredient',
     security: adminSecurity,
     request: {
@@ -279,7 +279,7 @@ export function registerCatalogOpenApi(registry: OpenAPIRegistry, errorSchema: Z
           'application/json': {
             schema: createIngredientRequestSchema,
             example: {
-              canonicalName: '�?u hu',
+              canonicalName: 'Đậu hũ',
               foodGroup: 'LEGUMES',
               allergenCodes: ['SOY'],
               dietCompatibilities: [{ dietPattern: 'VEGAN', compatible: true }],
@@ -290,7 +290,7 @@ export function registerCatalogOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     },
     responses: {
       201: {
-        description: 'Ingredient d� t?o',
+        description: 'Ingredient đã tạo',
         content: { 'application/json': { schema: ingredientResponse } },
       },
       ...adminErrors(errorSchema),
@@ -300,7 +300,7 @@ export function registerCatalogOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     method: 'patch',
     path: '/api/v1/admin/ingredients/{id}',
     tags: ['Catalog Admin'],
-    summary: 'C?p nh?t ingredient ho?c full snapshot metadata',
+    summary: 'Cập nhật ingredient hoặc full snapshot metadata',
     operationId: 'updateIngredient',
     security: adminSecurity,
     request: {
@@ -312,7 +312,7 @@ export function registerCatalogOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     },
     responses: {
       200: {
-        description: 'Ingredient d� c?p nh?t',
+        description: 'Ingredient đã cập nhật',
         content: { 'application/json': { schema: ingredientResponse } },
       },
       ...adminErrors(errorSchema),
@@ -328,7 +328,7 @@ export function registerCatalogOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     request: { params: idParamsSchema },
     responses: {
       200: {
-        description: 'Ingredient d� archive',
+        description: 'Ingredient đã archive',
         content: { 'application/json': { schema: archivedResponse } },
       },
       ...adminErrors(errorSchema),
@@ -338,9 +338,9 @@ export function registerCatalogOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     method: 'post',
     path: '/api/v1/admin/ingredients/{id}/aliases',
     tags: ['Catalog Admin'],
-    summary: 'Th�m alias ingredient',
+    summary: 'Thêm alias ingredient',
     description:
-      'Alias du?c normalize kh�ng d?u. C�ng alias c� th? tr? t?i nhi?u canonical ingredient d? bi?u di?n k?t qu? ambiguous.',
+      'Alias được normalize không dấu. Cùng alias có thể trỏ tới nhiều canonical ingredient để biểu diễn kết quả ambiguous.',
     operationId: 'addIngredientAlias',
     security: adminSecurity,
     request: {
@@ -357,7 +357,7 @@ export function registerCatalogOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     },
     responses: {
       201: {
-        description: 'Alias d� th�m',
+        description: 'Alias đã thêm',
         content: { 'application/json': { schema: ingredientResponse } },
       },
       ...adminErrors(errorSchema),
@@ -367,10 +367,10 @@ export function registerCatalogOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     method: 'delete',
     path: '/api/v1/admin/ingredients/{id}/aliases/{aliasId}',
     tags: ['Catalog Admin'],
-    summary: 'X�a alias c?a ingredient',
+    summary: 'Xóa alias của ingredient',
     operationId: 'deleteIngredientAlias',
     security: adminSecurity,
     request: { params: aliasParamsSchema },
-    responses: { 204: { description: 'Alias d� x�a' }, ...adminErrors(errorSchema) },
+    responses: { 204: { description: 'Alias đã xóa' }, ...adminErrors(errorSchema) },
   });
 }

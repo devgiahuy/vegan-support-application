@@ -4,6 +4,7 @@ import { Link, type Href, useLocalSearchParams } from 'expo-router';
 import { Search as SearchIcon, X } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
+import { PrimaryButton } from '@/components/ui/primary-button';
 import { RecipeCard } from '@/features/recipe/components/recipe-card';
 import { PostCard } from '@/features/post/components/post-card';
 import { VideoCard } from '@/features/video/components/video-card';
@@ -62,6 +63,19 @@ export default function SearchScreen() {
   const videos = tab === 'all' || tab === 'videos' ? videosPagination?.items ?? [] : [];
   const isLoading = isRecipesLoading || isArticlesLoading || isVideosLoading;
   const totalResults = recipes.length + articles.length + videos.length;
+  const recipesTotal = recipesPagination?.metadata?.totalItems ?? recipes.length;
+  const articlesTotal = articlesPagination?.metadata?.totalItems ?? articles.length;
+  const videosTotal = videosPagination?.metadata?.totalItems ?? videos.length;
+
+  /** Ở tab "Tất cả" mỗi nhóm chỉ hiện vài mục đầu; nút này chuyển sang tab của nhóm để xem hết. */
+  const renderSeeAll = (target: Tab, total: number, shown: number) =>
+    tab === 'all' && total > shown ? (
+      <PrimaryButton
+        label={`Xem tất cả ${total} kết quả`}
+        variant="outline"
+        onPress={() => setTab(target)}
+      />
+    ) : null;
 
   const runSearch = (keyword: string) => {
     const trimmed = keyword.trim();
@@ -153,18 +167,19 @@ export default function SearchScreen() {
               <View className="gap-6">
                 {recipes.length > 0 ? (
                   <View className="gap-3">
-                    <Text className="text-sm font-bold text-foreground">Công thức ({recipes.length})</Text>
+                    <Text className="text-sm font-bold text-foreground">Công thức ({recipesTotal})</Text>
                     <View className="flex-row flex-wrap gap-3">
                       {recipes.map((r) => (
                         <RecipeCard key={r.id} recipe={r} className="w-[47%]" />
                       ))}
                     </View>
+                    {renderSeeAll('recipes', recipesTotal, recipes.length)}
                   </View>
                 ) : null}
 
                 {articles.length > 0 ? (
                   <View className="gap-3">
-                    <Text className="text-sm font-bold text-foreground">Bài viết ({articles.length})</Text>
+                    <Text className="text-sm font-bold text-foreground">Bài viết ({articlesTotal})</Text>
                     <View className="gap-3">
                       {articles.map((a) => (
                         <Link key={a.id} href={`/articles/${a.id}` as Href} asChild>
@@ -174,17 +189,19 @@ export default function SearchScreen() {
                         </Link>
                       ))}
                     </View>
+                    {renderSeeAll('articles', articlesTotal, articles.length)}
                   </View>
                 ) : null}
 
                 {videos.length > 0 ? (
                   <View className="gap-3">
-                    <Text className="text-sm font-bold text-foreground">Video ({videos.length})</Text>
+                    <Text className="text-sm font-bold text-foreground">Video ({videosTotal})</Text>
                     <View className="gap-3">
                       {videos.map((v) => (
                         <VideoCard key={v.id} video={v} />
                       ))}
                     </View>
+                    {renderSeeAll('videos', videosTotal, videos.length)}
                   </View>
                 ) : null}
               </View>

@@ -1,5 +1,27 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-08] — Tự động seed khi khởi động Docker
+
+- Mục tiêu: Docker chạy seed hiện tại tự động và push thay đổi lên `dev` theo yêu cầu người dùng.
+- Đã làm: mặc định `RUN_SEED=true` ở Compose, image startup và `.env.example`; bật lại trong `.env` local. Entry script chạy schema → compiled seed → API, log rõ từng bước, dừng khi schema/seed lỗi và chuyển tín hiệu shutdown qua `exec`. Bổ sung invited Contributor email vào Compose.
+- Sửa lỗi tìm thấy khi restart: seed giữ ID và cập nhật quyết định Contributor đã có thay vì xóa/tạo lại; không phát thêm 7 thông báo sau mỗi lần seed và không xóa quyết định lịch sử khác.
+- Verify: backend lint/typecheck/build, Docker build, OpenAPI generate + Swagger sync; DB mới có 100 collections, 18 users, 49 posts, 25 nutrition estimates, 31 public recipes. Restart và nâng cấp image giữ counts/IDs; quyết định lịch sử bổ sung vẫn còn. Opt-out không tạo fixtures; thiếu mật khẩu hoặc flag sai dừng trước API. Container local đã chạy seed tự động và health trả 200.
+- File sửa: Dockerfile/Compose/startup script, `.env.example`, ba seed entry points và helper quyết định, README/Mongo migration docs, integration registry/catalogs và nhật ký.
+- PROGRESS: không đổi phần trăm feature; không sửa frontend consumer nên không chạy lại frontend tests/build.
+- Notification acceptance hiện có đã pass triggers/dedupe, privacy/ownership, đọc/đọc tất cả, race, retention và rollback trên DB audit đã seed. Lượt đầu chạy trên DB kiểm tra opt-out dừng vì thiếu storage policy; chạy lại trên DB đã seed đúng prerequisite thì pass.
+
+## [2026-10-08] — Giải quyết conflict với dev sau MongoDB migration
+
+- Mục tiêu: cập nhật PR #39 trên `codex/migrate-postgres-to-mongodb` để ghép được vào `dev` mới nhất.
+- Đã làm: giữ giao diện restaurants mới, meal macros/analysis, admin-content và mobile của dev; tái áp dụng pagination/cache identity/AbortSignal/device consent, tọa độ keyword, partial/suppressed empty notices và payload duyệt đúng. Mongo giữ trường chất xơ mới, decimal policy, checked nested create, seed alias/evidence; SQL migration mới chuyển vào lịch sử PostgreSQL. Khôi phục các chuỗi UTF-8 bị hỏng upstream trong backend.
+- File sửa: restaurant page/API/DTO/Model/Mapper/Queries/schema/list và tests; integration registry và generated catalogs; backend schema/adapter policy/seed/content aggregation và conflict services; `docs/IMPLEMENTATION_PLAN.md` giữ cả hai quyết định đã duyệt.
+- Verify: backend lint/typecheck/build; OpenAPI generate + Swagger sync 168 operations; FE typecheck, 47 files / 577 tests, build 46 routes; provision/seed 100 Mongo collections trên DB kiểm tra riêng; meal-plans, meal-analysis, vision, receipts acceptance. HTTP smoke kiểm tra chất xơ lưu/đọc/cập nhật, nutrition/current, generate/replay/detail 21 slots; kiểm tra 25 seed estimates có macro/provenance. Chi tiết tại `backend/docs/DEV_MERGE_RECONCILIATION.md`.
+- Lint FE: các file TS/TSX chỉnh thêm khi giải conflict có 0 lỗi và 2 warning unused icons từ queue-table. Lint cả feature còn 3 lỗi set-state-in-effect ở map loader/map component có sẵn trên dev; các file này được giữ nguyên từ dev.
+- PROGRESS: Restaurant 100% → 100%; không tăng phần trăm feature khác.
+- Seed follow-up theo yêu cầu người dùng: sửa cơ chế phát hiện `�`, dấu `?` trong từ và mojibake; phục hồi title/excerpt/body độc lập cho recipe/handbook/video V1, cùng recipe steps/ingredients/tags. Reseed DB riêng khôi phục 6 trường lỗi cố tình tạo; kiểm tra 32 revisions sạch và 25 current nutrition estimates giữ nguyên. DB local hiện tại không có chuỗi lỗi theo mẫu đã rà; không reset dữ liệu shared.
+- Giới hạn: không lặp audit 526 requests của lượt trước; không xác minh lại native mobile/export hoặc dịch vụ Cloudinary/OpenAI thật.
+- Handoff: người dùng yêu cầu cập nhật nhánh đích PR #39 sang dev và merge sau verification/check trạng thái PR.
+
 > Agent BẮT BUỘC append 1 entry sau mỗi task xong (xem `ARCHITECTURE.md` mục 7).
 > Mỗi entry ghi: đã làm gì, file đổi, cách verify, % PROGRESS đổi ra sao.
 
@@ -148,6 +170,14 @@
 - Còn lại / rủi ro:
 ```
 
+## [2026-10-07] — Đồng bộ contract khi backend chuyển MongoDB
+
+- Mục tiêu: duy trì tương thích frontend sau thay đổi persistence đã được người dùng duyệt.
+- Đã làm: sync Swagger từ OpenAPI backend (168 operations); cập nhật registry v4.18, health/date-only descriptions và tài liệu tiến độ. UUID, DTO/Model/Mapper và quyền nghiệp vụ giữ nguyên.
+- File tạo/sửa: `docs/BACKEND_INTEGRATION.md`, `docs/API-CATALOG.md`, `docs/api-catalog.json`, các catalog API bị ảnh hưởng, `docs/PROGRESS.md`, `docs/WORK-LOG.md`.
+- Verify: `npx tsc --noEmit` pass; `npm test` 42 files / 408 tests pass; `npm run build` pass. Dependencies local được cài lại bằng `npm ci` để khôi phục package Maps đã có trong lockfile; không đổi source UI.
+- PROGRESS: task tài liệu 100%; phần trăm feature giữ nguyên vì không thêm consumer hoặc UI.
+- Còn lại / rủi ro: giới hạn production AI image và kiểm tra tải được giữ nguyên; xem `backend/docs/MONGODB_MIGRATION.md`.
 ## [2026-10-03] — Cập nhật màu sắc trực quan cho các ô thông tin dinh dưỡng tại trang chi tiết thực đơn (/meal-plans/[id])
 
 - Mục tiêu:
@@ -3634,6 +3664,14 @@
 - PROGRESS: Giữ nguyên (tạo task guide & documentation scaffolding).
 - Còn lại: Lần lượt chọn task trong `frontend/docs/tasks/` để thực thi (ưu tiên Phase 15 và Phase 16).
 
+## [2026-10-07] — Audit endpoints và sửa discovery quán chay
+
+- Mục tiêu: kiểm tra nghiệp vụ sau Mongo migration và lỗi nearby trả 200 rỗng/chờ lâu, gồm FE gọi thật.
+- Đã làm: DTO submit/review đúng enum/field; kiểm tra tọa độ/radius/consent; phân trang thực; query cache theo identity và invalidate diet/schedule; hiển thị SerpApi attribution, partial/suppressed/truncated, unreviewed; sửa default API proxy/server URL sang 4000. Backend sửa song song/deadline/zoom, constraint/cache bypass, SerpApi detail và nullable references cho checked nested creates; seed evidence/alias được sửa có phạm vi.
+- File sửa: `features/restaurant/*`, restaurants page, enums, diet query invalidation, `next.config.ts`, `lib/env.ts`, `.env.example`, integration registry và generated API catalogs.
+- Verify: `npx tsc --noEmit`, `npm test` 42 files / 412 tests, `npm run build`; Swagger sync 168 operations. HTTP/business audit và browser evidence ghi tại `backend/docs/ENDPOINT_BUSINESS_AUDIT.md`.
+- PROGRESS: Restaurant integration 100% → 100% (sửa lỗi); các phần trăm feature khác không đổi.
+- Giới hạn: nguồn bản đồ vẫn có thể thiếu dữ liệu và có cap; hard diet/allergy constraints được giữ. Không suy luận an toàn ăn uống từ nhãn provider.
 ## [2026-10-06] — Khu vực Quản lý nội dung admin recipes/articles/video (spec 029-admin-content-crud)
 
 - Mục tiêu:

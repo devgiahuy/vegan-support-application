@@ -3,10 +3,11 @@ import { Link, type Href } from 'expo-router';
 import { CalendarRange, Plus } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
+import { LoadMoreButton } from '@/components/shared/load-more-button';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/state-views';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { ProgramCard } from '@/features/meal-program/components/program-card';
-import { useMealProgramsQuery } from '@/features/meal-program/queries/meal-program.queries';
+import { useInfiniteMealProgramsQuery } from '@/features/meal-program/queries/meal-program.queries';
 import { getMealProgramErrorMessage } from '@/features/meal-program/utils/meal-program-errors';
 import { useIconColors } from '@/lib/theme-colors';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -15,8 +16,9 @@ import { useAuthStore } from '@/store/useAuthStore';
 export default function MealProgramsScreen() {
   const colors = useIconColors();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const { data, error, isLoading, isError, refetch } = useMealProgramsQuery({ limit: 20 });
-  const programs = data?.items ?? [];
+  const { data, error, isLoading, isError, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } =
+    useInfiniteMealProgramsQuery({ limit: 20 });
+  const programs = data?.pages.flatMap((page) => page.items) ?? [];
 
   if (!isAuthenticated) {
     return (
@@ -77,6 +79,11 @@ export default function MealProgramsScreen() {
             {programs.map((program) => (
               <ProgramCard key={program.id} program={program} />
             ))}
+            <LoadMoreButton
+              hasNextPage={hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+              onPress={() => void fetchNextPage()}
+            />
           </View>
         )}
       </View>

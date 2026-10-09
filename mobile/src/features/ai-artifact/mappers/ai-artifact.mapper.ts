@@ -186,6 +186,7 @@ export class AiArtifactMapper extends BaseMapper<AiArtifactDto, AiArtifact> {
     const items = this.toModelList(pickField(dto, ['data'], null)).filter((item) => item.id.length > 0);
     return {
       items,
+      page: safeNumber(pickField(dto, ['meta.page'], 1), 1),
       total: safeNumber(pickField(dto, ['meta.total'], items.length), items.length),
       totalPages: safeNumber(pickField(dto, ['meta.totalPages'], 1), 1),
     };

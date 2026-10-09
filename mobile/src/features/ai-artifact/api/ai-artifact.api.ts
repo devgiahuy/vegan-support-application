@@ -48,7 +48,11 @@ export const aiArtifactApi = {
   /** Danh sách tri thức AI công khai (không cần đăng nhập). */
   listPublic: async (query: PublicAiArtifactsQuery = {}): Promise<AiArtifactListResult> => {
     const res = await api.get<PublicAiArtifactListResponseDto>(API_ENDPOINTS.AI_ARTIFACTS.PUBLIC, {
-      params: { limit: query.limit ?? 50, ...(query.type ? { type: query.type } : {}) },
+      params: {
+        limit: query.limit ?? 50,
+        ...(query.page ? { page: query.page } : {}),
+        ...(query.type ? { type: query.type } : {}),
+      },
       silent: true,
     });
     return aiArtifactMapper.toListResult(res.data);

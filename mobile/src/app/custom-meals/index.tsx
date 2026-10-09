@@ -3,9 +3,10 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import { Link, type Href } from 'expo-router';
 import { Plus } from 'lucide-react-native';
 import { SiteScreen } from '@/components/layout/site-screen';
+import { LoadMoreButton } from '@/components/shared/load-more-button';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { CustomMealCard } from '@/features/custom-meal/components/custom-meal-card';
-import { useCustomMealsQuery } from '@/features/custom-meal/queries/custom-meal.queries';
+import { useInfiniteCustomMealsQuery } from '@/features/custom-meal/queries/custom-meal.queries';
 import { useIconColors } from '@/lib/theme-colors';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -13,8 +14,9 @@ import { useAuthStore } from '@/store/useAuthStore';
 export default function CustomMealsScreen() {
   const colors = useIconColors();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const { data, isLoading, isError, refetch } = useCustomMealsQuery({ limit: 50 });
-  const allMeals = React.useMemo(() => data?.items ?? [], [data?.items]);
+  const { data, isLoading, isError, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } =
+    useInfiniteCustomMealsQuery({ limit: 20 });
+  const allMeals = React.useMemo(() => data?.pages.flatMap((page) => page.items) ?? [], [data?.pages]);
   const [activeTag, setActiveTag] = React.useState<string | null>(null);
 
   const tagCounts = React.useMemo(() => {
@@ -104,7 +106,16 @@ export default function CustomMealsScreen() {
             </Link>
           </View>
         ) : (
-          meals.map((meal) => <CustomMealCard key={meal.id} meal={meal} />)
+          <>
+            {meals.map((meal) => (
+              <CustomMealCard key={meal.id} meal={meal} />
+            ))}
+            <LoadMoreButton
+              hasNextPage={hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+              onPress={() => void fetchNextPage()}
+            />
+          </>
         )}
       </View>
     </SiteScreen>

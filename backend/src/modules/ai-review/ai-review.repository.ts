@@ -1,3 +1,4 @@
+import { lockDocument } from '../../database/locking.js';
 import {
   AiArtifactStatus,
   AiArtifactVisibility,
@@ -62,7 +63,10 @@ export class AiReviewRepository {
 
   findOwnedNutritionEstimate(ownerId: string, id: string) {
     return this.prisma.recipeNutritionEstimate.findFirst({
-      where: { id, revision: { is: { post: { is: { authorId: ownerId, type: PostType.RECIPE } } } } },
+      where: {
+        id,
+        revision: { is: { post: { is: { authorId: ownerId, type: PostType.RECIPE } } } },
+      },
       select: {
         id: true,
         version: true,
@@ -82,14 +86,27 @@ export class AiReviewRepository {
       where: {
         id,
         ownerId,
-        status: { in: [RecognitionJobStatus.READY, RecognitionJobStatus.PARTIAL_FAILED, RecognitionJobStatus.CONFIRMED] },
+        status: {
+          in: [
+            RecognitionJobStatus.READY,
+            RecognitionJobStatus.PARTIAL_FAILED,
+            RecognitionJobStatus.CONFIRMED,
+          ],
+        },
       },
       select: {
         id: true,
         attemptCount: true,
         candidates: {
           where: { status: { not: RecognitionCandidateStatus.REJECTED } },
-          select: { detectedName: true, quantity: true, unit: true, confidence: true, status: true, version: true },
+          select: {
+            detectedName: true,
+            quantity: true,
+            unit: true,
+            confidence: true,
+            status: true,
+            version: true,
+          },
           orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
         },
       },
@@ -101,14 +118,23 @@ export class AiReviewRepository {
       where: {
         id,
         ownerId,
-        status: { in: [ReceiptJobStatus.READY, ReceiptJobStatus.PARTIAL_FAILED, ReceiptJobStatus.CONFIRMED] },
+        status: {
+          in: [ReceiptJobStatus.READY, ReceiptJobStatus.PARTIAL_FAILED, ReceiptJobStatus.CONFIRMED],
+        },
       },
       select: {
         id: true,
         attemptCount: true,
         candidates: {
           where: { status: { not: ReceiptCandidateStatus.REJECTED } },
-          select: { detectedName: true, quantity: true, unit: true, confidence: true, status: true, version: true },
+          select: {
+            detectedName: true,
+            quantity: true,
+            unit: true,
+            confidence: true,
+            status: true,
+            version: true,
+          },
           orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
         },
       },
@@ -154,10 +180,11 @@ export class AiReviewRepository {
     expectedLifecycleVersion: number,
   ): Promise<AiArtifactRecord | null> {
     return this.prisma.$transaction(async (transaction) => {
-      await transaction.$queryRaw(Prisma.sql`SELECT id FROM ai_artifacts WHERE id = ${id}::uuid FOR UPDATE`);
+      await lockDocument(transaction, 'aiArtifact', { id: id });
       const artifact = await transaction.aiArtifact.findFirst({ where: { id, ownerId } });
       if (!artifact) return null;
-      if (artifact.lifecycleVersion !== expectedLifecycleVersion) throw new AiReviewConflictError('ARTIFACT_VERSION');
+      if (artifact.lifecycleVersion !== expectedLifecycleVersion)
+        throw new AiReviewConflictError('ARTIFACT_VERSION');
       if (artifact.visibility !== visibility) {
         await transaction.aiArtifact.update({
           where: { id },
@@ -174,14 +201,19 @@ export class AiReviewRepository {
 
   async submit(ownerId: string, id: string, expectedLifecycleVersion: number) {
     return this.prisma.$transaction(async (transaction) => {
-      await transaction.$queryRaw(Prisma.sql`SELECT id FROM ai_artifacts WHERE id = ${id}::uuid FOR UPDATE`);
+      await lockDocument(transaction, 'aiArtifact', { id: id });
       const artifact = await transaction.aiArtifact.findFirst({ where: { id, ownerId } });
       if (!artifact) return null;
-      if (artifact.lifecycleVersion !== expectedLifecycleVersion) throw new AiReviewConflictError('ARTIFACT_VERSION');
+      if (artifact.lifecycleVersion !== expectedLifecycleVersion)
+        throw new AiReviewConflictError('ARTIFACT_VERSION');
       if (artifact.status !== AiArtifactStatus.SUBMITTED) {
         await transaction.aiArtifact.update({
           where: { id },
-          data: { status: AiArtifactStatus.SUBMITTED, submittedAt: new Date(), lifecycleVersion: { increment: 1 } },
+          data: {
+            status: AiArtifactStatus.SUBMITTED,
+            submittedAt: new Date(),
+            lifecycleVersion: { increment: 1 },
+          },
         });
       }
       return transaction.aiArtifact.findUniqueOrThrow({ where: { id }, include: artifactInclude });
@@ -194,16 +226,18 @@ export class AiReviewRepository {
       status: AiArtifactStatus.SUBMITTED,
       ...(query.type ? { type: query.type } : {}),
     };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.aiArtifact.findMany({
-        where,
-        include: artifactInclude,
-        orderBy: [{ sharedAt: 'desc' }, { id: 'desc' }],
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-      this.prisma.aiArtifact.count({ where }),
-    ]);
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.aiArtifact.findMany({
+          where,
+          include: artifactInclude,
+          orderBy: [{ sharedAt: 'desc' }, { id: 'desc' }],
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+        transaction.aiArtifact.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 
@@ -218,12 +252,18 @@ export class AiReviewRepository {
   }): Promise<{ artifact: AiArtifactRecord; verification: AiVerificationRecord }> {
     try {
       return await this.prisma.$transaction(async (transaction) => {
-        await transaction.$queryRaw(Prisma.sql`SELECT id FROM ai_artifacts WHERE id = ${data.artifactId}::uuid FOR UPDATE`);
-        const artifact = await transaction.aiArtifact.findUnique({ where: { id: data.artifactId } });
+        await lockDocument(transaction, 'aiArtifact', { id: data.artifactId });
+        const artifact = await transaction.aiArtifact.findUnique({
+          where: { id: data.artifactId },
+        });
         if (!artifact) throw new AiReviewConflictError('ARTIFACT_STATE');
-        if (artifact.version !== data.expectedArtifactVersion) throw new AiReviewConflictError('ARTIFACT_VERSION');
+        if (artifact.version !== data.expectedArtifactVersion)
+          throw new AiReviewConflictError('ARTIFACT_VERSION');
         if (artifact.ownerId === data.reviewerId) throw new AiReviewConflictError('ARTIFACT_STATE');
-        if (artifact.status !== AiArtifactStatus.SUBMITTED || artifact.visibility !== AiArtifactVisibility.PUBLIC) {
+        if (
+          artifact.status !== AiArtifactStatus.SUBMITTED ||
+          artifact.visibility !== AiArtifactVisibility.PUBLIC
+        ) {
           throw new AiReviewConflictError('ARTIFACT_STATE');
         }
         const reviewer = await transaction.user.findFirst({
@@ -256,13 +296,22 @@ export class AiReviewRepository {
           },
           include: { reviewer: { select: { displayName: true, role: true } } },
         });
-        await transaction.aiGovernanceEvent.create({ data: {
-          capability: 'VERIFICATION', provider: 'human', correlationId: aiCorrelationId(),
-          status: 'SUCCESS', safetyOutcome: data.conclusion, startedAt: verification.createdAt,
-          completedAt: verification.createdAt,
-        } });
+        await transaction.aiGovernanceEvent.create({
+          data: {
+            capability: 'VERIFICATION',
+            provider: 'human',
+            correlationId: aiCorrelationId(),
+            status: 'SUCCESS',
+            safetyOutcome: data.conclusion,
+            startedAt: verification.createdAt,
+            completedAt: verification.createdAt,
+          },
+        });
         return {
-          artifact: await transaction.aiArtifact.findUniqueOrThrow({ where: { id: artifact.id }, include: artifactInclude }),
+          artifact: await transaction.aiArtifact.findUniqueOrThrow({
+            where: { id: artifact.id },
+            include: artifactInclude,
+          }),
           verification,
         };
       });
@@ -288,12 +337,17 @@ export class AiReviewRepository {
     };
   }): Promise<{ artifact: AiArtifactRecord; verification: AiVerificationRecord } | null> {
     return this.prisma.$transaction(async (transaction) => {
-      await transaction.$queryRaw(Prisma.sql`SELECT id FROM ai_verifications WHERE id = ${data.verificationId}::uuid FOR UPDATE`);
-      const current = await transaction.aiVerification.findUnique({ where: { id: data.verificationId } });
+      await lockDocument(transaction, 'aiVerification', { id: data.verificationId });
+      const current = await transaction.aiVerification.findUnique({
+        where: { id: data.verificationId },
+      });
       if (!current) return null;
-      if (current.version !== data.expectedVersion) throw new AiReviewConflictError('VERIFICATION_VERSION');
-      if (current.status !== AiVerificationStatus.ACTIVE) throw new AiReviewConflictError('VERIFICATION_STATE');
-      const nextStatus = data.action === 'OVERRIDE' ? AiVerificationStatus.SUPERSEDED : AiVerificationStatus.REVOKED;
+      if (current.version !== data.expectedVersion)
+        throw new AiReviewConflictError('VERIFICATION_VERSION');
+      if (current.status !== AiVerificationStatus.ACTIVE)
+        throw new AiReviewConflictError('VERIFICATION_STATE');
+      const nextStatus =
+        data.action === 'OVERRIDE' ? AiVerificationStatus.SUPERSEDED : AiVerificationStatus.REVOKED;
       const updated = await transaction.aiVerification.update({
         where: { id: current.id },
         data: { status: nextStatus, version: { increment: 1 } },
@@ -321,19 +375,31 @@ export class AiReviewRepository {
         data: {
           verificationId: current.id,
           actorId: data.actorId,
-          action: data.action === 'OVERRIDE' ? AiVerificationAdminActionType.OVERRIDE : AiVerificationAdminActionType.REVOKE,
+          action:
+            data.action === 'OVERRIDE'
+              ? AiVerificationAdminActionType.OVERRIDE
+              : AiVerificationAdminActionType.REVOKE,
           reason: data.reason,
           expectedVersion: data.expectedVersion,
           resultingVersion: updated.version,
           replacementVerificationId: replacementId,
         },
       });
-      await transaction.aiGovernanceEvent.create({ data: {
-        capability: 'VERIFICATION', provider: 'human', correlationId: aiCorrelationId(),
-        status: 'SUCCESS', safetyOutcome: data.action, startedAt: updated.updatedAt,
-        completedAt: updated.updatedAt,
-      } });
-      const artifact = await transaction.aiArtifact.findUniqueOrThrow({ where: { id: current.artifactId }, include: artifactInclude });
+      await transaction.aiGovernanceEvent.create({
+        data: {
+          capability: 'VERIFICATION',
+          provider: 'human',
+          correlationId: aiCorrelationId(),
+          status: 'SUCCESS',
+          safetyOutcome: data.action,
+          startedAt: updated.updatedAt,
+          completedAt: updated.updatedAt,
+        },
+      });
+      const artifact = await transaction.aiArtifact.findUniqueOrThrow({
+        where: { id: current.artifactId },
+        include: artifactInclude,
+      });
       const verification = artifact.verifications.find((item) => item.id === resultId);
       if (!verification) throw new Error('AI verification action result missing');
       return { artifact, verification };

@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { getNextPageNumber } from '@/lib/pagination';
 import {
   videoApi,
   type CreateVideoInput,
@@ -17,6 +18,17 @@ export function useVideosQuery(params?: VideoQueryParams) {
   return useQuery({
     queryKey: VIDEO_QUERY_KEYS.list(params),
     queryFn: () => videoApi.getVideos(params),
+    staleTime: 60 * 1000,
+  });
+}
+
+/** Danh sách video phân trang kiểu "Tải thêm" (màn Video). `params` không chứa `page`. */
+export function useInfiniteVideosQuery(params?: Omit<VideoQueryParams, 'page'>) {
+  return useInfiniteQuery({
+    queryKey: [...VIDEO_QUERY_KEYS.all, 'infinite', params ?? {}] as const,
+    queryFn: ({ pageParam }) => videoApi.getVideos({ ...params, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: getNextPageNumber,
     staleTime: 60 * 1000,
   });
 }

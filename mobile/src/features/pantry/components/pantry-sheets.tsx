@@ -13,6 +13,7 @@ import {
   useCreatePantryItemMutation,
   useMergePantryItemsMutation,
   usePantryAdjustmentsQuery,
+  usePantryItemQuery,
   usePantryMergePreviewMutation,
   useUpdatePantryItemMutation,
 } from '../queries/pantry.queries';
@@ -34,6 +35,7 @@ export function PantryCreateSheet({ onClose }: { onClose: () => void }) {
   }>({ displayName: '', ingredientId: null });
   const [quantity, setQuantity] = React.useState('');
   const [unit, setUnit] = React.useState('g');
+  const [purchasedAt, setPurchasedAt] = React.useState('');
   const [date, setDate] = React.useState('');
   const [note, setNote] = React.useState('');
   const [error, setError] = React.useState('');
@@ -50,9 +52,18 @@ export function PantryCreateSheet({ onClose }: { onClose: () => void }) {
       unit.length > 40
     )
       return setError('Nhập số lượng dương và đơn vị hợp lệ.');
+    if (!isValidDateInput(purchasedAt.trim()))
+      return setError('Ngày mua phải là ngày hợp lệ dạng YYYY-MM-DD.');
     if (!isValidDateInput(date.trim()))
       return setError('Hạn dùng phải là ngày hợp lệ dạng YYYY-MM-DD.');
-    const fingerprint = JSON.stringify([identity, amount, unit.trim(), date.trim(), note.trim()]);
+    const fingerprint = JSON.stringify([
+      identity,
+      amount,
+      unit.trim(),
+      purchasedAt.trim(),
+      date.trim(),
+      note.trim(),
+    ]);
     if (operation.current?.fingerprint !== fingerprint)
       operation.current = {
         fingerprint,
@@ -65,6 +76,7 @@ export function PantryCreateSheet({ onClose }: { onClose: () => void }) {
         unmatchedText: identity.displayName,
         quantity: amount,
         unit: unit.trim(),
+        purchasedAt: purchasedAt.trim(),
         expiresAt: date.trim(),
         freshnessNote: note,
         idempotencyKey: operation.current.key,
@@ -86,6 +98,13 @@ export function PantryCreateSheet({ onClose }: { onClose: () => void }) {
       />
       <TextField label="Đơn vị" value={unit} onChangeText={setUnit} maxLength={40} />
       <TextField
+        label="Ngày mua"
+        placeholder="YYYY-MM-DD"
+        value={purchasedAt}
+        onChangeText={setPurchasedAt}
+        maxLength={10}
+      />
+      <TextField
         label="Hạn dùng"
         placeholder="YYYY-MM-DD"
         value={date}
@@ -99,7 +118,12 @@ export function PantryCreateSheet({ onClose }: { onClose: () => void }) {
   );
 }
 
-export function PantryItemSheet({ item, onClose }: { item: PantryItem; onClose: () => void }) {
+export function PantryItemSheet({ item: listItem, onClose }: { item: PantryItem; onClose: () => void }) {
+  // Danh sách có thể đã cũ; chi tiết mới nhất cung cấp `version` đúng cho khóa lạc quan khi lưu.
+  const detail = usePantryItemQuery(listItem.id);
+  const item = detail.data ?? listItem;
+  const syncedVersion = React.useRef(item.version);
+  const [refreshed, setRefreshed] = React.useState(false);
   const [mode, setMode] = React.useState<'OBSERVATION' | 'QUANTITY' | 'HISTORY'>('OBSERVATION');
   const [purchasedAt, setPurchasedAt] = React.useState(item.purchasedAt ?? '');
   const [openedAt, setOpenedAt] = React.useState(item.openedAt ?? '');
@@ -115,6 +139,16 @@ export function PantryItemSheet({ item, onClose }: { item: PantryItem; onClose: 
   const history = usePantryAdjustmentsQuery(mode === 'HISTORY' ? item.id : '', page);
   const operation = React.useRef<{ fingerprint: string; key: string } | null>(null);
   const busy = update.isPending || adjust.isPending;
+  React.useEffect(() => {
+    const fresh = detail.data;
+    if (!fresh || fresh.version === syncedVersion.current) return;
+    syncedVersion.current = fresh.version;
+    setPurchasedAt(fresh.purchasedAt ?? '');
+    setOpenedAt(fresh.openedAt ?? '');
+    setExpiresAt(fresh.expiresAt ?? '');
+    setNote(fresh.freshnessNote ?? '');
+    setRefreshed(true);
+  }, [detail.data]);
   const save = () => {
     setError('');
     if (mode === 'OBSERVATION') {
@@ -174,6 +208,9 @@ export function PantryItemSheet({ item, onClose }: { item: PantryItem; onClose: 
   return (
     <FormSheet title={item.displayName} onClose={onClose} busy={busy}>
       <Text className="text-sm text-muted-foreground">Hiện có: {item.formattedQuantity}</Text>
+      {refreshed ? (
+        <Text className="text-xs text-primary">Mục này đã thay đổi, thông tin đã được tải lại theo bản mới nhất.</Text>
+      ) : null}
       <View className="flex-row gap-2">
         {(['OBSERVATION', 'QUANTITY', 'HISTORY'] as const).map((value) => (
           <Pressable

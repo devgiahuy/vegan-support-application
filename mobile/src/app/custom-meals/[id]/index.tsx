@@ -4,6 +4,8 @@ import { Link, type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { Pencil, Trash2, Utensils } from 'lucide-react-native';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
+import { CustomMealNutritionBar } from '@/features/custom-meal/components/custom-meal-nutrition-bar';
+import { CustomMealPhotoManager } from '@/features/custom-meal/components/custom-meal-photo-manager';
 import { useCustomMealDetailQuery, useDeleteCustomMealMutation } from '@/features/custom-meal/queries/custom-meal.queries';
 import { getCustomMealErrorMessage } from '@/features/custom-meal/utils/custom-meal-errors';
 import { useIconColors } from '@/lib/theme-colors';
@@ -87,20 +89,8 @@ export default function CustomMealDetailScreen() {
           <Metric label="Calo" value={meal.calories === null ? 'Chưa nhập' : String(meal.calories)} />
           <Metric label="Nguyên liệu" value={String(meal.ingredientCount)} />
         </View>
-        <View className="gap-2 rounded-2xl border border-border p-4">
-          <Text className="font-bold text-foreground">Dinh dưỡng bạn nhập (mỗi bữa)</Text>
-          <View className="flex-row gap-2">
-            <Metric label="Đạm" value={formatGrams(meal.proteinGrams)} />
-            <Metric label="Carb" value={formatGrams(meal.carbsGrams)} />
-          </View>
-          <View className="flex-row gap-2">
-            <Metric label="Béo" value={formatGrams(meal.fatGrams)} />
-            <Metric label="Xơ" value={formatGrams(meal.fiberGrams)} />
-          </View>
-          <Text className="text-[11px] text-muted-foreground">
-            {meal.nutritionCoverageLabel}. Chỉ số để trống nghĩa là chưa có dữ liệu, không phải 0.
-          </Text>
-        </View>
+        <CustomMealNutritionBar meal={meal} />
+        <CustomMealPhotoManager meal={meal} />
         {meal.tags.length ? <Text className="text-sm text-muted-foreground">#{meal.tags.join(' #')}</Text> : null}
         <View className="gap-2 rounded-2xl border border-border p-4">
           <Text className="font-bold text-foreground">Nguyên liệu</Text>
@@ -121,10 +111,6 @@ export default function CustomMealDetailScreen() {
       </View>
     </SiteScreen>
   );
-}
-
-function formatGrams(value: number | null): string {
-  return value === null ? 'Chưa nhập' : `${value} g`;
 }
 
 function Metric({ label, value }: { label: string; value: string }) {

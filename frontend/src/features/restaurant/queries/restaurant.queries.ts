@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { toastApiError } from '@/lib/api-error';
+import { useAuthStore } from '@/store/useAuthStore';
 import { restaurantApi } from '../api/restaurant.api';
 import { resolveSearchMode } from '../utils/restaurant-search';
 import type { RestaurantSearchState, SubmitRestaurantInput } from '../types/restaurant.model';
@@ -20,9 +21,13 @@ export const RESTAURANT_KEYS = {
       state.lat,
       state.lng,
       state.dietPattern,
+      state.page,
+      state.limit,
+      state.locationSource,
+      state.locationConsent,
     ] as const,
   bounds: (state: RestaurantSearchState) =>
-    [...RESTAURANT_KEYS.all, 'bounds', state.bounds, state.dietPattern] as const,
+    [...RESTAURANT_KEYS.all, 'bounds', state.bounds, state.radiusM, state.dietPattern, state.page, state.limit, state.locationSource, state.locationConsent] as const,
   search: (state: RestaurantSearchState) =>
     [
       ...RESTAURANT_KEYS.all,
@@ -31,6 +36,12 @@ export const RESTAURANT_KEYS = {
       state.radiusM,
       state.dietPattern,
       state.advanced,
+      state.lat,
+      state.lng,
+      state.page,
+      state.limit,
+      state.locationSource,
+      state.locationConsent,
     ] as const,
   detail: (id: string) => [...RESTAURANT_KEYS.all, 'detail', id] as const,
   queue: () => [...RESTAURANT_KEYS.all, 'queue'] as const,
@@ -39,10 +50,10 @@ export const RESTAURANT_KEYS = {
 /** Quán gần vị trí/tọa độ hoặc theo khung vùng bản đồ (GET /restaurants/nearby). */
 export function useNearbyRestaurantsQuery(state: RestaurantSearchState, enabled = true) {
   const mode = resolveSearchMode(state);
+  const identity = useAuthStore((auth) => auth.user?.id ?? 'guest');
   return useQuery({
-    queryKey:
-      state.mode === 'BOUNDS' ? RESTAURANT_KEYS.bounds(state) : RESTAURANT_KEYS.nearby(state),
-    queryFn: () => restaurantApi.getNearby(state),
+    queryKey: [...(state.mode === 'BOUNDS' ? RESTAURANT_KEYS.bounds(state) : RESTAURANT_KEYS.nearby(state)), identity],
+    queryFn: ({ signal }) => restaurantApi.getNearby(state, signal),
     staleTime: 2 * 60 * 1000,
     enabled: enabled && (mode === 'NEARBY' || mode === 'BOUNDS'),
   });
@@ -51,9 +62,10 @@ export function useNearbyRestaurantsQuery(state: RestaurantSearchState, enabled 
 /** Tìm theo món ăn/tên quán (GET /restaurants/search). */
 export function useRestaurantSearchQuery(state: RestaurantSearchState, enabled = true) {
   const mode = resolveSearchMode(state);
+  const identity = useAuthStore((auth) => auth.user?.id ?? 'guest');
   return useQuery({
-    queryKey: RESTAURANT_KEYS.search(state),
-    queryFn: () => restaurantApi.search(state),
+    queryKey: [...RESTAURANT_KEYS.search(state), identity],
+    queryFn: ({ signal }) => restaurantApi.search(state, signal),
     staleTime: 2 * 60 * 1000,
     enabled: enabled && mode === 'KEYWORD',
   });
@@ -70,14 +82,15 @@ export function useRestaurantDiscoveryQuery(state: RestaurantSearchState, enable
   const mode = resolveSearchMode(state);
   const isKeyword = mode === 'KEYWORD';
   const isBounds = mode === 'BOUNDS';
+  const identity = useAuthStore((auth) => auth.user?.id ?? 'guest');
 
   return useQuery({
-    queryKey: isKeyword
+    queryKey: [...(isKeyword
       ? RESTAURANT_KEYS.search(state)
       : isBounds
         ? RESTAURANT_KEYS.bounds(state)
-        : RESTAURANT_KEYS.nearby(state),
-    queryFn: () => (isKeyword ? restaurantApi.search(state) : restaurantApi.getNearby(state)),
+        : RESTAURANT_KEYS.nearby(state)), identity],
+    queryFn: ({ signal }) => (isKeyword ? restaurantApi.search(state, signal) : restaurantApi.getNearby(state, signal)),
     staleTime: 2 * 60 * 1000,
     enabled: enabled && mode !== null,
   });
@@ -123,8 +136,9 @@ export function useGeocodeMutation() {
 
 /** Hàng chờ duyệt của quản trị viên (ngoài phạm vi redesign trang khám phá). */
 export function useRestaurantQueueQuery() {
+  const identity = useAuthStore((auth) => auth.user?.id ?? 'guest');
   return useQuery({
-    queryKey: RESTAURANT_KEYS.queue(),
+    queryKey: [...RESTAURANT_KEYS.queue(), identity],
     queryFn: () => restaurantApi.getQueue(),
     staleTime: 30 * 1000,
   });

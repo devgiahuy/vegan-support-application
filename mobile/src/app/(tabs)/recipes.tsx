@@ -6,7 +6,8 @@ import { PlusCircle, Search, ShieldCheck, Sparkles } from 'lucide-react-native';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { RecipeCard } from '@/features/recipe/components/recipe-card';
-import { useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
+import { LoadMoreButton } from '@/components/shared/load-more-button';
+import { useInfiniteRecipesQuery } from '@/features/recipe/queries/recipe.queries';
 import { CategoryType } from '@/common/enums';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
 import { CategoryFilterPills } from '@/features/category/components/category-filter-pills';
@@ -19,6 +20,14 @@ const DIFFICULTIES = [
   { label: 'Dễ', value: 'EASY' },
   { label: 'Trung bình', value: 'MEDIUM' },
   { label: 'Nâng cao', value: 'HARD' },
+];
+
+/** Backend chỉ có cận trên `maxCookTimeMinutes`, nên không có mức "Trên 1 giờ" như web. */
+const COOK_TIMES: { label: string; value: number | null }[] = [
+  { label: 'Tất cả thời gian', value: null },
+  { label: 'Dưới 15 phút', value: 15 },
+  { label: 'Dưới 30 phút', value: 30 },
+  { label: 'Dưới 60 phút', value: 60 },
 ];
 
 function getDietPatternLabel(pattern: string | null | undefined): string {
@@ -51,6 +60,7 @@ export default function RecipesScreen() {
   const params = useLocalSearchParams<{ category?: string }>();
   const [query, setQuery] = React.useState('');
   const [difficulty, setDifficulty] = React.useState('');
+  const [maxCookTime, setMaxCookTime] = React.useState<number | null>(null);
   const [categoryId, setCategoryId] = React.useState<string | null>(params.category ?? null);
 
   const {
@@ -61,25 +71,31 @@ export default function RecipesScreen() {
   } = useCategoryTreeQuery(CategoryType.RECIPE_GROUP);
 
   const {
-    data: recipesPagination,
+    data: recipePages,
     isLoading: isRecipesLoading,
     isError: isRecipesError,
     refetch: refetchRecipes,
-  } = useRecipesQuery({
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useInfiniteRecipesQuery({
     q: query.trim() || undefined,
     category: categoryId || undefined,
     difficulty: difficulty || undefined,
+    maxCookTimeMinutes: maxCookTime ?? undefined,
   });
 
-  const recipes = recipesPagination?.items || [];
+  const recipesPagination = recipePages?.pages[0];
+  const recipes = recipePages?.pages.flatMap((page) => page.items) ?? [];
   const totalItems = recipesPagination?.metadata?.totalItems ?? recipes.length;
   const selectedCategoryName = categoryId ? findCategoryById(categoryTree, categoryId)?.name : null;
-  const hasFilters = Boolean(categoryId || difficulty || query);
+  const hasFilters = Boolean(categoryId || difficulty || maxCookTime !== null || query);
   const constraints = recipesPagination?.metadata?.appliedConstraints;
 
   const resetFilters = () => {
     setCategoryId(null);
     setDifficulty('');
+    setMaxCookTime(null);
     setQuery('');
   };
 
@@ -112,8 +128,8 @@ export default function RecipesScreen() {
         {/* Đang lọc */}
         <View className="mt-3 flex-row flex-wrap items-center gap-2">
           <Text className="text-xs text-muted-foreground">Đang lọc:</Text>
-          {!selectedCategoryName && !difficulty ? (
-            <Text className="text-xs text-muted-foreground">Tất cả danh mục & độ khó</Text>
+          {!selectedCategoryName && !difficulty && maxCookTime === null ? (
+            <Text className="text-xs text-muted-foreground">Tất cả danh mục, độ khó & thời gian</Text>
           ) : (
             <>
               {selectedCategoryName ? (
@@ -125,6 +141,13 @@ export default function RecipesScreen() {
                 <View className="rounded-full bg-cta/10 px-2.5 py-1">
                   <Text className="text-xs font-medium text-cta">
                     Độ khó: {DIFFICULTIES.find((d) => d.value === difficulty)?.label}
+                  </Text>
+                </View>
+              ) : null}
+              {maxCookTime !== null ? (
+                <View className="rounded-full bg-cta/10 px-2.5 py-1">
+                  <Text className="text-xs font-medium text-cta">
+                    {COOK_TIMES.find((t) => t.value === maxCookTime)?.label}
                   </Text>
                 </View>
               ) : null}
@@ -174,6 +197,30 @@ export default function RecipesScreen() {
                       selected ? 'text-primary-foreground' : 'text-muted-foreground'
                     )}>
                     {d.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* Thời gian nấu */}
+        <View className="mt-4">
+          <Text className="text-sm font-semibold text-foreground">Thời gian chế biến</Text>
+          <View className="mt-2.5 flex-row flex-wrap gap-1.5">
+            {COOK_TIMES.map((t) => {
+              const selected = maxCookTime === t.value;
+              return (
+                <Pressable
+                  key={t.value ?? 'all'}
+                  onPress={() => setMaxCookTime(t.value)}
+                  className={cn('rounded-lg px-2.5 py-1.5', selected ? 'bg-primary' : 'bg-muted')}>
+                  <Text
+                    className={cn(
+                      'text-xs font-medium',
+                      selected ? 'text-primary-foreground' : 'text-muted-foreground'
+                    )}>
+                    {t.label}
                   </Text>
                 </Pressable>
               );
@@ -251,11 +298,20 @@ export default function RecipesScreen() {
               ) : null}
             </View>
           ) : (
-            <View className="flex-row flex-wrap gap-3">
-              {recipes.map((recipe) => (
-                <RecipeCard key={recipe.id} recipe={recipe} className="w-[47%]" />
-              ))}
-            </View>
+            <>
+              <View className="flex-row flex-wrap gap-3">
+                {recipes.map((recipe) => (
+                  <RecipeCard key={recipe.id} recipe={recipe} className="w-[47%]" />
+                ))}
+              </View>
+              <View className="mt-4">
+                <LoadMoreButton
+                  hasNextPage={hasNextPage}
+                  isFetchingNextPage={isFetchingNextPage}
+                  onPress={() => void fetchNextPage()}
+                />
+              </View>
+            </>
           )}
         </View>
 

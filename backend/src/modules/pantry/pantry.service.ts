@@ -6,10 +6,7 @@ import {
   PantryConversionStatus,
 } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
-import {
-  massFactorToGrams,
-  normalizeDisplayUnit,
-} from '../../common/units/unit-normalization.js';
+import { massFactorToGrams, normalizeDisplayUnit } from '../../common/units/unit-normalization.js';
 import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 import type {
   AdjustmentListQuery,
@@ -33,9 +30,9 @@ import {
   type PantryRepository,
 } from './pantry.repository.js';
 
-function number(value: { toNumber(): number } | number | null): number | null {
+function number(value: number | null): number | null {
   if (value === null) return null;
-  return typeof value === 'number' ? value : value.toNumber();
+  return typeof value === 'number' ? value : value;
 }
 
 function dateOnly(value: Date | null): string | null {
@@ -195,7 +192,11 @@ export class PantryService {
     }
     this.validateDates(input.purchasedAt, input.openedAt, input.expiresAt);
     const normalizedUnit = normalizeDisplayUnit(input.unit);
-    const conversion = await this.resolveConversion(input.ingredientId, input.quantity, normalizedUnit);
+    const conversion = await this.resolveConversion(
+      input.ingredientId,
+      input.quantity,
+      normalizedUnit,
+    );
     try {
       const result = await this.repository.create({
         ownerId,

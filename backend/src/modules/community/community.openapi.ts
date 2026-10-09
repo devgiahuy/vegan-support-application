@@ -73,18 +73,18 @@ export function registerCommunityOpenApi(registry: OpenAPIRegistry, errorSchema:
     method: 'get',
     path: '/api/v1/posts/{id}/comments',
     tags: ['Community'],
-    summary: 'List thread comment c?a published content',
+    summary: 'List thread comment của published content',
     description:
-      'Ph�n trang comment g?c; reply hi?n th? t?i da m?t t?ng. Comment d� x�a/?n ch? c�n placeholder khi v?n c� reply visible.',
+      'Phân trang comment gốc; reply hiển thị tối đa một tầng. Comment đã xóa/ẩn chỉ còn placeholder khi vẫn có reply visible.',
     operationId: 'listPostComments',
     request: { params: communityPostParamsSchema, query: commentListQuerySchema },
     responses: {
       200: {
-        description: 'Danh s�ch thread comment',
+        description: 'Danh sách thread comment',
         content: { 'application/json': { schema: commentListResponse } },
       },
-      400: errorResponse(errorSchema, 'ID ho?c pagination kh�ng h?p l?', ['VALIDATION_ERROR']),
-      404: errorResponse(errorSchema, 'Kh�ng t�m th?y published content', ['NOT_FOUND']),
+      400: errorResponse(errorSchema, 'ID hoặc pagination không hợp lệ', ['VALIDATION_ERROR']),
+      404: errorResponse(errorSchema, 'Không tìm thấy published content', ['NOT_FOUND']),
     },
   });
 
@@ -92,7 +92,7 @@ export function registerCommunityOpenApi(registry: OpenAPIRegistry, errorSchema:
     method: 'post',
     path: '/api/v1/posts/{id}/comments',
     tags: ['Community'],
-    summary: 'T?o comment ho?c reply m?t t?ng',
+    summary: 'Tạo comment hoặc reply một tầng',
     operationId: 'createPostComment',
     security: authenticated,
     request: {
@@ -101,17 +101,17 @@ export function registerCommunityOpenApi(registry: OpenAPIRegistry, errorSchema:
     },
     responses: {
       201: {
-        description: 'Comment d� t?o',
+        description: 'Comment đã tạo',
         content: { 'application/json': { schema: commentResponse } },
       },
-      400: errorResponse(errorSchema, 'Body ho?c parent comment kh�ng h?p l?', [
+      400: errorResponse(errorSchema, 'Body hoặc parent comment không hợp lệ', [
         'VALIDATION_ERROR',
         'INVALID_COMMENT_PARENT',
       ]),
-      401: errorResponse(errorSchema, 'Y�u c?u access token h?p l?', authenticationCodes),
-      403: errorResponse(errorSchema, 'T�i kho?n b? c?m', ['ACCOUNT_BANNED']),
-      404: errorResponse(errorSchema, 'Kh�ng t�m th?y published content', ['NOT_FOUND']),
-      429: errorResponse(errorSchema, 'Vu?t gi?i h?n thao t�c community', [
+      401: errorResponse(errorSchema, 'Yêu cầu access token hợp lệ', authenticationCodes),
+      403: errorResponse(errorSchema, 'Tài khoản bị cấm', ['ACCOUNT_BANNED']),
+      404: errorResponse(errorSchema, 'Không tìm thấy published content', ['NOT_FOUND']),
+      429: errorResponse(errorSchema, 'Vượt giới hạn thao tác community', [
         'COMMUNITY_RATE_LIMITED',
       ]),
     },
@@ -123,11 +123,11 @@ export function registerCommunityOpenApi(registry: OpenAPIRegistry, errorSchema:
       path: '/api/v1/comments/{id}',
       tags: ['Community'],
       summary:
-        method === 'patch' ? 'S?a comment c?a ch�nh m�nh' : 'Soft-delete comment c?a ch�nh m�nh',
+        method === 'patch' ? 'Sửa comment của chính mình' : 'Soft-delete comment của chính mình',
       description:
         method === 'delete'
-          ? 'Idempotent khi comment d� soft-delete. Comment b? Admin ?n kh�ng th? d?i tr?ng th�i qua API t�c gi?.'
-          : 'Ghi editedAt; ch? comment VISIBLE m?i s?a du?c.',
+          ? 'Idempotent khi comment đã soft-delete. Comment bị Admin ẩn không thể đổi trạng thái qua API tác giả.'
+          : 'Ghi editedAt; chỉ comment VISIBLE mới sửa được.',
       operationId: method === 'patch' ? 'updateOwnComment' : 'deleteOwnComment',
       security: authenticated,
       request: {
@@ -136,18 +136,18 @@ export function registerCommunityOpenApi(registry: OpenAPIRegistry, errorSchema:
       },
       responses: {
         200: {
-          description: method === 'patch' ? 'Comment d� s?a' : 'Comment d� soft-delete',
+          description: method === 'patch' ? 'Comment đã sửa' : 'Comment đã soft-delete',
           content: { 'application/json': { schema: commentResponse } },
         },
-        400: errorResponse(errorSchema, 'ID ho?c body kh�ng h?p l?', ['VALIDATION_ERROR']),
-        401: errorResponse(errorSchema, 'Y�u c?u access token h?p l?', authenticationCodes),
-        403: errorResponse(errorSchema, 'T�i kho?n b? c?m ho?c kh�ng ph?i ch? s? h?u comment', [
+        400: errorResponse(errorSchema, 'ID hoặc body không hợp lệ', ['VALIDATION_ERROR']),
+        401: errorResponse(errorSchema, 'Yêu cầu access token hợp lệ', authenticationCodes),
+        403: errorResponse(errorSchema, 'Tài khoản bị cấm hoặc không phải chủ sở hữu comment', [
           'ACCOUNT_BANNED',
           'COMMENT_OWNER_REQUIRED',
         ]),
-        404: errorResponse(errorSchema, 'Kh�ng t�m th?y comment', ['NOT_FOUND']),
-        409: errorResponse(errorSchema, 'Comment kh�ng c�n editable', ['COMMENT_NOT_EDITABLE']),
-        429: errorResponse(errorSchema, 'Vu?t gi?i h?n thao t�c community', [
+        404: errorResponse(errorSchema, 'Không tìm thấy comment', ['NOT_FOUND']),
+        409: errorResponse(errorSchema, 'Comment không còn editable', ['COMMENT_NOT_EDITABLE']),
+        429: errorResponse(errorSchema, 'Vượt giới hạn thao tác community', [
           'COMMUNITY_RATE_LIMITED',
         ]),
       },
@@ -158,24 +158,24 @@ export function registerCommunityOpenApi(registry: OpenAPIRegistry, errorSchema:
     method: 'get',
     path: '/api/v1/posts/{id}/community-summary',
     tags: ['Community'],
-    summary: 'L?y aggregate community v� viewer state',
+    summary: 'Lấy aggregate community và viewer state',
     description:
-      'Counter/average lu�n t�nh server-side t? record hi?n t?i. Rating aggregate ch? c� cho Recipe; viewer null v?i guest.',
+      'Counter/average luôn tính server-side từ record hiện tại. Rating aggregate chỉ có cho Recipe; viewer null với guest.',
     operationId: 'getPostCommunitySummary',
     security: optionalAuthenticated,
     request: { params: communityPostParamsSchema },
     responses: {
       200: {
-        description: 'Vote count, rating aggregate v� tr?ng th�i viewer',
+        description: 'Vote count, rating aggregate và trạng thái viewer',
         content: { 'application/json': { schema: summaryResponse } },
       },
-      400: errorResponse(errorSchema, 'ID kh�ng h?p l?', ['VALIDATION_ERROR']),
-      401: errorResponse(errorSchema, 'Access token du?c g?i nhung kh�ng h?p l?', [
+      400: errorResponse(errorSchema, 'ID không hợp lệ', ['VALIDATION_ERROR']),
+      401: errorResponse(errorSchema, 'Access token được gửi nhưng không hợp lệ', [
         'INVALID_ACCESS_TOKEN',
         'TOKEN_EXPIRED',
       ]),
-      403: errorResponse(errorSchema, 'T�i kho?n b? c?m', ['ACCOUNT_BANNED']),
-      404: errorResponse(errorSchema, 'Kh�ng t�m th?y published content', ['NOT_FOUND']),
+      403: errorResponse(errorSchema, 'Tài khoản bị cấm', ['ACCOUNT_BANNED']),
+      404: errorResponse(errorSchema, 'Không tìm thấy published content', ['NOT_FOUND']),
     },
   });
 
@@ -184,20 +184,20 @@ export function registerCommunityOpenApi(registry: OpenAPIRegistry, errorSchema:
       method,
       path: '/api/v1/posts/{id}/vote',
       tags: ['Community'],
-      summary: method === 'put' ? 'Upvote content idempotent' : 'G? upvote idempotent',
+      summary: method === 'put' ? 'Upvote content idempotent' : 'Gỡ upvote idempotent',
       operationId: method === 'put' ? 'putPostVote' : 'deletePostVote',
       security: authenticated,
       request: { params: communityPostParamsSchema },
       responses: {
         200: {
-          description: 'Tr?ng th�i vote v� counter server-side',
+          description: 'Trạng thái vote và counter server-side',
           content: { 'application/json': { schema: voteResponse } },
         },
-        400: errorResponse(errorSchema, 'ID kh�ng h?p l?', ['VALIDATION_ERROR']),
-        401: errorResponse(errorSchema, 'Y�u c?u access token h?p l?', authenticationCodes),
-        403: errorResponse(errorSchema, 'T�i kho?n b? c?m', ['ACCOUNT_BANNED']),
-        404: errorResponse(errorSchema, 'Kh�ng t�m th?y published content', ['NOT_FOUND']),
-        429: errorResponse(errorSchema, 'Vu?t gi?i h?n thao t�c community', [
+        400: errorResponse(errorSchema, 'ID không hợp lệ', ['VALIDATION_ERROR']),
+        401: errorResponse(errorSchema, 'Yêu cầu access token hợp lệ', authenticationCodes),
+        403: errorResponse(errorSchema, 'Tài khoản bị cấm', ['ACCOUNT_BANNED']),
+        404: errorResponse(errorSchema, 'Không tìm thấy published content', ['NOT_FOUND']),
+        429: errorResponse(errorSchema, 'Vượt giới hạn thao tác community', [
           'COMMUNITY_RATE_LIMITED',
         ]),
       },
@@ -209,23 +209,23 @@ export function registerCommunityOpenApi(registry: OpenAPIRegistry, errorSchema:
     path: '/api/v1/posts/{id}/rating',
     tags: ['Community'],
     summary: 'Upsert taste/difficulty rating cho Recipe',
-    description: 'M?i di?m t? 1 d?n 5; average ch? d�ng active rating v� do backend t�nh.',
+    description: 'Mỗi điểm từ 1 đến 5; average chỉ dùng active rating và do backend tính.',
     operationId: 'putRecipeRating',
     security: authenticated,
     request: { params: communityPostParamsSchema, body: jsonBody(ratingRequestSchema) },
     responses: {
       200: {
-        description: 'Rating hi?n t?i v� aggregate server-side',
+        description: 'Rating hiện tại và aggregate server-side',
         content: { 'application/json': { schema: ratingResponse } },
       },
-      400: errorResponse(errorSchema, 'Rating ho?c post type kh�ng h?p l?', [
+      400: errorResponse(errorSchema, 'Rating hoặc post type không hợp lệ', [
         'VALIDATION_ERROR',
         'RATING_RECIPE_ONLY',
       ]),
-      401: errorResponse(errorSchema, 'Y�u c?u access token h?p l?', authenticationCodes),
-      403: errorResponse(errorSchema, 'T�i kho?n b? c?m', ['ACCOUNT_BANNED']),
-      404: errorResponse(errorSchema, 'Kh�ng t�m th?y published content', ['NOT_FOUND']),
-      429: errorResponse(errorSchema, 'Vu?t gi?i h?n thao t�c community', [
+      401: errorResponse(errorSchema, 'Yêu cầu access token hợp lệ', authenticationCodes),
+      403: errorResponse(errorSchema, 'Tài khoản bị cấm', ['ACCOUNT_BANNED']),
+      404: errorResponse(errorSchema, 'Không tìm thấy published content', ['NOT_FOUND']),
+      429: errorResponse(errorSchema, 'Vượt giới hạn thao tác community', [
         'COMMUNITY_RATE_LIMITED',
       ]),
     },
@@ -236,23 +236,23 @@ export function registerCommunityOpenApi(registry: OpenAPIRegistry, errorSchema:
       method,
       path: '/api/v1/posts/{id}/bookmark',
       tags: ['Community'],
-      summary: method === 'put' ? 'Bookmark Recipe/Video idempotent' : 'G? bookmark idempotent',
+      summary: method === 'put' ? 'Bookmark Recipe/Video idempotent' : 'Gỡ bookmark idempotent',
       operationId: method === 'put' ? 'putPostBookmark' : 'deletePostBookmark',
       security: authenticated,
       request: { params: communityPostParamsSchema },
       responses: {
         200: {
-          description: 'Tr?ng th�i bookmark',
+          description: 'Trạng thái bookmark',
           content: { 'application/json': { schema: bookmarkResponse } },
         },
-        400: errorResponse(errorSchema, 'ID ho?c post type kh�ng h?p l?', [
+        400: errorResponse(errorSchema, 'ID hoặc post type không hợp lệ', [
           'VALIDATION_ERROR',
           'BOOKMARK_TYPE_NOT_SUPPORTED',
         ]),
-        401: errorResponse(errorSchema, 'Y�u c?u access token h?p l?', authenticationCodes),
-        403: errorResponse(errorSchema, 'T�i kho?n b? c?m', ['ACCOUNT_BANNED']),
-        404: errorResponse(errorSchema, 'Kh�ng t�m th?y published content', ['NOT_FOUND']),
-        429: errorResponse(errorSchema, 'Vu?t gi?i h?n thao t�c community', [
+        401: errorResponse(errorSchema, 'Yêu cầu access token hợp lệ', authenticationCodes),
+        403: errorResponse(errorSchema, 'Tài khoản bị cấm', ['ACCOUNT_BANNED']),
+        404: errorResponse(errorSchema, 'Không tìm thấy published content', ['NOT_FOUND']),
+        429: errorResponse(errorSchema, 'Vượt giới hạn thao tác community', [
           'COMMUNITY_RATE_LIMITED',
         ]),
       },
@@ -263,18 +263,18 @@ export function registerCommunityOpenApi(registry: OpenAPIRegistry, errorSchema:
     method: 'get',
     path: '/api/v1/users/me/bookmarks',
     tags: ['Community'],
-    summary: 'List bookmark Recipe/Video c?a current user',
+    summary: 'List bookmark Recipe/Video của current user',
     operationId: 'listOwnBookmarks',
     security: authenticated,
     request: { query: bookmarkListQuerySchema },
     responses: {
       200: {
-        description: 'Published bookmark list m?i nh?t tru?c',
+        description: 'Published bookmark list mới nhất trước',
         content: { 'application/json': { schema: bookmarkListResponse } },
       },
-      400: errorResponse(errorSchema, 'Pagination ho?c type kh�ng h?p l?', ['VALIDATION_ERROR']),
-      401: errorResponse(errorSchema, 'Y�u c?u access token h?p l?', authenticationCodes),
-      403: errorResponse(errorSchema, 'T�i kho?n b? c?m', ['ACCOUNT_BANNED']),
+      400: errorResponse(errorSchema, 'Pagination hoặc type không hợp lệ', ['VALIDATION_ERROR']),
+      401: errorResponse(errorSchema, 'Yêu cầu access token hợp lệ', authenticationCodes),
+      403: errorResponse(errorSchema, 'Tài khoản bị cấm', ['ACCOUNT_BANNED']),
     },
   });
 }

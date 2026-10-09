@@ -9,7 +9,8 @@ import { CategoryType } from '@/common/enums';
 import { CategoryFilterPills } from '@/features/category/components/category-filter-pills';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
 import { VideoCard } from '@/features/video/components/video-card';
-import { useVideosQuery } from '@/features/video/queries/video.queries';
+import { LoadMoreButton } from '@/components/shared/load-more-button';
+import { useInfiniteVideosQuery } from '@/features/video/queries/video.queries';
 import { useIconColors } from '@/lib/theme-colors';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -29,17 +30,20 @@ export default function VideosScreen() {
   } = useCategoryTreeQuery(CategoryType.CONTENT_TOPIC);
 
   const {
-    data: videosPagination,
+    data: videoPages,
     isLoading: isVideosLoading,
     isError: isVideosError,
     refetch: refetchVideos,
-  } = useVideosQuery({
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useInfiniteVideosQuery({
     q: query.trim() || undefined,
     category: categoryId || undefined,
   });
 
-  const videos = videosPagination?.items ?? [];
-  const totalItems = videosPagination?.metadata.totalItems ?? videos.length;
+  const videos = videoPages?.pages.flatMap((page) => page.items) ?? [];
+  const totalItems = videoPages?.pages[0]?.metadata.totalItems ?? videos.length;
   const hasFilters = Boolean(query.trim() || categoryId);
 
   const resetFilters = () => {
@@ -135,7 +139,16 @@ export default function VideosScreen() {
               ) : null}
             </View>
           ) : (
-            videos.map((video) => <VideoCard key={video.id} video={video} />)
+            <>
+              {videos.map((video) => (
+                <VideoCard key={video.id} video={video} />
+              ))}
+              <LoadMoreButton
+                hasNextPage={hasNextPage}
+                isFetchingNextPage={isFetchingNextPage}
+                onPress={() => void fetchNextPage()}
+              />
+            </>
           )}
         </View>
       </View>

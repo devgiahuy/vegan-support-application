@@ -127,6 +127,7 @@ Phân tích khẩu phần và các điểm cần lưu ý trong thực đơn
         "summary",
         "confidence",
         "incompleteData",
+        "incompleteDataSummary",
         "estimatedNutrition",
         "ruleVersions",
         "disclaimer",
@@ -227,6 +228,5 @@ Phân tích khẩu phần và các điểm cần lưu ý trong thực đơn
               "type": "integer",
               "_truncated": true
             },
-            "hardConstraintsPreserved":
   …(truncated — xem api-catalog.json)
 ```

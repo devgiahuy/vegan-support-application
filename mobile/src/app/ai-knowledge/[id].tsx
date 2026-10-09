@@ -10,7 +10,7 @@ import { ArtifactContent } from '@/features/ai-artifact/components/artifact-cont
 import { AuthRequiredCard } from '@/features/ai-artifact/components/auth-required-card';
 import { ShareArtifactSheet } from '@/features/ai-artifact/components/share-artifact-sheet';
 import { VerificationBadge } from '@/features/ai-artifact/components/verification-badge';
-import { usePublicAiArtifactsQuery } from '@/features/ai-artifact/queries/ai-artifact.queries';
+import { useInfinitePublicAiArtifactsQuery } from '@/features/ai-artifact/queries/ai-artifact.queries';
 import { getAiArtifactErrorMessage } from '@/features/ai-artifact/utils/ai-artifact-errors';
 import { getApiErrorCode } from '@/lib/api-error';
 import { useIconColors } from '@/lib/theme-colors';
@@ -29,10 +29,17 @@ export default function AiKnowledgeDetailScreen() {
   const artifactId = typeof id === 'string' ? id : '';
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
-  const { data, isLoading, isError, error, refetch } = usePublicAiArtifactsQuery({ limit: 50 });
+  const { data, isLoading, isError, error, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } =
+    useInfinitePublicAiArtifactsQuery({ limit: 50 });
   const [shareOpen, setShareOpen] = React.useState(false);
 
-  const artifact = data?.items.find((item) => item.id === artifactId);
+  const artifact = data?.pages.flatMap((page) => page.items).find((item) => item.id === artifactId);
+
+  // Backend chưa có GET theo id: nếu bản ghi chưa nằm trong các trang đã tải thì duyệt tiếp từng trang.
+  React.useEffect(() => {
+    if (!artifact && hasNextPage && !isFetchingNextPage && !isError) void fetchNextPage();
+  }, [artifact, hasNextPage, isFetchingNextPage, isError, fetchNextPage]);
+  const searching = !artifact && (hasNextPage || isFetchingNextPage);
 
   const back = (
     <Link href={'/ai-knowledge' as Href} asChild>
@@ -43,7 +50,7 @@ export default function AiKnowledgeDetailScreen() {
   return (
     <SiteScreen>
       <View className="gap-4 px-5 pt-4">
-        {isLoading ? (
+        {isLoading || searching ? (
           <LoadingState message="Đang tải tri thức AI..." />
         ) : isError && getApiErrorCode(error) === 'AUTH_REQUIRED' ? (
           <AuthRequiredCard />

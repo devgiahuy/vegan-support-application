@@ -1,6 +1,7 @@
+import { lockDocument } from '../../database/locking.js';
+import type { Prisma } from '@prisma/client';
 import {
   MealPlanMutationType,
-  Prisma,
   type MealGoal,
   type MealSlotStatus,
   type MealPlanItemSourceType,
@@ -169,24 +170,24 @@ export class MealPlanRepository {
     weekStart?: Date,
   ): Promise<{ records: MealPlanRecord[]; total: number }> {
     const where = { userId, deletedAt: null, ...(weekStart ? { weekStart } : {}) };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.mealPlan.findMany({
-        where,
-        include: mealPlanInclude,
-        orderBy: [{ weekStart: 'desc' }, { version: 'desc' }, { id: 'asc' }],
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      this.prisma.mealPlan.count({ where }),
-    ]);
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.mealPlan.findMany({
+          where,
+          include: mealPlanInclude,
+          orderBy: [{ weekStart: 'desc' }, { version: 'desc' }, { id: 'asc' }],
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        transaction.mealPlan.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 
   async createPlan(data: CreateMealPlanData): Promise<MealPlanRecord> {
     return this.prisma.$transaction(async (transaction) => {
-      await transaction.$queryRaw<Array<{ id: string }>>`
-        SELECT "id" FROM "users" WHERE "id" = ${data.userId}::uuid FOR UPDATE
-      `;
+      await lockDocument(transaction, 'user', { id: data.userId });
       const existing = await transaction.mealPlan.findUnique({
         where: {
           userId_idempotencyKey: {
@@ -243,9 +244,7 @@ export class MealPlanRepository {
 
   async swapItem(data: SwapMealPlanData): Promise<MealPlanRecord> {
     return this.prisma.$transaction(async (transaction) => {
-      await transaction.$queryRaw<Array<{ id: string }>>`
-        SELECT "id" FROM "users" WHERE "id" = ${data.userId}::uuid FOR UPDATE
-      `;
+      await lockDocument(transaction, 'user', { id: data.userId });
       const existingMutation = await transaction.mealPlanMutation.findUnique({
         where: {
           userId_idempotencyKey: {
@@ -284,7 +283,7 @@ export class MealPlanRepository {
         where: { id: data.itemId, mealPlanId: data.planId },
         data: {
           customMealId: null,
-          customMealSnapshot: Prisma.DbNull,
+          customMealSnapshot: null,
           sourceType: 'RECIPE',
           servings: 1,
           ...data.item,
@@ -316,9 +315,7 @@ export class MealPlanRepository {
 
   async manualAddItem(data: SwapMealPlanData): Promise<MealPlanRecord> {
     return this.prisma.$transaction(async (transaction) => {
-      await transaction.$queryRaw<Array<{ id: string }>>`
-        SELECT "id" FROM "users" WHERE "id" = ${data.userId}::uuid FOR UPDATE
-      `;
+      await lockDocument(transaction, 'user', { id: data.userId });
       const existingMutation = await transaction.mealPlanMutation.findUnique({
         where: {
           userId_idempotencyKey: { userId: data.userId, idempotencyKey: data.idempotencyKey },
@@ -354,7 +351,7 @@ export class MealPlanRepository {
           recipeId: null,
           recipeRevisionId: null,
           customMealId: null,
-          customMealSnapshot: Prisma.DbNull,
+          customMealSnapshot: null,
           ...data.item,
         },
       });

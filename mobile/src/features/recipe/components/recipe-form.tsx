@@ -7,6 +7,8 @@ import { CategoryType, RecipeDifficulty } from '@/common/enums';
 import { CategoryFilterPills } from '@/features/category/components/category-filter-pills';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
 import { IngredientPicker, type IngredientPickerValue } from '@/features/ingredient/components/ingredient-picker';
+import { ImagePickerField } from '@/features/storage/components/image-picker-field';
+import type { PickedImage } from '@/features/storage/types/storage.model';
 import type { CreateRecipeIngredientInput, CreateRecipeInput } from '../api/recipe.api';
 import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
@@ -36,6 +38,8 @@ interface DraftStep {
 export interface RecipeFormInitial {
   title?: string;
   excerpt?: string;
+  /** Ảnh bìa hiện có (chỉ để xem trước khi sửa). */
+  coverImageUrl?: string | null;
   tags?: string[];
   categoryId?: string | null;
   servings?: number;
@@ -77,6 +81,8 @@ export function RecipeForm({
 
   const [title, setTitle] = React.useState(initial?.title ?? '');
   const [excerpt, setExcerpt] = React.useState(initial?.excerpt ?? '');
+  const [cover, setCover] = React.useState<PickedImage | null>(null);
+  const [coverBusy, setCoverBusy] = React.useState(false);
   const [tags, setTags] = React.useState(initial?.tags?.join(', ') ?? '');
   const [categoryId, setCategoryId] = React.useState<string | null>(initial?.categoryId ?? null);
   const [servings, setServings] = React.useState(String(initial?.servings ?? 4));
@@ -128,6 +134,10 @@ export function RecipeForm({
   };
 
   const submit = () => {
+    if (coverBusy) {
+      Alert.alert('Ảnh đang tải lên', 'Vui lòng đợi ảnh bìa tải xong rồi gửi công thức.');
+      return;
+    }
     const cleanTitle = title.trim();
     const validSteps = steps
       .map((step) => ({ instruction: step.instruction.trim(), duration: Number(step.duration) }))
@@ -161,6 +171,7 @@ export function RecipeForm({
     onSubmit({
       title: cleanTitle,
       excerpt: excerpt.trim() || undefined,
+      ...(cover ? { coverAssetId: cover.assetId } : {}),
       categoryIds: categoryId ? [categoryId] : undefined,
       tags: splitTags(tags),
       servings: servingsNum,
@@ -208,6 +219,15 @@ export function RecipeForm({
             className="h-12 rounded-2xl border border-input bg-card px-3.5 text-sm text-foreground"
           />
         </View>
+
+        <ImagePickerField
+          label="Ảnh bìa món ăn"
+          value={cover}
+          onChange={setCover}
+          onBusyChange={setCoverBusy}
+          existingUrl={initial?.coverImageUrl}
+          existingNote={"Chọn ảnh mới để thay. Nếu không chọn, bản chỉnh sửa sẽ không có ảnh bìa vì API chưa cho giữ lại ảnh cũ."}
+        />
 
         <View className="flex-row gap-3">
           <View className="flex-1">
@@ -399,6 +419,7 @@ export function RecipeForm({
       <PrimaryButton
         label={isSubmitting ? 'Đang gửi...' : submitLabel}
         loading={isSubmitting}
+        disabled={coverBusy}
         icon={<Send size={16} color={colors.primaryForeground} />}
         onPress={submit}
       />

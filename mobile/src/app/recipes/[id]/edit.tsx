@@ -8,6 +8,7 @@ import { RecipeForm } from '@/features/recipe/components/recipe-form';
 import { useRecipeDetailQuery, useUpdateRecipeMutation } from '@/features/recipe/queries/recipe.queries';
 import { PostStatus } from '@/common/enums';
 import { getContentErrorMessage } from '@/features/recipe/utils/recipe-errors';
+import { FALLBACK_RECIPE_COVER_URL } from '@/lib/env';
 import { useAuthStore } from '@/store/useAuthStore';
 
 /** Sửa công thức của chính mình — `PATCH /posts/:id` rồi gửi lại duyệt. Author-only. */
@@ -72,6 +73,7 @@ export default function EditRecipeScreen() {
           initial={{
             title: recipe.title,
             excerpt: recipe.description,
+            coverImageUrl: recipe.coverImageUrl && recipe.coverImageUrl !== FALLBACK_RECIPE_COVER_URL ? recipe.coverImageUrl : null,
             tags: recipe.tags,
             categoryId: recipe.category.id || null,
             servings: recipe.servings,

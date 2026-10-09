@@ -73,12 +73,14 @@ export function RestaurantList({
   if (restaurants.length === 0) {
     return (
       <div className="space-y-3">
+        <ResultNotice notices={notices} />
         <EmptyState
           title={emptyTitle ?? 'Chưa tìm thấy quán chay quanh đây'}
           description={
             emptyDescription ?? 'Thử mở rộng bán kính tìm kiếm hoặc đổi sang khu vực khác.'
           }
         />
+        <Button variant="outline" size="sm" onClick={onRetry}>Thử lại</Button>
         {emptyActions.length > 0 && (
           <div className="flex flex-wrap justify-center gap-2">
             {emptyActions.map((action) => (

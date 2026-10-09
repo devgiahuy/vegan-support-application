@@ -6,7 +6,8 @@ import { BadgeCheck, BookOpen, Plus, Search } from 'lucide-react-native';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { PostCard } from '@/features/post/components/post-card';
-import { useArticlesQuery } from '@/features/post/queries/post.queries';
+import { LoadMoreButton } from '@/components/shared/load-more-button';
+import { useInfiniteArticlesQuery } from '@/features/post/queries/post.queries';
 import { CategoryType } from '@/common/enums';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
 import { CategoryFilterPills } from '@/features/category/components/category-filter-pills';
@@ -52,23 +53,26 @@ export default function ArticlesScreen() {
   } = useCategoryTreeQuery(CategoryType.CONTENT_TOPIC);
 
   const {
-    data: articlesPagination,
+    data: articlePages,
     isLoading: isArticlesLoading,
     isError: isArticlesError,
     refetch: refetchArticles,
-  } = useArticlesQuery({
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useInfiniteArticlesQuery({
     q: query.trim() || undefined,
     category: categoryId || undefined,
   });
 
   const articles = React.useMemo(() => {
-    const list = [...(articlesPagination?.items ?? [])];
+    const list = [...(articlePages?.pages.flatMap((page) => page.items) ?? [])];
     const time = (date: Date | null) => (date ? date.getTime() : 0);
     list.sort((a, b) =>
       sortOrder === 'newest' ? time(b.publishedAt) - time(a.publishedAt) : time(a.publishedAt) - time(b.publishedAt)
     );
     return list;
-  }, [articlesPagination?.items, sortOrder]);
+  }, [articlePages, sortOrder]);
   const hasFilters = Boolean(categoryId || query || dietSchool !== 'ALL');
 
   const resetFilters = () => {
@@ -211,13 +215,20 @@ export default function ArticlesScreen() {
               ) : null}
             </View>
           ) : (
-            articles.map((post) => (
-              <Link key={post.id} href={`/articles/${post.id}` as Href} asChild>
-                <Pressable>
-                  <PostCard post={post} />
-                </Pressable>
-              </Link>
-            ))
+            <>
+              {articles.map((post) => (
+                <Link key={post.id} href={`/articles/${post.id}` as Href} asChild>
+                  <Pressable>
+                    <PostCard post={post} />
+                  </Pressable>
+                </Link>
+              ))}
+              <LoadMoreButton
+                hasNextPage={hasNextPage}
+                isFetchingNextPage={isFetchingNextPage}
+                onPress={() => void fetchNextPage()}
+              />
+            </>
           )}
         </View>
 

@@ -1,19 +1,35 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB:-vegan_support}
-      POSTGRES_USER: ${POSTGRES_USER:-vegan}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-vegan_local}
+  mongodb:
+    image: mongo:7
+    command: ['mongod', '--replSet', 'rs0', '--bind_ip_all']
     ports:
-      - '${POSTGRES_PORT:-5432}:5432'
+      - '127.0.0.1:${MONGODB_PORT:-27017}:27017'
     volumes:
-      - vegan_support_postgres:/var/lib/postgresql/data
+      - vegan_support_mongodb:/data/db
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-vegan} -d ${POSTGRES_DB:-vegan_support}']
+      test: ['CMD', 'mongosh', '--quiet', '--eval', 'quit(db.hello().isWritablePrimary ? 0 : 1)']
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 30
+    restart: unless-stopped
+
+  mongo-init:
+    image: mongo:7
+    depends_on:
+      mongodb:
+        condition: service_started
+    entrypoint: ['bash', '-c']
+    command:
+      - |
+        for attempt in {1..60}; do
+          if mongosh --host mongodb --quiet --eval 'db.adminCommand({ping:1})' >/dev/null 2>&1; then
+            mongosh --host mongodb --quiet --eval 'try { rs.status() } catch (error) { if (error.code !== 94) throw error; rs.initiate({_id:"rs0",members:[{_id:0,host:"mongodb:27017"}]}) }'
+            exit 0
+          fi
+          sleep 1
+        done
+        exit 1
+    restart: 'no'
 
   backend:
     build:
@@ -22,7 +38,8 @@ services:
     environment:
       NODE_ENV: ${NODE_ENV:-production}
       PORT: 4000
-      DATABASE_URL: postgresql://${POSTGRES_USER:-vegan}:${POSTGRES_PASSWORD:-vegan_local}@postgres:5432/${POSTGRES_DB:-vegan_support}?schema=public
+      DATABASE_URL: mongodb://mongodb:27017/${MONGODB_DATABASE:-vegan_support}?replicaSet=rs0&directConnection=true
+      RUN_SEED: ${RUN_SEED:-true}
       FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:3000}
       JSON_BODY_LIMIT: ${JSON_BODY_LIMIT:-1mb}
       SHUTDOWN_TIMEOUT_MS: ${SHUTDOWN_TIMEOUT_MS:-10000}
@@ -79,14 +96,18 @@ services:
       SEED_MEMBER_PASSWORD: ${SEED_MEMBER_PASSWORD}
       SEED_PLATFORM_CONTRIBUTOR_EMAIL: ${SEED_PLATFORM_CONTRIBUTOR_EMAIL:-contributor@example.com}
       SEED_ORGANIZATION_CONTRIBUTOR_EMAIL: ${SEED_ORGANIZATION_CONTRIBUTOR_EMAIL:-expert@example.com}
+      SEED_INVITED_CONTRIBUTOR_EMAIL: ${SEED_INVITED_CONTRIBUTOR_EMAIL:-invited@example.com}
       SEED_ADMIN_EMAIL: ${SEED_ADMIN_EMAIL:-admin@example.com}
       SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD}
     ports:
       - '${BACKEND_PORT:-4000}:4000'
     depends_on:
-      postgres:
+      mongodb:
         condition: service_healthy
+      mongo-init:
+        condition: service_completed_successfully
     restart: unless-stopped
 
 volumes:
-  vegan_support_postgres:
+  vegan_support_mongodb:
+    name: ${MONGODB_VOLUME_NAME:-vegan_support_mongodb}

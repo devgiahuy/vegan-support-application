@@ -1,10 +1,10 @@
 # Backend Implementation Phases
 
-**Version:** 3.9
+**Version:** 3.10
 
-**Updated:** 2026-09-27
+**Updated:** 2026-10-07
 
-**Stack:** Node.js · Express · TypeScript · PostgreSQL · Prisma · Zod · OpenAPI
+**Stack:** Node.js · Express · TypeScript · MongoDB replica set · Prisma · Zod · OpenAPI
 
 **Current baseline:** Phases 00–20 and 23–26 completed; Phases 21–22 and 27 are in progress. OpenAI image adapters are implemented for Phase 21/22, but live Vietnamese image and receipt validation remains before production readiness.
 
@@ -187,3 +187,7 @@ Regenerate/validate OpenAPI using the repository workflow. Live external-provide
 3. The agent must inspect current source and contracts before choosing exact field/table names.
 4. If a dependency is incomplete, stop without pretending it exists.
 5. After completion, review the single phase commit before beginning a dependent phase.
+
+## 9. Persistence replacement — 2026-10-07
+
+User-approved cross-phase maintenance replaces PostgreSQL with MongoDB; this is not a new numbered product phase. Historical prompts and SQL migrations are archived context. Current provisioning uses `npm run prisma:push` (native validators/indexes), not Prisma Migrate. UUID contracts, permissions and confirmation boundaries remain unchanged. Historical-data preservation is optional. MongoDB maintenance gate: schema provisioning, idempotent seed, backend lint/typecheck/build, OpenAPI synchronization, existing acceptance flows and frontend compatibility checks passed on 2026-10-07. Verification record and operational instructions: [MONGODB_MIGRATION.md](MONGODB_MIGRATION.md). Phase 27 retains its existing release limitations.

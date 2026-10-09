@@ -22,8 +22,8 @@ function hash(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }
 
-function decimal(value: { toNumber(): number } | null): number | null {
-  return value?.toNumber() ?? null;
+function decimal(value: number | null): number | null {
+  return value ?? null;
 }
 
 function defaultArtifactPresentation(content: z.infer<typeof artifactContentSchema>): {
@@ -33,23 +33,23 @@ function defaultArtifactPresentation(content: z.infer<typeof artifactContentSche
   switch (content.type) {
     case AiArtifactType.CHAT_ANSWER:
       return {
-        title: 'C�u tr? l?i dinh du?ng t? AI',
+        title: 'Câu trả lời dinh dưỡng từ AI',
         summary: content.answer.slice(0, 5_000),
       };
     case AiArtifactType.RECIPE_NUTRITION:
       return {
         title: content.recipe.title.slice(0, 160),
-        summary: 'U?c t�nh dinh du?ng cho c�ng th?c, c� k�m ngu?n g?c v� d? kh�ng ch?c ch?n.',
+        summary: 'Ước tính dinh dưỡng cho công thức, có kèm nguồn gốc và độ không chắc chắn.',
       };
     case AiArtifactType.FRIDGE_RECOGNITION:
       return {
-        title: 'K?t qu? nh?n di?n nguy�n li?u',
-        summary: 'C�c nguy�n li?u du?c AI d? xu?t t? ?nh v� c?n ngu?i d�ng ki?m tra l?i.',
+        title: 'Kết quả nhận diện nguyên liệu',
+        summary: 'Các nguyên liệu được AI đề xuất từ ảnh và cần người dùng kiểm tra lại.',
       };
     case AiArtifactType.RECEIPT_EXTRACTION:
       return {
-        title: 'K?t qu? ph�n t�ch h�a don',
-        summary: 'C�c m?t h�ng du?c AI tr�ch xu?t t? h�a don v� c?n ngu?i d�ng ki?m tra l?i.',
+        title: 'Kết quả phân tích hóa đơn',
+        summary: 'Các mặt hàng được AI trích xuất từ hóa đơn và cần người dùng kiểm tra lại.',
       };
   }
 }
@@ -251,11 +251,11 @@ export class AiReviewService {
               type,
               recipe: { title: source.revision.title, servings: source.servings },
               totals: {
-                rawGrams: source.totalRawGrams.toNumber(),
-                cookedGrams: source.totalCookedGrams.toNumber(),
+                rawGrams: source.totalRawGrams,
+                cookedGrams: source.totalCookedGrams,
               },
               perServingNutrients: nutrientSnapshot(source.perServingNutrients),
-              confidence: source.confidence.toNumber(),
+              confidence: source.confidence,
               disclaimer: source.disclaimer,
             },
           }
@@ -273,7 +273,7 @@ export class AiReviewService {
               items: source.candidates.map((candidate) => ({
                 name: candidate.detectedName,
                 quantity: { value: decimal(candidate.quantity), unit: candidate.unit },
-                confidence: candidate.confidence.toNumber(),
+                confidence: candidate.confidence,
                 status: candidate.status,
               })),
             },
@@ -291,7 +291,7 @@ export class AiReviewService {
             items: source.candidates.map((candidate) => ({
               name: candidate.detectedName,
               quantity: { value: decimal(candidate.quantity), unit: candidate.unit },
-              confidence: candidate.confidence.toNumber(),
+              confidence: candidate.confidence,
               status: candidate.status,
             })),
           },

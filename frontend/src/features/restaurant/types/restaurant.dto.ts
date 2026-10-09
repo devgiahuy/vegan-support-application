@@ -108,6 +108,8 @@ export interface RestaurantDiscoveryMetaDto {
   resultsTruncated?: boolean;
   /** `true` khi không có nguồn provider nào phản hồi thành công. */
   externalDataUnavailable?: boolean;
+  /** Kết quả ngoài bị loại vì chưa được xác minh theo các ràng buộc ăn uống. */
+  externalResultsSuppressed?: boolean;
   /** `fake` | `google` | `serpapi`. */
   provider?: string;
   /** Trần số kết quả của provider (200 với SerpApi). */
@@ -197,8 +199,8 @@ export interface AdminRestaurantListResponseDto {
  * Ngoài phạm vi redesign trang khám phá: giữ nguyên shape hiện có để không đụng luồng quản trị.
  */
 export interface ReviewRestaurantRequestDto {
-  decision: 'APPROVE' | 'REJECT' | string;
-  reason?: string;
+  decision: 'APPROVED' | 'REJECTED';
+  reason: string;
 }
 
 /** `PATCH /admin/restaurants/:id/review` → kết quả sau khi duyệt. */
