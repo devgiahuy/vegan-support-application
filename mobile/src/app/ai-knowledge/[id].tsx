@@ -1,14 +1,16 @@
 import * as React from 'react';
 import { Share, Text, View } from 'react-native';
 import { Link, type Href, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Calendar, History, Settings2, Share2, User } from 'lucide-react-native';
+import { ArrowLeft, Calendar, FileCheck2, History, Settings2, Share2, User } from 'lucide-react-native';
 
+import { UserRole } from '@/common/enums';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/state-views';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { ArtifactContent } from '@/features/ai-artifact/components/artifact-content';
 import { AuthRequiredCard } from '@/features/ai-artifact/components/auth-required-card';
 import { ShareArtifactSheet } from '@/features/ai-artifact/components/share-artifact-sheet';
+import { VerificationSheet } from '@/features/ai-artifact/components/verification-sheet';
 import { VerificationBadge } from '@/features/ai-artifact/components/verification-badge';
 import { useInfinitePublicAiArtifactsQuery } from '@/features/ai-artifact/queries/ai-artifact.queries';
 import { getAiArtifactErrorMessage } from '@/features/ai-artifact/utils/ai-artifact-errors';
@@ -27,11 +29,14 @@ export default function AiKnowledgeDetailScreen() {
   const colors = useIconColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const artifactId = typeof id === 'string' ? id : '';
+  const currentUser = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const canVerify = currentUser?.role === UserRole.CONTRIBUTOR || currentUser?.role === UserRole.ADMIN;
 
   const { data, isLoading, isError, error, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } =
     useInfinitePublicAiArtifactsQuery({ limit: 50 });
   const [shareOpen, setShareOpen] = React.useState(false);
+  const [verifyOpen, setVerifyOpen] = React.useState(false);
 
   const artifact = data?.pages.flatMap((page) => page.items).find((item) => item.id === artifactId);
 
@@ -105,6 +110,15 @@ export default function AiKnowledgeDetailScreen() {
                   onPress={() => setShareOpen(true)}
                 />
               ) : null}
+              {canVerify ? (
+                <PrimaryButton
+                  label="Thẩm định"
+                  variant="outline"
+                  className="h-10 px-4"
+                  icon={<FileCheck2 size={14} color={colors.foreground} />}
+                  onPress={() => setVerifyOpen(true)}
+                />
+              ) : null}
             </View>
 
             {artifact.summary.length > 0 ? (
@@ -172,6 +186,7 @@ export default function AiKnowledgeDetailScreen() {
             {back}
 
             <ShareArtifactSheet artifact={artifact} visible={shareOpen} onClose={() => setShareOpen(false)} />
+            {verifyOpen ? <VerificationSheet artifact={artifact} onClose={() => setVerifyOpen(false)} /> : null}
           </>
         )}
       </View>

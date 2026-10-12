@@ -1,7 +1,7 @@
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { aiArtifactApi } from '../api/ai-artifact.api';
-import type { CreateAiArtifactInput, PublicAiArtifactsQuery } from '../types/ai-artifact.model';
+import type { CreateAiVerificationInput, CreateAiArtifactInput, PublicAiArtifactsQuery } from '../types/ai-artifact.model';
 
 export const AI_ARTIFACT_KEYS = {
   all: ['ai-artifacts'] as const,
@@ -55,6 +55,16 @@ export function useSubmitAiArtifactMutation() {
   return useMutation({
     mutationFn: (vars: { id: string; expectedLifecycleVersion: number }) =>
       aiArtifactApi.submit(vars.id, vars.expectedLifecycleVersion),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: AI_ARTIFACT_KEYS.all });
+    },
+  });
+}
+
+export function useCreateAiVerificationMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateAiVerificationInput) => aiArtifactApi.createVerification(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: AI_ARTIFACT_KEYS.all });
     },

@@ -87,6 +87,15 @@ export interface CreateAiArtifactInput {
   authorAnonymous: boolean;
 }
 
+export interface CreateAiVerificationInput {
+  artifactId: string;
+  expectedArtifactVersion: number;
+  conclusion: AiVerificationConclusion;
+  scope: string;
+  evidenceNote: string;
+  correction: string;
+}
+
 export interface PublicAiArtifactsQuery {
   type?: AiArtifactType;
   page?: number;

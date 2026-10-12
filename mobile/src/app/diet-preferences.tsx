@@ -58,7 +58,7 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 type Step = 'select' | 'review' | 'done';
 
-function OptionPill<T extends string>({
+function OptionPill({
   selected,
   label,
   note,

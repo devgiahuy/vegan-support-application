@@ -12,6 +12,11 @@ export function getAiArtifactErrorMessage(error: unknown, fallback = 'Không th�
     case 'AI_ARTIFACT_VERSION_CONFLICT':
     case 'AI_ARTIFACT_STATE_CONFLICT':
       return 'Bản ghi vừa được cập nhật ở nơi khác. Hãy tải lại danh sách rồi thử lại.';
+    case 'SELF_VERIFICATION_FORBIDDEN':
+      return 'Bạn không thể tự thẩm định tri thức AI do chính mình chia sẻ.';
+    case 'FORBIDDEN':
+    case 'INSUFFICIENT_ROLE':
+      return 'Chỉ Contributor đã được duyệt hoặc Quản trị viên mới được thẩm định tri thức AI.';
     case 'AI_ARTIFACT_NOT_FOUND':
       return 'Bản ghi không còn tồn tại hoặc đã được thu hồi chia sẻ.';
     case 'AI_FEATURE_DISABLED':

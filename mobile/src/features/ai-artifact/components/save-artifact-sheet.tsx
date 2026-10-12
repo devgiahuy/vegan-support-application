@@ -24,7 +24,12 @@ interface SaveArtifactSheetProps {
  * Lưu đầu ra AI thành "Tri thức AI" bất biến (riêng tư), rồi chuyển sang bước chia sẻ công khai/gửi thẩm định —
  * đồng bộ luồng `SaveArtifactDialog` → `ShareArtifactDialog` của web.
  */
-export function SaveArtifactSheet({ visible, type, sourceId, defaultTitle, defaultSummary, onClose }: SaveArtifactSheetProps) {
+export function SaveArtifactSheet(props: SaveArtifactSheetProps) {
+  if (!props.visible) return null;
+  return <SaveArtifactSheetContent key={`${props.sourceId}:${props.defaultTitle}:${props.defaultSummary}`} {...props} />;
+}
+
+function SaveArtifactSheetContent({ type, sourceId, defaultTitle, defaultSummary, onClose }: SaveArtifactSheetProps) {
   const colors = useIconColors();
   const createMutation = useCreateAiArtifactMutation();
 
@@ -33,18 +38,6 @@ export function SaveArtifactSheet({ visible, type, sourceId, defaultTitle, defau
   const [anonymous, setAnonymous] = React.useState(true);
   const [artifact, setArtifact] = React.useState<AiArtifact | null>(null);
   const [error, setError] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    if (visible) {
-      setTitle(defaultTitle);
-      setSummary(defaultSummary);
-      setAnonymous(true);
-      setArtifact(null);
-      setError(null);
-    }
-  }, [visible, defaultTitle, defaultSummary]);
-
-  if (!visible) return null;
 
   const save = async () => {
     setError(null);

@@ -102,6 +102,7 @@ export const API_ENDPOINTS = {
     PUBLIC: '/ai-artifacts/public',
     VISIBILITY: (id: string) => `/ai-artifacts/${id}/visibility`,
     SUBMIT: (id: string) => `/ai-artifacts/${id}/submit`,
+    VERIFICATIONS: (id: string) => `/ai-artifacts/${id}/verifications`,
   },
   CONTRIBUTOR: {
     APPLICATIONS: '/contributor-applications',
