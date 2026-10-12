@@ -194,7 +194,7 @@ function NutritionFactsView({ ingredientId, colors }: { ingredientId: string; co
       <View className="gap-1 pb-2">
         <View className="flex-row items-center justify-between gap-2">
           <Text className="text-lg font-black uppercase tracking-tight text-foreground">Giá trị dinh dưỡng</Text>
-          <SourceBadge provenance={data.provenance} colors={colors} />
+          {/* <SourceBadge provenance={data.provenance} colors={colors} /> */}
         </View>
         <Text className="text-xs text-muted-foreground">
           Tính trên 100g phần ăn được ({data.ediblePortionPercent}% ăn được)

@@ -10,6 +10,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 const beVietnam = Be_Vietnam_Pro({
   subsets: ['latin', 'vietnamese'],
   weight: ['400', '500', '600', '700'],
+  style: ['normal', 'italic'],
   variable: '--font-be-vietnam',
   display: 'swap',
 });

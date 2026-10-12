@@ -146,8 +146,7 @@ export function SiteFooter() {
                   </span>
 
                   <h2 className="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl leading-snug">
-                    Hành trình{' '}
-                    <span className="font-serif italic font-normal text-[#9eedb5]">sống xanh</span>
+                    Hành trình <span className="italic font-normal text-[#9eedb5]">sống xanh</span>
                     <br />
                     bắt đầu từ những điều nhỏ bé
                   </h2>
@@ -316,7 +315,7 @@ export function SiteFooter() {
               </div>
 
               {/* Chữ ký nghệ thuật */}
-              <div className="mt-5 flex items-center gap-1.5 font-serif italic text-emerald-300/90 text-sm select-none">
+              <div className="mt-5 flex items-center gap-1.5 italic text-emerald-300/90 text-sm select-none">
                 <span>Vì một tương lai xanh hơn</span>
                 <span className="not-italic text-sm">🍃</span>
               </div>

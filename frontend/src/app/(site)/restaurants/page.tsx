@@ -151,12 +151,14 @@ export default function RestaurantMapPage() {
   const page = pagination.scope === searchScope ? pagination.page : 1;
   const searchState = { ...baseSearchState, page, limit: 20 };
 
-  const { data, isLoading, isError, refetch } = useRestaurantDiscoveryQuery(
+  const { data, isLoading, isFetching, isError, refetch } = useRestaurantDiscoveryQuery(
     searchState,
     location !== null
   );
 
   const restaurants = data?.restaurants ?? [];
+  const isQueryLoading = isLoading || (!data && !isError && location !== null);
+  const isDataRefreshing = isFetching && Boolean(data);
 
   const applyLocation = React.useCallback((next: ResolvedLocation) => {
     setLocation(next);
@@ -349,6 +351,7 @@ export default function RestaurantMapPage() {
                   onSearchThisArea={handleSearchThisArea}
                   canSearchThisArea={hasViewBounds}
                   isSearchingArea={searchingArea}
+                  isLoading={isQueryLoading || isFetching}
                 />
               </div>
               {searchingArea && (
@@ -374,8 +377,20 @@ export default function RestaurantMapPage() {
                       ? 'Quán trong vùng đang xem'
                       : 'Quán chay lân cận'}
                   <span className="ml-1.5 text-sm font-medium text-muted-foreground">
-                    ({data?.meta.totalItems ?? restaurants.length})
+                    {isQueryLoading ? (
+                      <span className="text-xs font-normal text-muted-foreground">
+                        (Đang tìm...)
+                      </span>
+                    ) : (
+                      `(${data?.meta.totalItems ?? restaurants.length})`
+                    )}
                   </span>
+                  {isDataRefreshing && (
+                    <span
+                      className="ml-1.5 inline-block size-2 animate-pulse rounded-full bg-emerald-500"
+                      title="Đang cập nhật..."
+                    />
+                  )}
                 </h2>
 
                 {isAuthenticated ? (
@@ -408,25 +423,43 @@ export default function RestaurantMapPage() {
               <div className="lg:max-h-[calc(100vh-220px)] lg:overflow-y-auto lg:pr-1.5">
                 <RestaurantList
                   result={data}
-                  isLoading={isLoading}
+                  isLoading={isQueryLoading}
+                  isFetching={isDataRefreshing}
                   isError={isError}
                   selectedId={selectedId}
                   onSelect={setSelectedId}
                   onRetry={() => void refetch()}
                   emptyTitle={emptyCopy.title}
-                  emptyDescription={emptyCopy.description}
+                  emptyDescription={
+                    data?.meta.externalResultsSuppressed && restaurants.length === 0
+                      ? 'Các quán chưa được xác minh đã được loại khỏi kết quả để áp dụng chế độ ăn, dị ứng hoặc thành phần bạn cần tránh. Hãy thử mở rộng bán kính hoặc chọn khu vực khác.'
+                      : emptyCopy.description
+                  }
                   emptyActions={emptyActions}
                 />
               </div>
               {data && data.meta.totalPages > 1 && (
-                <nav aria-label="Phân trang quán" className="flex items-center justify-center gap-3">
-                  <Button variant="outline" size="sm" disabled={!data.meta.hasPrevPage || isLoading}
-                    onClick={() => setPagination({ scope: searchScope, page: page - 1 })}>
+                <nav
+                  aria-label="Phân trang quán"
+                  className="flex items-center justify-center gap-3"
+                >
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!data.meta.hasPrevPage || isQueryLoading || isFetching}
+                    onClick={() => setPagination({ scope: searchScope, page: page - 1 })}
+                  >
                     Trang trước
                   </Button>
-                  <span className="text-sm tabular-nums" aria-live="polite">{page} / {data.meta.totalPages}</span>
-                  <Button variant="outline" size="sm" disabled={!data.meta.hasNextPage || isLoading}
-                    onClick={() => setPagination({ scope: searchScope, page: page + 1 })}>
+                  <span className="text-sm tabular-nums" aria-live="polite">
+                    {page} / {data.meta.totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={!data.meta.hasNextPage || isQueryLoading || isFetching}
+                    onClick={() => setPagination({ scope: searchScope, page: page + 1 })}
+                  >
                     Trang sau
                   </Button>
                 </nav>

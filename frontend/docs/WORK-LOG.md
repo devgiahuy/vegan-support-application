@@ -1,6 +1,93 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
-## [2026-10-08] — Tự động seed khi khởi động Docker
+## [2026-10-12] — Tối ưu hiển thị dữ liệu, thêm timeout API và hoàn thiện trạng thái Loading trang /restaurants
+
+- Mục tiêu:
+  - Khắc phục tình trạng trang `/restaurants` không hiển thị trạng thái loading khi đang gọi API hoặc chưa có dữ liệu phản hồi (khiến giao diện nhảy thẳng vào trạng thái trống "Chưa tìm thấy quán" / "0 quán" gây hiểu lầm cho người dùng).
+  - Bổ sung cấu hình `timeout` (10 giây) cho các lời gọi API khám phá/tìm kiếm/địa chỉ trên trang để tránh việc request bị treo vô hạn khi dịch vụ bản đồ bên ngoài phản hồi chậm.
+  - Tối ưu hóa trải nghiệm hiển thị dữ liệu: Skeletons cấu trúc thẻ, chỉ báo đang tìm kiếm trên bản đồ Radar và Google Maps, căn chỉnh lại cụm nút hành động trạng thái rỗng và thông điệp giải thích khi quán chưa duyệt bị loại bỏ do ràng buộc chế độ ăn.
+- Đã làm:
+  - Bổ sung hằng số `RESTAURANT_REQUEST_TIMEOUT_MS = 10000` (10 giây) vào `src/features/restaurant/api/restaurant.api.ts` và tích hợp vào `api.get` cho `getNearby`, `search`, `getDetail`, `geocode`.
+  - Cập nhật bộ test `src/features/restaurant/api/restaurant.api.test.ts` để kiểm chứng tham số `timeout` trong tất cả các lệnh gọi request.
+  - Cấu hình `retry: 1` cho các hook `useRestaurantDiscoveryQuery`, `useNearbyRestaurantsQuery`, `useRestaurantSearchQuery` trong `src/features/restaurant/queries/restaurant.queries.ts`.
+  - Nâng cấp `RestaurantList`:
+    - Nhận biết trạng thái loading triệt để: hiển thị dàn khung Skeleton khi `isLoading` hoặc khi `!result && !isError`.
+    - Thêm chỉ báo nhẹ nhàng `isFetching` khi đang làm mới dữ liệu nền.
+    - Căn chỉnh lại cụm nút trong trạng thái rỗng: đưa nút "Thử lại" vào cùng một hàng flex cân đối, ngay hàng thẳng lối với "Nới bán kính", "Đổi vị trí".
+    - Cung cấp thông báo lỗi chi tiết khi xảy ra timeout hoặc gián đoạn mạng.
+  - Nâng cấp `RestaurantMap` và `MapFallback`:
+    - Truyền cờ `isLoading` xuống bản đồ.
+    - Trong bản đồ Radar mô phỏng (`MapFallback`): khi đang tải dữ liệu, hiển thị vòng quay La bàn cùng thông điệp "Đang tìm kiếm quán chay trong bán kính... Đang đồng bộ dữ liệu bản đồ và áp dụng chế độ ăn", tuyệt đối không hiển thị sớm thông báo "Chưa có quán chay trong bán kính" khi chưa tải xong.
+    - Đồng bộ nhãn nút mở rộng bán kính: "Mở rộng 10 km", "Mở rộng 20 km", "Mở rộng 50 km".
+    - Với chế độ Google Maps: hiển thị badge chỉ báo "Đang tìm kiếm quán chay..." nổi ở giữa màn hình bản đồ.
+  - Nâng cấp `RestaurantMapPage` (`src/app/(site)/restaurants/page.tsx`):
+    - Tách biệt `isQueryLoading` và `isDataRefreshing`.
+    - Phần tiêu đề danh sách hiển thị "(Đang tìm...)" thay vì cố định "(0)" khi chưa có dữ liệu.
+    - Hiển thị mô tả trạng thái rỗng thân thiện, giải thích rõ nếu các quán bên ngoài chưa xác minh bị lược bỏ để đảm bảo an toàn cho chế độ ăn của người dùng.
+- File tạo/sửa:
+  - `src/features/restaurant/api/restaurant.api.ts`
+  - `src/features/restaurant/api/restaurant.api.test.ts`
+  - `src/features/restaurant/queries/restaurant.queries.ts`
+  - `src/features/restaurant/components/restaurant-list.tsx`
+  - `src/features/restaurant/components/restaurant-map.tsx`
+  - `src/features/restaurant/components/map-fallback.tsx`
+  - `src/app/(site)/restaurants/page.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 47 test files, 577/577 tests pass (100%).
+  - `npm run build`: Turbopack compile thành công 46/46 static & dynamic routes.
+- PROGRESS: Hoàn thiện trải nghiệm UX mượt mà, loại bỏ triệt để hiện tượng thiếu loading và treo API trên trang `/restaurants`.
+
+
+- Mục tiêu:
+  - Tái thiết kế toàn diện khu vực Header/Hero Banner trên trang `/videos` (Kho video nấu chay trực quan) theo các nguyên tắc của skill `/frontend-design` và `/design-taste-frontend`.
+  - Thay thế khung nền phẳng đơn điệu bằng bố cục studio nấu ăn chuyên nghiệp có chiều sâu điện ảnh, tôn vinh tính năng AI Video Summarization (UC-10) và khơi gợi cảm hứng nấu ăn.
+- Đã làm:
+  - Sử dụng công cụ AI image generation tạo ảnh nền phim trường quay video ẩm thực chay với đầu bếp đảo chảo rau củ tươi sắc màu, khói bốc nghi ngút và camera studio; lưu tại `public/videos/hero-bg.jpg` và kết nối qua Next.js `<Image>`.
+  - Xây dựng component độc lập `VideosHeroBanner` tại `src/features/video/components/videos-hero-banner.tsx`.
+  - Áp dụng lớp phủ scrim chuyển sắc đa tầng kết hợp kính mờ (glassmorphism backdrop blur), đảm bảo độ tương phản chữ đạt chuẩn WCAG AA trên cả Light và Dark mode.
+  - Tái thiết kế typography: Eyebrow badge kính mờ có icon Play và chỉ báo động, tiêu đề chính nhấn nhá dải màu gradient ngọc bích, đoạn mô tả rõ ràng tôn vinh tính năng AI tóm tắt.
+  - Thiết kế nút CTA tương tác xúc giác cao (tactile push `active:scale-[0.98]`, đổ bóng ambient glow `shadow-primary/25`).
+  - Thêm thẻ nổi "Trợ Lý Video AI" bên phải (Desktop) cùng dải micro-pills về mốc thời gian nguyên liệu, chứng nhận đầu bếp và định lượng calo thuần chay.
+  - Tích hợp hiệu ứng mượt mà qua `motion/react`, tự động suy giảm an toàn khi bật `prefers-reduced-motion`.
+  - Tích hợp `VideosHeroBanner` vào `src/app/(site)/videos/page.tsx`.
+- File tạo/sửa:
+  - `public/videos/hero-bg.jpg`
+  - `src/features/video/components/videos-hero-banner.tsx`
+  - `src/app/(site)/videos/page.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 47 test files, 577/577 tests pass (100%).
+  - `npm run build`: Turbopack compile thành công 46/46 static & dynamic routes.
+- PROGRESS: Giao diện khu vực Kho Video `/videos` đậm chất điện ảnh ẩm thực, hiện đại và đồng bộ toàn diện với trang bài viết `/articles`.
+
+## [2026-10-12] — Redesign Hero Banner trang /articles theo phong cách Editorial Wellness (/frontend-design & /design-taste-frontend)
+
+- Mục tiêu:
+  - Tái thiết kế toàn diện khu vực Hero Banner trên trang `/articles` (Cẩm nang thực dưỡng chay) theo các nguyên tắc của skill `/frontend-design` và `/design-taste-frontend`.
+  - Khắc phục tình trạng khung nền đơn điệu, phẳng và thiếu sức sống; thay thế bằng bố cục ẩm thực thực dưỡng nghệ thuật, có chiều sâu thị giác và hình ảnh nền thảo mộc thực dưỡng chất lượng cao.
+- Đã làm:
+  - Sử dụng công cụ AI image generation tạo ảnh nền ẩm thực thực dưỡng tĩnh vật cao cấp (thảo mộc, hạt sen, nấm rừng, ngũ cốc trong ánh nắng sớm), lưu trữ tối ưu tại `public/articles/hero-bg.jpg` và kết nối qua Next.js `<Image>`.
+  - Xây dựng component độc lập `ArticlesHeroBanner` tại `src/features/post/components/articles-hero-banner.tsx` theo kiến trúc Clean Architecture.
+  - Xử lý lớp phủ đa tầng (directional multi-stop scrim) kết hợp hiệu ứng kính mờ (glassmorphism backdrop blur), bảo đảm độ tương phản hoàn hảo (WCAG AA) cho chữ trên cả Light và Dark mode.
+  - Tinh chỉnh typography phân cấp: Eyebrow badge kính mờ có chỉ báo động (pulsing indicator), tiêu đề chính nhấn nhá dải màu gradient ngọc bích, đoạn mô tả dễ đọc và giữ trọn vẹn thông điệp gốc.
+  - Tối ưu nút CTA với độ nảy xúc giác (tactile push `active:scale-[0.98]`, đổ bóng ambient glow `shadow-primary/25`).
+  - Bổ sung thẻ nổi tri thức (Floating Editorial Card) và dải vi chất dinh dưỡng (Content Pillars Micro-Pills) ở phía dưới.
+  - Tích hợp hoạt cảnh vào trang mượt mà qua `motion/react`, tự động suy giảm khi người dùng bật `prefers-reduced-motion`.
+  - Cập nhật trang `src/app/(site)/articles/page.tsx`, dọn sạch các import thừa.
+- File tạo/sửa:
+  - `public/articles/hero-bg.jpg`
+  - `src/features/post/components/articles-hero-banner.tsx`
+  - `src/app/(site)/articles/page.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 47 test files, 577/577 tests pass (100%).
+  - `npm run build`: Turbopack compile thành công 46/46 static & dynamic routes.
+- PROGRESS: Giao diện khu vực Cẩm nang bài viết `/articles` sang trọng, sống động, đậm nét văn hóa thực dưỡng VeggieConnect.
+
 
 - Mục tiêu: Docker chạy seed hiện tại tự động và push thay đổi lên `dev` theo yêu cầu người dùng.
 - Đã làm: mặc định `RUN_SEED=true` ở Compose, image startup và `.env.example`; bật lại trong `.env` local. Entry script chạy schema → compiled seed → API, log rõ từng bước, dừng khi schema/seed lỗi và chuyển tín hiệu shutdown qua `exec`. Bổ sung invited Contributor email vào Compose.
@@ -3696,3 +3783,27 @@
   - `npm run lint`: 0 lỗi/0 cảnh báo trong file mới (repo có 91 lỗi nền sẵn, không chạm).
 - PROGRESS: Task #16: 0% → 85%.
 - Còn lại / rủi ro: V-01..V-15 cần backend có phiên admin để chạy tay; Phase 9 (US1 đầy đủ) chặn bởi CG-01; Ẩn/Khôi phục chặn bởi CG-02. Nhánh `029-admin-content-crud` đã tạo.
+
+---
+
+## [2026-10-12] — Sửa lỗi vỡ phông chữ tiếng Việt (lỗi dấu thanh tách rời) ở tiêu đề Footer
+
+- Mục tiêu: Sửa lỗi hiển thị chữ "sống xanh" trong tiêu đề chân trang (SiteFooter) bị lỗi dấu thanh tiếng Việt (chữ `ố` bị lỗi font fallback, dấu sắc `´` bị đẩy bay ra xa thành "sô ´ ng xanh" trên môi trường Windows).
+- Đã làm:
+  - **Phân tích nguyên nhân**:
+    - Thẻ `<span className="font-serif italic font-normal text-[#9eedb5]">sống xanh</span>` và dòng chữ ký `font-serif italic` trong `site-footer.tsx` áp dụng lớp `font-serif`.
+    - Trong Tailwind CSS v4, `font-serif` mặc định ưu tiên `ui-serif, Georgia, Cambria, "Times New Roman", Times, serif`. Trên hệ điều hành Windows, phông `Georgia` biến thể `italic` không hỗ trợ đầy đủ ký tự tổ hợp tiếng Việt có 2 dấu thanh (`ố` - U+1ED1), dẫn đến cơ chế fallback font tách rời dấu sắc `´` khỏi chữ `ô`.
+    - Phông chữ chủ đạo của ứng dụng là `Be_Vietnam_Pro` (được thiết kế tối ưu riêng cho dấu thanh tiếng Việt), nhưng trong `src/app/layout.tsx` chưa cấu hình nạp biến thể `style: ['normal', 'italic']`.
+  - **Khắc phục**:
+    - Loại bỏ lớp `font-serif` trong `src/components/layout/site-footer.tsx` tại cụm chữ "sống xanh" và chữ ký chân trang, để văn bản kế thừa font `font-sans` (`Be_Vietnam_Pro`).
+    - Bổ sung `style: ['normal', 'italic']` cho `Be_Vietnam_Pro` trong `src/app/layout.tsx` để trình duyệt tải đầy đủ typeface nghiêng chuẩn tiếng Việt với kerning và dấu thanh hoàn hảo.
+- File tạo/sửa:
+  - `src/components/layout/site-footer.tsx`
+  - `src/app/layout.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 47/47 files passed (577/577 tests passed 100%).
+  - `npm run build`: Next.js 16 build thành công 46 static/dynamic routes.
+- PROGRESS: Sửa lỗi giao diện hoàn tất 100%.
+- Còn lại / rủi ro: Không có.

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import api from '@/lib/axios';
-import { restaurantApi } from './restaurant.api';
+import { restaurantApi, RESTAURANT_REQUEST_TIMEOUT_MS } from './restaurant.api';
 import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
 import type { RestaurantSearchState } from '../types/restaurant.model';
 import type { RestaurantListResponseDto } from '../types/restaurant.dto';
@@ -42,13 +42,17 @@ const listResponse: RestaurantListResponseDto = {
 };
 
 describe('restaurantApi — discovery theo chế độ', () => {
-  it('chuyển AbortSignal tới request để hủy lượt tìm cũ', async () => {
+  it('chuyển AbortSignal tới request để hủy lượt tìm cũ và có timeout', async () => {
     const spy = vi.spyOn(api, 'get').mockResolvedValueOnce({ data: listResponse });
     const controller = new AbortController();
-    await restaurantApi.getNearby(state({ lat: 10.875, lng: 106.8, page: 2, limit: 20 }), controller.signal);
+    await restaurantApi.getNearby(
+      state({ lat: 10.875, lng: 106.8, page: 2, limit: 20 }),
+      controller.signal
+    );
     expect(spy).toHaveBeenCalledWith(API_ENDPOINTS.RESTAURANTS.NEARBY, {
       params: { radiusMeters: 5000, lat: 10.875, lng: 106.8, page: 2, limit: 20 },
       silent: true,
+      timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
       signal: controller.signal,
     });
   });
@@ -60,7 +64,7 @@ describe('restaurantApi — discovery theo chế độ', () => {
     vi.restoreAllMocks();
   });
 
-  it('getNearby ở mode NEARBY gửi đúng radiusMeters, lat, lng', async () => {
+  it('getNearby ở mode NEARBY gửi đúng radiusMeters, lat, lng kèm timeout', async () => {
     const spy = vi.spyOn(api, 'get').mockResolvedValueOnce({ data: listResponse });
 
     const result = await restaurantApi.getNearby(
@@ -70,6 +74,7 @@ describe('restaurantApi — discovery theo chế độ', () => {
     expect(spy).toHaveBeenCalledWith(API_ENDPOINTS.RESTAURANTS.NEARBY, {
       params: { radiusMeters: 3000, lat: 10.8214, lng: 106.6381 },
       silent: true,
+      timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
     });
 
     expect(result.restaurants).toHaveLength(1);
@@ -89,6 +94,7 @@ describe('restaurantApi — discovery theo chế độ', () => {
     expect(spy).toHaveBeenCalledWith(API_ENDPOINTS.RESTAURANTS.NEARBY, {
       params: { radiusMeters: 5000, north: 10.9, south: 10.7, east: 106.9, west: 106.6 },
       silent: true,
+      timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
     });
   });
 
@@ -102,6 +108,7 @@ describe('restaurantApi — discovery theo chế độ', () => {
     expect(spy).toHaveBeenCalledWith(API_ENDPOINTS.RESTAURANTS.SEARCH, {
       params: { radiusMeters: 2000, q: 'phở', lat: 10.8214, lng: 106.6381 },
       silent: true,
+      timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
     });
     expect(result.restaurants).toHaveLength(1);
   });
@@ -136,6 +143,7 @@ describe('restaurantApi — discovery theo chế độ', () => {
         openAtHour: 19,
       },
       silent: true,
+      timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
     });
   });
 
@@ -149,6 +157,7 @@ describe('restaurantApi — discovery theo chế độ', () => {
     expect(spy).toHaveBeenCalledWith(API_ENDPOINTS.RESTAURANTS.NEARBY, {
       params: { radiusMeters: 2000, lat: 10.8214, lng: 106.6381 },
       silent: true,
+      timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
     });
   });
 
@@ -184,6 +193,7 @@ describe('restaurantApi — discovery theo chế độ', () => {
         locationConsent: 'true',
       },
       silent: true,
+      timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
     });
   });
 
@@ -250,6 +260,7 @@ describe('restaurantApi — geocode (FR-033)', () => {
     expect(spy).toHaveBeenCalledWith(API_ENDPOINTS.LOCATION.GEOCODE, {
       params: { address: 'Hồ Gươm, Hà Nội' },
       silent: true,
+      timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
     });
     expect(result.isAvailable).toBe(true);
     expect(result.lat).toBeCloseTo(21.0285);

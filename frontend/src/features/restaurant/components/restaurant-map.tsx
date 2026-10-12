@@ -28,6 +28,8 @@ export interface RestaurantMapProps {
   canSearchThisArea?: boolean;
   /** Đang ở chế độ tìm theo vùng → hiện nút quay lại tìm lân cận. */
   isSearchingArea?: boolean;
+  /** Trạng thái đang gọi API lấy dữ liệu. */
+  isLoading?: boolean;
 }
 
 /**
@@ -46,6 +48,7 @@ export function RestaurantMap({
   onSearchThisArea,
   canSearchThisArea = true,
   isSearchingArea = false,
+  isLoading = false,
 }: RestaurantMapProps) {
   const mapRef = React.useRef<HTMLDivElement>(null);
   const { isLoaded, loadError } = useGoogleMaps();
@@ -239,6 +242,7 @@ export function RestaurantMap({
         onSearchThisArea={onSearchThisArea}
         canSearchThisArea={canSearchThisArea}
         isSearchingArea={isSearchingArea}
+        isLoading={isLoading}
       />
     );
   }
@@ -246,6 +250,14 @@ export function RestaurantMap({
   return (
     <div className="relative size-full min-h-[400px] overflow-hidden rounded-2xl border bg-muted/20">
       <div ref={mapRef} className="size-full" />
+      {isLoading && (
+        <div className="pointer-events-none absolute inset-x-0 top-14 z-20 flex justify-center px-3">
+          <div className="inline-flex items-center gap-2 rounded-full border bg-background/90 px-3 py-1.5 text-xs font-medium text-foreground shadow-md backdrop-blur-xs">
+            <span className="size-2 animate-ping rounded-full bg-emerald-500" />
+            Đang tìm kiếm quán chay...
+          </div>
+        </div>
+      )}
       {onSearchThisArea && (
         <div className="absolute inset-x-0 top-3 flex justify-center px-3">
           <Button

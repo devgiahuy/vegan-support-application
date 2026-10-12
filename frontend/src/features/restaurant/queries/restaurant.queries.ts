@@ -27,7 +27,17 @@ export const RESTAURANT_KEYS = {
       state.locationConsent,
     ] as const,
   bounds: (state: RestaurantSearchState) =>
-    [...RESTAURANT_KEYS.all, 'bounds', state.bounds, state.radiusM, state.dietPattern, state.page, state.limit, state.locationSource, state.locationConsent] as const,
+    [
+      ...RESTAURANT_KEYS.all,
+      'bounds',
+      state.bounds,
+      state.radiusM,
+      state.dietPattern,
+      state.page,
+      state.limit,
+      state.locationSource,
+      state.locationConsent,
+    ] as const,
   search: (state: RestaurantSearchState) =>
     [
       ...RESTAURANT_KEYS.all,
@@ -52,9 +62,13 @@ export function useNearbyRestaurantsQuery(state: RestaurantSearchState, enabled 
   const mode = resolveSearchMode(state);
   const identity = useAuthStore((auth) => auth.user?.id ?? 'guest');
   return useQuery({
-    queryKey: [...(state.mode === 'BOUNDS' ? RESTAURANT_KEYS.bounds(state) : RESTAURANT_KEYS.nearby(state)), identity],
+    queryKey: [
+      ...(state.mode === 'BOUNDS' ? RESTAURANT_KEYS.bounds(state) : RESTAURANT_KEYS.nearby(state)),
+      identity,
+    ],
     queryFn: ({ signal }) => restaurantApi.getNearby(state, signal),
     staleTime: 2 * 60 * 1000,
+    retry: 1,
     enabled: enabled && (mode === 'NEARBY' || mode === 'BOUNDS'),
   });
 }
@@ -67,6 +81,7 @@ export function useRestaurantSearchQuery(state: RestaurantSearchState, enabled =
     queryKey: [...RESTAURANT_KEYS.search(state), identity],
     queryFn: ({ signal }) => restaurantApi.search(state, signal),
     staleTime: 2 * 60 * 1000,
+    retry: 1,
     enabled: enabled && mode === 'KEYWORD',
   });
 }
@@ -85,13 +100,18 @@ export function useRestaurantDiscoveryQuery(state: RestaurantSearchState, enable
   const identity = useAuthStore((auth) => auth.user?.id ?? 'guest');
 
   return useQuery({
-    queryKey: [...(isKeyword
-      ? RESTAURANT_KEYS.search(state)
-      : isBounds
-        ? RESTAURANT_KEYS.bounds(state)
-        : RESTAURANT_KEYS.nearby(state)), identity],
-    queryFn: ({ signal }) => (isKeyword ? restaurantApi.search(state, signal) : restaurantApi.getNearby(state, signal)),
+    queryKey: [
+      ...(isKeyword
+        ? RESTAURANT_KEYS.search(state)
+        : isBounds
+          ? RESTAURANT_KEYS.bounds(state)
+          : RESTAURANT_KEYS.nearby(state)),
+      identity,
+    ],
+    queryFn: ({ signal }) =>
+      isKeyword ? restaurantApi.search(state, signal) : restaurantApi.getNearby(state, signal),
     staleTime: 2 * 60 * 1000,
+    retry: 1,
     enabled: enabled && mode !== null,
   });
 }
