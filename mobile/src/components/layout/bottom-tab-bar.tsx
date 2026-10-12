@@ -88,7 +88,7 @@ export function BottomTabBar({ state, navigation, insets }: BottomTabBarProps) {
   const router = useRouter();
   const keyboardVisible = useKeyboardVisible();
   const [fanOpen, setFanOpen] = React.useState(false);
-  const progress = React.useRef(new Animated.Value(0)).current;
+  const [progress] = React.useState(() => new Animated.Value(0));
 
   const animateTo = (open: boolean) => {
     Animated.spring(progress, {

@@ -83,13 +83,15 @@ export function CommunityPanel({
   const ratingMutation = useRatingMutation();
   const createCommentMutation = useCreateCommentMutation();
   const comments = commentsPagination?.items ?? [];
+  const viewerRating = summary?.viewerRating;
 
   React.useEffect(() => {
-    if (summary?.viewerRating) {
-      setTasteDraft(summary.viewerRating.taste);
-      setDifficultyDraft(summary.viewerRating.difficulty);
-    }
-  }, [summary?.viewerRating]);
+    if (!viewerRating) return;
+    queueMicrotask(() => {
+      setTasteDraft(viewerRating.taste);
+      setDifficultyDraft(viewerRating.difficulty);
+    });
+  }, [viewerRating]);
 
   const requireLogin = (message: string): boolean => {
     if (isAuthenticated) return true;

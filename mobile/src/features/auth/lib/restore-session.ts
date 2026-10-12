@@ -58,7 +58,7 @@ export function useSessionRestore(): boolean {
 
   React.useEffect(() => {
     if (useAuthStore.persist.hasHydrated()) {
-      setHydrated(true);
+      queueMicrotask(() => setHydrated(true));
       return;
     }
     return useAuthStore.persist.onFinishHydration(() => setHydrated(true));

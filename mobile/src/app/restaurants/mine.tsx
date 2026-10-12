@@ -7,9 +7,8 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/shared/state-
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { useMyRestaurantsQuery } from '@/features/restaurant/queries/restaurant.queries';
 import type { SubmittedRestaurant } from '@/features/restaurant/types/restaurant.model';
-import { formatDate } from '@/lib/utils';
+import { cn, formatDate } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
-import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/useAuthStore';
 
 function statusStyle(status: SubmittedRestaurant['status']): { badge: string; text: string } {
