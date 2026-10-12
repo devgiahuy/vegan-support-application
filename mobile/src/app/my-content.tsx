@@ -2,7 +2,17 @@ import * as React from 'react';
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Link, type Href, useRouter } from 'expo-router';
-import { BookOpen, ChefHat, FileText, History, Pencil, Search, Trash2, Video as VideoIcon } from 'lucide-react-native';
+import {
+  BookOpen,
+  ChefHat,
+  FileText,
+  History,
+  Pencil,
+  Search,
+  Trash2,
+  Video as VideoIcon,
+  type LucideIcon,
+} from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
 import { LoadMoreButton } from '@/components/shared/load-more-button';
@@ -45,11 +55,11 @@ const TYPE_LABEL: Record<ContentType, string> = {
   VIDEO: 'Video',
 };
 
-function typeIcon(type: ContentType) {
-  if (type === 'RECIPE') return ChefHat;
-  if (type === 'VIDEO') return VideoIcon;
-  return BookOpen;
-}
+const TYPE_ICON: Record<ContentType, LucideIcon> = {
+  RECIPE: ChefHat,
+  BLOG: BookOpen,
+  VIDEO: VideoIcon,
+};
 
 function detailHref(item: MyContentItem): Href {
   if (item.type === 'RECIPE') return `/recipes/${item.id}` as Href;
@@ -104,7 +114,7 @@ function MyContentRow({
   onHistory: (item: MyContentItem) => void;
   isDeleting: boolean;
 }) {
-  const TypeIcon = typeIcon(item.type);
+  const TypeIcon = TYPE_ICON[item.type];
   return (
     <View className="gap-2 rounded-2xl border border-border bg-card p-3">
       <Link href={detailHref(item)} asChild>

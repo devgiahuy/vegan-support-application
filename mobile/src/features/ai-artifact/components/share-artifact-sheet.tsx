@@ -20,10 +20,6 @@ export function ShareArtifactPanel({ initial }: { initial: AiArtifact }) {
   const [acknowledged, setAcknowledged] = React.useState(false);
   const [message, setMessage] = React.useState<{ tone: 'error' | 'success'; text: string } | null>(null);
 
-  React.useEffect(() => {
-    setArtifact(initial);
-  }, [initial]);
-
   const setVisibility = async (visibility: 'PUBLIC' | 'PRIVATE') => {
     setMessage(null);
     if (visibility === 'PUBLIC' && !acknowledged) {
@@ -141,7 +137,7 @@ export function ShareArtifactSheet({ artifact, visible, onClose }: { artifact: A
             </Pressable>
           </View>
           <ScrollView className="mt-4" contentContainerClassName="pb-2">
-            <ShareArtifactPanel initial={artifact} />
+            <ShareArtifactPanel key={`${artifact.id}:${artifact.lifecycleVersion}`} initial={artifact} />
           </ScrollView>
         </View>
       </View>
