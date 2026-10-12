@@ -1,7 +1,19 @@
 'use client';
 
 import * as React from 'react';
-import { Search, Flame } from 'lucide-react';
+import {
+  Search,
+  Flame,
+  Carrot,
+  Wheat,
+  CircleDot,
+  Apple,
+  Trees,
+  Sparkles,
+  Flower2,
+  Egg,
+  Utensils,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +35,31 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { useIngredientsQuery } from '../queries/ingredient.queries';
 import { FoodGroup } from '@/common/enums';
 import { getAllergenName } from '@/common/constants/diet-labels';
+import { cn } from '@/lib/utils';
+import { groupIngredientsByFoodGroup, getFoodGroupTheme } from '../utils/food-group-themes';
+
+function FoodGroupIcon({ group, className }: { group: FoodGroup; className?: string }) {
+  switch (group) {
+    case FoodGroup.VEGETABLES:
+      return <Carrot className={className} />;
+    case FoodGroup.GRAINS:
+      return <Wheat className={className} />;
+    case FoodGroup.LEGUMES:
+      return <CircleDot className={className} />;
+    case FoodGroup.FRUITS:
+      return <Apple className={className} />;
+    case FoodGroup.MUSHROOMS:
+      return <Trees className={className} />;
+    case FoodGroup.NUTS_SEEDS:
+      return <Sparkles className={className} />;
+    case FoodGroup.HERBS_SPICES:
+      return <Flower2 className={className} />;
+    case FoodGroup.DAIRY_EGGS:
+      return <Egg className={className} />;
+    default:
+      return <Utensils className={className} />;
+  }
+}
 
 const FOOD_GROUP_OPTIONS: Array<{ value: FoodGroup | 'ALL'; label: string }> = [
   { value: 'ALL', label: 'Mọi nhóm' },
@@ -57,6 +94,10 @@ export function IngredientSearch() {
     ...(debouncedKeyword.length > 0 ? { q: debouncedKeyword } : {}),
     ...(foodGroup !== 'ALL' ? { foodGroup } : {}),
   });
+
+  const groupedSections = React.useMemo(() => {
+    return groupIngredientsByFoodGroup(data?.items ?? []);
+  }, [data?.items]);
 
   return (
     <div className="space-y-4">
@@ -111,43 +152,119 @@ export function IngredientSearch() {
 
       {!isLoading && !isError && data && data.items.length > 0 && (
         <>
-          <ul className="grid gap-3 md:grid-cols-2">
-            {data.items.map((item) => (
-              <li key={item.id} className="rounded-2xl border bg-card p-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <p className="font-semibold">{item.canonicalName}</p>
-                  <Badge variant="secondary" className="rounded-full text-[11px]">
-                    {item.foodGroupLabel}
-                  </Badge>
-                </div>
-                {item.aliases.length > 0 && (
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Còn gọi: {item.aliases.map((a) => a.alias).join(', ')}
-                  </p>
-                )}
-                {item.allergenCodes.length > 0 && (
-                  <div className="mt-2 flex flex-wrap gap-1">
-                    {item.allergenCodes.map((code) => (
-                      <Badge key={code} variant="outline" className="rounded-full text-[11px]">
-                        Dị ứng: {getAllergenName(code)}
-                      </Badge>
-                    ))}
+          <div className="space-y-6">
+            {groupedSections.map((section) => (
+              <section key={section.group} className="space-y-3">
+                <div className="flex items-center justify-between border-b pb-2 pt-1">
+                  <div className="flex items-center gap-2">
+                    <div
+                      className={cn(
+                        'flex h-7 w-7 items-center justify-center rounded-lg',
+                        section.theme.iconBgColor
+                      )}
+                    >
+                      <FoodGroupIcon
+                        group={section.group}
+                        className={cn('h-4 w-4', section.theme.iconTextColor)}
+                      />
+                    </div>
+                    <h3
+                      className={cn('text-base font-bold tracking-tight', section.theme.textColor)}
+                    >
+                      {section.theme.label}
+                    </h3>
+                    <Badge
+                      variant="outline"
+                      className={cn(
+                        'rounded-full text-xs font-semibold px-2 py-0.5',
+                        section.theme.badgeColor
+                      )}
+                    >
+                      {section.items.length} nguyên liệu
+                    </Badge>
                   </div>
-                )}
-                <div className="mt-3 flex items-center justify-end border-t border-muted/60 pt-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedIngredient({ id: item.id, name: item.canonicalName })}
-                    className="h-8 gap-1.5 text-xs text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
-                  >
-                    <Flame className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
-                    <span>Dinh dưỡng (100g)</span>
-                  </Button>
                 </div>
-              </li>
+
+                <ul className="grid gap-3 md:grid-cols-2">
+                  {section.items.map((item) => {
+                    const theme = section.theme;
+                    return (
+                      <li
+                        key={item.id}
+                        className={cn(
+                          'flex flex-col justify-between rounded-2xl border bg-card p-4 transition-all duration-200 hover:shadow-md',
+                          theme.borderColor
+                        )}
+                      >
+                        <div className="flex items-start gap-3">
+                          {/* Hình nhỏ/Icon nhận diện ở đầu thẻ */}
+                          <div
+                            className={cn(
+                              'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-transform hover:scale-105',
+                              theme.iconBgColor
+                            )}
+                          >
+                            <FoodGroupIcon
+                              group={item.foodGroup}
+                              className={cn('h-5 w-5', theme.iconTextColor)}
+                            />
+                          </div>
+
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center justify-between gap-1.5">
+                              <p className="font-semibold text-foreground text-sm sm:text-base leading-snug">
+                                {item.canonicalName}
+                              </p>
+                              <Badge
+                                variant="secondary"
+                                className={cn('rounded-full text-[11px]', theme.badgeColor)}
+                              >
+                                {theme.label}
+                              </Badge>
+                            </div>
+
+                            {item.aliases.length > 0 && (
+                              <p className="mt-1 text-xs text-muted-foreground line-clamp-1">
+                                Còn gọi: {item.aliases.map((a) => a.alias).join(', ')}
+                              </p>
+                            )}
+
+                            {item.allergenCodes.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {item.allergenCodes.map((code) => (
+                                  <Badge
+                                    key={code}
+                                    variant="outline"
+                                    className="rounded-full border-amber-500/40 bg-amber-500/10 text-[11px] text-amber-700 dark:text-amber-300 font-medium"
+                                  >
+                                    Dị ứng: {getAllergenName(code)}
+                                  </Badge>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="mt-3 flex items-center justify-end border-t border-muted/60 pt-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              setSelectedIngredient({ id: item.id, name: item.canonicalName })
+                            }
+                            className="h-8 gap-1.5 text-xs text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-950/50"
+                          >
+                            <Flame className="h-3.5 w-3.5 text-amber-500 fill-amber-500" />
+                            <span>Dinh dưỡng (100g)</span>
+                          </Button>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </section>
             ))}
-          </ul>
+          </div>
           <Dialog
             open={Boolean(selectedIngredient)}
             onOpenChange={(open) => !open && setSelectedIngredient(null)}
@@ -158,6 +275,7 @@ export function IngredientSearch() {
                 <NutritionFactsPanel
                   ingredientId={selectedIngredient.id}
                   className="w-full max-w-none border-0 shadow-none p-0"
+                  showProvenance={false}
                 />
               )}
             </DialogContent>

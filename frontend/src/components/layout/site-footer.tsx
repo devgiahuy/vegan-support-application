@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Mail, ArrowRight, Sprout, ShieldCheck, Heart, Star, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { isFooterHidden } from './site-footer-routes';
 
 // Social Media SVGs
 function FacebookIcon({ className }: { className?: string }) {
@@ -77,9 +78,9 @@ export function SiteFooter() {
   const [email, setEmail] = React.useState('');
   const [isSubmitted, setIsSubmitted] = React.useState(false);
 
-  // Không hiển thị Footer trên trang canvas trò chuyện Trợ lý AI (/assistant)
-  // Các trang con khác như /assistant/public vẫn hiển thị footer bình thường
-  if (pathname === '/assistant') {
+  // Ẩn Footer trên các màn hình công cụ chuyên sâu / toàn màn hình:
+  // /assistant, /meal-plans, /restaurants
+  if (isFooterHidden(pathname)) {
     return null;
   }
 

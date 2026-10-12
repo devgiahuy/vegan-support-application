@@ -1,5 +1,68 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-12] — Nâng cấp UI/UX: Thẻ công thức (/recipes), Cảnh báo dị ứng (/recipes/:id), Gom nhóm nguyên liệu (/categories#tra-cuu) & Ẩn footer (/meal-plans, /restaurants)
+
+- Mục tiêu:
+  - Thêm huy hiệu phân biệt Chuyên gia vs Người dùng thường và hiển thị số lượng người đang áp dụng công thức (mặc định 0 khi chưa có người dùng) trên thẻ công thức tại trang `/recipes`.
+  - Thiết kế thành phần Cảnh báo dị ứng nổi bật (Highlight Alert Callout) với viền cam/hổ phách và nhãn dị ứng tương phản cao tại trang chi tiết công thức `/recipes/:id`.
+  - Gom nhóm danh sách nguyên liệu theo nhóm thực phẩm (Rau củ, Ngũ cốc, Đậu, Trái cây, Nấm...), áp dụng dải mã màu nhận diện đặc trưng và bổ sung biểu tượng/icon nhỏ ở đầu mỗi thẻ nguyên liệu tại `/categories#tra-cuu`.
+  - Ẩn chân trang (SiteFooter) trên hai màn hình công cụ chuyên sâu `/meal-plans` và `/restaurants` để tối ưu không gian hiển thị dọc.
+- Đã làm:
+  - Mở rộng Model & DTO:
+    - Thêm `usageCount` và `isExpertAuthor` vào `Recipe` UI model (`recipe.model.ts`).
+    - Thêm `usageCount?: number` vào `RecipeDetailDto` (`recipe.dto.ts`).
+    - Cập nhật `RecipeMapper.toModel` ánh xạ an toàn `usageCount` (safeNumber defaulting 0) và tính toán `isExpertAuthor` (`recipe.mapper.ts`).
+    - Viết 4 unit tests kiểm chứng mapper cho `usageCount` và `isExpertAuthor` (`recipe.mapper.test.ts`).
+  - Nâng cấp `RecipeCard` (`recipe-card.tsx`):
+    - Hiển thị huy hiệu Chuyên gia (kèm icon `BadgeCheck`, viền xanh emerald) hoặc Người dùng thường (kèm icon `User`, màu trung tính).
+    - Hiển thị con số kiểm chứng `{usageCount} người đang dùng` (mặc định luôn hiển thị `0 người đang dùng` khi thiếu dữ liệu).
+  - Tạo mới `RecipeAllergenHighlight` (`recipe-allergen-highlight.tsx`) và tích hợp vào `RecipeDetailView` (`recipe-detail-view.tsx`):
+    - Thiết kế khối cảnh báo an toàn thực phẩm với viền cam/hổ phách nổi bật, icon `AlertTriangle`, nhãn dị ứng to rõ và lời khuyên an toàn thực phẩm ngay trên danh sách nguyên liệu.
+  - Gom nhóm nguyên liệu & icon nhận diện tại `/categories#tra-cuu`:
+    - Tạo `ingredient-group.model.ts` và tiện ích `food-group-themes.ts` kèm 5 unit tests (`food-group-themes.test.ts`).
+    - Cập nhật `IngredientSearch` (`ingredient-search.tsx`): Nhóm các nguyên liệu theo Rau củ, Ngũ cốc, Đậu, Trái cây, Nấm... có tiêu đề nhóm, số lượng và mỗi thẻ nguyên liệu có ô icon vector nổi bật ở đầu thẻ.
+  - Ẩn Footer trên các màn hình công cụ:
+    - Tạo helper `isFooterHidden` trong `site-footer-routes.ts` kèm 6 unit tests (`site-footer-routes.test.ts`).
+    - Cập nhật `SiteFooter` (`site-footer.tsx`) tự động ẩn trên `/meal-plans`, `/restaurants` và `/assistant`.
+- File tạo/sửa:
+  - `src/features/recipe/types/recipe.model.ts`
+  - `src/features/recipe/types/recipe.dto.ts`
+  - `src/features/recipe/mappers/recipe.mapper.ts`
+  - `src/features/recipe/mappers/recipe.mapper.test.ts`
+  - `src/features/recipe/components/recipe-card.tsx`
+  - `src/features/recipe/components/recipe-allergen-highlight.tsx`
+  - `src/features/recipe/components/recipe-detail-view.tsx`
+  - `src/features/ingredient/types/ingredient-group.model.ts`
+  - `src/features/ingredient/utils/food-group-themes.ts`
+  - `src/features/ingredient/utils/food-group-themes.test.ts`
+  - `src/features/ingredient/components/ingredient-search.tsx`
+  - `src/components/layout/site-footer-routes.ts`
+  - `src/components/layout/site-footer-routes.test.ts`
+  - `src/components/layout/site-footer.tsx`
+  - `docs/WORK-LOG.md`
+  - `specs/007-enhance-recipe-category-ui/tasks.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 49 test files, 592/592 tests pass (100%).
+  - `npm run build`: Turbopack compile thành công 46/46 static & dynamic routes.
+
+
+## [2026-10-12] — Ẩn huy hiệu nguồn kiểm định (SourceProvenanceBadge) trong modal Dinh dưỡng tại /categories#tra-cuu
+
+- Mục tiêu:
+  - Ẩn nút/huy hiệu nguồn dữ liệu kiểm định "VeggieConnect Curated Plant F..." trong modal thông tin dinh dưỡng 100g của nguyên liệu tại trang `/categories#tra-cuu` theo phản hồi giao diện của người dùng.
+- Đã làm:
+  - Bổ sung prop tùy chọn `showProvenance?: boolean` (mặc định là `true`) vào `NutritionFactsPanelProps` trong `src/features/food-data/components/nutrition-facts-panel.tsx`.
+  - Cập nhật điều kiện hiển thị cho `SourceProvenanceBadge` và skeleton tương ứng trong `NutritionFactsPanel`.
+  - Truyền `showProvenance={false}` vào `<NutritionFactsPanel>` trong modal tra cứu nguyên liệu tại `src/features/ingredient/components/ingredient-search.tsx` (trang `/categories#tra-cuu`).
+- File sửa:
+  - `src/features/food-data/components/nutrition-facts-panel.tsx`
+  - `src/features/ingredient/components/ingredient-search.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 47 test files / 577 tests pass 100%.
+
 ## [2026-10-12] — Tối ưu hiển thị dữ liệu, thêm timeout API và hoàn thiện trạng thái Loading trang /restaurants
 
 - Mục tiêu:

@@ -46,6 +46,8 @@ export interface RecipeDetailDto extends BasePostDto {
     traditionWarnings?: TraditionWarningDto[];
     dietCompatibilities?: DietCompatibilityDto[];
     ingredients?: RecipeIngredientDto[];
+    /** Số người đang sử dụng công thức (nếu backend trả về). */
+    usageCount?: number;
   } | null;
 }
 
