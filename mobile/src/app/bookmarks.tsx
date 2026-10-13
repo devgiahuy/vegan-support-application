@@ -55,7 +55,7 @@ export default function BookmarksScreen() {
   const colors = useIconColors();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { data, isLoading, isError, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } =
-    useInfiniteMyBookmarksQuery({ limit: 20 });
+    useInfiniteMyBookmarksQuery({ limit: 20 }, { enabled: isAuthenticated });
   const items = data?.pages.flatMap((page) => page.items) ?? [];
 
   if (!isAuthenticated) {

@@ -55,9 +55,12 @@ export function useSubmitRestaurantMutation() {
 /** Các quán tôi đã đề xuất. */
 export function useMyRestaurantsQuery() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: RESTAURANT_KEYS.mine(),
-    queryFn: () => restaurantApi.getMine(),
+    queryFn: ({ pageParam }) => restaurantApi.getMine(pageParam),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.page * lastPage.limit < lastPage.total ? lastPage.page + 1 : undefined,
     staleTime: 30 * 1000,
     enabled: isAuthenticated,
   });

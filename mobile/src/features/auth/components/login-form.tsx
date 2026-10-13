@@ -80,7 +80,7 @@ export function LoginForm({ onSuccess }: { onSuccess?: () => void }) {
         name="email"
         render={({ field }) => (
           <TextField
-            label="Email hoặc Tên đăng nhập"
+            label="Email"
             icon={Mail}
             keyboardType="email-address"
             autoCapitalize="none"

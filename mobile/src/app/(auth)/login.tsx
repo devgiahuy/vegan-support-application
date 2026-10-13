@@ -1,9 +1,10 @@
 import * as React from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link, router } from 'expo-router';
+import { Link, router, useLocalSearchParams } from 'expo-router';
 import { Leaf, ShieldCheck, X } from 'lucide-react-native';
 import { LoginForm } from '@/features/auth/components/login-form';
+import { goBackOrHome } from '@/lib/navigation';
 import { useIconColors } from '@/lib/theme-colors';
 
 /**
@@ -12,6 +13,7 @@ import { useIconColors } from '@/lib/theme-colors';
  */
 export default function LoginScreen() {
   const colors = useIconColors();
+  const { expired } = useLocalSearchParams<{ expired?: string }>();
 
   return (
     <SafeAreaView className="flex-1 bg-background">
@@ -39,8 +41,16 @@ export default function LoginScreen() {
               Tiếp tục hành trình ẩm thực chay thanh nhẹ và đầy đủ vi chất mỗi ngày.
             </Text>
 
+            {expired === '1' ? (
+              <View className="mt-4 rounded-xl border border-border bg-muted p-3">
+                <Text className="text-sm text-foreground">
+                  Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.
+                </Text>
+              </View>
+            ) : null}
+
             <View className="mt-6">
-              <LoginForm onSuccess={() => router.replace('/')} />
+              <LoginForm onSuccess={goBackOrHome} />
             </View>
 
             <Text className="mt-6 text-center text-xs text-muted-foreground">

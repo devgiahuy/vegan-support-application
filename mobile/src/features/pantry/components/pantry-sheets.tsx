@@ -206,7 +206,7 @@ export function PantryItemSheet({
     }
   };
   return (
-    <FormSheet title={item.displayName} onClose={onClose} busy={busy}>
+    <FormSheet title={item.displayName} onClose={onClose} busy={busy} variant="popup">
       <Text className="text-sm text-muted-foreground">Hiện có: {item.formattedQuantity}</Text>
       {refreshed ? (
         <Text className="text-xs text-primary">Mục này đã thay đổi, thông tin đã được tải lại theo bản mới nhất.</Text>

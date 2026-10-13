@@ -62,6 +62,8 @@ const STALE_AFTER_MS = 30 * 24 * 60 * 60 * 1000;
 
 /** Backend giới hạn tối đa 20 quán mỗi trang. */
 export const PAGE_SIZE = 20;
+/** Số quán mỗi trang của `GET /restaurants/mine`. */
+export const MINE_PAGE_SIZE = 20;
 
 const STATUS_LABELS: Record<SubmittedRestaurantStatus, string> = {
   PENDING: 'Chờ duyệt',
@@ -154,6 +156,7 @@ export class RestaurantMapper extends BaseMapper<RestaurantPlaceDto, Restaurant>
         total: safeNumber(pickField(meta, ['total'], items.length), items.length),
         resultsTruncated: safeBoolean(pickField(meta, ['resultsTruncated'], false)),
         externalDataUnavailable: safeBoolean(pickField(meta, ['externalDataUnavailable'], false)),
+        externalResultsSuppressed: safeBoolean(pickField(meta, ['externalResultsSuppressed'], false)),
       },
     };
   }
@@ -210,7 +213,12 @@ export class RestaurantMapper extends BaseMapper<RestaurantPlaceDto, Restaurant>
     );
     const items = rawItems.map((item) => this.toSubmittedModel(item)).filter((item) => item.id.length > 0);
     const meta = pickField(dto, ['meta'], null);
-    return { items, total: safeNumber(pickField(meta, ['total'], items.length), items.length) };
+    return {
+      items,
+      page: safeNumber(pickField(meta, ['page'], 1), 1),
+      limit: safeNumber(pickField(meta, ['limit'], MINE_PAGE_SIZE), MINE_PAGE_SIZE),
+      total: safeNumber(pickField(meta, ['total'], items.length), items.length),
+    };
   }
 
   toSubmitDto(input: SubmitRestaurantInput): SubmitRestaurantRequestDto {

@@ -21,7 +21,10 @@ export interface CreateVideoInput {
   title: string;
   excerpt?: string;
   body: string;
-  youtubeUrl: string;
+  /** Link YouTube/URL video. Bỏ trống khi dùng `videoAssetId`. */
+  youtubeUrl?: string;
+  /** Id asset video đã tải lên và commit; dùng thay cho `youtubeUrl`. */
+  videoAssetId?: string;
   categoryIds?: string[];
   tags?: string[];
   /** Id asset ảnh bìa đã tải lên và commit (Phase 15); bỏ trống = không có ảnh bìa. */
@@ -32,16 +35,17 @@ export interface UpdateVideoInput extends CreateVideoInput {
   expectedVersion: number;
 }
 
-function buildVideoMedia(input: Pick<CreateVideoInput, 'coverAssetId' | 'youtubeUrl'>): CreateVideoPostRequestDto['media'] {
+function buildVideoMedia(
+  input: Pick<CreateVideoInput, 'coverAssetId' | 'youtubeUrl' | 'videoAssetId'>
+): CreateVideoPostRequestDto['media'] {
+  const video: CreateVideoPostRequestDto['media'][number] = input.videoAssetId
+    ? { provider: 'CLOUDINARY', kind: 'VIDEO', assetId: input.videoAssetId }
+    : { provider: 'YOUTUBE', kind: 'VIDEO', secureUrl: input.youtubeUrl ?? '' };
   return [
     ...(input.coverAssetId
       ? [{ provider: 'CLOUDINARY' as const, kind: 'COVER_IMAGE' as const, assetId: input.coverAssetId }]
       : []),
-    {
-      provider: 'YOUTUBE',
-      kind: 'VIDEO',
-      secureUrl: input.youtubeUrl,
-    },
+    video,
   ];
 }
 

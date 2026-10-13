@@ -4,6 +4,7 @@ import { Link, type Href, useRouter } from 'expo-router';
 import { ArrowLeft, CalendarPlus, Minus, Plus, X } from 'lucide-react-native';
 
 import { MealType } from '@/common/enums';
+import { LoadMoreButton } from '@/components/shared/load-more-button';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/state-views';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { useIconColors } from '@/lib/theme-colors';
@@ -12,7 +13,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import {
   useManualAddMealMutation,
   useMealPlanDetailQuery,
-  useMealPlansQuery,
+  useInfiniteMealPlansQuery,
 } from '../queries/meal-plan.queries';
 import type { MealPlan, MealSlot } from '../types/meal-plan.model';
 import { createIdempotencyKey } from '../utils/idempotency';
@@ -47,12 +48,12 @@ function Body({
   const [planId, setPlanId] = React.useState<string | null>(null);
   const [servings, setServings] = React.useState(1);
 
-  const plansQuery = useMealPlansQuery({ page: 1, limit: 10 });
+  const plansQuery = useInfiniteMealPlansQuery(10);
   const detailQuery = useMealPlanDetailQuery(planId ?? '', planId !== null);
   const manualAdd = useManualAddMealMutation();
 
   const plan = detailQuery.data;
-  const plans = plansQuery.data?.items ?? [];
+  const plans = plansQuery.data?.pages.flatMap((page) => page.items) ?? [];
 
   const addToSlot = async (slot: MealSlot) => {
     if (!plan) return;
@@ -123,6 +124,11 @@ function Body({
                   </Text>
                 </Pressable>
               ))}
+              <LoadMoreButton
+                hasNextPage={plansQuery.hasNextPage}
+                isFetchingNextPage={plansQuery.isFetchingNextPage}
+                onPress={() => void plansQuery.fetchNextPage()}
+              />
             </>
           )
         ) : detailQuery.isLoading ? (

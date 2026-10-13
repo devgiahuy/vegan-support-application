@@ -13,7 +13,7 @@ const transport: ImageUploadTransport = {
   async send(config, image, progress) {
     const form = new FormData();
     if (Platform.OS === 'web') {
-      if (!image.file) throw new Error('Không đọc được tệp ảnh đã chọn.');
+      if (!image.file) throw new Error('Không đọc được tệp đã chọn.');
       form.append('file', image.file);
     } else {
       // React Native serializes URI file descriptors as multipart file parts.
@@ -25,7 +25,8 @@ const transport: ImageUploadTransport = {
     }
     Object.entries(config.fields).forEach(([name, value]) => form.append(name, value));
     const res = await axios.post<ProviderUploadResponseDto>(config.url, form, {
-      timeout: 120000,
+      // Video lớn cần nhiều thời gian hơn ảnh trên mạng di động.
+      timeout: image.mimeType.startsWith('video/') ? 600000 : 120000,
       onUploadProgress: (event) => {
         if (event.total) progress(Math.min(99, Math.round((event.loaded * 100) / event.total)));
       },

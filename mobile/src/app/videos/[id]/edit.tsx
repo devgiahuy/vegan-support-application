@@ -71,7 +71,8 @@ export default function EditVideoScreen() {
           initial={{
             title: video.title,
             excerpt: video.excerpt,
-            youtubeUrl: video.videoUrl,
+            youtubeUrl: video.provider === 'CLOUDINARY' ? '' : video.videoUrl,
+            uploadedVideo: video.provider === 'CLOUDINARY',
             body: video.summary,
             tags: video.tags,
             categoryId: video.category.id || null,
@@ -87,6 +88,7 @@ export default function EditVideoScreen() {
                   title: values.title,
                   excerpt: values.excerpt,
                   youtubeUrl: values.youtubeUrl,
+                  videoAssetId: values.videoAssetId,
                   body: values.body,
                   categoryIds: values.categoryIds,
                   tags: values.tags,

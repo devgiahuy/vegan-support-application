@@ -2,6 +2,7 @@ import { Modal, Pressable, ScrollView, Text, View, StyleSheet } from 'react-nati
 import { Link, type Href } from 'expo-router';
 import { Compass, LogIn, MessageSquare, MessagesSquare, Plus, Sparkles, X } from 'lucide-react-native';
 
+import { LoadMoreButton } from '@/components/shared/load-more-button';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { useIconColors } from '@/lib/theme-colors';
 import { cn } from '@/lib/utils';
@@ -32,7 +33,7 @@ export function SessionListSheet({
   const colors = useIconColors();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const sessionsQuery = useChatSessionsQuery();
-  const sessions = sessionsQuery.data?.items ?? [];
+  const sessions = sessionsQuery.data?.pages.flatMap((page) => page.items) ?? [];
 
   if (!visible) return null;
 
@@ -116,6 +117,13 @@ export function SessionListSheet({
                 );
               })
             )}
+            {isAuthenticated ? (
+              <LoadMoreButton
+                hasNextPage={sessionsQuery.hasNextPage}
+                isFetchingNextPage={sessionsQuery.isFetchingNextPage}
+                onPress={() => void sessionsQuery.fetchNextPage()}
+              />
+            ) : null}
           </ScrollView>
         </View>
       </View>
