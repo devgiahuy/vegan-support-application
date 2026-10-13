@@ -191,3 +191,9 @@ Regenerate/validate OpenAPI using the repository workflow. Live external-provide
 ## 9. Persistence replacement — 2026-10-07
 
 User-approved cross-phase maintenance replaces PostgreSQL with MongoDB; this is not a new numbered product phase. Historical prompts and SQL migrations are archived context. Current provisioning uses `npm run prisma:push` (native validators/indexes), not Prisma Migrate. UUID contracts, permissions and confirmation boundaries remain unchanged. Historical-data preservation is optional. MongoDB maintenance gate: schema provisioning, idempotent seed, backend lint/typecheck/build, OpenAPI synchronization, existing acceptance flows and frontend compatibility checks passed on 2026-10-07. Verification record and operational instructions: [MONGODB_MIGRATION.md](MONGODB_MIGRATION.md). Phase 27 retains its existing release limitations.
+
+## 10. Sandbox billing extension — approved 2026-10-13
+
+Separate user-authorized extension, not a numbered Phase 28. Scope: one-time AI usage and Pantry capacity packages, VNPAY Sandbox and explicit local simulation, owner-only contracts, transactionally deduplicated grants/debits, scan attempt fencing/recovery and capacity checks on all three insert paths. Billing remains disabled by default and cannot run in production. Media storage, subscriptions and real-money refunds are deferred.
+
+Backend demo gate: Mongo validators/indexes/backfill/seed, authorization, lint/typecheck/build, OpenAPI and local acceptance pass. Signed VNPAY protocol fixtures pass; external merchant sandbox acceptance remains pending credentials. Phases 21–22 remain IN_PROGRESS for live image validation, and Phase 27 release limitations remain unchanged. Setup and verification: [BILLING_DEMO.md](../../docs/BILLING_DEMO.md).

@@ -7,6 +7,10 @@
     "node": ">=22.0.0"
   },
   "scripts": {
+    "billing:demo": "tsx src/modules/billing/billing.demo.ts",
+    "billing:acceptance": "tsx src/modules/billing/billing.acceptance.ts",
+    "billing:cleanup": "tsx src/modules/billing/billing-maintenance.ts cleanup",
+    "billing:reconcile": "tsx src/modules/billing/billing-maintenance.ts reconcile",
     "dev": "tsx watch src/server.ts",
     "build": "prisma generate && tsc -p tsconfig.build.json && tsc -p tsconfig.seed.json",
     "start": "npm run build && node dist/server.js",

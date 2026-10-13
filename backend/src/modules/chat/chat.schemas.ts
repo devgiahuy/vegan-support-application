@@ -91,6 +91,7 @@ const quotaSchema = z
     limit: z.number().int().positive(),
     used: z.number().int().nonnegative(),
     remaining: z.number().int().nonnegative(),
+    paidRemaining: z.number().int().nonnegative().optional(),
     resetAt: z.string().datetime(),
   })
   .strict();

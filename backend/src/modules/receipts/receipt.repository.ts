@@ -1,3 +1,5 @@
+import { AppError } from '../../common/errors/app-error.js';
+import type { EntitlementService } from '../entitlements/entitlement.service.js';
 import { lockDocument } from '../../database/locking.js';
 import type { Prisma } from '@prisma/client';
 import {
@@ -58,7 +60,10 @@ export interface ConversionSnapshot {
 }
 
 export class ReceiptRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly entitlements?: EntitlementService,
+  ) {}
 
   findOwnedAssets(ownerId: string, assetIds: string[]) {
     return this.prisma.mediaAsset.findMany({
@@ -81,6 +86,7 @@ export class ReceiptRepository {
     requestHash: string;
   }): Promise<{ job: ReceiptJobRecord; created: boolean }> {
     return this.prisma.$transaction(async (transaction) => {
+      await lockDocument(transaction, 'user', { id: data.ownerId });
       const existing = await transaction.receiptJob.findUnique({
         where: {
           ownerId_idempotencyKey: {
@@ -103,16 +109,19 @@ export class ReceiptRepository {
         },
         include: jobInclude,
       });
+      await this.entitlements?.reserve(transaction, data.ownerId, 'RECEIPT', 'RECEIPT:' + job.id);
       return { job, created: true };
     });
   }
 
-  findOwnedJob(ownerId: string, id: string) {
+  async findOwnedJob(ownerId: string, id: string) {
+    await this.entitlements?.recover(new Date(), ownerId);
     return this.prisma.receiptJob.findFirst({ where: { id, ownerId }, include: jobInclude });
   }
 
   async startProcessing(ownerId: string, id: string): Promise<ReceiptJobRecord | null> {
     return this.prisma.$transaction(async (transaction) => {
+      await lockDocument(transaction, 'user', { id: ownerId });
       const updated = await transaction.receiptJob.updateMany({
         where: { id, ownerId, status: ReceiptJobStatus.QUEUED },
         data: {
@@ -136,6 +145,7 @@ export class ReceiptRepository {
 
   async saveResults(data: {
     jobId: string;
+    expectedAttempt?: number;
     inputs: Array<{ inputId: string; error: { code: string; message: string } | null }>;
     candidates: ReceiptCandidateData[];
     metadata: {
@@ -148,7 +158,10 @@ export class ReceiptRepository {
   }): Promise<ReceiptJobRecord> {
     return this.prisma.$transaction(async (transaction) => {
       const current = await transaction.receiptJob.findUniqueOrThrow({ where: { id: data.jobId } });
-      if (current.status !== ReceiptJobStatus.PROCESSING) {
+      if (
+        current.status !== ReceiptJobStatus.PROCESSING ||
+        (data.expectedAttempt !== undefined && current.attemptCount !== data.expectedAttempt)
+      ) {
         return transaction.receiptJob.findUniqueOrThrow({
           where: { id: data.jobId },
           include: jobInclude,
@@ -171,6 +184,11 @@ export class ReceiptRepository {
           data: data.candidates.map((candidate) => ({ jobId: data.jobId, ...candidate })),
         });
       const failedCount = data.inputs.filter((input) => input.error).length;
+      await this.entitlements?.settle(
+        transaction,
+        'RECEIPT:' + data.jobId,
+        failedCount < data.inputs.length,
+      );
       await transaction.receiptJob.update({
         where: { id: data.jobId },
         data: {
@@ -199,16 +217,26 @@ export class ReceiptRepository {
     });
   }
 
-  async markFailed(id: string): Promise<void> {
-    await this.prisma.receiptJob.updateMany({
-      where: { id, status: ReceiptJobStatus.PROCESSING },
-      data: {
-        status: ReceiptJobStatus.FAILED,
-        errorCode: 'RECEIPT_PROVIDER_UNAVAILABLE',
-        errorMessage:
-          'Receipt extraction is temporarily unavailable. Retry later or update pantry manually.',
-        processingCompletedAt: new Date(),
-      },
+  async markFailed(id: string, expectedAttempt?: number): Promise<void> {
+    await this.prisma.$transaction(async (transaction) => {
+      const job = await transaction.receiptJob.findUnique({ where: { id } });
+      if (
+        !job ||
+        job.status !== ReceiptJobStatus.PROCESSING ||
+        (expectedAttempt !== undefined && job.attemptCount !== expectedAttempt)
+      )
+        return;
+      await lockDocument(transaction, 'user', { id: job.ownerId });
+      await transaction.receiptJob.update({
+        where: { id },
+        data: {
+          status: ReceiptJobStatus.FAILED,
+          errorCode: 'RECEIPT_PROVIDER_UNAVAILABLE',
+          errorMessage: 'Phân tích tạm thời không khả dụng. Lần thử này không trừ thêm lượt.',
+          processingCompletedAt: new Date(),
+        },
+      });
+      await this.entitlements?.settle(transaction, 'RECEIPT:' + id, false);
     });
   }
 
@@ -281,11 +309,13 @@ export class ReceiptRepository {
 
   async cancel(ownerId: string, id: string): Promise<ReceiptJobRecord | null> {
     return this.prisma.$transaction(async (transaction) => {
+      await lockDocument(transaction, 'user', { id: ownerId });
       const job = await transaction.receiptJob.findFirst({ where: { id, ownerId } });
       if (!job) return null;
       if (job.status === ReceiptJobStatus.CANCELLED)
         return transaction.receiptJob.findUniqueOrThrow({ where: { id }, include: jobInclude });
       if (job.status === ReceiptJobStatus.CONFIRMED) throw new ReceiptConflictError();
+      await this.entitlements?.settle(transaction, 'RECEIPT:' + id, false);
       await transaction.receiptJob.update({
         where: { id },
         data: { status: ReceiptJobStatus.CANCELLED, cancelledAt: new Date() },
@@ -296,6 +326,7 @@ export class ReceiptRepository {
 
   async queueRetry(ownerId: string, id: string, key: string, requestHash: string) {
     return this.prisma.$transaction(async (transaction) => {
+      await lockDocument(transaction, 'user', { id: ownerId });
       const job = await transaction.receiptJob.findFirst({ where: { id, ownerId } });
       if (!job) return null;
       if (job.lastRetryKey === key) {
@@ -310,9 +341,24 @@ export class ReceiptRepository {
       }
       if (job.status !== ReceiptJobStatus.FAILED && job.status !== ReceiptJobStatus.PARTIAL_FAILED)
         throw new ReceiptConflictError();
+      if (
+        this.entitlements?.config.billing.enabled &&
+        job.attemptCount >= this.entitlements.config.billing.scanMaxAttempts
+      )
+        throw new AppError({
+          statusCode: 409,
+          code: 'SCAN_RETRY_LIMIT_EXCEEDED',
+          message: 'Đã hết số lần thử lại cho tác vụ này. Tạo tác vụ mới để tiếp tục.',
+        });
+      await this.entitlements?.reserve(transaction, ownerId, 'RECEIPT', 'RECEIPT:' + id);
       await transaction.receiptJob.update({
         where: { id },
-        data: { status: ReceiptJobStatus.QUEUED, lastRetryKey: key, lastRetryHash: requestHash },
+        data: {
+          status: ReceiptJobStatus.QUEUED,
+          queuedAt: new Date(),
+          lastRetryKey: key,
+          lastRetryHash: requestHash,
+        },
       });
       return {
         job: await transaction.receiptJob.findUniqueOrThrow({ where: { id }, include: jobInclude }),
@@ -425,6 +471,7 @@ export class ReceiptRepository {
           pantryItemId = existing.id;
           action = 'UPDATED';
         } else {
+          await this.entitlements?.assertPantryCapacity(transaction, data.ownerId);
           const created = await transaction.pantryItem.create({
             data: {
               ownerId: data.ownerId,

@@ -1,5 +1,7 @@
 'use client';
 
+import { BILLING_QUERY_KEYS } from '@/features/billing/queries/billing.queries';
+
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -145,13 +147,16 @@ export function useSendChatMessage(
           {
             onDelta: (_, fullContent) =>
               setState((prev) => ({ ...prev, streamingContent: fullContent })),
-            onQuota: (quota) => setState((prev) => ({ ...prev, quota })),
+            onQuota: (quota) => {
+              setState((prev) => ({ ...prev, quota }));
+              void queryClient.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
+            },
             onErrorEvent: (code, message) =>
               setState((prev) => ({
                 ...prev,
                 maintenance: code === 'AI_FEATURE_DISABLED' ? true : prev.maintenance,
                 streamError:
-                  code === 'AI_QUOTA_EXCEEDED'
+                  code === 'AI_QUOTA_EXCEEDED' || code === 'ENTITLEMENT_QUOTA_EXCEEDED'
                     ? 'Bạn đã hết lượt hôm nay.'
                     : code === 'AI_FEATURE_DISABLED'
                       ? 'Trợ lý đang bảo trì. Vui lòng quay lại sau.'
@@ -192,12 +197,13 @@ export function useSendChatMessage(
           }));
           return;
         }
-        if (code === 'AI_QUOTA_EXCEEDED') {
+        if (code === 'AI_QUOTA_EXCEEDED' || code === 'ENTITLEMENT_QUOTA_EXCEEDED') {
           setState((prev) => ({
             ...prev,
             isStreaming: false,
             pendingUserContent: null,
-            streamError: 'Bạn đã hết lượt hôm nay. Hạn mức cấp lại lúc nửa đêm.',
+            streamError:
+              'Bạn đã hết lượt hiện có. Lượt miễn phí cấp lại lúc nửa đêm; có thể mua thêm gói tiện ích.',
           }));
           return;
         }

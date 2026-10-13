@@ -1,3 +1,4 @@
+import { registerBillingOpenApi } from '../modules/billing/billing.openapi.js';
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import { errorResponseSchema } from '../common/schemas/api-envelope.schemas.js';
 import {
@@ -67,6 +68,7 @@ registerMealPlanOpenApi(registry, registeredErrorResponse);
 registerMealAnalysisOpenApi(registry, registeredErrorResponse);
 registerMealProgramOpenApi(registry, registeredErrorResponse);
 registerChatOpenApi(registry, registeredErrorResponse);
+registerBillingOpenApi(registry, registeredErrorResponse);
 registerFoodDataOpenApi(registry, registeredErrorResponse);
 registerRecipeNutritionOpenApi(registry, registeredErrorResponse);
 registerStorageOpenApi(registry, registeredErrorResponse);
@@ -91,6 +93,7 @@ const generatedDocument = generator.generateDocument({
   },
   servers: [{ url: 'http://localhost:4000', description: 'Local development' }],
   tags: [
+    { name: 'Billing', description: 'Sandbox package purchases and allowances' },
     { name: 'Foundation', description: 'Service health and foundation contract' },
     { name: 'Auth', description: 'Authentication and refresh-session lifecycle' },
     { name: 'Users', description: 'Authenticated user contract' },

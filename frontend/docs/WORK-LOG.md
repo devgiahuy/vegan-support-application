@@ -1,5 +1,26 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-13] — Payment sandbox và hạn mức chat, phân tích ảnh/hóa đơn, tủ đồ ăn
+
+- Mục tiêu: Phân tích rồi implement ngay web và mobile development/demo, chọn provider thuận tiện chạy sandbox, tự quyết các option trong phạm vi người dùng đã duyệt.
+- Đã làm:
+  - Chọn VNPAY Sandbox làm adapter ngoài; local sandbox rõ nhãn mô phỏng cho demo không cần merchant registration. Billing opt-in, chặn production. Gói một lần cộng dồn, giá minh họa, không tự gia hạn/không hết hạn demo; không cấp role hay dung lượng media.
+  - Backend: catalog/order snapshot, owner authorization, idempotency, IPN/querydr ký HMAC, return chỉ redirect, ledger cấp một lần; giữ/trừ/trả lượt chat và job quét có khóa transaction/fencing, recovery lease và tối đa ba attempt mặc định. Pantry kiểm tra đồng thời ở thêm tay và hai confirm, tính tất cả item chưa xóa.
+  - Mongo: thêm collection/schema/index/validator và backfill queued timestamp; seed giữ catalog đã cấu hình. Script demo chạy trên DB riêng, có login mẫu, cleanup/reconcile và acceptance theo convention backend hiện có.
+  - Web/mobile: DTO/Model/Mapper/API/Query/UI riêng, endpoint constants, query key theo owner, polling dừng khi terminal, invalidate sau mutation, business errors và loading/error/empty/success; trang `/billing`, entry account/Profile và allowance notices ở Pantry/chat/scan. Mobile web dùng cùng tab tránh popup blocking; native dùng system browser và refresh khi focus.
+  - Sửa session restoration khi quay lại checkout: AuthProvider chờ refresh kết thúc, AuthGuard giữ query của đơn và refresh timeout 15 giây. Không đổi auth contract.
+  - Đồng bộ Swagger trước consumer; cập nhật SRS/plan/roadmap, phase completion, integration registry, spec 030 và hướng dẫn demo cùng ảnh bằng chứng.
+- File tạo/sửa: `backend/src/modules/billing/**`, `backend/src/modules/entitlements/**`, Prisma/native provisioning, chat/pantry/scan repositories; `frontend/src/features/billing/**`, web route, các consumers liên quan; `mobile/src/features/billing/**`, mobile route/entry/consumers; docs và OpenAPI/catalog.
+- Verify:
+  - Backend lint/typecheck/build/OpenAPI pass; schema/seed DB riêng pass; billing acceptance pass (callback replay, owner, amount, late success, free/paid chat SSE/replay, cross-midnight stale worker, final-credit/final-slot race, all confirmation paths, scan retry/empty/partial/failure/recovery và VNPAY signed fixtures). Vision/receipt acceptance fake pass. Không thêm backend unit/integration infrastructure.
+  - Web tsc pass; 600 tests/50 files pass; Next build pass. Lint các consumer thay đổi 0 lỗi/3 cảnh báo nền; full lint còn 89 lỗi/347 cảnh báo ngoài feature.
+  - Mobile tsc/lint pass; 3 mapper tests pass; web export 64 routes và Android Hermes export pass khi cấu hình API demo.
+  - Browser login, mua combo, cancel/fail không cộng thêm, reload/return giữ phiên và đơn, Profile mobile entry/checkout, số dư/lịch sử chung pass; mobile 390px không tràn ngang. Lưu `docs/billing-evidence/web-paid.png` và `mobile-390.png`.
+- PROGRESS: Sandbox extension 0% → 100% trong phạm vi development/demo. Backend scan endpoints vẫn IN_PROGRESS; không đổi production phase completion.
+- Còn lại / rủi ro: External VNPAY end-to-end cần merchant credentials/IPN HTTPS; native device/camera/iOS acceptance chưa chạy. Fake scan không chứng minh độ chính xác AI; upload ảnh tiếp tục cần Cloudinary. Không đăng ký hộ merchant, không gọi thanh toán tiền thật, không sửa shared `.env` hoặc database hiện hữu. Setup: `../../docs/BILLING_DEMO.md`.
+
+---
+
 ## [2026-10-12] — Nâng cấp UI/UX: Thẻ công thức (/recipes), Cảnh báo dị ứng (/recipes/:id), Gom nhóm nguyên liệu (/categories#tra-cuu) & Ẩn footer (/meal-plans, /restaurants)
 
 - Mục tiêu:

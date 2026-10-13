@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
   "source": "../backend/openapi.json",
-  "generatedAt": "2026-10-08T06:34:30.235Z",
+  "generatedAt": "2026-10-13T12:49:22.928Z",
   "stats": {
-    "operations": 168,
-    "groups": 39,
-    "schemas": 150
+    "operations": 178,
+    "groups": 40,
+    "schemas": 154
   },
   "operations": [
     {
@@ -2904,6 +2904,368 @@
         "403": "ErrorResponse",
         "404": "ErrorResponse",
         "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/billing/products",
+      "group": "Billing",
+      "summary": "List demo packages and configured provider",
+      "operationId": "",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "BillingCatalogEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/entitlements/me",
+      "group": "Billing",
+      "summary": "Owned allowances, Pantry capacity and recent ledger",
+      "operationId": "",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "EntitlementEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/billing/orders",
+      "group": "Billing",
+      "summary": "Paginated owned payment history",
+      "operationId": "",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "BillingOrdersEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/billing/orders",
+      "group": "Billing",
+      "summary": "Create idempotent package order; server snapshots price and benefits",
+      "operationId": "",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "productId",
+            "idempotencyKey"
+          ],
+          "properties": {
+            "productId": {
+              "type": "string"
+            },
+            "idempotencyKey": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "201": "BillingOrderEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/billing/orders/{id}",
+      "group": "Billing",
+      "summary": "Read owned order; return page does not settle it",
+      "operationId": "",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "BillingOrderEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/billing/orders/{id}/reconcile",
+      "group": "Billing",
+      "summary": "Verify provider query and settle once; 5-minute throttle",
+      "operationId": "",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "BillingOrderEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/billing/vnpay/ipn",
+      "group": "Billing",
+      "summary": "VNPAY Sandbox signed server notification; grants once",
+      "operationId": "",
+      "params": [
+        {
+          "in": "query",
+          "name": "vnp_TxnRef",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "vnp_Amount",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "vnp_TmnCode",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "vnp_ResponseCode",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "vnp_TransactionStatus",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "vnp_TransactionNo",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "vnp_SecureHash",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "object"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/billing/vnpay/return",
+      "group": "Billing",
+      "summary": "Verify browser return and redirect; never grant",
+      "operationId": "",
+      "params": [
+        {
+          "in": "query",
+          "name": "vnp_TxnRef",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "vnp_Amount",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "vnp_TmnCode",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "vnp_ResponseCode",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "vnp_TransactionStatus",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "vnp_TransactionNo",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "vnp_SecureHash",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "303": "Configured application return URL",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/billing/sandbox/{id}",
+      "group": "Billing",
+      "summary": "Development-only simulated checkout, expiring order-bound capability",
+      "operationId": "",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "token",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "Explicit local simulation HTML",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/billing/sandbox/{id}",
+      "group": "Billing",
+      "summary": "Development-only simulated settlement; no real money",
+      "operationId": "",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "token",
+            "outcome"
+          ],
+          "properties": {
+            "token": {
+              "type": "string"
+            },
+            "outcome": {
+              "type": "string",
+              "enum": [
+                "PAID",
+                "CANCELLED",
+                "FAILED"
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "303": "Application return URL",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
       }
     },
     {

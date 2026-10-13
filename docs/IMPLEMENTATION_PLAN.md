@@ -1,12 +1,12 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.2
+**Version:** 4.3
 
-**Updated:** 2026-10-08
+**Updated:** 2026-10-13
 
 **Status:** Approved implementation baseline
 
-**Current backend baseline:** Phases 00–11 completed; Phase 12 is next
+**Current backend baseline:** Phases 00–20 and 23–26 completed; Phases 21–22 and 27 in progress; sandbox billing is a separately approved extension.
 
 ## 1. Document authority
 
@@ -40,6 +40,7 @@ The current API contract may still contain legacy Contributor subtype fields unt
 | D20 | Certificates | No certificate verification in MVP. Future evidence badges do not silently introduce Contributor permission tiers. |
 | D21 | Documentation | `docs/SRS.md` is canonical; runtime capability status stays in frontend integration docs; roadmap is separate from implementation phases. |
 | D22 | Safety | Nutrition, freshness, compatibility, BMI, and AI answers are educational support, not diagnosis or guaranteed safety. |
+| D23 | Sandbox billing | User-approved 2026-10-13: VNPAY Sandbox plus labeled local simulation; one-time cumulative AI usage/Pantry capacity packages, development/test only. No recurring or media-storage purchase. |
 
 ## 3. MVP scope
 
@@ -273,7 +274,7 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 3. Release expired/failed reservations and decrement committed use only after a valid asset deletion.
 4. Prevent concurrent uploads from exceeding quota.
 5. Return used, reserved, limit, and remaining bytes plus typed quota errors.
-6. Admin may configure policy or grant audited adjustments. MVP has no payment flow.
+6. Admin may configure policy or grant audited adjustments. Media-storage payment remains deferred; the approved sandbox extension sells AI usage and Pantry capacity separately.
 
 ### BL-09 — Custom meals and user tags
 
@@ -367,6 +368,16 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 - Soft-delete or anonymize where legal/audit retention is required.
 - Deletion jobs cover profile, health, behavior, AI, pantry, receipt, recognition, media, and location data according to policy.
 - Public content ownership/display after account deletion follows an explicit policy and audit trail.
+
+### BL-20 — Approved sandbox billing extension (2026-10-13)
+
+- Billing is opt-in and limited to development/test. Local checkout is explicitly simulated; the external adapter is VNPAY Sandbox. Production payment remains deferred.
+- Sell one-time cumulative packages for chat credits, fridge jobs, receipt jobs and additional Pantry slots. Demo benefits do not expire or grant roles/media storage. Prices and benefits are snapshotted on each order.
+- Only a verified provider IPN/query result (or guarded local simulation) may grant benefits. Browser return never grants. Duplicate payment events and concurrent callbacks grant once; a verified late success may upgrade an unpaid terminal order, while PAID never downgrades.
+- Chat consumes daily free quota first, then purchased credits. Reserve before provider work; complete atomically with the successful answer. Failures/fallbacks release; replay and stale workers cannot charge again or overwrite a newer attempt.
+- One bounded scan job costs one credit after any image succeeds, including a valid empty analysis. Total failure/cancellation before success releases it. Retries of an already charged job are free, with a configurable default maximum of three processing attempts. Expired queued/processing leases are fenced before release.
+- Pantry capacity counts every undeleted item, including zero quantity. Enforce the limit transactionally for manual creation and both scan confirmations. Existing over-limit items remain readable/editable/deletable; deletion/merge frees capacity. Results require explicit user confirmation before Pantry mutation.
+- Clients share account balances/history and use typed business errors. Mongo validators/indexes, additive queued timestamp backfill, idempotent seed, OpenAPI and consumer documentation are required release gates.
 
 ## 6. RBAC summary
 
@@ -540,6 +551,8 @@ A phase is complete only when:
 | Phase 2 ideas are forgotten or accidentally claimed READY | Dedicated roadmap plus explicit status taxonomy |
 
 ## 13. Change record
+
+- **4.3 — 2026-10-13:** User-authorized sandbox billing. Snapshot VND catalog/orders; verified IPN/query reconciliation and idempotent grants; free-first chat; one bounded scan job credit after any successful image; total failures release; charged retries free, default three processing attempts; undeleted Pantry count with transactional enforcement on all insert paths. No production billing, role grants or storage upgrades. Mongo native validators, queued timestamp backfill and worker/credit fencing are required. Checkout returns wait for session restoration and preserve order context.
 
 - **4.2 — 2026-10-08:** Reconcile dev estimated-macro planning/analysis updates with MongoDB persistence; preserve both approved decisions.
 

@@ -1,3 +1,4 @@
+import { BILLING_QUERY_KEYS } from '@/features/billing/queries/billing.queries';
 import * as React from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
@@ -61,7 +62,9 @@ export function useChatFeedbackMutation() {
       reason?: string;
     }) => chatApi.sendFeedback(vars.messageId, vars.value, vars.reason),
     onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.messages(vars.sessionId) });
+      queryClient.invalidateQueries({
+        queryKey: CHAT_QUERY_KEYS.messages(vars.sessionId),
+      });
     },
   });
 }
@@ -119,21 +122,33 @@ export function useSendChatMessage(sessionId: string) {
       }));
 
       try {
-        const result = await streamChatMessage(targetSessionId, trimmed, createChatIdempotencyKey(), controller.signal, {
-          onDelta: (_, fullContent) => setState((prev) => ({ ...prev, streamingContent: fullContent })),
-          onQuota: (quota) => setState((prev) => ({ ...prev, quota })),
-          onErrorEvent: (code, message) =>
-            setState((prev) => ({
-              ...prev,
-              maintenance: code === 'AI_FEATURE_DISABLED' ? true : prev.maintenance,
-              streamError:
-                code === 'AI_QUOTA_EXCEEDED'
-                  ? 'Bạn đã hết lượt hôm nay.'
-                  : code === 'AI_FEATURE_DISABLED'
-                    ? 'Trợ lý đang bảo trì. Vui lòng quay lại sau.'
-                    : message,
-            })),
-        });
+        const result = await streamChatMessage(
+          targetSessionId,
+          trimmed,
+          createChatIdempotencyKey(),
+          controller.signal,
+          {
+            onDelta: (_, fullContent) =>
+              setState((prev) => ({ ...prev, streamingContent: fullContent })),
+            onQuota: (quota) => {
+              setState((prev) => ({ ...prev, quota }));
+              void queryClient.invalidateQueries({
+                queryKey: BILLING_QUERY_KEYS.all,
+              });
+            },
+            onErrorEvent: (code, message) =>
+              setState((prev) => ({
+                ...prev,
+                maintenance: code === 'AI_FEATURE_DISABLED' ? true : prev.maintenance,
+                streamError:
+                  code === 'AI_QUOTA_EXCEEDED' || code === 'ENTITLEMENT_QUOTA_EXCEEDED'
+                    ? 'Bạn đã hết lượt hôm nay.'
+                    : code === 'AI_FEATURE_DISABLED'
+                      ? 'Trợ lý đang bảo trì. Vui lòng quay lại sau.'
+                      : message,
+              })),
+          }
+        );
 
         if (result.aborted) {
           setState((prev) => ({
@@ -146,7 +161,9 @@ export function useSendChatMessage(sessionId: string) {
         }
 
         if (result.completed) {
-          await queryClient.invalidateQueries({ queryKey: CHAT_QUERY_KEYS.messages(targetSessionId) });
+          await queryClient.invalidateQueries({
+            queryKey: CHAT_QUERY_KEYS.messages(targetSessionId),
+          });
         }
 
         setState((prev) => ({
@@ -160,8 +177,8 @@ export function useSendChatMessage(sessionId: string) {
         const streamError =
           code === 'AI_FEATURE_DISABLED'
             ? 'Trợ lý đang bảo trì. Lịch sử trò chuyện vẫn xem được.'
-            : code === 'AI_QUOTA_EXCEEDED'
-              ? 'Bạn đã hết lượt hôm nay. Hạn mức cấp lại lúc nửa đêm.'
+            : code === 'AI_QUOTA_EXCEEDED' || code === 'ENTITLEMENT_QUOTA_EXCEEDED'
+              ? 'Bạn đã hết lượt hiện có. Lượt miễn phí cấp lại lúc nửa đêm; có thể mua thêm gói tiện ích.'
               : code === 'AI_RATE_LIMITED'
                 ? 'Bạn thao tác quá nhanh. Vui lòng chờ giây lát rồi thử lại.'
                 : code === 'CHAT_REQUEST_IN_PROGRESS'

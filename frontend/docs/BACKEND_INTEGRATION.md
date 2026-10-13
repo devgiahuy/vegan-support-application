@@ -1,8 +1,8 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.28
+**Version:** 4.29
 
-**Cập nhật:** 08/10/2026
+**Cập nhật:** 13/10/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
@@ -13,6 +13,42 @@
 ---
 
 ## 1. Source of truth và status
+
+### Sandbox billing extension — 2026-10-13
+
+User authorized implementation and autonomous product decisions on 2026-10-13. One-time packages accumulate chat/job credits and Pantry capacity; purchases do not grant roles or media storage. Billing is opt-in (`BILLING_ENABLED=true`), development/test only. Prices are demonstration values, not a launched commercial offer.
+
+| Method | Endpoint | Status | FE integrated | Notes |
+| --- | --- | --- | --- | --- |
+| GET | `/billing/products` | `READY` | Yes, web/mobile 2026-10-13 | Authenticated catalog; enabled/provider/simulated disclosure |
+| POST | `/billing/orders` | `READY` | Yes, web/mobile 2026-10-13 | Owner idempotency, server price/benefit snapshot; maximum five unexpired pending orders |
+| GET | `/billing/orders` | `READY` | Yes, web/mobile 2026-10-13 | Owner history, 20/page |
+| GET | `/billing/orders/:id` | `READY` | Yes, web/mobile 2026-10-13 | Owner-only status/expiring checkout; return URL never grants |
+| POST | `/billing/orders/:id/reconcile` | `READY` | Yes, web/mobile 2026-10-13 | Verified VNPAY querydr, five-minute throttle; local sandbox only refreshes state |
+| GET | `/entitlements/me` | `READY` | Yes, web/mobile 2026-10-13 | Available/held credits, undeleted Pantry count and recent 20 ledger entries |
+| GET | `/billing/vnpay/ipn` | `READY` | N/A | Signed provider notification; atomic once-only grant |
+| GET | `/billing/vnpay/return` | `READY` | N/A | Verified display-only redirect |
+| GET/POST | `/billing/sandbox/:id` | `READY` | N/A | Local simulation only, expiring order-bound bearer checkout capability |
+
+Readiness evidence: Mongo schema provisioning/seed, owner and account-state authorization, backend lint/typecheck/build, generated OpenAPI and acceptance of local checkout, concurrent debit/capacity, signed VNPAY protocol fixtures. External VNPAY sandbox end-to-end acceptance remains pending merchant credentials; no real payment is claimed. Existing fridge/receipt endpoints remain `IN_PROGRESS` and keep their development exception.
+
+Additive chat SSE quota field: `paidRemaining`; `remaining` stays the free daily balance. Free quota is used first. Pantry creation and both confirmation paths may now return `PANTRY_CAPACITY_EXCEEDED` when billing is enabled. Scan job creation/retry may return `ENTITLEMENT_QUOTA_EXCEEDED` or `SCAN_RETRY_LIMIT_EXCEEDED`. One bounded multi-image job costs one credit once any image is successfully analyzed; total failure releases credit. Charged-job retries are free, maximum three processing attempts by default. Retry continues to regenerate all candidates; correction behavior is unchanged.
+
+| Error | Frontend handling |
+| --- | --- |
+| `BILLING_DISABLED` | Show unavailable state; retain readable history |
+| `BILLING_PRODUCT_UNAVAILABLE` | Refresh catalog |
+| `BILLING_ORDER_NOT_FOUND` | Show owner-scoped not-found state |
+| `BILLING_IDEMPOTENCY_CONFLICT` | Keep the original request; create a new intent for a different package |
+| `BILLING_PENDING_LIMIT` | Resume an existing pending order |
+| `BILLING_PROVIDER_UNAVAILABLE` | Keep order unconfirmed and offer later reconciliation |
+| `BILLING_SIGNATURE_INVALID`, `BILLING_PAYMENT_MISMATCH` | Do not show success or grant locally |
+| `BILLING_RECONCILE_COOLDOWN` | Ask user to wait at least five minutes |
+| `ENTITLEMENT_QUOTA_EXCEEDED` | Link to billing; do not retry automatically |
+| `PANTRY_CAPACITY_EXCEEDED` | Keep analysis output; select fewer items, delete/merge or buy space |
+| `SCAN_RETRY_LIMIT_EXCEEDED` | Explain retry cap; new job requires another allowance |
+
+Changelog 2026-10-13 (4.29): opt-in sandbox billing and transactional allowances, signed VNPAY adapter, explicit local simulation, scan recovery/fencing and Pantry capacity. Source implementation is complete for the demo contract; external merchant and native-device acceptance are separate gates.
 
 ### Mobile integration record — 2026-10-03
 
