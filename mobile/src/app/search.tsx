@@ -4,6 +4,7 @@ import { Link, type Href, useLocalSearchParams } from 'expo-router';
 import { Search as SearchIcon, X } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
+import { ErrorState } from '@/components/shared/state-views';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { RecipeCard } from '@/features/recipe/components/recipe-card';
 import { PostCard } from '@/features/post/components/post-card';
@@ -48,13 +49,28 @@ export default function SearchScreen() {
   const hasQuery = submittedQuery.trim().length > 0;
   const limit = tab === 'all' ? 4 : 20;
 
-  const { data: recipesPagination, isLoading: isRecipesLoading } = useRecipesQuery(
+  const {
+    data: recipesPagination,
+    isLoading: isRecipesLoading,
+    isError: isRecipesError,
+    refetch: refetchRecipes,
+  } = useRecipesQuery(
     hasQuery && (tab === 'all' || tab === 'recipes') ? { q: submittedQuery, limit } : undefined
   );
-  const { data: articlesPagination, isLoading: isArticlesLoading } = useArticlesQuery(
+  const {
+    data: articlesPagination,
+    isLoading: isArticlesLoading,
+    isError: isArticlesError,
+    refetch: refetchArticles,
+  } = useArticlesQuery(
     hasQuery && (tab === 'all' || tab === 'articles') ? { q: submittedQuery, limit } : undefined
   );
-  const { data: videosPagination, isLoading: isVideosLoading } = useVideosQuery(
+  const {
+    data: videosPagination,
+    isLoading: isVideosLoading,
+    isError: isVideosError,
+    refetch: refetchVideos,
+  } = useVideosQuery(
     hasQuery && (tab === 'all' || tab === 'videos') ? { q: submittedQuery, limit } : undefined
   );
 
@@ -63,6 +79,16 @@ export default function SearchScreen() {
   const videos = tab === 'all' || tab === 'videos' ? videosPagination?.items ?? [] : [];
   const isLoading = isRecipesLoading || isArticlesLoading || isVideosLoading;
   const totalResults = recipes.length + articles.length + videos.length;
+  // Chỉ coi là lỗi các nhóm đang được tìm ở tab hiện tại (query của nhóm khác bị tắt nên không tính).
+  const hasError =
+    (isRecipesError && (tab === 'all' || tab === 'recipes')) ||
+    (isArticlesError && (tab === 'all' || tab === 'articles')) ||
+    (isVideosError && (tab === 'all' || tab === 'videos'));
+  const retryAll = () => {
+    if (isRecipesError) void refetchRecipes();
+    if (isArticlesError) void refetchArticles();
+    if (isVideosError) void refetchVideos();
+  };
   const recipesTotal = recipesPagination?.metadata?.totalItems ?? recipes.length;
   const articlesTotal = articlesPagination?.metadata?.totalItems ?? articles.length;
   const videosTotal = videosPagination?.metadata?.totalItems ?? videos.length;
@@ -156,6 +182,12 @@ export default function SearchScreen() {
 
             {isLoading ? (
               <Text className="py-6 text-center text-sm text-muted-foreground">Đang tìm kiếm...</Text>
+            ) : hasError && totalResults === 0 ? (
+              <ErrorState
+                title="Không tìm kiếm được."
+                description="Kiểm tra kết nối mạng rồi thử lại."
+                onRetry={retryAll}
+              />
             ) : totalResults === 0 ? (
               <View className="items-center rounded-2xl border border-dashed border-border p-6">
                 <Text className="text-center font-semibold text-foreground">Không tìm thấy kết quả</Text>

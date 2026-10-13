@@ -9,10 +9,11 @@ import { TextField } from '@/components/ui/text-field';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/state-views';
 import { useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
 import { useCustomMealsQuery } from '@/features/custom-meal/queries/custom-meal.queries';
+import { ShoppingPreviewView } from '@/features/shopping/components/shopping-preview-view';
 import { useShoppingPreviewQuery } from '@/features/shopping/queries/shopping.queries';
 import type { SelectedShoppingMeal } from '@/features/shopping/types/shopping.model';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
-import { getApiErrorCode, getApiErrorMessage } from '@/lib/api-error';
+import { getApiErrorMessage } from '@/lib/api-error';
 import { useIconColors } from '@/lib/theme-colors';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -117,7 +118,7 @@ export default function ShoppingPreviewScreen() {
               className={`min-h-12 flex-1 items-center justify-center rounded-lg border ${source === value ? 'border-primary bg-primary/10' : 'border-border'}`}
             >
               <Text className="text-sm text-foreground">
-                {value === 'RECIPE' ? 'Công thức' : 'Món riêng'}
+                {value === 'RECIPE' ? 'Công thức' : 'Món ăn của tôi'}
               </Text>
             </Pressable>
           ))}
@@ -248,67 +249,7 @@ export default function ShoppingPreviewScreen() {
             else setRequest(selected);
           }}
         />
-        {request ? (
-          preview.isLoading ? (
-            <LoadingState message="Đang đối chiếu tủ bếp..." />
-          ) : preview.isError ? (
-            <ErrorState
-              title="Không tính được danh sách"
-              description={
-                getApiErrorCode(preview.error) === 'SHOPPING_MEAL_NOT_FOUND'
-                  ? 'Có món đã bị xóa hoặc không còn truy cập được. Bỏ món đó rồi tính lại.'
-                  : getApiErrorMessage(preview.error)
-              }
-              onRetry={() => void preview.refetch()}
-            />
-          ) : preview.data ? (
-            <>
-              <Text className="text-lg font-bold text-foreground">
-                Cần mua thêm {preview.data.missingItemCount} nguyên liệu
-              </Text>
-              <Text className="text-xs text-muted-foreground">
-                Tủ bếp tại {new Date(preview.data.pantryAsOf).toLocaleString('vi-VN')}
-              </Text>
-              {preview.data.items.map((item, index) => (
-                <View
-                  key={`${item.id}-${index}`}
-                  className="gap-2 rounded-lg border border-border p-4"
-                >
-                  <Text className="font-bold text-foreground">{item.name}</Text>
-                  <Text className="text-sm text-primary">
-                    {item.needsPurchase ? `Cần mua: ${item.missing}` : 'Đã có đủ'}
-                  </Text>
-                  <Text className="text-sm text-muted-foreground">
-                    Cần: {item.required} · Có: {item.available}
-                  </Text>
-                  <Text className="text-sm text-muted-foreground">Dư: {item.surplus}</Text>
-                  <Text className="text-xs text-muted-foreground">
-                    Mức tin cậy quy đổi: {item.confidencePercent}%
-                  </Text>
-                  <Text className="text-xs text-muted-foreground">{item.mealNames.join(', ')}</Text>
-                  {item.assumptions.map((assumption, position) => (
-                    <Text key={position} className="text-xs text-muted-foreground">
-                      {assumption}
-                    </Text>
-                  ))}
-                </View>
-              ))}
-              {preview.data.unresolvedItems.length ? (
-                <Text className="text-lg font-bold text-foreground">Cần kiểm tra thêm</Text>
-              ) : null}
-              {preview.data.unresolvedItems.map((item, index) => (
-                <View key={index} className="gap-2 border-l-4 border-amber-500 px-3 py-2">
-                  <Text className="font-semibold text-foreground">
-                    {item.name}: {item.required}
-                  </Text>
-                  <Text className="text-sm text-muted-foreground">{item.reason}</Text>
-                  <Text className="text-sm text-muted-foreground">{item.explanation}</Text>
-                  <Text className="text-xs text-muted-foreground">{item.mealNames.join(', ')}</Text>
-                </View>
-              ))}
-            </>
-          ) : null
-        ) : null}
+        {request ? <ShoppingPreviewView preview={preview} /> : null}
       </View>
     </SiteScreen>
   );

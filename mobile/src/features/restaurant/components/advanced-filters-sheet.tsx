@@ -103,7 +103,7 @@ export function AdvancedFiltersSheet({
   };
 
   return (
-    <FormSheet title="Bộ lọc nâng cao" onClose={onClose}>
+    <FormSheet title="Bộ lọc nâng cao" onClose={onClose} variant="popup">
       <Text className="text-sm text-muted-foreground">
         Lọc theo giá, đánh giá và giờ mở cửa của quán. Các bộ lọc này chỉ áp dụng khi tìm theo từ khóa.
       </Text>

@@ -83,7 +83,9 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
 
     const ingredients: RecipeIngredient[] = safeArray<RecipeIngredientDto>(
       detail?.ingredients
-    ).map((item) => ({
+    ).map((item, index) => ({
+      position: safeNumber(item?.position, index),
+      optional: safeBoolean(item?.optional, false),
       ingredientId: item?.ingredientId ?? null,
       name: safeString(item?.displayName, 'Nguyên liệu'),
       amount: safeNumber(item?.amount, 1),
@@ -97,7 +99,11 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
         instruction: safeString(step?.instruction, ''),
         durationMinutes: nullableNumber(step?.durationMinutes),
         temperatureCelsius: nullableNumber(step?.temperatureCelsius),
-        cookingMethodName: safeString(step?.cookingMethod?.name, '') || null,
+        cookingMethodId: safeString(step?.cookingMethodId, '') || null,
+        cookingMethodName: safeString(step?.cookingMethodName, '') || null,
+        affectedIngredientPositions: safeArray<number>(step?.affectedIngredientPositions).filter(
+          (value) => Number.isInteger(value) && value >= 0
+        ),
       }))
       .filter((step) => step.instruction.length > 0)
       .sort((a, b) => a.position - b.position);

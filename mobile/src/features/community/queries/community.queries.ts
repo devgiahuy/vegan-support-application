@@ -35,6 +35,18 @@ export function useCommentThreadQuery(postId: string, params?: CommunityQueryPar
   });
 }
 
+/** Bình luận phân trang kiểu "Tải thêm"; key nằm dưới tiền tố `thread` nên mọi mutation bình luận đều làm mới được. */
+export function useInfiniteCommentThreadQuery(postId: string, params?: Omit<CommunityQueryParams, 'page'>) {
+  return useInfiniteQuery({
+    queryKey: [...COMMUNITY_QUERY_KEYS.all, 'thread', postId, 'infinite', params ?? {}] as const,
+    queryFn: ({ pageParam }) => communityApi.getThread({ ...params, postId, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: getNextPageNumber,
+    enabled: postId.length > 0,
+    staleTime: 30 * 1000,
+  });
+}
+
 export function useCreateCommentMutation() {
   const queryClient = useQueryClient();
   return useMutation({

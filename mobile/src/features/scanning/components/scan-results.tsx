@@ -68,7 +68,7 @@ export function ScanResults({ job, selected, busy, onSelect, onEdit, onReject, o
       {editable ? <PrimaryButton label={`Xác nhận vào tủ bếp (${selected.length})`} disabled={busy || !selected.length} onPress={onConfirm} /> : null}
       {job.status === 'FAILED' || job.status === 'PARTIAL_FAILED' ? <PrimaryButton label="Thử lại" variant="outline" disabled={busy} icon={<RotateCcw size={18} color={colors.primary} />} onPress={onRetry} /> : null}
       {job.status !== 'CANCELLED' && job.status !== 'CONFIRMED' ? <PrimaryButton label="Hủy tác vụ" variant="outline" disabled={busy} onPress={onCancel} /> : null}
-      {preview ? <FormSheet title={`Ảnh ${preview.position + 1}`} onClose={() => setPreview(null)}><Image source={{ uri: preview.url }} style={{ width: '100%', height: 420 }} contentFit="contain" accessibilityLabel="Ảnh quét gốc" /></FormSheet> : null}
+      {preview ? <FormSheet title={`Ảnh ${preview.position + 1}`} onClose={() => setPreview(null)} variant="popup"><Image source={{ uri: preview.url }} style={{ width: '100%', height: 420 }} contentFit="contain" accessibilityLabel="Ảnh quét gốc" /></FormSheet> : null}
     </View>
   );
 }

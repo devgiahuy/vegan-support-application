@@ -1,4 +1,4 @@
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
 import { Link, type Href } from 'expo-router';
 import { Compass, LogIn, MessageSquare, MessagesSquare, Plus, Sparkles, X } from 'lucide-react-native';
 
@@ -37,10 +37,10 @@ export function SessionListSheet({
   if (!visible) return null;
 
   return (
-    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
-      <View className="flex-1 justify-end bg-black/50">
-        <Pressable className="flex-1" onPress={onClose} accessibilityLabel="Đóng" />
-        <View className="max-h-[80%] rounded-t-3xl bg-background px-5 pb-6 pt-4">
+    <Modal visible animationType="fade" transparent statusBarTranslucent onRequestClose={onClose}>
+      <View className="flex-1 items-center justify-center bg-black/60 px-5">
+        <Pressable accessibilityLabel="Đóng" onPress={onClose} style={StyleSheet.absoluteFill} />
+        <View className="w-full max-w-md max-h-[80%] rounded-3xl border border-border bg-background p-5">
           <View className="flex-row items-center justify-between gap-3">
             <Text className="flex-1 text-base font-bold text-foreground">Đoạn chat</Text>
             <Pressable onPress={onClose} accessibilityLabel="Đóng" className="h-9 w-9 items-center justify-center rounded-full bg-muted">

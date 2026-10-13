@@ -10,9 +10,9 @@ import { LoadMoreButton } from '@/components/shared/load-more-button';
 import { useInfiniteRecipesQuery } from '@/features/recipe/queries/recipe.queries';
 import { CategoryType } from '@/common/enums';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
-import { CategoryFilterPills } from '@/features/category/components/category-filter-pills';
-import { findCategoryById } from '@/features/category/utils/flatten-categories';
-import { cn } from '@/lib/utils';
+import { DropdownField } from '@/components/ui/dropdown-field';
+import { buildCategoryOptions } from '@/features/category/utils/category-options';
+import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useIconColors } from '@/lib/theme-colors';
 
 const DIFFICULTIES = [
@@ -59,6 +59,7 @@ export default function RecipesScreen() {
   const colors = useIconColors();
   const params = useLocalSearchParams<{ category?: string }>();
   const [query, setQuery] = React.useState('');
+  const debouncedQuery = useDebouncedValue(query, 400);
   const [difficulty, setDifficulty] = React.useState('');
   const [maxCookTime, setMaxCookTime] = React.useState<number | null>(null);
   const [categoryId, setCategoryId] = React.useState<string | null>(params.category ?? null);
@@ -79,7 +80,7 @@ export default function RecipesScreen() {
     fetchNextPage,
     isFetchingNextPage,
   } = useInfiniteRecipesQuery({
-    q: query.trim() || undefined,
+    q: debouncedQuery.trim() || undefined,
     category: categoryId || undefined,
     difficulty: difficulty || undefined,
     maxCookTimeMinutes: maxCookTime ?? undefined,
@@ -88,7 +89,7 @@ export default function RecipesScreen() {
   const recipesPagination = recipePages?.pages[0];
   const recipes = recipePages?.pages.flatMap((page) => page.items) ?? [];
   const totalItems = recipesPagination?.metadata?.totalItems ?? recipes.length;
-  const selectedCategoryName = categoryId ? findCategoryById(categoryTree, categoryId)?.name : null;
+  const categoryOptions = React.useMemo(() => buildCategoryOptions(categoryTree), [categoryTree]);
   const hasFilters = Boolean(categoryId || difficulty || maxCookTime !== null || query);
   const constraints = recipesPagination?.metadata?.appliedConstraints;
 
@@ -102,13 +103,18 @@ export default function RecipesScreen() {
   return (
     <SiteScreen>
       <View className="px-5 pt-4">
-        <View className="flex-row items-center justify-between">
-          <Text className="text-xl font-bold text-foreground">
+        <View className="flex-row items-center justify-between gap-3">
+          <Text className="flex-1 text-xl font-bold text-foreground">
             Khám phá công thức <Text className="text-sm font-normal text-muted-foreground">({totalItems})</Text>
           </Text>
-          <Link href={'/categories' as Href} asChild>
-            <Pressable className="rounded-full bg-muted px-3 py-1.5">
-              <Text className="text-xs font-semibold text-foreground">Danh mục</Text>
+          <Link href={'/recipes/new' as Href} asChild>
+            <Pressable
+              accessibilityRole="button"
+              className="h-9 flex-row items-center gap-1.5 rounded-xl bg-primary px-3">
+              <PlusCircle size={15} color={colors.primaryForeground} />
+              <Text numberOfLines={1} style={{ flexShrink: 0 }} className="text-xs font-semibold text-primary-foreground">
+                Đăng công thức mới
+              </Text>
             </Pressable>
           </Link>
         </View>
@@ -125,115 +131,57 @@ export default function RecipesScreen() {
           />
         </View>
 
-        {/* Đang lọc */}
-        <View className="mt-3 flex-row flex-wrap items-center gap-2">
-          <Text className="text-xs text-muted-foreground">Đang lọc:</Text>
-          {!selectedCategoryName && !difficulty && maxCookTime === null ? (
-            <Text className="text-xs text-muted-foreground">Tất cả danh mục, độ khó & thời gian</Text>
-          ) : (
-            <>
-              {selectedCategoryName ? (
-                <View className="rounded-full bg-primary/10 px-2.5 py-1">
-                  <Text className="text-xs font-medium text-primary">{selectedCategoryName}</Text>
-                </View>
-              ) : null}
-              {difficulty ? (
-                <View className="rounded-full bg-cta/10 px-2.5 py-1">
-                  <Text className="text-xs font-medium text-cta">
-                    Độ khó: {DIFFICULTIES.find((d) => d.value === difficulty)?.label}
-                  </Text>
-                </View>
-              ) : null}
-              {maxCookTime !== null ? (
-                <View className="rounded-full bg-cta/10 px-2.5 py-1">
-                  <Text className="text-xs font-medium text-cta">
-                    {COOK_TIMES.find((t) => t.value === maxCookTime)?.label}
-                  </Text>
-                </View>
-              ) : null}
-            </>
-          )}
-          {hasFilters ? (
-            <Pressable onPress={resetFilters}>
-              <Text className="text-xs text-muted-foreground underline">Xoá tất cả bộ lọc</Text>
-            </Pressable>
-          ) : null}
+        {/* Ba bộ lọc dạng dropdown đặt kề nhau: danh mục · độ khó · thời gian chế biến */}
+        <View className="mt-3 flex-row gap-2">
+          <DropdownField
+            className="flex-[1.3]"
+            label="Danh mục món"
+            value={categoryId}
+            options={categoryOptions}
+            onChange={setCategoryId}
+            status={isCategoryLoading ? 'loading' : isCategoryError ? 'error' : undefined}
+            onRetry={() => void refetchCategories()}
+          />
+          <DropdownField
+            className="flex-1"
+            label="Độ khó"
+            value={difficulty}
+            options={DIFFICULTIES.map((item) => ({
+              value: item.value,
+              label: item.label,
+              shortLabel: item.value === '' ? 'Tất cả' : item.label,
+            }))}
+            onChange={setDifficulty}
+          />
+          <DropdownField
+            className="flex-1"
+            label="Thời gian"
+            value={maxCookTime}
+            options={COOK_TIMES.map((item) => ({
+              value: item.value,
+              label: item.label,
+              shortLabel: item.value === null ? 'Tất cả' : item.label.replace('Dưới ', '< '),
+            }))}
+            onChange={setMaxCookTime}
+          />
         </View>
-
-        {/* Danh mục món */}
-        <View className="mt-5">
-          <Text className="text-sm font-semibold text-foreground">Danh mục món</Text>
-          <View className="mt-2.5">
-            {isCategoryLoading ? (
-              <View className="h-8 rounded-lg bg-muted" />
-            ) : isCategoryError ? (
-              <Pressable onPress={() => void refetchCategories()}>
-                <Text className="text-sm text-primary underline">
-                  Không tải được danh mục. Thử lại.
-                </Text>
-              </Pressable>
-            ) : categoryTree.length === 0 ? (
-              <Text className="text-sm text-muted-foreground">Chưa có danh mục nhóm công thức.</Text>
-            ) : (
-              <CategoryFilterPills items={categoryTree} selectedId={categoryId} onSelect={setCategoryId} />
-            )}
-          </View>
-        </View>
-
-        {/* Độ khó */}
-        <View className="mt-4">
-          <Text className="text-sm font-semibold text-foreground">Độ khó</Text>
-          <View className="mt-2.5 flex-row flex-wrap gap-1.5">
-            {DIFFICULTIES.map((d) => {
-              const selected = difficulty === d.value;
-              return (
-                <Pressable
-                  key={d.value || 'all'}
-                  onPress={() => setDifficulty(d.value)}
-                  className={cn('rounded-lg px-2.5 py-1.5', selected ? 'bg-primary' : 'bg-muted')}>
-                  <Text
-                    className={cn(
-                      'text-xs font-medium',
-                      selected ? 'text-primary-foreground' : 'text-muted-foreground'
-                    )}>
-                    {d.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Thời gian nấu */}
-        <View className="mt-4">
-          <Text className="text-sm font-semibold text-foreground">Thời gian chế biến</Text>
-          <View className="mt-2.5 flex-row flex-wrap gap-1.5">
-            {COOK_TIMES.map((t) => {
-              const selected = maxCookTime === t.value;
-              return (
-                <Pressable
-                  key={t.value ?? 'all'}
-                  onPress={() => setMaxCookTime(t.value)}
-                  className={cn('rounded-lg px-2.5 py-1.5', selected ? 'bg-primary' : 'bg-muted')}>
-                  <Text
-                    className={cn(
-                      'text-xs font-medium',
-                      selected ? 'text-primary-foreground' : 'text-muted-foreground'
-                    )}>
-                    {t.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
+        {hasFilters ? (
+          <Pressable onPress={resetFilters} className="mt-2 self-start">
+            <Text className="text-xs text-muted-foreground underline">Xoá tất cả bộ lọc</Text>
+          </Pressable>
+        ) : null}
 
         {/* Bộ lọc an toàn cá nhân hoá theo hồ sơ (backend áp dụng, mobile chỉ hiển thị) */}
         {constraints?.authenticated ? (
           <View className="mt-5 rounded-2xl border border-primary/25 bg-primary/5 p-4">
             <View className="flex-row items-center gap-2">
               <ShieldCheck size={16} color={colors.primary} />
-              <Text className="text-sm font-semibold text-foreground">Bộ lọc an toàn theo hồ sơ của bạn</Text>
+              <Text className="flex-1 text-sm font-semibold text-foreground">Bộ lọc an toàn theo hồ sơ của bạn</Text>
+              <Link href={'/profile' as Href} asChild>
+                <Pressable hitSlop={8}>
+                  <Text className="text-xs font-semibold text-primary underline">Quản lý hồ sơ</Text>
+                </Pressable>
+              </Link>
             </View>
             <View className="mt-2 flex-row flex-wrap gap-1.5">
               {constraints.dietPattern ? (
@@ -257,11 +205,6 @@ export default function RecipesScreen() {
             <Text className="mt-2 text-xs leading-relaxed text-muted-foreground">
               Hệ thống chỉ hiển thị món có nguyên liệu chuẩn hóa và phù hợp với hồ sơ ăn kiêng của bạn.
             </Text>
-            <Link href={'/profile' as Href} asChild>
-              <Pressable className="mt-2 self-start">
-                <Text className="text-xs font-semibold text-primary underline">Quản lý hồ sơ</Text>
-              </Pressable>
-            </Link>
           </View>
         ) : null}
 
@@ -337,15 +280,6 @@ export default function RecipesScreen() {
           </View>
         </View>
 
-        <View className="mt-4">
-          <Link href={'/recipes/new' as Href} asChild>
-            <PrimaryButton
-              label="Đăng công thức mới"
-              variant="outline"
-              icon={<PlusCircle size={16} color={colors.foreground} />}
-            />
-          </Link>
-        </View>
       </View>
     </SiteScreen>
   );

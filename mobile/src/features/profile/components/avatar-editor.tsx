@@ -114,7 +114,7 @@ export function AvatarEditor({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <FormSheet title="Ảnh đại diện" onClose={onClose} busy={busy}>
+    <FormSheet title="Ảnh đại diện" onClose={onClose} busy={busy} variant="popup">
       {selected ? (
         <Image
           source={{ uri: selected.image.uri }}

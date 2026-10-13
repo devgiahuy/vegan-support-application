@@ -25,7 +25,7 @@ interface TabConfig {
 /** Khóa là tên route trong `app/(tabs)/`. */
 const TAB_CONFIG: Record<string, TabConfig> = {
   index: { label: 'Trang chủ', icon: House },
-  recipes: { label: 'Món chay', icon: ChefHat },
+  recipes: { label: 'Khám phá', icon: ChefHat },
   restaurants: { label: 'Bản đồ', icon: MapPin },
   profile: { label: 'Hồ sơ', icon: UserRound },
 };

@@ -10,8 +10,7 @@ import type {
 
 export const PANTRY_QUERY_KEYS = {
   all: ['pantry'] as const,
-  list: (params?: PantryListFilters, expiring = false) =>
-    [...PANTRY_QUERY_KEYS.all, 'list', expiring, params] as const,
+  list: (params?: PantryListFilters) => [...PANTRY_QUERY_KEYS.all, 'list', params] as const,
   detail: (id: string) => [...PANTRY_QUERY_KEYS.all, 'detail', id] as const,
 };
 
@@ -22,10 +21,10 @@ function invalidateInventory(client: QueryClient) {
   ]);
 }
 
-export function usePantryItemsQuery(params?: PantryListFilters, enabled = true, expiring = false) {
+export function usePantryItemsQuery(params?: PantryListFilters, enabled = true) {
   return useQuery({
-    queryKey: PANTRY_QUERY_KEYS.list(params, expiring),
-    queryFn: () => pantryApi.getItems(params, expiring),
+    queryKey: PANTRY_QUERY_KEYS.list(params),
+    queryFn: () => pantryApi.getItems(params),
     enabled,
   });
 }

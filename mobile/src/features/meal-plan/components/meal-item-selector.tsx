@@ -68,7 +68,7 @@ function SelectorBody({
         <View className="flex-1">
           <Text className="text-base font-bold text-foreground">Chọn món cho {slotLabel}</Text>
           <Text className="mt-0.5 text-xs text-muted-foreground">
-            Chọn từ bữa ăn tự tạo của bạn hoặc công thức từ cộng đồng. Hệ thống sẽ kiểm tra chế độ ăn và dị ứng.
+            Chọn từ món ăn cá nhân của bạn hoặc công thức từ cộng đồng. Hệ thống sẽ kiểm tra chế độ ăn và dị ứng.
           </Text>
         </View>
         <Pressable onPress={onClose} accessibilityLabel="Đóng" className="h-9 w-9 items-center justify-center rounded-full bg-muted">
@@ -98,8 +98,8 @@ function SelectorBody({
       <View className="mt-3 flex-row gap-2">
         {(
           [
-            { value: 'custom', label: `Món tự tạo (${customMeals.data?.pagination.totalItems ?? 0})`, Icon: Users },
-            { value: 'recipes', label: 'Công thức', Icon: BookOpen },
+            { value: 'custom', label: `Món ăn cá nhân (${customMeals.data?.pagination.totalItems ?? 0})`, Icon: Users },
+            { value: 'recipes', label: 'Công thức cộng đồng', Icon: BookOpen },
           ] as const
         ).map(({ value, label, Icon }) => {
           const selected = tab === value;
@@ -138,13 +138,13 @@ function SelectorBody({
       <ScrollView className="mt-3" contentContainerClassName="gap-2 pb-2" keyboardShouldPersistTaps="handled">
         {tab === 'custom' ? (
           customMeals.isLoading ? (
-            <LoadingState message="Đang tải bữa ăn tự tạo..." />
+            <LoadingState message="Đang tải món ăn cá nhân..." />
           ) : customMeals.isError ? (
-            <ErrorState title="Không tải được bữa ăn tự tạo." onRetry={() => void customMeals.refetch()} />
+            <ErrorState title="Không tải được món ăn cá nhân." onRetry={() => void customMeals.refetch()} />
           ) : filteredCustomMeals.length === 0 ? (
             <EmptyState
-              title="Chưa có bữa ăn tự tạo phù hợp"
-              description="Bạn có thể tạo món mới trong mục Bữa ăn tự tạo ở Hồ sơ."
+              title="Chưa có món ăn cá nhân phù hợp"
+              description="Bạn có thể tạo món mới trong mục Món ăn của tôi ở Hồ sơ."
             />
           ) : (
             filteredCustomMeals.map((meal) => (

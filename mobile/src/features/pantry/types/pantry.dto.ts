@@ -98,6 +98,9 @@ export interface PantryListQueryDto {
   confirmationStatus?: PantryConfirmationStatusDto;
   conversionStatus?: PantryConversionStatusDto;
   search?: string;
+  /** `YYYY-MM-DD`, bao gồm cả ngày này. */
+  expiresFrom?: string;
+  expiresTo?: string;
   includeZero?: boolean | string;
 }
 

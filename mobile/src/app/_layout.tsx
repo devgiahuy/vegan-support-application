@@ -1,4 +1,5 @@
 import '../global.css';
+import '@/lib/web-alert';
 
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -28,7 +29,7 @@ export default function RootLayout() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <Stack screenOptions={{ headerShown: false }}>
-          {/* Nhóm tab chính có thanh điều hướng dưới đáy: Trang chủ, Món chay, Bản đồ quán,
+          {/* Nhóm tab chính có thanh điều hướng dưới đáy: Trang chủ, Khám phá, Bản đồ quán,
               menu quạt (Video/Cẩm nang/Thực đơn), Hồ sơ. Trợ lý AI, Thực đơn, Cẩm nang,
               danh sách Video vẫn là màn trong nhóm tab (giữ thanh dưới đáy) dù không có
               nút riêng trên thanh — tới qua nút quạt hoặc từ Trang chủ. */}
@@ -44,10 +45,8 @@ export default function RootLayout() {
           <Stack.Screen name="videos/[id]" />
           <Stack.Screen name="videos/[id]/edit" />
           <Stack.Screen name="meal-plans/[id]" />
-          <Stack.Screen name="categories" />
           <Stack.Screen name="search" />
           <Stack.Screen name="bookmarks" />
-          <Stack.Screen name="notifications" />
           <Stack.Screen name="contributor-status" />
           <Stack.Screen name="diet-preferences" />
           <Stack.Screen name="diet-schedule" />

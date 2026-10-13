@@ -4,6 +4,7 @@ import { Link, type Href, useRouter } from 'expo-router';
 import { Check, Dumbbell, Flame, Scale, Sparkles } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
+import { DateField } from '@/components/ui/date-field';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { useCreateMealProgramMutation } from '@/features/meal-program/queries/meal-program.queries';
 import type { MealProgramGoalDto } from '@/features/meal-program/types/meal-program.dto';
@@ -118,7 +119,7 @@ export default function NewMealProgramScreen() {
     <SiteScreen>
       <View className="gap-5 px-5 pt-4">
         <View>
-          <Text className="text-2xl font-extrabold text-foreground">Tạo lộ trình nhiều tuần</Text>
+          <Text className="text-2xl font-extrabold text-foreground">Tạo lộ trình dinh dưỡng cá nhân mới</Text>
           <Text className="mt-1 text-sm text-muted-foreground">
             Hệ thống tạo thực đơn cho từng tuần theo hồ sơ sức khỏe, dị ứng và chế độ ăn của bạn.
           </Text>
@@ -199,14 +200,7 @@ export default function NewMealProgramScreen() {
               );
             })}
           </View>
-          <TextInput
-            value={startDate}
-            onChangeText={changeDate}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={colors.mutedForeground}
-            autoCapitalize="none"
-            className="h-12 rounded-2xl border border-input bg-card px-3.5 text-sm text-foreground"
-          />
+          <DateField label="Hoặc chọn ngày khác" value={startDate} onChange={changeDate} />
           {dateNotice ? <Text className="text-xs text-amber-700">{dateNotice}</Text> : null}
         </View>
 

@@ -30,6 +30,10 @@ export interface CreateRecipeIngredientInput {
 export interface CreateRecipeStepInput {
   instruction: string;
   durationMinutes?: number;
+  /** Chỉ giữ lại khi sửa công thức đã có; form di động chưa cho nhập. */
+  cookingMethodId?: string | null;
+  temperatureCelsius?: number | null;
+  affectedIngredientPositions?: number[];
 }
 
 export interface CreateRecipeInput {
@@ -49,6 +53,7 @@ export interface CreateRecipeInput {
     carbsGrams?: number;
     fatGrams?: number;
     fiberGrams?: number;
+    vitaminB12Mcg?: number;
   };
   ingredients: CreateRecipeIngredientInput[];
   steps: CreateRecipeStepInput[];
@@ -90,6 +95,11 @@ function buildRecipePayload(input: CreateRecipeInput) {
       steps: input.steps.map((step) => ({
         instruction: step.instruction.trim(),
         ...(step.durationMinutes ? { durationMinutes: step.durationMinutes } : {}),
+        ...(step.cookingMethodId ? { cookingMethodId: step.cookingMethodId } : {}),
+        ...(typeof step.temperatureCelsius === 'number' ? { temperatureCelsius: step.temperatureCelsius } : {}),
+        ...(step.affectedIngredientPositions?.length
+          ? { affectedIngredientPositions: step.affectedIngredientPositions }
+          : {}),
       })),
     },
   };

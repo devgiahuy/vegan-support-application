@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Modal, Pressable, ScrollView, Switch, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { Globe, Send, Undo2, X } from 'lucide-react-native';
 
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -121,10 +121,10 @@ export function ShareArtifactSheet({ artifact, visible, onClose }: { artifact: A
   if (!visible) return null;
 
   return (
-    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
-      <View className="flex-1 justify-end bg-black/50">
-        <Pressable className="flex-1" onPress={onClose} accessibilityLabel="Đóng" />
-        <View className="max-h-[85%] rounded-t-3xl bg-background px-5 pb-6 pt-4">
+    <Modal visible animationType="fade" transparent statusBarTranslucent onRequestClose={onClose}>
+      <View className="flex-1 items-center justify-center bg-black/60 px-5">
+        <Pressable accessibilityLabel="Đóng" onPress={onClose} style={StyleSheet.absoluteFill} />
+        <View className="w-full max-w-md max-h-[85%] rounded-3xl border border-border bg-background p-5">
           <View className="flex-row items-start justify-between gap-3">
             <View className="flex-1">
               <Text className="text-base font-bold text-foreground">Quản lý chia sẻ</Text>

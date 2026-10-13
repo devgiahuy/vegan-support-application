@@ -104,12 +104,12 @@ export function CustomMealPhotoManager({ meal }: { meal: CustomMeal }) {
     try {
       await deleteAsset.mutateAsync(assetId);
     } catch (value) {
-      setError(`Đã gỡ ảnh khỏi bữa ăn nhưng chưa xóa được tệp: ${storageErrorMessage(value)}`);
+      setError(`Đã gỡ ảnh khỏi món ăn nhưng chưa xóa được tệp: ${storageErrorMessage(value)}`);
     }
   };
 
   const confirmRemove = (assetId: string) => {
-    Alert.alert('Gỡ ảnh', 'Chọn cách gỡ ảnh khỏi bữa ăn này.', [
+    Alert.alert('Gỡ ảnh', 'Chọn cách gỡ ảnh khỏi món ăn này.', [
       { text: 'Hủy', style: 'cancel' },
       { text: 'Chỉ gỡ khỏi món', onPress: () => void removePhoto(assetId, false) },
       { text: 'Gỡ và xóa tệp', style: 'destructive', onPress: () => void removePhoto(assetId, true) },
@@ -181,7 +181,7 @@ export function CustomMealPhotoManager({ meal }: { meal: CustomMeal }) {
       {uploader.uploading ? (
         <Text className="text-sm text-muted-foreground">Đang tải ảnh: {uploader.progress}%</Text>
       ) : attach.isPending ? (
-        <Text className="text-sm text-muted-foreground">Đang gắn ảnh vào bữa ăn...</Text>
+        <Text className="text-sm text-muted-foreground">Đang gắn ảnh vào món ăn...</Text>
       ) : null}
       {error || uploader.error ? (
         <Text accessibilityRole="alert" className="text-sm text-destructive">

@@ -29,7 +29,7 @@ export function CandidateEditor({ candidate, kind, busy, error, onSave, onClose 
     catch (value) { setValidation(value instanceof Error ? value.message : 'Dữ liệu không hợp lệ.'); }
   };
   return (
-    <FormSheet title="Sửa nguyên liệu" onClose={onClose} busy={busy}>
+    <FormSheet title="Sửa nguyên liệu" onClose={onClose} busy={busy} variant="popup">
       <View style={{ pointerEvents: busy ? 'none' : 'auto' }} className="gap-4">
         <IngredientPicker label="Nguyên liệu" value={{ displayName: form.name, ingredientId: form.ingredientId }} onChange={value => setForm(current => ({ ...current, name: value.displayName, ingredientId: value.ingredientId }))} />
         <TextField label="Số lượng" accessibilityLabel="Số lượng" editable={!busy} value={form.quantity} keyboardType="decimal-pad" onChangeText={value => field('quantity', value)} />

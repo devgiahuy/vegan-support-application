@@ -12,6 +12,8 @@ import type { AppNotification, UnreadCount } from '../types/notification.model';
 const TYPE_LABELS: Record<string, string> = {
   POST_APPROVED: 'Bài được duyệt',
   POST_REJECTED: 'Bài viết bị từ chối',
+  VIDEO_APPROVED: 'Video được duyệt',
+  VIDEO_REJECTED: 'Video bị từ chối',
   COMMENT_REPLY: 'Trả lời bình luận',
   CONTRIBUTOR_APPROVED: 'Đơn cộng tác được duyệt',
   CONTRIBUTOR_REJECTED: 'Đơn cộng tác bị từ chối',
@@ -19,11 +21,14 @@ const TYPE_LABELS: Record<string, string> = {
   APPLICATION_DECIDED: 'Đơn cộng tác',
   RESTAURANT_APPROVED: 'Quán ăn được duyệt',
   RESTAURANT_REJECTED: 'Quán ăn bị từ chối',
+  STORAGE_QUOTA_WARNING: 'Cảnh báo dung lượng',
   STORAGE_WARNING: 'Cảnh báo dung lượng',
   QUOTA_WARNING: 'Cảnh báo dung lượng',
+  MODERATION_OUTCOME: 'Quyết định kiểm duyệt',
   MODERATION_ACTION: 'Quyết định kiểm duyệt',
   REPORT_RESOLVED: 'Báo cáo đã xử lý',
   AI_VERIFICATION_CREATED: 'Yêu cầu thẩm định AI',
+  AI_VERIFICATION_CHANGED: 'Cập nhật thẩm định AI',
   AI_VERIFICATION_STATUS: 'Cập nhật thẩm định AI',
   SYSTEM: 'Hệ thống',
 };

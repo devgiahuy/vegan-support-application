@@ -33,7 +33,7 @@ function emptyIngredient(id: string): CustomMealIngredient {
 }
 
 /**
- * Form tạo/sửa bữa ăn tự tạo. Mỗi nguyên liệu có thể liên kết với nguyên liệu chuẩn bằng gợi ý tìm kiếm
+ * Form tạo/sửa món ăn cá nhân (Món ăn của tôi). Mỗi nguyên liệu có thể liên kết với nguyên liệu chuẩn bằng gợi ý tìm kiếm
  * (gửi kèm `ingredientId`); nếu sửa tên sau khi chọn thì liên kết bị bỏ để tránh lỗi lệch tên-id.
  * Chỉ số dinh dưỡng là số người dùng tự nhập, để trống = chưa có dữ liệu.
  */
@@ -75,7 +75,7 @@ export function CustomMealForm({
     const cleanName = name.trim();
     const parsedServings = Math.trunc(Number(servings));
     if (cleanName.length < 1) {
-      Alert.alert('Thiếu tên bữa ăn', 'Vui lòng nhập tên bữa ăn.');
+      Alert.alert('Thiếu tên món ăn', 'Vui lòng nhập tên món ăn.');
       return;
     }
     if (!Number.isInteger(parsedServings) || parsedServings < 1 || parsedServings > 99) {
@@ -106,7 +106,7 @@ export function CustomMealForm({
 
   return (
     <View className="gap-4">
-      <TextField label="Tên bữa ăn" value={name} onChangeText={setName} placeholder="VD: Cơm đậu hũ sốt nấm" />
+      <TextField label="Tên món ăn" value={name} onChangeText={setName} placeholder="VD: Cơm đậu hũ sốt nấm" />
       <TextField label="Ghi chú" value={notes} onChangeText={setNotes} placeholder="Cách nấu, cảm hứng..." multiline className="min-h-20 pt-3" />
       <View className="flex-row gap-3">
         <View className="flex-1">

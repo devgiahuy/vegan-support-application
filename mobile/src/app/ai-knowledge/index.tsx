@@ -88,7 +88,7 @@ export default function AiKnowledgeScreen() {
             <View className="h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
               <Sparkles size={16} color={colors.primary} />
             </View>
-            <Text className="flex-1 text-2xl font-extrabold text-foreground">Tri thức AI công khai</Text>
+            <Text className="flex-1 text-2xl font-extrabold text-foreground">Khám phá Tri thức AI Công khai</Text>
           </View>
           <Text className="text-sm text-muted-foreground">
             Các giải đáp, phân tích dinh dưỡng do cộng đồng chia sẻ, có thể kèm ý kiến thẩm định của Người đóng góp. Chỉ mang tính

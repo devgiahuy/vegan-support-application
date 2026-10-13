@@ -12,15 +12,19 @@ export function SiteScreen({
   children,
   fab,
   showFooter = false,
+  scrollRef,
 }: {
   children: React.ReactNode;
   fab?: React.ReactNode;
   showFooter?: boolean;
+  /** Tham chiếu tới ScrollView bên trong, để màn hình tự cuộn tới một khối (ví dụ mở từ thẻ ở trang chủ). */
+  scrollRef?: React.Ref<ScrollView>;
 }) {
   return (
     <View className="flex-1 bg-background">
       <SiteHeader />
       <ScrollView
+        ref={scrollRef}
         className="flex-1"
         // pb-10: chừa chỗ cho nút "Thêm" nổi lên (-mt-6) ở giữa thanh tab dưới đáy,
         // tránh đè lên nội dung cuối trang khi kéo hết cỡ (mọi màn dùng chung thanh tab).

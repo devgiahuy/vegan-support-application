@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Alert, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Link, type Href, useRouter } from 'expo-router';
 import { ArrowLeft, CalendarPlus, Minus, Plus, X } from 'lucide-react-native';
 
@@ -80,7 +80,7 @@ function Body({
   };
 
   return (
-    <View className="max-h-[88%] rounded-t-3xl bg-background px-5 pb-6 pt-4">
+    <View className="w-full max-w-md max-h-[88%] rounded-3xl border border-border bg-background p-5">
       <View className="flex-row items-start justify-between gap-3">
         <View className="flex-1">
           <Text className="text-base font-bold text-foreground">Thêm vào thực đơn</Text>
@@ -207,13 +207,13 @@ export function AddToMealPlanSheet({
   if (!visible) return null;
 
   return (
-    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
-      <View className="flex-1 justify-end bg-black/50">
-        <Pressable className="flex-1" onPress={onClose} accessibilityLabel="Đóng" />
+    <Modal visible animationType="fade" transparent statusBarTranslucent onRequestClose={onClose}>
+      <View className="flex-1 items-center justify-center bg-black/60 px-5">
+        <Pressable accessibilityLabel="Đóng" onPress={onClose} style={StyleSheet.absoluteFill} />
         {isAuthenticated ? (
           <Body recipeId={recipeId} recipeTitle={recipeTitle} onClose={onClose} />
         ) : (
-          <View className="rounded-t-3xl bg-background px-5 pb-8 pt-5">
+          <View className="w-full max-w-md rounded-3xl border border-border bg-background p-5">
             <Text className="text-center text-lg font-bold text-foreground">Đăng nhập để dùng thực đơn</Text>
             <Text className="mt-2 text-center text-sm text-muted-foreground">
               Thực đơn tuần là dữ liệu cá nhân, cần tài khoản để thêm món.
