@@ -45310,7 +45310,7 @@
     },
     "/api/v1/billing/orders/{id}/reconcile": {
       "post": {
-        "summary": "Verify payOS query and settle once; 30-second throttle",
+        "summary": "Recover same payOS checkout if needed, verify query and settle once; 30-second throttle",
         "tags": [
           "Billing"
         ],

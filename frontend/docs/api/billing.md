@@ -36,7 +36,7 @@ Read owned order; return page does not settle it
 - Responses: `200` → BillingOrderEnvelope, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `422` → ErrorResponse, `429` → ErrorResponse, `503` → ErrorResponse
 
 ## POST `/api/v1/billing/orders/{id}/reconcile`
-Verify payOS query and settle once; 30-second throttle
+Recover same payOS checkout if needed, verify query and settle once; 30-second throttle
 - Params: `path:id* (string)`
 - Request: —
 - Responses: `200` → BillingOrderEnvelope, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `422` → ErrorResponse, `423` → ErrorResponse, `429` → ErrorResponse, `503` → ErrorResponse

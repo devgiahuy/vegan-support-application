@@ -66,9 +66,9 @@ const signedData = (data: Record<string, unknown>) => {
                   ),
                 ),
               )
-          : typeof raw === 'string' || typeof raw === 'number' || typeof raw === 'boolean'
-            ? String(raw)
-            : JSON.stringify(raw);
+            : typeof raw === 'string' || typeof raw === 'number' || typeof raw === 'boolean'
+              ? String(raw)
+              : JSON.stringify(raw);
       return key + '=' + value;
     })
     .join('&');
@@ -398,10 +398,7 @@ try {
   assert.equal((await billing.get(user.id, expiredOrder.id, '')).status, 'EXPIRED');
   assert.equal((await billing.get(user.id, expiredOrder.id, '')).checkoutUrl, null);
   assert.equal((await balance()).chatCredits, expiryBalance.chatCredits);
-  assert.equal(
-    (await request('/billing/sandbox/' + expiredOrder.id)).status,
-    404,
-  );
+  assert.equal((await request('/billing/sandbox/' + expiredOrder.id)).status, 404);
   assert.equal((await request('/billing/vnpay/ipn')).status, 404);
   const returned = await request(
     '/billing/payos/return/' + expiredOrder.id + '?status=PAID&cancel=false',
@@ -855,10 +852,22 @@ try {
     200,
   );
   const pending = await createOrder('receipt-10');
+  const pendingBeforeRecovery = await billing.owned(user.id, pending.id);
+  const linkCount = links.size;
+  await db.paymentOrder.update({
+    where: { id: pending.id },
+    data: { providerLinkId: null, providerCheckoutUrl: null },
+  });
   assert.equal(
     (await request('/billing/orders/' + pending.id + '/reconcile', 'POST', {})).status,
     200,
   );
+  assert.equal((await billing.get(user.id, pending.id, '')).checkoutUrl, pending.checkoutUrl);
+  assert.equal(
+    (await billing.owned(user.id, pending.id)).providerOrderCode,
+    pendingBeforeRecovery.providerOrderCode,
+  );
+  assert.equal(links.size, linkCount);
   assert.equal(
     (await request('/billing/orders/' + pending.id + '/reconcile', 'POST', {})).status,
     429,

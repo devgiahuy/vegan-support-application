@@ -69,7 +69,7 @@ Backend uses official `@payos/node@2.0.5` for signed create/get/webhook. A disti
 
 Signed webhook data maps the local order, then an authenticated signed payOS query confirms amount/reference/link before granting. UNDERPAID/PROCESSING remain PENDING; PAID only grants after sufficient money is received. Excess transferred money does not increase benefits or trigger an automatic refund. Late verified full payment can grant an unfulfilled expired/cancelled order once. PAID never downgrades.
 
-Browser return/cancel parameters are ignored for settlement. “Kiểm tra thanh toán” queries payOS with a 30-second cooldown and visible result/error. Historic providers are read-only.
+Browser return/cancel parameters are ignored for settlement. “Kiểm tra thanh toán” queries payOS with a 30-second cooldown and visible result/error. It can recover an unfinished checkout after a response/persistence failure using the same provider code; no duplicate application order is allocated. Historic providers are read-only.
 
 ## Mongo schema migration and verification
 
