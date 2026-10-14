@@ -21,7 +21,7 @@ Object.assign(process.env, {
   BILLING_PUBLIC_URL: process.env.BILLING_DEMO_PUBLIC_URL ?? 'http://localhost:' + port,
   BILLING_RETURN_URL: process.env.BILLING_DEMO_RETURN_URL ?? 'http://localhost:3100/billing',
   FRONTEND_ORIGIN:
-    process.env.BILLING_DEMO_ORIGINS ?? 'http://localhost:3100,http://localhost:8090',
+    process.env.BILLING_DEMO_ORIGINS ?? 'http://localhost:3100,http://127.0.0.1:8090',
   JWT_ACCESS_SECRET:
     process.env.JWT_ACCESS_SECRET ?? 'billing-demo-only-secret-at-least-32-characters',
   CLOUDINARY_CLOUD_NAME: process.env.CLOUDINARY_CLOUD_NAME ?? 'local-development',

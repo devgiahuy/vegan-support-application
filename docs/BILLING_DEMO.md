@@ -41,12 +41,12 @@ Mobile development, in a third terminal:
 ```bash
 cd mobile
 npm ci
-EXPO_PUBLIC_API_URL=http://localhost:4100/api/v1 EXPO_PUBLIC_ENABLE_DEV_SCANS=true EXPO_PUBLIC_SCAN_PROVIDER=fake npx expo start --web --port 8090
+EXPO_PUBLIC_API_URL=http://127.0.0.1:4100/api/v1 EXPO_PUBLIC_ENABLE_DEV_SCANS=true EXPO_PUBLIC_SCAN_PROVIDER=fake npx expo start --web --port 8090
 ```
 
-Open http://localhost:8090/billing or enter through Profile → Gói tiện ích. Use the same demo login. Native devices require the computer's LAN IP instead of localhost in the mobile API URL and `BILLING_DEMO_PUBLIC_URL`; allow the applicable web development origin via `BILLING_DEMO_ORIGINS`. Do not expose the no-auth local MongoDB service publicly.
+Open http://127.0.0.1:8090/billing or enter through Profile → Gói tiện ích. Use the same demo login. Keep web on `localhost` and mobile web plus its API on `127.0.0.1`: cookies are scoped by hostname, not port. Using `localhost` for both clients can make concurrent refresh rotations reuse the same cookie and revoke the session. Do not open mobile via Expo's printed localhost URL for this two-client demo. Native devices require the computer's LAN IP in the mobile API URL and `BILLING_DEMO_PUBLIC_URL`; allow the applicable web development origin via `BILLING_DEMO_ORIGINS`. Do not expose the no-auth local MongoDB service publicly.
 
-Expo web opens checkout in the same tab to avoid popup blocking. The default backend returns to the web billing page on port 3100; reopen port 8090 to continue the mobile web preview. A mobile-only demo can set `BILLING_DEMO_RETURN_URL=http://localhost:8090/billing`. Native uses the system browser; close it to return to the application, which refreshes balances on focus.
+Expo web opens checkout in the same tab to avoid popup blocking. The default backend returns to the web billing page on port 3100; reopen http://127.0.0.1:8090/billing to continue the mobile web preview. A mobile-only demo can set `BILLING_DEMO_RETURN_URL=http://127.0.0.1:8090/billing`. Native uses the system browser; close it to return to the application, which refreshes balances on focus.
 
 ## Review scenarios
 
