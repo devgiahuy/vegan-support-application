@@ -12,6 +12,11 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useIconColors } from '@/lib/theme-colors';
 import { billingErrorMessage } from '@/features/billing/lib/billing-errors';
 import {
+  billingCheckMessage,
+  billingCheckTime,
+  type BillingCheckFeedback,
+} from '@/features/billing/lib/billing-feedback';
+import {
   BILLING_QUERY_KEYS,
   useBillingCatalogQuery,
   useBillingOrderQuery,
@@ -34,9 +39,32 @@ function OrderCard({
   busy,
 }: {
   order: BillingOrder;
-  refresh: (id: string) => void;
+  refresh: (id: string) => Promise<BillingOrder>;
   busy: boolean;
 }) {
+  const [checking, setChecking] = React.useState(false);
+  const [feedback, setFeedback] = React.useState<BillingCheckFeedback | null>(null);
+  async function checkPayment() {
+    setChecking(true);
+    setFeedback(null);
+    try {
+      const result = await refresh(order.id);
+      setFeedback({
+        message: billingCheckMessage(result),
+        checkedAtLabel: billingCheckTime(),
+        isError: false,
+        status: result.status,
+      });
+    } catch (error) {
+      setFeedback({
+        message: billingErrorMessage(error),
+        checkedAtLabel: billingCheckTime(),
+        isError: true,
+      });
+    } finally {
+      setChecking(false);
+    }
+  }
   return (
     <View className="gap-3 rounded-xl border border-border bg-card p-4">
       <Text className="text-base font-semibold text-foreground">{order.productName}</Text>
@@ -47,21 +75,41 @@ function OrderCard({
       <Text className="text-sm font-semibold text-primary">{order.statusLabel}</Text>
       {order.checkoutUrl && (
         <PrimaryButton
-          label="Tiếp tục thanh toán"
+          label={order.simulated ? 'Mở trang kiểm thử' : 'Tiếp tục thanh toán'}
           variant="outline"
           disabled={busy}
           onPress={() => {
-            void openCheckout(order.checkoutUrl!).catch(() => refresh(order.id));
+            void openCheckout(order.checkoutUrl!).catch(() => void checkPayment());
           }}
         />
       )}
       {order.status !== 'PAID' && (
         <PrimaryButton
-          label="Kiểm tra thanh toán"
+          label={
+            checking
+              ? 'Đang kiểm tra…'
+              : order.simulated
+                ? 'Tải lại trạng thái'
+                : 'Kiểm tra thanh toán'
+          }
           variant="outline"
-          disabled={busy}
-          onPress={() => refresh(order.id)}
+          disabled={busy || checking}
+          loading={checking}
+          onPress={() => void checkPayment()}
         />
+      )}
+      {feedback && (feedback.isError || feedback.status === order.status) && (
+        <Text
+          accessibilityRole={feedback.isError ? 'alert' : undefined}
+          accessibilityLiveRegion="polite"
+          className={
+            feedback.isError
+              ? 'text-sm text-destructive'
+              : 'text-sm leading-5 text-muted-foreground'
+          }
+        >
+          Kiểm tra lúc {feedback.checkedAtLabel}. {feedback.message}
+        </Text>
       )}
     </View>
   );
@@ -110,11 +158,7 @@ export default function BillingScreen() {
   }
   async function refresh(id: string) {
     setActionError(null);
-    try {
-      await reconcile.mutateAsync(id);
-    } catch (error) {
-      setActionError(billingErrorMessage(error));
-    }
+    return reconcile.mutateAsync(id);
   }
   const loading = catalog.isLoading || allowances.isLoading;
   const error = catalog.error ?? allowances.error;
@@ -150,7 +194,7 @@ export default function BillingScreen() {
               </Text>
               <Text className="text-sm leading-5 text-muted-foreground">
                 {catalog.data?.simulated !== false
-                  ? 'Sandbox nội bộ, không chuyển tiền thật. Giá và giao dịch chỉ phục vụ demo.'
+                  ? 'Bản mô phỏng để thử kết quả thành công, hủy hoặc thất bại. Chưa kết nối VNPAY; không có bước nhập thẻ, OTP hay quét QR và không chuyển tiền thật.'
                   : 'Môi trường thử nghiệm VNPAY; không phải thanh toán production.'}
               </Text>
               <Text className="text-xs text-muted-foreground">
@@ -214,11 +258,7 @@ export default function BillingScreen() {
                   </Text>
                 ) : (
                   selected.data && (
-                    <OrderCard
-                      order={selected.data}
-                      refresh={(id) => void refresh(id)}
-                      busy={reconcile.isPending}
-                    />
+                    <OrderCard order={selected.data} refresh={refresh} busy={reconcile.isPending} />
                   )
                 )}
               </View>
@@ -245,7 +285,7 @@ export default function BillingScreen() {
                     Cộng dồn · Không hết hạn trong bản demo
                   </Text>
                   <PrimaryButton
-                    label="Mua gói"
+                    label={catalog.data?.simulated ? 'Thử thanh toán' : 'Mua gói'}
                     loading={purchase.isPending && purchase.variables?.productId === product.id}
                     disabled={!catalog.data?.enabled || !product.canBuy || purchase.isPending}
                     onPress={() => void buy(product.id)}
@@ -277,7 +317,7 @@ export default function BillingScreen() {
                   <OrderCard
                     key={order.id}
                     order={order}
-                    refresh={(id) => void refresh(id)}
+                    refresh={refresh}
                     busy={reconcile.isPending}
                   />
                 ))

@@ -1,5 +1,11 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Billing check feedback and demo disclosure — Updated 2026-10-14
+
+Fixed the silent status-check action on web/mobile: row-local loading, timestamped success/error feedback, actionable status messages and web toast. Local simulation buttons now say “Thử thanh toán”, “Mở trang kiểm thử” and “Tải lại trạng thái”; the page explicitly discloses that it has no card/OTP/QR flow. The previous 100% claim covers the local simulation and allowance UI only. VNPAY hosted checkout is implemented as an adapter but is not activated or externally accepted: merchant TmnCode/HashSecret are absent. No production or native-device readiness change.
+
+Verified the user's failed order on web and mobile web: check displays FAILED without granting benefits; repeated web check updates its timestamp. Frontend scoped lint/typecheck, 600 tests/50 files and build pass; mobile typecheck/lint pass. Manual design detector returned no findings for the changed billing screens. Native device, provider and exports were not rerun for this UI-only feedback change. Changes remain in `codex/sandbox-billing-ui`; primary backend branch is unchanged.
+
 ## Billing repeat verification and branch split — Updated 2026-10-14
 
 Follow-up after overlapping refresh: a later localhost web/mobile race reproduced REUSE_DETECTED/401. The final demo isolates cookies using web `localhost:3100` and mobile UI/API `127.0.0.1:8090`/`127.0.0.1:4100`. Both clients were logged in again and repeated overlapping reloads retained their 43-credit state with refresh 200. Backend reuse detection remains intact. Earlier successful reload was a limited observation, not proof against races. Web/Android exports also pass. Final detail: `../../docs/BILLING_RETEST_20261014.md`.

@@ -1,5 +1,14 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-14] — Phản hồi nút kiểm tra thanh toán và làm rõ mô phỏng
+
+- Cause: reconciliation refreshed query caches but had no visible acknowledgement when an order kept the same status. Local reconciliation reads persisted state; it does not simulate success or query a bank.
+- Fix: web/mobile display per-order loading and timestamped result/error, preserve the status returned by the server, and suppress stale success feedback when polling changes the status. Web also shows a toast. Local buttons and notice explicitly identify the outcome-test harness; VNPAY labels remain for external-provider orders.
+- Verification: `npm run sync:swagger -- ../backend/openapi.json` (178 operations); frontend scoped ESLint/typecheck, 600 tests/50 files and Next build pass; mobile typecheck/lint pass; manual Impeccable detection on both billing screens returns `[]`. Browser checks on the user's failed order show the result on both clients, with updated timestamp on repeat web click. Evidence: `../../docs/billing-evidence/web-check-feedback-20261014.png` and `mobile-check-feedback-20261014.png`.
+- Scope: UI branch `codex/sandbox-billing-ui` only. No backend API/domain changes, new test infrastructure, production payments or synthetic card/QR UI. Backend gates, exports and native-device acceptance were not rerun because this change is UI feedback only. Full frontend lint retains the previously documented baseline failures; scoped changed-file lint is clean.
+- Hosted VNPAY sandbox remains incomplete as a live demo: configured merchant code and signing secret are absent. Official hosted checkout and registration requirements were checked; no merchant account was created or external transaction attempted.
+- Existing assistant `animate-bounce` finding predates this change and remains outside scope, with no suppression. Impeccable reported legacy product context; no context migration was performed.
+
 ## [2026-10-14] — Test lại billing lâu dài, xử lý checkout hết hạn và tách nhánh UI
 
 - Follow-up: overlapping localhost web/mobile refresh eventually returned 200 then 401, with session `REUSE_DETECTED`; the initial successful reload did not rule out a race. Corrected demo configuration separates cookie hostnames (web localhost, mobile UI/API 127.0.0.1). Fresh logins and repeated overlaps now retain sessions/balances with refresh 200. Auth rotation rules were preserved. Mobile web/Android exports pass; saved paid/expiry/mobile proof screenshots dated 2026-10-14 in `docs/billing-evidence/`.

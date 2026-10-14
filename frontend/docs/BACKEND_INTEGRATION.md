@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.30
+**Version:** 4.31
 
 **Cập nhật:** 14/10/2026
 
@@ -56,6 +56,8 @@ Additive chat SSE quota field: `paidRemaining`; `remaining` stays the free daily
 Changelog 2026-10-13 (4.29): opt-in sandbox billing and transactional allowances, signed VNPAY adapter, explicit local simulation, scan recovery/fencing and Pantry capacity. Source implementation is complete for the demo contract; external merchant and native-device acceptance are separate gates.
 
 Changelog 2026-10-14 (4.30): local checkout expiry has an explicit 410 business error and an HTML recovery page. Signed invalid capabilities remain 403; expired GET/POST never grant. Retest covers six refresh rotations, expiry and a replacement order. External merchant/native acceptance remains open.
+
+Changelog 2026-10-14 (4.31, UI branch only): reconciliation now acknowledges unchanged status with row-local loading, timestamped result/error and web toast. Local simulation uses explicit test/reload labels and discloses absence of card/OTP/QR checkout. API shapes/statuses and domain behavior are unchanged; external VNPAY remains pending merchant configuration and acceptance. Swagger resynced (178 operations); web scoped lint/typecheck, 600 tests/build and mobile typecheck/lint pass. Browser failed-order checks verified on both clients.
 
 ### Mobile integration record — 2026-10-03
 

@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CreditCard, Info } from 'lucide-react';
+import { toast } from 'sonner';
 import { AuthGuard } from '@/components/shared/auth-guard';
 import { Button } from '@/components/ui/button';
 import {
@@ -17,6 +18,11 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { billingErrorMessage } from '@/features/billing/lib/billing-errors';
+import {
+  billingCheckMessage,
+  billingCheckTime,
+  type BillingCheckFeedback,
+} from '@/features/billing/lib/billing-feedback';
 import {
   useBillingCatalogQuery,
   useBillingOrderQuery,
@@ -33,40 +39,81 @@ function OrderRow({
   refreshing,
 }: {
   order: BillingOrder;
-  onRefresh: (id: string) => void;
+  onRefresh: (id: string) => Promise<BillingOrder>;
   refreshing: boolean;
 }) {
+  const [checking, setChecking] = useState(false);
+  const [feedback, setFeedback] = useState<BillingCheckFeedback | null>(null);
+  async function checkPayment() {
+    setChecking(true);
+    setFeedback(null);
+    try {
+      const result = await onRefresh(order.id);
+      const message = billingCheckMessage(result);
+      setFeedback({
+        message,
+        checkedAtLabel: billingCheckTime(),
+        isError: false,
+        status: result.status,
+      });
+      toast.info('Đã tải lại trạng thái: ' + result.statusLabel, { description: message });
+    } catch (error) {
+      const message = billingErrorMessage(error);
+      setFeedback({ message, checkedAtLabel: billingCheckTime(), isError: true });
+      toast.error('Chưa kiểm tra được thanh toán', { description: message });
+    } finally {
+      setChecking(false);
+    }
+  }
   return (
-    <div className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-center sm:justify-between">
-      <div className="min-w-0">
-        <p className="font-medium">{order.productName}</p>
-        <p className="text-sm text-muted-foreground">
-          {order.priceLabel} · {order.createdAtLabel}
+    <div className="flex flex-col gap-3 rounded-lg border p-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0">
+          <p className="font-medium">{order.productName}</p>
+          <p className="text-sm text-muted-foreground">
+            {order.priceLabel} · {order.createdAtLabel}
+          </p>
+          <p className="text-xs text-muted-foreground">{order.providerLabel}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant={order.status === 'PAID' ? 'default' : 'secondary'}>
+            {order.statusLabel}
+          </Badge>
+          {order.checkoutUrl && (
+            <Button variant="outline" size="sm" asChild>
+              <a href={order.checkoutUrl} rel="noreferrer">
+                {order.simulated ? 'Mở trang kiểm thử' : 'Tiếp tục thanh toán'}
+              </a>
+            </Button>
+          )}
+          {order.status !== 'PAID' && (
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={refreshing || checking}
+              aria-busy={checking}
+              onClick={() => void checkPayment()}
+            >
+              {checking
+                ? 'Đang kiểm tra…'
+                : order.simulated
+                  ? 'Tải lại trạng thái'
+                  : 'Kiểm tra thanh toán'}
+            </Button>
+          )}
+        </div>
+      </div>
+      {feedback && (feedback.isError || feedback.status === order.status) && (
+        <p
+          role={feedback.isError ? 'alert' : 'status'}
+          className={
+            feedback.isError ? 'text-sm text-destructive' : 'text-sm text-muted-foreground'
+          }
+        >
+          <span className="tabular-nums">Kiểm tra lúc {feedback.checkedAtLabel}. </span>
+          {feedback.message}
         </p>
-        <p className="text-xs text-muted-foreground">{order.providerLabel}</p>
-      </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Badge variant={order.status === 'PAID' ? 'default' : 'secondary'}>
-          {order.statusLabel}
-        </Badge>
-        {order.checkoutUrl && (
-          <Button variant="outline" size="sm" asChild>
-            <a href={order.checkoutUrl} rel="noreferrer">
-              Tiếp tục thanh toán
-            </a>
-          </Button>
-        )}
-        {order.status !== 'PAID' && (
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={refreshing}
-            onClick={() => onRefresh(order.id)}
-          >
-            Kiểm tra thanh toán
-          </Button>
-        )}
-      </div>
+      )}
     </div>
   );
 }
@@ -102,11 +149,7 @@ function BillingContent() {
   }
   async function refresh(id: string) {
     setActionError(null);
-    try {
-      await reconcile.mutateAsync(id);
-    } catch (error) {
-      setActionError(billingErrorMessage(error));
-    }
+    return reconcile.mutateAsync(id);
   }
   const loading = catalog.isLoading || allowances.isLoading;
   const error = catalog.error ?? allowances.error;
@@ -125,7 +168,7 @@ function BillingContent() {
         <AlertTitle>{catalog.data?.providerLabel ?? 'Thanh toán sandbox'}</AlertTitle>
         <AlertDescription>
           {catalog.data?.simulated !== false
-            ? 'Đây là sandbox nội bộ: không chuyển tiền thật. Giá và giao dịch chỉ phục vụ bản demo.'
+            ? 'Đây là bản mô phỏng để thử kết quả thành công, hủy hoặc thất bại. Chưa kết nối cổng VNPAY; không có bước nhập thẻ, OTP hay quét QR và không chuyển tiền thật.'
             : 'Đây là môi trường thử nghiệm VNPAY. Giao dịch sandbox không phải thanh toán production.'}
         </AlertDescription>
       </Alert>
@@ -214,13 +257,11 @@ function BillingContent() {
               <>
                 <OrderRow
                   order={selected.data}
-                  onRefresh={(id) => void refresh(id)}
+                  onRefresh={refresh}
                   refreshing={reconcile.isPending}
                 />
                 <p className="text-sm text-muted-foreground">
-                  {selected.data.status === 'PAID'
-                    ? 'Quyền lợi đã được cấp vào tài khoản. Bạn có thể quay lại chat hoặc tủ đồ ăn.'
-                    : 'Kết quả được xác nhận từ máy chủ. Nếu đã thanh toán, hãy kiểm tra lại; trang quay về không tự cấp lượt.'}
+                  {billingCheckMessage(selected.data)}
                 </p>
               </>
             )
@@ -261,7 +302,9 @@ function BillingContent() {
                   <CreditCard data-icon="inline-start" />
                   {purchase.isPending && purchase.variables?.productId === product.id
                     ? 'Đang tạo đơn…'
-                    : 'Mua gói'}
+                    : catalog.data?.simulated
+                      ? 'Thử thanh toán'
+                      : 'Mua gói'}
                 </Button>
               </CardFooter>
             </Card>
@@ -290,7 +333,7 @@ function BillingContent() {
             <OrderRow
               key={order.id}
               order={order}
-              onRefresh={(id) => void refresh(id)}
+              onRefresh={refresh}
               refreshing={reconcile.isPending}
             />
           ))

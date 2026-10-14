@@ -8,6 +8,10 @@ One-time packages for chat, fridge jobs, receipt jobs and Pantry capacity. Defau
 
 VNPAY Sandbox is the external adapter. The local sandbox is explicitly simulated and needs no registration. Neither performs production billing; enabling billing in production fails configuration validation. No subscriptions, real-money refunds, storage upgrades or role changes are implemented.
 
+The running demo currently uses the local simulation. Its three outcome buttons are a test harness for order/allowance behavior, not a hosted payment flow. Card entry, OTP and payment-method selection belong to VNPAY's hosted sandbox page after merchant configuration. At the 2026-10-14 check, merchant code/signing secret were absent; external checkout is not claimed as verified.
+
+Web/mobile acknowledge every status reload with a timestamped result or error. In simulation mode the button says “Tải lại trạng thái”: it reads the outcome selected on “Mở trang kiểm thử” and does not change a failed/cancelled order into a paid order. A failed order requires a new order to try again.
+
 ## Quick start without merchant registration
 
 Prerequisites: Node 22+, npm, Docker, dependencies installed in backend/frontend/mobile. Commands run from the indicated directory.
