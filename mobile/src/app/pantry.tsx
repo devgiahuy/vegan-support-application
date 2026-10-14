@@ -1,4 +1,3 @@
-import { AllowanceNotice } from '@/features/billing/components/allowance-notice';
 import * as React from 'react';
 import { Alert, Pressable, Switch, Text, TextInput, View } from 'react-native';
 import { Link, type Href } from 'expo-router';
@@ -29,11 +28,7 @@ import {
   usePantryItemsQuery,
 } from '@/features/pantry/queries/pantry.queries';
 import { pantryErrorMessage } from '@/features/pantry/lib/pantry-errors';
-import type {
-  PantryItem,
-  PantryItemSource,
-  PantryListFilters,
-} from '@/features/pantry/types/pantry.model';
+import type { PantryItem, PantryItemSource, PantryListFilters } from '@/features/pantry/types/pantry.model';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useIconColors } from '@/lib/theme-colors';
 import { cn } from '@/lib/utils';
@@ -50,11 +45,7 @@ const PAGE_SIZE = 20;
 const SOURCE_OPTIONS: DropdownOption<SourceFilter>[] = [
   { value: 'ALL', label: 'Tất cả nguồn', shortLabel: 'Tất cả' },
   { value: 'MANUAL', label: 'Nhập thủ công', shortLabel: 'Thủ công' },
-  {
-    value: 'FRIDGE_RECOGNITION',
-    label: 'Nhận diện tủ lạnh',
-    shortLabel: 'Tủ lạnh',
-  },
+  { value: 'FRIDGE_RECOGNITION', label: 'Nhận diện tủ lạnh', shortLabel: 'Tủ lạnh' },
   { value: 'RECEIPT', label: 'Quét hóa đơn', shortLabel: 'Hóa đơn' },
 ];
 
@@ -68,11 +59,7 @@ function utcDay(offsetDays: number): string {
 /** Điều kiện lọc theo hạn dùng của từng tab (chỉ tính mục đã xác nhận ở hai tab theo hạn). */
 function tabFilters(tab: Tab): PantryListFilters {
   if (tab === 'expiring') {
-    return {
-      expiresFrom: utcDay(0),
-      expiresTo: utcDay(EXPIRING_DAYS),
-      confirmedOnly: true,
-    };
+    return { expiresFrom: utcDay(0), expiresTo: utcDay(EXPIRING_DAYS), confirmedOnly: true };
   }
   if (tab === 'expired') return { expiresTo: utcDay(-1), confirmedOnly: true };
   return {};
@@ -99,8 +86,7 @@ function HeaderAction({
       className={cn(
         'min-h-[60px] flex-1 items-center justify-center gap-1 rounded-2xl border px-1 py-2',
         active ? 'border-primary bg-primary/10' : 'border-input bg-card'
-      )}
-    >
+      )}>
       <Icon size={18} color={active ? colors.primary : colors.foreground} />
       <Text numberOfLines={1} className="text-[11px] font-semibold text-foreground">
         {label}
@@ -112,15 +98,8 @@ function HeaderAction({
 function CountBadge({ count, urgent }: { count: number | undefined; urgent: boolean }) {
   const hot = urgent && (count ?? 0) > 0;
   return (
-    <View
-      className={cn(
-        'min-w-5 items-center rounded-full px-1.5 py-0.5',
-        hot ? 'bg-red-600' : 'bg-background'
-      )}
-    >
-      <Text
-        className={cn('text-[11px] font-semibold', hot ? 'text-white' : 'text-muted-foreground')}
-      >
+    <View className={cn('min-w-5 items-center rounded-full px-1.5 py-0.5', hot ? 'bg-red-600' : 'bg-background')}>
+      <Text className={cn('text-[11px] font-semibold', hot ? 'text-white' : 'text-muted-foreground')}>
         {count ?? '–'}
       </Text>
     </View>
@@ -159,14 +138,8 @@ export default function PantryScreen() {
   );
   // Số lượng hiển thị trên 3 tab: lấy `metadata.totalItems` của truy vấn 1 mục, không phụ thuộc ô tìm kiếm/bộ lọc nguồn.
   const allCount = usePantryItemsQuery({ page: 1, limit: 1, ...tabFilters('all') }, authenticated);
-  const expiringCount = usePantryItemsQuery(
-    { page: 1, limit: 1, ...tabFilters('expiring') },
-    authenticated
-  );
-  const expiredCount = usePantryItemsQuery(
-    { page: 1, limit: 1, ...tabFilters('expired') },
-    authenticated
-  );
+  const expiringCount = usePantryItemsQuery({ page: 1, limit: 1, ...tabFilters('expiring') }, authenticated);
+  const expiredCount = usePantryItemsQuery({ page: 1, limit: 1, ...tabFilters('expired') }, authenticated);
   const counts: Record<Tab, number | undefined> = {
     all: allCount.data?.metadata.totalItems,
     expiring: expiringCount.data?.metadata.totalItems,
@@ -233,34 +206,24 @@ export default function PantryScreen() {
     );
 
   const emptyText: Record<Tab, { title: string; description: string }> = {
-    all: {
-      title: 'Chưa có nguyên liệu phù hợp',
-      description: 'Thêm nguyên liệu hoặc đổi bộ lọc.',
-    },
+    all: { title: 'Chưa có nguyên liệu phù hợp', description: 'Thêm nguyên liệu hoặc đổi bộ lọc.' },
     expiring: {
       title: 'Không có nguyên liệu sắp hết hạn',
       description: `Không có mục nào hết hạn trong ${EXPIRING_DAYS} ngày tới.`,
     },
-    expired: {
-      title: 'Không có nguyên liệu đã hết hạn',
-      description: 'Tủ bếp của bạn đang không có mục quá hạn.',
-    },
+    expired: { title: 'Không có nguyên liệu đã hết hạn', description: 'Tủ bếp của bạn đang không có mục quá hạn.' },
   };
 
   return (
     <SiteScreen>
       <View className="gap-4 px-5 pt-4">
-        <AllowanceNotice />
         <View className="flex-row items-start gap-2.5 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-3.5">
           <Info size={16} color="#d97706" />
           <View className="flex-1">
-            <Text className="text-sm font-bold text-amber-700">
-              Khuyến cáo quản lý an toàn thực phẩm
-            </Text>
+            <Text className="text-sm font-bold text-amber-700">Khuyến cáo quản lý an toàn thực phẩm</Text>
             <Text className="mt-1 text-xs leading-relaxed text-foreground">
-              Hạn sử dụng và ghi chú độ tươi là các quan sát do bạn ghi nhận hoặc thu thập từ bao
-              bì. Hệ thống không thay thế việc kiểm tra màu sắc, mùi vị và cảm quan thực tế của thực
-              phẩm trước khi chế biến nhằm đảm bảo an toàn vệ sinh tối đa.
+              Hạn sử dụng và ghi chú độ tươi là các quan sát do bạn ghi nhận hoặc thu thập từ bao bì. Hệ thống không thay thế
+              việc kiểm tra màu sắc, mùi vị và cảm quan thực tế của thực phẩm trước khi chế biến nhằm đảm bảo an toàn vệ sinh tối đa.
             </Text>
           </View>
         </View>
@@ -302,9 +265,7 @@ export default function PantryScreen() {
         {selectMode ? (
           <View className="gap-2 rounded-2xl border border-primary/30 bg-primary/5 p-3.5">
             <Text className="text-sm font-semibold text-foreground">
-              {selected.length === 0
-                ? 'Chọn từ 2 nguyên liệu trở lên để gộp'
-                : `Đã chọn ${selected.length} nguyên liệu`}
+              {selected.length === 0 ? 'Chọn từ 2 nguyên liệu trở lên để gộp' : `Đã chọn ${selected.length} nguyên liệu`}
             </Text>
             <View className="flex-row gap-2">
               <PrimaryButton
@@ -313,12 +274,7 @@ export default function PantryScreen() {
                 onPress={() => setMerging(true)}
                 className="flex-1"
               />
-              <PrimaryButton
-                label="Hủy"
-                variant="outline"
-                onPress={exitSelectMode}
-                className="flex-1"
-              />
+              <PrimaryButton label="Hủy" variant="outline" onPress={exitSelectMode} className="flex-1" />
             </View>
           </View>
         ) : null}
@@ -370,16 +326,11 @@ export default function PantryScreen() {
                 className={cn(
                   'h-10 flex-1 flex-row items-center justify-center gap-1.5 rounded-full',
                   selectedTab ? 'bg-background' : ''
-                )}
-              >
+                )}>
                 <Text
                   numberOfLines={1}
                   style={{ flexShrink: 0 }}
-                  className={cn(
-                    'text-xs font-semibold',
-                    selectedTab ? 'text-foreground' : 'text-muted-foreground'
-                  )}
-                >
+                  className={cn('text-xs font-semibold', selectedTab ? 'text-foreground' : 'text-muted-foreground')}>
                   {item.label}
                 </Text>
                 <CountBadge count={counts[item.value]} urgent={item.urgent} />
@@ -418,13 +369,7 @@ export default function PantryScreen() {
                 item={item}
                 busy={deletion.isPending}
                 onDelete={confirmDelete}
-                onEdit={(value) =>
-                  setActive({
-                    item: value,
-                    mode: 'OBSERVATION',
-                    type: 'CONSUME',
-                  })
-                }
+                onEdit={(value) => setActive({ item: value, mode: 'OBSERVATION', type: 'CONSUME' })}
                 onAdjust={(value, type) => setActive({ item: value, mode: 'QUANTITY', type })}
                 selectable={selectMode}
                 selected={selected.some((value) => value.id === item.id)}

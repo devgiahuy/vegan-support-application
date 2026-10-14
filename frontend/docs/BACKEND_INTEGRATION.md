@@ -16,16 +16,18 @@
 
 ### Sandbox billing extension — 2026-10-13
 
+Branch separation (2026-10-14): `codex/sandbox-billing` contains backend/domain/contracts only; billing web/mobile consumer source is retained on `codex/sandbox-billing-ui` in a separate worktree. The integration column below describes this backend checkout; the UI branch has its own completed consumer record. API contract documentation remains here as required by repository synchronization policy.
+
 User authorized implementation and autonomous product decisions on 2026-10-13. One-time packages accumulate chat/job credits and Pantry capacity; purchases do not grant roles or media storage. Billing is opt-in (`BILLING_ENABLED=true`), development/test only. Prices are demonstration values, not a launched commercial offer.
 
 | Method | Endpoint | Status | FE integrated | Notes |
 | --- | --- | --- | --- | --- |
-| GET | `/billing/products` | `READY` | Yes, web/mobile 2026-10-13 | Authenticated catalog; enabled/provider/simulated disclosure |
-| POST | `/billing/orders` | `READY` | Yes, web/mobile 2026-10-13 | Owner idempotency, server price/benefit snapshot; maximum five unexpired pending orders |
-| GET | `/billing/orders` | `READY` | Yes, web/mobile 2026-10-13 | Owner history, 20/page |
-| GET | `/billing/orders/:id` | `READY` | Yes, web/mobile 2026-10-13 | Owner-only status/expiring checkout; return URL never grants |
-| POST | `/billing/orders/:id/reconcile` | `READY` | Yes, web/mobile 2026-10-13 | Verified VNPAY querydr, five-minute throttle; local sandbox only refreshes state |
-| GET | `/entitlements/me` | `READY` | Yes, web/mobile 2026-10-13 | Available/held credits, undeleted Pantry count and recent 20 ledger entries |
+| GET | `/billing/products` | `READY` | No (UI branch: Yes) | Authenticated catalog; enabled/provider/simulated disclosure |
+| POST | `/billing/orders` | `READY` | No (UI branch: Yes) | Owner idempotency, server price/benefit snapshot; maximum five unexpired pending orders |
+| GET | `/billing/orders` | `READY` | No (UI branch: Yes) | Owner history, 20/page |
+| GET | `/billing/orders/:id` | `READY` | No (UI branch: Yes) | Owner-only status/expiring checkout; return URL never grants |
+| POST | `/billing/orders/:id/reconcile` | `READY` | No (UI branch: Yes) | Verified VNPAY querydr, five-minute throttle; local sandbox only refreshes state |
+| GET | `/entitlements/me` | `READY` | No (UI branch: Yes) | Available/held credits, undeleted Pantry count and recent 20 ledger entries |
 | GET | `/billing/vnpay/ipn` | `READY` | N/A | Signed provider notification; atomic once-only grant |
 | GET | `/billing/vnpay/return` | `READY` | N/A | Verified display-only redirect |
 | GET/POST | `/billing/sandbox/:id` | `READY` | N/A | Local simulation only, expiring order-bound bearer checkout capability |

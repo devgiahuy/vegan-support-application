@@ -4,35 +4,34 @@ import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { getAccessToken, setAccessToken } from '@/lib/auth-token';
 import { sharedRefresh, forceLogout } from '@/lib/auth-refresh';
-import { LoadingState } from '@/components/shared/loading-state';
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isHydrated, setIsHydrated] = useState(false);
 
   useEffect(() => {
-    let mounted = true;
-    async function restoreSession() {
-      const token = useAuthStore.getState().token ?? getAccessToken();
-      if (!token && useAuthStore.getState().user) {
-        try {
-          await sharedRefresh();
-        } catch {
-          await forceLogout().catch(() => undefined);
-        }
-      } else if (token && !getAccessToken()) {
-        setAccessToken(token);
-      }
-      // Checkout returns reload the app; mount guards after refresh settles.
-      if (mounted) setIsHydrated(true);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setIsHydrated(true);
+
+    const token = useAuthStore.getState().token ?? getAccessToken();
+    if (!token) {
+      // Chỉ silent-refresh khi từng đăng nhập (còn user persist trong storage).
+      // KHÔNG kiểm tra `document.cookie`: cookie refresh là HttpOnly nên JS
+      // không bao giờ đọc được — check cũ khiến F5 nào cũng mất phiên.
+      const persistedUser = useAuthStore.getState().user;
+      if (!persistedUser) return;
+
+      void sharedRefresh().catch(() => {
+        // Refresh cookie hết hạn/bị thu hồi -> đăng xuất triệt để (xóa cả
+        // HttpOnly cookies) để không kẹt loop /login → / ở lần vào sau.
+        void forceLogout();
+      });
+    } else if (token && !getAccessToken()) {
+      setAccessToken(token);
     }
-    void restoreSession();
-    return () => {
-      mounted = false;
-    };
   }, []);
 
   if (!isHydrated) {
-    return <LoadingState message="Đang khôi phục phiên đăng nhập…" />;
+    return null;
   }
 
   return <>{children}</>;

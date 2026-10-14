@@ -565,17 +565,6 @@ export default function ProfileScreen() {
               <ChevronRight size={16} color={colors.mutedForeground} />
             </Pressable>
           </Link>
-          <Link href={'/billing' as Href} asChild>
-            <Pressable
-              accessibilityRole="link"
-              className="min-h-14 flex-row items-center justify-between border-b border-border p-4"
-            >
-              <Text className="text-sm font-semibold text-foreground">
-                Gói tiện ích · Mua thêm lượt AI và ô tủ đồ ăn
-              </Text>
-              <ChevronRight size={16} color={colors.mutedForeground} />
-            </Pressable>
-          </Link>
           <Link href={'/pantry' as Href} asChild>
             <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
               <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">

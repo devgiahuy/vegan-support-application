@@ -1,4 +1,3 @@
-import { BILLING_QUERY_KEYS } from '@/features/billing/queries/billing.queries';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { pantryApi } from '../api/pantry.api';
 import type {
@@ -18,7 +17,6 @@ export const PANTRY_QUERY_KEYS = {
 function invalidateInventory(client: QueryClient) {
   return Promise.all([
     client.invalidateQueries({ queryKey: PANTRY_QUERY_KEYS.all }),
-    client.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all }),
     client.invalidateQueries({ queryKey: ['shopping-preview'] }),
   ]);
 }
@@ -88,7 +86,6 @@ export function useCreatePantryItemMutation() {
     mutationFn: (values: PantryItemFormValues) => pantryApi.createItem(values),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: PANTRY_QUERY_KEYS.all });
-      void queryClient.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
       void queryClient.invalidateQueries({ queryKey: ['shopping-preview'] });
     },
   });
@@ -101,7 +98,6 @@ export function useDeletePantryItemMutation() {
       pantryApi.deleteItem(vars.id, vars.expectedVersion),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: PANTRY_QUERY_KEYS.all });
-      void queryClient.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
       void queryClient.invalidateQueries({ queryKey: ['shopping-preview'] });
     },
   });

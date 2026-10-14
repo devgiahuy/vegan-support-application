@@ -12,6 +12,8 @@ VNPAY Sandbox is the external adapter. The local sandbox is explicitly simulated
 
 Prerequisites: Node 22+, npm, Docker, dependencies installed in backend/frontend/mobile. Commands run from the indicated directory.
 
+Run backend commands in the primary checkout. Run all web/mobile commands below in the separate `codex/sandbox-billing-ui` checkout (locate it with `git worktree list`). The backend branch has no `/billing` client route after the user-requested split. The attached UI checkout is `/Users/thienel/.codex/worktrees/sandbox-billing-ui/vegan-support-application` on this workstation; relative `cd frontend` / `cd mobile` below refer to that checkout.
+
 Backend:
 
 ```bash
@@ -98,4 +100,4 @@ The script leaves fixtures in this isolated database for inspection. It exercise
 - Browser: demo login, successful combo purchase, cancellation and failure with no extra grants, return/reload session restoration preserving the selected order, mobile Profile entry, mobile checkout and shared balances/history passed. Mobile web has no horizontal overflow at 390px.
 - Demo account ends with 100 purchased chat credits, 13 fridge jobs, 13 receipt jobs and 70 Pantry slots (three scan trials plus purchased benefits). The paid, cancelled and failed orders remain inspectable.
 
-Screenshots: [web paid order](billing-evidence/web-paid.png), [mobile at 390px](billing-evidence/mobile-390.png).
+Screenshots are retained on the UI branch under `docs/billing-evidence/web-paid.png` and `docs/billing-evidence/mobile-390.png`. Historical 2026-10-13 balances above describe that run; later demo purchases may increase them.

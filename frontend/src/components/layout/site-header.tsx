@@ -218,9 +218,6 @@ export function SiteHeader() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/billing">Gói tiện ích</Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
                   <Link href="/pantry">
                     <Utensils className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Tủ bếp
                     gia đình

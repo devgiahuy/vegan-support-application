@@ -1,11 +1,5 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
-## Sandbox billing extension — Updated 2026-10-13
-
-Phạm vi demo được người dùng duyệt riêng, hoàn thành 100% (0% → 100%): web/mobile có catalog, tạo đơn idempotent, checkout, trạng thái/lịch sử và số dư chung; backend cấp quyền một lần, dùng lượt chat miễn phí trước, tính một lượt/job quét và giới hạn số item Pantry. Không thay đổi mức hoàn thành production của Phase 21/22/27. Provider ngoài: VNPAY Sandbox; local sandbox chạy không cần đăng ký và ghi rõ không chuyển tiền thật.
-
-Backend lint/typecheck/build/OpenAPI và billing/vision/receipt acceptance pass. Web typecheck, 600 tests/50 files, Next build pass; lint các consumer thay đổi có 0 lỗi/3 cảnh báo nền, full lint còn 89 lỗi/347 cảnh báo nền. Mobile typecheck/lint, 3 billing mapper tests, web export 64 routes và Android export pass. Browser xác nhận mua combo/cancel/fail, return giữ phiên/đơn, entry từ Profile mobile, checkout và số dư chung; mobile 390px không tràn ngang. External VNPAY với merchant thật, native device/camera và production còn deferred. Hướng dẫn và ảnh: `../../docs/BILLING_DEMO.md`.
-
 ## Docker seed startup — Updated 2026-10-08
 
 Docker automatically seeds MongoDB before API startup, with an explicit `RUN_SEED=false` opt-out.

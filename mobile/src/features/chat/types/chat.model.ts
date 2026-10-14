@@ -33,7 +33,6 @@ export interface MessageFeedback {
 }
 
 export interface QuotaState {
-  paidRemaining?: number;
   used: number;
   limit: number;
   remaining: number;

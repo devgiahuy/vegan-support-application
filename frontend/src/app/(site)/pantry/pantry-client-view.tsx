@@ -1,7 +1,5 @@
 'use client';
 
-import { AllowanceNotice } from '@/features/billing/components/allowance-notice';
-
 import React, { useState, useMemo } from 'react';
 import { GitMerge } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -75,7 +73,6 @@ export function PantryClientView() {
   return (
     <div className="container max-w-7xl mx-auto px-4 py-6 sm:py-8 space-y-6">
       <PantrySafetyBanner />
-      <AllowanceNotice />
 
       <PantryHeader
         search={search}

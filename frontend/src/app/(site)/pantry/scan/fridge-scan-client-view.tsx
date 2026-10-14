@@ -1,7 +1,5 @@
 'use client';
 
-import { AllowanceNotice } from '@/features/billing/components/allowance-notice';
-
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Sparkles } from 'lucide-react';
@@ -93,7 +91,6 @@ export function FridgeScanClientView() {
         job?.isReadyForReview ? 'max-w-7xl' : 'max-w-5xl'
       }`}
     >
-      <AllowanceNotice feature="FRIDGE" />
       {/* Header thanh điều hướng */}
       <div className="flex items-center justify-between gap-4">
         <Button

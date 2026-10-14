@@ -1,4 +1,3 @@
-import { AllowanceNotice } from '@/features/billing/components/allowance-notice';
 import * as React from 'react';
 import { Linking, Platform, Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
@@ -161,7 +160,6 @@ function ScanWorkspaceSession({ kind }: { kind: ScanKind }) {
   return (
     <SiteScreen>
       <View className="gap-4 px-5 pt-4 pb-8" style={{ width: '100%', maxWidth: 760, alignSelf: 'center' }}>
-        <AllowanceNotice feature={kind === 'fridge' ? 'FRIDGE' : 'RECEIPT'} />
         <Text className="text-2xl font-bold text-foreground">{title}</Text>
         <Text className="text-sm text-muted-foreground">{SCAN_PROVIDER_MODE === 'fake' ? 'DEV · Kết quả mẫu, không phải nhận diện ảnh thật.' : 'DEV · Provider cấu hình: OpenAI'}</Text>
         {!jobId ? (
