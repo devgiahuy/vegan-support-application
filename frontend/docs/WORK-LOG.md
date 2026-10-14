@@ -1,5 +1,12 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-14] — Chuẩn bị PR backend rồi frontend vào dev
+
+- Mục tiêu: tạo hai PR theo thứ tự người dùng yêu cầu, giữ checkout chính backend-only và nhánh UI phụ thuộc backend.
+- Đã làm: nhập origin/dev mới vào backend, giữ cả changelog mobile và billing trong registry; nhập backend vào UI, giữ auto-merge session/message pagination mới của mobile. Backend PR: https://github.com/devgiahuy/vegan-support-application/pull/42. PR frontend target dev cần merge backend trước; nếu backend được squash thì cập nhật/rebase nhánh frontend lên dev trước khi review diff cuối.
+- Verify sau merge: npm ci mobile; typecheck và lint pass; npm test mobile 53/53 pass; Expo web export pass khi cấp EXPO_PUBLIC_API_URL theo tài liệu. Lần chạy thiếu biến báo lỗi cấu hình, không có thay đổi source để né guard. Web runtime không đổi trong lần chuẩn bị PR, nên không chạy lại 602 tests/Next build đã pass trước đó. git diff --check sạch.
+- Cập nhật bằng chứng: credentialed hosted QR/PENDING query và actual payOS confirmation webhook 200 đã xác minh, tampered signature 400. Chưa chuyển tiền thật hoặc test native-device. Progress code giữ 100%; không nâng các gate live còn mở.
+
 ## [2026-10-14] — Chuyển billing sang payOS trên web/mobile
 
 - Scope: user-authorized provider replacement; backend commit `cd45c24` merged into UI worktree, schema/docs regenerated before mapper changes. Existing billing endpoints/DTO envelopes remain; no direct component DTO consumption or new client endpoint calls.

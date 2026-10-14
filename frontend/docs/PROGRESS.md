@@ -1,5 +1,9 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## payOS PR handoff — Updated 2026-10-14
+
+Client code remains 100% complete for the approved development scope. Merchant keys are now configured locally; live VietQR checkout, PENDING query/visible feedback and the provider's actual channel-verification request through HTTPS all pass. No real transfer-to-credit settlement or native-device acceptance is claimed. Backend PR #42 targets dev; the frontend follow-up also targets dev and depends on merging backend first. Latest origin/dev was merged while preserving its mobile session/pagination changes. Mobile verification after this merge: typecheck, lint, all 53 tests and web export pass using the documented EXPO_PUBLIC_API_URL. Earlier web 602-test/build gates remain valid because no web source changed during PR preparation.
+
 ## payOS provider conversion — Updated 2026-10-14
 
 User requested all active billing moved to payOS; credentials will be configured later. Web/mobile integration code is complete: payOS-only purchasing, strict hosted URL validation, real-transfer disclosure, disabled purchase without configuration, visible status-check feedback and read-only historical provider labels. Existing balances/usage remain unchanged. This is client-code completion, not hosted checkout or real-transfer acceptance; payOS has no sandbox. Primary branch stays backend-only; UI is on `codex/sandbox-billing-ui`.
