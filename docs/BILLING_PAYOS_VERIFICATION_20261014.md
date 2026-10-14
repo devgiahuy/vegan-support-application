@@ -1,6 +1,6 @@
 # payOS conversion verification — 2026-10-14
 
-User selected payOS and will configure merchant keys later. New purchases exclusively use payOS; VNPAY/local checkout routes and configuration are removed. Existing orders/balances retain their original provider. payOS has no sandbox and its checkout transfers real money; app production rollout remains disabled.
+User selected payOS and configured merchant keys locally. New purchases exclusively use payOS; VNPAY/local checkout routes and configuration are removed. Existing orders/balances retain their original provider. payOS has no sandbox and its checkout transfers real money; app production rollout remains disabled.
 
 ## Verified
 
@@ -13,8 +13,17 @@ User selected payOS and will configure merchant keys later. New purchases exclus
 
 ## Open acceptance gates
 
-- User configures PAYOS_CLIENT_ID, PAYOS_API_KEY, PAYOS_CHECKSUM_KEY and a public HTTPS webhook URL. Credentialed hosted QR checkout, actual transfer/provider webhook delivery and native-device acceptance have not been run.
-- Mocked SDK acceptance is not payOS sandbox. No real transaction, account registration or deployment was performed.
+- Public HTTPS webhook URL, actual transfer/provider webhook delivery and native-device acceptance remain unverified. The regular public URL is still a placeholder; the demo helper currently uses localhost:4100 because BILLING_DEMO_PUBLIC_URL is absent.
+- Mocked SDK acceptance is not payOS sandbox. No bank transfer, merchant-account registration or deployment was performed.
 - Full frontend lint still has previously documented baseline findings; changed billing scope is clean. Existing assistant animation remains outside scope without manual suppression.
 
 Setup: [BILLING_DEMO.md](BILLING_DEMO.md). Backend branch `codex/sandbox-billing`; clients on `codex/sandbox-billing-ui`.
+
+## Credentialed local retest — 17:03 ICT
+
+- Restarted the isolated demo API after the user configured all three keys; no secrets were printed or committed. Catalog purchases are enabled.
+- Created one actual payOS link for the 19,000 VND / ten fridge scans package through the web UI. Hosted payOS checkout rendered VietQR and the correct amount. No bank transfer was performed.
+- Back in the application, signed provider reconciliation returned PENDING. The web button displayed loading, a result timestamp and the pending explanation; a repeat within 30 seconds displayed the cooldown message.
+- Mobile web loaded the same order and balances, displayed the shared reconciliation cooldown, and returned the timestamped PENDING explanation after waiting. Balances stayed chat 100, fridge 53, receipts 13, Pantry 0/70; no grant was issued for the unpaid order.
+- Reran the isolated billing acceptance command successfully, including signed transport fixtures, idempotency, quota/capacity and auth scenarios. This command mocks payOS transport; the credentialed checkout/query above were separate live requests.
+- No source code changed during this retest. Earlier lint/typecheck/build and client test results above were not rerun. Browser evidence is saved in the UI worktree's docs/billing-evidence/ directory.

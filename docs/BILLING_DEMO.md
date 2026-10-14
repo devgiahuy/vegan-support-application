@@ -4,7 +4,7 @@ Updated: 2026-10-14. Backend: `codex/sandbox-billing`; web/mobile clients: `code
 
 ## Scope and payment mode
 
-New purchases use payOS exclusively. Hosted checkout offers bank transfer/QR with integer VND prices. **payOS has no sandbox: transfers are real money, including when checkout is opened from this development application.** No live merchant request or bank transfer was made during agent acceptance.
+New purchases use payOS exclusively. Hosted checkout offers bank transfer/QR with integer VND prices. **payOS has no sandbox: transfers are real money, including when checkout is opened from this development application.** Credentialed checkout and PENDING reconciliation were verified on 2026-10-14; no bank transfer was performed. See [verification record](BILLING_PAYOS_VERIFICATION_20261014.md).
 
 One-time packages retain the existing snapshotted credits/capacity. Default trial: three fridge/receipt jobs each and Pantry baseline 20 items. Purchased demo allowances accumulate without expiry. Free daily chat is consumed first; one bounded successful/partially successful scan job consumes one credit; total failure releases it. Results still require confirmation. Package purchases do not change roles or media storage.
 
@@ -46,7 +46,7 @@ EXPO_PUBLIC_API_URL=http://127.0.0.1:4100/api/v1 EXPO_PUBLIC_ENABLE_DEV_SCANS=tr
 
 Open http://127.0.0.1:8090/billing, or Profile → Gói tiện ích. Keep mobile UI/API on 127.0.0.1 and web on localhost; different ports alone do not isolate refresh cookies. Native requires LAN/API URLs and appropriate allowed development origins. Fake AI/scan fixtures are independent of payOS and do not establish image-recognition quality.
 
-## Configure payOS later
+## Configure payOS
 
 Create/verify a payOS account and payment channel at https://my.payos.vn. Put the channel's values in untracked `backend/.env`:
 
@@ -60,6 +60,8 @@ PAYOS_CHECKSUM_KEY=<channel-checksum-key>
 Remove old `BILLING_PROVIDER=sandbox|vnpay` and VNPAY settings. Blank/missing keys leave purchases unavailable. Regular backend requires `BILLING_ENABLED=true`; the isolated demo helper sets it. Configure a public HTTPS API via `BILLING_DEMO_PUBLIC_URL` (or `BILLING_PUBLIC_URL` in regular startup), and the app return via `BILLING_DEMO_RETURN_URL` / `BILLING_RETURN_URL`.
 
 Register the channel webhook URL `https://<api-host>/api/v1/billing/payos/webhook` in payOS. A signed registration sample is acknowledged without a grant. Native opens the system browser; close it to return to the app and refresh account state. Web returns to its selected order; mobile web's default checkout return is the web page, so reopen the mobile preview afterward. For mobile-only preview set the helper return URL to http://127.0.0.1:8090/billing.
+
+The public URL lets payOS call your backend after payment. Localhost is accessible only on your machine; a development HTTPS tunnel forwards public requests to port 4100. For the demo helper set BILLING_DEMO_PUBLIC_URL to the tunnel origin, restart the API and register that origin plus /api/v1/billing/payos/webhook on the payment channel. Do not use the example placeholder as an actual URL. The manual “Kiểm tra thanh toán” action can query payOS from a local backend without a public webhook.
 
 Do not put merchant keys in frontend/mobile environment or commit them. The agent does not create a merchant account or perform a real payment.
 
@@ -84,7 +86,7 @@ DATABASE_URL='mongodb://localhost:27018/vegan_billing_payos_20261014?replicaSet=
 DATABASE_URL='mongodb://localhost:27018/vegan_billing_payos_20261014?replicaSet=rs0&directConnection=true' npm run billing:acceptance
 ```
 
-Acceptance leaves disposable fixtures in that isolated database. It verifies owner/idempotency, signed payOS SDK create/query/webhook, partial/excess payments, replay, unknown samples, provider/signature errors, cooldown, ambiguous create recovery, historical records and existing quota/capacity/auth behavior. Credentialed hosted checkout, bank transfer/webhook delivery and native-device acceptance remain separate manual gates.
+Acceptance leaves disposable fixtures in that isolated database. It verifies owner/idempotency, signed payOS SDK create/query/webhook, partial/excess payments, replay, unknown samples, provider/signature errors, cooldown, ambiguous create recovery, historical records and existing quota/capacity/auth behavior. Credentialed hosted checkout and PENDING query passed separately on 2026-10-14; bank transfer/webhook delivery and native-device acceptance remain manual gates.
 
 Maintenance: `BILLING_ENABLED=true npm run billing:cleanup` recovers stale usage reservations; `BILLING_ENABLED=true npm run billing:reconcile` queries unfulfilled payOS orders from the last 24 hours when keys are configured.
 
