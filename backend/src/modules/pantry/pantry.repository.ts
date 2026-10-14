@@ -1,3 +1,4 @@
+import type { EntitlementService } from '../entitlements/entitlement.service.js';
 import { lockDocument } from '../../database/locking.js';
 import {
   FoodDataReviewStatus,
@@ -84,7 +85,10 @@ export interface MergeData {
 }
 
 export class PantryRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly entitlements?: EntitlementService,
+  ) {}
 
   findActiveIngredient(id: string) {
     return this.prisma.ingredient.findFirst({
@@ -243,6 +247,7 @@ export class PantryRepository {
         });
         return { item, adjustment: existing };
       }
+      await this.entitlements?.assertPantryCapacity(transaction, data.ownerId);
       const item = await transaction.pantryItem.create({
         data: {
           ownerId: data.ownerId,

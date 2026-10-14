@@ -1,7 +1,15 @@
 # MongoDB persistence migration
 
-**Updated:** 2026-10-08
+**Updated:** 2026-10-13
 **Scope:** User-approved replacement of PostgreSQL with MongoDB for the current backend. Historical data preservation is optional and is not an acceptance gate. Product scope and existing release limitations remain unchanged.
+
+## Sandbox billing schema extension — 2026-10-13
+
+The approved billing demo adds six models/collections (106 total): BillingProduct, PaymentOrder, PaymentEvent, EntitlementAccount, UsageReservation and EntitlementLedger. Each referenced model includes `referenceVersion`; unique owner/idempotency, provider transaction and ledger-operation indexes enforce deduplication.
+
+`npm run prisma:push` combines generated validators with reviewed additive bounds from `prisma/mongodb-native-validators.json` (positive monetary values, nonnegative credits/capacity, provider/feature allowlists). It applies `prisma/mongodb-backfills.json` only to missing `queued_at` fields in existing recognition/receipt jobs, using `created_at` without overwriting existing timestamps. Repeated provisioning and catalog seeding are safe. No Prisma Migrate/SQL migration is used for this Mongo extension.
+
+Provisioning, seed and transactional acceptance passed on separate `vegan_billing_demo` and `vegan_billing_20261013` databases. The shared application database was not provisioned or reseeded in this task. Setup and verification: [BILLING_DEMO.md](../../docs/BILLING_DEMO.md).
 
 ## Architecture and affected behavior
 

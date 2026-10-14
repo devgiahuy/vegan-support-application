@@ -1,8 +1,8 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.30
+**Version:** 4.34
 
-**Cập nhật:** 13/10/2026
+**Cập nhật:** 14/10/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
@@ -13,6 +13,53 @@
 ---
 
 ## 1. Source of truth và status
+
+### Usage billing extension — payOS conversion 2026-10-14
+
+User requested complete payOS conversion and will configure keys later. New purchases use payOS exclusively; payOS has no sandbox and transfers real money, even from a development app. App production rollout remains disabled. Existing quotas, confirmation rules and allowance accounting remain unchanged.
+
+Backend branch `codex/sandbox-billing` contains domain/contracts only; consumer changes live in `codex/sandbox-billing-ui`. The existing localhost/127.0.0.1 cookie-host isolation remains required for simultaneous web/mobile previews.
+
+Provider migration is complete in the separate UI checkout after web/mobile consumer gates passed. Catalog/entitlement provider is `payos`, simulated=false. Catalog enabled requires billing opt-in and complete merchant credentials; entitlement enabled describes usage enforcement. Old provider strings remain in history only.
+
+| Method | Endpoint | Status | FE integrated | Notes |
+| --- | --- | --- | --- | --- |
+| GET | `/billing/products` | `READY` | No (UI branch: Yes, 2026-10-14) | payOS catalog; purchase disabled without keys |
+| POST | `/billing/orders` | `READY` | No (UI branch: Yes, 2026-10-14) | Owner intent/server snapshot; unique persisted provider reference/link; retry recovers same code |
+| GET | `/billing/orders` | `READY` | No (UI branch: Yes, 2026-10-14) | Owned history retains legacy providers without checkout |
+| GET | `/billing/orders/:id` | `READY` | No (UI branch: Yes, 2026-10-14) | Owned status; expired URL hidden; return never grants |
+| POST | `/billing/orders/:id/reconcile` | `READY` | No (UI branch: Yes, 2026-10-14) | Signed payOS query; 30-second cooldown; history unchanged |
+| GET | `/entitlements/me` | `READY` | No (UI branch: Yes, 2026-10-14) | Usage enforcement/ledger with payOS provider |
+| POST | `/billing/payos/webhook` | `READY` | N/A | SDK signature + signed query; fully paid grant once; unknown signed samples ACK, including confirmation payloads without success |
+| GET | `/billing/payos/return/:id` | `READY` | N/A | Display-only redirect; query claims ignored |
+| GET | `/billing/vnpay/ipn` | `REMOVED` | N/A | No new VNPAY settlement |
+| GET | `/billing/vnpay/return` | `REMOVED` | N/A | Retired provider |
+| GET/POST | `/billing/sandbox/:id` | `REMOVED` | N/A | No simulator or fallback |
+
+Backend evidence: Mongo validators/partial unique indexes, isolated seed, authorization, lint/typecheck/build, OpenAPI and controlled SDK transport acceptance. External merchant/real-transfer acceptance remains pending keys. Phase 21/22 readiness is unchanged.
+
+Completed migration: recognize payos in mappers, allow new purchases only for payos, validate HTTPS pay.payos.vn checkout URLs, preserve historical labels/read-only records, remove simulation/VNPAY checkout wording, disclose real transfer and show disabled purchase without keys. Existing envelopes/benefits remain unchanged; provider references are internal.
+
+| Error | Frontend handling |
+| --- | --- |
+| `BILLING_DISABLED` | Unavailable action; history readable |
+| `BILLING_PRODUCT_UNAVAILABLE` | Refresh catalog |
+| `BILLING_ORDER_NOT_FOUND` | Owner-scoped not-found |
+| `BILLING_IDEMPOTENCY_CONFLICT` | Preserve intent; another intent for another package |
+| `BILLING_PENDING_LIMIT` | Resume existing payOS order |
+| `BILLING_PROVIDER_UNAVAILABLE` | Missing configuration/network error; no fallback or grant |
+| `BILLING_SIGNATURE_INVALID`, `BILLING_PAYMENT_MISMATCH` | Invalid shape/signature/reference/link/amount/currency; no grant. Webhook success is optional, but must be boolean when present; data/signature remain required |
+| `BILLING_RECONCILE_COOLDOWN` | Wait at least 30 seconds |
+| `BILLING_CHECKOUT_EXPIRED` | Historical retired local-checkout code; not emitted by current billing routes |
+| `ENTITLEMENT_QUOTA_EXCEEDED`, `PANTRY_CAPACITY_EXCEEDED`, `SCAN_RETRY_LIMIT_EXCEEDED` | Existing quota/capacity/retry handling |
+
+Changelog 2026-10-14 (4.32): user-authorized payOS conversion replaces routes/configuration and preserves historical orders. Signed SDK create/query/webhook, persisted references, partial-payment handling and 30-second checks. Backend gates pass; affected clients remain CHANGING until migration. No external merchant request.
+
+Changelog 2026-10-14 (4.33): web/mobile mapper migration and real-transfer UI disclosure complete; affected contracts returned to READY. Web scoped lint/typecheck, 602 tests/50 files and build, mobile typecheck/lint/6 billing tests, web export 64 routes and Android Hermes export pass. Browser confirms disabled purchase without keys, original balances and read-only history; mobile 390px has no horizontal overflow. External channel/transfer and native-device acceptance remain pending.
+
+Historical changelog: 4.29 introduced VNPAY/local simulation; 4.30 fixed local checkout expiry. These are superseded for new purchases by payOS.
+
+Changelog 2026-10-14 (4.34): live payOS channel verification omits the unsigned success field despite its required SDK/documentation type. Accept this field as optional without changing signed data or settlement authorization. Signed unknown confirmation samples ACK; invalid signatures/shapes still return 400. No consumer DTO or database change; sync generated OpenAPI. Credentialed QR/PENDING checks passed separately; actual payment/native-device acceptance remains open.
 
 ### Mobile integration record — 2026-10-03
 

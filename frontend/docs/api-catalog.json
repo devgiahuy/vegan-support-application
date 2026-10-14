@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
-  "source": "../backend/openapi.json",
-  "generatedAt": "2026-10-08T06:34:30.235Z",
+  "source": "http://localhost:4100/api-docs.json",
+  "generatedAt": "2026-10-14T10:13:05.005Z",
   "stats": {
-    "operations": 168,
-    "groups": 39,
-    "schemas": 150
+    "operations": 176,
+    "groups": 40,
+    "schemas": 154
   },
   "operations": [
     {
@@ -2904,6 +2904,286 @@
         "403": "ErrorResponse",
         "404": "ErrorResponse",
         "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/billing/products",
+      "group": "Billing",
+      "summary": "List packages and payOS checkout availability",
+      "operationId": "",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "BillingCatalogEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/entitlements/me",
+      "group": "Billing",
+      "summary": "Owned allowances, Pantry capacity and recent ledger",
+      "operationId": "",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "EntitlementEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/billing/orders",
+      "group": "Billing",
+      "summary": "Paginated owned payment history",
+      "operationId": "",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "BillingOrdersEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/billing/orders",
+      "group": "Billing",
+      "summary": "Create idempotent package order; server snapshots price and benefits",
+      "operationId": "",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "productId",
+            "idempotencyKey"
+          ],
+          "properties": {
+            "productId": {
+              "type": "string"
+            },
+            "idempotencyKey": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "201": "BillingOrderEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/billing/orders/{id}",
+      "group": "Billing",
+      "summary": "Read owned order; return page does not settle it",
+      "operationId": "",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "BillingOrderEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/billing/orders/{id}/reconcile",
+      "group": "Billing",
+      "summary": "Recover same payOS checkout if needed, verify query and settle once; 30-second throttle",
+      "operationId": "",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "BillingOrderEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/billing/payos/webhook",
+      "group": "Billing",
+      "summary": "Verify signed payOS notification and authoritative payment query; grant once",
+      "operationId": "",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "code",
+            "desc",
+            "signature",
+            "data"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "desc": {
+              "type": "string"
+            },
+            "success": {
+              "type": "boolean"
+            },
+            "signature": {
+              "type": "string"
+            },
+            "data": {
+              "type": "object",
+              "required": [
+                "orderCode",
+                "amount",
+                "description",
+                "accountNumber",
+                "reference",
+                "transactionDateTime",
+                "currency",
+                "paymentLinkId",
+                "code",
+                "desc"
+              ],
+              "properties": {
+                "orderCode": {
+                  "type": "integer"
+                },
+                "amount": {
+                  "type": "integer"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "accountNumber": {
+                  "type": "string"
+                },
+                "reference": {
+                  "type": "string"
+                },
+                "transactionDateTime": {
+                  "type": "string"
+                },
+                "currency": {
+                  "type": "string"
+                },
+                "paymentLinkId": {
+                  "type": "string"
+                },
+                "code": {
+                  "type": "string"
+                },
+                "desc": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "object",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/billing/payos/return/{id}",
+      "group": "Billing",
+      "summary": "Display-only browser return/cancel redirect; never grant or trust query payment claims",
+      "operationId": "",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "303": "Configured application billing URL with local orderId",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
       }
     },
     {

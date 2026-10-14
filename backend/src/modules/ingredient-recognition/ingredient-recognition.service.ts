@@ -256,6 +256,7 @@ export class IngredientRecognitionService {
         job.id,
         'RECOGNITION_PROVIDER_UNAVAILABLE',
         'The configured image provider changed. Create a new job with the committed images.',
+        job.attemptCount,
       );
       return;
     }
@@ -272,12 +273,14 @@ export class IngredientRecognitionService {
         job.id,
         results.map((result) => ({ inputId: result.inputId, error: result.error })),
         candidates,
+        job.attemptCount,
       );
     } catch {
       await this.repository.markFailed(
         job.id,
         'RECOGNITION_PROVIDER_UNAVAILABLE',
         'Image recognition is temporarily unavailable. Retry later or add pantry items manually.',
+        job.attemptCount,
       );
     }
   }

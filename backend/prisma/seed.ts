@@ -1,4 +1,5 @@
 import { createPrismaClient } from '../src/database/client.js';
+import { seedBillingProducts } from '../src/modules/billing/billing.catalog.js';
 import 'dotenv/config';
 import {
   ActivityLevel,
@@ -763,6 +764,7 @@ const seedEnvironment = z
   .parse(process.env);
 
 async function main(): Promise<void> {
+  await seedBillingProducts(prisma);
   const [memberPasswordHash, adminPasswordHash] = await Promise.all([
     passwordService.hash(seedEnvironment.SEED_MEMBER_PASSWORD),
     passwordService.hash(seedEnvironment.SEED_ADMIN_PASSWORD),

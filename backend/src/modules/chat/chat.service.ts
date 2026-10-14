@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { AiRequestStatus, ChatMessageRole, Role, type ChatSession } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
 import type { AppConfig } from '../../config/env.js';
@@ -94,7 +94,9 @@ function sha256(value: unknown): string {
 }
 
 function redactPii(value: string): string {
-  return value.replace(EMAIL_PATTERN, '[EMAIL_REDACTED]').replace(PHONE_PATTERN, '[PHONE_REDACTED]');
+  return value
+    .replace(EMAIL_PATTERN, '[EMAIL_REDACTED]')
+    .replace(PHONE_PATTERN, '[PHONE_REDACTED]');
 }
 
 function datePartsInTimezone(date: Date): { year: number; month: number; day: number } {
@@ -263,14 +265,22 @@ export class ChatService {
 
     const window = quotaWindow(now);
     const limit = this.quotaLimit(identity);
-    const reserved = await this.repository.reserveQuota(
-      identity.subjectKey,
-      window.usageDate,
-      limit,
-      turn.assistantMessage.id,
-      new Date(now.getTime() + this.config.ai.timeoutMs + 10_000),
-    );
-    if (reserved.reservationKey !== turn.assistantMessage.id) {
+    const reservationKey = 'CHAT:' + turn.assistantMessage.id + ':' + randomUUID();
+    let reserved: QuotaBucketState;
+    try {
+      reserved = await this.repository.reserveQuota(
+        identity.subjectKey,
+        window.usageDate,
+        limit,
+        reservationKey,
+        new Date(now.getTime() + this.config.ai.timeoutMs + 10_000),
+        identity.type === 'AUTHENTICATED' ? identity.userId : undefined,
+      );
+    } catch (error) {
+      await this.repository.failAssistant(turn.assistantMessage.id, '');
+      throw error;
+    }
+    if (reserved.reservationKey !== reservationKey) {
       await this.repository.failAssistant(turn.assistantMessage.id, '');
       if (reserved.successfulCount >= reserved.quotaLimit) {
         throw new AppError({
@@ -291,44 +301,51 @@ export class ChatService {
       });
     }
 
-    const profile =
-      identity.type === 'AUTHENTICATED'
-        ? await this.repository.findPromptProfile(identity.userId)
-        : null;
-    const personalized = Boolean(
-      profile?.personalizationPreference?.enabled &&
-      profile.personalizationPreference.consentVersion === PERSONALIZATION_CONSENT_VERSION,
-    );
-    const history = await this.repository.findHistory(
-      sessionId,
-      turn.requestMessage.id,
-      HISTORY_LIMIT,
-    );
-    await this.repository.upsertRequestLog({
-      identity,
-      sessionId,
-      requestMessageId: turn.requestMessage.id,
-      provider: this.provider.name,
-      modelId: this.provider.chatModel,
-      redactedMetadata: {
-        promptHash: payloadHash,
-        topicCodes: topics,
-        personalizedContext: personalized,
-        historyMessageCount: history.length,
-      },
-      startedAt: now,
-    });
-    return this.providerStream({
-      identity,
-      requestMessage: turn.requestMessage,
-      assistantMessage: turn.assistantMessage,
-      history,
-      instructions: this.instructions(profile, personalized),
-      topics,
-      window,
-      clientSignal,
-      startedAt: now,
-    });
+    try {
+      const profile =
+        identity.type === 'AUTHENTICATED'
+          ? await this.repository.findPromptProfile(identity.userId)
+          : null;
+      const personalized = Boolean(
+        profile?.personalizationPreference?.enabled &&
+        profile.personalizationPreference.consentVersion === PERSONALIZATION_CONSENT_VERSION,
+      );
+      const history = await this.repository.findHistory(
+        sessionId,
+        turn.requestMessage.id,
+        HISTORY_LIMIT,
+      );
+      await this.repository.upsertRequestLog({
+        identity,
+        sessionId,
+        requestMessageId: turn.requestMessage.id,
+        provider: this.provider.name,
+        modelId: this.provider.chatModel,
+        redactedMetadata: {
+          promptHash: payloadHash,
+          topicCodes: topics,
+          personalizedContext: personalized,
+          historyMessageCount: history.length,
+        },
+        startedAt: now,
+      });
+      return this.providerStream({
+        identity,
+        requestMessage: turn.requestMessage,
+        assistantMessage: turn.assistantMessage,
+        history,
+        instructions: this.instructions(profile, personalized),
+        topics,
+        window,
+        clientSignal,
+        reservationKey,
+        startedAt: now,
+      });
+    } catch (error) {
+      await this.repository.releaseQuota(identity.subjectKey, window.usageDate, reservationKey);
+      await this.repository.failAssistant(turn.assistantMessage.id, '', reservationKey);
+      throw error;
+    }
   }
 
   private async *providerStream(data: {
@@ -341,6 +358,7 @@ export class ChatService {
     window: { usageDate: Date; resetAt: Date };
     clientSignal: AbortSignal;
     startedAt: Date;
+    reservationKey: string;
   }): AsyncIterable<ChatSseEvent> {
     const controller = new AbortController();
     const onClientAbort = () => controller.abort(data.clientSignal.reason);
@@ -364,7 +382,7 @@ export class ChatService {
           replayed: false,
         },
       };
-      await this.repository.markProviderCalled(data.requestMessage.id);
+      await this.repository.markProviderCalled(data.requestMessage.id, data.reservationKey);
       const moderation = await this.provider.moderate(
         redactPii(data.requestMessage.content),
         controller.signal,
@@ -373,7 +391,7 @@ export class ChatService {
         const message = await this.repository.completeNonQuotaTurn({
           subjectKey: data.identity.subjectKey,
           usageDate: data.window.usageDate,
-          reservationKey: data.assistantMessage.id,
+          reservationKey: data.reservationKey,
           assistantMessageId: data.assistantMessage.id,
           content: PROVIDER_FALLBACK_RESPONSE,
           provider: 'local-fallback',
@@ -394,7 +412,7 @@ export class ChatService {
         const message = await this.repository.completeNonQuotaTurn({
           subjectKey: data.identity.subjectKey,
           usageDate: data.window.usageDate,
-          reservationKey: data.assistantMessage.id,
+          reservationKey: data.reservationKey,
           assistantMessageId: data.assistantMessage.id,
           content: SAFETY_RESPONSE,
           provider: this.provider.name,
@@ -412,7 +430,7 @@ export class ChatService {
         return;
       }
 
-      await this.repository.markProviderCalled(data.requestMessage.id);
+      await this.repository.markProviderCalled(data.requestMessage.id, data.reservationKey);
       for await (const chunk of this.provider.streamChat({
         instructions: data.instructions,
         messages: data.history.map((message) => ({
@@ -434,7 +452,7 @@ export class ChatService {
       const completed = await this.repository.completeSuccessfulTurn({
         subjectKey: data.identity.subjectKey,
         usageDate: data.window.usageDate,
-        reservationKey: data.assistantMessage.id,
+        reservationKey: data.reservationKey,
         assistantMessageId: data.assistantMessage.id,
         content,
         provider: this.provider.name,
@@ -447,7 +465,7 @@ export class ChatService {
       });
       settled = true;
       await this.emitChatTopics(data.identity, data.requestMessage.id, data.topics);
-      const quota = this.quotaOutput(completed.quota, data.window.resetAt);
+      const quota = await this.currentQuota(data.identity, data.window);
       yield {
         event: 'message_complete',
         data: { message: this.messageOutput(completed.message), quota },
@@ -460,10 +478,11 @@ export class ChatService {
         await this.repository.releaseQuota(
           data.identity.subjectKey,
           data.window.usageDate,
-          data.assistantMessage.id,
+          data.reservationKey,
         );
-        await this.repository.failAssistant(data.assistantMessage.id, content);
+        await this.repository.failAssistant(data.assistantMessage.id, content, data.reservationKey);
         await this.repository.finishRequestLog(data.requestMessage.id, AiRequestStatus.ABORTED, {
+          processingToken: data.reservationKey,
           latencyMs: Date.now() - data.startedAt.getTime(),
           errorCode: 'CLIENT_ABORTED',
         });
@@ -475,7 +494,7 @@ export class ChatService {
         const message = await this.repository.completeNonQuotaTurn({
           subjectKey: data.identity.subjectKey,
           usageDate: data.window.usageDate,
-          reservationKey: data.assistantMessage.id,
+          reservationKey: data.reservationKey,
           assistantMessageId: data.assistantMessage.id,
           content: PROVIDER_FALLBACK_RESPONSE,
           provider: 'local-fallback',
@@ -500,10 +519,11 @@ export class ChatService {
       await this.repository.releaseQuota(
         data.identity.subjectKey,
         data.window.usageDate,
-        data.assistantMessage.id,
+        data.reservationKey,
       );
-      await this.repository.failAssistant(data.assistantMessage.id, content);
+      await this.repository.failAssistant(data.assistantMessage.id, content, data.reservationKey);
       await this.repository.finishRequestLog(data.requestMessage.id, AiRequestStatus.FAILED, {
+        processingToken: data.reservationKey,
         latencyMs: Date.now() - data.startedAt.getTime(),
         errorCode,
       });
@@ -523,10 +543,11 @@ export class ChatService {
           this.repository.releaseQuota(
             data.identity.subjectKey,
             data.window.usageDate,
-            data.assistantMessage.id,
+            data.reservationKey,
           ),
-          this.repository.failAssistant(data.assistantMessage.id, content),
+          this.repository.failAssistant(data.assistantMessage.id, content, data.reservationKey),
           this.repository.finishRequestLog(data.requestMessage.id, AiRequestStatus.ABORTED, {
+            processingToken: data.reservationKey,
             latencyMs: Date.now() - data.startedAt.getTime(),
             errorCode: 'STREAM_CLOSED',
           }),
@@ -634,6 +655,10 @@ export class ChatService {
 
   private async currentQuota(identity: ChatIdentity, window: { usageDate: Date; resetAt: Date }) {
     const state = await this.repository.findQuotaState(identity.subjectKey, window.usageDate);
+    const paidRemaining =
+      identity.type === 'AUTHENTICATED'
+        ? await this.repository.paidChatBalance(identity.userId)
+        : 0;
     return this.quotaOutput(
       state ?? {
         successfulCount: 0,
@@ -642,15 +667,17 @@ export class ChatService {
         reservationExpiresAt: null,
       },
       window.resetAt,
+      paidRemaining,
     );
   }
 
-  private quotaOutput(state: QuotaBucketState, resetAt: Date) {
+  private quotaOutput(state: QuotaBucketState, resetAt: Date, paidRemaining = 0) {
     return {
       limit: state.quotaLimit,
       used: state.successfulCount,
       remaining: Math.max(0, state.quotaLimit - state.successfulCount),
       resetAt: resetAt.toISOString(),
+      paidRemaining,
     };
   }
 

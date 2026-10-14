@@ -1,8 +1,8 @@
 # Backend Implementation Phases
 
-**Version:** 3.10
+**Version:** 3.13
 
-**Updated:** 2026-10-07
+**Updated:** 2026-10-14
 
 **Stack:** Node.js · Express · TypeScript · MongoDB replica set · Prisma · Zod · OpenAPI
 
@@ -191,3 +191,21 @@ Regenerate/validate OpenAPI using the repository workflow. Live external-provide
 ## 9. Persistence replacement — 2026-10-07
 
 User-approved cross-phase maintenance replaces PostgreSQL with MongoDB; this is not a new numbered product phase. Historical prompts and SQL migrations are archived context. Current provisioning uses `npm run prisma:push` (native validators/indexes), not Prisma Migrate. UUID contracts, permissions and confirmation boundaries remain unchanged. Historical-data preservation is optional. MongoDB maintenance gate: schema provisioning, idempotent seed, backend lint/typecheck/build, OpenAPI synchronization, existing acceptance flows and frontend compatibility checks passed on 2026-10-07. Verification record and operational instructions: [MONGODB_MIGRATION.md](MONGODB_MIGRATION.md). Phase 27 retains its existing release limitations.
+
+## 10. Usage billing extension — approved 2026-10-13; payOS conversion 2026-10-14
+
+Provider conversion approved 2026-10-14: active checkout/settlement is now payOS only, via official SDK 2.0.5. VNPAY and local sandbox routes/configuration are removed; old orders/balances remain historical with optional new provider fields and partial unique indexes. payOS has no sandbox; real money mode is disclosed and missing credentials disable checkout. Application production rollout remains disabled. Backend lint/typecheck/build/OpenAPI, additive Mongo provisioning/seed and controlled transport acceptance pass (SDK signatures, partial/extra payment, replay, sample webhook, provider failure/cooldown and ambiguous-create recovery plus existing accounting/auth checks). External merchant acceptance remains pending user configuration; frontend migration is recorded separately in the contract registry.
+
+Final migration gate 2026-10-14: UI commit `59a042c` completes web/mobile payOS consumers; affected endpoints returned from CHANGING to READY. Web typecheck/scoped lint, 602 tests and build; mobile typecheck/lint/6 mapper tests, web64-route and Android Hermes exports pass. Browser missing-configuration/history states verified, without real transfer. Explicit reconciliation also recovers an unfinished same-code checkout after a persistence/response failure; controlled transport acceptance covers this recovery.
+
+Webhook compatibility gate 2026-10-14: the actual payOS channel-confirmation sample omits unsigned success. Accepting optional boolean success fixes registration without altering signed data or grant authorization. Original captured provider sample replay through the user-requested HTTPS tunnel returned 200; tampered signature returned 400. Backend lint/typecheck/build/OpenAPI and existing billing acceptance (including no-success/invalid-type/invalid-signature samples with unchanged balances) pass. Credentialed hosted QR/PENDING queries have passed; actual transfer/settlement notification and native-device acceptance remain open. No schema/seed change or client DTO migration is required.
+
+The following original records are historical and do not describe the current provider:
+
+Demo session isolation (2026-10-14): overlapping localhost web/mobile refresh was reproduced with persisted REUSE_DETECTED. Use separate hostnames (web localhost, mobile UI/API 127.0.0.1) and matching demo CORS origins. The backend still rejects reused refresh tokens; this setup change does not relax auth behavior.
+
+Retest 2026-10-14: backend lint/typecheck/build/OpenAPI and extended billing acceptance pass, including expired access plus six refresh rotations and expired checkout GET/POST with safe return/replacement order. Default checkout TTL remains 15 minutes; valid expiry is 410, invalid signatures stay 403. This does not establish the cause of the user's historical failure without the original response.
+
+Separate user-authorized extension, not a numbered Phase 28. Scope: one-time AI usage and Pantry capacity packages, VNPAY Sandbox and explicit local simulation, owner-only contracts, transactionally deduplicated grants/debits, scan attempt fencing/recovery and capacity checks on all three insert paths. Billing remains disabled by default and cannot run in production. Media storage, subscriptions and real-money refunds are deferred.
+
+Backend demo gate: Mongo validators/indexes/backfill/seed, authorization, lint/typecheck/build, OpenAPI and local acceptance pass. Signed VNPAY protocol fixtures pass; external merchant sandbox acceptance remains pending credentials. Phases 21–22 remain IN_PROGRESS for live image validation, and Phase 27 release limitations remain unchanged. Setup and verification: [BILLING_DEMO.md](../../docs/BILLING_DEMO.md).
