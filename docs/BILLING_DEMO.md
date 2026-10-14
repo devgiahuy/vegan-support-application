@@ -1,24 +1,18 @@
-# Payment and allowances demo
+# payOS billing and usage allowances
 
-Updated: 2026-10-14. Backend branch: `codex/sandbox-billing`. Web/mobile UI branch: `codex/sandbox-billing-ui`, created from the backend branch at its original billing commit. The UI worktree runs the clients while the primary checkout remains for backend work.
+Updated: 2026-10-14. Backend: `codex/sandbox-billing`; web/mobile clients: `codex/sandbox-billing-ui` in a separate worktree.
 
-## What is implemented
+## Scope and payment mode
 
-One-time packages for chat, fridge jobs, receipt jobs and Pantry capacity. Default trial: three jobs of each scan type; Pantry baseline: 20 undeleted items. Existing daily chat quotas remain unchanged. Demo packages are cumulative and do not expire. Prices are sample catalog data.
+New purchases use payOS exclusively. Hosted checkout offers bank transfer/QR with integer VND prices. **payOS has no sandbox: transfers are real money, including when checkout is opened from this development application.** No live merchant request or bank transfer was made during agent acceptance.
 
-VNPAY Sandbox is the external adapter. The local sandbox is explicitly simulated and needs no registration. Neither performs production billing; enabling billing in production fails configuration validation. No subscriptions, real-money refunds, storage upgrades or role changes are implemented.
+One-time packages retain the existing snapshotted credits/capacity. Default trial: three fridge/receipt jobs each and Pantry baseline 20 items. Purchased demo allowances accumulate without expiry. Free daily chat is consumed first; one bounded successful/partially successful scan job consumes one credit; total failure releases it. Results still require confirmation. Package purchases do not change roles or media storage.
 
-The running demo currently uses the local simulation. Its three outcome buttons are a test harness for order/allowance behavior, not a hosted payment flow. Card entry, OTP and payment-method selection belong to VNPAY's hosted sandbox page after merchant configuration. At the 2026-10-14 check, merchant code/signing secret were absent; external checkout is not claimed as verified.
+App production rollout remains disabled by configuration; subscriptions, invoices, automatic refunds, media purchases and app-store distribution remain deferred. Historical local/VNPAY orders retain their provider identity and balances, but cannot resume checkout or receive new settlements. Their routes have been removed.
 
-Web/mobile acknowledge every status reload with a timestamped result or error. In simulation mode the button says “Tải lại trạng thái”: it reads the outcome selected on “Mở trang kiểm thử” and does not change a failed/cancelled order into a paid order. A failed order requires a new order to try again.
+## Run without credentials
 
-## Quick start without merchant registration
-
-Prerequisites: Node 22+, npm, Docker, dependencies installed in backend/frontend/mobile. Commands run from the indicated directory.
-
-Run backend commands in the primary checkout. Run all web/mobile commands below in the separate `codex/sandbox-billing-ui` checkout (locate it with `git worktree list`). The backend branch has no `/billing` client route after the user-requested split. The attached UI checkout is `/Users/thienel/.codex/worktrees/sandbox-billing-ui/vegan-support-application` on this workstation; relative `cd frontend` / `cd mobile` below refer to that checkout.
-
-Backend:
+Dependencies: Node 22+, npm, Docker/Mongo replica set. Backend commands run in the primary checkout; web/mobile commands run in the UI checkout (`git worktree list`).
 
 ```bash
 cd backend
@@ -28,9 +22,11 @@ npm run prisma:generate
 npm run billing:demo
 ```
 
-The helper provisions and seeds a separate `vegan_billing_demo` database, then starts API port 4100. It never targets the existing application database. This workspace's MongoDB host port is 27018; if your MongoDB uses another port, set `BILLING_DEMO_DATABASE_URL=mongodb://localhost:27017/vegan_billing_demo?replicaSet=rs0&directConnection=true`.
+The helper provisions/seeds isolated `vegan_billing_demo` on localhost:27018 and starts API 4100. It opts in to existing allowance enforcement but only enables catalog purchases when all payOS keys exist. With no credentials the page displays balances/history and disabled purchase actions; there is no simulated checkout fallback.
 
-Web, in a second terminal:
+Public local login: `billing-demo@example.test` / `DemoBilling2026!`.
+
+Web in UI worktree:
 
 ```bash
 cd frontend
@@ -38,9 +34,9 @@ npm ci
 BACKEND_API_URL=http://localhost:4100/api/v1 NEXT_PUBLIC_API_URL=http://localhost:3100/api/v1 npm run dev -- --port 3100
 ```
 
-Open http://localhost:3100/billing. Demo login: `billing-demo@example.test` / `DemoBilling2026!`. These public credentials are local demonstration data only.
+Open http://localhost:3100/billing.
 
-Mobile development, in a third terminal:
+Mobile web in UI worktree:
 
 ```bash
 cd mobile
@@ -48,62 +44,48 @@ npm ci
 EXPO_PUBLIC_API_URL=http://127.0.0.1:4100/api/v1 EXPO_PUBLIC_ENABLE_DEV_SCANS=true EXPO_PUBLIC_SCAN_PROVIDER=fake npx expo start --web --port 8090
 ```
 
-Open http://127.0.0.1:8090/billing or enter through Profile → Gói tiện ích. Use the same demo login. Keep web on `localhost` and mobile web plus its API on `127.0.0.1`: cookies are scoped by hostname, not port. Using `localhost` for both clients can make concurrent refresh rotations reuse the same cookie and revoke the session. Do not open mobile via Expo's printed localhost URL for this two-client demo. Native devices require the computer's LAN IP in the mobile API URL and `BILLING_DEMO_PUBLIC_URL`; allow the applicable web development origin via `BILLING_DEMO_ORIGINS`. Do not expose the no-auth local MongoDB service publicly.
+Open http://127.0.0.1:8090/billing, or Profile → Gói tiện ích. Keep mobile UI/API on 127.0.0.1 and web on localhost; different ports alone do not isolate refresh cookies. Native requires LAN/API URLs and appropriate allowed development origins. Fake AI/scan fixtures are independent of payOS and do not establish image-recognition quality.
 
-Expo web opens checkout in the same tab to avoid popup blocking. The default backend returns to the web billing page on port 3100; reopen http://127.0.0.1:8090/billing to continue the mobile web preview. A mobile-only demo can set `BILLING_DEMO_RETURN_URL=http://127.0.0.1:8090/billing`. Native uses the system browser; close it to return to the application, which refreshes balances on focus.
+## Configure payOS later
 
-## Review scenarios
+Create/verify a payOS account and payment channel at https://my.payos.vn. Put the channel's values in untracked `backend/.env`:
 
-Checkout links expire after 15 minutes by default. After expiry the server returns HTTP 410 / `BILLING_CHECKOUT_EXPIRED`; browsers receive a readable recovery page with a return link. Create a new order from the catalog instead of reusing an old checkout URL. Tampered tokens still return 403 and no expired request grants benefits. This intentional order expiry is separate from access-token expiry, which refreshes the signed-in session.
+```dotenv
+BILLING_PROVIDER=payos
+PAYOS_CLIENT_ID=<channel-client-id>
+PAYOS_API_KEY=<channel-api-key>
+PAYOS_CHECKSUM_KEY=<channel-checksum-key>
+```
 
-1. Buy the combo and choose “Mô phỏng thanh toán thành công”. Return to the selected order; chat +100, fridge +10, receipts +10 and Pantry +50 appear.
-2. Reload the result page: benefits stay unchanged. Repeat a success notification: no extra grant.
-3. Create another order and cancel/fail it: no benefits are granted.
-4. Open mobile with the same account: its balance and history match web.
-5. Use free daily chat first, then paid credits; provider failure/fallback/replay does not spend another credit.
-6. One scan job uses one credit after any successful image; total failure releases the credit. Retries of a charged job are free; default maximum three processing attempts. Results still need confirmation.
-7. At Pantry capacity, manual creation and both confirmations fail atomically. Existing data remains available; deletion/merge frees space.
+Remove old `BILLING_PROVIDER=sandbox|vnpay` and VNPAY settings. Blank/missing keys leave purchases unavailable. Regular backend requires `BILLING_ENABLED=true`; the isolated demo helper sets it. Configure a public HTTPS API via `BILLING_DEMO_PUBLIC_URL` (or `BILLING_PUBLIC_URL` in regular startup), and the app return via `BILLING_DEMO_RETURN_URL` / `BILLING_RETURN_URL`.
 
-Fake AI/scan providers in this helper are deterministic development simulations. They do not establish real recognition accuracy. Camera/upload still uses the existing storage/Cloudinary flow and requires its configured credentials; billing acceptance uses owned seeded fixtures.
+Register the channel webhook URL `https://<api-host>/api/v1/billing/payos/webhook` in payOS. A signed registration sample is acknowledged without a grant. Native opens the system browser; close it to return to the app and refresh account state. Web returns to its selected order; mobile web's default checkout return is the web page, so reopen the mobile preview afterward. For mobile-only preview set the helper return URL to http://127.0.0.1:8090/billing.
 
-## Switch to external VNPAY Sandbox
+Do not put merchant keys in frontend/mobile environment or commit them. The agent does not create a merchant account or perform a real payment.
 
-Register at https://sandbox.vnpayment.vn/devreg/; integration credentials are sent by email. Registration/CAPTCHA and external merchant credentials were not performed or obtained by the agent.
+## Settlement and retry behavior
 
-Start the helper with `BILLING_PROVIDER=vnpay VNPAY_TMN_CODE=<merchant-code> VNPAY_HASH_SECRET=<merchant-secret> npm run billing:demo`. Configure a public HTTPS API URL for `BILLING_DEMO_PUBLIC_URL` and an accessible web return URL for `BILLING_DEMO_RETURN_URL`. Register IPN URL `https://<api-host>/api/v1/billing/vnpay/ipn`. Frontend/native clients must target that API.
+Backend uses official `@payos/node@2.0.5` for signed create/get/webhook. A distinct persisted numeric provider code prevents duplicate links on retry. Checkout descriptions use ≤9 characters; links expire after 15 minutes by default. Recovery after a timed-out create queries the same reference.
 
-Checkout uses VNPAY's sandbox endpoint, integer VND ×100 and GMT+7 timestamps. IPN validates HMAC-SHA512, merchant, reference, amount and both success codes before an atomic grant. Browser return verifies the payload and redirects only. Querydr uses the original order date and its distinct request/response pipe signatures. “Kiểm tra thanh toán” reconciles with a five-minute cooldown; network/no-final-result errors keep the order unconfirmed.
+Signed webhook data maps the local order, then an authenticated signed payOS query confirms amount/reference/link before granting. UNDERPAID/PROCESSING remain PENDING; PAID only grants after sufficient money is received. Excess transferred money does not increase benefits or trigger an automatic refund. Late verified full payment can grant an unfulfilled expired/cancelled order once. PAID never downgrades.
 
-References: https://sandbox.vnpayment.vn/apis/docs/thanh-toan-pay/pay.html and https://sandbox.vnpayment.vn/apis/docs/truy-van-hoan-tien/querydr%26refund.html.
+Browser return/cancel parameters are ignored for settlement. “Kiểm tra thanh toán” queries payOS with a 30-second cooldown and visible result/error. Historic providers are read-only.
 
-## Persistence and maintenance
+## Mongo schema migration and verification
 
-Use `npm run prisma:push`, not raw Prisma db push/Migrate. It installs new collection validators/indexes and adds missing queued timestamps from original creation dates without overwriting existing values. Catalog seed is idempotent and preserves existing configured products and snapshotted order benefits.
+Run `npm run prisma:generate`, then `npm run prisma:push`. This applies native validators and partial unique indexes for optional provider order code/link ID; old documents need no conversion. Existing catalog seeding preserves configured prices and order snapshots. Never rewrite old provider identities into payOS or grant migration credits.
 
-`BILLING_ENABLED=true npm run billing:cleanup` recovers expired usage leases, fencing stale attempts first. Owned job/balance reads also recover that owner's stale jobs. `BILLING_ENABLED=true BILLING_PROVIDER=vnpay npm run billing:reconcile` checks unconfirmed VNPAY orders from the last 24 hours; use deployment scheduling for recurring maintenance. Production billing remains intentionally disabled.
-
-## Verification
-
-Latest repeat verification and branch/UI status: [BILLING_RETEST_20261014.md](BILLING_RETEST_20261014.md).
-
-Backend acceptance runs only against a separate database whose name contains `billing_`:
+Internal acceptance uses an isolated database and controlled SDK transport, not payOS sandbox:
 
 ```bash
 cd backend
-DATABASE_URL='mongodb://localhost:27018/vegan_billing_20261013?replicaSet=rs0&directConnection=true' npm run prisma:push
-DATABASE_URL='mongodb://localhost:27018/vegan_billing_20261013?replicaSet=rs0&directConnection=true' npm run seed
-DATABASE_URL='mongodb://localhost:27018/vegan_billing_20261013?replicaSet=rs0&directConnection=true' npm run billing:acceptance
+DATABASE_URL='mongodb://localhost:27018/vegan_billing_payos_20261014?replicaSet=rs0&directConnection=true' npm run prisma:push
+DATABASE_URL='mongodb://localhost:27018/vegan_billing_payos_20261014?replicaSet=rs0&directConnection=true' npm run seed
+DATABASE_URL='mongodb://localhost:27018/vegan_billing_payos_20261014?replicaSet=rs0&directConnection=true' npm run billing:acceptance
 ```
 
-The script leaves fixtures in this isolated database for inspection. It exercises HTTP checkout/auth/SSE and transactional provider/quota/capacity cases. External VNPAY sandbox and native camera/payment device acceptance require separate credentials/devices; signed protocol fixtures are not claimed as external end-to-end validation.
+Acceptance leaves disposable fixtures in that isolated database. It verifies owner/idempotency, signed payOS SDK create/query/webhook, partial/excess payments, replay, unknown samples, provider/signature errors, cooldown, ambiguous create recovery, historical records and existing quota/capacity/auth behavior. Credentialed hosted checkout, bank transfer/webhook delivery and native-device acceptance remain separate manual gates.
 
-### Verified on 2026-10-13
+Maintenance: `BILLING_ENABLED=true npm run billing:cleanup` recovers stale usage reservations; `BILLING_ENABLED=true npm run billing:reconcile` queries unfulfilled payOS orders from the last 24 hours when keys are configured.
 
-- Mongo schema/validators/indexes/backfill and seed succeeded in separate demo/acceptance databases; the shared application database was not changed.
-- Backend lint, typecheck, build, OpenAPI generation and billing acceptance passed. Existing vision/receipt acceptance also passed with fake providers.
-- Swagger sync: 178 endpoints, 40 groups, 154 schemas. Frontend typecheck, 600 tests across 50 files and Next build passed. Changed frontend consumers: zero lint errors, three existing warnings. Full frontend lint still reports 89 baseline errors and 347 warnings outside this feature.
-- Mobile typecheck/lint, three billing mapper tests, web export (64 routes) and Android Hermes export passed with the demo API configured. No physical-device or iOS build acceptance is claimed.
-- Browser: demo login, successful combo purchase, cancellation and failure with no extra grants, return/reload session restoration preserving the selected order, mobile Profile entry, mobile checkout and shared balances/history passed. Mobile web has no horizontal overflow at 390px.
-- Demo account ends with 100 purchased chat credits, 13 fridge jobs, 13 receipt jobs and 70 Pantry slots (three scan trials plus purchased benefits). The paid, cancelled and failed orders remain inspectable.
-
-Screenshots are retained on the UI branch under `docs/billing-evidence/web-paid.png` and `docs/billing-evidence/mobile-390.png`. Historical 2026-10-13 balances above describe that run; later demo purchases may increase them.
+References: [payOS API](https://payos.vn/docs/api/), [no sandbox](https://payos.vn/docs/moi-truong-test/), [Node SDK](https://payos.vn/docs/sdks/back-end/node/), [return semantics](https://payos.vn/docs/du-lieu-tra-ve/return-url/). Previous VNPAY/local screenshots and [BILLING_RETEST_20261014.md](BILLING_RETEST_20261014.md) are historical evidence, not payOS acceptance.

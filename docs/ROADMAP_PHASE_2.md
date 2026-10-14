@@ -1,8 +1,8 @@
 # Product Roadmap — Phase 2 (Post-MVP)
 
-**Version:** 1.1
+**Version:** 1.2
 
-**Updated:** 2026-10-13
+**Updated:** 2026-10-14
 
 **Status:** Retained backlog; not committed MVP scope
 
@@ -82,7 +82,7 @@ This file preserves post-MVP product directions so they are not lost while backe
 
 ### R2-09 Storage plans, billing, and commercial controls
 
-Update 2026-10-13: a separately approved development/demo extension implements one-time AI usage and Pantry item-capacity packages with VNPAY Sandbox/local simulation. Production payments, storage monetization, subscriptions, invoices and real-money refunds remain in this roadmap.
+Update 2026-10-14: the separately approved one-time AI usage/Pantry capacity extension now uses payOS instead of VNPAY/local simulation. payOS transfers real money and has no sandbox; app production rollout, storage monetization, subscriptions, invoices and automatic refunds remain in this roadmap.
 
 - Paid storage tiers, payment provider integration, invoices, subscription state, grace periods, refunds, and quota transitions.
 - Bandwidth/transcoding cost controls for video.

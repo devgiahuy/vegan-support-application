@@ -18,6 +18,7 @@ Object.assign(process.env, {
     process.env.BILLING_DEMO_DATABASE_URL ??
     'mongodb://localhost:27018/vegan_billing_demo?replicaSet=rs0&directConnection=true',
   BILLING_ENABLED: 'true',
+  BILLING_PROVIDER: 'payos',
   BILLING_PUBLIC_URL: process.env.BILLING_DEMO_PUBLIC_URL ?? 'http://localhost:' + port,
   BILLING_RETURN_URL: process.env.BILLING_DEMO_RETURN_URL ?? 'http://localhost:3100/billing',
   FRONTEND_ORIGIN:
@@ -61,7 +62,13 @@ const server = createServer(createApp({ config, database, logger: pino({ level: 
 server.listen(port, '0.0.0.0', () => {
   console.info('Billing demo API: http://localhost:' + port);
   console.info('Demo login: billing-demo@example.test / DemoBilling2026!');
-  console.info('Payment provider:', config.billing.provider, '(sandbox only)');
+  console.info('Payment provider: payOS (real transfers, no sandbox).');
+  console.info(
+    'Checkout configured:',
+    Boolean(
+      config.billing.payosClientId && config.billing.payosApiKey && config.billing.payosChecksumKey,
+    ),
+  );
 });
 for (const signal of ['SIGINT', 'SIGTERM'] as const)
   process.once(signal, () => {

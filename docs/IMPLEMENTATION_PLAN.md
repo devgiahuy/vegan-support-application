@@ -1,6 +1,6 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.4
+**Version:** 4.5
 
 **Updated:** 2026-10-14
 
@@ -40,7 +40,7 @@ The current API contract may still contain legacy Contributor subtype fields unt
 | D20 | Certificates | No certificate verification in MVP. Future evidence badges do not silently introduce Contributor permission tiers. |
 | D21 | Documentation | `docs/SRS.md` is canonical; runtime capability status stays in frontend integration docs; roadmap is separate from implementation phases. |
 | D22 | Safety | Nutrition, freshness, compatibility, BMI, and AI answers are educational support, not diagnosis or guaranteed safety. |
-| D23 | Sandbox billing | User-approved 2026-10-13: VNPAY Sandbox plus labeled local simulation; one-time cumulative AI usage/Pantry capacity packages, development/test only. No recurring or media-storage purchase. |
+| D23 | Usage billing | User-approved 2026-10-13 and payOS conversion 2026-10-14: payOS exclusively for new one-time cumulative AI usage/Pantry capacity packages. App rollout remains development/test; payOS checkout is real money, without sandbox or mock fallback. No recurring or media-storage purchase. |
 
 ## 3. MVP scope
 
@@ -369,10 +369,12 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 - Deletion jobs cover profile, health, behavior, AI, pantry, receipt, recognition, media, and location data according to policy.
 - Public content ownership/display after account deletion follows an explicit policy and audit trail.
 
-### BL-20 — Approved sandbox billing extension (2026-10-13)
+### BL-20 — Approved usage billing extension (2026-10-13; payOS conversion 2026-10-14)
 
-- Local checkout links expire after the configured TTL (default 15 minutes). Valid expired capabilities return `BILLING_CHECKOUT_EXPIRED`/410; browser GET/POST displays a return link and new-order instructions. Invalid signatures stay 403; neither path grants benefits.
-- Billing is opt-in and limited to development/test. Local checkout is explicitly simulated; the external adapter is VNPAY Sandbox. Production payment remains deferred.
+- payOS checkout expires after configured TTL (default 15 minutes); expired application orders hide the checkout URL. Retired local/VNPAY checkout and notification routes are removed; the old expiry recovery behavior is historical only.
+- Billing is opt-in and app rollout remains development/test. The provider is now payOS, whose transfers are real even from a development app. Missing Client ID/API key/checksum disables purchases, without mock fallback. Historical balances/orders retain original identity. Application production rollout remains deferred.
+- Signed payOS webhooks trigger an authoritative signed payment-request query. PAID with sufficient received money grants once; UNDERPAID/PROCESSING map to PENDING. Expected order amount/link/reference must match. Extra payment does not change package benefits and requires manual merchant handling. Late fully verified payment may supersede an unfulfilled terminal order; PAID never downgrades.
+- New payOS order code/link/checkout URL are persisted, distinct from application UUID. Ambiguous creates retry/recover the same code. Reconciliation uses an owner-scoped 30-second cooldown. Signed unknown webhook confirmation samples ACK without grants. Browser return/cancel claims are ignored for settlement.
 - Sell one-time cumulative packages for chat credits, fridge jobs, receipt jobs and additional Pantry slots. Demo benefits do not expire or grant roles/media storage. Prices and benefits are snapshotted on each order.
 - Only a verified provider IPN/query result (or guarded local simulation) may grant benefits. Browser return never grants. Duplicate payment events and concurrent callbacks grant once; a verified late success may upgrade an unpaid terminal order, while PAID never downgrades.
 - Chat consumes daily free quota first, then purchased credits. Reserve before provider work; complete atomically with the successful answer. Failures/fallbacks release; replay and stale workers cannot charge again or overwrite a newer attempt.
@@ -553,7 +555,9 @@ A phase is complete only when:
 
 ## 13. Change record
 
-- **4.4 — 2026-10-14:** Sandbox checkout expiry now distinguishes a valid expired capability (410/BILLING_CHECKOUT_EXPIRED with HTML recovery for browsers) from an invalid signature (403). GET/POST remain unable to grant after expiry. Retest includes repeated refresh rotation and replacement orders; production scope is unchanged.
+- **4.5 — 2026-10-14:** User requests all billing moved to payOS and will configure credentials later. New purchases use hosted payOS QR/bank transfer, signed SDK create/query/webhook, persisted unique provider references, partial-payment handling and 30-second reconciliation. Retired providers are read-only history; their routes/configuration are removed. payOS is real money with no sandbox; app production rollout remains deferred.
+
+- **4.4 — 2026-10-14:** Historical local-sandbox expiry fix; superseded for new purchases by payOS conversion 4.5. Retest distinguished 410 valid expiry from invalid signature and exercised repeated refresh rotation.
 
 - **4.3 — 2026-10-13:** User-authorized sandbox billing. Snapshot VND catalog/orders; verified IPN/query reconciliation and idempotent grants; free-first chat; one bounded scan job credit after any successful image; total failures release; charged retries free, default three processing attempts; undeleted Pantry count with transactional enforcement on all insert paths. No production billing, role grants or storage upgrades. Mongo native validators, queued timestamp backfill and worker/credit fencing are required. Checkout returns wait for session restoration and preserve order context.
 

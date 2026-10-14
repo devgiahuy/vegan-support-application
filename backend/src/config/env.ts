@@ -97,12 +97,12 @@ const environmentSchema = z
     CHAT_GUEST_COOKIE_SECRET: z.string().min(32).optional(),
     CHAT_GUEST_COOKIE_TTL_DAYS: z.coerce.number().int().min(1).max(30).default(7),
     BILLING_ENABLED: z.stringbool().default(false),
-    BILLING_PROVIDER: z.enum(['sandbox', 'vnpay']).default('sandbox'),
+    BILLING_PROVIDER: z.literal('payos').default('payos'),
     BILLING_PUBLIC_URL: z.string().url().default('http://localhost:4000'),
     BILLING_RETURN_URL: z.string().url().default('http://localhost:3000/billing'),
-    BILLING_SANDBOX_SECRET: z.string().min(32).optional(),
-    VNPAY_TMN_CODE: z.string().trim().min(1).max(32).optional(),
-    VNPAY_HASH_SECRET: z.string().min(16).optional(),
+    PAYOS_CLIENT_ID: z.preprocess((value) => value === '' ? undefined : value, z.string().trim().min(1).optional()),
+    PAYOS_API_KEY: z.preprocess((value) => value === '' ? undefined : value, z.string().trim().min(1).optional()),
+    PAYOS_CHECKSUM_KEY: z.preprocess((value) => value === '' ? undefined : value, z.string().trim().min(1).optional()),
     BILLING_ORDER_TTL_MINUTES: z.coerce.number().int().min(5).max(60).default(15),
     BILLING_PANTRY_BASE_LIMIT: z.coerce.number().int().min(1).max(10000).default(20),
     BILLING_FRIDGE_TRIAL_JOBS: z.coerce.number().int().min(0).max(100).default(3),
@@ -143,11 +143,7 @@ const environmentSchema = z
   })
   .superRefine((environment, context) => {
     if (environment.BILLING_ENABLED && environment.NODE_ENV === 'production') {
-      context.addIssue({ code: 'custom', path: ['BILLING_ENABLED'], message: 'sandbox billing is development/test only' });
-    }
-    if (environment.BILLING_ENABLED && environment.BILLING_PROVIDER === 'vnpay' &&
-      (!environment.VNPAY_TMN_CODE || !environment.VNPAY_HASH_SECRET)) {
-      context.addIssue({ code: 'custom', path: ['VNPAY_TMN_CODE'], message: 'VNPAY sandbox requires merchant code and hash secret' });
+      context.addIssue({ code: 'custom', path: ['BILLING_ENABLED'], message: 'billing rollout is development/test only; payOS itself processes real transfers' });
     }
     const macroEnergyPercent =
       environment.MEAL_PLAN_PROTEIN_ENERGY_PERCENT +
@@ -289,9 +285,9 @@ const environmentSchema = z
       provider: environment.BILLING_PROVIDER,
       publicUrl: environment.BILLING_PUBLIC_URL.replace(/\/$/, ''),
       returnUrl: environment.BILLING_RETURN_URL,
-      sandboxSecret: environment.BILLING_SANDBOX_SECRET ?? environment.JWT_ACCESS_SECRET,
-      vnpayMerchant: environment.VNPAY_TMN_CODE,
-      vnpaySecret: environment.VNPAY_HASH_SECRET,
+      payosClientId: environment.PAYOS_CLIENT_ID,
+      payosApiKey: environment.PAYOS_API_KEY,
+      payosChecksumKey: environment.PAYOS_CHECKSUM_KEY,
       orderTtlMinutes: environment.BILLING_ORDER_TTL_MINUTES,
       pantryBaseLimit: environment.BILLING_PANTRY_BASE_LIMIT,
       fridgeTrialJobs: environment.BILLING_FRIDGE_TRIAL_JOBS,

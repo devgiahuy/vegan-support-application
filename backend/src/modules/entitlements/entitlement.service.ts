@@ -190,7 +190,7 @@ export class EntitlementService {
       return {
         enabled: this.config.billing.enabled,
         provider: this.config.billing.provider,
-        simulated: this.config.billing.provider === 'sandbox',
+        simulated: false,
         chatCredits: account.chatCredits,
         fridgeCredits: account.fridgeCredits,
         receiptCredits: account.receiptCredits,

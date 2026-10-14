@@ -13,11 +13,11 @@ try {
   if (
     process.argv[2] === 'reconcile' &&
     config.billing.enabled &&
-    config.billing.provider === 'vnpay'
+    config.billing.provider === 'payos'
   ) {
     const orders = await prisma.paymentOrder.findMany({
       where: {
-        provider: 'vnpay',
+        provider: 'payos',
         status: { not: 'PAID' },
         createdAt: { gt: new Date(Date.now() - 86400000) },
       },

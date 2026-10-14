@@ -16780,8 +16780,7 @@
               "provider": {
                 "type": "string",
                 "enum": [
-                  "sandbox",
-                  "vnpay"
+                  "payos"
                 ]
               },
               "simulated": {
@@ -16901,6 +16900,7 @@
               "provider": {
                 "type": "string",
                 "enum": [
+                  "payos",
                   "sandbox",
                   "vnpay"
                 ]
@@ -17017,6 +17017,7 @@
                     "provider": {
                       "type": "string",
                       "enum": [
+                        "payos",
                         "sandbox",
                         "vnpay"
                       ]
@@ -17120,8 +17121,7 @@
               "provider": {
                 "type": "string",
                 "enum": [
-                  "sandbox",
-                  "vnpay"
+                  "payos"
                 ]
               },
               "simulated": {
@@ -44719,7 +44719,7 @@
     },
     "/api/v1/billing/products": {
       "get": {
-        "summary": "List demo packages and configured provider",
+        "summary": "List packages and payOS checkout availability",
         "tags": [
           "Billing"
         ],
@@ -45310,7 +45310,7 @@
     },
     "/api/v1/billing/orders/{id}/reconcile": {
       "post": {
-        "summary": "Verify provider query and settle once; 5-minute throttle",
+        "summary": "Verify payOS query and settle once; 30-second throttle",
         "tags": [
           "Billing"
         ],
@@ -45442,421 +45442,128 @@
         }
       }
     },
-    "/api/v1/billing/vnpay/ipn": {
-      "get": {
-        "tags": [
-          "Billing"
-        ],
-        "summary": "VNPAY Sandbox signed server notification; grants once",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "vnp_TxnRef",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "vnp_Amount",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "vnp_TmnCode",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "vnp_ResponseCode",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "vnp_TransactionStatus",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "vnp_TransactionNo",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "vnp_SecureHash",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Provider acknowledgement: 00 accepted, 02 replay, 97 signature, 01 order, 04 mismatch, 99 retry",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "RspCode": {
-                      "type": "string"
-                    },
-                    "Message": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "RspCode",
-                    "Message"
-                  ]
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/billing/vnpay/return": {
-      "get": {
-        "tags": [
-          "Billing"
-        ],
-        "summary": "Verify browser return and redirect; never grant",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "vnp_TxnRef",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "vnp_Amount",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "vnp_TmnCode",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "vnp_ResponseCode",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "vnp_TransactionStatus",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "vnp_TransactionNo",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": true,
-            "name": "vnp_SecureHash",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "303": {
-            "description": "Configured application return URL"
-          },
-          "400": {
-            "description": "Typed billing/allowance business error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Typed billing/allowance business error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Typed billing/allowance business error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Typed billing/allowance business error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Typed billing/allowance business error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Typed billing/allowance business error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Typed billing/allowance business error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Typed billing/allowance business error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/billing/sandbox/{id}": {
-      "get": {
-        "tags": [
-          "Billing"
-        ],
-        "summary": "Development-only simulated checkout, expiring order-bound capability",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": true,
-            "name": "id",
-            "in": "path"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "pattern": "^[a-f0-9]{128}$/i"
-            },
-            "required": true,
-            "name": "token",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Explicit local simulation HTML"
-          },
-          "400": {
-            "description": "Typed billing/allowance business error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Typed billing/allowance business error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Typed billing/allowance business error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Typed billing/allowance business error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "Typed billing/allowance business error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "410": {
-            "description": "Valid local checkout capability has expired (BILLING_CHECKOUT_EXPIRED); browser HTML offers a return link, API callers receive the typed JSON error. No grant.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              },
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Typed billing/allowance business error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Typed billing/allowance business error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Typed billing/allowance business error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ErrorResponse"
-                }
-              }
-            }
-          }
-        }
-      },
+    "/api/v1/billing/payos/webhook": {
       "post": {
         "tags": [
           "Billing"
         ],
-        "summary": "Development-only simulated settlement; no real money",
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": true,
-            "name": "id",
-            "in": "path"
-          }
-        ],
+        "summary": "Verify signed payOS notification and authoritative payment query; grant once",
+        "security": [],
         "requestBody": {
           "content": {
-            "application/x-www-form-urlencoded": {
+            "application/json": {
               "schema": {
                 "type": "object",
                 "properties": {
-                  "token": {
+                  "code": {
                     "type": "string",
-                    "pattern": "^[a-f0-9]{128}$/i"
+                    "maxLength": 100
                   },
-                  "outcome": {
+                  "desc": {
                     "type": "string",
-                    "enum": [
-                      "PAID",
-                      "CANCELLED",
-                      "FAILED"
-                    ]
+                    "maxLength": 1000
+                  },
+                  "success": {
+                    "type": "boolean"
+                  },
+                  "signature": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$/i"
+                  },
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "orderCode": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "amount": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "description": {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      "accountNumber": {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      "reference": {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      "transactionDateTime": {
+                        "type": "string",
+                        "maxLength": 100
+                      },
+                      "currency": {
+                        "type": "string",
+                        "maxLength": 20
+                      },
+                      "paymentLinkId": {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{32}$/i"
+                      },
+                      "code": {
+                        "type": "string",
+                        "maxLength": 100
+                      },
+                      "desc": {
+                        "type": "string",
+                        "maxLength": 1000
+                      }
+                    },
+                    "required": [
+                      "orderCode",
+                      "amount",
+                      "description",
+                      "accountNumber",
+                      "reference",
+                      "transactionDateTime",
+                      "currency",
+                      "paymentLinkId",
+                      "code",
+                      "desc"
+                    ],
+                    "additionalProperties": {}
                   }
                 },
                 "required": [
-                  "token",
-                  "outcome"
+                  "code",
+                  "desc",
+                  "success",
+                  "signature",
+                  "data"
                 ],
-                "additionalProperties": false
+                "additionalProperties": {}
               }
             }
           }
         },
         "responses": {
-          "303": {
-            "description": "Application return URL"
+          "200": {
+            "description": "Accepted, replay or signed unknown confirmation sample; no unverified grant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ]
+                }
+              }
+            }
           },
           "400": {
             "description": "Typed billing/allowance business error",
@@ -45908,17 +45615,107 @@
               }
             }
           },
-          "410": {
-            "description": "Valid local checkout capability has expired (BILLING_CHECKOUT_EXPIRED); browser HTML offers a return link, API callers receive the typed JSON error. No grant.",
+          "422": {
+            "description": "Typed billing/allowance business error",
             "content": {
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
                 }
-              },
-              "text/html": {
+              }
+            }
+          },
+          "429": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
                 "schema": {
-                  "type": "string"
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/billing/payos/return/{id}": {
+      "get": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Display-only browser return/cancel redirect; never grant or trust query payment claims",
+        "security": [],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "303": {
+            "description": "Configured application billing URL with local orderId"
+          },
+          "400": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }

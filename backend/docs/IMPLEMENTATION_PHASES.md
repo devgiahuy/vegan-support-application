@@ -1,6 +1,6 @@
 # Backend Implementation Phases
 
-**Version:** 3.11
+**Version:** 3.12
 
 **Updated:** 2026-10-14
 
@@ -193,6 +193,10 @@ Regenerate/validate OpenAPI using the repository workflow. Live external-provide
 User-approved cross-phase maintenance replaces PostgreSQL with MongoDB; this is not a new numbered product phase. Historical prompts and SQL migrations are archived context. Current provisioning uses `npm run prisma:push` (native validators/indexes), not Prisma Migrate. UUID contracts, permissions and confirmation boundaries remain unchanged. Historical-data preservation is optional. MongoDB maintenance gate: schema provisioning, idempotent seed, backend lint/typecheck/build, OpenAPI synchronization, existing acceptance flows and frontend compatibility checks passed on 2026-10-07. Verification record and operational instructions: [MONGODB_MIGRATION.md](MONGODB_MIGRATION.md). Phase 27 retains its existing release limitations.
 
 ## 10. Sandbox billing extension — approved 2026-10-13
+
+Provider conversion approved 2026-10-14: active checkout/settlement is now payOS only, via official SDK 2.0.5. VNPAY and local sandbox routes/configuration are removed; old orders/balances remain historical with optional new provider fields and partial unique indexes. payOS has no sandbox; real money mode is disclosed and missing credentials disable checkout. Application production rollout remains disabled. Backend lint/typecheck/build/OpenAPI, additive Mongo provisioning/seed and controlled transport acceptance pass (SDK signatures, partial/extra payment, replay, sample webhook, provider failure/cooldown and ambiguous-create recovery plus existing accounting/auth checks). External merchant acceptance remains pending user configuration; frontend migration is recorded separately in the contract registry.
+
+The following original records are historical and do not describe the current provider:
 
 Demo session isolation (2026-10-14): overlapping localhost web/mobile refresh was reproduced with persisted REUSE_DETECTED. Use separate hostnames (web localhost, mobile UI/API 127.0.0.1) and matching demo CORS origins. The backend still rejects reused refresh tokens; this setup change does not relax auth behavior.
 

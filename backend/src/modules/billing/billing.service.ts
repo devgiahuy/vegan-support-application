@@ -1,3 +1,4 @@
+import { randomInt } from 'node:crypto';
 import type { PaymentOrder, PrismaClient } from '@prisma/client';
 import type { AppConfig } from '../../config/env.js';
 import { lockDocument } from '../../database/locking.js';
@@ -16,9 +17,9 @@ export class BillingService {
 
   async products() {
     return {
-      enabled: this.config.billing.enabled,
+      enabled: this.config.billing.enabled && this.providers.configured,
       provider: this.config.billing.provider,
-      simulated: this.config.billing.provider === 'sandbox',
+      simulated: false,
       products: (
         await this.prisma.billingProduct.findMany({
           where: { active: true },
@@ -40,6 +41,12 @@ export class BillingService {
 
   async create(ownerId: string, input: { productId: string; idempotencyKey: string }, ip: string) {
     this.ensureEnabled();
+    if (!this.providers.configured)
+      throw paymentError(
+        'BILLING_PROVIDER_UNAVAILABLE',
+        'Thanh toán payOS chưa được cấu hình.',
+        503,
+      );
     const order = await this.prisma.$transaction(async (tx) => {
       await lockDocument(tx, 'user', { id: ownerId });
       const existing = await tx.paymentOrder.findUnique({
@@ -79,12 +86,24 @@ export class BillingService {
           receiptCredits: product.receiptCredits,
           pantrySlots: product.pantrySlots,
           provider: this.config.billing.provider,
+          providerOrderCode: String(randomInt(1, 2 ** 48 - 1)),
+          providerLinkId: null,
+          providerCheckoutUrl: null,
+          lastQueriedAt: null,
           idempotencyKey: input.idempotencyKey,
           expiresAt: new Date(Date.now() + this.config.billing.orderTtlMinutes * 60000),
         },
       });
     });
-    return this.serialize(order, ip);
+    const current = await this.expire(order);
+    if (current.provider !== 'payos' || current.status !== 'PENDING' || current.providerCheckoutUrl)
+      return this.serialize(current, ip);
+    const checkout = await this.providers.checkout(current);
+    await this.prisma.paymentOrder.updateMany({
+      where: { id: current.id, providerCheckoutUrl: null },
+      data: { providerLinkId: checkout.linkId, providerCheckoutUrl: checkout.url },
+    });
+    return this.get(ownerId, current.id, ip);
   }
 
   async owned(ownerId: string, id: string): Promise<PaymentOrder> {
@@ -117,6 +136,8 @@ export class BillingService {
 
   async settle(provider: string, payment: VerifiedPayment): Promise<{ alreadyPaid: boolean }> {
     this.ensureEnabled();
+    if (provider !== 'payos' || (payment.status === 'PAID' && !payment.transactionId))
+      throw paymentError('BILLING_PAYMENT_MISMATCH', 'Provider thanh toán không hợp lệ.');
     return this.prisma.$transaction(async (tx) => {
       const initial = await tx.paymentOrder.findUnique({ where: { id: payment.orderId } });
       if (!initial) throw paymentError('BILLING_ORDER_NOT_FOUND', 'Không tìm thấy đơn hàng.', 404);
@@ -153,41 +174,43 @@ export class BillingService {
   async reconcile(ownerId: string, id: string, ip: string) {
     this.ensureEnabled();
     const order = await this.owned(ownerId, id);
-    if (order.status === 'PAID' || order.provider === 'sandbox') return this.get(ownerId, id, ip);
+    if (order.status === 'PAID' || order.provider !== 'payos') return this.get(ownerId, id, ip);
     const claimed = await this.prisma.paymentOrder.updateMany({
       where: {
         id,
-        OR: [{ lastQueriedAt: null }, { lastQueriedAt: { lt: new Date(Date.now() - 300000) } }],
+        OR: [{ lastQueriedAt: null }, { lastQueriedAt: { lt: new Date(Date.now() - 30000) } }],
       },
       data: { lastQueriedAt: new Date() },
     });
     if (!claimed.count)
       throw paymentError(
         'BILLING_RECONCILE_COOLDOWN',
-        'Vui lòng đợi ít nhất 5 phút giữa hai lần đối soát.',
+        'Vui lòng đợi ít nhất 30 giây giữa hai lần kiểm tra thanh toán.',
         429,
       );
-    await this.settle('vnpay', await this.providers.query(order, ip));
+    await this.settle('payos', await this.providers.query(order));
     return this.get(ownerId, id, ip);
   }
 
-  async sandboxOrder(id: string, token: string) {
+  async webhook(input: unknown): Promise<void> {
     this.ensureEnabled();
-    const order = await this.prisma.paymentOrder.findUnique({ where: { id } });
-    if (!order) throw paymentError('BILLING_ORDER_NOT_FOUND', 'Không tìm thấy đơn hàng.', 404);
-    this.providers.verifySandbox(order, token);
-    return order;
-  }
-
-  async sandboxSettle(id: string, token: string, outcome: 'PAID' | 'CANCELLED' | 'FAILED') {
-    const order = await this.sandboxOrder(id, token);
-    await this.settle('sandbox', {
-      orderId: id,
-      transactionId: 'demo-' + id,
-      amountVnd: order.priceVnd,
-      status: outcome,
+    const data = await this.providers.verifyWebhook(input);
+    const order = await this.prisma.paymentOrder.findUnique({
+      where: { providerOrderCode: String(data.orderCode) },
     });
-    return order;
+    // payOS confirm-webhook sends a signed example, not an application purchase.
+    if (!order) return;
+    if (
+      order.provider !== 'payos' ||
+      data.currency !== 'VND' ||
+      (order.providerLinkId && order.providerLinkId !== data.paymentLinkId)
+    )
+      throw paymentError('BILLING_PAYMENT_MISMATCH', 'Thông báo payOS không khớp đơn hàng.');
+    if (data.code !== '00') return;
+    const verified = await this.providers.query(order);
+    if (verified.transactionId !== data.paymentLinkId)
+      throw paymentError('BILLING_PAYMENT_MISMATCH', 'Thông báo và kết quả payOS không khớp.');
+    await this.settle('payos', verified);
   }
 
   returnUrl(id: string): string {
@@ -196,7 +219,7 @@ export class BillingService {
     return url.toString();
   }
 
-  serialize(order: PaymentOrder, ip = '127.0.0.1') {
+  serialize(order: PaymentOrder, _ip = '127.0.0.1') {
     const status =
       order.status === 'PENDING' && order.expiresAt <= new Date() ? 'EXPIRED' : order.status;
     return {
@@ -214,8 +237,9 @@ export class BillingService {
       checkoutUrl:
         status === 'PENDING' &&
         this.config.billing.enabled &&
-        order.provider === this.config.billing.provider
-          ? this.providers.checkout(order, ip)
+        order.provider === this.config.billing.provider &&
+        this.providers.configured
+          ? order.providerCheckoutUrl
           : null,
       createdAt: order.createdAt.toISOString(),
       expiresAt: order.expiresAt.toISOString(),
