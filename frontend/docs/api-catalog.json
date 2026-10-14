@@ -1,7 +1,7 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
   "source": "../backend/openapi.json",
-  "generatedAt": "2026-10-14T09:10:59.657Z",
+  "generatedAt": "2026-10-14T09:25:50.450Z",
   "stats": {
     "operations": 176,
     "groups": 40,
@@ -3043,7 +3043,7 @@
       "method": "POST",
       "path": "/api/v1/billing/orders/{id}/reconcile",
       "group": "Billing",
-      "summary": "Verify payOS query and settle once; 30-second throttle",
+      "summary": "Recover same payOS checkout if needed, verify query and settle once; 30-second throttle",
       "operationId": "",
       "params": [
         {

@@ -63,7 +63,7 @@ export function registerBillingOpenApi(registry: OpenAPIRegistry, errorSchema: z
     {
       method: 'post' as const,
       path: '/billing/orders/{id}/reconcile',
-      summary: 'Verify payOS query and settle once; 30-second throttle',
+      summary: 'Recover same payOS checkout if needed, verify query and settle once; 30-second throttle',
       response: schemas.order,
       request: { params: billingIdSchema },
     },

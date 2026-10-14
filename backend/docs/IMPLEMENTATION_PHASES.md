@@ -192,9 +192,11 @@ Regenerate/validate OpenAPI using the repository workflow. Live external-provide
 
 User-approved cross-phase maintenance replaces PostgreSQL with MongoDB; this is not a new numbered product phase. Historical prompts and SQL migrations are archived context. Current provisioning uses `npm run prisma:push` (native validators/indexes), not Prisma Migrate. UUID contracts, permissions and confirmation boundaries remain unchanged. Historical-data preservation is optional. MongoDB maintenance gate: schema provisioning, idempotent seed, backend lint/typecheck/build, OpenAPI synchronization, existing acceptance flows and frontend compatibility checks passed on 2026-10-07. Verification record and operational instructions: [MONGODB_MIGRATION.md](MONGODB_MIGRATION.md). Phase 27 retains its existing release limitations.
 
-## 10. Sandbox billing extension — approved 2026-10-13
+## 10. Usage billing extension — approved 2026-10-13; payOS conversion 2026-10-14
 
 Provider conversion approved 2026-10-14: active checkout/settlement is now payOS only, via official SDK 2.0.5. VNPAY and local sandbox routes/configuration are removed; old orders/balances remain historical with optional new provider fields and partial unique indexes. payOS has no sandbox; real money mode is disclosed and missing credentials disable checkout. Application production rollout remains disabled. Backend lint/typecheck/build/OpenAPI, additive Mongo provisioning/seed and controlled transport acceptance pass (SDK signatures, partial/extra payment, replay, sample webhook, provider failure/cooldown and ambiguous-create recovery plus existing accounting/auth checks). External merchant acceptance remains pending user configuration; frontend migration is recorded separately in the contract registry.
+
+Final migration gate 2026-10-14: UI commit `59a042c` completes web/mobile payOS consumers; affected endpoints returned from CHANGING to READY. Web typecheck/scoped lint, 602 tests and build; mobile typecheck/lint/6 mapper tests, web64-route and Android Hermes exports pass. Browser missing-configuration/history states verified, without real transfer. Explicit reconciliation also recovers an unfinished same-code checkout after a persistence/response failure; controlled transport acceptance covers this recovery.
 
 The following original records are historical and do not describe the current provider:
 

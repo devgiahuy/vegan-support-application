@@ -173,7 +173,7 @@ export class BillingService {
 
   async reconcile(ownerId: string, id: string, ip: string) {
     this.ensureEnabled();
-    const order = await this.owned(ownerId, id);
+    let order = await this.owned(ownerId, id);
     if (order.status === 'PAID' || order.provider !== 'payos') return this.get(ownerId, id, ip);
     const claimed = await this.prisma.paymentOrder.updateMany({
       where: {
@@ -188,6 +188,16 @@ export class BillingService {
         'Vui lòng đợi ít nhất 30 giây giữa hai lần kiểm tra thanh toán.',
         429,
       );
+    // Recover a checkout whose provider create succeeded but local persistence/response failed.
+    // The same persisted provider code is reused; no second application order is allocated.
+    if (order.status === 'PENDING' && order.expiresAt > new Date() && !order.providerCheckoutUrl) {
+      const checkout = await this.providers.checkout(order);
+      await this.prisma.paymentOrder.updateMany({
+        where: { id: order.id, providerCheckoutUrl: null },
+        data: { providerLinkId: checkout.linkId, providerCheckoutUrl: checkout.url },
+      });
+      order = await this.owned(ownerId, id);
+    }
     await this.settle('payos', await this.providers.query(order));
     return this.get(ownerId, id, ip);
   }
