@@ -13,7 +13,8 @@ The original historical failure response is unavailable. It is not established t
 - Backend lint, typecheck, build, generated OpenAPI and synchronized API catalogs passed. No persistence schema changed in this retest; no backend test infrastructure was introduced.
 - Real browser session used a temporary 60-second access TTL. Logs show a 401 after expiry followed by refresh 200; the UI then created and paid a new order, adding fridge credits from 33 to 43. Reload retained 43 and the paid state without another grant.
 - Web/mobile simultaneous reload retained authentication and identical balances. Mobile checkout opened successfully; cancellation returned to the selected order without extra benefits. Expiry recovery and its return link were verified in the browser.
-- UI-branch frontend typecheck, all 600 tests across 50 files, Next build and scoped billing/auth lint passed. Mobile typecheck/lint and three billing mapper tests passed. Native device, real VNPAY merchant and live-image quality acceptance remain open.
+- UI-branch frontend typecheck, all 600 tests across 50 files, Next build and scoped billing/auth lint passed. Mobile typecheck/lint, three billing mapper tests, web export (64 routes) and Android Hermes export passed. Native device, real VNPAY merchant and live-image quality acceptance remain open.
+- After session-expiry verification, the running demo was restored to the normal 900-second access TTL. Shared `.env` files were not edited.
 
 ## Branch separation
 
