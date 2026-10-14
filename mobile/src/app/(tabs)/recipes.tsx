@@ -6,6 +6,10 @@ import { PlusCircle, Search, ShieldCheck, Sparkles } from 'lucide-react-native';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { RecipeCard } from '@/features/recipe/components/recipe-card';
+import {
+  RecipeIngredientFilter,
+  type IngredientFilterItem,
+} from '@/features/recipe/components/recipe-ingredient-filter';
 import { LoadMoreButton } from '@/components/shared/load-more-button';
 import { useInfiniteRecipesQuery } from '@/features/recipe/queries/recipe.queries';
 import { CategoryType } from '@/common/enums';
@@ -62,6 +66,7 @@ export default function RecipesScreen() {
   const debouncedQuery = useDebouncedValue(query, 400);
   const [difficulty, setDifficulty] = React.useState('');
   const [maxCookTime, setMaxCookTime] = React.useState<number | null>(null);
+  const [ingredients, setIngredients] = React.useState<IngredientFilterItem[]>([]);
   const [categoryId, setCategoryId] = React.useState<string | null>(params.category ?? null);
 
   const {
@@ -84,19 +89,21 @@ export default function RecipesScreen() {
     category: categoryId || undefined,
     difficulty: difficulty || undefined,
     maxCookTimeMinutes: maxCookTime ?? undefined,
+    ingredientIds: ingredients.length > 0 ? ingredients.map((item) => item.id) : undefined,
   });
 
   const recipesPagination = recipePages?.pages[0];
   const recipes = recipePages?.pages.flatMap((page) => page.items) ?? [];
   const totalItems = recipesPagination?.metadata?.totalItems ?? recipes.length;
   const categoryOptions = React.useMemo(() => buildCategoryOptions(categoryTree), [categoryTree]);
-  const hasFilters = Boolean(categoryId || difficulty || maxCookTime !== null || query);
+  const hasFilters = Boolean(categoryId || difficulty || maxCookTime !== null || query || ingredients.length > 0);
   const constraints = recipesPagination?.metadata?.appliedConstraints;
 
   const resetFilters = () => {
     setCategoryId(null);
     setDifficulty('');
     setMaxCookTime(null);
+    setIngredients([]);
     setQuery('');
   };
 
@@ -165,6 +172,7 @@ export default function RecipesScreen() {
             onChange={setMaxCookTime}
           />
         </View>
+        <RecipeIngredientFilter items={ingredients} onChange={setIngredients} />
         {hasFilters ? (
           <Pressable onPress={resetFilters} className="mt-2 self-start">
             <Text className="text-xs text-muted-foreground underline">Xoá tất cả bộ lọc</Text>

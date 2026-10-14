@@ -4,6 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, router } from 'expo-router';
 import { X } from 'lucide-react-native';
 import { RegisterForm } from '@/features/auth/components/register-form';
+import { goBackOrHome } from '@/lib/navigation';
 import { useIconColors } from '@/lib/theme-colors';
 
 /**
@@ -40,7 +41,7 @@ export default function RegisterScreen() {
             </Text>
 
             <View className="mt-6">
-              <RegisterForm onSuccess={() => router.replace('/')} />
+              <RegisterForm onSuccess={goBackOrHome} />
             </View>
 
             <Text className="mt-6 text-center text-xs text-muted-foreground">

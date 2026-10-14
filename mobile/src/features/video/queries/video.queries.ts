@@ -23,8 +23,9 @@ export function useVideosQuery(params?: VideoQueryParams) {
 }
 
 /** Danh sách video phân trang kiểu "Tải thêm" (màn Video). `params` không chứa `page`. */
-export function useInfiniteVideosQuery(params?: Omit<VideoQueryParams, 'page'>) {
+export function useInfiniteVideosQuery(params?: Omit<VideoQueryParams, 'page'>, options?: { enabled?: boolean }) {
   return useInfiniteQuery({
+    enabled: options?.enabled ?? true,
     queryKey: [...VIDEO_QUERY_KEYS.all, 'infinite', params ?? {}] as const,
     queryFn: ({ pageParam }) => videoApi.getVideos({ ...params, page: pageParam }),
     initialPageParam: 1,

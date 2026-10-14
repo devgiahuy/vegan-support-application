@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { ActivityIndicator, Alert, Pressable, Switch, Text, View } from 'react-native';
-import { Link, type Href } from 'expo-router';
+import { Link, useLocalSearchParams, type Href } from 'expo-router';
 import { Image } from 'expo-image';
 import {
   Activity,
@@ -110,7 +110,16 @@ export default function ProfileScreen() {
   const logoutMutation = useLogoutMutation();
 
   const [displayName, setDisplayName] = React.useState('');
-  const [profileTab, setProfileTab] = React.useState<'PROFILE' | 'STORAGE'>('PROFILE');
+  const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
+  const [profileTab, setProfileTab] = React.useState<'PROFILE' | 'STORAGE'>(
+    tabParam === 'storage' ? 'STORAGE' : 'PROFILE'
+  );
+  // Thông báo dung lượng mở thẳng tab "Lưu trữ" kể cả khi màn Hồ sơ đã được mở sẵn (đổi state ngay lúc render).
+  const [seenTabParam, setSeenTabParam] = React.useState(tabParam);
+  if (seenTabParam !== tabParam) {
+    setSeenTabParam(tabParam);
+    if (tabParam === 'storage') setProfileTab('STORAGE');
+  }
   const [avatarEditing, setAvatarEditing] = React.useState(false);
   const [height, setHeight] = React.useState('');
   const [weight, setWeight] = React.useState('');

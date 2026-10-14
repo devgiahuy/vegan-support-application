@@ -39,6 +39,25 @@ const TYPE_LABELS: Record<string, string> = {
  */
 const MOBILE_LINK_PREFIXES = ['/recipes/', '/articles/', '/videos/', '/restaurants/'];
 
+/**
+ * Backend chỉ kèm `link` cho bài/video/quán. Các loại còn lại mở màn liên quan trên mobile theo loại
+ * thông báo (bảng này chỉ là điều hướng, không suy luận thêm quyền hay trạng thái).
+ */
+const TYPE_FALLBACK_LINKS: Record<string, string> = {
+  CONTRIBUTOR_APPROVED: '/contributor-status',
+  CONTRIBUTOR_REJECTED: '/contributor-status',
+  CONTRIBUTOR_REVOKED: '/contributor-status',
+  APPLICATION_DECIDED: '/contributor-status',
+  MODERATION_OUTCOME: '/guidelines',
+  MODERATION_ACTION: '/guidelines',
+  AI_VERIFICATION_CREATED: '/ai-knowledge',
+  AI_VERIFICATION_CHANGED: '/ai-knowledge',
+  AI_VERIFICATION_STATUS: '/ai-knowledge',
+  STORAGE_QUOTA_WARNING: '/profile?tab=storage',
+  STORAGE_WARNING: '/profile?tab=storage',
+  QUOTA_WARNING: '/profile?tab=storage',
+};
+
 function toMobileLink(link: string): string | null {
   if (!link.startsWith('/') || link.startsWith('//')) return null;
   return MOBILE_LINK_PREFIXES.some((prefix) => link.startsWith(prefix)) ? link : null;
@@ -73,7 +92,7 @@ export class NotificationMapper extends BaseMapper<NotificationDto, AppNotificat
       typeLabel: TYPE_LABELS[type] ?? 'Hệ thống',
       title: safeString(pickField(dto, ['title'], '')) || 'Thông báo mới',
       summary: safeString(pickField(dto, ['summary'], '')),
-      link: rawLink ? toMobileLink(rawLink) : null,
+      link: (rawLink ? toMobileLink(rawLink) : null) ?? TYPE_FALLBACK_LINKS[type] ?? null,
       read: pickField<boolean>(dto, ['read'], false),
       readAt: safeDate(pickField(dto, ['readAt', 'read_at'], null)),
       createdAt,

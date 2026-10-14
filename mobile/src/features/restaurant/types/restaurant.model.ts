@@ -70,6 +70,8 @@ export interface RestaurantDiscoveryMeta {
   resultsTruncated: boolean;
   /** Nhà cung cấp bản đồ ngoài không khả dụng, chỉ có dữ liệu nội bộ. */
   externalDataUnavailable: boolean;
+  /** Quán ngoài chưa xác minh đã bị lọc bớt để áp dụng chế độ ăn, dị ứng hoặc thành phần cần tránh. */
+  externalResultsSuppressed: boolean;
 }
 
 export interface RestaurantDiscoveryResult {
@@ -118,6 +120,8 @@ export interface SubmittedRestaurant {
 
 export interface SubmittedRestaurantListResult {
   items: SubmittedRestaurant[];
+  page: number;
+  limit: number;
   total: number;
 }
 

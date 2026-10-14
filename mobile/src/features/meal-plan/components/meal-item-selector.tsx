@@ -1,11 +1,23 @@
 import * as React from 'react';
-import { Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import {
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { Image } from 'expo-image';
 import { BookOpen, Check, Flame, Minus, Plus, Search, Users, Utensils, X } from 'lucide-react-native';
 
+import { LoadMoreButton } from '@/components/shared/load-more-button';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/state-views';
-import { useCustomMealsQuery } from '@/features/custom-meal/queries/custom-meal.queries';
-import { useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
+import { useInfiniteCustomMealsQuery } from '@/features/custom-meal/queries/custom-meal.queries';
+import { useInfiniteRecipesQuery } from '@/features/recipe/queries/recipe.queries';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useIconColors } from '@/lib/theme-colors';
 import { cn } from '@/lib/utils';
@@ -40,30 +52,46 @@ function SelectorBody({
   onClose: () => void;
 }) {
   const colors = useIconColors();
+  const { height: windowHeight } = useWindowDimensions();
   const [tab, setTab] = React.useState<SelectorTab>('custom');
   const [search, setSearch] = React.useState('');
   const [servings, setServings] = React.useState(1);
   const debouncedSearch = useDebouncedValue(search, 400);
   const keyword = debouncedSearch.trim();
 
-  const customMeals = useCustomMealsQuery({ limit: 50 });
-  const recipes = useRecipesQuery({ q: keyword || undefined, limit: 20 });
+  const customMeals = useInfiniteCustomMealsQuery({ limit: 50 });
+  const recipes = useInfiniteRecipesQuery({ q: keyword || undefined, limit: 20 });
 
+  // API món riêng không có tham số tìm theo tên nên tìm trên danh sách đã tải; khi đang tìm thì nạp nốt các trang còn lại
+  // để không bỏ sót món nằm ở trang sau.
+  const { hasNextPage: hasMoreCustomMeals, isFetchingNextPage: isFetchingMoreCustomMeals } = customMeals;
+  const fetchMoreCustomMeals = customMeals.fetchNextPage;
+  const customMealsFailedNextPage = customMeals.isFetchNextPageError;
+  React.useEffect(() => {
+    if (keyword && hasMoreCustomMeals && !isFetchingMoreCustomMeals && !customMealsFailedNextPage) {
+      void fetchMoreCustomMeals();
+    }
+  }, [keyword, hasMoreCustomMeals, isFetchingMoreCustomMeals, customMealsFailedNextPage, fetchMoreCustomMeals]);
+
+  const customMealPages = customMeals.data?.pages;
+  const customMealTotal = customMealPages?.[0]?.pagination.totalItems ?? 0;
   const filteredCustomMeals = React.useMemo(() => {
-    const items = customMeals.data?.items ?? [];
+    const items = customMealPages?.flatMap((page) => page.items) ?? [];
     if (!keyword) return items;
     const lowered = keyword.toLowerCase();
     return items.filter((meal) => meal.name.toLowerCase().includes(lowered));
-  }, [customMeals.data?.items, keyword]);
+  }, [customMealPages, keyword]);
 
-  const recipeItems = recipes.data?.items ?? [];
+  const recipeItems = recipes.data?.pages.flatMap((page) => page.items) ?? [];
 
   const choose = (item: Omit<SelectedMealItem, 'servings'>) => {
     onSelect({ ...item, servings: Math.max(1, servings) });
   };
 
   return (
-    <View className="max-h-[88%] rounded-t-3xl bg-background px-5 pb-6 pt-4">
+    <View
+      style={{ maxHeight: Math.round(windowHeight * 0.85) }}
+      className="w-full max-w-md rounded-3xl border border-border bg-background px-5 pb-5 pt-4">
       <View className="flex-row items-start justify-between gap-3">
         <View className="flex-1">
           <Text className="text-base font-bold text-foreground">Chọn món cho {slotLabel}</Text>
@@ -98,7 +126,7 @@ function SelectorBody({
       <View className="mt-3 flex-row gap-2">
         {(
           [
-            { value: 'custom', label: `Món ăn cá nhân (${customMeals.data?.pagination.totalItems ?? 0})`, Icon: Users },
+            { value: 'custom', label: `Món ăn cá nhân (${customMealTotal})`, Icon: Users },
             { value: 'recipes', label: 'Công thức cộng đồng', Icon: BookOpen },
           ] as const
         ).map(({ value, label, Icon }) => {
@@ -135,7 +163,11 @@ function SelectorBody({
         />
       </View>
 
-      <ScrollView className="mt-3" contentContainerClassName="gap-2 pb-2" keyboardShouldPersistTaps="handled">
+      <ScrollView
+        className="mt-3 shrink"
+        style={{ flexGrow: 0 }}
+        contentContainerClassName="gap-2 pb-2"
+        keyboardShouldPersistTaps="handled">
         {tab === 'custom' ? (
           customMeals.isLoading ? (
             <LoadingState message="Đang tải món ăn cá nhân..." />
@@ -205,13 +237,27 @@ function SelectorBody({
             </Pressable>
           ))
         )}
+        {tab === 'custom' && !keyword ? (
+          <LoadMoreButton
+            hasNextPage={customMeals.hasNextPage}
+            isFetchingNextPage={customMeals.isFetchingNextPage}
+            onPress={() => void customMeals.fetchNextPage()}
+          />
+        ) : null}
+        {tab === 'recipes' ? (
+          <LoadMoreButton
+            hasNextPage={recipes.hasNextPage}
+            isFetchingNextPage={recipes.isFetchingNextPage}
+            onPress={() => void recipes.fetchNextPage()}
+          />
+        ) : null}
       </ScrollView>
     </View>
   );
 }
 
 /**
- * Hộp chọn món cho một ô thực đơn (bottom sheet) — đồng bộ `meal-plan-item-selector.tsx` của web:
+ * Hộp chọn món cho một ô thực đơn (popup giữa màn hình) — đồng bộ `meal-plan-item-selector.tsx` của web:
  * hai tab (bữa ăn tự tạo / công thức cộng đồng), tìm kiếm, chọn số khẩu phần. Chỉ mount khi mở nên các
  * truy vấn danh sách chỉ chạy lúc cần.
  */
@@ -228,11 +274,13 @@ export function MealItemSelector({
 }) {
   if (!visible) return null;
   return (
-    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
-      <View className="flex-1 justify-end bg-black/50">
-        <Pressable className="flex-1" onPress={onClose} accessibilityLabel="Đóng" />
+    <Modal visible animationType="fade" transparent statusBarTranslucent onRequestClose={onClose}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className="flex-1 items-center justify-center bg-black/60 px-5">
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} accessibilityLabel="Đóng" />
         <SelectorBody slotLabel={slotLabel} onSelect={onSelect} onClose={onClose} />
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }
