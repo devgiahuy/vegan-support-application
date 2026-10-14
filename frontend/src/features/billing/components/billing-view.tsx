@@ -2,7 +2,7 @@
 import { useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { CreditCard, Info } from 'lucide-react';
+import { QrCode, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import { AuthGuard } from '@/components/shared/auth-guard';
 import { Button } from '@/components/ui/button';
@@ -82,11 +82,11 @@ function OrderRow({
           {order.checkoutUrl && (
             <Button variant="outline" size="sm" asChild>
               <a href={order.checkoutUrl} rel="noreferrer">
-                {order.simulated ? 'Mở trang kiểm thử' : 'Tiếp tục thanh toán'}
+                Tiếp tục thanh toán qua payOS
               </a>
             </Button>
           )}
-          {order.status !== 'PAID' && (
+          {order.provider === 'payos' && order.status !== 'PAID' && (
             <Button
               variant="outline"
               size="sm"
@@ -94,11 +94,7 @@ function OrderRow({
               aria-busy={checking}
               onClick={() => void checkPayment()}
             >
-              {checking
-                ? 'Đang kiểm tra…'
-                : order.simulated
-                  ? 'Tải lại trạng thái'
-                  : 'Kiểm tra thanh toán'}
+              {checking ? 'Đang kiểm tra…' : 'Kiểm tra thanh toán'}
             </Button>
           )}
         </div>
@@ -165,11 +161,10 @@ function BillingContent() {
       </header>
       <Alert>
         <Info />
-        <AlertTitle>{catalog.data?.providerLabel ?? 'Thanh toán sandbox'}</AlertTitle>
+        <AlertTitle>{catalog.data?.providerLabel ?? 'Thanh toán qua payOS'}</AlertTitle>
         <AlertDescription>
-          {catalog.data?.simulated !== false
-            ? 'Đây là bản mô phỏng để thử kết quả thành công, hủy hoặc thất bại. Chưa kết nối cổng VNPAY; không có bước nhập thẻ, OTP hay quét QR và không chuyển tiền thật.'
-            : 'Đây là môi trường thử nghiệm VNPAY. Giao dịch sandbox không phải thanh toán production.'}
+          Thanh toán bằng chuyển khoản hoặc quét QR trên trang payOS. Giao dịch chuyển tiền thật;
+          payOS không có sandbox riêng. Chỉ cộng lượt sau khi xác nhận đã nhận đủ tiền.
         </AlertDescription>
       </Alert>
       {loading ? (
@@ -215,10 +210,10 @@ function BillingContent() {
           </section>
           {!catalog.data?.enabled && (
             <Alert>
-              <AlertTitle>Thanh toán demo chưa được bật</AlertTitle>
+              <AlertTitle>Thanh toán payOS chưa sẵn sàng</AlertTitle>
               <AlertDescription>
-                Bạn vẫn có thể xem lịch sử và quyền lợi hiện có. Máy chủ cần bật tính năng trước khi
-                mua gói.
+                Bạn vẫn có thể xem hạn mức và lịch sử. Các gói sẽ mở mua khi thanh toán payOS sẵn
+                sàng.
               </AlertDescription>
             </Alert>
           )}
@@ -299,12 +294,10 @@ function BillingContent() {
                   disabled={!catalog.data?.enabled || !product.canBuy || purchase.isPending}
                   onClick={() => void buy(product.id)}
                 >
-                  <CreditCard data-icon="inline-start" />
+                  <QrCode data-icon="inline-start" />
                   {purchase.isPending && purchase.variables?.productId === product.id
                     ? 'Đang tạo đơn…'
-                    : catalog.data?.simulated
-                      ? 'Thử thanh toán'
-                      : 'Mua gói'}
+                    : 'Thanh toán qua payOS'}
                 </Button>
               </CardFooter>
             </Card>

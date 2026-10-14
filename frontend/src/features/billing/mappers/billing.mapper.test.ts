@@ -44,11 +44,13 @@ describe('billing mapper', () => {
     ).toBeNull();
     expect(orderMapper.toModel({ status: 'invented' }).status).toBe('UNKNOWN');
   });
-  it('keeps sandbox disclosure and provider identity', () => {
+  it('preserves historical providers without allowing new purchases', () => {
     expect(orderMapper.toModel({ provider: 'sandbox' }).simulated).toBe(true);
     expect(
       catalogMapper.toModel({ enabled: true, provider: 'vnpay', simulated: false }).providerLabel
-    ).toBe('VNPAY Sandbox');
+    ).toBe('VNPAY Sandbox cũ · Chỉ xem');
+    expect(catalogMapper.toModel({ enabled: true, provider: 'vnpay' }).enabled).toBe(false);
+    expect(catalogMapper.toModel({ enabled: true, provider: 'sandbox' }).enabled).toBe(false);
   });
   it('counts full/over-limit Pantry and preserves disabled limit', () => {
     expect(entitlementMapper.toModel({ pantryUsed: '22', pantryLimit: '20' }).pantryFull).toBe(
@@ -76,9 +78,49 @@ describe('billing mapper', () => {
     expect(
       orderMapper.toModel({
         status: 'PENDING',
+        provider: 'payos',
+        checkoutUrl: 'https://pay.payos.vn/web/' + 'a'.repeat(32),
+      }).checkoutUrl
+    ).toBe('https://pay.payos.vn/web/' + 'a'.repeat(32));
+  });
+  it('recognizes real payOS and fails closed for contradictory simulation flags', () => {
+    expect(
+      catalogMapper.toModel({ enabled: true, provider: 'payos', simulated: false })
+    ).toMatchObject({
+      provider: 'payos',
+      enabled: true,
+      simulated: false,
+      providerLabel: 'payOS · Chuyển khoản / QR',
+    });
+    expect(
+      catalogMapper.toModel({ enabled: true, provider: 'payos', simulated: true }).enabled
+    ).toBe(false);
+    expect(catalogMapper.toModel({ enabled: false, provider: 'payos' }).enabled).toBe(false);
+  });
+  it('rejects lookalike checkout hosts and keeps legacy orders read-only', () => {
+    for (const url of [
+      'http://pay.payos.vn/web/' + 'a'.repeat(32),
+      'https://pay.payos.vn.evil.test/web/' + 'a'.repeat(32),
+      'https://evil.test',
+      'https://user:pass@pay.payos.vn/web/' + 'a'.repeat(32),
+    ]) {
+      expect(
+        orderMapper.toModel({ status: 'PENDING', provider: 'payos', checkoutUrl: url }).checkoutUrl
+      ).toBeNull();
+    }
+    expect(
+      orderMapper.toModel({
+        status: 'PENDING',
         provider: 'sandbox',
         checkoutUrl: 'http://localhost:4100/checkout',
-      }).checkoutUrl
-    ).toBe('http://localhost:4100/checkout');
+      })
+    ).toMatchObject({ provider: 'sandbox', checkoutUrl: null, pending: false });
+    expect(
+      orderMapper.toModel({
+        status: 'PENDING',
+        provider: 'vnpay',
+        checkoutUrl: 'https://sandbox.vnpayment.vn/checkout',
+      })
+    ).toMatchObject({ provider: 'vnpay', checkoutUrl: null, pending: false });
   });
 });

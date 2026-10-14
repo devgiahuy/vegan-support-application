@@ -43,13 +43,15 @@ const dateLabel = (value: unknown) => {
     : 'Chưa có';
 };
 const provider = (value: unknown): BillingProvider =>
-  value === 'sandbox' || value === 'vnpay' ? value : 'UNKNOWN';
+  value === 'payos' || value === 'sandbox' || value === 'vnpay' ? value : 'UNKNOWN';
 const providerLabel = (value: BillingProvider) =>
-  value === 'sandbox'
-    ? 'Sandbox nội bộ · Mô phỏng'
-    : value === 'vnpay'
-      ? 'VNPAY Sandbox'
-      : 'Chưa xác định provider';
+  value === 'payos'
+    ? 'payOS · Chuyển khoản / QR'
+    : value === 'sandbox'
+      ? 'Mô phỏng cũ · Chỉ xem'
+      : value === 'vnpay'
+        ? 'VNPAY Sandbox cũ · Chỉ xem'
+        : 'Chưa xác định provider';
 const statuses: Record<BillingStatus, string> = {
   PENDING: 'Chờ thanh toán',
   PAID: 'Đã cấp quyền lợi',
@@ -82,7 +84,14 @@ function checkoutUrl(value: unknown): string | null {
   const text = safeString(value);
   try {
     const url = new URL(text);
-    return ['http:', 'https:'].includes(url.protocol) ? url.toString() : null;
+    return url.protocol === 'https:' &&
+      url.hostname === 'pay.payos.vn' &&
+      !url.port &&
+      !url.username &&
+      !url.password &&
+      /^\/web\/[a-f0-9]{32}$/i.test(url.pathname)
+      ? url.toString()
+      : null;
   } catch {
     return null;
   }
@@ -108,10 +117,16 @@ export class CatalogMapper extends BaseMapper<BillingCatalogDto, BillingCatalog>
   toModel(dto: BillingCatalogDto | null | undefined): BillingCatalog {
     const source = provider(safeString(pickField(dto, ['provider'], '')));
     return {
-      enabled: safeBoolean(pickField(dto, ['enabled'], false)) && source !== 'UNKNOWN',
+      enabled:
+        safeBoolean(pickField(dto, ['enabled'], false)) &&
+        source === 'payos' &&
+        !safeBoolean(pickField(dto, ['simulated'], false)),
       provider: source,
       providerLabel: providerLabel(source),
-      simulated: source !== 'vnpay' || safeBoolean(pickField(dto, ['simulated'], false)),
+      simulated:
+        source === 'sandbox' ||
+        source === 'UNKNOWN' ||
+        safeBoolean(pickField(dto, ['simulated'], false)),
       products: productMapper.toModelList(pickField(dto, ['products'], [])),
     };
   }
@@ -125,14 +140,18 @@ export class OrderMapper extends BaseMapper<BillingOrderDto, BillingOrder> {
       id: safeString(pickField(dto, ['id'], '')),
       productId: safeString(pickField(dto, ['productId'], '')),
       productName: safeString(pickField(dto, ['productName'], 'Gói quyền lợi')),
+      provider: source,
       priceLabel: formatCurrency(count(pickField(dto, ['priceVnd'], 0))),
       providerLabel: providerLabel(source),
-      simulated: source !== 'vnpay' || safeBoolean(pickField(dto, ['simulated'], false)),
+      simulated:
+        source === 'sandbox' ||
+        source === 'UNKNOWN' ||
+        safeBoolean(pickField(dto, ['simulated'], false)),
       status: currentStatus,
       statusLabel: statuses[currentStatus],
-      pending: currentStatus === 'PENDING',
+      pending: currentStatus === 'PENDING' && source === 'payos',
       checkoutUrl:
-        currentStatus === 'PENDING' && source !== 'UNKNOWN'
+        currentStatus === 'PENDING' && source === 'payos'
           ? checkoutUrl(pickField(dto, ['checkoutUrl'], null))
           : null,
       createdAtLabel: dateLabel(pickField(dto, ['createdAt'], null)),
@@ -183,7 +202,10 @@ export class EntitlementMapper extends BaseMapper<EntitlementDto, Entitlements> 
       ...allowance,
       enabled: safeBoolean(pickField(dto, ['enabled'], false)),
       providerLabel: providerLabel(source),
-      simulated: source !== 'vnpay' || safeBoolean(pickField(dto, ['simulated'], false)),
+      simulated:
+        source === 'sandbox' ||
+        source === 'UNKNOWN' ||
+        safeBoolean(pickField(dto, ['simulated'], false)),
       pantryUsed,
       pantryLimit,
       pantryFull: pantryLimit !== null && pantryUsed >= pantryLimit,

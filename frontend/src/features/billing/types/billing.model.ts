@@ -1,4 +1,4 @@
-export type BillingProvider = 'sandbox' | 'vnpay' | 'UNKNOWN';
+export type BillingProvider = 'payos' | 'sandbox' | 'vnpay' | 'UNKNOWN';
 export type BillingStatus = 'PENDING' | 'PAID' | 'CANCELLED' | 'FAILED' | 'EXPIRED' | 'UNKNOWN';
 export interface BillingBenefits {
   chatCredits: number;
@@ -27,6 +27,7 @@ export interface BillingOrder extends BillingBenefits {
   id: string;
   productId: string;
   productName: string;
+  provider: BillingProvider;
   priceLabel: string;
   providerLabel: string;
   simulated: boolean;

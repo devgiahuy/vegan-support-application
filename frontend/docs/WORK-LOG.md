@@ -1,5 +1,13 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-14] — Chuyển billing sang payOS trên web/mobile
+
+- Scope: user-authorized provider replacement; backend commit `cd45c24` merged into UI worktree, schema/docs regenerated before mapper changes. Existing billing endpoints/DTO envelopes remain; no direct component DTO consumption or new client endpoint calls.
+- Changed: billing Model provider identity, web/mobile mappers and tests, error/feedback copy, billing screen actions/disclosure. Only payOS can buy/resume, checkout URLs require HTTPS pay.payos.vn/web/32-hex ID, old providers are read-only and do not poll. Missing keys disable purchasing; no mock fallback. QR checkout belongs to payOS's hosted page and processes real transfers.
+- Verification: Swagger 176 operations; web scoped ESLint/typecheck, 602 tests/50 files, Next build; mobile typecheck/lint, 6 billing mapper tests, web export 64 routes and Android Hermes export all pass. Initial export lacked EXPO_PUBLIC_API_URL; rerunning with the documented URL passed without code changes. Browser verifies payOS text, disabled buy, unchanged balances/history on both clients; 390px content width equals viewport width. Impeccable detector returns `[]` for both screens. Evidence: `../../docs/billing-evidence/web-payos-unconfigured-20261014.png` and `mobile-payos-unconfigured-20261014.png`.
+- Progress: payOS client migration 0% → 100% code. Live merchant checkout/webhook and native-device tests remain unverified because user will configure keys later. Full frontend lint was not rerun; previously documented baseline failures remain, scoped billing lint clean.
+- Branch discipline: all runtime frontend/mobile edits remain in `codex/sandbox-billing-ui`; primary branch contains backend/domain/contracts only. No real transfer, merchant registration or rollout performed. Old assistant bounce finding unchanged outside scope, no manual suppression.
+
 ## [2026-10-14] — Phản hồi nút kiểm tra thanh toán và làm rõ mô phỏng
 
 - Cause: reconciliation refreshed query caches but had no visible acknowledgement when an order kept the same status. Local reconciliation reads persisted state; it does not simulate success or query a bank.

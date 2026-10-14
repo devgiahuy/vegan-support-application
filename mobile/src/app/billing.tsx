@@ -75,7 +75,7 @@ function OrderCard({
       <Text className="text-sm font-semibold text-primary">{order.statusLabel}</Text>
       {order.checkoutUrl && (
         <PrimaryButton
-          label={order.simulated ? 'Mở trang kiểm thử' : 'Tiếp tục thanh toán'}
+          label="Tiếp tục thanh toán qua payOS"
           variant="outline"
           disabled={busy}
           onPress={() => {
@@ -83,15 +83,9 @@ function OrderCard({
           }}
         />
       )}
-      {order.status !== 'PAID' && (
+      {order.provider === 'payos' && order.status !== 'PAID' && (
         <PrimaryButton
-          label={
-            checking
-              ? 'Đang kiểm tra…'
-              : order.simulated
-                ? 'Tải lại trạng thái'
-                : 'Kiểm tra thanh toán'
-          }
+          label={checking ? 'Đang kiểm tra…' : 'Kiểm tra thanh toán'}
           variant="outline"
           disabled={busy || checking}
           loading={checking}
@@ -190,12 +184,11 @@ export default function BillingScreen() {
           <>
             <View className="gap-2 rounded-xl border border-border bg-muted p-4">
               <Text className="font-semibold text-foreground">
-                {catalog.data?.providerLabel ?? 'Thanh toán sandbox'}
+                {catalog.data?.providerLabel ?? 'Thanh toán qua payOS'}
               </Text>
               <Text className="text-sm leading-5 text-muted-foreground">
-                {catalog.data?.simulated !== false
-                  ? 'Bản mô phỏng để thử kết quả thành công, hủy hoặc thất bại. Chưa kết nối VNPAY; không có bước nhập thẻ, OTP hay quét QR và không chuyển tiền thật.'
-                  : 'Môi trường thử nghiệm VNPAY; không phải thanh toán production.'}
+                Chuyển khoản hoặc quét QR trên trang payOS. Giao dịch chuyển tiền thật; payOS không
+                có sandbox riêng. Chỉ cộng lượt sau khi xác nhận đã nhận đủ tiền.
               </Text>
               <Text className="text-xs text-muted-foreground">
                 Sau thanh toán, đóng trình duyệt và quay lại ứng dụng để xem quyền lợi.
@@ -233,7 +226,7 @@ export default function BillingScreen() {
                 </View>
                 {!catalog.data?.enabled && (
                   <Text className="text-sm text-muted-foreground">
-                    Thanh toán demo chưa được bật trên máy chủ.
+                    Thanh toán payOS chưa sẵn sàng trên máy chủ.
                   </Text>
                 )}
                 <Text className="text-xs leading-5 text-muted-foreground">
@@ -285,7 +278,7 @@ export default function BillingScreen() {
                     Cộng dồn · Không hết hạn trong bản demo
                   </Text>
                   <PrimaryButton
-                    label={catalog.data?.simulated ? 'Thử thanh toán' : 'Mua gói'}
+                    label="Thanh toán qua payOS"
                     loading={purchase.isPending && purchase.variables?.productId === product.id}
                     disabled={!catalog.data?.enabled || !product.canBuy || purchase.isPending}
                     onPress={() => void buy(product.id)}

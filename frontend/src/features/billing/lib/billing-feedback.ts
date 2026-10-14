@@ -8,13 +8,13 @@ export interface BillingCheckFeedback {
 }
 
 export function billingCheckMessage(order: BillingOrder): string {
+  if (order.provider !== 'payos' && order.status !== 'PAID')
+    return 'Đây là đơn cũ trước khi chuyển sang payOS, chỉ dùng để xem lịch sử. Chọn gói để tạo một đơn payOS mới.';
   switch (order.status) {
     case 'PAID':
       return 'Thanh toán đã được xác nhận. Quyền lợi đã được cấp vào tài khoản.';
     case 'PENDING':
-      return order.simulated
-        ? 'Đơn vẫn chờ kết quả mô phỏng. Mở trang kiểm thử, chọn kết quả rồi tải lại trạng thái.'
-        : 'Chưa nhận được xác nhận thanh toán từ VNPAY. Nếu đã thanh toán, hãy kiểm tra lại sau.';
+      return 'payOS chưa xác nhận đơn đã nhận đủ tiền. Nếu đã chuyển khoản, hãy kiểm tra lại sau ít nhất 30 giây.';
     case 'CANCELLED':
       return 'Đơn đã bị hủy. Bạn có thể tạo đơn mới để tiếp tục.';
     case 'FAILED':

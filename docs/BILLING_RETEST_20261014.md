@@ -1,5 +1,7 @@
 # Billing retest — 2026-10-14
 
+Historical VNPAY/local-simulation record, superseded for new purchases by [payOS conversion verification](BILLING_PAYOS_VERIFICATION_20261014.md) later on the same date.
+
 ## Findings and fix
 
 At the start of this session MongoDB was healthy, but demo API/web/mobile processes were not running. They were restarted using the dedicated billing database and explicit API URLs.
