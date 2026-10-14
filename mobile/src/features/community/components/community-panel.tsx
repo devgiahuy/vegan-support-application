@@ -15,6 +15,7 @@ import {
   useUpdateCommentMutation,
   useVoteMutation,
 } from '../queries/community.queries';
+import { ReportButton } from '@/features/safety/components/report-button';
 import type { CommunityComment } from '../types/community.model';
 import { CommentStatus } from '@/common/enums';
 import { getApiErrorMessage } from '@/lib/api-error';
@@ -400,13 +401,16 @@ function CommentItem({
       )}
 
       {!!currentUserId && !isDeleted && !isEditing && comment.content !== null ? (
-        <Pressable
-          onPress={() => setIsReplying((value) => !value)}
-          hitSlop={6}
-          className="mt-1.5 flex-row items-center gap-1 self-start">
-          <CornerDownRight size={12} color={colors.primary} />
-          <Text className="text-xs font-semibold text-primary">{isReplying ? 'Đóng' : 'Trả lời'}</Text>
-        </Pressable>
+        <View className="mt-1.5 flex-row items-center gap-4">
+          <Pressable
+            onPress={() => setIsReplying((value) => !value)}
+            hitSlop={6}
+            className="flex-row items-center gap-1 self-start">
+            <CornerDownRight size={12} color={colors.primary} />
+            <Text className="text-xs font-semibold text-primary">{isReplying ? 'Đóng' : 'Trả lời'}</Text>
+          </Pressable>
+          <ReportButton targetType="COMMENT" targetId={comment.id} authorId={comment.author?.id} compact />
+        </View>
       ) : null}
 
       {isReplying ? (
@@ -431,9 +435,14 @@ function CommentItem({
       {comment.replies.length > 0 ? (
         <View className="mt-2 gap-2 border-l border-border pl-3">
           {comment.replies.map((reply) => (
-            <Text key={reply.id} className="text-sm text-muted-foreground">
-              {reply.author?.displayName ?? 'Người dùng'}: {reply.content ?? 'Bình luận đã bị ẩn.'}
-            </Text>
+            <View key={reply.id} className="gap-1">
+              <Text className="text-sm text-muted-foreground">
+                {reply.author?.displayName ?? 'Người dùng'}: {reply.content ?? 'Bình luận đã bị ẩn.'}
+              </Text>
+              {reply.content !== null ? (
+                <ReportButton targetType="COMMENT" targetId={reply.id} authorId={reply.author?.id} compact />
+              ) : null}
+            </View>
           ))}
         </View>
       ) : null}

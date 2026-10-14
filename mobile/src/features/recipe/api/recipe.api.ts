@@ -15,6 +15,8 @@ export interface RecipeQueryParams {
   /** Chỉ lấy món có thời gian nấu không vượt quá số phút này (backend `maxCookTimeMinutes`, 0–10080). */
   maxCookTimeMinutes?: number;
   q?: string;
+  /** Chỉ lấy công thức chứa đủ mọi nguyên liệu chuẩn này (backend `ingredientIds`, tối đa 20). */
+  ingredientIds?: string[];
 }
 
 export interface CreateRecipeIngredientInput {
@@ -109,7 +111,12 @@ export const recipeApi = {
   /** Danh sách công thức nấu ăn (phân trang, lọc danh mục/độ khó/từ khóa). `GET /posts?type=RECIPE`. */
   getRecipes: async (params?: RecipeQueryParams): Promise<RecipePaginationResult> => {
     const res = await api.get<RecipeListResponseDto>(API_ENDPOINTS.POSTS.LIST, {
-      params: { ...params, type: PostType.RECIPE },
+      params: {
+        ...params,
+        // Backend nhận danh sách UUID dạng CSV; axios mặc định gửi `ingredientIds[]=...` nên tự nối chuỗi.
+        ingredientIds: params?.ingredientIds?.length ? params.ingredientIds.join(',') : undefined,
+        type: PostType.RECIPE,
+      },
       silent: true,
     });
     return recipeMapper.toPaginationFromEnvelope(res.data.data, res.data.meta);

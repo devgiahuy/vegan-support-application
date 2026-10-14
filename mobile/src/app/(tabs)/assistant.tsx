@@ -57,7 +57,7 @@ export default function AssistantScreen() {
   const createSessionMutation = useCreateChatSessionMutation();
   const sessionsQuery = useChatSessionsQuery();
 
-  const activeSessionId = selectedSessionId ?? sessionsQuery.data?.items?.[0]?.id ?? '';
+  const activeSessionId = selectedSessionId ?? sessionsQuery.data?.pages[0]?.items[0]?.id ?? '';
   const messagesQuery = useChatMessagesQuery(activeSessionId, activeSessionId.length > 0);
   const sendState = useSendChatMessage(activeSessionId);
 

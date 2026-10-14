@@ -107,8 +107,12 @@ export function useRatingMutation() {
 }
 
 /** `GET /users/me/bookmarks` phân trang kiểu "Tải thêm" (màn "Đã lưu"). Nằm dưới khóa `bookmarks` nên tự làm mới khi lưu/bỏ lưu. */
-export function useInfiniteMyBookmarksQuery(params?: { limit?: number; type?: 'RECIPE' | 'VIDEO' }) {
+export function useInfiniteMyBookmarksQuery(
+  params?: { limit?: number; type?: 'RECIPE' | 'VIDEO' },
+  options?: { enabled?: boolean }
+) {
   return useInfiniteQuery({
+    enabled: options?.enabled ?? true,
     queryKey: [...COMMUNITY_QUERY_KEYS.all, 'bookmarks', 'infinite', params ?? {}] as const,
     queryFn: ({ pageParam }) => communityApi.getMyBookmarks({ ...params, page: pageParam }),
     initialPageParam: 1,

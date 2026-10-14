@@ -1,9 +1,10 @@
 import { BILLING_QUERY_KEYS } from '@/features/billing/queries/billing.queries';
 import * as React from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 import type { FeedbackValue } from '@/common/enums';
 import { useAuthStore } from '@/store/useAuthStore';
+import { getNextPageNumber } from '@/lib/pagination';
 import { chatApi } from '../api/chat.api';
 import { streamChatMessage } from '../api/chat-stream';
 import type { QuotaState } from '../types/chat.model';
@@ -23,23 +24,40 @@ function getStreamErrorCode(error: unknown): string | undefined {
   return typeof nested === 'string' && nested.length > 0 ? nested : undefined;
 }
 
+/** Danh sách phiên chat phân trang kiểu "Tải thêm"; phiên gần nhất nằm ở trang đầu. */
 export function useChatSessionsQuery() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  return useQuery({
+  return useInfiniteQuery({
     queryKey: CHAT_QUERY_KEYS.sessions(),
-    queryFn: () => chatApi.getSessions({ page: 1, limit: 20 }),
+    queryFn: ({ pageParam }) => chatApi.getSessions({ page: pageParam, limit: 20 }),
+    initialPageParam: 1,
+    getNextPageParam: getNextPageNumber,
     staleTime: 30 * 1000,
     enabled: isAuthenticated,
   });
 }
 
+/**
+ * Tin nhắn của một phiên, sắp theo thời gian tăng dần nên tin mới nhất nằm ở trang cuối. Vì vậy tự nạp
+ * hết các trang (100 tin/trang) để cuối hội thoại luôn đầy đủ, thay vì cắt ở 100 tin đầu.
+ */
 export function useChatMessagesQuery(sessionId: string, enabled = true) {
-  return useQuery({
+  const query = useInfiniteQuery({
     queryKey: CHAT_QUERY_KEYS.messages(sessionId),
-    queryFn: () => chatApi.getMessages(sessionId, { page: 1, limit: 100 }),
+    queryFn: ({ pageParam }) => chatApi.getMessages(sessionId, { page: pageParam, limit: 100 }),
+    initialPageParam: 1,
+    getNextPageParam: getNextPageNumber,
+    select: (data) => ({ items: data.pages.flatMap((page) => page.items) }),
     staleTime: 30 * 1000,
     enabled: enabled && sessionId.length > 0,
   });
+
+  const { hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage } = query;
+  React.useEffect(() => {
+    if (hasNextPage && !isFetchingNextPage && !isFetchNextPageError) void fetchNextPage();
+  }, [hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
+
+  return query;
 }
 
 export function useCreateChatSessionMutation() {

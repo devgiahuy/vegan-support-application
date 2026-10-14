@@ -167,6 +167,7 @@ export class AiArtifactMapper extends BaseMapper<AiArtifactDto, AiArtifact> {
       content: toContent(type, pickField<AiArtifactContentDto | undefined>(dto, ['content'], undefined)),
       authorName:
         safeString(pickField(dto, ['author.name'], '')) || (anonymous ? 'Thành viên ẩn danh' : 'Thành viên VeggieConnect'),
+      authorAnonymous: anonymous,
       status,
       visibility,
       lifecycleVersion: safeNumber(pickField(dto, ['lifecycle.version'], 1), 1),

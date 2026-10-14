@@ -36,6 +36,8 @@ export interface RestaurantDiscoveryMetaDto {
   total?: number;
   resultsTruncated?: boolean;
   externalDataUnavailable?: boolean;
+  /** Quán ngoài chưa xác minh bị loại vì ràng buộc ăn uống/dị ứng của người dùng. */
+  externalResultsSuppressed?: boolean;
   provider?: string;
   providerResultLimit?: number;
   locationStored?: boolean;

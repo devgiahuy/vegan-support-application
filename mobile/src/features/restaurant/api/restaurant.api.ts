@@ -16,7 +16,7 @@ import type {
   SubmittedRestaurant,
   SubmittedRestaurantListResult,
 } from '../types/restaurant.model';
-import { hasSearchKeyword, restaurantMapper } from '../mappers/restaurant.mapper';
+import { hasSearchKeyword, MINE_PAGE_SIZE, restaurantMapper } from '../mappers/restaurant.mapper';
 
 /** Nhà cung cấp bản đồ ngoài có thể trả chậm ở lần gọi đầu, nên cho phép chờ lâu hơn mặc định 15 giây. */
 const DISCOVERY_TIMEOUT_MS = 45000;
@@ -76,9 +76,9 @@ export const restaurantApi = {
   },
 
   /** `GET /restaurants/mine` — các quán mình đã đề xuất và trạng thái duyệt. */
-  getMine: async (): Promise<SubmittedRestaurantListResult> => {
+  getMine: async (page = 1): Promise<SubmittedRestaurantListResult> => {
     const res = await api.get<RestaurantRecordListResponseDto>(API_ENDPOINTS.RESTAURANTS.MINE, {
-      params: { limit: 50 },
+      params: { page, limit: MINE_PAGE_SIZE },
       silent: true,
     });
     return restaurantMapper.toSubmittedList(res.data);

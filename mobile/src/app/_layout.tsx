@@ -7,6 +7,7 @@ import { useColorScheme } from 'nativewind';
 import { QueryClientProvider } from '@tanstack/react-query';
 import * as React from 'react';
 
+import { useSessionExpiredRedirect } from '@/features/auth/lib/use-session-expired';
 import { useSessionRestore } from '@/features/auth/lib/restore-session';
 import { createQueryClient } from '@/lib/query-client';
 
@@ -18,6 +19,7 @@ export default function RootLayout() {
 
   // Giữ splash đến khi khôi phục xong phiên đăng nhập (silent refresh bằng cookie refresh token).
   const sessionReady = useSessionRestore();
+  useSessionExpiredRedirect(queryClient);
 
   React.useEffect(() => {
     if (sessionReady) void SplashScreen.hideAsync();

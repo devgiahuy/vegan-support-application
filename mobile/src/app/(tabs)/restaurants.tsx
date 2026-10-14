@@ -97,6 +97,7 @@ export default function RestaurantsScreen() {
     useRestaurantDiscoveryQuery(query);
   const restaurants = data?.pages.flatMap((page) => page.items) ?? [];
   const meta = data?.pages[data.pages.length - 1]?.meta;
+  const externalResultsSuppressed = data?.pages.some((page) => page.meta.externalResultsSuppressed) ?? false;
   const totalFound = data?.pages[0]?.meta.total ?? restaurants.length;
   const attributions = Array.from(new Set(restaurants.map((item) => item.attribution).filter(Boolean)));
 
@@ -337,6 +338,13 @@ export default function RestaurantsScreen() {
               </Text>
             ) : null}
 
+            {externalResultsSuppressed ? (
+              <Text className="rounded-xl border border-border bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+                Các quán chưa được xác minh đã được loại khỏi kết quả để áp dụng chế độ ăn, dị ứng hoặc thành phần bạn
+                cần tránh.
+              </Text>
+            ) : null}
+
             <View className="gap-3">
               {isLoading ? (
                 <LoadingState message="Đang tìm quán chay quanh bạn..." />
@@ -349,7 +357,11 @@ export default function RestaurantsScreen() {
               ) : restaurants.length === 0 ? (
                 <EmptyState
                   title="Không tìm thấy quán phù hợp"
-                  description="Thử mở rộng bán kính (10 km, 20 km), đổi từ khóa hoặc bỏ bộ lọc chế độ ăn và bộ lọc nâng cao."
+                  description={
+                    externalResultsSuppressed
+                      ? 'Các quán chưa được xác minh đã được loại khỏi kết quả để áp dụng chế độ ăn, dị ứng hoặc thành phần bạn cần tránh. Hãy thử mở rộng bán kính hoặc chọn khu vực khác.'
+                      : 'Thử mở rộng bán kính (10 km, 20 km), đổi từ khóa hoặc bỏ bộ lọc chế độ ăn và bộ lọc nâng cao.'
+                  }
                 />
               ) : (
                 <>
