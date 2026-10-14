@@ -40,7 +40,7 @@ export function AuthGuard({
   useEffect(() => {
     if (!hydrated) return;
     if (!isAuthenticated) {
-      router.replace(`${loginPath}?from=${encodeURIComponent(pathname)}`);
+      router.replace(`${loginPath}?from=${encodeURIComponent(pathname + window.location.search)}`);
     }
   }, [hydrated, isAuthenticated, loginPath, pathname, router]);
 

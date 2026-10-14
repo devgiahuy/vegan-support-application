@@ -1,6 +1,7 @@
 import { getApiErrorCode, getApiErrorMessage } from '@/lib/api-error';
 
 const messages: Record<string, string> = {
+  PANTRY_CAPACITY_EXCEEDED: 'Tủ đồ ăn đã đầy. Xóa, gộp item hoặc mua thêm ô rồi xác nhận lại.',
   PANTRY_NEGATIVE_QUANTITY: 'Số lượng dùng vượt quá số lượng hiện có.',
   PANTRY_UNIT_CONVERSION_UNAVAILABLE:
     'Chưa có quy đổi cho đơn vị này. Dùng đơn vị đang lưu của nguyên liệu.',

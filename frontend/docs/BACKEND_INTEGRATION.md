@@ -20,16 +20,16 @@ User requested complete payOS conversion and will configure keys later. New purc
 
 Backend branch `codex/sandbox-billing` contains domain/contracts only; consumer changes live in `codex/sandbox-billing-ui`. The existing localhost/127.0.0.1 cookie-host isolation remains required for simultaneous web/mobile previews.
 
-Provider migration is complete in the separate UI checkout after web/mobile consumer gates passed. Catalog/entitlement provider is `payos`, simulated=false. Catalog enabled requires billing opt-in and complete merchant credentials; entitlement enabled describes usage enforcement. Old provider strings remain in history only.
+Provider migration is complete in this UI checkout after web/mobile consumer gates passed. Catalog/entitlement provider is `payos`, simulated=false. Catalog enabled requires billing opt-in and complete merchant credentials; entitlement enabled describes usage enforcement. Old provider strings remain in history only.
 
 | Method | Endpoint | Status | FE integrated | Notes |
 | --- | --- | --- | --- | --- |
-| GET | `/billing/products` | `READY` | No (UI branch: Yes, 2026-10-14) | payOS catalog; purchase disabled without keys |
-| POST | `/billing/orders` | `READY` | No (UI branch: Yes, 2026-10-14) | Owner intent/server snapshot; unique persisted provider reference/link; retry recovers same code |
-| GET | `/billing/orders` | `READY` | No (UI branch: Yes, 2026-10-14) | Owned history retains legacy providers without checkout |
-| GET | `/billing/orders/:id` | `READY` | No (UI branch: Yes, 2026-10-14) | Owned status; expired URL hidden; return never grants |
-| POST | `/billing/orders/:id/reconcile` | `READY` | No (UI branch: Yes, 2026-10-14) | Signed payOS query; 30-second cooldown; history unchanged |
-| GET | `/entitlements/me` | `READY` | No (UI branch: Yes, 2026-10-14) | Usage enforcement/ledger with payOS provider |
+| GET | `/billing/products` | `READY` | Yes, web/mobile 2026-10-14 | payOS catalog; purchase disabled without keys |
+| POST | `/billing/orders` | `READY` | Yes, web/mobile 2026-10-14 | Owner intent/server snapshot; unique persisted provider reference/link; retry recovers same code |
+| GET | `/billing/orders` | `READY` | Yes, web/mobile 2026-10-14 | Owned history retains legacy providers without checkout |
+| GET | `/billing/orders/:id` | `READY` | Yes, web/mobile 2026-10-14 | Owned status; expired URL hidden; return never grants |
+| POST | `/billing/orders/:id/reconcile` | `READY` | Yes, web/mobile 2026-10-14 | Signed payOS query; 30-second cooldown; history unchanged |
+| GET | `/entitlements/me` | `READY` | Yes, web/mobile 2026-10-14 | Usage enforcement/ledger with payOS provider |
 | POST | `/billing/payos/webhook` | `READY` | N/A | SDK signature + signed query; fully paid grant once; unknown signed samples ACK, including confirmation payloads without success |
 | GET | `/billing/payos/return/:id` | `READY` | N/A | Display-only redirect; query claims ignored |
 | GET | `/billing/vnpay/ipn` | `REMOVED` | N/A | No new VNPAY settlement |

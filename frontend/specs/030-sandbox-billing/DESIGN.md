@@ -1,0 +1,3 @@
+# Billing UI
+
+Reuse existing shadcn Card, Button, Alert, Badge and Skeleton. Semantic background, foreground, primary, muted and border tokens; no new palette or animation. A short introductory area describes one-time purchases. Usage appears before catalog, followed by order history and recent allowance entries. Every package shows integer VND formatted in the mapper and exact benefits. Simulation has a persistent notice. Pending orders offer resume and refresh; polling stops at terminal states. Mobile uses the existing PrimaryButton and SiteScreen, large touch targets and the same content hierarchy. Preserve dark mode and narrow-screen stacking.

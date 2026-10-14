@@ -52,7 +52,11 @@ function releaseLocalLock(): void {
 
 async function doFetchRefresh(): Promise<string> {
   // Đi qua Next proxy để forward HttpOnly cookie + nhận Set-Cookie rotation
-  const res = await axios.post<RefreshResponseDto>('/api/auth/refresh-token', {}, { baseURL: '' });
+  const res = await axios.post<RefreshResponseDto>(
+    '/api/auth/refresh-token',
+    {},
+    { baseURL: '', timeout: 15000 }
+  );
   const raw = res.data as RefreshResponseDto & { accessToken?: string };
   const envelope: RefreshResponseDto =
     raw && typeof raw === 'object' && 'accessToken' in raw && !('data' in raw)

@@ -1,5 +1,64 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-14] — Chuẩn bị PR backend rồi frontend vào dev
+
+- Mục tiêu: tạo hai PR theo thứ tự người dùng yêu cầu, giữ checkout chính backend-only và nhánh UI phụ thuộc backend.
+- Đã làm: nhập origin/dev mới vào backend, giữ cả changelog mobile và billing trong registry; nhập backend vào UI, giữ auto-merge session/message pagination mới của mobile. Backend PR: https://github.com/devgiahuy/vegan-support-application/pull/42. PR frontend target dev cần merge backend trước; nếu backend được squash thì cập nhật/rebase nhánh frontend lên dev trước khi review diff cuối.
+- Verify sau merge: npm ci mobile; typecheck và lint pass; npm test mobile 53/53 pass; Expo web export pass khi cấp EXPO_PUBLIC_API_URL theo tài liệu. Lần chạy thiếu biến báo lỗi cấu hình, không có thay đổi source để né guard. Web runtime không đổi trong lần chuẩn bị PR, nên không chạy lại 602 tests/Next build đã pass trước đó. git diff --check sạch.
+- Cập nhật bằng chứng: credentialed hosted QR/PENDING query và actual payOS confirmation webhook 200 đã xác minh, tampered signature 400. Chưa chuyển tiền thật hoặc test native-device. Progress code giữ 100%; không nâng các gate live còn mở.
+
+## [2026-10-14] — Chuyển billing sang payOS trên web/mobile
+
+- Scope: user-authorized provider replacement; backend commit `cd45c24` merged into UI worktree, schema/docs regenerated before mapper changes. Existing billing endpoints/DTO envelopes remain; no direct component DTO consumption or new client endpoint calls.
+- Changed: billing Model provider identity, web/mobile mappers and tests, error/feedback copy, billing screen actions/disclosure. Only payOS can buy/resume, checkout URLs require HTTPS pay.payos.vn/web/32-hex ID, old providers are read-only and do not poll. Missing keys disable purchasing; no mock fallback. QR checkout belongs to payOS's hosted page and processes real transfers.
+- Verification: Swagger 176 operations; web scoped ESLint/typecheck, 602 tests/50 files, Next build; mobile typecheck/lint, 6 billing mapper tests, web export 64 routes and Android Hermes export all pass. Initial export lacked EXPO_PUBLIC_API_URL; rerunning with the documented URL passed without code changes. Browser verifies payOS text, disabled buy, unchanged balances/history on both clients; 390px content width equals viewport width. Impeccable detector returns `[]` for both screens. Evidence: `../../docs/billing-evidence/web-payos-unconfigured-20261014.png` and `mobile-payos-unconfigured-20261014.png`.
+- Progress: payOS client migration 0% → 100% code. Live merchant checkout/webhook and native-device tests remain unverified because user will configure keys later. Full frontend lint was not rerun; previously documented baseline failures remain, scoped billing lint clean.
+- Branch discipline: all runtime frontend/mobile edits remain in `codex/sandbox-billing-ui`; primary branch contains backend/domain/contracts only. No real transfer, merchant registration or rollout performed. Old assistant bounce finding unchanged outside scope, no manual suppression.
+
+## [2026-10-14] — Phản hồi nút kiểm tra thanh toán và làm rõ mô phỏng
+
+- Cause: reconciliation refreshed query caches but had no visible acknowledgement when an order kept the same status. Local reconciliation reads persisted state; it does not simulate success or query a bank.
+- Fix: web/mobile display per-order loading and timestamped result/error, preserve the status returned by the server, and suppress stale success feedback when polling changes the status. Web also shows a toast. Local buttons and notice explicitly identify the outcome-test harness; VNPAY labels remain for external-provider orders.
+- Verification: `npm run sync:swagger -- ../backend/openapi.json` (178 operations); frontend scoped ESLint/typecheck, 600 tests/50 files and Next build pass; mobile typecheck/lint pass; manual Impeccable detection on both billing screens returns `[]`. Browser checks on the user's failed order show the result on both clients, with updated timestamp on repeat web click. Evidence: `../../docs/billing-evidence/web-check-feedback-20261014.png` and `mobile-check-feedback-20261014.png`.
+- Scope: UI branch `codex/sandbox-billing-ui` only. No backend API/domain changes, new test infrastructure, production payments or synthetic card/QR UI. Backend gates, exports and native-device acceptance were not rerun because this change is UI feedback only. Full frontend lint retains the previously documented baseline failures; scoped changed-file lint is clean.
+- Hosted VNPAY sandbox remains incomplete as a live demo: configured merchant code and signing secret are absent. Official hosted checkout and registration requirements were checked; no merchant account was created or external transaction attempted.
+- Existing assistant `animate-bounce` finding predates this change and remains outside scope, with no suppression. Impeccable reported legacy product context; no context migration was performed.
+
+## [2026-10-14] — Test lại billing lâu dài, xử lý checkout hết hạn và tách nhánh UI
+
+- Follow-up: overlapping localhost web/mobile refresh eventually returned 200 then 401, with session `REUSE_DETECTED`; the initial successful reload did not rule out a race. Corrected demo configuration separates cookie hostnames (web localhost, mobile UI/API 127.0.0.1). Fresh logins and repeated overlaps now retain sessions/balances with refresh 200. Auth rotation rules were preserved. Mobile web/Android exports pass; saved paid/expiry/mobile proof screenshots dated 2026-10-14 in `docs/billing-evidence/`.
+
+- Mục tiêu: Test lỗi ban đầu hoạt động nhưng về sau không được; xác nhận UI hoàn thiện; giữ primary branch cho backend và chuyển frontend/mobile sang nhánh riêng.
+- Đã làm: tạo `codex/sandbox-billing-ui` trong worktree riêng; giữ toàn bộ UI/consumers và nhận backend expiry fix. Primary branch trả `frontend/src`, frontend AGENTS và mobile về dev baseline; giữ API contract docs theo repository policy. Web/mobile map `BILLING_CHECKOUT_EXPIRED`. UI branch nhận backend-only baseline để merge client về sau không mất code.
+- Findings: khi bắt đầu các demo server đã dừng. Tái hiện được checkout hợp lệ nhưng quá TTL bị phân loại như sai chữ ký/403 và trả JSON trong browser; backend sửa thành 410 và trang recovery. Không khẳng định đây là nguyên nhân lỗi hôm trước vì không có response gốc.
+- Verify: expired access + 6 refresh rotations và extended billing acceptance pass. Browser dùng TTL access 60s: 401 → refresh 200, mua gói tăng 33 → 43 lượt, reload không tăng nữa; web/mobile simultaneous reload giữ phiên và số dư chung; mobile mở checkout/cancel đúng; expired checkout hiển thị hướng dẫn và return đúng. Khôi phục TTL bình thường sau test. Frontend tsc, 600 tests/50 files, build và scoped billing/auth lint pass; mobile tsc/lint và 3 mapper tests pass.
+- File tạo/sửa: billing error maps ở web/mobile; API registry, PROGRESS, WORK-LOG; backend fix/acceptance/OpenAPI và `docs/BILLING_RETEST_20261014.md` được nhận từ backend branch; screenshot evidence trong `docs/billing-evidence/`.
+- PROGRESS: billing UI demo 100% → 100%; external VNPAY merchant/native device/live AI accuracy vẫn chưa xác nhận production.
+- Còn lại: lịch sử lỗi chính xác cần original endpoint/status/code để đối chiếu; không gặp lỗi 500 billing trong lượt retest này. Không thay shared .env, auth rotation/security rules hoặc database chính.
+
+---
+
+## [2026-10-13] — Payment sandbox và hạn mức chat, phân tích ảnh/hóa đơn, tủ đồ ăn
+
+- Mục tiêu: Phân tích rồi implement ngay web và mobile development/demo, chọn provider thuận tiện chạy sandbox, tự quyết các option trong phạm vi người dùng đã duyệt.
+- Đã làm:
+  - Chọn VNPAY Sandbox làm adapter ngoài; local sandbox rõ nhãn mô phỏng cho demo không cần merchant registration. Billing opt-in, chặn production. Gói một lần cộng dồn, giá minh họa, không tự gia hạn/không hết hạn demo; không cấp role hay dung lượng media.
+  - Backend: catalog/order snapshot, owner authorization, idempotency, IPN/querydr ký HMAC, return chỉ redirect, ledger cấp một lần; giữ/trừ/trả lượt chat và job quét có khóa transaction/fencing, recovery lease và tối đa ba attempt mặc định. Pantry kiểm tra đồng thời ở thêm tay và hai confirm, tính tất cả item chưa xóa.
+  - Mongo: thêm collection/schema/index/validator và backfill queued timestamp; seed giữ catalog đã cấu hình. Script demo chạy trên DB riêng, có login mẫu, cleanup/reconcile và acceptance theo convention backend hiện có.
+  - Web/mobile: DTO/Model/Mapper/API/Query/UI riêng, endpoint constants, query key theo owner, polling dừng khi terminal, invalidate sau mutation, business errors và loading/error/empty/success; trang `/billing`, entry account/Profile và allowance notices ở Pantry/chat/scan. Mobile web dùng cùng tab tránh popup blocking; native dùng system browser và refresh khi focus.
+  - Sửa session restoration khi quay lại checkout: AuthProvider chờ refresh kết thúc, AuthGuard giữ query của đơn và refresh timeout 15 giây. Không đổi auth contract.
+  - Đồng bộ Swagger trước consumer; cập nhật SRS/plan/roadmap, phase completion, integration registry, spec 030 và hướng dẫn demo cùng ảnh bằng chứng.
+- File tạo/sửa: `backend/src/modules/billing/**`, `backend/src/modules/entitlements/**`, Prisma/native provisioning, chat/pantry/scan repositories; `frontend/src/features/billing/**`, web route, các consumers liên quan; `mobile/src/features/billing/**`, mobile route/entry/consumers; docs và OpenAPI/catalog.
+- Verify:
+  - Backend lint/typecheck/build/OpenAPI pass; schema/seed DB riêng pass; billing acceptance pass (callback replay, owner, amount, late success, free/paid chat SSE/replay, cross-midnight stale worker, final-credit/final-slot race, all confirmation paths, scan retry/empty/partial/failure/recovery và VNPAY signed fixtures). Vision/receipt acceptance fake pass. Không thêm backend unit/integration infrastructure.
+  - Web tsc pass; 600 tests/50 files pass; Next build pass. Lint các consumer thay đổi 0 lỗi/3 cảnh báo nền; full lint còn 89 lỗi/347 cảnh báo ngoài feature.
+  - Mobile tsc/lint pass; 3 mapper tests pass; web export 64 routes và Android Hermes export pass khi cấu hình API demo.
+  - Browser login, mua combo, cancel/fail không cộng thêm, reload/return giữ phiên và đơn, Profile mobile entry/checkout, số dư/lịch sử chung pass; mobile 390px không tràn ngang. Lưu `docs/billing-evidence/web-paid.png` và `mobile-390.png`.
+- PROGRESS: Sandbox extension 0% → 100% trong phạm vi development/demo. Backend scan endpoints vẫn IN_PROGRESS; không đổi production phase completion.
+- Còn lại / rủi ro: External VNPAY end-to-end cần merchant credentials/IPN HTTPS; native device/camera/iOS acceptance chưa chạy. Fake scan không chứng minh độ chính xác AI; upload ảnh tiếp tục cần Cloudinary. Không đăng ký hộ merchant, không gọi thanh toán tiền thật, không sửa shared `.env` hoặc database hiện hữu. Setup: `../../docs/BILLING_DEMO.md`.
+
+---
+
 ## [2026-10-12] — Nâng cấp UI/UX: Thẻ công thức (/recipes), Cảnh báo dị ứng (/recipes/:id), Gom nhóm nguyên liệu (/categories#tra-cuu) & Ẩn footer (/meal-plans, /restaurants)
 
 - Mục tiêu:
