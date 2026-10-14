@@ -80,6 +80,8 @@ Use `npm run prisma:push`, not raw Prisma db push/Migrate. It installs new colle
 
 ## Verification
 
+Latest repeat verification and branch/UI status: [BILLING_RETEST_20261014.md](BILLING_RETEST_20261014.md).
+
 Backend acceptance runs only against a separate database whose name contains `billing_`:
 
 ```bash
