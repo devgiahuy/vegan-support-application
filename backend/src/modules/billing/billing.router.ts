@@ -1,4 +1,4 @@
-import { Router, urlencoded } from 'express';
+import { Router, urlencoded, type Request, type Response } from 'express';
 import { AppError } from '../../common/errors/app-error.js';
 import {
   getValidatedBody,
@@ -23,6 +23,35 @@ const htmlEscape = (value: string) =>
     /[&<>"']/g,
     (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!,
   );
+
+function showExpiredCheckout(
+  error: unknown,
+  req: Request,
+  res: Response,
+  returnUrl: string,
+): boolean {
+  if (
+    !(error instanceof AppError) ||
+    error.code !== 'BILLING_CHECKOUT_EXPIRED' ||
+    !/\btext\/html\b/i.test(req.header('accept') ?? '')
+  )
+    return false;
+  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'",
+  );
+  res
+    .status(410)
+    .type('html')
+    .send(
+      '<!doctype html><html lang="vi"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Phiên thanh toán đã hết hạn</title><style>body{font:16px system-ui;background:#f6faf7;color:#18382a;margin:0;padding:24px}main{max-width:520px;margin:8vh auto;background:#fff;padding:32px;border:1px solid #dce9df;border-radius:16px}a{display:inline-block;padding:14px;border-radius:8px;background:#2f6d4c;color:#fff;text-decoration:none}</style></head><body><main><small>VeggieConnect · Sandbox nội bộ</small><h1>Phiên thanh toán đã hết hạn</h1><p>Liên kết thanh toán này đã hết hạn. Yêu cầu này không cấp thêm quyền lợi.</p><p>Quay lại ứng dụng, kiểm tra trạng thái đơn và tạo một đơn mới để tiếp tục.</p><a href="' +
+        htmlEscape(returnUrl) +
+        '">Quay lại ứng dụng</a><p><small>Đây là mô phỏng; không chuyển tiền thật.</small></p></main></body></html>',
+    );
+  return true;
+}
 
 export function createBillingRouter(
   service: BillingService,
@@ -116,7 +145,13 @@ export function createBillingRouter(
     async (req, res) => {
       const { id } = getValidatedParams<{ id: string }>(req);
       const { token } = getValidatedQuery<{ token: string }>(req);
-      const order = await service.sandboxOrder(id, token);
+      let order;
+      try {
+        order = await service.sandboxOrder(id, token);
+      } catch (error) {
+        if (showExpiredCheckout(error, req, res, service.returnUrl(id))) return;
+        throw error;
+      }
       res.setHeader('Cache-Control', 'no-store');
       res.setHeader('Referrer-Policy', 'no-referrer');
       // Browsers also check form-action across 303 redirects.
@@ -153,7 +188,12 @@ export function createBillingRouter(
         token: string;
         outcome: 'PAID' | 'CANCELLED' | 'FAILED';
       }>(req);
-      await service.sandboxSettle(id, token, outcome);
+      try {
+        await service.sandboxSettle(id, token, outcome);
+      } catch (error) {
+        if (showExpiredCheckout(error, req, res, service.returnUrl(id))) return;
+        throw error;
+      }
       res.redirect(303, service.returnUrl(id));
     },
   );

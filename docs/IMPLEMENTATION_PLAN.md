@@ -1,8 +1,8 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.3
+**Version:** 4.4
 
-**Updated:** 2026-10-13
+**Updated:** 2026-10-14
 
 **Status:** Approved implementation baseline
 
@@ -371,6 +371,7 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 
 ### BL-20 — Approved sandbox billing extension (2026-10-13)
 
+- Local checkout links expire after the configured TTL (default 15 minutes). Valid expired capabilities return `BILLING_CHECKOUT_EXPIRED`/410; browser GET/POST displays a return link and new-order instructions. Invalid signatures stay 403; neither path grants benefits.
 - Billing is opt-in and limited to development/test. Local checkout is explicitly simulated; the external adapter is VNPAY Sandbox. Production payment remains deferred.
 - Sell one-time cumulative packages for chat credits, fridge jobs, receipt jobs and additional Pantry slots. Demo benefits do not expire or grant roles/media storage. Prices and benefits are snapshotted on each order.
 - Only a verified provider IPN/query result (or guarded local simulation) may grant benefits. Browser return never grants. Duplicate payment events and concurrent callbacks grant once; a verified late success may upgrade an unpaid terminal order, while PAID never downgrades.
@@ -551,6 +552,8 @@ A phase is complete only when:
 | Phase 2 ideas are forgotten or accidentally claimed READY | Dedicated roadmap plus explicit status taxonomy |
 
 ## 13. Change record
+
+- **4.4 — 2026-10-14:** Sandbox checkout expiry now distinguishes a valid expired capability (410/BILLING_CHECKOUT_EXPIRED with HTML recovery for browsers) from an invalid signature (403). GET/POST remain unable to grant after expiry. Retest includes repeated refresh rotation and replacement orders; production scope is unchanged.
 
 - **4.3 — 2026-10-13:** User-authorized sandbox billing. Snapshot VND catalog/orders; verified IPN/query reconciliation and idempotent grants; free-first chat; one bounded scan job credit after any successful image; total failures release; charged retries free, default three processing attempts; undeleted Pantry count with transactional enforcement on all insert paths. No production billing, role grants or storage upgrades. Mongo native validators, queued timestamp backfill and worker/credit fencing are required. Checkout returns wait for session restoration and preserve order context.
 

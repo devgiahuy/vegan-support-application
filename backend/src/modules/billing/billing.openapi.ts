@@ -27,6 +27,13 @@ export function registerBillingOpenApi(registry: OpenAPIRegistry, errorSchema: z
     orders: registry.register('BillingOrdersEnvelope', billingEnvelope(billingOrdersSchema)),
     entitlement: registry.register('EntitlementEnvelope', billingEnvelope(entitlementSchema)),
   };
+  const expiredCheckout = {
+    410: {
+      description:
+        'Valid local checkout capability has expired (BILLING_CHECKOUT_EXPIRED); browser HTML offers a return link, API callers receive the typed JSON error. No grant.',
+      content: { ...json(errorSchema), 'text/html': { schema: z.string() } },
+    },
+  };
   const callbackQuery = z
     .object({
       vnp_TxnRef: z.string(),
@@ -124,7 +131,11 @@ export function registerBillingOpenApi(registry: OpenAPIRegistry, errorSchema: z
     tags: ['Billing'],
     summary: 'Development-only simulated checkout, expiring order-bound capability',
     request: { params: billingIdSchema, query: sandboxQuerySchema },
-    responses: { 200: { description: 'Explicit local simulation HTML' }, ...errors },
+    responses: {
+      200: { description: 'Explicit local simulation HTML' },
+      ...errors,
+      ...expiredCheckout,
+    },
   });
   registry.registerPath({
     method: 'post',
@@ -135,6 +146,6 @@ export function registerBillingOpenApi(registry: OpenAPIRegistry, errorSchema: z
       params: billingIdSchema,
       body: { content: { 'application/x-www-form-urlencoded': { schema: sandboxBodySchema } } },
     },
-    responses: { 303: { description: 'Application return URL' }, ...errors },
+    responses: { 303: { description: 'Application return URL' }, ...errors, ...expiredCheckout },
   });
 }

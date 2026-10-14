@@ -1,8 +1,8 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.29
+**Version:** 4.30
 
-**Cập nhật:** 13/10/2026
+**Cập nhật:** 14/10/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
@@ -43,12 +43,15 @@ Additive chat SSE quota field: `paidRemaining`; `remaining` stays the free daily
 | `BILLING_PENDING_LIMIT` | Resume an existing pending order |
 | `BILLING_PROVIDER_UNAVAILABLE` | Keep order unconfirmed and offer later reconciliation |
 | `BILLING_SIGNATURE_INVALID`, `BILLING_PAYMENT_MISMATCH` | Do not show success or grant locally |
+| `BILLING_CHECKOUT_EXPIRED` (410) | Valid local checkout capability expired. HTML browser GET/POST shows a return link and instructions to create a new order; API callers get this typed JSON error. Invalid/tampered tokens stay 403. No grant occurs. |
 | `BILLING_RECONCILE_COOLDOWN` | Ask user to wait at least five minutes |
 | `ENTITLEMENT_QUOTA_EXCEEDED` | Link to billing; do not retry automatically |
 | `PANTRY_CAPACITY_EXCEEDED` | Keep analysis output; select fewer items, delete/merge or buy space |
 | `SCAN_RETRY_LIMIT_EXCEEDED` | Explain retry cap; new job requires another allowance |
 
 Changelog 2026-10-13 (4.29): opt-in sandbox billing and transactional allowances, signed VNPAY adapter, explicit local simulation, scan recovery/fencing and Pantry capacity. Source implementation is complete for the demo contract; external merchant and native-device acceptance are separate gates.
+
+Changelog 2026-10-14 (4.30): local checkout expiry has an explicit 410 business error and an HTML recovery page. Signed invalid capabilities remain 403; expired GET/POST never grant. Retest covers six refresh rotations, expiry and a replacement order. External merchant/native acceptance remains open.
 
 ### Mobile integration record — 2026-10-03
 

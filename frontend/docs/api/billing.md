@@ -57,13 +57,13 @@ Verify browser return and redirect; never grant
 Development-only simulated checkout, expiring order-bound capability
 - Params: `path:id* (string)`, `query:token* (string)`
 - Request: —
-- Responses: `200` → Explicit local simulation HTML, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `422` → ErrorResponse, `429` → ErrorResponse, `503` → ErrorResponse
+- Responses: `200` → Explicit local simulation HTML, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `410` → ErrorResponse, `422` → ErrorResponse, `429` → ErrorResponse, `503` → ErrorResponse
 
 ## POST `/api/v1/billing/sandbox/{id}`
 Development-only simulated settlement; no real money
 - Params: `path:id* (string)`
 - Request: `object`
-- Responses: `303` → Application return URL, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `422` → ErrorResponse, `429` → ErrorResponse, `503` → ErrorResponse
+- Responses: `303` → Application return URL, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `410` → ErrorResponse, `422` → ErrorResponse, `429` → ErrorResponse, `503` → ErrorResponse
 
 ```json
 {"type":"object","required":["token","outcome"],"properties":{"token":{"type":"string"},"outcome":{"type":"string","enum":["PAID","CANCELLED","FAILED"]}},"additionalProperties":false}
