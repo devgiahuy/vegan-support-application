@@ -1,6 +1,6 @@
 # Backend Implementation Phases
 
-**Version:** 3.12
+**Version:** 3.13
 
 **Updated:** 2026-10-14
 
@@ -197,6 +197,8 @@ User-approved cross-phase maintenance replaces PostgreSQL with MongoDB; this is 
 Provider conversion approved 2026-10-14: active checkout/settlement is now payOS only, via official SDK 2.0.5. VNPAY and local sandbox routes/configuration are removed; old orders/balances remain historical with optional new provider fields and partial unique indexes. payOS has no sandbox; real money mode is disclosed and missing credentials disable checkout. Application production rollout remains disabled. Backend lint/typecheck/build/OpenAPI, additive Mongo provisioning/seed and controlled transport acceptance pass (SDK signatures, partial/extra payment, replay, sample webhook, provider failure/cooldown and ambiguous-create recovery plus existing accounting/auth checks). External merchant acceptance remains pending user configuration; frontend migration is recorded separately in the contract registry.
 
 Final migration gate 2026-10-14: UI commit `59a042c` completes web/mobile payOS consumers; affected endpoints returned from CHANGING to READY. Web typecheck/scoped lint, 602 tests and build; mobile typecheck/lint/6 mapper tests, web64-route and Android Hermes exports pass. Browser missing-configuration/history states verified, without real transfer. Explicit reconciliation also recovers an unfinished same-code checkout after a persistence/response failure; controlled transport acceptance covers this recovery.
+
+Webhook compatibility gate 2026-10-14: the actual payOS channel-confirmation sample omits unsigned success. Accepting optional boolean success fixes registration without altering signed data or grant authorization. Original captured provider sample replay through the user-requested HTTPS tunnel returned 200; tampered signature returned 400. Backend lint/typecheck/build/OpenAPI and existing billing acceptance (including no-success/invalid-type/invalid-signature samples with unchanged balances) pass. Credentialed hosted QR/PENDING queries have passed; actual transfer/settlement notification and native-device acceptance remain open. No schema/seed change or client DTO migration is required.
 
 The following original records are historical and do not describe the current provider:
 

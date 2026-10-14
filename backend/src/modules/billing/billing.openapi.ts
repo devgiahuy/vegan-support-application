@@ -63,7 +63,8 @@ export function registerBillingOpenApi(registry: OpenAPIRegistry, errorSchema: z
     {
       method: 'post' as const,
       path: '/billing/orders/{id}/reconcile',
-      summary: 'Recover same payOS checkout if needed, verify query and settle once; 30-second throttle',
+      summary:
+        'Recover same payOS checkout if needed, verify query and settle once; 30-second throttle',
       response: schemas.order,
       request: { params: billingIdSchema },
     },
@@ -89,6 +90,8 @@ export function registerBillingOpenApi(registry: OpenAPIRegistry, errorSchema: z
     path: '/api/v1/billing/payos/webhook',
     tags: ['Billing'],
     summary: 'Verify signed payOS notification and authoritative payment query; grant once',
+    description:
+      'Channel confirmation samples may omit the unsigned success envelope field. Data and signature remain required; verified unknown samples are acknowledged without granting benefits.',
     security: [],
     request: { body: { content: json(payosWebhookSchema) } },
     responses: {

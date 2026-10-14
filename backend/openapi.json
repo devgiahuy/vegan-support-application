@@ -45448,6 +45448,7 @@
           "Billing"
         ],
         "summary": "Verify signed payOS notification and authoritative payment query; grant once",
+        "description": "Channel confirmation samples may omit the unsigned success envelope field. Data and signature remain required; verified unknown samples are acknowledged without granting benefits.",
         "security": [],
         "requestBody": {
           "content": {
@@ -45534,7 +45535,6 @@
                 "required": [
                   "code",
                   "desc",
-                  "success",
                   "signature",
                   "data"
                 ],

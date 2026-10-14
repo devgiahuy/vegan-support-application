@@ -20,7 +20,8 @@ export const payosWebhookSchema = z
   .object({
     code: z.string().max(100),
     desc: z.string().max(1000),
-    success: z.boolean(),
+    // The live payOS channel-confirmation sample omits this unsigned envelope field.
+    success: z.boolean().optional(),
     signature: z.string().regex(/^[a-f0-9]{64}$/i),
     data: z
       .object({
