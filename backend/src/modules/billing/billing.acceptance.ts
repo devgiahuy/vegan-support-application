@@ -141,6 +141,45 @@ try {
     );
   }
   console.info('PASS expired access token and six refresh rotations retain billing access');
+  const rotateCookie = (cookie: string) =>
+    fetch(base + '/auth/refresh', {
+      method: 'POST',
+      headers: { Cookie: cookie, 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+  const duplicatedRefresh = await Promise.all([
+    rotateCookie(sessionCookie),
+    rotateCookie(sessionCookie),
+  ]);
+  assert.deepEqual(duplicatedRefresh.map((response) => response.status).sort(), [200, 401]);
+  assert(
+    await db.refreshSession.count({ where: { userId: user.id, revokeReason: 'REUSE_DETECTED' } }),
+  );
+  const independentLogins = await Promise.all(
+    [0, 1].map(() =>
+      request(
+        '/auth/login',
+        'POST',
+        {
+          email: user.email,
+          password: 'DemoBilling2026!',
+        },
+        '',
+      ),
+    ),
+  );
+  assert(independentLogins.every((response) => response.status === 200));
+  const independentCookies = independentLogins.map(cookieFrom);
+  assert.notEqual(independentCookies[0], independentCookies[1]);
+  const independentRotations = await Promise.all(independentCookies.map(rotateCookie));
+  assert(independentRotations.every((response) => response.status === 200));
+  const nextIndependentRotations = await Promise.all(
+    independentRotations.map((response) => rotateCookie(cookieFrom(response))),
+  );
+  assert(nextIndependentRotations.every((response) => response.status === 200));
+  console.info(
+    'PASS duplicate refresh still revokes reused family; independent client cookies rotate concurrently',
+  );
   const before = await balance();
   const key = randomUUID();
   const order = await createOrder('combo', key);

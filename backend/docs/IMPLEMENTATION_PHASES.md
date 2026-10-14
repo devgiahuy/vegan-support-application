@@ -194,6 +194,8 @@ User-approved cross-phase maintenance replaces PostgreSQL with MongoDB; this is 
 
 ## 10. Sandbox billing extension — approved 2026-10-13
 
+Demo session isolation (2026-10-14): overlapping localhost web/mobile refresh was reproduced with persisted REUSE_DETECTED. Use separate hostnames (web localhost, mobile UI/API 127.0.0.1) and matching demo CORS origins. The backend still rejects reused refresh tokens; this setup change does not relax auth behavior.
+
 Retest 2026-10-14: backend lint/typecheck/build/OpenAPI and extended billing acceptance pass, including expired access plus six refresh rotations and expired checkout GET/POST with safe return/replacement order. Default checkout TTL remains 15 minutes; valid expiry is 410, invalid signatures stay 403. This does not establish the cause of the user's historical failure without the original response.
 
 Separate user-authorized extension, not a numbered Phase 28. Scope: one-time AI usage and Pantry capacity packages, VNPAY Sandbox and explicit local simulation, owner-only contracts, transactionally deduplicated grants/debits, scan attempt fencing/recovery and capacity checks on all three insert paths. Billing remains disabled by default and cannot run in production. Media storage, subscriptions and real-money refunds are deferred.

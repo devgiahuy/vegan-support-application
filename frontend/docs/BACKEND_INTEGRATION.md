@@ -16,6 +16,8 @@
 
 ### Sandbox billing extension — 2026-10-13
 
+Demo setup correction (2026-10-14): use `http://localhost:3100` for web, `http://127.0.0.1:8090` for mobile web and `http://127.0.0.1:4100/api/v1` for its API. Different ports on localhost share cookies and can race strict refresh rotation; separate hostnames isolate session families. The demo helper permits these explicit origins. Auth/API shapes and reuse detection are unchanged.
+
 Branch separation (2026-10-14): `codex/sandbox-billing` contains backend/domain/contracts only. This `codex/sandbox-billing-ui` checkout retains the complete web/mobile consumer and includes the backend expiry correction. The integration column below describes this UI checkout. Both clients map the new expiry error; backend-rendered checkout pages provide a recovery link.
 
 User authorized implementation and autonomous product decisions on 2026-10-13. One-time packages accumulate chat/job credits and Pantry capacity; purchases do not grant roles or media storage. Billing is opt-in (`BILLING_ENABLED=true`), development/test only. Prices are demonstration values, not a launched commercial offer.
