@@ -63,6 +63,8 @@ Register the channel webhook URL `https://<api-host>/api/v1/billing/payos/webhoo
 
 The public URL lets payOS call your backend after payment. Localhost is accessible only on your machine; a development HTTPS tunnel forwards public requests to port 4100. For the demo helper set BILLING_DEMO_PUBLIC_URL to the tunnel origin, restart the API and register that origin plus /api/v1/billing/payos/webhook on the payment channel. Do not use the example placeholder as an actual URL. The manual “Kiểm tra thanh toán” action can query payOS from a local backend without a public webhook.
 
+The live payOS channel-confirmation sample can omit the unsigned success envelope field. The endpoint accepts that shape, verifies the original data/signature with the SDK and acknowledges an unknown sample without granting benefits. Do not return blanket 200 for unsigned or invalid payloads to bypass channel verification.
+
 Do not put merchant keys in frontend/mobile environment or commit them. The agent does not create a merchant account or perform a real payment.
 
 ## Settlement and retry behavior

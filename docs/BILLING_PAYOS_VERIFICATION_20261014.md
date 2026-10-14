@@ -13,7 +13,7 @@ User selected payOS and configured merchant keys locally. New purchases exclusiv
 
 ## Open acceptance gates
 
-- Public HTTPS webhook URL, actual transfer/provider webhook delivery and native-device acceptance remain unverified. The regular public URL is still a placeholder; the demo helper currently uses localhost:4100 because BILLING_DEMO_PUBLIC_URL is absent.
+- Actual payment/provider settlement notification and native-device acceptance remain unverified. A user-requested ngrok HTTPS tunnel now forwards to the isolated demo API; its origin is configured locally in BILLING_PUBLIC_URL and BILLING_DEMO_PUBLIC_URL.
 - Mocked SDK acceptance is not payOS sandbox. No bank transfer, merchant-account registration or deployment was performed.
 - Full frontend lint still has previously documented baseline findings; changed billing scope is clean. Existing assistant animation remains outside scope without manual suppression.
 
@@ -27,3 +27,11 @@ Setup: [BILLING_DEMO.md](BILLING_DEMO.md). Backend branch `codex/sandbox-billing
 - Mobile web loaded the same order and balances, displayed the shared reconciliation cooldown, and returned the timestamped PENDING explanation after waiting. Balances stayed chat 100, fridge 53, receipts 13, Pantry 0/70; no grant was issued for the unpaid order.
 - Reran the isolated billing acceptance command successfully, including signed transport fixtures, idempotency, quota/capacity and auth scenarios. This command mocks payOS transport; the credentialed checkout/query above were separate live requests.
 - No source code changed during this retest. Earlier lint/typecheck/build and client test results above were not rerun. Browser evidence is saved in the UI worktree's docs/billing-evidence/ directory.
+
+## Live channel-confirmation compatibility fix
+
+The actual payOS verification request reached the tunnel but returned 400 because it omitted success. Its data/signature verified successfully with the configured SDK/checksum key. The schema now accepts optional boolean success; the SDK adapter supplies a false envelope hint when absent, leaving signed data unchanged. Settlement never trusts this unsigned field. Existing acceptance adds the missing-success sample, invalid-signature and invalid-field-type cases with unchanged balances.
+
+- Replayed the original captured payOS sample through the public HTTPS tunnel: 200, success=true. Replayed with a tampered signature: 400, BILLING_SIGNATURE_INVALID. No blanket webhook bypass or real bank transfer.
+- Backend lint, typecheck, build, OpenAPI generation and extended billing acceptance all pass. Generated frontend contract catalogs are synchronized. No persistence or UI consumer change.
+- API restarted with the fix; the user can retry saving the same webhook URL on the payOS channel. The agent did not overwrite merchant-channel configuration through confirm-webhook.

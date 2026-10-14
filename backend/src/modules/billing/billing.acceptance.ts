@@ -840,6 +840,7 @@ try {
   await billing.webhook(await webhookFor(protocol.id));
   assert.equal((await balance()).receiptCredits, protocolStart.receiptCredits + 10);
   const unknown = { ...signed.data, orderCode: 1 };
+  const sampleBalance = await balance();
   assert.equal(
     (
       await request(
@@ -851,6 +852,39 @@ try {
     ).status,
     200,
   );
+  const confirmationSample = {
+    code: signed.code,
+    desc: signed.desc,
+    data: unknown,
+    signature: signedData(unknown),
+  };
+  assert.equal(
+    (await request('/billing/payos/webhook', 'POST', confirmationSample, '')).status,
+    200,
+  );
+  assert.equal(
+    (
+      await request(
+        '/billing/payos/webhook',
+        'POST',
+        { ...confirmationSample, signature: '0'.repeat(64) },
+        '',
+      )
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await request(
+        '/billing/payos/webhook',
+        'POST',
+        { ...confirmationSample, success: 'true' },
+        '',
+      )
+    ).status,
+    400,
+  );
+  assert.deepEqual(await balance(), sampleBalance);
   const pending = await createOrder('receipt-10');
   const pendingBeforeRecovery = await billing.owned(user.id, pending.id);
   const linkCount = links.size;

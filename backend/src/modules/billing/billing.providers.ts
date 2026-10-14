@@ -83,7 +83,12 @@ export class BillingProviders {
     if (!parsed.success)
       throw paymentError('BILLING_SIGNATURE_INVALID', 'Thông báo payOS không hợp lệ.');
     try {
-      return await this.ensurePayos().webhooks.verify(parsed.data);
+      // SDK types require success although verification only uses data + signature.
+      // Never use this unsigned envelope hint as evidence of settlement.
+      return await this.ensurePayos().webhooks.verify({
+        ...parsed.data,
+        success: parsed.data.success ?? false,
+      });
     } catch (error) {
       if (error instanceof AppError) throw error;
       throw paymentError('BILLING_SIGNATURE_INVALID', 'Chữ ký thông báo payOS không hợp lệ.');

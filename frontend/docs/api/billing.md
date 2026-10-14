@@ -48,7 +48,7 @@ Verify signed payOS notification and authoritative payment query; grant once
 - Responses: `200` → object, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `422` → ErrorResponse, `429` → ErrorResponse, `503` → ErrorResponse
 
 ```json
-{"type":"object","required":["code","desc","success","signature","data"],"properties":{"code":{"type":"string"},"desc":{"type":"string"},"success":{"type":"boolean"},"signature":{"type":"string"},"data":{"type":"object","required":["orderCode","amount","description","accountNumber","reference","transactionDateTime","currency","paymentLinkId","code","desc"],"properties":{"orderCode":{"type":"integer"},"amount":{"type":"integer"},"description":{"type":"string"},"accountNumber":{"type":"string"},"reference":{"type":"string"},"transactionDateTime":{"type":"string"},"currency":{"type":"string"},"paymentLinkId":{"type":"string"},"code":{"type":"string"},"desc":{"type":"string"}}}}}
+{"type":"object","required":["code","desc","signature","data"],"properties":{"code":{"type":"string"},"desc":{"type":"string"},"success":{"type":"boolean"},"signature":{"type":"string"},"data":{"type":"object","required":["orderCode","amount","description","accountNumber","reference","transactionDateTime","currency","paymentLinkId","code","desc"],"properties":{"orderCode":{"type":"integer"},"amount":{"type":"integer"},"description":{"type":"string"},"accountNumber":{"type":"string"},"reference":{"type":"string"},"transactionDateTime":{"type":"string"},"currency":{"type":"string"},"paymentLinkId":{"type":"string"},"code":{"type":"string"},"desc":{"type":"string"}}}}}
 ```
 
 ## GET `/api/v1/billing/payos/return/{id}`

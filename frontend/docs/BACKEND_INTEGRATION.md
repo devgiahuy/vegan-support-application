@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.33
+**Version:** 4.34
 
 **Cập nhật:** 14/10/2026
 
@@ -30,7 +30,7 @@ Provider migration is complete in the separate UI checkout after web/mobile cons
 | GET | `/billing/orders/:id` | `READY` | No (UI branch: Yes, 2026-10-14) | Owned status; expired URL hidden; return never grants |
 | POST | `/billing/orders/:id/reconcile` | `READY` | No (UI branch: Yes, 2026-10-14) | Signed payOS query; 30-second cooldown; history unchanged |
 | GET | `/entitlements/me` | `READY` | No (UI branch: Yes, 2026-10-14) | Usage enforcement/ledger with payOS provider |
-| POST | `/billing/payos/webhook` | `READY` | N/A | SDK signature + signed query; fully paid grant once; unknown signed samples ACK |
+| POST | `/billing/payos/webhook` | `READY` | N/A | SDK signature + signed query; fully paid grant once; unknown signed samples ACK, including confirmation payloads without success |
 | GET | `/billing/payos/return/:id` | `READY` | N/A | Display-only redirect; query claims ignored |
 | GET | `/billing/vnpay/ipn` | `REMOVED` | N/A | No new VNPAY settlement |
 | GET | `/billing/vnpay/return` | `REMOVED` | N/A | Retired provider |
@@ -48,7 +48,7 @@ Completed migration: recognize payos in mappers, allow new purchases only for pa
 | `BILLING_IDEMPOTENCY_CONFLICT` | Preserve intent; another intent for another package |
 | `BILLING_PENDING_LIMIT` | Resume existing payOS order |
 | `BILLING_PROVIDER_UNAVAILABLE` | Missing configuration/network error; no fallback or grant |
-| `BILLING_SIGNATURE_INVALID`, `BILLING_PAYMENT_MISMATCH` | Invalid signature/reference/link/amount/currency; no grant |
+| `BILLING_SIGNATURE_INVALID`, `BILLING_PAYMENT_MISMATCH` | Invalid shape/signature/reference/link/amount/currency; no grant. Webhook success is optional, but must be boolean when present; data/signature remain required |
 | `BILLING_RECONCILE_COOLDOWN` | Wait at least 30 seconds |
 | `BILLING_CHECKOUT_EXPIRED` | Historical retired local-checkout code; not emitted by current billing routes |
 | `ENTITLEMENT_QUOTA_EXCEEDED`, `PANTRY_CAPACITY_EXCEEDED`, `SCAN_RETRY_LIMIT_EXCEEDED` | Existing quota/capacity/retry handling |
@@ -58,6 +58,8 @@ Changelog 2026-10-14 (4.32): user-authorized payOS conversion replaces routes/co
 Changelog 2026-10-14 (4.33): web/mobile mapper migration and real-transfer UI disclosure complete; affected contracts returned to READY. Web scoped lint/typecheck, 602 tests/50 files and build, mobile typecheck/lint/6 billing tests, web export 64 routes and Android Hermes export pass. Browser confirms disabled purchase without keys, original balances and read-only history; mobile 390px has no horizontal overflow. External channel/transfer and native-device acceptance remain pending.
 
 Historical changelog: 4.29 introduced VNPAY/local simulation; 4.30 fixed local checkout expiry. These are superseded for new purchases by payOS.
+
+Changelog 2026-10-14 (4.34): live payOS channel verification omits the unsigned success field despite its required SDK/documentation type. Accept this field as optional without changing signed data or settlement authorization. Signed unknown confirmation samples ACK; invalid signatures/shapes still return 400. No consumer DTO or database change; sync generated OpenAPI. Credentialed QR/PENDING checks passed separately; actual payment/native-device acceptance remains open.
 
 ### Mobile integration record — 2026-10-03
 
