@@ -2,7 +2,7 @@
 # Billing
 
 ## GET `/api/v1/billing/products`
-List demo packages and configured provider
+List packages and payOS checkout availability
 - Params: —
 - Request: —
 - Responses: `200` → BillingCatalogEnvelope, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `422` → ErrorResponse, `429` → ErrorResponse, `503` → ErrorResponse
@@ -36,38 +36,26 @@ Read owned order; return page does not settle it
 - Responses: `200` → BillingOrderEnvelope, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `422` → ErrorResponse, `429` → ErrorResponse, `503` → ErrorResponse
 
 ## POST `/api/v1/billing/orders/{id}/reconcile`
-Verify provider query and settle once; 5-minute throttle
+Verify payOS query and settle once; 30-second throttle
 - Params: `path:id* (string)`
 - Request: —
 - Responses: `200` → BillingOrderEnvelope, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `422` → ErrorResponse, `423` → ErrorResponse, `429` → ErrorResponse, `503` → ErrorResponse
 
-## GET `/api/v1/billing/vnpay/ipn`
-VNPAY Sandbox signed server notification; grants once
-- Params: `query:vnp_TxnRef* (string)`, `query:vnp_Amount* (string)`, `query:vnp_TmnCode* (string)`, `query:vnp_ResponseCode* (string)`, `query:vnp_TransactionStatus* (string)`, `query:vnp_TransactionNo* (string)`, `query:vnp_SecureHash* (string)`
-- Request: —
-- Responses: `200` → object
-
-## GET `/api/v1/billing/vnpay/return`
-Verify browser return and redirect; never grant
-- Params: `query:vnp_TxnRef* (string)`, `query:vnp_Amount* (string)`, `query:vnp_TmnCode* (string)`, `query:vnp_ResponseCode* (string)`, `query:vnp_TransactionStatus* (string)`, `query:vnp_TransactionNo* (string)`, `query:vnp_SecureHash* (string)`
-- Request: —
-- Responses: `303` → Configured application return URL, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `422` → ErrorResponse, `429` → ErrorResponse, `503` → ErrorResponse
-
-## GET `/api/v1/billing/sandbox/{id}`
-Development-only simulated checkout, expiring order-bound capability
-- Params: `path:id* (string)`, `query:token* (string)`
-- Request: —
-- Responses: `200` → Explicit local simulation HTML, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `410` → ErrorResponse, `422` → ErrorResponse, `429` → ErrorResponse, `503` → ErrorResponse
-
-## POST `/api/v1/billing/sandbox/{id}`
-Development-only simulated settlement; no real money
-- Params: `path:id* (string)`
+## POST `/api/v1/billing/payos/webhook`
+Verify signed payOS notification and authoritative payment query; grant once
+- Params: —
 - Request: `object`
-- Responses: `303` → Application return URL, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `410` → ErrorResponse, `422` → ErrorResponse, `429` → ErrorResponse, `503` → ErrorResponse
+- Responses: `200` → object, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `422` → ErrorResponse, `429` → ErrorResponse, `503` → ErrorResponse
 
 ```json
-{"type":"object","required":["token","outcome"],"properties":{"token":{"type":"string"},"outcome":{"type":"string","enum":["PAID","CANCELLED","FAILED"]}},"additionalProperties":false}
+{"type":"object","required":["code","desc","success","signature","data"],"properties":{"code":{"type":"string"},"desc":{"type":"string"},"success":{"type":"boolean"},"signature":{"type":"string"},"data":{"type":"object","required":["orderCode","amount","description","accountNumber","reference","transactionDateTime","currency","paymentLinkId","code","desc"],"properties":{"orderCode":{"type":"integer"},"amount":{"type":"integer"},"description":{"type":"string"},"accountNumber":{"type":"string"},"reference":{"type":"string"},"transactionDateTime":{"type":"string"},"currency":{"type":"string"},"paymentLinkId":{"type":"string"},"code":{"type":"string"},"desc":{"type":"string"}}}}}
 ```
+
+## GET `/api/v1/billing/payos/return/{id}`
+Display-only browser return/cancel redirect; never grant or trust query payment claims
+- Params: `path:id* (string)`
+- Request: —
+- Responses: `303` → Configured application billing URL with local orderId, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `422` → ErrorResponse, `429` → ErrorResponse, `503` → ErrorResponse
 
 ---
 ### Schemas dùng trong nhóm
@@ -102,8 +90,7 @@ Development-only simulated settlement; no real money
         "provider": {
           "type": "string",
           "enum": [
-            "sandbox",
-            "vnpay"
+            "payos"
           ]
         },
         "simulated": {
@@ -187,6 +174,7 @@ Development-only simulated settlement; no real money
         "provider": {
           "type": "string",
           "enum": [
+            "payos",
             "sandbox",
             "vnpay"
           ]
@@ -324,8 +312,7 @@ Development-only simulated settlement; no real money
         "provider": {
           "type": "string",
           "enum": [
-            "sandbox",
-            "vnpay"
+            "payos"
           ]
         },
         "simulated": {

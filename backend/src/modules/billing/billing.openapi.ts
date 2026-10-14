@@ -9,8 +9,7 @@ import {
   billingOrdersSchema,
   createBillingOrderSchema,
   entitlementSchema,
-  sandboxBodySchema,
-  sandboxQuerySchema,
+  payosWebhookSchema,
 } from './billing.schemas.js';
 
 export function registerBillingOpenApi(registry: OpenAPIRegistry, errorSchema: z.ZodType): void {
@@ -27,29 +26,11 @@ export function registerBillingOpenApi(registry: OpenAPIRegistry, errorSchema: z
     orders: registry.register('BillingOrdersEnvelope', billingEnvelope(billingOrdersSchema)),
     entitlement: registry.register('EntitlementEnvelope', billingEnvelope(entitlementSchema)),
   };
-  const expiredCheckout = {
-    410: {
-      description:
-        'Valid local checkout capability has expired (BILLING_CHECKOUT_EXPIRED); browser HTML offers a return link, API callers receive the typed JSON error. No grant.',
-      content: { ...json(errorSchema), 'text/html': { schema: z.string() } },
-    },
-  };
-  const callbackQuery = z
-    .object({
-      vnp_TxnRef: z.string(),
-      vnp_Amount: z.string(),
-      vnp_TmnCode: z.string(),
-      vnp_ResponseCode: z.string(),
-      vnp_TransactionStatus: z.string(),
-      vnp_TransactionNo: z.string(),
-      vnp_SecureHash: z.string(),
-    })
-    .passthrough();
   for (const operation of [
     {
       method: 'get' as const,
       path: '/billing/products',
-      summary: 'List demo packages and configured provider',
+      summary: 'List packages and payOS checkout availability',
       response: schemas.catalog,
     },
     {
@@ -82,7 +63,7 @@ export function registerBillingOpenApi(registry: OpenAPIRegistry, errorSchema: z
     {
       method: 'post' as const,
       path: '/billing/orders/{id}/reconcile',
-      summary: 'Verify provider query and settle once; 5-minute throttle',
+      summary: 'Verify payOS query and settle once; 30-second throttle',
       response: schemas.order,
       request: { params: billingIdSchema },
     },
@@ -104,48 +85,31 @@ export function registerBillingOpenApi(registry: OpenAPIRegistry, errorSchema: z
     });
   }
   registry.registerPath({
-    method: 'get',
-    path: '/api/v1/billing/vnpay/ipn',
+    method: 'post',
+    path: '/api/v1/billing/payos/webhook',
     tags: ['Billing'],
-    summary: 'VNPAY Sandbox signed server notification; grants once',
-    request: { query: callbackQuery },
+    summary: 'Verify signed payOS notification and authoritative payment query; grant once',
+    security: [],
+    request: { body: { content: json(payosWebhookSchema) } },
     responses: {
       200: {
-        description:
-          'Provider acknowledgement: 00 accepted, 02 replay, 97 signature, 01 order, 04 mismatch, 99 retry',
-        content: json(z.object({ RspCode: z.string(), Message: z.string() })),
+        description: 'Accepted, replay or signed unknown confirmation sample; no unverified grant',
+        content: json(z.object({ success: z.literal(true) })),
       },
-    },
-  });
-  registry.registerPath({
-    method: 'get',
-    path: '/api/v1/billing/vnpay/return',
-    tags: ['Billing'],
-    summary: 'Verify browser return and redirect; never grant',
-    request: { query: callbackQuery },
-    responses: { 303: { description: 'Configured application return URL' }, ...errors },
-  });
-  registry.registerPath({
-    method: 'get',
-    path: '/api/v1/billing/sandbox/{id}',
-    tags: ['Billing'],
-    summary: 'Development-only simulated checkout, expiring order-bound capability',
-    request: { params: billingIdSchema, query: sandboxQuerySchema },
-    responses: {
-      200: { description: 'Explicit local simulation HTML' },
       ...errors,
-      ...expiredCheckout,
     },
   });
   registry.registerPath({
-    method: 'post',
-    path: '/api/v1/billing/sandbox/{id}',
+    method: 'get',
+    path: '/api/v1/billing/payos/return/{id}',
     tags: ['Billing'],
-    summary: 'Development-only simulated settlement; no real money',
-    request: {
-      params: billingIdSchema,
-      body: { content: { 'application/x-www-form-urlencoded': { schema: sandboxBodySchema } } },
+    summary:
+      'Display-only browser return/cancel redirect; never grant or trust query payment claims',
+    security: [],
+    request: { params: billingIdSchema },
+    responses: {
+      303: { description: 'Configured application billing URL with local orderId' },
+      ...errors,
     },
-    responses: { 303: { description: 'Application return URL' }, ...errors, ...expiredCheckout },
   });
 }

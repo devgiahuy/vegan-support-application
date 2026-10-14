@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.30
+**Version:** 4.32
 
 **Cập nhật:** 14/10/2026
 
@@ -14,48 +14,48 @@
 
 ## 1. Source of truth và status
 
-### Sandbox billing extension — 2026-10-13
+### Usage billing extension — payOS conversion 2026-10-14
 
-Demo setup correction (2026-10-14): use `http://localhost:3100` for web, `http://127.0.0.1:8090` for mobile web and `http://127.0.0.1:4100/api/v1` for its API. Different ports on localhost share cookies and can race strict refresh rotation; separate hostnames isolate session families. The demo helper permits these explicit origins. Auth/API shapes and reuse detection are unchanged.
+User requested complete payOS conversion and will configure keys later. New purchases use payOS exclusively; payOS has no sandbox and transfers real money, even from a development app. App production rollout remains disabled. Existing quotas, confirmation rules and allowance accounting remain unchanged.
 
-Branch separation (2026-10-14): `codex/sandbox-billing` contains backend/domain/contracts only; billing web/mobile consumer source is retained on `codex/sandbox-billing-ui` in a separate worktree. The integration column below describes this backend checkout; the UI branch has its own completed consumer record. API contract documentation remains here as required by repository synchronization policy.
+Backend branch `codex/sandbox-billing` contains domain/contracts only; consumer changes live in `codex/sandbox-billing-ui`. The existing localhost/127.0.0.1 cookie-host isolation remains required for simultaneous web/mobile previews.
 
-User authorized implementation and autonomous product decisions on 2026-10-13. One-time packages accumulate chat/job credits and Pantry capacity; purchases do not grant roles or media storage. Billing is opt-in (`BILLING_ENABLED=true`), development/test only. Prices are demonstration values, not a launched commercial offer.
+Provider migration is CHANGING until the UI branch consumer gate passes. Catalog/entitlement provider is `payos`, simulated=false. Catalog enabled requires billing opt-in and complete merchant credentials; entitlement enabled describes usage enforcement. Old provider strings remain in history only.
 
 | Method | Endpoint | Status | FE integrated | Notes |
 | --- | --- | --- | --- | --- |
-| GET | `/billing/products` | `READY` | No (UI branch: Yes) | Authenticated catalog; enabled/provider/simulated disclosure |
-| POST | `/billing/orders` | `READY` | No (UI branch: Yes) | Owner idempotency, server price/benefit snapshot; maximum five unexpired pending orders |
-| GET | `/billing/orders` | `READY` | No (UI branch: Yes) | Owner history, 20/page |
-| GET | `/billing/orders/:id` | `READY` | No (UI branch: Yes) | Owner-only status/expiring checkout; return URL never grants |
-| POST | `/billing/orders/:id/reconcile` | `READY` | No (UI branch: Yes) | Verified VNPAY querydr, five-minute throttle; local sandbox only refreshes state |
-| GET | `/entitlements/me` | `READY` | No (UI branch: Yes) | Available/held credits, undeleted Pantry count and recent 20 ledger entries |
-| GET | `/billing/vnpay/ipn` | `READY` | N/A | Signed provider notification; atomic once-only grant |
-| GET | `/billing/vnpay/return` | `READY` | N/A | Verified display-only redirect |
-| GET/POST | `/billing/sandbox/:id` | `READY` | N/A | Local simulation only, expiring order-bound bearer checkout capability |
+| GET | `/billing/products` | `CHANGING` | No (UI migration pending) | payOS catalog; purchase disabled without keys |
+| POST | `/billing/orders` | `CHANGING` | No (UI migration pending) | Owner intent/server snapshot; unique persisted provider reference/link; retry recovers same code |
+| GET | `/billing/orders` | `CHANGING` | No (UI migration pending) | Owned history retains legacy providers without checkout |
+| GET | `/billing/orders/:id` | `CHANGING` | No (UI migration pending) | Owned status; expired URL hidden; return never grants |
+| POST | `/billing/orders/:id/reconcile` | `CHANGING` | No (UI migration pending) | Signed payOS query; 30-second cooldown; history unchanged |
+| GET | `/entitlements/me` | `CHANGING` | No (UI migration pending) | Usage enforcement/ledger with payOS provider |
+| POST | `/billing/payos/webhook` | `READY` | N/A | SDK signature + signed query; fully paid grant once; unknown signed samples ACK |
+| GET | `/billing/payos/return/:id` | `READY` | N/A | Display-only redirect; query claims ignored |
+| GET | `/billing/vnpay/ipn` | `REMOVED` | N/A | No new VNPAY settlement |
+| GET | `/billing/vnpay/return` | `REMOVED` | N/A | Retired provider |
+| GET/POST | `/billing/sandbox/:id` | `REMOVED` | N/A | No simulator or fallback |
 
-Readiness evidence: Mongo schema provisioning/seed, owner and account-state authorization, backend lint/typecheck/build, generated OpenAPI and acceptance of local checkout, concurrent debit/capacity, signed VNPAY protocol fixtures. External VNPAY sandbox end-to-end acceptance remains pending merchant credentials; no real payment is claimed. Existing fridge/receipt endpoints remain `IN_PROGRESS` and keep their development exception.
+Backend evidence: Mongo validators/partial unique indexes, isolated seed, authorization, lint/typecheck/build, OpenAPI and controlled SDK transport acceptance. External merchant/real-transfer acceptance remains pending keys. Phase 21/22 readiness is unchanged.
 
-Additive chat SSE quota field: `paidRemaining`; `remaining` stays the free daily balance. Free quota is used first. Pantry creation and both confirmation paths may now return `PANTRY_CAPACITY_EXCEEDED` when billing is enabled. Scan job creation/retry may return `ENTITLEMENT_QUOTA_EXCEEDED` or `SCAN_RETRY_LIMIT_EXCEEDED`. One bounded multi-image job costs one credit once any image is successfully analyzed; total failure releases credit. Charged-job retries are free, maximum three processing attempts by default. Retry continues to regenerate all candidates; correction behavior is unchanged.
+Migration action: recognize payos in mappers, allow new purchases only for payos, validate HTTPS pay.payos.vn checkout URLs, preserve historical labels/read-only records, remove simulation/VNPAY checkout wording, disclose real transfer and show disabled purchase without keys. Existing envelopes/benefits remain unchanged; provider references are internal.
 
 | Error | Frontend handling |
 | --- | --- |
-| `BILLING_DISABLED` | Show unavailable state; retain readable history |
+| `BILLING_DISABLED` | Unavailable action; history readable |
 | `BILLING_PRODUCT_UNAVAILABLE` | Refresh catalog |
-| `BILLING_ORDER_NOT_FOUND` | Show owner-scoped not-found state |
-| `BILLING_IDEMPOTENCY_CONFLICT` | Keep the original request; create a new intent for a different package |
-| `BILLING_PENDING_LIMIT` | Resume an existing pending order |
-| `BILLING_PROVIDER_UNAVAILABLE` | Keep order unconfirmed and offer later reconciliation |
-| `BILLING_SIGNATURE_INVALID`, `BILLING_PAYMENT_MISMATCH` | Do not show success or grant locally |
-| `BILLING_CHECKOUT_EXPIRED` (410) | Valid local checkout capability expired. HTML browser GET/POST shows a return link and instructions to create a new order; API callers get this typed JSON error. Invalid/tampered tokens stay 403. No grant occurs. |
-| `BILLING_RECONCILE_COOLDOWN` | Ask user to wait at least five minutes |
-| `ENTITLEMENT_QUOTA_EXCEEDED` | Link to billing; do not retry automatically |
-| `PANTRY_CAPACITY_EXCEEDED` | Keep analysis output; select fewer items, delete/merge or buy space |
-| `SCAN_RETRY_LIMIT_EXCEEDED` | Explain retry cap; new job requires another allowance |
+| `BILLING_ORDER_NOT_FOUND` | Owner-scoped not-found |
+| `BILLING_IDEMPOTENCY_CONFLICT` | Preserve intent; another intent for another package |
+| `BILLING_PENDING_LIMIT` | Resume existing payOS order |
+| `BILLING_PROVIDER_UNAVAILABLE` | Missing configuration/network error; no fallback or grant |
+| `BILLING_SIGNATURE_INVALID`, `BILLING_PAYMENT_MISMATCH` | Invalid signature/reference/link/amount/currency; no grant |
+| `BILLING_RECONCILE_COOLDOWN` | Wait at least 30 seconds |
+| `BILLING_CHECKOUT_EXPIRED` | Historical retired local-checkout code; not emitted by current billing routes |
+| `ENTITLEMENT_QUOTA_EXCEEDED`, `PANTRY_CAPACITY_EXCEEDED`, `SCAN_RETRY_LIMIT_EXCEEDED` | Existing quota/capacity/retry handling |
 
-Changelog 2026-10-13 (4.29): opt-in sandbox billing and transactional allowances, signed VNPAY adapter, explicit local simulation, scan recovery/fencing and Pantry capacity. Source implementation is complete for the demo contract; external merchant and native-device acceptance are separate gates.
+Changelog 2026-10-14 (4.32): user-authorized payOS conversion replaces routes/configuration and preserves historical orders. Signed SDK create/query/webhook, persisted references, partial-payment handling and 30-second checks. Backend gates pass; affected clients remain CHANGING until migration. No external merchant request.
 
-Changelog 2026-10-14 (4.30): local checkout expiry has an explicit 410 business error and an HTML recovery page. Signed invalid capabilities remain 403; expired GET/POST never grant. Retest covers six refresh rotations, expiry and a replacement order. External merchant/native acceptance remains open.
+Historical changelog: 4.29 introduced VNPAY/local simulation; 4.30 fixed local checkout expiry. These are superseded for new purchases by payOS.
 
 ### Mobile integration record — 2026-10-03
 

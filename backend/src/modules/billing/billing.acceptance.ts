@@ -3,7 +3,7 @@ import 'dotenv/config';
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { createServer } from 'node:http';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, createHmac, randomUUID } from 'node:crypto';
 import pino from 'pino';
 import { createApp } from '../../app.js';
 import { loadConfig } from '../../config/env.js';
@@ -17,7 +17,8 @@ import { PantryService } from '../pantry/pantry.service.js';
 import { IngredientRecognitionRepository } from '../ingredient-recognition/ingredient-recognition.repository.js';
 import { ReceiptRepository } from '../receipts/receipt.repository.js';
 import { BillingService } from './billing.service.js';
-import { BillingProviders, paymentHmac, vnpayCanonical, vnpayDate } from './billing.providers.js';
+import { BillingProviders } from './billing.providers.js';
+import type { CreatePaymentLinkRequest, PaymentLink } from '@payos/node';
 import { billingEnvelope, billingOrderSchema, entitlementSchema } from './billing.schemas.js';
 import { seedBillingProducts } from './billing.catalog.js';
 import { AppError } from '../../common/errors/app-error.js';
@@ -26,7 +27,10 @@ const config = loadConfig({
   ...process.env,
   NODE_ENV: 'test',
   BILLING_ENABLED: 'true',
-  BILLING_PROVIDER: 'sandbox',
+  BILLING_PROVIDER: 'payos',
+  PAYOS_CLIENT_ID: 'acceptance-fixture-client',
+  PAYOS_API_KEY: 'acceptance-fixture-key',
+  PAYOS_CHECKSUM_KEY: 'acceptance-only-checksum-key',
   BILLING_PANTRY_BASE_LIMIT: '2',
   AI_PROVIDER: 'fake',
   VISION_PROVIDER: 'fake',
@@ -38,6 +42,139 @@ assert(
   new URL(config.databaseUrl).pathname.includes('billing_'),
   'Acceptance requires a separate database named billing_*; never use user data.',
 );
+// Controlled payOS transport; never contacts the merchant API or transfers money.
+const originalFetch = globalThis.fetch;
+const links = new Map<number, PaymentLink>();
+let ambiguousCreate = false;
+let tamperQuery = false;
+let unavailableQuery = false;
+const signedData = (data: Record<string, unknown>) => {
+  const canonical = Object.keys(data)
+    .sort()
+    .map((key) => {
+      const raw = data[key];
+      const value =
+        raw == null || raw === 'null' || raw === 'undefined'
+          ? ''
+          : Array.isArray(raw)
+            ? JSON.stringify(
+                raw.map((item: Record<string, unknown>) =>
+                  Object.fromEntries(
+                    Object.keys(item)
+                      .sort()
+                      .map((field) => [field, item[field]]),
+                  ),
+                ),
+              )
+          : typeof raw === 'string' || typeof raw === 'number' || typeof raw === 'boolean'
+            ? String(raw)
+            : JSON.stringify(raw);
+      return key + '=' + value;
+    })
+    .join('&');
+  return createHmac('sha256', config.billing.payosChecksumKey!).update(canonical).digest('hex');
+};
+const providerResponse = (data: Record<string, unknown>) =>
+  new Response(
+    JSON.stringify({
+      code: '00',
+      desc: 'success',
+      data,
+      signature: tamperQuery ? '0'.repeat(64) : signedData(data),
+    }),
+    { headers: { 'Content-Type': 'application/json' } },
+  );
+globalThis.fetch = async (input, init) => {
+  const url = new URL(input instanceof Request ? input.url : String(input));
+  if (url.origin !== 'https://api-merchant.payos.vn') {
+    assert(
+      url.hostname === '127.0.0.1' || url.hostname === 'localhost',
+      'No external acceptance request',
+    );
+    return originalFetch(input, init);
+  }
+  if (init?.method === 'POST' && url.pathname === '/v2/payment-requests') {
+    assert(typeof init.body === 'string');
+    const body = JSON.parse(init.body) as CreatePaymentLinkRequest;
+    assert(Number.isSafeInteger(body.orderCode) && body.orderCode > 0);
+    assert(body.description.length <= 9);
+    assert.equal(
+      body.signature,
+      signedData({
+        amount: body.amount,
+        cancelUrl: body.cancelUrl,
+        description: body.description,
+        orderCode: body.orderCode,
+        returnUrl: body.returnUrl,
+      }),
+    );
+    assert(body.expiredAt && body.expiredAt > Date.now() / 1000);
+    if (links.has(body.orderCode))
+      return new Response(JSON.stringify({ code: '231', desc: 'Order already exists' }), {
+        status: 400,
+      });
+    const id = randomUUID().replaceAll('-', '');
+    links.set(body.orderCode, {
+      id,
+      orderCode: body.orderCode,
+      amount: body.amount,
+      amountPaid: 0,
+      amountRemaining: body.amount,
+      status: 'PENDING',
+      createdAt: new Date().toISOString(),
+      transactions: [],
+      cancellationReason: null,
+      canceledAt: null,
+    });
+    if (ambiguousCreate) {
+      ambiguousCreate = false;
+      throw new Error('Fixture response lost after creation');
+    }
+    return providerResponse({
+      bin: '970422',
+      accountNumber: 'fixture-only',
+      accountName: 'Fixture',
+      amount: body.amount,
+      description: body.description,
+      orderCode: body.orderCode,
+      currency: 'VND',
+      paymentLinkId: id,
+      status: 'PENDING',
+      checkoutUrl: 'https://pay.payos.vn/web/' + id,
+      qrCode: 'fixture-qr',
+    });
+  }
+  assert.equal(init?.method, 'GET');
+  assert(url.pathname.startsWith('/v2/payment-requests/'));
+  if (unavailableQuery) throw new Error('Fixture unavailable');
+  const link = links.get(Number(url.pathname.split('/').pop()));
+  if (!link)
+    return new Response(JSON.stringify({ code: '101', desc: 'Not found' }), { status: 404 });
+  return providerResponse({ ...link });
+};
+const providerLink = async (id: string) => {
+  const order = await db.paymentOrder.findUniqueOrThrow({ where: { id } });
+  return links.get(Number(order.providerOrderCode))!;
+};
+const webhookFor = async (id: string, amount?: number) => {
+  const link = await providerLink(id);
+  const data = {
+    orderCode: link.orderCode,
+    amount: amount ?? link.amountPaid,
+    description: 'VC fixture',
+    accountNumber: 'fixture-only',
+    reference: 'fixture-' + link.id,
+    transactionDateTime: '2026-10-14 12:00:00',
+    currency: 'VND',
+    paymentLinkId: link.id,
+    code: '00',
+    desc: 'success',
+    counterAccountName: null,
+    counterAccountNumber: null,
+  };
+  return { code: '00', desc: 'success', success: true, data, signature: signedData(data) };
+};
+
 const db = createPrismaClient();
 const entitlements = new EntitlementService(db, config);
 const billing = new BillingService(db, entitlements, config);
@@ -194,25 +331,27 @@ try {
     404,
   );
   assert(order.checkoutUrl);
-  const sandboxUrl = new URL(order.checkoutUrl);
-  const capability = sandboxUrl.searchParams.get('token')!;
-  assert.equal((await fetch(order.checkoutUrl)).status, 200);
-  assert.equal((await fetch(order.checkoutUrl.replace(capability, 'a'.repeat(128)))).status, 403);
+  assert(new URL(order.checkoutUrl).hostname === 'pay.payos.vn');
+  const paidLink = await providerLink(order.id);
+  paidLink.status = 'PAID';
+  paidLink.amountPaid = paidLink.amount;
+  paidLink.amountRemaining = 0;
+  const paidWebhook = await webhookFor(order.id);
   assert.equal(
-    (await request('/billing/sandbox/' + order.id, 'POST', { token: capability, outcome: 'PAID' }))
-      .status,
-    303,
+    (
+      await request(
+        '/billing/payos/webhook',
+        'POST',
+        { ...paidWebhook, signature: '0'.repeat(64) },
+        '',
+      )
+    ).status,
+    400,
   );
-  await Promise.all(
-    Array.from({ length: 10 }, () =>
-      billing.settle('sandbox', {
-        orderId: order.id,
-        amountVnd: order.priceVnd,
-        status: 'PAID',
-        transactionId: 'demo-' + order.id,
-      }),
-    ),
+  const replayResponses = await Promise.all(
+    Array.from({ length: 10 }, () => request('/billing/payos/webhook', 'POST', paidWebhook, '')),
   );
+  assert(replayResponses.every((response) => response.status === 200));
   const purchased = await balance();
   assert.equal(purchased.chatCredits, before.chatCredits + 100);
   assert.equal(purchased.fridgeCredits, before.fridgeCredits + 10);
@@ -220,7 +359,7 @@ try {
   assert.equal(purchased.pantrySlots, 50);
   assert.equal(await db.paymentEvent.count({ where: { orderId: order.id } }), 1);
   await assert.rejects(
-    billing.settle('sandbox', {
+    billing.settle('payos', {
       orderId: order.id,
       amountVnd: 1,
       status: 'PAID',
@@ -229,19 +368,17 @@ try {
     expectCode('BILLING_PAYMENT_MISMATCH'),
   );
   const canceled = await createOrder('chat-100');
-  await billing.sandboxSettle(
-    canceled.id,
-    new URL(canceled.checkoutUrl!).searchParams.get('token')!,
-    'CANCELLED',
-  );
+  const canceledLink = await providerLink(canceled.id);
+  canceledLink.status = 'CANCELLED';
+  await billing.webhook(await webhookFor(canceled.id));
   assert.equal((await balance()).chatCredits, purchased.chatCredits);
-  await billing.settle('sandbox', {
+  await billing.settle('payos', {
     orderId: canceled.id,
     transactionId: 'late-' + canceled.id,
     amountVnd: canceled.priceVnd,
     status: 'PAID',
   });
-  await billing.settle('sandbox', {
+  await billing.settle('payos', {
     orderId: canceled.id,
     transactionId: 'late-' + canceled.id,
     amountVnd: canceled.priceVnd,
@@ -258,43 +395,32 @@ try {
     where: { id: expiring.id },
     data: { expiresAt: new Date(Date.now() - 1000) },
   });
-  const expiredCheckoutUrl = billing.providers.checkout(expiredOrder, '127.0.0.1');
-  const expiredJson = await fetch(expiredCheckoutUrl);
-  assert.equal(expiredJson.status, 410);
+  assert.equal((await billing.get(user.id, expiredOrder.id, '')).status, 'EXPIRED');
+  assert.equal((await billing.get(user.id, expiredOrder.id, '')).checkoutUrl, null);
+  assert.equal((await balance()).chatCredits, expiryBalance.chatCredits);
   assert.equal(
-    ((await expiredJson.json()) as { error: { code: string } }).error.code,
-    'BILLING_CHECKOUT_EXPIRED',
+    (await request('/billing/sandbox/' + expiredOrder.id)).status,
+    404,
   );
-  const expiredPage = await fetch(expiredCheckoutUrl, { headers: { Accept: 'text/html' } });
-  assert.equal(expiredPage.status, 410);
-  assert(expiredPage.headers.get('content-type')?.includes('text/html'));
-  assert((await expiredPage.text()).includes('Phiên thanh toán đã hết hạn'));
-  const expiredForm = await fetch(
-    new URL(expiredCheckoutUrl).origin + new URL(expiredCheckoutUrl).pathname,
-    {
-      method: 'POST',
-      redirect: 'manual',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'text/html' },
-      body: new URLSearchParams({
-        token: new URL(expiredCheckoutUrl).searchParams.get('token')!,
-        outcome: 'PAID',
-      }),
-    },
+  assert.equal((await request('/billing/vnpay/ipn')).status, 404);
+  const returned = await request(
+    '/billing/payos/return/' + expiredOrder.id + '?status=PAID&cancel=false',
+    'GET',
+    undefined,
+    '',
   );
-  assert.equal(expiredForm.status, 410);
-  assert((await expiredForm.text()).includes('Phiên thanh toán đã hết hạn'));
-  const expiredDetail = await billing.get(user.id, expiring.id, '127.0.0.1');
-  assert.equal(expiredDetail.status, 'EXPIRED');
-  assert.equal(expiredDetail.checkoutUrl, null);
+  assert.equal(returned.status, 303);
+  assert(
+    new URL(returned.headers.get('location')!).searchParams.get('orderId') === expiredOrder.id,
+  );
   assert.equal((await balance()).chatCredits, expiryBalance.chatCredits);
   const replacement = await createOrder('chat-100');
-  assert(replacement.checkoutUrl);
-  await billing.sandboxSettle(
-    replacement.id,
-    new URL(replacement.checkoutUrl).searchParams.get('token')!,
-    'CANCELLED',
+  const replacementLink = await providerLink(replacement.id);
+  replacementLink.status = 'CANCELLED';
+  await billing.webhook(await webhookFor(replacement.id));
+  console.info(
+    'PASS expired checkout hidden, retired routes removed and browser return never grants',
   );
-  console.info('PASS expired checkout GET/POST show recovery, never grant and allow a new order');
 
   // HTTP SSE uses the real chat gateway with a deterministic development provider.
   const sessionResponse = await request('/chat/sessions', 'POST', { title: 'Billing acceptance' });
@@ -670,102 +796,114 @@ try {
   );
   console.info('PASS partial-success charge, free charged-job retries and configured attempt cap');
 
-  const vnpConfig = {
-    ...config,
-    billing: {
-      ...config.billing,
-      provider: 'vnpay' as const,
-      vnpayMerchant: 'TESTCODE',
-      vnpaySecret: 'acceptance-only-secret-1234567890',
-    },
-  };
-  const providers = new BillingProviders(vnpConfig);
-  const unsigned = {
-    vnp_TmnCode: 'TESTCODE',
-    vnp_TxnRef: order.id.replaceAll('-', ''),
-    vnp_Amount: String(order.priceVnd * 100),
-    vnp_ResponseCode: '00',
-    vnp_TransactionStatus: '00',
-    vnp_TransactionNo: '123456',
-    vnp_CurrCode: 'VND',
-  };
-  const signed = {
-    ...unsigned,
-    vnp_SecureHash: paymentHmac(vnpConfig.billing.vnpaySecret, vnpayCanonical(unsigned)),
-  };
-  assert.equal(providers.verifyIpn(signed).amountVnd, order.priceVnd);
-  assert.throws(
-    () => providers.verifyIpn({ ...signed, vnp_Amount: '1' }),
+  const protocol = await createOrder('receipt-10');
+  const protocolLink = await providerLink(protocol.id);
+  const providers = new BillingProviders(config);
+  const protocolOwned = await billing.owned(user.id, protocol.id);
+  const protocolStart = await balance();
+  protocolLink.status = 'UNDERPAID';
+  protocolLink.amountPaid = 100;
+  protocolLink.amountRemaining = protocolLink.amount - 100;
+  await billing.webhook(await webhookFor(protocol.id, 100));
+  assert.equal((await billing.get(user.id, protocol.id, '')).status, 'PENDING');
+  assert.equal((await balance()).receiptCredits, protocolStart.receiptCredits);
+  const signed = await webhookFor(protocol.id, 100);
+  await assert.rejects(
+    providers.verifyWebhook({ ...signed, data: { ...signed.data, amount: 101 } }),
     expectCode('BILLING_SIGNATURE_INVALID'),
   );
-  assert.throws(
-    () => providers.verifyIpn({ ...signed, vnp_TxnRef: [order.id] }),
-    expectCode('BILLING_SIGNATURE_INVALID'),
+  await assert.rejects(
+    billing.webhook({
+      ...signed,
+      data: { ...signed.data, currency: 'USD' },
+      signature: signedData({ ...signed.data, currency: 'USD' }),
+    }),
+    expectCode('BILLING_PAYMENT_MISMATCH'),
   );
-  assert.equal(vnpayDate(new Date('2026-10-13T00:00:00Z')), '20261013070000');
-  assert.equal(vnpayCanonical({ b: 'x y', a: 'a&b' }), 'a=a%26b&b=x+y');
-  const originalFetch = globalThis.fetch;
-  globalThis.fetch = (_url, init) => {
-    assert(typeof init?.body === 'string');
-    const body = JSON.parse(init.body) as Record<string, string>;
-    const raw = [
-      body.vnp_RequestId,
-      '2.1.0',
-      'querydr',
-      'TESTCODE',
-      order.id.replaceAll('-', ''),
-      vnpayDate(new Date(order.createdAt)),
-      body.vnp_CreateDate,
-      '127.0.0.1',
-      body.vnp_OrderInfo,
-    ].join('|');
-    assert.equal(body.vnp_SecureHash, paymentHmac(vnpConfig.billing.vnpaySecret, raw));
-    const result = {
-      ...unsigned,
-      vnp_ResponseId: 'fixture',
-      vnp_Command: 'querydr',
-      vnp_Message: 'Success',
-      vnp_TransactionType: '01',
-      vnp_OrderInfo: body.vnp_OrderInfo!,
-    };
-    const fields = [
-      'vnp_ResponseId',
-      'vnp_Command',
-      'vnp_ResponseCode',
-      'vnp_Message',
-      'vnp_TmnCode',
-      'vnp_TxnRef',
-      'vnp_Amount',
-      'vnp_BankCode',
-      'vnp_PayDate',
-      'vnp_TransactionNo',
-      'vnp_TransactionType',
-      'vnp_TransactionStatus',
-      'vnp_OrderInfo',
-      'vnp_PromotionCode',
-      'vnp_PromotionAmount',
-    ];
-    const values: Record<string, string> = result;
-    return Promise.resolve(
-      new Response(
-        JSON.stringify({
-          ...result,
-          vnp_SecureHash: paymentHmac(
-            vnpConfig.billing.vnpaySecret,
-            fields.map((f) => values[f] ?? '').join('|'),
-          ),
-        }),
-      ),
-    );
-  };
-  try {
-    assert.equal(
-      (await providers.query(await billing.owned(user.id, order.id), '127.0.0.1')).status,
-      'PAID',
-    );
-  } finally {
-    globalThis.fetch = originalFetch;
-  }
+  await assert.rejects(
+    billing.webhook({
+      ...signed,
+      data: { ...signed.data, paymentLinkId: 'f'.repeat(32) },
+      signature: signedData({ ...signed.data, paymentLinkId: 'f'.repeat(32) }),
+    }),
+    expectCode('BILLING_PAYMENT_MISMATCH'),
+  );
+  tamperQuery = true;
+  await assert.rejects(providers.query(protocolOwned), expectCode('BILLING_SIGNATURE_INVALID'));
+  tamperQuery = false;
+  unavailableQuery = true;
+  assert.equal((await request('/billing/payos/webhook', 'POST', signed, '')).status, 503);
+  unavailableQuery = false;
+  protocolLink.status = 'PAID';
+  protocolLink.amountPaid = protocolLink.amount - 1;
+  assert.equal((await providers.query(protocolOwned)).status, 'PENDING');
+  protocolLink.amountPaid = protocolLink.amount + 100;
+  protocolLink.amountRemaining = 0;
+  await billing.webhook(await webhookFor(protocol.id));
+  await billing.webhook(await webhookFor(protocol.id));
+  assert.equal((await balance()).receiptCredits, protocolStart.receiptCredits + 10);
+  const unknown = { ...signed.data, orderCode: 1 };
+  assert.equal(
+    (
+      await request(
+        '/billing/payos/webhook',
+        'POST',
+        { ...signed, data: unknown, signature: signedData(unknown) },
+        '',
+      )
+    ).status,
+    200,
+  );
+  const pending = await createOrder('receipt-10');
+  assert.equal(
+    (await request('/billing/orders/' + pending.id + '/reconcile', 'POST', {})).status,
+    200,
+  );
+  assert.equal(
+    (await request('/billing/orders/' + pending.id + '/reconcile', 'POST', {})).status,
+    429,
+  );
+  ambiguousCreate = true;
+  const recovered = await createOrder('receipt-10');
+  assert(recovered.checkoutUrl);
+  const recoveredOrder = await billing.owned(user.id, recovered.id);
+  const existingCode = recoveredOrder.providerOrderCode;
+  assert.equal(
+    (
+      await billing.create(
+        user.id,
+        { productId: 'receipt-10', idempotencyKey: recoveredOrder.idempotencyKey },
+        '',
+      )
+    ).id,
+    recovered.id,
+  );
+  assert.equal((await billing.owned(user.id, recovered.id)).providerOrderCode, existingCode);
+  const missingConfig = { ...config, billing: { ...config.billing, payosApiKey: undefined } };
+  const disabled = new BillingService(db, entitlements, missingConfig);
+  assert.equal((await disabled.products()).enabled, false);
+  await assert.rejects(
+    disabled.create(user.id, { productId: 'chat-100', idempotencyKey: randomUUID() }, ''),
+    expectCode('BILLING_PROVIDER_UNAVAILABLE'),
+  );
+  const historic = await db.paymentOrder.update({
+    where: { id: expiring.id },
+    data: { provider: 'sandbox' },
+  });
+  assert.equal(billing.serialize(historic).provider, 'sandbox');
+  assert.equal(billing.serialize(historic).checkoutUrl, null);
+  await assert.rejects(
+    billing.settle('sandbox', {
+      orderId: historic.id,
+      transactionId: 'legacy',
+      amountVnd: historic.priceVnd,
+      status: 'PAID',
+    }),
+    expectCode('BILLING_PAYMENT_MISMATCH'),
+  );
+  console.info(
+    'PASS signed SDK create/query/webhook, underpayment, overpayment, replay, unknown sample, provider errors, cooldown, ambiguous create recovery and legacy read-only history',
+  );
   assert.throws(() =>
     loadConfig({
       ...process.env,
@@ -775,13 +913,12 @@ try {
       RECEIPT_ENABLED: 'false',
     }),
   );
+  console.info('PASS payOS fixtures and production rollout guard');
   console.info(
-    'PASS VNPAY checkout/IPN/querydr protocol fixtures, tampering, duplicate keys and production guards',
-  );
-  console.info(
-    'Billing acceptance complete. External VNPAY sandbox was not called; merchant credentials are required for that separate check.',
+    'Billing acceptance complete. payOS transport was mocked; no external merchant request or real transfer occurred.',
   );
 } finally {
+  globalThis.fetch = originalFetch;
   await new Promise<void>((resolve, reject) =>
     server.close((error) => (error ? reject(error) : resolve())),
   );

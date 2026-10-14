@@ -16,15 +16,28 @@ export const billingIdSchema = z.object({ id: z.string().uuid() }).strict();
 export const billingListQuerySchema = z
   .object({ page: z.coerce.number().int().min(1).max(10000).default(1) })
   .strict();
-export const sandboxQuerySchema = z
-  .object({ token: z.string().regex(/^[a-f0-9]{128}$/i) })
-  .strict();
-export const sandboxBodySchema = z
+export const payosWebhookSchema = z
   .object({
-    token: z.string().regex(/^[a-f0-9]{128}$/i),
-    outcome: z.enum(['PAID', 'CANCELLED', 'FAILED']),
+    code: z.string().max(100),
+    desc: z.string().max(1000),
+    success: z.boolean(),
+    signature: z.string().regex(/^[a-f0-9]{64}$/i),
+    data: z
+      .object({
+        orderCode: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+        amount: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
+        description: z.string().max(2000),
+        accountNumber: z.string().max(200),
+        reference: z.string().max(200),
+        transactionDateTime: z.string().max(100),
+        currency: z.string().max(20),
+        paymentLinkId: z.string().regex(/^[a-f0-9]{32}$/i),
+        code: z.string().max(100),
+        desc: z.string().max(1000),
+      })
+      .passthrough(),
   })
-  .strict();
+  .passthrough();
 export const billingProductSchema = z
   .object({
     id: z.string(),
@@ -38,7 +51,7 @@ export const billingProductSchema = z
 export const billingCatalogSchema = z
   .object({
     enabled: z.boolean(),
-    provider: z.enum(['sandbox', 'vnpay']),
+    provider: z.literal('payos'),
     simulated: z.boolean(),
     products: z.array(billingProductSchema),
   })
@@ -50,7 +63,7 @@ export const billingOrderSchema = z
     productName: z.string(),
     priceVnd: z.number().int().positive(),
     ...benefits,
-    provider: z.enum(['sandbox', 'vnpay']),
+    provider: z.enum(['payos', 'sandbox', 'vnpay']),
     simulated: z.boolean(),
     status: z.enum(['PENDING', 'PAID', 'CANCELLED', 'FAILED', 'EXPIRED']),
     checkoutUrl: z.string().url().nullable(),
@@ -70,7 +83,7 @@ export const billingOrdersSchema = z
 export const entitlementSchema = z
   .object({
     enabled: z.boolean(),
-    provider: z.enum(['sandbox', 'vnpay']),
+    provider: z.literal('payos'),
     simulated: z.boolean(),
     ...benefits,
     chatReserved: z.number().int().nonnegative(),
