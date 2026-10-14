@@ -1,5 +1,13 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Billing repeat verification and branch split — Updated 2026-10-14
+
+Follow-up after overlapping refresh: a later localhost web/mobile race reproduced REUSE_DETECTED/401. The final demo isolates cookies using web `localhost:3100` and mobile UI/API `127.0.0.1:8090`/`127.0.0.1:4100`. Both clients were logged in again and repeated overlapping reloads retained their 43-credit state with refresh 200. Backend reuse detection remains intact. Earlier successful reload was a limited observation, not proof against races. Web/Android exports also pass. Final detail: `../../docs/BILLING_RETEST_20261014.md`.
+
+UI demo vẫn 100% → 100%, giữ tại `codex/sandbox-billing-ui`; nhánh `codex/sandbox-billing` chỉ giữ backend/domain và tài liệu contract. UI branch đã nhận bản sửa backend checkout hết hạn (410 và HTML recovery) và cả web/mobile map mã lỗi mới. Không đổi production readiness của scan/payment.
+
+Retest: backend extended acceptance pass; browser access-token TTL 60s tái hiện 401 → refresh 200, mua gói sau refresh cộng 33 → 43 lượt tủ lạnh, reload không cộng trùng; web/mobile reload đồng thời giữ phiên/số dư, checkout mobile và cancel pass, expiry recovery/return pass. Frontend typecheck, 600 tests/50 files, Next build và lint billing/auth pass; mobile typecheck/lint và 3 billing mapper tests pass. Native device/merchant sandbox còn cần kiểm chứng. Kết quả: `../../docs/BILLING_RETEST_20261014.md`.
+
 ## Sandbox billing extension — Updated 2026-10-13
 
 Phạm vi demo được người dùng duyệt riêng, hoàn thành 100% (0% → 100%): web/mobile có catalog, tạo đơn idempotent, checkout, trạng thái/lịch sử và số dư chung; backend cấp quyền một lần, dùng lượt chat miễn phí trước, tính một lượt/job quét và giới hạn số item Pantry. Không thay đổi mức hoàn thành production của Phase 21/22/27. Provider ngoài: VNPAY Sandbox; local sandbox chạy không cần đăng ký và ghi rõ không chuyển tiền thật.

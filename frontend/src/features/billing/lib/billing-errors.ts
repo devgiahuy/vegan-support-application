@@ -8,6 +8,7 @@ const messages: Record<string, string> = {
   BILLING_PROVIDER_UNAVAILABLE:
     'Chưa kết nối được cổng thanh toán. Đơn chưa được xác nhận; thử lại sau.',
   BILLING_SIGNATURE_INVALID: 'Không xác minh được kết quả thanh toán. Chưa cấp quyền lợi.',
+  BILLING_CHECKOUT_EXPIRED: 'Phiên thanh toán đã hết hạn. Quay lại danh sách gói và tạo đơn mới.',
   BILLING_PAYMENT_MISMATCH: 'Giao dịch không khớp đơn hàng. Chưa cấp quyền lợi.',
   BILLING_RECONCILE_COOLDOWN: 'Đợi ít nhất 5 phút giữa hai lần đối soát với VNPAY.',
   ENTITLEMENT_QUOTA_EXCEEDED: 'Bạn đã hết lượt. Mua thêm gói để tiếp tục.',

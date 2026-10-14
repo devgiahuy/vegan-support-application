@@ -1,5 +1,19 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-14] — Test lại billing lâu dài, xử lý checkout hết hạn và tách nhánh UI
+
+- Follow-up: overlapping localhost web/mobile refresh eventually returned 200 then 401, with session `REUSE_DETECTED`; the initial successful reload did not rule out a race. Corrected demo configuration separates cookie hostnames (web localhost, mobile UI/API 127.0.0.1). Fresh logins and repeated overlaps now retain sessions/balances with refresh 200. Auth rotation rules were preserved. Mobile web/Android exports pass; saved paid/expiry/mobile proof screenshots dated 2026-10-14 in `docs/billing-evidence/`.
+
+- Mục tiêu: Test lỗi ban đầu hoạt động nhưng về sau không được; xác nhận UI hoàn thiện; giữ primary branch cho backend và chuyển frontend/mobile sang nhánh riêng.
+- Đã làm: tạo `codex/sandbox-billing-ui` trong worktree riêng; giữ toàn bộ UI/consumers và nhận backend expiry fix. Primary branch trả `frontend/src`, frontend AGENTS và mobile về dev baseline; giữ API contract docs theo repository policy. Web/mobile map `BILLING_CHECKOUT_EXPIRED`. UI branch nhận backend-only baseline để merge client về sau không mất code.
+- Findings: khi bắt đầu các demo server đã dừng. Tái hiện được checkout hợp lệ nhưng quá TTL bị phân loại như sai chữ ký/403 và trả JSON trong browser; backend sửa thành 410 và trang recovery. Không khẳng định đây là nguyên nhân lỗi hôm trước vì không có response gốc.
+- Verify: expired access + 6 refresh rotations và extended billing acceptance pass. Browser dùng TTL access 60s: 401 → refresh 200, mua gói tăng 33 → 43 lượt, reload không tăng nữa; web/mobile simultaneous reload giữ phiên và số dư chung; mobile mở checkout/cancel đúng; expired checkout hiển thị hướng dẫn và return đúng. Khôi phục TTL bình thường sau test. Frontend tsc, 600 tests/50 files, build và scoped billing/auth lint pass; mobile tsc/lint và 3 mapper tests pass.
+- File tạo/sửa: billing error maps ở web/mobile; API registry, PROGRESS, WORK-LOG; backend fix/acceptance/OpenAPI và `docs/BILLING_RETEST_20261014.md` được nhận từ backend branch; screenshot evidence trong `docs/billing-evidence/`.
+- PROGRESS: billing UI demo 100% → 100%; external VNPAY merchant/native device/live AI accuracy vẫn chưa xác nhận production.
+- Còn lại: lịch sử lỗi chính xác cần original endpoint/status/code để đối chiếu; không gặp lỗi 500 billing trong lượt retest này. Không thay shared .env, auth rotation/security rules hoặc database chính.
+
+---
+
 ## [2026-10-13] — Payment sandbox và hạn mức chat, phân tích ảnh/hóa đơn, tủ đồ ăn
 
 - Mục tiêu: Phân tích rồi implement ngay web và mobile development/demo, chọn provider thuận tiện chạy sandbox, tự quyết các option trong phạm vi người dùng đã duyệt.
