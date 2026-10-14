@@ -116,15 +116,20 @@ export class BillingProviders {
       this.config.billing.provider !== 'sandbox' ||
       this.config.nodeEnv === 'production' ||
       order.provider !== 'sandbox' ||
-      !equalHash(this.sandboxToken(order), token) ||
-      order.expiresAt <= new Date()
+      !equalHash(this.sandboxToken(order), token)
     ) {
       throw paymentError(
         'BILLING_SIGNATURE_INVALID',
-        'Phiên thanh toán mô phỏng không hợp lệ hoặc đã hết hạn.',
+        'Phiên thanh toán mô phỏng không hợp lệ.',
         403,
       );
     }
+    if (order.expiresAt <= new Date())
+      throw paymentError(
+        'BILLING_CHECKOUT_EXPIRED',
+        'Phiên thanh toán đã hết hạn. Quay lại ứng dụng và tạo đơn mới.',
+        410,
+      );
   }
 
   checkout(order: PaymentOrder, ip: string): string {

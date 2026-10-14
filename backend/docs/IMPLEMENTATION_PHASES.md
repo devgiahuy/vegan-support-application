@@ -1,8 +1,8 @@
 # Backend Implementation Phases
 
-**Version:** 3.10
+**Version:** 3.11
 
-**Updated:** 2026-10-07
+**Updated:** 2026-10-14
 
 **Stack:** Node.js · Express · TypeScript · MongoDB replica set · Prisma · Zod · OpenAPI
 
@@ -193,6 +193,8 @@ Regenerate/validate OpenAPI using the repository workflow. Live external-provide
 User-approved cross-phase maintenance replaces PostgreSQL with MongoDB; this is not a new numbered product phase. Historical prompts and SQL migrations are archived context. Current provisioning uses `npm run prisma:push` (native validators/indexes), not Prisma Migrate. UUID contracts, permissions and confirmation boundaries remain unchanged. Historical-data preservation is optional. MongoDB maintenance gate: schema provisioning, idempotent seed, backend lint/typecheck/build, OpenAPI synchronization, existing acceptance flows and frontend compatibility checks passed on 2026-10-07. Verification record and operational instructions: [MONGODB_MIGRATION.md](MONGODB_MIGRATION.md). Phase 27 retains its existing release limitations.
 
 ## 10. Sandbox billing extension — approved 2026-10-13
+
+Retest 2026-10-14: backend lint/typecheck/build/OpenAPI and extended billing acceptance pass, including expired access plus six refresh rotations and expired checkout GET/POST with safe return/replacement order. Default checkout TTL remains 15 minutes; valid expiry is 410, invalid signatures stay 403. This does not establish the cause of the user's historical failure without the original response.
 
 Separate user-authorized extension, not a numbered Phase 28. Scope: one-time AI usage and Pantry capacity packages, VNPAY Sandbox and explicit local simulation, owner-only contracts, transactionally deduplicated grants/debits, scan attempt fencing/recovery and capacity checks on all three insert paths. Billing remains disabled by default and cannot run in production. Media storage, subscriptions and real-money refunds are deferred.
 

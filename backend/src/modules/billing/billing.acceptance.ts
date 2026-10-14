@@ -86,6 +86,61 @@ const expectCode = (code: string) => (error: unknown) =>
 try {
   await seedBillingProducts(db);
   assert.equal((await request('/billing/products', 'GET', undefined, '')).status, 401);
+  // Reproduce a long-lived session without waiting for the normal 15-minute TTL.
+  const loginResponse = await request(
+    '/auth/login',
+    'POST',
+    {
+      email: user.email,
+      password: 'DemoBilling2026!',
+    },
+    '',
+  );
+  assert.equal(loginResponse.status, 200);
+  const cookieFrom = (response: Response) => {
+    const cookie = response.headers
+      .getSetCookie()
+      .find((value) => value.startsWith('refreshToken='));
+    assert(cookie, 'Refresh rotation must return its HttpOnly cookie');
+    return cookie.split(';')[0]!;
+  };
+  let sessionCookie = cookieFrom(loginResponse);
+  const expiredAccess = await new TokenService({
+    ...config,
+    accessTokenTtlSeconds: -1,
+  }).issueAccessToken(user);
+  const expiredAccessResponse = await request(
+    '/billing/products',
+    'GET',
+    undefined,
+    expiredAccess.token,
+  );
+  assert.equal(expiredAccessResponse.status, 401);
+  assert.equal(
+    ((await expiredAccessResponse.json()) as { error: { code: string } }).error.code,
+    'TOKEN_EXPIRED',
+  );
+  for (let cycle = 0; cycle < 6; cycle++) {
+    const refreshed = await fetch(base + '/auth/refresh', {
+      method: 'POST',
+      headers: { Cookie: sessionCookie, 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    assert.equal(refreshed.status, 200, 'Refresh cycle ' + cycle);
+    const nextCookie = cookieFrom(refreshed);
+    assert.notEqual(nextCookie, sessionCookie);
+    sessionCookie = nextCookie;
+    const refreshedBody = (await refreshed.json()) as { data: { accessToken: string } };
+    assert.equal(
+      (await request('/billing/products', 'GET', undefined, refreshedBody.data.accessToken)).status,
+      200,
+    );
+    assert.equal(
+      (await request('/entitlements/me', 'GET', undefined, refreshedBody.data.accessToken)).status,
+      200,
+    );
+  }
+  console.info('PASS expired access token and six refresh rotations retain billing access');
   const before = await balance();
   const key = randomUUID();
   const order = await createOrder('combo', key);
@@ -157,6 +212,50 @@ try {
   console.info(
     'PASS checkout, owner auth, idempotency, 10 webhook replays, wrong amount, cancellation and late success',
   );
+
+  const expiryBalance = await balance();
+  const expiring = await createOrder('chat-100');
+  const expiredOrder = await db.paymentOrder.update({
+    where: { id: expiring.id },
+    data: { expiresAt: new Date(Date.now() - 1000) },
+  });
+  const expiredCheckoutUrl = billing.providers.checkout(expiredOrder, '127.0.0.1');
+  const expiredJson = await fetch(expiredCheckoutUrl);
+  assert.equal(expiredJson.status, 410);
+  assert.equal(
+    ((await expiredJson.json()) as { error: { code: string } }).error.code,
+    'BILLING_CHECKOUT_EXPIRED',
+  );
+  const expiredPage = await fetch(expiredCheckoutUrl, { headers: { Accept: 'text/html' } });
+  assert.equal(expiredPage.status, 410);
+  assert(expiredPage.headers.get('content-type')?.includes('text/html'));
+  assert((await expiredPage.text()).includes('Phiên thanh toán đã hết hạn'));
+  const expiredForm = await fetch(
+    new URL(expiredCheckoutUrl).origin + new URL(expiredCheckoutUrl).pathname,
+    {
+      method: 'POST',
+      redirect: 'manual',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded', Accept: 'text/html' },
+      body: new URLSearchParams({
+        token: new URL(expiredCheckoutUrl).searchParams.get('token')!,
+        outcome: 'PAID',
+      }),
+    },
+  );
+  assert.equal(expiredForm.status, 410);
+  assert((await expiredForm.text()).includes('Phiên thanh toán đã hết hạn'));
+  const expiredDetail = await billing.get(user.id, expiring.id, '127.0.0.1');
+  assert.equal(expiredDetail.status, 'EXPIRED');
+  assert.equal(expiredDetail.checkoutUrl, null);
+  assert.equal((await balance()).chatCredits, expiryBalance.chatCredits);
+  const replacement = await createOrder('chat-100');
+  assert(replacement.checkoutUrl);
+  await billing.sandboxSettle(
+    replacement.id,
+    new URL(replacement.checkoutUrl).searchParams.get('token')!,
+    'CANCELLED',
+  );
+  console.info('PASS expired checkout GET/POST show recovery, never grant and allow a new order');
 
   // HTTP SSE uses the real chat gateway with a deterministic development provider.
   const sessionResponse = await request('/chat/sessions', 'POST', { title: 'Billing acceptance' });

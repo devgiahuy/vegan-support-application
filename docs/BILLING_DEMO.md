@@ -1,6 +1,6 @@
 # Payment and allowances demo
 
-Updated: 2026-10-13. Branch: `codex/sandbox-billing`.
+Updated: 2026-10-14. Backend branch: `codex/sandbox-billing`. Web/mobile UI branch: `codex/sandbox-billing-ui`, created from the backend branch at its original billing commit. The UI worktree runs the clients while the primary checkout remains for backend work.
 
 ## What is implemented
 
@@ -47,6 +47,8 @@ Open http://localhost:8090/billing or enter through Profile → Gói tiện ích
 Expo web opens checkout in the same tab to avoid popup blocking. The default backend returns to the web billing page on port 3100; reopen port 8090 to continue the mobile web preview. A mobile-only demo can set `BILLING_DEMO_RETURN_URL=http://localhost:8090/billing`. Native uses the system browser; close it to return to the application, which refreshes balances on focus.
 
 ## Review scenarios
+
+Checkout links expire after 15 minutes by default. After expiry the server returns HTTP 410 / `BILLING_CHECKOUT_EXPIRED`; browsers receive a readable recovery page with a return link. Create a new order from the catalog instead of reusing an old checkout URL. Tampered tokens still return 403 and no expired request grants benefits. This intentional order expiry is separate from access-token expiry, which refreshes the signed-in session.
 
 1. Buy the combo and choose “Mô phỏng thanh toán thành công”. Return to the selected order; chat +100, fridge +10, receipts +10 and Pantry +50 appear.
 2. Reload the result page: benefits stay unchanged. Repeat a success notification: no extra grant.

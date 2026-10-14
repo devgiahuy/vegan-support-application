@@ -45763,6 +45763,21 @@
               }
             }
           },
+          "410": {
+            "description": "Valid local checkout capability has expired (BILLING_CHECKOUT_EXPIRED); browser HTML offers a return link, API callers receive the typed JSON error. No grant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              },
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
           "422": {
             "description": "Typed billing/allowance business error",
             "content": {
@@ -45889,6 +45904,21 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Valid local checkout capability has expired (BILLING_CHECKOUT_EXPIRED); browser HTML offers a return link, API callers receive the typed JSON error. No grant.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              },
+              "text/html": {
+                "schema": {
+                  "type": "string"
                 }
               }
             }
