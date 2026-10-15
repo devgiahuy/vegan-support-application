@@ -28,12 +28,18 @@ import { restaurantMapper } from '../mappers/restaurant.mapper';
  * - Hàm này KHÔNG trả DTO ra ngoài; luôn trả UI Model.
  * - Không log payload/tọa độ người dùng ra console.
  */
+/** Thời gian chờ tối đa cho các yêu cầu khám phá quán và bản đồ (10 giây). */
+export const RESTAURANT_REQUEST_TIMEOUT_MS = 10000;
+
 export const restaurantApi = {
   /**
    * `GET /restaurants/nearby` — quán lân cận theo tọa độ HOẶC theo khung vùng bản đồ.
    * `state.mode` quyết định gửi `lat`+`lng` hay `north`/`south`/`east`/`west`.
    */
-  getNearby: async (state: RestaurantSearchState, signal?: AbortSignal): Promise<RestaurantDiscoveryResult> => {
+  getNearby: async (
+    state: RestaurantSearchState,
+    signal?: AbortSignal
+  ): Promise<RestaurantDiscoveryResult> => {
     const params = restaurantMapper.toDiscoveryParams({
       ...state,
       mode: state.mode === 'KEYWORD' ? 'NEARBY' : state.mode,
@@ -41,6 +47,7 @@ export const restaurantApi = {
     const response = await api.get<RestaurantListResponseDto>(API_ENDPOINTS.RESTAURANTS.NEARBY, {
       params,
       silent: true,
+      timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
       ...(signal ? { signal } : {}),
     });
     return restaurantMapper.toDiscoveryModel(response.data);
@@ -50,7 +57,10 @@ export const restaurantApi = {
    * `GET /restaurants/search` — tìm theo từ khóa món ăn/tên quán kèm bộ lọc nâng cao.
    * Backend yêu cầu `q` bắt buộc 2..160 ký tự; từ khóa không hợp lệ thì chuyển an toàn sang `nearby`.
    */
-  search: async (state: RestaurantSearchState, signal?: AbortSignal): Promise<RestaurantDiscoveryResult> => {
+  search: async (
+    state: RestaurantSearchState,
+    signal?: AbortSignal
+  ): Promise<RestaurantDiscoveryResult> => {
     if (state.query.trim().length < 2) {
       return restaurantApi.getNearby({ ...state, mode: 'NEARBY' }, signal);
     }
@@ -58,6 +68,7 @@ export const restaurantApi = {
     const response = await api.get<RestaurantListResponseDto>(API_ENDPOINTS.RESTAURANTS.SEARCH, {
       params,
       silent: true,
+      timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
       ...(signal ? { signal } : {}),
     });
     return restaurantMapper.toDiscoveryModel(response.data);
@@ -67,6 +78,7 @@ export const restaurantApi = {
   getDetail: async (id: string): Promise<Restaurant> => {
     const response = await api.get<RestaurantResponseDto>(API_ENDPOINTS.RESTAURANTS.DETAIL(id), {
       silent: true,
+      timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
     });
     return restaurantMapper.toSingleModel(response.data);
   },
@@ -90,6 +102,7 @@ export const restaurantApi = {
     const response = await api.get<GeocodeResponseDto>(API_ENDPOINTS.LOCATION.GEOCODE, {
       params: { address: address.trim() },
       silent: true,
+      timeout: RESTAURANT_REQUEST_TIMEOUT_MS,
     });
     return restaurantMapper.toGeocodeResult(response.data);
   },

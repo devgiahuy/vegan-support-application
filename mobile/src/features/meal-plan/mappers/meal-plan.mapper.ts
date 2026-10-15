@@ -1,3 +1,4 @@
+import { resolveMediaUrl } from '@/lib/env';
 import { MealPlanGoal, MealType, NutritionDataQuality } from '@/common/enums';
 import { BaseMapper, pickField, safeArray, safeBoolean, safeDate, safeEnum, safeNumber, safeString } from '@/lib/mapper';
 import type { PaginationResult } from '@/types/api';
@@ -188,9 +189,9 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
       recipeTitle: !filled
         ? ''
         : hasCustomMeal
-          ? safeString(pickField(customMeal, ['name'], 'Món tự tạo'))
+          ? safeString(pickField(customMeal, ['name'], 'Món ăn cá nhân'))
           : safeString(pickField(recipe, ['title', 'name'], 'Món chay')),
-      coverImageUrl: filled && hasRecipe ? safeString(pickField(recipe, ['coverImageUrl'], '')) || null : null,
+      coverImageUrl: filled && hasRecipe ? resolveMediaUrl(safeString(pickField(recipe, ['coverImageUrl'], ''))) || null : null,
       servings,
       customMealCoverage:
         filled && hasCustomMeal ? safeString(pickField(customMeal, ['nutritionCoverage'], '')) || null : null,

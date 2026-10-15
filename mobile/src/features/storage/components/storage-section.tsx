@@ -25,7 +25,7 @@ export function StorageSection() {
     <View className="gap-4 py-5">
       <View className="flex-row items-center gap-2">
         <HardDrive size={22} color={colors.primary} />
-        <Text className="text-lg font-bold text-foreground">Dung lượng tài khoản</Text>
+        <Text className="text-lg font-bold text-foreground">Lưu trữ</Text>
       </View>
       <Text className="text-sm text-muted-foreground">{policyName}</Text>
       <View

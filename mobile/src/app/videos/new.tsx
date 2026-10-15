@@ -34,6 +34,7 @@ export default function CreateVideoScreen() {
                 title: values.title,
                 excerpt: values.excerpt,
                 youtubeUrl: values.youtubeUrl,
+                videoAssetId: values.videoAssetId,
                 body: values.body,
                 categoryIds: values.categoryIds,
                 tags: values.tags,

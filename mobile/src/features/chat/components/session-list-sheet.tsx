@@ -1,7 +1,8 @@
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
 import { Link, type Href } from 'expo-router';
 import { Compass, LogIn, MessageSquare, MessagesSquare, Plus, Sparkles, X } from 'lucide-react-native';
 
+import { LoadMoreButton } from '@/components/shared/load-more-button';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { useIconColors } from '@/lib/theme-colors';
 import { cn } from '@/lib/utils';
@@ -32,15 +33,15 @@ export function SessionListSheet({
   const colors = useIconColors();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const sessionsQuery = useChatSessionsQuery();
-  const sessions = sessionsQuery.data?.items ?? [];
+  const sessions = sessionsQuery.data?.pages.flatMap((page) => page.items) ?? [];
 
   if (!visible) return null;
 
   return (
-    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
-      <View className="flex-1 justify-end bg-black/50">
-        <Pressable className="flex-1" onPress={onClose} accessibilityLabel="Đóng" />
-        <View className="max-h-[80%] rounded-t-3xl bg-background px-5 pb-6 pt-4">
+    <Modal visible animationType="fade" transparent statusBarTranslucent onRequestClose={onClose}>
+      <View className="flex-1 items-center justify-center bg-black/60 px-5">
+        <Pressable accessibilityLabel="Đóng" onPress={onClose} style={StyleSheet.absoluteFill} />
+        <View className="w-full max-w-md max-h-[80%] rounded-3xl border border-border bg-background p-5">
           <View className="flex-row items-center justify-between gap-3">
             <Text className="flex-1 text-base font-bold text-foreground">Đoạn chat</Text>
             <Pressable onPress={onClose} accessibilityLabel="Đóng" className="h-9 w-9 items-center justify-center rounded-full bg-muted">
@@ -116,6 +117,13 @@ export function SessionListSheet({
                 );
               })
             )}
+            {isAuthenticated ? (
+              <LoadMoreButton
+                hasNextPage={sessionsQuery.hasNextPage}
+                isFetchingNextPage={sessionsQuery.isFetchingNextPage}
+                onPress={() => void sessionsQuery.fetchNextPage()}
+              />
+            ) : null}
           </ScrollView>
         </View>
       </View>

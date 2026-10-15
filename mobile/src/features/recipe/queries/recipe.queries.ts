@@ -21,8 +21,12 @@ export const useRecipesQuery = (params?: RecipeQueryParams) => {
 };
 
 /** Danh sách công thức phân trang kiểu "Tải thêm" (màn Khám phá món). `params` không chứa `page`. */
-export const useInfiniteRecipesQuery = (params?: Omit<RecipeQueryParams, 'page'>) => {
+export const useInfiniteRecipesQuery = (
+  params?: Omit<RecipeQueryParams, 'page'>,
+  options?: { enabled?: boolean }
+) => {
   return useInfiniteQuery({
+    enabled: options?.enabled ?? true,
     queryKey: [...RECIPE_QUERY_KEYS.all, 'infinite', params ?? {}] as const,
     queryFn: ({ pageParam }) => recipeApi.getRecipes({ ...params, page: pageParam }),
     initialPageParam: 1,

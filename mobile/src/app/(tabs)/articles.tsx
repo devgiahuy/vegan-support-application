@@ -10,18 +10,9 @@ import { LoadMoreButton } from '@/components/shared/load-more-button';
 import { useInfiniteArticlesQuery } from '@/features/post/queries/post.queries';
 import { CategoryType } from '@/common/enums';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
-import { CategoryFilterPills } from '@/features/category/components/category-filter-pills';
-import { cn } from '@/lib/utils';
+import { DropdownField } from '@/components/ui/dropdown-field';
+import { buildCategoryOptions } from '@/features/category/utils/category-options';
 import { useIconColors } from '@/lib/theme-colors';
-
-type DietSchool = 'ALL' | 'PHAT_GIAO' | 'DAO_GIAO' | 'THUAN_CHAY';
-
-const DIET_SCHOOL_FILTERS: { value: DietSchool; label: string }[] = [
-  { value: 'ALL', label: 'Tất cả trường phái' },
-  { value: 'PHAT_GIAO', label: 'Chay Phật giáo' },
-  { value: 'DAO_GIAO', label: 'Chay Đạo giáo / Cao Đài' },
-  { value: 'THUAN_CHAY', label: 'Thuần chay (Vegan)' },
-];
 
 type SortOrder = 'newest' | 'oldest';
 
@@ -42,7 +33,6 @@ export default function ArticlesScreen() {
   const params = useLocalSearchParams<{ category?: string }>();
   const [query, setQuery] = React.useState('');
   const [categoryId, setCategoryId] = React.useState<string | null>(params.category ?? null);
-  const [dietSchool, setDietSchool] = React.useState<DietSchool>('ALL');
   const [sortOrder, setSortOrder] = React.useState<SortOrder>('newest');
 
   const {
@@ -73,12 +63,12 @@ export default function ArticlesScreen() {
     );
     return list;
   }, [articlePages, sortOrder]);
-  const hasFilters = Boolean(categoryId || query || dietSchool !== 'ALL');
+  const hasFilters = Boolean(categoryId || query);
+  const categoryOptions = React.useMemo(() => buildCategoryOptions(categoryTree, 'Tất cả chủ đề'), [categoryTree]);
 
   const resetFilters = () => {
     setQuery('');
     setCategoryId(null);
-    setDietSchool('ALL');
   };
 
   return (
@@ -122,70 +112,26 @@ export default function ArticlesScreen() {
               className="h-11 flex-1 text-sm text-foreground"
             />
           </View>
-          <Link href={'/categories' as Href} asChild>
-            <Pressable className="h-11 items-center justify-center rounded-2xl bg-muted px-3.5">
-              <Text className="text-xs font-semibold text-foreground">Danh mục</Text>
-            </Pressable>
-          </Link>
         </View>
 
-        {/* Sắp xếp */}
-        <View className="flex-row items-center gap-2">
-          <Text className="text-xs font-medium text-muted-foreground">Sắp xếp:</Text>
-          {SORT_OPTIONS.map((option) => {
-            const selected = sortOrder === option.value;
-            return (
-              <Pressable
-                key={option.value}
-                onPress={() => setSortOrder(option.value)}
-                className={cn('rounded-full px-3 py-1.5', selected ? 'bg-primary' : 'bg-muted')}>
-                <Text
-                  className={cn(
-                    'text-xs font-medium',
-                    selected ? 'text-primary-foreground' : 'text-muted-foreground'
-                  )}>
-                  {option.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {/* Trường phái */}
-        <View className="flex-row flex-wrap gap-2">
-          {DIET_SCHOOL_FILTERS.map((s) => {
-            const selected = dietSchool === s.value;
-            return (
-              <Pressable
-                key={s.value}
-                onPress={() => setDietSchool(s.value)}
-                className={cn('rounded-full px-3 py-1.5', selected ? 'bg-primary' : 'bg-muted')}>
-                <Text
-                  className={cn(
-                    'text-xs font-medium',
-                    selected ? 'text-primary-foreground' : 'text-muted-foreground'
-                  )}>
-                  {s.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-
-        {/* Chủ đề (danh mục thật) */}
-        <View className="border-t border-border pt-4">
-          <Text className="mb-2 text-xs text-muted-foreground">Chủ đề</Text>
-          {isCategoryLoading ? (
-            <View className="h-8 rounded-lg bg-muted" />
-          ) : isCategoryError ? (
-            <Pressable onPress={() => void refetchCategories()}>
-              <Text className="text-sm text-primary underline">Không tải được danh mục. Thử lại.</Text>
-            </Pressable>
-          ) : categoryTree.length === 0 ? (
-            <Text className="text-sm text-muted-foreground">Chưa có chủ đề nội dung.</Text>
-          ) : (
-            <CategoryFilterPills items={categoryTree} selectedId={categoryId} onSelect={setCategoryId} />
-          )}
+        {/* Bộ lọc dạng popup đặt kề nhau: chủ đề · sắp xếp */}
+        <View className="flex-row gap-2">
+          <DropdownField
+            className="flex-[1.3]"
+            label="Chủ đề"
+            value={categoryId}
+            options={categoryOptions}
+            onChange={setCategoryId}
+            status={isCategoryLoading ? 'loading' : isCategoryError ? 'error' : undefined}
+            onRetry={() => void refetchCategories()}
+          />
+          <DropdownField
+            className="flex-1"
+            label="Sắp xếp"
+            value={sortOrder}
+            options={SORT_OPTIONS}
+            onChange={setSortOrder}
+          />
         </View>
 
         {/* Danh sách bài viết — 4 trạng thái */}

@@ -13,6 +13,10 @@
   ],
   "tags": [
     {
+      "name": "Billing",
+      "description": "Sandbox package purchases and allowances"
+    },
+    {
       "name": "Foundation",
       "description": "Service health and foundation contract"
     },
@@ -16757,6 +16761,488 @@
         "type": "string",
         "description": "SSE events: message_start, content_delta, message_complete, quota, error. data là JSON theo event type; chỉ cache assistant message sau message_complete.",
         "example": "event: message_start\ndata: {\"requestMessageId\":\"0781d468-5eb1-4bd0-9671-e4ca33b76462\",\"assistantMessageId\":\"1781d468-5eb1-4bd0-9671-e4ca33b76462\",\"replayed\":false}\n\nevent: content_delta\ndata: {\"delta\":\"Đậu hũ là một nguồn đạm...\"}\n\nevent: message_complete\ndata: {\"message\":{\"id\":\"1781d468-5eb1-4bd0-9671-e4ca33b76462\"},\"quota\":{\"limit\":20,\"used\":1,\"remaining\":19,\"resetAt\":\"2026-09-16T17:00:00.000Z\"}}\n\n"
+      },
+      "BillingCatalogEnvelope": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "payos"
+                ]
+              },
+              "simulated": {
+                "type": "boolean"
+              },
+              "products": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "priceVnd": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "chatCredits": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "fridgeCredits": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "receiptCredits": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "pantrySlots": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "description",
+                    "version",
+                    "priceVnd",
+                    "chatCredits",
+                    "fridgeCredits",
+                    "receiptCredits",
+                    "pantrySlots"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "enabled",
+              "provider",
+              "simulated",
+              "products"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "BillingOrderEnvelope": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "productId": {
+                "type": "string"
+              },
+              "productName": {
+                "type": "string"
+              },
+              "priceVnd": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "chatCredits": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "fridgeCredits": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "receiptCredits": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pantrySlots": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "payos",
+                  "sandbox",
+                  "vnpay"
+                ]
+              },
+              "simulated": {
+                "type": "boolean"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "PENDING",
+                  "PAID",
+                  "CANCELLED",
+                  "FAILED",
+                  "EXPIRED"
+                ]
+              },
+              "checkoutUrl": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "uri"
+              },
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time"
+              },
+              "paidAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "id",
+              "productId",
+              "productName",
+              "priceVnd",
+              "chatCredits",
+              "fridgeCredits",
+              "receiptCredits",
+              "pantrySlots",
+              "provider",
+              "simulated",
+              "status",
+              "checkoutUrl",
+              "createdAt",
+              "expiresAt",
+              "paidAt"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "BillingOrdersEnvelope": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "productId": {
+                      "type": "string"
+                    },
+                    "productName": {
+                      "type": "string"
+                    },
+                    "priceVnd": {
+                      "type": "integer",
+                      "exclusiveMinimum": 0
+                    },
+                    "chatCredits": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "fridgeCredits": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "receiptCredits": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "pantrySlots": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "provider": {
+                      "type": "string",
+                      "enum": [
+                        "payos",
+                        "sandbox",
+                        "vnpay"
+                      ]
+                    },
+                    "simulated": {
+                      "type": "boolean"
+                    },
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "PENDING",
+                        "PAID",
+                        "CANCELLED",
+                        "FAILED",
+                        "EXPIRED"
+                      ]
+                    },
+                    "checkoutUrl": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "uri"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "expiresAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "paidAt": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "productId",
+                    "productName",
+                    "priceVnd",
+                    "chatCredits",
+                    "fridgeCredits",
+                    "receiptCredits",
+                    "pantrySlots",
+                    "provider",
+                    "simulated",
+                    "status",
+                    "checkoutUrl",
+                    "createdAt",
+                    "expiresAt",
+                    "paidAt"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "page": {
+                "type": "integer"
+              },
+              "totalPages": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "items",
+              "page",
+              "totalPages",
+              "total"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "EntitlementEnvelope": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "enabled": {
+                "type": "boolean"
+              },
+              "provider": {
+                "type": "string",
+                "enum": [
+                  "payos"
+                ]
+              },
+              "simulated": {
+                "type": "boolean"
+              },
+              "chatCredits": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "fridgeCredits": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "receiptCredits": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pantrySlots": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "chatReserved": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "fridgeReserved": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "receiptReserved": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pantryUsed": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "pantryLimit": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
+              "fridgeMaxImages": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "receiptMaxImages": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "scanMaxAttempts": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "ledger": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "feature": {
+                      "type": "string",
+                      "enum": [
+                        "CHAT",
+                        "FRIDGE",
+                        "RECEIPT",
+                        "PANTRY"
+                      ]
+                    },
+                    "delta": {
+                      "type": "integer"
+                    },
+                    "reason": {
+                      "type": "string"
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "feature",
+                    "delta",
+                    "reason",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "enabled",
+              "provider",
+              "simulated",
+              "chatCredits",
+              "fridgeCredits",
+              "receiptCredits",
+              "pantrySlots",
+              "chatReserved",
+              "fridgeReserved",
+              "receiptReserved",
+              "pantryUsed",
+              "pantryLimit",
+              "fridgeMaxImages",
+              "receiptMaxImages",
+              "scanMaxAttempts",
+              "ledger"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ],
+        "additionalProperties": false
       },
       "FoodDataListResponse": {
         "type": "object",
@@ -44224,6 +44710,1042 @@
                     "message": "Tài khoản đang bị khóa",
                     "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                   }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/billing/products": {
+      "get": {
+        "summary": "List packages and payOS checkout availability",
+        "tags": [
+          "Billing"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingCatalogEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/entitlements/me": {
+      "get": {
+        "summary": "Owned allowances, Pantry capacity and recent ledger",
+        "tags": [
+          "Billing"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntitlementEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/billing/orders": {
+      "get": {
+        "summary": "Paginated owned payment history",
+        "tags": [
+          "Billing"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingOrdersEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create idempotent package order; server snapshots price and benefits",
+        "tags": [
+          "Billing"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "productId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 80
+                  },
+                  "idempotencyKey": {
+                    "type": "string",
+                    "minLength": 8,
+                    "maxLength": 160
+                  }
+                },
+                "required": [
+                  "productId",
+                  "idempotencyKey"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingOrderEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/billing/orders/{id}": {
+      "get": {
+        "summary": "Read owned order; return page does not settle it",
+        "tags": [
+          "Billing"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingOrderEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/billing/orders/{id}/reconcile": {
+      "post": {
+        "summary": "Recover same payOS checkout if needed, verify query and settle once; 30-second throttle",
+        "tags": [
+          "Billing"
+        ],
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Success",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingOrderEnvelope"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/billing/payos/webhook": {
+      "post": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Verify signed payOS notification and authoritative payment query; grant once",
+        "description": "Channel confirmation samples may omit the unsigned success envelope field. Data and signature remain required; verified unknown samples are acknowledged without granting benefits.",
+        "security": [],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "maxLength": 100
+                  },
+                  "desc": {
+                    "type": "string",
+                    "maxLength": 1000
+                  },
+                  "success": {
+                    "type": "boolean"
+                  },
+                  "signature": {
+                    "type": "string",
+                    "pattern": "^[a-f0-9]{64}$/i"
+                  },
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "orderCode": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "amount": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "description": {
+                        "type": "string",
+                        "maxLength": 2000
+                      },
+                      "accountNumber": {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      "reference": {
+                        "type": "string",
+                        "maxLength": 200
+                      },
+                      "transactionDateTime": {
+                        "type": "string",
+                        "maxLength": 100
+                      },
+                      "currency": {
+                        "type": "string",
+                        "maxLength": 20
+                      },
+                      "paymentLinkId": {
+                        "type": "string",
+                        "pattern": "^[a-f0-9]{32}$/i"
+                      },
+                      "code": {
+                        "type": "string",
+                        "maxLength": 100
+                      },
+                      "desc": {
+                        "type": "string",
+                        "maxLength": 1000
+                      }
+                    },
+                    "required": [
+                      "orderCode",
+                      "amount",
+                      "description",
+                      "accountNumber",
+                      "reference",
+                      "transactionDateTime",
+                      "currency",
+                      "paymentLinkId",
+                      "code",
+                      "desc"
+                    ],
+                    "additionalProperties": {}
+                  }
+                },
+                "required": [
+                  "code",
+                  "desc",
+                  "signature",
+                  "data"
+                ],
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Accepted, replay or signed unknown confirmation sample; no unverified grant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    }
+                  },
+                  "required": [
+                    "success"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/billing/payos/return/{id}": {
+      "get": {
+        "tags": [
+          "Billing"
+        ],
+        "summary": "Display-only browser return/cancel redirect; never grant or trust query payment claims",
+        "security": [],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "303": {
+            "description": "Configured application billing URL with local orderId"
+          },
+          "400": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Typed billing/allowance business error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
                 }
               }
             }

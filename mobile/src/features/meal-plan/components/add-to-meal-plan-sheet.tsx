@@ -1,9 +1,10 @@
 import * as React from 'react';
-import { Alert, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Link, type Href, useRouter } from 'expo-router';
 import { ArrowLeft, CalendarPlus, Minus, Plus, X } from 'lucide-react-native';
 
 import { MealType } from '@/common/enums';
+import { LoadMoreButton } from '@/components/shared/load-more-button';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/state-views';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { useIconColors } from '@/lib/theme-colors';
@@ -12,7 +13,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import {
   useManualAddMealMutation,
   useMealPlanDetailQuery,
-  useMealPlansQuery,
+  useInfiniteMealPlansQuery,
 } from '../queries/meal-plan.queries';
 import type { MealPlan, MealSlot } from '../types/meal-plan.model';
 import { createIdempotencyKey } from '../utils/idempotency';
@@ -47,12 +48,12 @@ function Body({
   const [planId, setPlanId] = React.useState<string | null>(null);
   const [servings, setServings] = React.useState(1);
 
-  const plansQuery = useMealPlansQuery({ page: 1, limit: 10 });
+  const plansQuery = useInfiniteMealPlansQuery(10);
   const detailQuery = useMealPlanDetailQuery(planId ?? '', planId !== null);
   const manualAdd = useManualAddMealMutation();
 
   const plan = detailQuery.data;
-  const plans = plansQuery.data?.items ?? [];
+  const plans = plansQuery.data?.pages.flatMap((page) => page.items) ?? [];
 
   const addToSlot = async (slot: MealSlot) => {
     if (!plan) return;
@@ -80,7 +81,7 @@ function Body({
   };
 
   return (
-    <View className="max-h-[88%] rounded-t-3xl bg-background px-5 pb-6 pt-4">
+    <View className="w-full max-w-md max-h-[88%] rounded-3xl border border-border bg-background p-5">
       <View className="flex-row items-start justify-between gap-3">
         <View className="flex-1">
           <Text className="text-base font-bold text-foreground">Thêm vào thực đơn</Text>
@@ -123,6 +124,11 @@ function Body({
                   </Text>
                 </Pressable>
               ))}
+              <LoadMoreButton
+                hasNextPage={plansQuery.hasNextPage}
+                isFetchingNextPage={plansQuery.isFetchingNextPage}
+                onPress={() => void plansQuery.fetchNextPage()}
+              />
             </>
           )
         ) : detailQuery.isLoading ? (
@@ -207,13 +213,13 @@ export function AddToMealPlanSheet({
   if (!visible) return null;
 
   return (
-    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
-      <View className="flex-1 justify-end bg-black/50">
-        <Pressable className="flex-1" onPress={onClose} accessibilityLabel="Đóng" />
+    <Modal visible animationType="fade" transparent statusBarTranslucent onRequestClose={onClose}>
+      <View className="flex-1 items-center justify-center bg-black/60 px-5">
+        <Pressable accessibilityLabel="Đóng" onPress={onClose} style={StyleSheet.absoluteFill} />
         {isAuthenticated ? (
           <Body recipeId={recipeId} recipeTitle={recipeTitle} onClose={onClose} />
         ) : (
-          <View className="rounded-t-3xl bg-background px-5 pb-8 pt-5">
+          <View className="w-full max-w-md rounded-3xl border border-border bg-background p-5">
             <Text className="text-center text-lg font-bold text-foreground">Đăng nhập để dùng thực đơn</Text>
             <Text className="mt-2 text-center text-sm text-muted-foreground">
               Thực đơn tuần là dữ liệu cá nhân, cần tài khoản để thêm món.

@@ -45,7 +45,7 @@ export default function MealProgramsScreen() {
       <View className="gap-5 px-5 pt-4">
         <View className="flex-row items-center justify-between gap-3">
           <View className="flex-1">
-            <Text className="text-2xl font-extrabold text-foreground">Lộ trình nhiều tuần</Text>
+            <Text className="text-2xl font-extrabold text-foreground">Lộ trình Dinh dưỡng Nhiều tuần</Text>
             <Text className="mt-1 text-sm text-muted-foreground">
               Tạo lộ trình 2-12 tuần, chọn phương án cho từng tuần và xem phân tích tích lũy.
             </Text>

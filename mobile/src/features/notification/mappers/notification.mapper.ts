@@ -12,6 +12,8 @@ import type { AppNotification, UnreadCount } from '../types/notification.model';
 const TYPE_LABELS: Record<string, string> = {
   POST_APPROVED: 'Bài được duyệt',
   POST_REJECTED: 'Bài viết bị từ chối',
+  VIDEO_APPROVED: 'Video được duyệt',
+  VIDEO_REJECTED: 'Video bị từ chối',
   COMMENT_REPLY: 'Trả lời bình luận',
   CONTRIBUTOR_APPROVED: 'Đơn cộng tác được duyệt',
   CONTRIBUTOR_REJECTED: 'Đơn cộng tác bị từ chối',
@@ -19,11 +21,14 @@ const TYPE_LABELS: Record<string, string> = {
   APPLICATION_DECIDED: 'Đơn cộng tác',
   RESTAURANT_APPROVED: 'Quán ăn được duyệt',
   RESTAURANT_REJECTED: 'Quán ăn bị từ chối',
+  STORAGE_QUOTA_WARNING: 'Cảnh báo dung lượng',
   STORAGE_WARNING: 'Cảnh báo dung lượng',
   QUOTA_WARNING: 'Cảnh báo dung lượng',
+  MODERATION_OUTCOME: 'Quyết định kiểm duyệt',
   MODERATION_ACTION: 'Quyết định kiểm duyệt',
   REPORT_RESOLVED: 'Báo cáo đã xử lý',
   AI_VERIFICATION_CREATED: 'Yêu cầu thẩm định AI',
+  AI_VERIFICATION_CHANGED: 'Cập nhật thẩm định AI',
   AI_VERIFICATION_STATUS: 'Cập nhật thẩm định AI',
   SYSTEM: 'Hệ thống',
 };
@@ -33,6 +38,25 @@ const TYPE_LABELS: Record<string, string> = {
  * mobile (ví dụ dashboard) đều bị bỏ để tránh mở màn không tồn tại.
  */
 const MOBILE_LINK_PREFIXES = ['/recipes/', '/articles/', '/videos/', '/restaurants/'];
+
+/**
+ * Backend chỉ kèm `link` cho bài/video/quán. Các loại còn lại mở màn liên quan trên mobile theo loại
+ * thông báo (bảng này chỉ là điều hướng, không suy luận thêm quyền hay trạng thái).
+ */
+const TYPE_FALLBACK_LINKS: Record<string, string> = {
+  CONTRIBUTOR_APPROVED: '/contributor-status',
+  CONTRIBUTOR_REJECTED: '/contributor-status',
+  CONTRIBUTOR_REVOKED: '/contributor-status',
+  APPLICATION_DECIDED: '/contributor-status',
+  MODERATION_OUTCOME: '/guidelines',
+  MODERATION_ACTION: '/guidelines',
+  AI_VERIFICATION_CREATED: '/ai-knowledge',
+  AI_VERIFICATION_CHANGED: '/ai-knowledge',
+  AI_VERIFICATION_STATUS: '/ai-knowledge',
+  STORAGE_QUOTA_WARNING: '/profile?tab=storage',
+  STORAGE_WARNING: '/profile?tab=storage',
+  QUOTA_WARNING: '/profile?tab=storage',
+};
 
 function toMobileLink(link: string): string | null {
   if (!link.startsWith('/') || link.startsWith('//')) return null;
@@ -68,7 +92,7 @@ export class NotificationMapper extends BaseMapper<NotificationDto, AppNotificat
       typeLabel: TYPE_LABELS[type] ?? 'Hệ thống',
       title: safeString(pickField(dto, ['title'], '')) || 'Thông báo mới',
       summary: safeString(pickField(dto, ['summary'], '')),
-      link: rawLink ? toMobileLink(rawLink) : null,
+      link: (rawLink ? toMobileLink(rawLink) : null) ?? TYPE_FALLBACK_LINKS[type] ?? null,
       read: pickField<boolean>(dto, ['read'], false),
       readAt: safeDate(pickField(dto, ['readAt', 'read_at'], null)),
       createdAt,

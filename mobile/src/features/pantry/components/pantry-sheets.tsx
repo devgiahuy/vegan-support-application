@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { FormSheet } from '@/components/shared/form-sheet';
 import { ErrorState, LoadingState } from '@/components/shared/state-views';
+import { DateField } from '@/components/ui/date-field';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextField } from '@/components/ui/text-field';
 import { IngredientPicker } from '@/features/ingredient/components/ingredient-picker';
@@ -88,7 +89,7 @@ export function PantryCreateSheet({ onClose }: { onClose: () => void }) {
     );
   };
   return (
-    <FormSheet title="Thêm nguyên liệu" onClose={onClose} busy={mutation.isPending}>
+    <FormSheet title="Thêm nguyên liệu" onClose={onClose} busy={mutation.isPending} variant="popup">
       <IngredientPicker label="Nguyên liệu" value={identity} onChange={setIdentity} />
       <TextField
         label="Số lượng"
@@ -97,20 +98,8 @@ export function PantryCreateSheet({ onClose }: { onClose: () => void }) {
         keyboardType="decimal-pad"
       />
       <TextField label="Đơn vị" value={unit} onChangeText={setUnit} maxLength={40} />
-      <TextField
-        label="Ngày mua"
-        placeholder="YYYY-MM-DD"
-        value={purchasedAt}
-        onChangeText={setPurchasedAt}
-        maxLength={10}
-      />
-      <TextField
-        label="Hạn dùng"
-        placeholder="YYYY-MM-DD"
-        value={date}
-        onChangeText={setDate}
-        maxLength={10}
-      />
+      <DateField label="Ngày mua" value={purchasedAt} onChange={setPurchasedAt} clearable />
+      <DateField label="Hạn dùng" value={date} onChange={setDate} clearable />
       <TextField label="Ghi chú độ tươi" value={note} onChangeText={setNote} maxLength={5000} />
       <InlineError message={error} />
       <PrimaryButton label="Thêm vào tủ bếp" loading={mutation.isPending} onPress={submit} />
@@ -118,18 +107,29 @@ export function PantryCreateSheet({ onClose }: { onClose: () => void }) {
   );
 }
 
-export function PantryItemSheet({ item: listItem, onClose }: { item: PantryItem; onClose: () => void }) {
+export function PantryItemSheet({
+  item: listItem,
+  onClose,
+  initialMode = 'OBSERVATION',
+  initialType = 'CONSUME',
+}: {
+  item: PantryItem;
+  onClose: () => void;
+  /** Tab mở đầu tiên: bấm "Tiêu hao"/"Bổ sung" ngoài danh sách mở thẳng tab Số lượng. */
+  initialMode?: 'OBSERVATION' | 'QUANTITY' | 'HISTORY';
+  initialType?: 'CONSUME' | 'RESTORE' | 'ADJUST';
+}) {
   // Danh sách có thể đã cũ; chi tiết mới nhất cung cấp `version` đúng cho khóa lạc quan khi lưu.
   const detail = usePantryItemQuery(listItem.id);
   const item = detail.data ?? listItem;
   const syncedVersion = React.useRef(item.version);
   const [refreshed, setRefreshed] = React.useState(false);
-  const [mode, setMode] = React.useState<'OBSERVATION' | 'QUANTITY' | 'HISTORY'>('OBSERVATION');
+  const [mode, setMode] = React.useState<'OBSERVATION' | 'QUANTITY' | 'HISTORY'>(initialMode);
   const [purchasedAt, setPurchasedAt] = React.useState(item.purchasedAt ?? '');
   const [openedAt, setOpenedAt] = React.useState(item.openedAt ?? '');
   const [expiresAt, setExpiresAt] = React.useState(item.expiresAt ?? '');
   const [note, setNote] = React.useState(item.freshnessNote ?? '');
-  const [type, setType] = React.useState<'CONSUME' | 'RESTORE' | 'ADJUST'>('CONSUME');
+  const [type, setType] = React.useState<'CONSUME' | 'RESTORE' | 'ADJUST'>(initialType);
   const [amount, setAmount] = React.useState('');
   const [reason, setReason] = React.useState('');
   const [page, setPage] = React.useState(1);
@@ -206,7 +206,7 @@ export function PantryItemSheet({ item: listItem, onClose }: { item: PantryItem;
     }
   };
   return (
-    <FormSheet title={item.displayName} onClose={onClose} busy={busy}>
+    <FormSheet title={item.displayName} onClose={onClose} busy={busy} variant="popup">
       <Text className="text-sm text-muted-foreground">Hiện có: {item.formattedQuantity}</Text>
       {refreshed ? (
         <Text className="text-xs text-primary">Mục này đã thay đổi, thông tin đã được tải lại theo bản mới nhất.</Text>
@@ -236,27 +236,9 @@ export function PantryItemSheet({ item: listItem, onClose }: { item: PantryItem;
       </View>
       {mode === 'OBSERVATION' ? (
         <>
-          <TextField
-            label="Ngày mua"
-            value={purchasedAt}
-            onChangeText={setPurchasedAt}
-            placeholder="YYYY-MM-DD"
-            maxLength={10}
-          />
-          <TextField
-            label="Ngày mở"
-            value={openedAt}
-            onChangeText={setOpenedAt}
-            placeholder="YYYY-MM-DD"
-            maxLength={10}
-          />
-          <TextField
-            label="Hạn dùng"
-            value={expiresAt}
-            onChangeText={setExpiresAt}
-            placeholder="YYYY-MM-DD"
-            maxLength={10}
-          />
+          <DateField label="Ngày mua" value={purchasedAt} onChange={setPurchasedAt} clearable />
+          <DateField label="Ngày mở" value={openedAt} onChange={setOpenedAt} clearable />
+          <DateField label="Hạn dùng" value={expiresAt} onChange={setExpiresAt} clearable />
           <TextField label="Ghi chú độ tươi" value={note} onChangeText={setNote} maxLength={5000} />
         </>
       ) : mode === 'QUANTITY' ? (
@@ -366,6 +348,7 @@ export function PantryMergeSheet({ items, onClose }: { items: PantryItem[]; onCl
       title="Gộp nguyên liệu"
       onClose={onClose}
       busy={merge.isPending || preview.isPending}
+      variant="popup"
     >
       {items.map((item) => (
         <Text key={item.id} className="text-foreground">

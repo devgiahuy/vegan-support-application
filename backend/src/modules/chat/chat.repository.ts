@@ -1,3 +1,4 @@
+import type { EntitlementService } from '../entitlements/entitlement.service.js';
 import { lockDocument } from '../../database/locking.js';
 import {
   AiRequestStatus,
@@ -28,6 +29,7 @@ export interface PreparedTurn {
 }
 
 export interface QuotaBucketState {
+  paidReservation?: boolean;
   successfulCount: number;
   quotaLimit: number;
   reservationKey: string | null;
@@ -35,7 +37,10 @@ export interface QuotaBucketState {
 }
 
 export class ChatRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly entitlements?: EntitlementService,
+  ) {}
 
   async purgeExpiredGuestHistory(now: Date): Promise<void> {
     await this.prisma.$transaction(async (transaction) =>
@@ -142,6 +147,7 @@ export class ChatRepository {
         const reset = await transaction.chatMessage.update({
           where: { id: response.id },
           data: {
+            processingToken: null,
             status: ChatMessageStatus.PENDING,
             content: '',
             provider: null,
@@ -231,26 +237,61 @@ export class ChatRepository {
     quotaLimit: number,
     reservationKey: string,
     reservationExpiresAt: Date,
+    ownerId?: string,
   ): Promise<QuotaBucketState> {
     return this.prisma.$transaction(async (transaction) => {
+      if (ownerId) await lockDocument(transaction, 'user', { id: ownerId });
       const where = { subjectKey_usageDate: { subjectKey, usageDate } };
       const existing = await transaction.aiQuotaBucket.findUnique({ where });
-      const now = new Date();
       if (
-        existing &&
-        (existing.successfulCount >= quotaLimit ||
-          (existing.reservationKey !== null &&
-            existing.reservationKey !== reservationKey &&
-            existing.reservationExpiresAt !== null &&
-            existing.reservationExpiresAt > now))
+        existing?.reservationKey &&
+        existing.reservationKey !== reservationKey &&
+        existing.reservationExpiresAt &&
+        existing.reservationExpiresAt > new Date()
       )
         return existing;
-      return transaction.aiQuotaBucket.upsert({
+      if (existing?.reservationKey && existing.reservationKey !== reservationKey) {
+        await this.entitlements?.settle(transaction, existing.reservationKey, false);
+        await transaction.chatMessage.updateMany({
+          where: { processingToken: existing.reservationKey, status: 'PENDING' },
+          data: { status: 'FAILED', processingToken: null },
+        });
+      }
+      const paid = Boolean(existing && existing.successfulCount >= quotaLimit);
+      if (paid) {
+        if (!ownerId || !this.entitlements?.config.billing.enabled) return existing!;
+        await this.entitlements.reserve(
+          transaction,
+          ownerId,
+          'CHAT',
+          reservationKey,
+          reservationExpiresAt,
+        );
+      }
+      const result = await transaction.aiQuotaBucket.upsert({
         where,
-        create: { subjectKey, usageDate, quotaLimit, reservationKey, reservationExpiresAt },
-        update: { quotaLimit, reservationKey, reservationExpiresAt },
+        create: {
+          subjectKey,
+          usageDate,
+          quotaLimit,
+          reservationKey,
+          reservationExpiresAt,
+          paidReservation: paid,
+        },
+        update: { quotaLimit, reservationKey, reservationExpiresAt, paidReservation: paid },
       });
+      const messageId = reservationKey.startsWith('CHAT:') ? reservationKey.split(':')[1] : null;
+      if (messageId)
+        await transaction.chatMessage.update({
+          where: { id: messageId },
+          data: { processingToken: reservationKey },
+        });
+      return result;
     });
+  }
+
+  async paidChatBalance(ownerId: string): Promise<number> {
+    return this.entitlements?.chatBalance(ownerId) ?? 0;
   }
 
   async completeQuota(
@@ -275,9 +316,12 @@ export class ChatRepository {
   }
 
   async releaseQuota(subjectKey: string, usageDate: Date, reservationKey: string): Promise<void> {
-    await this.prisma.aiQuotaBucket.updateMany({
-      where: { subjectKey, usageDate, reservationKey },
-      data: { reservationKey: null, reservationExpiresAt: null },
+    await this.prisma.$transaction(async (transaction) => {
+      const updated = await transaction.aiQuotaBucket.updateMany({
+        where: { subjectKey, usageDate, reservationKey },
+        data: { reservationKey: null, reservationExpiresAt: null, paidReservation: false },
+      });
+      if (updated.count) await this.entitlements?.settle(transaction, reservationKey, false);
     });
   }
 
@@ -355,14 +399,21 @@ export class ChatRepository {
     });
   }
 
-  markProviderCalled(requestMessageId: string) {
+  async markProviderCalled(requestMessageId: string, processingToken?: string) {
+    if (
+      processingToken &&
+      !(await this.prisma.chatMessage.findFirst({
+        where: { requestMessageId, processingToken, status: ChatMessageStatus.PENDING },
+      }))
+    )
+      return null;
     return this.prisma.aiRequestLog.update({
       where: { requestMessageId },
       data: { providerCallCount: { increment: 1 } },
     });
   }
 
-  finishRequestLog(
+  async finishRequestLog(
     requestMessageId: string,
     status: AiRequestStatus,
     data: {
@@ -371,8 +422,16 @@ export class ChatRepository {
       outputTokens?: number | null;
       errorCode?: string;
       redactedMetadata?: Prisma.InputJsonValue;
+      processingToken?: string;
     },
   ) {
+    if (
+      data.processingToken &&
+      !(await this.prisma.chatMessage.findFirst({
+        where: { requestMessageId, processingToken: data.processingToken },
+      }))
+    )
+      return null;
     return this.prisma.aiRequestLog.update({
       where: { requestMessageId },
       data: {
@@ -402,19 +461,29 @@ export class ChatRepository {
     outputTokens: number | null;
   }): Promise<{ message: ChatMessageRecord; quota: QuotaBucketState }> {
     return this.prisma.$transaction(async (transaction) => {
+      const currentMessage = await transaction.chatMessage.findUniqueOrThrow({
+        where: { id: data.assistantMessageId },
+      });
+      if (
+        currentMessage.status !== ChatMessageStatus.PENDING ||
+        currentMessage.processingToken !== data.reservationKey
+      )
+        throw new Error('CHAT_PROCESSING_TOKEN_LOST');
       const where = {
         subjectKey_usageDate: { subjectKey: data.subjectKey, usageDate: data.usageDate },
       };
       const bucket = await transaction.aiQuotaBucket.findUniqueOrThrow({ where });
       if (
         bucket.reservationKey !== data.reservationKey ||
-        bucket.successfulCount >= bucket.quotaLimit
+        (!bucket.paidReservation && bucket.successfulCount >= bucket.quotaLimit)
       )
         throw new Error('AI_QUOTA_RESERVATION_LOST');
+      await this.entitlements?.settle(transaction, data.reservationKey, true);
       const quota = await transaction.aiQuotaBucket.update({
         where,
         data: {
-          successfulCount: { increment: 1 },
+          successfulCount: { increment: bucket.paidReservation ? 0 : 1 },
+          paidReservation: false,
           reservationKey: null,
           reservationExpiresAt: null,
         },
@@ -422,6 +491,7 @@ export class ChatRepository {
       const message = await transaction.chatMessage.update({
         where: { id: data.assistantMessageId },
         data: {
+          processingToken: null,
           status: ChatMessageStatus.COMPLETED,
           content: data.content,
           provider: data.provider,
@@ -462,6 +532,13 @@ export class ChatRepository {
     redactedMetadata?: Prisma.InputJsonValue;
   }): Promise<ChatMessageRecord> {
     return this.prisma.$transaction(async (transaction) => {
+      if (data.reservationKey) {
+        const current = await transaction.chatMessage.findUniqueOrThrow({
+          where: { id: data.assistantMessageId },
+          include: messageInclude,
+        });
+        if (current.processingToken !== data.reservationKey) return current;
+      }
       if (data.subjectKey && data.usageDate && data.reservationKey) {
         await transaction.aiQuotaBucket.updateMany({
           where: {
@@ -469,12 +546,15 @@ export class ChatRepository {
             usageDate: data.usageDate,
             reservationKey: data.reservationKey,
           },
-          data: { reservationKey: null, reservationExpiresAt: null },
+          data: { reservationKey: null, reservationExpiresAt: null, paidReservation: false },
         });
       }
+      if (data.reservationKey)
+        await this.entitlements?.settle(transaction, data.reservationKey, false);
       const message = await transaction.chatMessage.update({
         where: { id: data.assistantMessageId },
         data: {
+          processingToken: null,
           status: ChatMessageStatus.COMPLETED,
           content: data.content,
           provider: data.provider,
@@ -540,16 +620,16 @@ export class ChatRepository {
     });
   }
 
-  failAssistant(id: string, partialContent: string): Promise<ChatMessageRecord> {
-    return this.prisma.chatMessage.update({
-      where: { id },
-      data: {
-        status: ChatMessageStatus.FAILED,
-        content: partialContent,
-        completedAt: new Date(),
-      },
-      include: messageInclude,
+  async failAssistant(
+    id: string,
+    partialContent: string,
+    processingToken?: string,
+  ): Promise<ChatMessageRecord> {
+    await this.prisma.chatMessage.updateMany({
+      where: { id, ...(processingToken ? { processingToken } : {}) },
+      data: { status: ChatMessageStatus.FAILED, content: partialContent, completedAt: new Date() },
     });
+    return this.prisma.chatMessage.findUniqueOrThrow({ where: { id }, include: messageInclude });
   }
 
   async findOwnedAssistantMessage(identity: ChatIdentity, id: string) {

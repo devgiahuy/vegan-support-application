@@ -1,8 +1,8 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.28
+**Version:** 4.35
 
-**Cập nhật:** 08/10/2026
+**Cập nhật:** 14/10/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
@@ -13,6 +13,57 @@
 ---
 
 ## 1. Source of truth và status
+
+### Usage billing extension — payOS conversion 2026-10-14
+
+User requested complete payOS conversion and will configure keys later. New purchases use payOS exclusively; payOS has no sandbox and transfers real money, even from a development app. App production rollout remains disabled. Existing quotas, confirmation rules and allowance accounting remain unchanged.
+
+Backend branch `codex/sandbox-billing` contains domain/contracts only; consumer changes live in `codex/sandbox-billing-ui`. The existing localhost/127.0.0.1 cookie-host isolation remains required for simultaneous web/mobile previews.
+
+Provider migration is complete in this UI checkout after web/mobile consumer gates passed. Catalog/entitlement provider is `payos`, simulated=false. Catalog enabled requires billing opt-in and complete merchant credentials; entitlement enabled describes usage enforcement. Old provider strings remain in history only.
+
+| Method | Endpoint | Status | FE integrated | Notes |
+| --- | --- | --- | --- | --- |
+| GET | `/billing/products` | `READY` | Yes, web/mobile 2026-10-14 | payOS catalog; purchase disabled without keys |
+| POST | `/billing/orders` | `READY` | Yes, web/mobile 2026-10-14 | Owner intent/server snapshot; unique persisted provider reference/link; retry recovers same code |
+| GET | `/billing/orders` | `READY` | Yes, web/mobile 2026-10-14 | Owned history retains legacy providers without checkout |
+| GET | `/billing/orders/:id` | `READY` | Yes, web/mobile 2026-10-14 | Owned status; expired URL hidden; return never grants |
+| POST | `/billing/orders/:id/reconcile` | `READY` | Yes, web/mobile 2026-10-14 | Signed payOS query; 30-second cooldown; history unchanged |
+| GET | `/entitlements/me` | `READY` | Yes, web/mobile 2026-10-14 | Usage enforcement/ledger with payOS provider |
+| POST | `/billing/payos/webhook` | `READY` | N/A | SDK signature + signed query; fully paid grant once; unknown signed samples ACK, including confirmation payloads without success |
+| GET | `/billing/payos/return/:id` | `READY` | N/A | Display-only redirect; query claims ignored |
+| GET | `/billing/vnpay/ipn` | `REMOVED` | N/A | No new VNPAY settlement |
+| GET | `/billing/vnpay/return` | `REMOVED` | N/A | Retired provider |
+| GET/POST | `/billing/sandbox/:id` | `REMOVED` | N/A | No simulator or fallback |
+
+Backend evidence: Mongo validators/partial unique indexes, isolated seed, authorization, lint/typecheck/build, OpenAPI and controlled SDK transport acceptance. External merchant/real-transfer acceptance remains pending keys. Phase 21/22 readiness is unchanged.
+
+Completed migration: recognize payos in mappers, allow new purchases only for payos, validate HTTPS pay.payos.vn checkout URLs, preserve historical labels/read-only records, remove simulation/VNPAY checkout wording, disclose real transfer and show disabled purchase without keys. Existing envelopes/benefits remain unchanged; provider references are internal.
+
+| Error | Frontend handling |
+| --- | --- |
+| `BILLING_DISABLED` | Unavailable action; history readable |
+| `BILLING_PRODUCT_UNAVAILABLE` | Refresh catalog |
+| `BILLING_ORDER_NOT_FOUND` | Owner-scoped not-found |
+| `BILLING_IDEMPOTENCY_CONFLICT` | Preserve intent; another intent for another package |
+| `BILLING_PENDING_LIMIT` | Resume existing payOS order |
+| `BILLING_PROVIDER_UNAVAILABLE` | Missing configuration/network error; no fallback or grant |
+| `BILLING_SIGNATURE_INVALID`, `BILLING_PAYMENT_MISMATCH` | Invalid shape/signature/reference/link/amount/currency; no grant. Webhook success is optional, but must be boolean when present; data/signature remain required |
+| `BILLING_RECONCILE_COOLDOWN` | Wait at least 30 seconds |
+| `BILLING_CHECKOUT_EXPIRED` | Historical retired local-checkout code; not emitted by current billing routes |
+| `ENTITLEMENT_QUOTA_EXCEEDED`, `PANTRY_CAPACITY_EXCEEDED`, `SCAN_RETRY_LIMIT_EXCEEDED` | Existing quota/capacity/retry handling |
+
+Changelog 2026-10-14 (4.32): user-authorized payOS conversion replaces routes/configuration and preserves historical orders. Signed SDK create/query/webhook, persisted references, partial-payment handling and 30-second checks. Backend gates pass; affected clients remain CHANGING until migration. No external merchant request.
+
+Changelog 2026-10-14 (4.33): web/mobile mapper migration and real-transfer UI disclosure complete; affected contracts returned to READY. Web scoped lint/typecheck, 602 tests/50 files and build, mobile typecheck/lint/6 billing tests, web export 64 routes and Android Hermes export pass. Browser confirms disabled purchase without keys, original balances and read-only history; mobile 390px has no horizontal overflow. External channel/transfer and native-device acceptance remain pending.
+
+Historical changelog: 4.29 introduced VNPAY/local simulation; 4.30 fixed local checkout expiry. These are superseded for new purchases by payOS.
+
+Changelog 2026-10-14 (4.34): live payOS channel verification omits the unsigned success field despite its required SDK/documentation type. Accept this field as optional without changing signed data or settlement authorization. Signed unknown confirmation samples ACK; invalid signatures/shapes still return 400. No consumer DTO or database change; sync generated OpenAPI. Credentialed QR/PENDING checks passed separately; actual payment/native-device acceptance remains open.
+
+Changelog 2026-10-14 (4.35): optional Docker `webhook` profile adds ngrok v3 for the existing payOS webhook, with a loopback-only inspector and configurable container/host upstream. Compose now forwards existing billing/payOS settings to the backend. Configure the ngrok HTTPS origin as `BILLING_PUBLIC_URL` (or `BILLING_DEMO_PUBLIC_URL` for the host demo) and register `/api/v1/billing/payos/webhook` on the payment channel; see [setup](../../backend/README.md#https-webhook-tunnel-with-ngrok-2026-10-14). No route, DTO, authorization, settlement rule, database or endpoint readiness change. After user credential configuration, Docker build/start and live HTTPS smoke checks passed: health/OpenAPI 200, unauthenticated billing 401, locally signed unknown webhook sample/replay 200, invalid signatures/unsigned payloads 400. The tunnel forwards to `http://backend:4000` and its origin matches `BILLING_PUBLIC_URL`. No payment order or checkout was created; an actual provider payment/settlement callback remains unverified.
+
+Provider webhook verification 2026-10-14, 22:07 Asia/Ho_Chi_Minh: the official payOS SDK `webhooks.confirm` accepted the user's existing ngrok webhook URL. The provider's validation POST reached the Docker backend and returned 200; its captured payload signature verified with the configured channel checksum. Tampering that captured signature returned 400 `BILLING_SIGNATURE_INVALID`. Confirmation registers/reconfirms the same requested URL; no checkout or bank transfer was performed. This verifies live provider-to-backend connectivity and validation, not paid-order settlement.
 
 ### Mobile integration record — 2026-10-03
 
@@ -31,9 +82,21 @@
 | `POST /posts`, `PATCH /posts/{id}` cover media; `/uploads/reservations*` with `kind: COVER_IMAGE` | `READY` | Yes, 2026-10-08: Recipe, Article and Video forms pick or capture a cover, upload it (reserve → Cloudinary → commit) and send `media: [{ provider: CLOUDINARY, kind: COVER_IMAGE, assetId }]`; the manual Cloudinary metadata fields on the Video form are removed | Cloudinary and camera/library device acceptance; edit flow cannot keep an existing cover (see 4.28) |
 | `POST/DELETE/PUT /custom-meals/{id}/photos*` | `READY` | Yes, 2026-10-08: add (pick/capture → upload → attach), set cover (first position), reorder and remove photos on the custom meal detail screen; limit 10 photos | Live database and device acceptance |
 | `DELETE /storage/assets/{id}` | `READY` | Yes, 2026-10-08: offered when removing a custom meal photo ("Gỡ và xóa tệp") to reclaim quota; `MEDIA_ASSET_IN_USE`, `MEDIA_DELETE_IDEMPOTENCY_CONFLICT` and `MEDIA_DELETE_FAILED` are mapped | Live provider acceptance |
+| `GET /posts?ingredientIds` (CSV of canonical ingredient UUIDs, max 20), `GET /custom-meals`, `GET /posts` (picker lists), `GET /meal-plans` | `READY` | Yes, 2026-10-13: Recipes screen filters by ingredients on hand (picked from `GET /ingredients`, sent as CSV; the backend returns only recipes containing all of them). The meal picker and the add-to-plan sheet now page through custom meals (50 per page), recipes (20) and plans (10) instead of stopping at the first page | Live database acceptance |
 | `/ingredient-recognition/jobs*`, `/receipt-jobs*` | `IN_PROGRESS`: real-image provider acceptance remains open | Yes, development-only exception approved by user on 2026-10-03: DTO/Model/Mapper/API/Query, `/fridge-scan`, `/receipt-scan`, Pantry links, picker/upload, polling, correction/rejection, confirmation diff, cancel/retry | Successful OpenAI recognition and native camera/permission acceptance; production integration remains disabled |
+| `POST /ai-artifacts/{id}/verifications` | `READY` | Yes, 2026-10-12: verification sheet on the public AI knowledge detail screen for approved Contributors and Admins (role read from the backend profile; the backend rejects self-verification and other roles) | Device acceptance with a Contributor account |
+| `GET /food-data/ingredients/{id}/nutrients`, `/food-data/reference-intakes`, `/food-data/ingredient-guidelines`, `/food-data/cooking-methods`, `/food-data/interaction-rules` | `READY` | Yes, 2026-10-13: "Tra cứu" screen (`/food-data`) with nutrient facts, reference intakes, guidelines, cooking methods and interaction rules, keeping source/version provenance; read-only (no admin record management on mobile) | Live database acceptance |
+| `POST /posts`, `PATCH /posts/{id}` video media; `/uploads/reservations*` with `kind: VIDEO` | `READY` | Yes, 2026-10-13: Video form offers a YouTube link or an uploaded file (library or camera; MP4, WebM, MOV). The file goes through reserve → Cloudinary → commit and is sent as `media: [{ provider: CLOUDINARY, kind: VIDEO, assetId }]`; the size limit comes from the reservation response | Cloudinary upload of a real video on device; edit flow cannot keep an uploaded video (see 4.29) |
+| `POST /reports` with `targetType: COMMENT` | `READY` | Yes, 2026-10-13: per-comment and per-reply "Báo cáo" action; the reason picker (all six reason codes plus optional 10–2000 character details) is now a popup, also used for post reports | Device acceptance |
+| `GET /restaurants/mine`, `GET /chat/sessions`, `GET /chat/sessions/{id}/messages`, `GET /posts` (search tabs) | `READY` | Yes, 2026-10-13: "Tải thêm" pagination on "Quán tôi đề xuất" (20 per page), chat sessions (20), search tabs (20) and chat messages (100 per page, all pages loaded automatically because messages are oldest-first) | Device acceptance with data larger than one page |
+| `GET /restaurants/nearby`, `GET /restaurants/search` meta `externalResultsSuppressed` | `READY` | Yes, 2026-10-13: notice and empty-state explanation when unverified external places are removed to honour diet, allergy or ingredient constraints | Live provider acceptance |
+| `POST /auth/refresh` (cookie) | `READY` | Yes, 2026-10-13: a failed refresh clears local session and cache and opens the login screen when the current screen needs a session; requests queued during a refresh are retried with the new token | Native cookie persistence after restarting the app |
 
 Approved development exception (2026-10-03): the user first authorized mobile integration with fake providers while these endpoints remain `IN_PROGRESS`, then explicitly requested switching the development preview to real OpenAI. The dedicated backend on port 4003 now uses `VISION_PROVIDER=openai` / `RECEIPT_PROVIDER=openai`; mobile web on port 8084 targets it and labels the configured provider as OpenAI. Newly created fridge and receipt jobs both persist provider `openai`, but recognition fails because the configured account still returns 429 credit_balance_exhausted / insufficient_quota. Existing fake jobs retain their original identity/results; create a new job after the switch. The exception still applies only to an opted-in Expo development runtime (`EXPO_PUBLIC_ENABLE_DEV_SCANS=true` plus `__DEV__`). Routes and API functions enforce this guard; production integration remains disabled. `EXPO_PUBLIC_SCAN_PROVIDER` changes the mobile label only, not backend behavior. Shared backend `.env`, API key and model settings were not changed. Setup: `mobile/docs/SCAN_DEV.md`.
+
+Changelog 2026-10-13 (4.30): mobile-only; no endpoint, contract or status change. The meal item picker and the "add recipe to plan" sheet no longer stop at the first page (custom meals 50, recipes 20, plans 10): they offer "Tải thêm", and while a keyword is typed the picker loads the remaining custom-meal pages because `GET /custom-meals` has no name search (only `tag`). The Recipes screen gains an "ingredients on hand" filter using the existing `ingredientIds` query parameter. Mobile gets `npm test` (runs the existing `*.test.ts` files through `tsx`; plain `node --test` cannot resolve extension-less imports) plus mapper tests for recipes and recommendations; 47 tests pass. The unused `expo-secure-store` dependency was removed. No live-device acceptance was run.
+
+Changelog 2026-10-13 (4.29): mobile-only; no endpoint, contract or status change. Records mobile work that was missing from this table: Contributor/Admin AI verification (2026-10-12), the "Tra cứu" food-data screen, and the 2026-10-13 additions listed above. Corrects the "Open mobile gaps" line of 4.27: cover/photo upload (4.28), Contributor AI verification and video file upload are done; the in-app video player and a real map view remain open (videos still open in the external browser; restaurants use a radar view). Mobile now handles `externalResultsSuppressed`, comment reports, extra pagination, and a session-expiry redirect. Notifications without a backend `link` open a mobile screen chosen by type (Contributor decisions, moderation outcomes, AI verification, storage quota); the mapping is navigation only and does not change any permission or status. The AI knowledge "Quản lý chia sẻ" action is shown only when the author name matches the signed-in account or the author is anonymous, because public records expose no owner id; the backend remains the authority and rejects non-owners. Contract gaps found, not changed: (1) post responses still expose no media `assetId` and `PATCH /posts/{id}` replaces the whole media list, so editing a video that was uploaded as a file requires choosing the file again (or switching to a YouTube link); (2) there is no `GET /ai-artifacts/{id}` and no endpoint to list the caller's own AI artifacts. Mobile typecheck and lint pass and the 32 existing unit tests pass when run with `tsx`; no live-device acceptance was run.
 
 Changelog 2026-10-08 (4.28): mobile-only upload completion; no endpoint, contract or status change. Added a shared image picker and upload hook on top of the existing reservation flow (avatar and scan screens keep using the unchanged `useUploadImageMutation`). Cover images are attached by `assetId` as the strict OpenAPI media schema requires; the previous Video form sent `publicId`/`secureUrl`/`bytes` metadata that this schema does not accept. Custom meal photos gain attach, reorder (first = cover) and remove, and removing a photo can also delete the stored file to reclaim quota. Contract gap found, not changed: post responses expose each media row `id` but not the `assetId`, and `PATCH /posts/{id}` replaces the whole media list, so an edit that does not pick a new cover saves the new revision without a cover. Mobile shows a note; fixing it needs the backend to expose `assetId` (or keep media when `media` is omitted), which would be a contract change. Mobile typecheck and lint pass; no live-device acceptance was run.
 

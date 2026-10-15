@@ -1,8 +1,8 @@
 # Software Requirements Specification — Vegan Support Application
 
-**Version:** 1.0
+**Version:** 1.2
 
-**Updated:** 2026-09-18
+**Updated:** 2026-10-14
 
 **Status:** Approved product baseline
 
@@ -159,7 +159,7 @@ When a user selects a diet pattern or tradition, the backend provides a default 
 - Enforce per-file and per-account storage quotas before accepting durable uploads.
 - Reserve, commit, and release quota safely so failed or abandoned uploads do not leak capacity.
 - Report usage and limits to the user and administrators.
-- MVP has no payment or quota-purchase flow.
+- Media storage purchases remain outside MVP. A user-approved development/demo extension (2026-10-13, FR-17) supports AI usage and Pantry item-capacity packages; it does not increase media storage.
 
 ### FR-11 Video lifecycle
 
@@ -199,6 +199,16 @@ When a user selects a diet pattern or tradition, the backend provides a default 
 - Model/vendor identifiers and quotas are configuration, not domain constants.
 - Administrators can disable a capability/provider and route to a documented fallback.
 - Sensitive prompt and health data are minimized and access-controlled.
+
+### FR-17 Purchases and usage allowances — approved 2026-10-13; payOS conversion 2026-10-14
+
+- Signed-in users buy one-time packages for additional chat answers, fridge-analysis jobs, receipt-analysis jobs and simultaneous Pantry item capacity.
+- Purchased allowances accumulate without expiry in this demo scope. Free daily chat is consumed first; failed/fallback answers do not consume purchased credits.
+- Each scan job is bounded by configured image limits. Full/partial successful analysis consumes one job credit once; total failure releases it. A previously charged job can retry without another debit, subject to configured attempt limits.
+- All undeleted Pantry records count toward capacity, including zero-quantity records. Manual creation and both confirmation flows enforce the same transactional cap. Over-limit existing data remains readable, editable and deletable; no automatic deletion occurs.
+- Only verified server-side settlement grants snapshotted benefits, once. Browser return URLs cannot grant allowances. Purchases never modify roles or bypass dietary rules, consent, provider controls or confirmation.
+- User-authorized provider conversion (2026-10-14) uses payOS exclusively for new purchases. payOS has no independent sandbox and checkout transfers real money; the development application must disclose this. Missing merchant credentials disable checkout without a simulation fallback. Application production rollout, recurring subscriptions, automatic refunds and mobile-store distribution remain deferred.
+- Historical VNPAY/local simulation orders and existing balances remain readable with original provider identity. Their old settlement/checkout routes are removed. Partial payments remain pending; only a verified fully paid provider order grants the fixed package once. Extra transferred money does not add package benefits or trigger automatic refunds.
 
 ## 6. Non-functional requirements
 
@@ -243,4 +253,4 @@ When a user selects a diet pattern or tradition, the backend provides a default 
 
 ## 9. Post-MVP roadmap
 
-All deferred requirements, including wearable integration, automatic video summarization, broader religious traditions, certificate verification, payments, formal DMCA operations, advanced moderation, and mature AI evaluation, are retained in `docs/ROADMAP_PHASE_2.md`.
+All deferred requirements, including wearable integration, automatic video summarization, broader religious traditions, certificate verification, production payments, formal DMCA operations, advanced moderation, and mature AI evaluation, are retained in `docs/ROADMAP_PHASE_2.md`.

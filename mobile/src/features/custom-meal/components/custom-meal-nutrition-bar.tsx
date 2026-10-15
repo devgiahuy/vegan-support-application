@@ -3,15 +3,27 @@ import { AlertTriangle, CheckCircle2, Flame } from 'lucide-react-native';
 import { useIconColors } from '@/lib/theme-colors';
 import type { CustomMeal } from '../types/custom-meal.model';
 
-function formatValue(value: number | null, unit: string): string {
-  return value === null ? 'Chưa nhập' : `${value} ${unit}`;
-}
-
-function Tile({ label, value }: { label: string; value: string }) {
+/**
+ * Ô một chỉ số. Có dữ liệu: khung liền, số đậm. Chưa có dữ liệu: khung nét đứt, chữ mờ nghiêng — nhìn là phân biệt được
+ * ngay với ô đã nhập (và nhắc rằng "trống" không có nghĩa là 0).
+ */
+function Tile({ label, value, unit }: { label: string; value: number | null; unit: string }) {
+  const missing = value === null;
   return (
-    <View className="min-w-[30%] flex-1 rounded-xl bg-muted/50 p-3">
+    <View
+      className={
+        missing
+          ? 'min-w-[30%] flex-1 rounded-xl border border-dashed border-border bg-muted p-3'
+          : 'min-w-[30%] flex-1 rounded-xl border border-border bg-background p-3'
+      }>
       <Text className="text-xs text-muted-foreground">{label}</Text>
-      <Text className="mt-1 text-base font-extrabold text-foreground">{value}</Text>
+      {missing ? (
+        <Text className="mt-1 text-sm italic text-muted-foreground">Chưa nhập</Text>
+      ) : (
+        <Text className="mt-1 text-base font-extrabold text-foreground">
+          {value} {unit}
+        </Text>
+      )}
     </View>
   );
 }
@@ -44,11 +56,11 @@ export function CustomMealNutritionBar({ meal }: { meal: CustomMeal }) {
       </View>
 
       <View className="flex-row flex-wrap gap-2">
-        <Tile label="Năng lượng" value={formatValue(meal.calories, 'kcal')} />
-        <Tile label="Đạm" value={formatValue(meal.proteinGrams, 'g')} />
-        <Tile label="Carb" value={formatValue(meal.carbsGrams, 'g')} />
-        <Tile label="Béo" value={formatValue(meal.fatGrams, 'g')} />
-        <Tile label="Xơ" value={formatValue(meal.fiberGrams, 'g')} />
+        <Tile label="Năng lượng" value={meal.calories} unit="kcal" />
+        <Tile label="Đạm" value={meal.proteinGrams} unit="g" />
+        <Tile label="Carb" value={meal.carbsGrams} unit="g" />
+        <Tile label="Béo" value={meal.fatGrams} unit="g" />
+        <Tile label="Xơ" value={meal.fiberGrams} unit="g" />
       </View>
 
       {total > 0 ? (

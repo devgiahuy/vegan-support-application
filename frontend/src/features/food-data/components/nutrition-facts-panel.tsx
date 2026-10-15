@@ -23,6 +23,7 @@ interface NutritionFactsPanelProps {
   referenceIntakes?: ReferenceIntakeItem[];
   selectedPopulationCode?: string;
   className?: string;
+  showProvenance?: boolean;
 }
 
 export function NutritionFactsPanel({
@@ -32,6 +33,7 @@ export function NutritionFactsPanel({
   referenceIntakes = [],
   selectedPopulationCode = 'GENERAL_ADULT',
   className = '',
+  showProvenance = true,
 }: NutritionFactsPanelProps) {
   const query = useIngredientNutrientsQuery(
     ingredientId || '',
@@ -57,7 +59,7 @@ export function NutritionFactsPanel({
       <div className={`rounded-xl border bg-card p-5 shadow-sm space-y-4 max-w-md ${className}`}>
         <div className="flex justify-between items-start">
           <Skeleton className="h-6 w-36" />
-          <Skeleton className="h-5 w-24 rounded-full" />
+          {showProvenance && <Skeleton className="h-5 w-24 rounded-full" />}
         </div>
         <Skeleton className="h-4 w-48" />
         <div className="border-y-4 border-foreground py-2 my-2 flex justify-between items-baseline">
@@ -187,7 +189,7 @@ export function NutritionFactsPanel({
             Tính trên 100g phần ăn được ({data.ediblePortionPercent}% ăn được)
           </p>
         </div>
-        <SourceProvenanceBadge provenance={data.provenance} />
+        {showProvenance && <SourceProvenanceBadge provenance={data.provenance} />}
       </div>
 
       {/* Serving Conversion if available */}

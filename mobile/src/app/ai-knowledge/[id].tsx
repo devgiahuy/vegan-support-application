@@ -16,6 +16,7 @@ import { useInfinitePublicAiArtifactsQuery } from '@/features/ai-artifact/querie
 import { getAiArtifactErrorMessage } from '@/features/ai-artifact/utils/ai-artifact-errors';
 import { getApiErrorCode } from '@/lib/api-error';
 import { useIconColors } from '@/lib/theme-colors';
+import { canManageSharing } from '@/features/ai-artifact/utils/can-manage-sharing';
 import { useAuthStore } from '@/store/useAuthStore';
 
 const DISCLAIMER =
@@ -101,7 +102,7 @@ export default function AiKnowledgeDetailScreen() {
                 icon={<Share2 size={14} color={colors.foreground} />}
                 onPress={() => void Share.share({ title: artifact.title, message: `${artifact.title}\n\n${artifact.summary}`.trim() })}
               />
-              {isAuthenticated ? (
+              {isAuthenticated && canManageSharing(artifact, currentUser) ? (
                 <PrimaryButton
                   label="Quản lý chia sẻ"
                   variant="outline"

@@ -31,6 +31,8 @@ import {
 } from '@/features/meal-plan/queries/meal-plan.queries';
 import type { EstimatedMacros, MealPlan, MealSlot } from '@/features/meal-plan/types/meal-plan.model';
 import { createIdempotencyKey } from '@/features/meal-plan/utils/idempotency';
+import { PlanShoppingGap } from '@/features/shopping/components/plan-shopping-gap';
+import { mealsFromPlan } from '@/features/shopping/utils/plan-meals';
 import {
   getMealAnalysisErrorMessage,
   getMealPlanErrorMessage,
@@ -466,6 +468,7 @@ export default function MealPlanDetailScreen() {
   }
 
   const days = groupDays(plan);
+  const planMeals = mealsFromPlan(plan.items);
   const busy =
     swapMutation.isPending || deleteMutation.isPending || analyzeMutation.isPending || manualAddMutation.isPending;
   const targets = plan.estimatedTargets;
@@ -597,6 +600,8 @@ export default function MealPlanDetailScreen() {
             )}
           </View>
         </View>
+
+        <PlanShoppingGap meals={planMeals} />
 
         <Text className="mt-4 text-xs text-muted-foreground">
           {plan.vitaminB12Mcg !== null

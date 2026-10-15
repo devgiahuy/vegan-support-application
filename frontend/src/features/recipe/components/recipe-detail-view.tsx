@@ -41,6 +41,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { NutritionFactsPanel } from '@/features/food-data/components/nutrition-facts-panel';
 import { RecipeNutritionCard } from '@/features/recipe-nutrition/components/recipe-nutrition-card';
 import { RecipeCard } from './recipe-card';
+import { RecipeAllergenHighlight } from './recipe-allergen-highlight';
 import type { Recipe } from '../types/recipe.model';
 import {
   getAllergenName,
@@ -347,6 +348,9 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
             </Card>
           </div> */}
 
+          {/* CẢNH BÁO DỊ ỨNG NỔI BẬT */}
+          <RecipeAllergenHighlight allergens={allergens} />
+
           {/* INGREDIENTS CHECKLIST SECTION */}
           <Card className="border-border/60 shadow-sm overflow-hidden">
             <CardHeader className="bg-muted/40 pb-4 border-b flex flex-row items-center justify-between">
@@ -548,7 +552,7 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
           </div>
 
           {/* Tương thích & dị ứng từ backend — chỉ hiện khi có dữ liệu thật */}
-          {hasCompatibilityInfo && (
+          {/* {hasCompatibilityInfo && (
             <Card className="border-border/60 shadow-sm">
               <CardHeader className="pb-3 border-b">
                 <CardTitle className="text-base font-bold flex items-center gap-2 text-foreground">
@@ -616,7 +620,7 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
                 })}
               </CardContent>
             </Card>
-          )}
+          )} */}
 
           {/* REVIEWS & COMMUNITY FEEDBACK — chỉ hiện khi có dữ liệu thật */}
           {((recipe.reviews && recipe.reviews.length > 0) ||

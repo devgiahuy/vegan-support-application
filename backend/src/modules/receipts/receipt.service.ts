@@ -300,7 +300,7 @@ export class ReceiptService {
       job.modelId !== this.provider.model ||
       job.templateVersion !== this.provider.templateVersion
     ) {
-      await this.repository.markFailed(job.id);
+      await this.repository.markFailed(job.id, job.attemptCount);
       return;
     }
     try {
@@ -318,6 +318,7 @@ export class ReceiptService {
       const candidates = await this.mapProviderLines(results);
       await this.repository.saveResults({
         jobId: job.id,
+        expectedAttempt: job.attemptCount,
         inputs: results.map((result) => ({ inputId: result.inputId, error: result.error })),
         candidates,
         metadata: {
@@ -331,7 +332,7 @@ export class ReceiptService {
         },
       });
     } catch {
-      await this.repository.markFailed(job.id);
+      await this.repository.markFailed(job.id, job.attemptCount);
     }
   }
 

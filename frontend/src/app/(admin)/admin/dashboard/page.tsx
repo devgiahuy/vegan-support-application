@@ -227,9 +227,9 @@ function AdminDashboardContent() {
           <div>
             <h1 className="flex items-center gap-2 text-xl font-bold md:text-2xl">
               <BadgeCheckIcon /> Bảng Điều Hành Trung Tâm
-              <Badge variant="secondary" className="rounded-full">
+              {/* <Badge variant="secondary" className="rounded-full">
                 RBAC V2.4
-              </Badge>
+              </Badge> */}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
               Hàng đợi duyệt:{' '}

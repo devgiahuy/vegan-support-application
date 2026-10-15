@@ -7,6 +7,138 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum PaymentOrderStatus {
+  PENDING
+  PAID
+  CANCELLED
+  FAILED
+  EXPIRED
+}
+
+enum UsageReservationStatus {
+  HELD
+  SPENT
+  RELEASED
+}
+
+enum EntitlementFeature {
+  CHAT
+  FRIDGE
+  RECEIPT
+  PANTRY
+}
+
+model BillingProduct {
+  referenceVersion Int      @default(0) @map("reference_version")
+  id               String   @id @map("_id")
+  name             String
+  description      String
+  version          Int      @default(1)
+  active           Boolean  @default(true)
+  priceVnd         Int      @map("price_vnd")
+  chatCredits      Int      @map("chat_credits")
+  fridgeCredits    Int      @map("fridge_credits")
+  receiptCredits   Int      @map("receipt_credits")
+  pantrySlots      Int      @map("pantry_slots")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@map("billing_products")
+}
+
+model PaymentOrder {
+  referenceVersion    Int                @default(0) @map("reference_version")
+  id                  String             @id @default(uuid()) @map("_id")
+  ownerId             String             @map("owner_id")
+  productId           String             @map("product_id")
+  productName         String             @map("product_name")
+  productVersion      Int                @map("product_version")
+  priceVnd            Int                @map("price_vnd")
+  chatCredits         Int                @map("chat_credits")
+  fridgeCredits       Int                @map("fridge_credits")
+  receiptCredits      Int                @map("receipt_credits")
+  pantrySlots         Int                @map("pantry_slots")
+  provider            String
+  providerOrderCode   String?            @unique @map("provider_order_code")
+  providerLinkId      String?            @unique @map("provider_link_id")
+  providerCheckoutUrl String?            @map("provider_checkout_url")
+  status              PaymentOrderStatus @default(PENDING)
+  idempotencyKey      String             @map("idempotency_key")
+  expiresAt           DateTime           @map("expires_at")
+  paidAt              DateTime?          @map("paid_at")
+  lastQueriedAt       DateTime?          @map("last_queried_at")
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+  owner               User               @relation(fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  events              PaymentEvent[]
+
+  @@unique([ownerId, idempotencyKey])
+  @@index([ownerId, createdAt])
+  @@index([status, expiresAt])
+  @@map("payment_orders")
+}
+
+model PaymentEvent {
+  referenceVersion Int          @default(0) @map("reference_version")
+  id               String       @id @default(uuid()) @map("_id")
+  transactionKey   String       @unique @map("transaction_key")
+  orderId          String       @map("order_id")
+  provider         String
+  amountVnd        Int          @map("amount_vnd")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  order            PaymentOrder @relation(fields: [orderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("payment_events")
+}
+
+model EntitlementAccount {
+  referenceVersion Int      @default(0) @map("reference_version")
+  id               String   @id @default(uuid()) @map("_id")
+  ownerId          String   @unique @map("owner_id")
+  chatCredits      Int      @default(0) @map("chat_credits")
+  fridgeCredits    Int      @default(0) @map("fridge_credits")
+  receiptCredits   Int      @default(0) @map("receipt_credits")
+  pantrySlots      Int      @default(0) @map("pantry_slots")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+  owner            User     @relation(fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("entitlement_accounts")
+}
+
+model UsageReservation {
+  referenceVersion Int                    @default(0) @map("reference_version")
+  id               String                 @id @default(uuid()) @map("_id")
+  ownerId          String                 @map("owner_id")
+  resourceKey      String                 @unique @map("resource_key")
+  feature          EntitlementFeature
+  status           UsageReservationStatus @default(HELD)
+  leaseUntil       DateTime               @map("lease_until")
+  generation       Int                    @default(1)
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+  owner            User                   @relation(fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([status, leaseUntil])
+  @@index([ownerId, feature, status])
+  @@map("usage_reservations")
+}
+
+model EntitlementLedger {
+  referenceVersion Int                @default(0) @map("reference_version")
+  id               String             @id @default(uuid()) @map("_id")
+  ownerId          String             @map("owner_id")
+  operationKey     String             @unique @map("operation_key")
+  feature          EntitlementFeature
+  delta            Int
+  reason           String
+  createdAt        DateTime           @default(now()) @map("created_at")
+  owner            User               @relation(fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([ownerId, createdAt])
+  @@map("entitlement_ledger")
+}
+
 enum Role {
   MEMBER
   CONTRIBUTOR
@@ -584,6 +716,10 @@ enum AiVerificationAdminActionType {
 model User {
   referenceVersion               Int                         @default(0) @map("reference_version")
   lockVersion                    Int                         @default(0) @map("lock_version")
+  paymentOrders                  PaymentOrder[]
+  entitlementAccount             EntitlementAccount?
+  entitlementLedger              EntitlementLedger[]
+  usageReservations              UsageReservation[]
   id                             String                      @id @default(uuid()) @map("_id")
   email                          String                      @unique
   passwordHash                   String                      @map("password_hash")
@@ -923,6 +1059,7 @@ model PantryAdjustment {
 }
 
 model RecognitionJob {
+  queuedAt              DateTime               @default(now()) @map("queued_at")
   referenceVersion      Int                    @default(0) @map("reference_version")
   id                    String                 @id @default(uuid()) @map("_id")
   ownerId               String                 @map("owner_id")
@@ -1024,6 +1161,7 @@ model RecognitionCandidateEvidence {
 }
 
 model ReceiptJob {
+  queuedAt              DateTime           @default(now()) @map("queued_at")
   referenceVersion      Int                @default(0) @map("reference_version")
   id                    String             @id @default(uuid()) @map("_id")
   ownerId               String             @map("owner_id")
@@ -1737,6 +1875,7 @@ model ChatSession {
 }
 
 model ChatMessage {
+  processingToken    String?           @map("processing_token")
   referenceVersion   Int               @default(0) @map("reference_version")
   id                 String            @id @default(uuid()) @map("_id")
   sessionId          String            @map("session_id")
@@ -1872,6 +2011,7 @@ model AiQuotaBucket {
   usageDate            DateTime  @map("usage_date")
   successfulCount      Int       @default(0) @map("successful_count")
   quotaLimit           Int       @map("quota_limit")
+  paidReservation      Boolean   @default(false) @map("paid_reservation")
   reservationKey       String?   @map("reservation_key")
   reservationExpiresAt DateTime? @map("reservation_expires_at")
   createdAt            DateTime  @default(now()) @map("created_at")

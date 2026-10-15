@@ -176,15 +176,15 @@ export default function VideoDetailScreen() {
 
         <CommunityPanel postId={video.id} showBookmark commentPlaceholder="Chia sẻ cảm nhận hoặc câu hỏi về video..." />
 
-        <View className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
-          <View className="flex-row items-center gap-2">
-            <Sparkles size={16} color={colors.primary} />
-            <Text className="font-bold text-foreground">Tóm tắt công thức</Text>
+        {video.summary ? (
+          <View className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+            <View className="flex-row items-center gap-2">
+              <Sparkles size={16} color={colors.primary} />
+              <Text className="font-bold text-foreground">Tóm tắt công thức</Text>
+            </View>
+            <Text className="mt-3 text-sm leading-relaxed text-muted-foreground">{video.summary}</Text>
           </View>
-          <Text className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            {video.summary || 'Backend chưa có tóm tắt công thức cho video này.'}
-          </Text>
-        </View>
+        ) : null}
 
         {video.tags.length > 0 ? (
           <View className="flex-row flex-wrap gap-2">

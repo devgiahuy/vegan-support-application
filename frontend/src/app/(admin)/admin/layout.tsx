@@ -160,7 +160,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
   const renderFooterCards = () => (
     <div className="space-y-3">
-      <div className="rounded-xl border bg-muted/40 p-3 text-xs">
+      {/* <div className="rounded-xl border bg-muted/40 p-3 text-xs">
         <p className="flex items-center gap-1.5 font-semibold text-foreground">
           <ShieldCheck className="h-4 w-4 text-primary shrink-0" /> Cơ sở dữ liệu
         </p>
@@ -168,7 +168,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           <div className="h-full w-1/3 rounded-full bg-primary" />
         </div>
         <p className="mt-1.5 text-muted-foreground">Sức chứa 32.4% / 250GB</p>
-      </div>
+      </div> */}
 
       <div className="flex items-center gap-2.5 rounded-xl border bg-card p-3 shadow-2xs">
         <Avatar className="h-9 w-9 shrink-0">
@@ -226,15 +226,15 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           </div>
 
           <div className="ml-auto flex items-center gap-2 shrink-0">
-            <Badge variant="outline" className="hidden gap-1.5 rounded-full md:inline-flex text-xs">
+            {/* <Badge variant="outline" className="hidden gap-1.5 rounded-full md:inline-flex text-xs">
               <ShieldCheck className="h-3.5 w-3.5 text-primary" /> RBAC V2.4
-            </Badge>
-            <button
+            </Badge> */}
+            {/* <button
               aria-label="Thông báo"
               className="rounded-full p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
             >
               <Bell className="h-5 w-5" />
-            </button>
+            </button> */}
             <Link
               href="/"
               className="rounded-full px-3 py-1.5 text-sm text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"

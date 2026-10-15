@@ -88,7 +88,7 @@ export function VerificationSheet({
   };
 
   return (
-    <FormSheet title="Thẩm định tri thức AI" onClose={onClose} busy={mutation.isPending}>
+    <FormSheet title="Thẩm định tri thức AI" onClose={onClose} busy={mutation.isPending} variant="popup">
       <View className="gap-1.5 rounded-2xl border border-border bg-card p-3.5">
         <Text className="text-xs font-semibold text-muted-foreground">Bản ghi</Text>
         <Text className="text-base font-bold text-foreground">{artifact.title}</Text>

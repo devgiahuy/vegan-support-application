@@ -1,5 +1,7 @@
 'use client';
 
+import { AllowanceNotice } from '@/features/billing/components/allowance-notice';
+
 import React, { useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -96,6 +98,7 @@ export function ReceiptScanClientView() {
         )}
       </div>
 
+      <AllowanceNotice feature="RECEIPT" />
       {/* Trường hợp lỗi tải tác vụ */}
       {activeJobId && isError && (
         <div className="max-w-xl mx-auto py-12 text-center space-y-5">

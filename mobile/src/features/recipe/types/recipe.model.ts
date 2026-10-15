@@ -13,10 +13,16 @@ export interface RecipeInstructionStep {
   instruction: string;
   durationMinutes: number | null;
   temperatureCelsius: number | null;
+  cookingMethodId: string | null;
   cookingMethodName: string | null;
+  /** Vị trí (theo `RecipeIngredient.position`) của các nguyên liệu bị bước này tác động. */
+  affectedIngredientPositions: number[];
 }
 
 export interface RecipeIngredient {
+  /** Vị trí nguyên liệu trong công thức (0-based), dùng để tham chiếu từ bước nấu. */
+  position: number;
+  optional: boolean;
   ingredientId: string | null;
   name: string;
   amount: number;

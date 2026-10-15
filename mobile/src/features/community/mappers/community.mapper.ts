@@ -1,3 +1,4 @@
+import { resolveMediaUrl } from '@/lib/env';
 import { BaseMapper, pickField, safeArray, safeDate, safeEnum, safeNumber, safeString } from '@/lib/mapper';
 import { CommentStatus, PostType } from '@/common/enums';
 import type { PaginationResult } from '@/types/api';
@@ -54,7 +55,7 @@ export class CommunityMapper extends BaseMapper<CommunityCommentDto, CommunityCo
           ? {
               id: safeString(pickField(author, ['id'], '')),
               displayName: safeString(pickField(author, ['displayName'], 'Người dùng')),
-              avatarUrl: safeString(pickField(author, ['avatarUrl'], '')) || null,
+              avatarUrl: resolveMediaUrl(safeString(pickField(author, ['avatarUrl'], ''))) || null,
             }
           : null,
       editedAt: safeDate(pickField(dto, ['editedAt'], null)),
@@ -141,7 +142,7 @@ export class CommunityMapper extends BaseMapper<CommunityCommentDto, CommunityCo
       slug: safeString(pickField(dto, ['slug'], '')),
       title: safeString(pickField(dto, ['title'], 'Nội dung đã lưu')),
       excerpt: safeString(pickField(dto, ['excerpt'], '')) || null,
-      coverImageUrl: safeString(pickField(dto, ['coverImageUrl'], '')) || null,
+      coverImageUrl: resolveMediaUrl(safeString(pickField(dto, ['coverImageUrl'], ''))) || null,
       publishedAt: safeDate(pickField(dto, ['publishedAt'], null)),
       bookmarkedAt: safeDate(pickField(dto, ['bookmarkedAt'], null)),
     };

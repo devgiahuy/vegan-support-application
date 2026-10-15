@@ -34,6 +34,7 @@ export interface MapFallbackProps {
   /** Đã có khung vùng để tìm hay chưa — dùng để vô hiệu hoá nút. */
   canSearchThisArea?: boolean;
   isSearchingArea?: boolean;
+  isLoading?: boolean;
 }
 
 /**
@@ -54,6 +55,7 @@ export function MapFallback({
   onSearchThisArea,
   canSearchThisArea = true,
   isSearchingArea = false,
+  isLoading = false,
 }: MapFallbackProps) {
   const [zoomFactor, setZoomFactor] = React.useState(1);
 
@@ -161,18 +163,33 @@ export function MapFallback({
             <h3 className="text-xs font-bold leading-none">Bản đồ vị trí trực quan</h3>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
               Bán kính: {radiusM >= 1000 ? `${radiusM / 1000} km` : `${radiusM} m`} •{' '}
-              {validPlaces.length} quán
+              {isLoading ? (
+                <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                  Đang tìm quán...
+                </span>
+              ) : (
+                `${validPlaces.length} quán`
+              )}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5">
-          <Badge
-            variant="outline"
-            className="border-emerald-500/30 bg-emerald-50 text-[10px] text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-          >
-            Sẵn sàng
-          </Badge>
+          {isLoading ? (
+            <Badge
+              variant="outline"
+              className="border-emerald-500/40 bg-emerald-50/80 text-[10px] text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 animate-pulse"
+            >
+              Đang tìm kiếm
+            </Badge>
+          ) : (
+            <Badge
+              variant="outline"
+              className="border-emerald-500/30 bg-emerald-50 text-[10px] text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+            >
+              Sẵn sàng
+            </Badge>
+          )}
           <a
             href={googleMapsUrl}
             target="_blank"
@@ -273,8 +290,24 @@ export function MapFallback({
           );
         })}
 
-        {/* Trạng thái không có quán nào trong bán kính hiện tại */}
-        {validPlaces.length === 0 && (
+        {/* Trạng thái đang tải dữ liệu trên bản đồ */}
+        {isLoading && (
+          <div className="absolute inset-x-4 top-1/2 z-20 flex -translate-y-1/2 flex-col items-center justify-center rounded-xl border border-primary/20 bg-background/90 p-5 text-center shadow-md backdrop-blur-xs">
+            <div className="relative mb-2.5 flex size-10 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <Compass className="size-5 animate-spin text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <p className="text-xs font-bold text-foreground">
+              Đang tìm kiếm quán chay trong bán kính{' '}
+              {radiusM >= 1000 ? `${radiusM / 1000} km` : `${radiusM} m`}...
+            </p>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Đang đồng bộ dữ liệu bản đồ và áp dụng chế độ ăn
+            </p>
+          </div>
+        )}
+
+        {/* Trạng thái không có quán nào trong bán kính hiện tại (chỉ hiện khi đã tải xong) */}
+        {!isLoading && validPlaces.length === 0 && (
           <div className="absolute inset-x-4 top-1/2 z-20 flex -translate-y-1/2 flex-col items-center justify-center rounded-xl border border-dashed bg-background/90 p-4 text-center shadow-xs backdrop-blur-xs">
             <MapPin className="size-6 text-muted-foreground" />
             <p className="mt-1.5 text-xs font-semibold">
@@ -308,7 +341,7 @@ export function MapFallback({
                   className="h-7 text-xs"
                   onClick={() => onRadiusChange(50000)}
                 >
-                  50 km
+                  Mở rộng 50 km
                 </Button>
               </div>
             )}

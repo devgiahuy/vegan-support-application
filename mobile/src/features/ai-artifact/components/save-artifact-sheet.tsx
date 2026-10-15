@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { Bookmark, Lock, X } from 'lucide-react-native';
 
 import type { AiArtifactType } from '@/common/enums';
@@ -59,10 +59,10 @@ function SaveArtifactSheetContent({ type, sourceId, defaultTitle, defaultSummary
   };
 
   return (
-    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 justify-end bg-black/50">
-        <Pressable className="flex-1" onPress={onClose} accessibilityLabel="Đóng" />
-        <View className="max-h-[88%] rounded-t-3xl bg-background px-5 pb-6 pt-4">
+    <Modal visible animationType="fade" transparent statusBarTranslucent onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 items-center justify-center bg-black/60 px-5">
+        <Pressable accessibilityLabel="Đóng" onPress={onClose} style={StyleSheet.absoluteFill} />
+        <View className="w-full max-w-md max-h-[88%] rounded-3xl border border-border bg-background p-5">
           <View className="flex-row items-start justify-between gap-3">
             <View className="flex-1">
               <Text className="text-base font-bold text-foreground">{artifact ? 'Đã lưu tri thức AI' : 'Lưu thành tri thức AI'}</Text>

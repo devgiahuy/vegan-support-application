@@ -35,7 +35,7 @@ export interface UploadConfigurationDto {
 }
 
 export interface CreateReservationRequestDto {
-  kind: 'COVER_IMAGE' | 'FRIDGE_IMAGE' | 'RECEIPT_IMAGE';
+  kind: 'COVER_IMAGE' | 'FRIDGE_IMAGE' | 'RECEIPT_IMAGE' | 'VIDEO';
   mimeType: string;
   extension: string;
   bytes: number;

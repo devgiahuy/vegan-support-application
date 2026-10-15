@@ -45,7 +45,7 @@ export interface CreateVideoPostRequestDto {
       secureUrl: string;
     } | {
       provider: 'CLOUDINARY';
-      kind: 'COVER_IMAGE';
+      kind: 'COVER_IMAGE' | 'VIDEO';
       assetId: string;
     }
   )[];

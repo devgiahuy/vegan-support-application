@@ -39,6 +39,7 @@ export interface MessageFeedback {
 
 /** Trạng thái hạn mức lượt dùng trong ngày. */
 export interface QuotaState {
+  paidRemaining?: number;
   used: number;
   limit: number;
   remaining: number;

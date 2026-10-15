@@ -20,18 +20,20 @@ import type {
 } from '../types/pantry.model';
 
 export const pantryApi = {
-  getItems: async (
-    params?: PantryListFilters,
-    expiring = false
-  ): Promise<PaginationResult<PantryItem>> => {
-    const query: PantryListQueryDto = params ?? {};
-    const res = await api.get<PantryListEnvelopeDto>(
-      expiring ? API_ENDPOINTS.PANTRY.EXPIRING_SOON : API_ENDPOINTS.PANTRY.ITEMS,
-      {
-        params: expiring ? { page: query.page, limit: query.limit, days: 7 } : query,
-        silent: true,
-      }
-    );
+  /**
+   * `GET /pantry/items`. Các tab theo hạn dùng (sắp hết hạn / đã hết hạn) dùng khoảng `expiresFrom`–`expiresTo` của
+   * cùng endpoint này để tìm kiếm và lọc theo nguồn hoạt động ở mọi tab.
+   */
+  getItems: async (params?: PantryListFilters): Promise<PaginationResult<PantryItem>> => {
+    const { confirmedOnly, ...rest } = params ?? {};
+    const query: PantryListQueryDto = {
+      ...rest,
+      ...(confirmedOnly ? { confirmationStatus: 'CONFIRMED' as const } : {}),
+    };
+    const res = await api.get<PantryListEnvelopeDto>(API_ENDPOINTS.PANTRY.ITEMS, {
+      params: query,
+      silent: true,
+    });
     return pantryMapper.toPantryPaginationModel(res.data);
   },
 

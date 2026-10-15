@@ -7,13 +7,18 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { CategoryFilterPills } from '@/features/category/components/category-filter-pills';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
 import { ImagePickerField } from '@/features/storage/components/image-picker-field';
+import { VideoPickerField, type PickedVideo } from '@/features/storage/components/video-picker-field';
+import { cn } from '@/lib/utils';
 import type { PickedImage } from '@/features/storage/types/storage.model';
 import { useIconColors } from '@/lib/theme-colors';
 
 export interface VideoFormValues {
   title: string;
   excerpt?: string;
-  youtubeUrl: string;
+  /** Link YouTube/URL video; có khi nguồn video là liên kết. */
+  youtubeUrl?: string;
+  /** Id asset video đã tải lên và commit; có khi nguồn video là tệp tải lên. */
+  videoAssetId?: string;
   body: string;
   tags?: string[];
   categoryIds?: string[];
@@ -38,6 +43,16 @@ function isValidUrl(value: string): boolean {
   }
 }
 
+type VideoSource = 'YOUTUBE' | 'UPLOAD';
+
+const SOURCES: { value: VideoSource; label: string }[] = [
+  { value: 'YOUTUBE', label: 'Link YouTube' },
+  { value: 'UPLOAD', label: 'Tải video lên' },
+];
+
+const EDIT_VIDEO_NOTE =
+  'Video hiện tại là tệp đã tải lên. API chưa cho giữ lại tệp cũ khi sửa, nên hãy chọn lại tệp video hoặc chuyển sang dán link YouTube.';
+
 const EDIT_COVER_NOTE =
   'Chọn ảnh mới để thay. Nếu không chọn, bản chỉnh sửa sẽ không có ảnh bìa vì API chưa cho giữ lại ảnh cũ.';
 
@@ -51,6 +66,8 @@ export function VideoForm({
     title?: string;
     excerpt?: string;
     youtubeUrl?: string;
+    /** Video hiện có là tệp đã tải lên (không có link để điền lại khi sửa). */
+    uploadedVideo?: boolean;
     body?: string;
     tags?: string[];
     categoryId?: string | null;
@@ -65,6 +82,9 @@ export function VideoForm({
   const [title, setTitle] = React.useState(initial?.title ?? '');
   const [excerpt, setExcerpt] = React.useState(initial?.excerpt ?? '');
   const [youtubeUrl, setYoutubeUrl] = React.useState(initial?.youtubeUrl ?? '');
+  const [source, setSource] = React.useState<VideoSource>(initial?.uploadedVideo ? 'UPLOAD' : 'YOUTUBE');
+  const [video, setVideo] = React.useState<PickedVideo | null>(null);
+  const [videoBusy, setVideoBusy] = React.useState(false);
   const [body, setBody] = React.useState(initial?.body ?? '');
   const [tags, setTags] = React.useState(initial?.tags?.join(', ') ?? '');
   const [categoryId, setCategoryId] = React.useState<string | null>(initial?.categoryId ?? null);
@@ -79,8 +99,8 @@ export function VideoForm({
   } = useCategoryTreeQuery(CategoryType.CONTENT_TOPIC);
 
   const submit = () => {
-    if (coverBusy) {
-      Alert.alert('Ảnh đang tải lên', 'Vui lòng đợi ảnh bìa tải xong rồi gửi video.');
+    if (coverBusy || videoBusy) {
+      Alert.alert('Tệp đang tải lên', 'Vui lòng đợi ảnh bìa và video tải xong rồi gửi.');
       return;
     }
     const cleanTitle = title.trim();
@@ -92,8 +112,12 @@ export function VideoForm({
       Alert.alert('Thiếu tiêu đề', 'Tiêu đề video cần ít nhất 3 ký tự.');
       return;
     }
-    if (!isValidUrl(cleanUrl)) {
+    if (source === 'YOUTUBE' && !isValidUrl(cleanUrl)) {
       Alert.alert('Link video chưa hợp lệ', 'Vui lòng nhập link YouTube hoặc video dạng URL đầy đủ.');
+      return;
+    }
+    if (source === 'UPLOAD' && !video) {
+      Alert.alert('Chưa có video', 'Vui lòng chọn tệp video và đợi tải lên xong, hoặc chuyển sang dán link YouTube.');
       return;
     }
     if (cleanBody.length < 20) {
@@ -104,7 +128,7 @@ export function VideoForm({
     onSubmit({
       title: cleanTitle,
       excerpt: cleanExcerpt || undefined,
-      youtubeUrl: cleanUrl,
+      ...(source === 'UPLOAD' && video ? { videoAssetId: video.assetId } : { youtubeUrl: cleanUrl }),
       body: cleanBody,
       categoryIds: categoryId ? [categoryId] : undefined,
       tags: splitTags(tags),
@@ -126,20 +150,50 @@ export function VideoForm({
           />
         </View>
 
-        <View>
-          <Text className="mb-1.5 text-xs font-bold uppercase text-muted-foreground">Link video</Text>
-          <View className="flex-row items-center gap-2 rounded-2xl border border-input bg-card px-3.5">
-            <LinkIcon size={16} color={colors.mutedForeground} />
-            <TextInput
-              value={youtubeUrl}
-              onChangeText={setYoutubeUrl}
-              autoCapitalize="none"
-              keyboardType="url"
-              placeholder="Dán link video YouTube"
-              placeholderTextColor={colors.mutedForeground}
-              className="h-12 flex-1 text-sm text-foreground"
-            />
+        <View className="gap-3">
+          <Text className="text-xs font-bold uppercase text-muted-foreground">Nguồn video</Text>
+          <View className="flex-row gap-2">
+            {SOURCES.map((option) => {
+              const selected = source === option.value;
+              return (
+                <Pressable
+                  key={option.value}
+                  accessibilityRole="radio"
+                  accessibilityState={{ selected }}
+                  disabled={videoBusy}
+                  onPress={() => setSource(option.value)}
+                  className={cn(
+                    'min-h-11 flex-1 items-center justify-center rounded-xl border px-3',
+                    selected ? 'border-primary bg-primary/10' : 'border-border bg-card'
+                  )}>
+                  <Text className={cn('text-sm font-semibold', selected ? 'text-primary' : 'text-foreground')}>
+                    {option.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
           </View>
+          {source === 'YOUTUBE' ? (
+            <View className="flex-row items-center gap-2 rounded-2xl border border-input bg-card px-3.5">
+              <LinkIcon size={16} color={colors.mutedForeground} />
+              <TextInput
+                value={youtubeUrl}
+                onChangeText={setYoutubeUrl}
+                autoCapitalize="none"
+                keyboardType="url"
+                placeholder="Dán link video YouTube"
+                placeholderTextColor={colors.mutedForeground}
+                className="h-12 flex-1 text-sm text-foreground"
+              />
+            </View>
+          ) : (
+            <VideoPickerField
+              value={video}
+              onChange={setVideo}
+              onBusyChange={setVideoBusy}
+              note={initial?.uploadedVideo ? EDIT_VIDEO_NOTE : undefined}
+            />
+          )}
         </View>
 
         <View>
@@ -208,7 +262,7 @@ export function VideoForm({
       <PrimaryButton
         label={isSubmitting ? 'Đang gửi...' : submitLabel}
         loading={isSubmitting}
-        disabled={coverBusy}
+        disabled={coverBusy || videoBusy}
         icon={<Send size={16} color={colors.primaryForeground} />}
         onPress={submit}
       />

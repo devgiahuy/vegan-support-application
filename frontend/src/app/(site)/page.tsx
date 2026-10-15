@@ -531,7 +531,7 @@ export default function HomePage() {
       </section>
 
       {/* Restaurants */}
-      <section className="py-10">
+      {/* <section className="py-10">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary">
@@ -572,7 +572,7 @@ export default function HomePage() {
             </Card>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Mobile FAB */}
       <Button

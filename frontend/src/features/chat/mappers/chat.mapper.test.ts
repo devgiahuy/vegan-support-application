@@ -152,3 +152,18 @@ describe('parseSseEvent', () => {
     expect(parseSseEvent('').type).toBe('unknown');
   });
 });
+
+describe('purchased chat quota', () => {
+  it('keeps daily quota separate and permits purchased credits after exhaustion', () => {
+    const model = chatMapper.toQuotaState({
+      limit: 20,
+      used: 20,
+      remaining: 0,
+      paidRemaining: '2',
+    });
+    expect(model.remaining).toBe(0);
+    expect(model.paidRemaining).toBe(2);
+    expect(model.exhausted).toBe(false);
+    expect(chatMapper.toQuotaState({ limit: 20, used: 20, paidRemaining: 0 }).exhausted).toBe(true);
+  });
+});

@@ -1,6 +1,215 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
-## [2026-10-08] — Tự động seed khi khởi động Docker
+## [2026-10-14] — Chuẩn bị PR backend rồi frontend vào dev
+
+- Mục tiêu: tạo hai PR theo thứ tự người dùng yêu cầu, giữ checkout chính backend-only và nhánh UI phụ thuộc backend.
+- Đã làm: nhập origin/dev mới vào backend, giữ cả changelog mobile và billing trong registry; nhập backend vào UI, giữ auto-merge session/message pagination mới của mobile. Backend PR: https://github.com/devgiahuy/vegan-support-application/pull/42. PR frontend target dev cần merge backend trước; nếu backend được squash thì cập nhật/rebase nhánh frontend lên dev trước khi review diff cuối.
+- Verify sau merge: npm ci mobile; typecheck và lint pass; npm test mobile 53/53 pass; Expo web export pass khi cấp EXPO_PUBLIC_API_URL theo tài liệu. Lần chạy thiếu biến báo lỗi cấu hình, không có thay đổi source để né guard. Web runtime không đổi trong lần chuẩn bị PR, nên không chạy lại 602 tests/Next build đã pass trước đó. git diff --check sạch.
+- Cập nhật bằng chứng: credentialed hosted QR/PENDING query và actual payOS confirmation webhook 200 đã xác minh, tampered signature 400. Chưa chuyển tiền thật hoặc test native-device. Progress code giữ 100%; không nâng các gate live còn mở.
+
+## [2026-10-14] — Chuyển billing sang payOS trên web/mobile
+
+- Scope: user-authorized provider replacement; backend commit `cd45c24` merged into UI worktree, schema/docs regenerated before mapper changes. Existing billing endpoints/DTO envelopes remain; no direct component DTO consumption or new client endpoint calls.
+- Changed: billing Model provider identity, web/mobile mappers and tests, error/feedback copy, billing screen actions/disclosure. Only payOS can buy/resume, checkout URLs require HTTPS pay.payos.vn/web/32-hex ID, old providers are read-only and do not poll. Missing keys disable purchasing; no mock fallback. QR checkout belongs to payOS's hosted page and processes real transfers.
+- Verification: Swagger 176 operations; web scoped ESLint/typecheck, 602 tests/50 files, Next build; mobile typecheck/lint, 6 billing mapper tests, web export 64 routes and Android Hermes export all pass. Initial export lacked EXPO_PUBLIC_API_URL; rerunning with the documented URL passed without code changes. Browser verifies payOS text, disabled buy, unchanged balances/history on both clients; 390px content width equals viewport width. Impeccable detector returns `[]` for both screens. Evidence: `../../docs/billing-evidence/web-payos-unconfigured-20261014.png` and `mobile-payos-unconfigured-20261014.png`.
+- Progress: payOS client migration 0% → 100% code. Live merchant checkout/webhook and native-device tests remain unverified because user will configure keys later. Full frontend lint was not rerun; previously documented baseline failures remain, scoped billing lint clean.
+- Branch discipline: all runtime frontend/mobile edits remain in `codex/sandbox-billing-ui`; primary branch contains backend/domain/contracts only. No real transfer, merchant registration or rollout performed. Old assistant bounce finding unchanged outside scope, no manual suppression.
+
+## [2026-10-14] — Phản hồi nút kiểm tra thanh toán và làm rõ mô phỏng
+
+- Cause: reconciliation refreshed query caches but had no visible acknowledgement when an order kept the same status. Local reconciliation reads persisted state; it does not simulate success or query a bank.
+- Fix: web/mobile display per-order loading and timestamped result/error, preserve the status returned by the server, and suppress stale success feedback when polling changes the status. Web also shows a toast. Local buttons and notice explicitly identify the outcome-test harness; VNPAY labels remain for external-provider orders.
+- Verification: `npm run sync:swagger -- ../backend/openapi.json` (178 operations); frontend scoped ESLint/typecheck, 600 tests/50 files and Next build pass; mobile typecheck/lint pass; manual Impeccable detection on both billing screens returns `[]`. Browser checks on the user's failed order show the result on both clients, with updated timestamp on repeat web click. Evidence: `../../docs/billing-evidence/web-check-feedback-20261014.png` and `mobile-check-feedback-20261014.png`.
+- Scope: UI branch `codex/sandbox-billing-ui` only. No backend API/domain changes, new test infrastructure, production payments or synthetic card/QR UI. Backend gates, exports and native-device acceptance were not rerun because this change is UI feedback only. Full frontend lint retains the previously documented baseline failures; scoped changed-file lint is clean.
+- Hosted VNPAY sandbox remains incomplete as a live demo: configured merchant code and signing secret are absent. Official hosted checkout and registration requirements were checked; no merchant account was created or external transaction attempted.
+- Existing assistant `animate-bounce` finding predates this change and remains outside scope, with no suppression. Impeccable reported legacy product context; no context migration was performed.
+
+## [2026-10-14] — Test lại billing lâu dài, xử lý checkout hết hạn và tách nhánh UI
+
+- Follow-up: overlapping localhost web/mobile refresh eventually returned 200 then 401, with session `REUSE_DETECTED`; the initial successful reload did not rule out a race. Corrected demo configuration separates cookie hostnames (web localhost, mobile UI/API 127.0.0.1). Fresh logins and repeated overlaps now retain sessions/balances with refresh 200. Auth rotation rules were preserved. Mobile web/Android exports pass; saved paid/expiry/mobile proof screenshots dated 2026-10-14 in `docs/billing-evidence/`.
+
+- Mục tiêu: Test lỗi ban đầu hoạt động nhưng về sau không được; xác nhận UI hoàn thiện; giữ primary branch cho backend và chuyển frontend/mobile sang nhánh riêng.
+- Đã làm: tạo `codex/sandbox-billing-ui` trong worktree riêng; giữ toàn bộ UI/consumers và nhận backend expiry fix. Primary branch trả `frontend/src`, frontend AGENTS và mobile về dev baseline; giữ API contract docs theo repository policy. Web/mobile map `BILLING_CHECKOUT_EXPIRED`. UI branch nhận backend-only baseline để merge client về sau không mất code.
+- Findings: khi bắt đầu các demo server đã dừng. Tái hiện được checkout hợp lệ nhưng quá TTL bị phân loại như sai chữ ký/403 và trả JSON trong browser; backend sửa thành 410 và trang recovery. Không khẳng định đây là nguyên nhân lỗi hôm trước vì không có response gốc.
+- Verify: expired access + 6 refresh rotations và extended billing acceptance pass. Browser dùng TTL access 60s: 401 → refresh 200, mua gói tăng 33 → 43 lượt, reload không tăng nữa; web/mobile simultaneous reload giữ phiên và số dư chung; mobile mở checkout/cancel đúng; expired checkout hiển thị hướng dẫn và return đúng. Khôi phục TTL bình thường sau test. Frontend tsc, 600 tests/50 files, build và scoped billing/auth lint pass; mobile tsc/lint và 3 mapper tests pass.
+- File tạo/sửa: billing error maps ở web/mobile; API registry, PROGRESS, WORK-LOG; backend fix/acceptance/OpenAPI và `docs/BILLING_RETEST_20261014.md` được nhận từ backend branch; screenshot evidence trong `docs/billing-evidence/`.
+- PROGRESS: billing UI demo 100% → 100%; external VNPAY merchant/native device/live AI accuracy vẫn chưa xác nhận production.
+- Còn lại: lịch sử lỗi chính xác cần original endpoint/status/code để đối chiếu; không gặp lỗi 500 billing trong lượt retest này. Không thay shared .env, auth rotation/security rules hoặc database chính.
+
+---
+
+## [2026-10-13] — Payment sandbox và hạn mức chat, phân tích ảnh/hóa đơn, tủ đồ ăn
+
+- Mục tiêu: Phân tích rồi implement ngay web và mobile development/demo, chọn provider thuận tiện chạy sandbox, tự quyết các option trong phạm vi người dùng đã duyệt.
+- Đã làm:
+  - Chọn VNPAY Sandbox làm adapter ngoài; local sandbox rõ nhãn mô phỏng cho demo không cần merchant registration. Billing opt-in, chặn production. Gói một lần cộng dồn, giá minh họa, không tự gia hạn/không hết hạn demo; không cấp role hay dung lượng media.
+  - Backend: catalog/order snapshot, owner authorization, idempotency, IPN/querydr ký HMAC, return chỉ redirect, ledger cấp một lần; giữ/trừ/trả lượt chat và job quét có khóa transaction/fencing, recovery lease và tối đa ba attempt mặc định. Pantry kiểm tra đồng thời ở thêm tay và hai confirm, tính tất cả item chưa xóa.
+  - Mongo: thêm collection/schema/index/validator và backfill queued timestamp; seed giữ catalog đã cấu hình. Script demo chạy trên DB riêng, có login mẫu, cleanup/reconcile và acceptance theo convention backend hiện có.
+  - Web/mobile: DTO/Model/Mapper/API/Query/UI riêng, endpoint constants, query key theo owner, polling dừng khi terminal, invalidate sau mutation, business errors và loading/error/empty/success; trang `/billing`, entry account/Profile và allowance notices ở Pantry/chat/scan. Mobile web dùng cùng tab tránh popup blocking; native dùng system browser và refresh khi focus.
+  - Sửa session restoration khi quay lại checkout: AuthProvider chờ refresh kết thúc, AuthGuard giữ query của đơn và refresh timeout 15 giây. Không đổi auth contract.
+  - Đồng bộ Swagger trước consumer; cập nhật SRS/plan/roadmap, phase completion, integration registry, spec 030 và hướng dẫn demo cùng ảnh bằng chứng.
+- File tạo/sửa: `backend/src/modules/billing/**`, `backend/src/modules/entitlements/**`, Prisma/native provisioning, chat/pantry/scan repositories; `frontend/src/features/billing/**`, web route, các consumers liên quan; `mobile/src/features/billing/**`, mobile route/entry/consumers; docs và OpenAPI/catalog.
+- Verify:
+  - Backend lint/typecheck/build/OpenAPI pass; schema/seed DB riêng pass; billing acceptance pass (callback replay, owner, amount, late success, free/paid chat SSE/replay, cross-midnight stale worker, final-credit/final-slot race, all confirmation paths, scan retry/empty/partial/failure/recovery và VNPAY signed fixtures). Vision/receipt acceptance fake pass. Không thêm backend unit/integration infrastructure.
+  - Web tsc pass; 600 tests/50 files pass; Next build pass. Lint các consumer thay đổi 0 lỗi/3 cảnh báo nền; full lint còn 89 lỗi/347 cảnh báo ngoài feature.
+  - Mobile tsc/lint pass; 3 mapper tests pass; web export 64 routes và Android Hermes export pass khi cấu hình API demo.
+  - Browser login, mua combo, cancel/fail không cộng thêm, reload/return giữ phiên và đơn, Profile mobile entry/checkout, số dư/lịch sử chung pass; mobile 390px không tràn ngang. Lưu `docs/billing-evidence/web-paid.png` và `mobile-390.png`.
+- PROGRESS: Sandbox extension 0% → 100% trong phạm vi development/demo. Backend scan endpoints vẫn IN_PROGRESS; không đổi production phase completion.
+- Còn lại / rủi ro: External VNPAY end-to-end cần merchant credentials/IPN HTTPS; native device/camera/iOS acceptance chưa chạy. Fake scan không chứng minh độ chính xác AI; upload ảnh tiếp tục cần Cloudinary. Không đăng ký hộ merchant, không gọi thanh toán tiền thật, không sửa shared `.env` hoặc database hiện hữu. Setup: `../../docs/BILLING_DEMO.md`.
+
+---
+
+## [2026-10-12] — Nâng cấp UI/UX: Thẻ công thức (/recipes), Cảnh báo dị ứng (/recipes/:id), Gom nhóm nguyên liệu (/categories#tra-cuu) & Ẩn footer (/meal-plans, /restaurants)
+
+- Mục tiêu:
+  - Thêm huy hiệu phân biệt Chuyên gia vs Người dùng thường và hiển thị số lượng người đang áp dụng công thức (mặc định 0 khi chưa có người dùng) trên thẻ công thức tại trang `/recipes`.
+  - Thiết kế thành phần Cảnh báo dị ứng nổi bật (Highlight Alert Callout) với viền cam/hổ phách và nhãn dị ứng tương phản cao tại trang chi tiết công thức `/recipes/:id`.
+  - Gom nhóm danh sách nguyên liệu theo nhóm thực phẩm (Rau củ, Ngũ cốc, Đậu, Trái cây, Nấm...), áp dụng dải mã màu nhận diện đặc trưng và bổ sung biểu tượng/icon nhỏ ở đầu mỗi thẻ nguyên liệu tại `/categories#tra-cuu`.
+  - Ẩn chân trang (SiteFooter) trên hai màn hình công cụ chuyên sâu `/meal-plans` và `/restaurants` để tối ưu không gian hiển thị dọc.
+- Đã làm:
+  - Mở rộng Model & DTO:
+    - Thêm `usageCount` và `isExpertAuthor` vào `Recipe` UI model (`recipe.model.ts`).
+    - Thêm `usageCount?: number` vào `RecipeDetailDto` (`recipe.dto.ts`).
+    - Cập nhật `RecipeMapper.toModel` ánh xạ an toàn `usageCount` (safeNumber defaulting 0) và tính toán `isExpertAuthor` (`recipe.mapper.ts`).
+    - Viết 4 unit tests kiểm chứng mapper cho `usageCount` và `isExpertAuthor` (`recipe.mapper.test.ts`).
+  - Nâng cấp `RecipeCard` (`recipe-card.tsx`):
+    - Hiển thị huy hiệu Chuyên gia (kèm icon `BadgeCheck`, viền xanh emerald) hoặc Người dùng thường (kèm icon `User`, màu trung tính).
+    - Hiển thị con số kiểm chứng `{usageCount} người đang dùng` (mặc định luôn hiển thị `0 người đang dùng` khi thiếu dữ liệu).
+  - Tạo mới `RecipeAllergenHighlight` (`recipe-allergen-highlight.tsx`) và tích hợp vào `RecipeDetailView` (`recipe-detail-view.tsx`):
+    - Thiết kế khối cảnh báo an toàn thực phẩm với viền cam/hổ phách nổi bật, icon `AlertTriangle`, nhãn dị ứng to rõ và lời khuyên an toàn thực phẩm ngay trên danh sách nguyên liệu.
+  - Gom nhóm nguyên liệu & icon nhận diện tại `/categories#tra-cuu`:
+    - Tạo `ingredient-group.model.ts` và tiện ích `food-group-themes.ts` kèm 5 unit tests (`food-group-themes.test.ts`).
+    - Cập nhật `IngredientSearch` (`ingredient-search.tsx`): Nhóm các nguyên liệu theo Rau củ, Ngũ cốc, Đậu, Trái cây, Nấm... có tiêu đề nhóm, số lượng và mỗi thẻ nguyên liệu có ô icon vector nổi bật ở đầu thẻ.
+  - Ẩn Footer trên các màn hình công cụ:
+    - Tạo helper `isFooterHidden` trong `site-footer-routes.ts` kèm 6 unit tests (`site-footer-routes.test.ts`).
+    - Cập nhật `SiteFooter` (`site-footer.tsx`) tự động ẩn trên `/meal-plans`, `/restaurants` và `/assistant`.
+- File tạo/sửa:
+  - `src/features/recipe/types/recipe.model.ts`
+  - `src/features/recipe/types/recipe.dto.ts`
+  - `src/features/recipe/mappers/recipe.mapper.ts`
+  - `src/features/recipe/mappers/recipe.mapper.test.ts`
+  - `src/features/recipe/components/recipe-card.tsx`
+  - `src/features/recipe/components/recipe-allergen-highlight.tsx`
+  - `src/features/recipe/components/recipe-detail-view.tsx`
+  - `src/features/ingredient/types/ingredient-group.model.ts`
+  - `src/features/ingredient/utils/food-group-themes.ts`
+  - `src/features/ingredient/utils/food-group-themes.test.ts`
+  - `src/features/ingredient/components/ingredient-search.tsx`
+  - `src/components/layout/site-footer-routes.ts`
+  - `src/components/layout/site-footer-routes.test.ts`
+  - `src/components/layout/site-footer.tsx`
+  - `docs/WORK-LOG.md`
+  - `specs/007-enhance-recipe-category-ui/tasks.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 49 test files, 592/592 tests pass (100%).
+  - `npm run build`: Turbopack compile thành công 46/46 static & dynamic routes.
+
+
+## [2026-10-12] — Ẩn huy hiệu nguồn kiểm định (SourceProvenanceBadge) trong modal Dinh dưỡng tại /categories#tra-cuu
+
+- Mục tiêu:
+  - Ẩn nút/huy hiệu nguồn dữ liệu kiểm định "VeggieConnect Curated Plant F..." trong modal thông tin dinh dưỡng 100g của nguyên liệu tại trang `/categories#tra-cuu` theo phản hồi giao diện của người dùng.
+- Đã làm:
+  - Bổ sung prop tùy chọn `showProvenance?: boolean` (mặc định là `true`) vào `NutritionFactsPanelProps` trong `src/features/food-data/components/nutrition-facts-panel.tsx`.
+  - Cập nhật điều kiện hiển thị cho `SourceProvenanceBadge` và skeleton tương ứng trong `NutritionFactsPanel`.
+  - Truyền `showProvenance={false}` vào `<NutritionFactsPanel>` trong modal tra cứu nguyên liệu tại `src/features/ingredient/components/ingredient-search.tsx` (trang `/categories#tra-cuu`).
+- File sửa:
+  - `src/features/food-data/components/nutrition-facts-panel.tsx`
+  - `src/features/ingredient/components/ingredient-search.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 47 test files / 577 tests pass 100%.
+
+## [2026-10-12] — Tối ưu hiển thị dữ liệu, thêm timeout API và hoàn thiện trạng thái Loading trang /restaurants
+
+- Mục tiêu:
+  - Khắc phục tình trạng trang `/restaurants` không hiển thị trạng thái loading khi đang gọi API hoặc chưa có dữ liệu phản hồi (khiến giao diện nhảy thẳng vào trạng thái trống "Chưa tìm thấy quán" / "0 quán" gây hiểu lầm cho người dùng).
+  - Bổ sung cấu hình `timeout` (10 giây) cho các lời gọi API khám phá/tìm kiếm/địa chỉ trên trang để tránh việc request bị treo vô hạn khi dịch vụ bản đồ bên ngoài phản hồi chậm.
+  - Tối ưu hóa trải nghiệm hiển thị dữ liệu: Skeletons cấu trúc thẻ, chỉ báo đang tìm kiếm trên bản đồ Radar và Google Maps, căn chỉnh lại cụm nút hành động trạng thái rỗng và thông điệp giải thích khi quán chưa duyệt bị loại bỏ do ràng buộc chế độ ăn.
+- Đã làm:
+  - Bổ sung hằng số `RESTAURANT_REQUEST_TIMEOUT_MS = 10000` (10 giây) vào `src/features/restaurant/api/restaurant.api.ts` và tích hợp vào `api.get` cho `getNearby`, `search`, `getDetail`, `geocode`.
+  - Cập nhật bộ test `src/features/restaurant/api/restaurant.api.test.ts` để kiểm chứng tham số `timeout` trong tất cả các lệnh gọi request.
+  - Cấu hình `retry: 1` cho các hook `useRestaurantDiscoveryQuery`, `useNearbyRestaurantsQuery`, `useRestaurantSearchQuery` trong `src/features/restaurant/queries/restaurant.queries.ts`.
+  - Nâng cấp `RestaurantList`:
+    - Nhận biết trạng thái loading triệt để: hiển thị dàn khung Skeleton khi `isLoading` hoặc khi `!result && !isError`.
+    - Thêm chỉ báo nhẹ nhàng `isFetching` khi đang làm mới dữ liệu nền.
+    - Căn chỉnh lại cụm nút trong trạng thái rỗng: đưa nút "Thử lại" vào cùng một hàng flex cân đối, ngay hàng thẳng lối với "Nới bán kính", "Đổi vị trí".
+    - Cung cấp thông báo lỗi chi tiết khi xảy ra timeout hoặc gián đoạn mạng.
+  - Nâng cấp `RestaurantMap` và `MapFallback`:
+    - Truyền cờ `isLoading` xuống bản đồ.
+    - Trong bản đồ Radar mô phỏng (`MapFallback`): khi đang tải dữ liệu, hiển thị vòng quay La bàn cùng thông điệp "Đang tìm kiếm quán chay trong bán kính... Đang đồng bộ dữ liệu bản đồ và áp dụng chế độ ăn", tuyệt đối không hiển thị sớm thông báo "Chưa có quán chay trong bán kính" khi chưa tải xong.
+    - Đồng bộ nhãn nút mở rộng bán kính: "Mở rộng 10 km", "Mở rộng 20 km", "Mở rộng 50 km".
+    - Với chế độ Google Maps: hiển thị badge chỉ báo "Đang tìm kiếm quán chay..." nổi ở giữa màn hình bản đồ.
+  - Nâng cấp `RestaurantMapPage` (`src/app/(site)/restaurants/page.tsx`):
+    - Tách biệt `isQueryLoading` và `isDataRefreshing`.
+    - Phần tiêu đề danh sách hiển thị "(Đang tìm...)" thay vì cố định "(0)" khi chưa có dữ liệu.
+    - Hiển thị mô tả trạng thái rỗng thân thiện, giải thích rõ nếu các quán bên ngoài chưa xác minh bị lược bỏ để đảm bảo an toàn cho chế độ ăn của người dùng.
+- File tạo/sửa:
+  - `src/features/restaurant/api/restaurant.api.ts`
+  - `src/features/restaurant/api/restaurant.api.test.ts`
+  - `src/features/restaurant/queries/restaurant.queries.ts`
+  - `src/features/restaurant/components/restaurant-list.tsx`
+  - `src/features/restaurant/components/restaurant-map.tsx`
+  - `src/features/restaurant/components/map-fallback.tsx`
+  - `src/app/(site)/restaurants/page.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 47 test files, 577/577 tests pass (100%).
+  - `npm run build`: Turbopack compile thành công 46/46 static & dynamic routes.
+- PROGRESS: Hoàn thiện trải nghiệm UX mượt mà, loại bỏ triệt để hiện tượng thiếu loading và treo API trên trang `/restaurants`.
+
+
+- Mục tiêu:
+  - Tái thiết kế toàn diện khu vực Header/Hero Banner trên trang `/videos` (Kho video nấu chay trực quan) theo các nguyên tắc của skill `/frontend-design` và `/design-taste-frontend`.
+  - Thay thế khung nền phẳng đơn điệu bằng bố cục studio nấu ăn chuyên nghiệp có chiều sâu điện ảnh, tôn vinh tính năng AI Video Summarization (UC-10) và khơi gợi cảm hứng nấu ăn.
+- Đã làm:
+  - Sử dụng công cụ AI image generation tạo ảnh nền phim trường quay video ẩm thực chay với đầu bếp đảo chảo rau củ tươi sắc màu, khói bốc nghi ngút và camera studio; lưu tại `public/videos/hero-bg.jpg` và kết nối qua Next.js `<Image>`.
+  - Xây dựng component độc lập `VideosHeroBanner` tại `src/features/video/components/videos-hero-banner.tsx`.
+  - Áp dụng lớp phủ scrim chuyển sắc đa tầng kết hợp kính mờ (glassmorphism backdrop blur), đảm bảo độ tương phản chữ đạt chuẩn WCAG AA trên cả Light và Dark mode.
+  - Tái thiết kế typography: Eyebrow badge kính mờ có icon Play và chỉ báo động, tiêu đề chính nhấn nhá dải màu gradient ngọc bích, đoạn mô tả rõ ràng tôn vinh tính năng AI tóm tắt.
+  - Thiết kế nút CTA tương tác xúc giác cao (tactile push `active:scale-[0.98]`, đổ bóng ambient glow `shadow-primary/25`).
+  - Thêm thẻ nổi "Trợ Lý Video AI" bên phải (Desktop) cùng dải micro-pills về mốc thời gian nguyên liệu, chứng nhận đầu bếp và định lượng calo thuần chay.
+  - Tích hợp hiệu ứng mượt mà qua `motion/react`, tự động suy giảm an toàn khi bật `prefers-reduced-motion`.
+  - Tích hợp `VideosHeroBanner` vào `src/app/(site)/videos/page.tsx`.
+- File tạo/sửa:
+  - `public/videos/hero-bg.jpg`
+  - `src/features/video/components/videos-hero-banner.tsx`
+  - `src/app/(site)/videos/page.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 47 test files, 577/577 tests pass (100%).
+  - `npm run build`: Turbopack compile thành công 46/46 static & dynamic routes.
+- PROGRESS: Giao diện khu vực Kho Video `/videos` đậm chất điện ảnh ẩm thực, hiện đại và đồng bộ toàn diện với trang bài viết `/articles`.
+
+## [2026-10-12] — Redesign Hero Banner trang /articles theo phong cách Editorial Wellness (/frontend-design & /design-taste-frontend)
+
+- Mục tiêu:
+  - Tái thiết kế toàn diện khu vực Hero Banner trên trang `/articles` (Cẩm nang thực dưỡng chay) theo các nguyên tắc của skill `/frontend-design` và `/design-taste-frontend`.
+  - Khắc phục tình trạng khung nền đơn điệu, phẳng và thiếu sức sống; thay thế bằng bố cục ẩm thực thực dưỡng nghệ thuật, có chiều sâu thị giác và hình ảnh nền thảo mộc thực dưỡng chất lượng cao.
+- Đã làm:
+  - Sử dụng công cụ AI image generation tạo ảnh nền ẩm thực thực dưỡng tĩnh vật cao cấp (thảo mộc, hạt sen, nấm rừng, ngũ cốc trong ánh nắng sớm), lưu trữ tối ưu tại `public/articles/hero-bg.jpg` và kết nối qua Next.js `<Image>`.
+  - Xây dựng component độc lập `ArticlesHeroBanner` tại `src/features/post/components/articles-hero-banner.tsx` theo kiến trúc Clean Architecture.
+  - Xử lý lớp phủ đa tầng (directional multi-stop scrim) kết hợp hiệu ứng kính mờ (glassmorphism backdrop blur), bảo đảm độ tương phản hoàn hảo (WCAG AA) cho chữ trên cả Light và Dark mode.
+  - Tinh chỉnh typography phân cấp: Eyebrow badge kính mờ có chỉ báo động (pulsing indicator), tiêu đề chính nhấn nhá dải màu gradient ngọc bích, đoạn mô tả dễ đọc và giữ trọn vẹn thông điệp gốc.
+  - Tối ưu nút CTA với độ nảy xúc giác (tactile push `active:scale-[0.98]`, đổ bóng ambient glow `shadow-primary/25`).
+  - Bổ sung thẻ nổi tri thức (Floating Editorial Card) và dải vi chất dinh dưỡng (Content Pillars Micro-Pills) ở phía dưới.
+  - Tích hợp hoạt cảnh vào trang mượt mà qua `motion/react`, tự động suy giảm khi người dùng bật `prefers-reduced-motion`.
+  - Cập nhật trang `src/app/(site)/articles/page.tsx`, dọn sạch các import thừa.
+- File tạo/sửa:
+  - `public/articles/hero-bg.jpg`
+  - `src/features/post/components/articles-hero-banner.tsx`
+  - `src/app/(site)/articles/page.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 47 test files, 577/577 tests pass (100%).
+  - `npm run build`: Turbopack compile thành công 46/46 static & dynamic routes.
+- PROGRESS: Giao diện khu vực Cẩm nang bài viết `/articles` sang trọng, sống động, đậm nét văn hóa thực dưỡng VeggieConnect.
+
 
 - Mục tiêu: Docker chạy seed hiện tại tự động và push thay đổi lên `dev` theo yêu cầu người dùng.
 - Đã làm: mặc định `RUN_SEED=true` ở Compose, image startup và `.env.example`; bật lại trong `.env` local. Entry script chạy schema → compiled seed → API, log rõ từng bước, dừng khi schema/seed lỗi và chuyển tín hiệu shutdown qua `exec`. Bổ sung invited Contributor email vào Compose.
@@ -3706,3 +3915,33 @@
 - Verify: `cd mobile && npx tsc --noEmit` pass; `cd mobile && npm run lint` pass.
 - PROGRESS: Mobile completion giữ trạng thái đã tích hợp, cập nhật follow-up ngày 2026-10-14; không đổi trạng thái backend hoặc FE integrated của endpoint nào.
 - Còn lại / rủi ro: true native map SDK and embedded uploaded video playback still require dependency/API-key decisions (`react-native-maps`/Google Maps or equivalent, `expo-video`) and device acceptance; no backend-blocked row was claimed complete.
+
+---
+
+## [2026-10-12] — Sửa lỗi vỡ phông chữ tiếng Việt (lỗi dấu thanh tách rời) ở tiêu đề Footer
+
+- Mục tiêu: Sửa lỗi hiển thị chữ "sống xanh" trong tiêu đề chân trang (SiteFooter) bị lỗi dấu thanh tiếng Việt (chữ `ố` bị lỗi font fallback, dấu sắc `´` bị đẩy bay ra xa thành "sô ´ ng xanh" trên môi trường Windows).
+- Đã làm:
+  - **Phân tích nguyên nhân**:
+    - Thẻ `<span className="font-serif italic font-normal text-[#9eedb5]">sống xanh</span>` và dòng chữ ký `font-serif italic` trong `site-footer.tsx` áp dụng lớp `font-serif`.
+    - Trong Tailwind CSS v4, `font-serif` mặc định ưu tiên `ui-serif, Georgia, Cambria, "Times New Roman", Times, serif`. Trên hệ điều hành Windows, phông `Georgia` biến thể `italic` không hỗ trợ đầy đủ ký tự tổ hợp tiếng Việt có 2 dấu thanh (`ố` - U+1ED1), dẫn đến cơ chế fallback font tách rời dấu sắc `´` khỏi chữ `ô`.
+    - Phông chữ chủ đạo của ứng dụng là `Be_Vietnam_Pro` (được thiết kế tối ưu riêng cho dấu thanh tiếng Việt), nhưng trong `src/app/layout.tsx` chưa cấu hình nạp biến thể `style: ['normal', 'italic']`.
+  - **Khắc phục**:
+    - Loại bỏ lớp `font-serif` trong `src/components/layout/site-footer.tsx` tại cụm chữ "sống xanh" và chữ ký chân trang, để văn bản kế thừa font `font-sans` (`Be_Vietnam_Pro`).
+    - Bổ sung `style: ['normal', 'italic']` cho `Be_Vietnam_Pro` trong `src/app/layout.tsx` để trình duyệt tải đầy đủ typeface nghiêng chuẩn tiếng Việt với kerning và dấu thanh hoàn hảo.
+- File tạo/sửa:
+  - `src/components/layout/site-footer.tsx`
+  - `src/app/layout.tsx`
+  - `docs/WORK-LOG.md`
+- Verify:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 47/47 files passed (577/577 tests passed 100%).
+  - `npm run build`: Next.js 16 build thành công 46 static/dynamic routes.
+- PROGRESS: Sửa lỗi giao diện hoàn tất 100%.
+- Còn lại / rủi ro: Không có.
+
+## [2026-10-15] — Giải quyết conflict PR mobile với dev
+
+- Đã làm: merge `origin/dev` vào `feature/mobile-table-completion`, giữ cả mục mobile follow-up và mục sửa font footer trong `frontend/docs/WORK-LOG.md`.
+- Verify: mobile `npx tsc --noEmit`, `npm run lint` và `git diff --check` đều pass sau merge.
+- PROGRESS: không đổi phần trăm tính năng; chỉ giải quyết xung đột nhật ký. Thay đổi chưa commit ở workspace chính được giữ nguyên.

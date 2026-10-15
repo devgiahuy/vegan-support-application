@@ -58,6 +58,70 @@ Local endpoints:
 - Swagger UI: `http://localhost:4000/api-docs`
 - OpenAPI JSON: `http://localhost:4000/api-docs.json`
 
+## HTTPS webhook tunnel with ngrok (2026-10-14)
+
+The optional `webhook` Compose profile adds an ngrok v3 container forwarding to
+`http://backend:4000` on the Compose network. Normal `docker compose up` does not start it.
+The tunnel exposes the backend HTTP server, including the existing payOS webhook;
+backend authentication and payOS signature verification still apply.
+
+From `backend/`, configure the untracked `.env`:
+
+```dotenv
+NGROK_AUTHTOKEN=<your-ngrok-agent-authtoken>
+NGROK_URL=https://<your-assigned-ngrok-domain>
+NGROK_UPSTREAM=http://backend:4000
+NGROK_INSPECTOR_PORT=4040
+NODE_ENV=development
+BILLING_ENABLED=true
+BILLING_PROVIDER=payos
+BILLING_PUBLIC_URL=https://<your-assigned-ngrok-domain>
+BILLING_RETURN_URL=http://localhost:3000/billing
+PAYOS_CLIENT_ID=<channel-client-id>
+PAYOS_API_KEY=<channel-api-key>
+PAYOS_CHECKSUM_KEY=<channel-checksum-key>
+```
+
+Get the agent authtoken and assigned domain from the [ngrok dashboard](https://dashboard.ngrok.com/).
+Use your actual values, not the placeholders. Compose forwards billing settings into the
+backend container. Billing opt-in requires `NODE_ENV=development` or `test`; the backend
+rejects billing in production. payOS processes real transfers even in development.
+Keep both ngrok and payOS credentials in `.env`, never in the tracked agent config.
+
+```bash
+docker compose --profile webhook up -d --build
+docker compose logs -f ngrok
+```
+
+Open `http://localhost:4040` to inspect requests and find the public HTTPS URL, or run:
+
+```bash
+curl --fail http://localhost:4040/api/tunnels
+curl --fail -H 'ngrok-skip-browser-warning: true' https://<your-assigned-ngrok-domain>/api/v1/health
+```
+
+Wait for the backend schema/seed startup to complete and the public health request to
+succeed before registering `https://<your-assigned-ngrok-domain>/api/v1/billing/payos/webhook`
+on the payOS payment channel. Registration sends a signed sample; the backend verifies it
+and acknowledges it without granting benefits. See [billing setup](../docs/BILLING_DEMO.md).
+
+`NGROK_URL` is optional. If empty, use the HTTPS URL returned by ngrok, set
+`BILLING_PUBLIC_URL` to that origin and run `docker compose up -d --no-deps backend`
+to recreate the backend with the new checkout return origin. Update the payOS webhook
+registration whenever the public URL changes. Changes to `.env` require container
+recreation with `up -d`; `restart` does not reload Compose environment values.
+
+For an API running on the host, set `NGROK_UPSTREAM=http://host.docker.internal:4000`
+and start only the tunnel with `docker compose --profile webhook up -d --no-deps ngrok`.
+For `npm run billing:demo`, use port `4100` and set `BILLING_DEMO_PUBLIC_URL` to the
+ngrok origin when starting the helper. This mode does not start the backend container.
+
+Stop the tunnel with `docker compose --profile webhook stop ngrok`. If port 4040 is
+occupied, change `NGROK_INSPECTOR_PORT` and use that port for the inspector/API above.
+For ngrok authentication or domain errors, check `docker compose logs ngrok`.
+Agent configuration follows the official [Docker guide](https://ngrok.com/docs/using-ngrok-with/docker)
+and [v3 configuration reference](https://ngrok.com/docs/gateway/agent/config/v3).
+
 Profile calculations use manual height, weight, age, sex, and activity inputs. BMR follows the
 Mifflin–St Jeor formula; TDEE factors are 1.2, 1.375, 1.55, 1.725, and 1.9 from sedentary through
 extra-active. Diet rule set v1 is seeded by `npm run seed`, and `PERIODIC` dates are stored as

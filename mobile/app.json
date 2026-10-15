@@ -8,13 +8,13 @@
     "scheme": "mobile",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "bundleIdentifier": "vn.veggieconnect.mobile"
     },
     "android": {
+      "package": "vn.veggieconnect.mobile",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#F1F8E9",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false
@@ -28,18 +28,21 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
+          "backgroundColor": "#FFFFFF",
           "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "imageWidth": 220,
+          "dark": {
+            "backgroundColor": "#0B1410",
+            "image": "./assets/images/splash-icon.png"
+          }
         }
       ],
-      "expo-secure-store",
       [
         "expo-image-picker",
         {
           "photosPermission": "Cho phép VeggieConnect chọn ảnh từ thư viện của bạn.",
-          "cameraPermission": "Cho phép VeggieConnect chụp ảnh đại diện.",
-          "microphonePermission": false
+          "cameraPermission": "Cho phép VeggieConnect dùng camera để chụp ảnh đại diện, ảnh bìa bài đăng, ảnh món ăn và quét tủ lạnh hoặc hóa đơn.",
+          "microphonePermission": "Cho phép VeggieConnect dùng micro khi bạn quay video nấu ăn để đăng lên."
         }
       ],
       [

@@ -1,0 +1,33 @@
+{
+  "billing_products": [
+    { "$gt": ["$price_vnd", 0] },
+    { "$gte": ["$chat_credits", 0] },
+    { "$gte": ["$fridge_credits", 0] },
+    { "$gte": ["$receipt_credits", 0] },
+    { "$gte": ["$pantry_slots", 0] }
+  ],
+  "payment_orders": [
+    { "$gt": ["$price_vnd", 0] },
+    { "$in": ["$provider", ["payos", "sandbox", "vnpay"]] },
+    { "$cond": [
+      { "$eq": ["$provider", "payos"] },
+      { "$regexMatch": { "input": { "$ifNull": ["$provider_order_code", ""] }, "regex": "^[1-9][0-9]{0,14}$" } },
+      true
+    ] },
+    { "$gte": ["$chat_credits", 0] },
+    { "$gte": ["$fridge_credits", 0] },
+    { "$gte": ["$receipt_credits", 0] },
+    { "$gte": ["$pantry_slots", 0] }
+  ],
+  "entitlement_accounts": [
+    { "$gte": ["$chat_credits", 0] },
+    { "$gte": ["$fridge_credits", 0] },
+    { "$gte": ["$receipt_credits", 0] },
+    { "$gte": ["$pantry_slots", 0] }
+  ],
+  "usage_reservations": [
+    { "$in": ["$feature", ["CHAT", "FRIDGE", "RECEIPT"]] },
+    { "$gte": ["$generation", 1] }
+  ],
+  "payment_events": [{ "$gt": ["$amount_vnd", 0] }]
+}

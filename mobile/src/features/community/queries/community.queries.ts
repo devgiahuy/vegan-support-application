@@ -35,6 +35,18 @@ export function useCommentThreadQuery(postId: string, params?: CommunityQueryPar
   });
 }
 
+/** Bình luận phân trang kiểu "Tải thêm"; key nằm dưới tiền tố `thread` nên mọi mutation bình luận đều làm mới được. */
+export function useInfiniteCommentThreadQuery(postId: string, params?: Omit<CommunityQueryParams, 'page'>) {
+  return useInfiniteQuery({
+    queryKey: [...COMMUNITY_QUERY_KEYS.all, 'thread', postId, 'infinite', params ?? {}] as const,
+    queryFn: ({ pageParam }) => communityApi.getThread({ ...params, postId, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: getNextPageNumber,
+    enabled: postId.length > 0,
+    staleTime: 30 * 1000,
+  });
+}
+
 export function useCreateCommentMutation() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -95,8 +107,12 @@ export function useRatingMutation() {
 }
 
 /** `GET /users/me/bookmarks` phân trang kiểu "Tải thêm" (màn "Đã lưu"). Nằm dưới khóa `bookmarks` nên tự làm mới khi lưu/bỏ lưu. */
-export function useInfiniteMyBookmarksQuery(params?: { limit?: number; type?: 'RECIPE' | 'VIDEO' }) {
+export function useInfiniteMyBookmarksQuery(
+  params?: { limit?: number; type?: 'RECIPE' | 'VIDEO' },
+  options?: { enabled?: boolean }
+) {
   return useInfiniteQuery({
+    enabled: options?.enabled ?? true,
     queryKey: [...COMMUNITY_QUERY_KEYS.all, 'bookmarks', 'infinite', params ?? {}] as const,
     queryFn: ({ pageParam }) => communityApi.getMyBookmarks({ ...params, page: pageParam }),
     initialPageParam: 1,
