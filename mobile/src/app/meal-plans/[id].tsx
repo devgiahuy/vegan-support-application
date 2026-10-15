@@ -513,6 +513,9 @@ export default function MealPlanDetailScreen() {
           <View className="flex-1 rounded-xl border border-border bg-card p-3">
             <Text className="text-xs text-muted-foreground">Mục tiêu/ngày</Text>
             <Text className="mt-1 text-lg font-bold text-primary">{plan.targetCalories} kcal</Text>
+            <Text className="mt-1 text-[11px] leading-4 text-muted-foreground">
+              Theo mục tiêu backend trả về cho thực đơn này.
+            </Text>
           </View>
           <View className="flex-1 rounded-xl border border-border bg-card p-3">
             <Text className="text-xs text-muted-foreground">Vitamin B12 ước tính</Text>
