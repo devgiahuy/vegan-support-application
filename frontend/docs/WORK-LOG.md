@@ -3906,6 +3906,16 @@
 - PROGRESS: Task #16: 0% → 85%.
 - Còn lại / rủi ro: V-01..V-15 cần backend có phiên admin để chạy tay; Phase 9 (US1 đầy đủ) chặn bởi CG-01; Ẩn/Khôi phục chặn bởi CG-02. Nhánh `029-admin-content-crud` đã tạo.
 
+## [2026-10-14] — Mobile follow-up from `Cần sử lý wdp301.docx`
+
+- Mục tiêu: đọc file DOCX người dùng cung cấp, tách phần mobile có thể xử lý ngay khỏi các giới hạn backend/contract, và hoàn tất trong nhánh `feature/mobile-table-completion` mà không kéo thêm native SDK hay endpoint chưa READY.
+- Đã làm: nâng `RadarMap` từ sơ đồ chỉ-minh-hoạ thành fallback có hành động thật: chọn ghim để xem quán và mở provider map/directions URL khi backend/env có liên kết; giữ quyết định không thêm SDK bản đồ vì cần thư viện/API key riêng. Meal-plan detail ghi rõ `targetCalories` là mục tiêu backend trả về cho thực đơn, tránh sao chép công thức web TDEE ±300 gây lệch với backend. Pantry quantity sheet giải thích `RESTORE` là hoàn trả phần đã ghi nhận dùng, không phải mua thêm; người dùng mua mới dùng thêm nguyên liệu hoặc quét hóa đơn.
+- Đã đối chiếu: video detail hiện đã mở bằng Expo in-app browser; các dòng DOCX bị backend chặn như thiếu `assetId` media, thiếu `GET /ai-artifacts/{id}`, thiếu API "tri thức AI của tôi", quên mật khẩu/OTP/xóa tài khoản, realtime/push notification và scan provider production vẫn giữ là giới hạn contract, không dựng UI/API giả.
+- File sửa: `mobile/src/features/restaurant/components/radar-map.tsx`, `mobile/src/app/meal-plans/[id].tsx`, `mobile/src/features/pantry/components/pantry-sheets.tsx`, `frontend/docs/PROGRESS.md`, `frontend/docs/WORK-LOG.md`.
+- Verify: `cd mobile && npx tsc --noEmit` pass; `cd mobile && npm run lint` pass.
+- PROGRESS: Mobile completion giữ trạng thái đã tích hợp, cập nhật follow-up ngày 2026-10-14; không đổi trạng thái backend hoặc FE integrated của endpoint nào.
+- Còn lại / rủi ro: true native map SDK and embedded uploaded video playback still require dependency/API-key decisions (`react-native-maps`/Google Maps or equivalent, `expo-video`) and device acceptance; no backend-blocked row was claimed complete.
+
 ---
 
 ## [2026-10-12] — Sửa lỗi vỡ phông chữ tiếng Việt (lỗi dấu thanh tách rời) ở tiêu đề Footer
@@ -3929,3 +3939,9 @@
   - `npm run build`: Next.js 16 build thành công 46 static/dynamic routes.
 - PROGRESS: Sửa lỗi giao diện hoàn tất 100%.
 - Còn lại / rủi ro: Không có.
+
+## [2026-10-15] — Giải quyết conflict PR mobile với dev
+
+- Đã làm: merge `origin/dev` vào `feature/mobile-table-completion`, giữ cả mục mobile follow-up và mục sửa font footer trong `frontend/docs/WORK-LOG.md`.
+- Verify: mobile `npx tsc --noEmit`, `npm run lint` và `git diff --check` đều pass sau merge.
+- PROGRESS: không đổi phần trăm tính năng; chỉ giải quyết xung đột nhật ký. Thay đổi chưa commit ở workspace chính được giữ nguyên.

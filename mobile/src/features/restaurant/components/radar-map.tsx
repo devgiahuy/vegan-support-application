@@ -1,9 +1,10 @@
 import * as React from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { Compass, MapPin } from 'lucide-react-native';
+import { Linking, Pressable, Text, View } from 'react-native';
+import { Compass, ExternalLink, MapPin, Navigation } from 'lucide-react-native';
 
 import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
+import { buildDirectionsUrl } from '@/lib/env';
 import type { Restaurant } from '../types/restaurant.model';
 
 /** Hệ số quy đổi độ → mét (xấp xỉ), dùng để chiếu tọa độ quanh tâm lên khung bản đồ. */
@@ -46,6 +47,21 @@ export function RadarMap({
   }, [items, center, radiusM]);
 
   const radiusLabel = radiusM >= 1000 ? `${radiusM / 1000} km` : `${radiusM} m`;
+  const selectedRestaurant = React.useMemo(
+    () => items.find((item) => item.id === selectedId) ?? null,
+    [items, selectedId]
+  );
+  const selectedMapUrl = selectedRestaurant
+    ? selectedRestaurant.mapsUrl ??
+      (selectedRestaurant.lat !== null && selectedRestaurant.lng !== null
+        ? buildDirectionsUrl(selectedRestaurant.lat, selectedRestaurant.lng)
+        : '')
+    : '';
+
+  const openSelectedMap = () => {
+    if (!selectedMapUrl) return;
+    void Linking.openURL(selectedMapUrl);
+  };
 
   return (
     <View className="overflow-hidden rounded-2xl border border-border bg-muted/40">
@@ -101,6 +117,40 @@ export function RadarMap({
           </View>
         ) : null}
       </View>
+
+      {selectedRestaurant ? (
+        <View className="mx-3 mb-3 rounded-xl border border-border bg-background/85 p-3">
+          <View className="flex-row items-start gap-2">
+            <Navigation size={15} color={colors.primary} />
+            <View className="flex-1">
+              <Text numberOfLines={1} className="text-sm font-semibold text-foreground">
+                {selectedRestaurant.name}
+              </Text>
+              <Text numberOfLines={2} className="mt-0.5 text-xs text-muted-foreground">
+                {selectedRestaurant.address}
+              </Text>
+            </View>
+          </View>
+          {selectedMapUrl ? (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel={`Mở bản đồ đến ${selectedRestaurant.name}`}
+              onPress={openSelectedMap}
+              className="mt-3 flex-row items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2.5">
+              <ExternalLink size={14} color={colors.primaryForeground} />
+              <Text className="text-xs font-semibold text-primary-foreground">Mở bản đồ / chỉ đường</Text>
+            </Pressable>
+          ) : (
+            <Text className="mt-2 text-[11px] text-muted-foreground">
+              Quán này chưa có liên kết bản đồ từ nhà cung cấp. Mở chi tiết để xem địa chỉ và liên hệ.
+            </Text>
+          )}
+        </View>
+      ) : (
+        <Text className="mx-3 mb-3 text-[11px] text-muted-foreground">
+          Chạm vào ghim để xem địa chỉ và mở bản đồ khi nhà cung cấp có liên kết.
+        </Text>
+      )}
     </View>
   );
 }
