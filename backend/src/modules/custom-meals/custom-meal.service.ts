@@ -39,9 +39,9 @@ function rounded(value: number, digits = 2): number {
   return Math.round((value + Number.EPSILON) * factor) / factor;
 }
 
-function formatDecimal(value: { toNumber(): number } | null | undefined): number | null {
+function formatDecimal(value: number | null | undefined): number | null {
   if (value == null) return null;
-  return value.toNumber();
+  return value;
 }
 
 export function formatCustomMeal(meal: CustomMealRecord) {
@@ -315,7 +315,7 @@ export class CustomMealService {
         });
         continue;
       }
-      const amount = ingredient.amount.toNumber();
+      const amount = ingredient.amount;
       const normalizedUnit = ingredient.unit.trim().toLocaleLowerCase('vi');
       const massFactor = MASS_FACTORS.get(normalizedUnit);
       const conversion = profile.householdConversions.find(
@@ -327,7 +327,7 @@ export class CustomMealService {
         massFactor !== undefined
           ? amount * massFactor
           : conversion
-            ? (amount / conversion.quantity.toNumber()) * conversion.grams.toNumber()
+            ? (amount / conversion.quantity) * conversion.grams
             : null;
       if (rawGrams === null) {
         uncovered.push({
@@ -337,15 +337,12 @@ export class CustomMealService {
         });
         continue;
       }
-      const edibleGrams = rawGrams * (profile.ediblePortionPercent.toNumber() / 100);
+      const edibleGrams = rawGrams * (profile.ediblePortionPercent / 100);
       for (const nutrient of profile.nutrientValues) {
         const metric =
           METRIC_BY_NUTRIENT[nutrient.nutrient.code as keyof typeof METRIC_BY_NUTRIENT];
         if (!metric) continue;
-        totals.set(
-          metric,
-          (totals.get(metric) ?? 0) + (nutrient.valuePer100g.toNumber() * edibleGrams) / 100,
-        );
+        totals.set(metric, (totals.get(metric) ?? 0) + (nutrient.valuePer100g * edibleGrams) / 100);
       }
       sources.push({
         ingredientId: profile.ingredientId,
@@ -357,10 +354,10 @@ export class CustomMealService {
 
     const existing: Partial<Record<NutritionMetric, number>> = {
       ...(meal.userCalories !== null ? { calories: meal.userCalories } : {}),
-      ...(meal.userProteinGrams !== null ? { proteinGrams: meal.userProteinGrams.toNumber() } : {}),
-      ...(meal.userCarbsGrams !== null ? { carbsGrams: meal.userCarbsGrams.toNumber() } : {}),
-      ...(meal.userFatGrams !== null ? { fatGrams: meal.userFatGrams.toNumber() } : {}),
-      ...(meal.userFiberGrams !== null ? { fiberGrams: meal.userFiberGrams.toNumber() } : {}),
+      ...(meal.userProteinGrams !== null ? { proteinGrams: meal.userProteinGrams } : {}),
+      ...(meal.userCarbsGrams !== null ? { carbsGrams: meal.userCarbsGrams } : {}),
+      ...(meal.userFatGrams !== null ? { fatGrams: meal.userFatGrams } : {}),
+      ...(meal.userFiberGrams !== null ? { fiberGrams: meal.userFiberGrams } : {}),
     };
     const values: Partial<Record<NutritionMetric, number>> = { ...existing };
     const metricMetadata: Record<string, Prisma.InputJsonValue> = {};
@@ -394,7 +391,7 @@ export class CustomMealService {
           ingredients: meal.ingredients.map((ingredient) => ({
             displayName: ingredient.displayName,
             canonicalName: ingredient.ingredient?.canonicalName ?? null,
-            amount: ingredient.amount.toNumber(),
+            amount: ingredient.amount,
             unit: ingredient.unit,
           })),
           missingMetrics,

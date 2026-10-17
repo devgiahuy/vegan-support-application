@@ -1,3 +1,4 @@
+import { resolveMediaUrl } from '@/lib/env';
 import { BaseMapper, pickField, safeBoolean, safeDate, safeEnum, safeString } from '@/lib/mapper';
 import {
   AuthSessionResponseDto,
@@ -46,7 +47,7 @@ export class AuthMapper extends BaseMapper<UserDto, User> {
       id: safeString(pickField(dto, ['id'], '')),
       email: safeString(pickField(dto, ['email'], '')),
       displayName,
-      avatarUrl: safeString(pickField(dto, ['avatarUrl', 'avatar_url'], '')),
+      avatarUrl: resolveMediaUrl(safeString(pickField(dto, ['avatarUrl', 'avatar_url'], ''))),
       role: safeEnum(pickField(dto, ['role'], 'MEMBER'), UserRole, UserRole.MEMBER),
       status: safeEnum(pickField(dto, ['status'], 'ACTIVE'), MemberStatus, MemberStatus.ACTIVE),
       createdAt: safeDate(pickField(dto, ['createdAt', 'created_at'], null)),

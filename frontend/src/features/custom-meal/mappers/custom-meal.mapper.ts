@@ -44,6 +44,7 @@ export class CustomMealMapper extends BaseMapper<CustomMealResponseDto, CustomMe
         userProtein: null,
         userCarbs: null,
         userFat: null,
+        userFiber: null,
         calculatedCalories: null,
         calculatedProtein: null,
         calculatedCarbs: null,
@@ -186,6 +187,11 @@ export class CustomMealMapper extends BaseMapper<CustomMealResponseDto, CustomMe
       ['userFatGrams', 'userFat', 'user_fat_grams', 'user_fat'],
       null
     );
+    const userFiber = pickField<number | null>(
+      dto,
+      ['userFiberGrams', 'userFiber', 'user_fiber_grams', 'user_fiber'],
+      null
+    );
 
     const calculatedCalories = pickField<number | null>(
       dto,
@@ -231,6 +237,7 @@ export class CustomMealMapper extends BaseMapper<CustomMealResponseDto, CustomMe
       userProtein: userProtein !== null ? safeNumber(userProtein, 0) : null,
       userCarbs: userCarbs !== null ? safeNumber(userCarbs, 0) : null,
       userFat: userFat !== null ? safeNumber(userFat, 0) : null,
+      userFiber: userFiber !== null ? safeNumber(userFiber, 0) : null,
       calculatedCalories: calculatedCalories !== null ? safeNumber(calculatedCalories, 0) : null,
       calculatedProtein: calculatedProtein !== null ? safeNumber(calculatedProtein, 0) : null,
       calculatedCarbs: calculatedCarbs !== null ? safeNumber(calculatedCarbs, 0) : null,
@@ -275,6 +282,11 @@ export class CustomMealMapper extends BaseMapper<CustomMealResponseDto, CustomMe
       ['userFatGrams', 'userFat', 'user_fat_grams', 'user_fat'],
       null
     );
+    const userFiber = pickField<number | null>(
+      dto,
+      ['userFiberGrams', 'userFiber', 'user_fiber_grams', 'user_fiber'],
+      null
+    );
 
     const calculatedCalories = pickField<number | null>(
       dto,
@@ -316,6 +328,7 @@ export class CustomMealMapper extends BaseMapper<CustomMealResponseDto, CustomMe
         ? safeString(pickField(dto, ['sourceNote', 'source_note'], null), '')
         : null,
       userCalories: userCalories !== null ? safeNumber(userCalories, 0) : null,
+      userFiber: userFiber !== null ? safeNumber(userFiber, 0) : null,
       calculatedCalories: calculatedCalories !== null ? safeNumber(calculatedCalories, 0) : null,
       coverageRatio: safeNumber(pickField(dto, ['coverageRatio', 'coverage_ratio'], 1.0), 1.0),
       isFullyCovered,

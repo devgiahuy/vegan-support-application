@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { SafeImage } from '@/components/shared/safe-image';
-import { ArrowRight, BadgeCheck, Bookmark, Clock, Flame, Star } from 'lucide-react';
+import { ArrowRight, BadgeCheck, Bookmark, Clock, Flame, Star, User, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
@@ -25,6 +25,10 @@ export function RecipeCard({
   const authorName = recipe.author?.name || 'Tác giả ẩn danh';
   const authorVerified =
     recipe.author && 'verified' in recipe.author ? recipe.author.verified === true : false;
+  const isExpert = Boolean(
+    recipe.isExpertAuthor ?? recipe.author?.isExpert ?? authorVerified ?? recipe.expertVerified
+  );
+  const usageCount = recipe.usageCount ?? 0;
   const rating = recipe.rating;
   const ratingCount = recipe.ratingCount;
   const minutes = recipe.minutes || recipe.totalTimeMinutes;
@@ -67,7 +71,11 @@ export function RecipeCard({
       </Link>
 
       <div className="flex flex-1 flex-col p-4">
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1 font-medium text-emerald-700 dark:text-emerald-400">
+            <Users className="h-3.5 w-3.5" />
+            {usageCount} người đang dùng
+          </span>
           {typeof rating === 'number' && (
             <span className="inline-flex items-center gap-1 font-medium text-foreground">
               <Star className="h-3.5 w-3.5 fill-cta text-cta" />
@@ -87,18 +95,36 @@ export function RecipeCard({
           <Link href={`/recipes/${recipe.id}`}>{recipe.title}</Link>
         </h3>
 
-        <div className="mt-3 flex items-center justify-between pt-3 border-t border-border/60">
-          <div className="flex items-center gap-2">
-            <Avatar className="h-7 w-7">
+        <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <Avatar className="h-8 w-8 shrink-0">
               {authorAvatar ? <AvatarImage src={authorAvatar} alt={authorName} /> : null}
               <AvatarFallback>{authorName.charAt(0)}</AvatarFallback>
             </Avatar>
-            <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
-              {authorName}
-              {authorVerified && <BadgeCheck className="h-3.5 w-3.5 text-primary" />}
-            </span>
+            <div className="flex flex-col min-w-0">
+              <span className="truncate text-xs font-medium text-foreground">{authorName}</span>
+              <div className="mt-0.5 flex items-center gap-1.5">
+                {isExpert ? (
+                  <Badge
+                    variant="outline"
+                    className="gap-1 rounded-full border-emerald-500/40 bg-emerald-50 px-1.5 py-0 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                  >
+                    <BadgeCheck className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                    Chuyên gia
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant="secondary"
+                    className="gap-1 rounded-full px-1.5 py-0 text-[10px] font-normal text-muted-foreground"
+                  >
+                    <User className="h-3 w-3" />
+                    Người dùng thường
+                  </Badge>
+                )}
+              </div>
+            </div>
           </div>
-          <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
+          <ArrowRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
         </div>
       </div>
     </article>

@@ -19,7 +19,7 @@ import { useReviewRestaurantMutation } from '../queries/restaurant.queries';
 /**
  * Dialog xem xét và kiểm duyệt quán ăn (Admin Moderation):
  * - Quyết định: Phê duyệt (PUBLISHED) hoặc Từ chối (REJECTED).
- * - Bắt buộc nhập lý do (tối thiểu 3 ký tự) khi từ chối để phục vụ kiểm toán.
+ * - Bắt buộc nhập lý do (tối thiểu 3 ký tự) cho cả phê duyệt và từ chối để phục vụ kiểm toán.
  */
 export function ReviewRestaurantDialog({
   restaurant,
@@ -35,18 +35,10 @@ export function ReviewRestaurantDialog({
   const [reason, setReason] = React.useState('');
   const [fieldError, setFieldError] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    if (open) {
-      setDecision('APPROVE');
-      setReason('');
-      setFieldError(null);
-    }
-  }, [open]);
-
   const handleConfirm = async () => {
     if (!restaurant) return;
-    if (decision === 'REJECT' && reason.trim().length < 3) {
-      setFieldError('Vui lòng nhập lý do từ chối cụ thể (tối thiểu 3 ký tự).');
+    if (reason.trim().length < 3) {
+      setFieldError('Vui lòng nhập lý do quyết định cụ thể (tối thiểu 3 ký tự).');
       return;
     }
     setFieldError(null);
@@ -105,16 +97,14 @@ export function ReviewRestaurantDialog({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="review-reason">
-              Lý do kiểm duyệt {decision === 'REJECT' ? '*' : '(Tùy chọn)'}
-            </Label>
+            <Label htmlFor="review-reason">Lý do kiểm duyệt *</Label>
             <Textarea
               id="review-reason"
               rows={3}
               placeholder={
                 decision === 'REJECT'
                   ? 'VD: Quán đã đóng cửa, địa chỉ không có thật, hoặc quán có phục vụ món mặn...'
-                  : 'Ghi chú kiểm duyệt nếu có...'
+                  : 'Nhập lý do phê duyệt quán...'
               }
               value={reason}
               onChange={(e) => {

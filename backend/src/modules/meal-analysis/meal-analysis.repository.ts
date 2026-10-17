@@ -1,3 +1,4 @@
+import { lockDocument } from '../../database/locking.js';
 import {
   FoodDataReviewStatus,
   MealAnalysisStatus,
@@ -122,9 +123,7 @@ export class MealAnalysisRepository {
     disclaimer: string;
   }): Promise<MealAnalysisRecord> {
     return this.prisma.$transaction(async (transaction) => {
-      await transaction.$queryRaw<Array<{ id: string }>>`
-        SELECT "id" FROM "meal_plans" WHERE "id" = ${data.mealPlanId}::uuid FOR UPDATE
-      `;
+      await lockDocument(transaction, 'mealPlan', { id: data.mealPlanId });
       const latest = await transaction.mealAnalysis.findFirst({
         where: { mealPlanId: data.mealPlanId },
         orderBy: { version: 'desc' },

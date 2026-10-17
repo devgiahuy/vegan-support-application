@@ -1,3 +1,4 @@
+import { resolveMediaUrl } from '@/lib/env';
 import { BaseMapper, pickField, safeArray, safeNumber, safeString } from '@/lib/mapper';
 import type {
   CreateCustomMealRequestDto,
@@ -38,7 +39,7 @@ export class CustomMealMapper extends BaseMapper<CustomMealDto, CustomMeal> {
   toModel(dto: CustomMealDto | null | undefined): CustomMeal {
     const photos = safeArray<CustomMealPhotoDto | null, CustomMealPhoto>(pickField(dto, ['photos'], []), (photo, index) => ({
       id: safeString(pickField(photo, ['assetId', 'id'], '')),
-      url: safeString(pickField(photo, ['secureUrl'], '')),
+      url: resolveMediaUrl(safeString(pickField(photo, ['secureUrl'], ''))),
       sortOrder: safeNumber(pickField(photo, ['position'], index), index),
       isCover: index === 0,
       mimeType: safeString(pickField(photo, ['mimeType'], 'image/jpeg')) || 'image/jpeg',
@@ -72,7 +73,7 @@ export class CustomMealMapper extends BaseMapper<CustomMealDto, CustomMeal> {
 
     return {
       id: safeString(pickField(dto, ['id'], '')),
-      name: safeString(pickField(dto, ['name'], 'Bữa ăn tùy chỉnh')),
+      name: safeString(pickField(dto, ['name'], 'Món ăn cá nhân')),
       notes: safeString(pickField(dto, ['notes'], '')) || null,
       servings: Math.max(1, safeNumber(pickField(dto, ['servings'], 1), 1)),
       sourceNote: safeString(pickField(dto, ['sourceNote'], '')) || null,

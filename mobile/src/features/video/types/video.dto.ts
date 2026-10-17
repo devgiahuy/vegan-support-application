@@ -45,13 +45,8 @@ export interface CreateVideoPostRequestDto {
       secureUrl: string;
     } | {
       provider: 'CLOUDINARY';
-      kind: 'COVER_IMAGE';
-      publicId: string;
-      secureUrl: string;
-      mimeType: string;
-      bytes: number;
-      width?: number;
-      height?: number;
+      kind: 'COVER_IMAGE' | 'VIDEO';
+      assetId: string;
     }
   )[];
   body: string;

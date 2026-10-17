@@ -10,8 +10,8 @@ import { useAuthStore } from '@/store/useAuthStore';
 
 /**
  * Viết bài chia sẻ mới (Cẩm nang) — `POST /posts` (type=BLOG) +
- * `POST /posts/:id/submit` ngay sau đó để gửi duyệt. Chưa hỗ trợ ảnh bìa (cần
- * luồng upload Cloudinary riêng, ngoài phạm vi task này).
+ * `POST /posts/:id/submit` ngay sau đó để gửi duyệt. Ảnh bìa tải lên qua luồng
+ * reserve → Cloudinary → commit và gắn bằng `assetId`.
  */
 export default function CreateArticleScreen() {
   const router = useRouter();

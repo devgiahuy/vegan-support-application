@@ -111,6 +111,7 @@ export function RestaurantQueueTable() {
       )}
 
       <ReviewRestaurantDialog
+        key={`${selected?.id ?? 'none'}:${reviewOpen}`}
         restaurant={selected}
         open={reviewOpen}
         onOpenChange={setReviewOpen}

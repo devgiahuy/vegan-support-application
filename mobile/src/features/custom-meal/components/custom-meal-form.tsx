@@ -6,6 +6,7 @@ import { TextField } from '@/components/ui/text-field';
 import { IngredientPicker } from '@/features/ingredient/components/ingredient-picker';
 import { useIconColors } from '@/lib/theme-colors';
 import { customMealMapper } from '../mappers/custom-meal.mapper';
+import { CustomMealTagInput } from './custom-meal-tag-input';
 import type { CustomMeal, CustomMealFormValues, CustomMealIngredient } from '../types/custom-meal.model';
 
 function toNumberOrNull(value: string): number | null {
@@ -32,7 +33,7 @@ function emptyIngredient(id: string): CustomMealIngredient {
 }
 
 /**
- * Form tạo/sửa bữa ăn tự tạo. Mỗi nguyên liệu có thể liên kết với nguyên liệu chuẩn bằng gợi ý tìm kiếm
+ * Form tạo/sửa món ăn cá nhân (Món ăn của tôi). Mỗi nguyên liệu có thể liên kết với nguyên liệu chuẩn bằng gợi ý tìm kiếm
  * (gửi kèm `ingredientId`); nếu sửa tên sau khi chọn thì liên kết bị bỏ để tránh lỗi lệch tên-id.
  * Chỉ số dinh dưỡng là số người dùng tự nhập, để trống = chưa có dữ liệu.
  */
@@ -57,7 +58,7 @@ export function CustomMealForm({
   const [carbs, setCarbs] = React.useState(numberToText(initial?.carbsGrams));
   const [fat, setFat] = React.useState(numberToText(initial?.fatGrams));
   const [fiber, setFiber] = React.useState(numberToText(initial?.fiberGrams));
-  const [tags, setTags] = React.useState((initial?.tags ?? []).join(', '));
+  const [tags, setTags] = React.useState<string[]>(initial?.tags ?? []);
   const [ingredients, setIngredients] = React.useState<CustomMealIngredient[]>(
     initial?.ingredients.length ? initial.ingredients : [emptyIngredient('local-1')]
   );
@@ -74,7 +75,7 @@ export function CustomMealForm({
     const cleanName = name.trim();
     const parsedServings = Math.trunc(Number(servings));
     if (cleanName.length < 1) {
-      Alert.alert('Thiếu tên bữa ăn', 'Vui lòng nhập tên bữa ăn.');
+      Alert.alert('Thiếu tên món ăn', 'Vui lòng nhập tên món ăn.');
       return;
     }
     if (!Number.isInteger(parsedServings) || parsedServings < 1 || parsedServings > 99) {
@@ -98,14 +99,14 @@ export function CustomMealForm({
       userCarbsGrams: toNumberOrNull(carbs),
       userFatGrams: toNumberOrNull(fat),
       userFiberGrams: toNumberOrNull(fiber),
-      tags: tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+      tags,
       ingredients: cleanIngredients,
     });
   };
 
   return (
     <View className="gap-4">
-      <TextField label="Tên bữa ăn" value={name} onChangeText={setName} placeholder="VD: Cơm đậu hũ sốt nấm" />
+      <TextField label="Tên món ăn" value={name} onChangeText={setName} placeholder="VD: Cơm đậu hũ sốt nấm" />
       <TextField label="Ghi chú" value={notes} onChangeText={setNotes} placeholder="Cách nấu, cảm hứng..." multiline className="min-h-20 pt-3" />
       <View className="flex-row gap-3">
         <View className="flex-1">
@@ -135,7 +136,7 @@ export function CustomMealForm({
         Chỉ số dinh dưỡng là số bạn tự nhập; để trống nếu chưa biết (hệ thống không coi là 0).
       </Text>
       <TextField label="Nguồn/ghi chú riêng" value={sourceNote} onChangeText={setSourceNote} placeholder="VD: tag shopee chỉ là tag người dùng tự đặt, không gọi dịch vụ ngoài" />
-      <TextField label="Tags" value={tags} onChangeText={setTags} placeholder="meal-prep, shopee, bữa-trưa" />
+      <CustomMealTagInput tags={tags} onChange={setTags} />
 
       <View className="gap-3 rounded-2xl border border-border p-4">
         <View className="flex-row items-center justify-between">

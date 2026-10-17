@@ -120,7 +120,7 @@ export function WhyRecommendedDialog({
                     Chỉ số thể trạng &amp; Calo mục tiêu (BMI / TDEE)
                   </span>
                   <p className="text-muted-foreground">
-                    BMI 21.5 (Bình thường) • TDEE mục tiêu 1,850 kcal/ngày. Thực đơn tuần đạt 98.4%
+                    BMI 21.5 (Bình thường) • TDEE mục tiêu ~1,850 kcal/ngày. Thực đơn tuần đạt 98.4%
                     độ chuẩn xác calo.
                   </p>
                 </div>

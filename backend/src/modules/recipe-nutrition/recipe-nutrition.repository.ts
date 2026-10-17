@@ -131,16 +131,18 @@ export class RecipeNutritionRepository {
 
   async listEstimates(revisionId: string, page: number, limit: number) {
     const where = { revisionId };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.recipeNutritionEstimate.findMany({
-        where,
-        include: estimateInclude,
-        orderBy: { version: 'desc' },
-        skip: (page - 1) * limit,
-        take: limit,
-      }),
-      this.prisma.recipeNutritionEstimate.count({ where }),
-    ]);
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.recipeNutritionEstimate.findMany({
+          where,
+          include: estimateInclude,
+          orderBy: { version: 'desc' },
+          skip: (page - 1) * limit,
+          take: limit,
+        }),
+        transaction.recipeNutritionEstimate.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 

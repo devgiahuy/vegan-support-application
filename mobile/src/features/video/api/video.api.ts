@@ -21,44 +21,31 @@ export interface CreateVideoInput {
   title: string;
   excerpt?: string;
   body: string;
-  youtubeUrl: string;
+  /** Link YouTube/URL video. Bỏ trống khi dùng `videoAssetId`. */
+  youtubeUrl?: string;
+  /** Id asset video đã tải lên và commit; dùng thay cho `youtubeUrl`. */
+  videoAssetId?: string;
   categoryIds?: string[];
   tags?: string[];
-  coverMedia?: {
-    publicId: string;
-    secureUrl: string;
-    mimeType: string;
-    bytes: number;
-    width?: number;
-    height?: number;
-  };
+  /** Id asset ảnh bìa đã tải lên và commit (Phase 15); bỏ trống = không có ảnh bìa. */
+  coverAssetId?: string;
 }
 
 export interface UpdateVideoInput extends CreateVideoInput {
   expectedVersion: number;
 }
 
-function buildVideoMedia(input: Pick<CreateVideoInput, 'coverMedia' | 'youtubeUrl'>): CreateVideoPostRequestDto['media'] {
+function buildVideoMedia(
+  input: Pick<CreateVideoInput, 'coverAssetId' | 'youtubeUrl' | 'videoAssetId'>
+): CreateVideoPostRequestDto['media'] {
+  const video: CreateVideoPostRequestDto['media'][number] = input.videoAssetId
+    ? { provider: 'CLOUDINARY', kind: 'VIDEO', assetId: input.videoAssetId }
+    : { provider: 'YOUTUBE', kind: 'VIDEO', secureUrl: input.youtubeUrl ?? '' };
   return [
-    ...(input.coverMedia
-      ? [
-          {
-            provider: 'CLOUDINARY' as const,
-            kind: 'COVER_IMAGE' as const,
-            publicId: input.coverMedia.publicId,
-            secureUrl: input.coverMedia.secureUrl,
-            mimeType: input.coverMedia.mimeType,
-            bytes: input.coverMedia.bytes,
-            ...(input.coverMedia.width ? { width: input.coverMedia.width } : {}),
-            ...(input.coverMedia.height ? { height: input.coverMedia.height } : {}),
-          },
-        ]
+    ...(input.coverAssetId
+      ? [{ provider: 'CLOUDINARY' as const, kind: 'COVER_IMAGE' as const, assetId: input.coverAssetId }]
       : []),
-    {
-      provider: 'YOUTUBE',
-      kind: 'VIDEO',
-      secureUrl: input.youtubeUrl,
-    },
+    video,
   ];
 }
 

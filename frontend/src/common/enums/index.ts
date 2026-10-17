@@ -324,8 +324,58 @@ export enum AiVerificationAdminActionType {
   REVOKE = 'REVOKE',
 }
 
-/** Nguồn dữ liệu quán ăn (Phase 24). */
+/**
+ * Nguồn dữ liệu quán ăn (Phase 24).
+ * Khớp contract backend `RestaurantPlace.source` — xem
+ * `backend/src/modules/restaurants/restaurant.openapi.ts`.
+ * `SERPAPI` là dữ liệu Google Maps đi qua SerpApi; `FAKE` là dữ liệu minh hoạ khi không có provider thật.
+ * Cả hai KHÔNG phải quán nội bộ đã được kiểm duyệt.
+ */
 export enum RestaurantSource {
   INTERNAL = 'INTERNAL',
-  GOOGLE_PLACES = 'GOOGLE_PLACES',
+  GOOGLE = 'GOOGLE',
+  SERPAPI = 'SERPAPI',
+  FAKE = 'FAKE',
+}
+
+/** Trạng thái mở cửa của quán (contract `place.openState`). */
+export enum RestaurantOpenState {
+  /** Đang mở tại thời điểm truy vấn. */
+  NOW = 'now',
+  /** Mở 24 giờ. */
+  TWENTY_FOUR_HOURS = '24h',
+}
+
+/**
+ * Nhãn chế độ ăn của quán (contract `POST /restaurants` `dietTags`).
+ * Phân biệt với `DietPattern` (chỉ `VEGAN` | `LACTO_OVO`) vốn là tham số lọc `dietPattern`.
+ */
+export enum RestaurantDietTag {
+  VEGAN = 'VEGAN',
+  LACTO_OVO = 'LACTO_OVO',
+  BUDDHIST = 'BUDDHIST',
+  CHRISTIAN = 'CHRISTIAN',
+}
+
+/** Thứ trong tuất dạng khóa 3 ký tự (contract `openOnDay`). */
+export enum RestaurantWeekday {
+  MON = 'mon',
+  TUE = 'tue',
+  WED = 'wed',
+  THU = 'thu',
+  FRI = 'fri',
+  SAT = 'sat',
+  SUN = 'sun',
+}
+
+/**
+ * Thang giá của nhà cung cấp, 4 mức (contract `minPrice`/`maxPrice`: 0..4). KHÔNG phải số tiền VND.
+ * Dùng cho nhãn tiếng Việt trong `advanced-filters.tsx` và để hiển thị khoảng giá của quán.
+ */
+export enum RestaurantPriceLevel {
+  FREE = 0,
+  CHEAP = 1,
+  MODERATE = 2,
+  EXPENSIVE = 3,
+  LUXURY = 4,
 }

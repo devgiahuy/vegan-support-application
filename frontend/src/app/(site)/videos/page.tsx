@@ -24,6 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import { useVideosQuery } from '@/features/video/queries/video.queries';
 import { VideoCard } from '@/features/video/components/video-card';
+import { VideosHeroBanner } from '@/features/video/components/videos-hero-banner';
 import type { Video } from '@/features/video/types/video.model';
 
 const CATEGORIES = [
@@ -68,7 +69,7 @@ export default function VideoDiscoveryPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 lg:px-6 space-y-8">
       {/* Breadcrumbs */}
-      <nav className="flex items-center gap-2 text-sm text-muted-foreground">
+      {/* <nav className="flex items-center gap-2 text-sm text-muted-foreground">
         <Link
           href="/"
           className="inline-flex items-center gap-1 hover:text-primary transition-colors"
@@ -77,31 +78,10 @@ export default function VideoDiscoveryPage() {
         </Link>
         <ChevronRight className="h-3.5 w-3.5" />
         <span className="font-semibold text-primary">Video dạy nấu ăn chay</span>
-      </nav>
+      </nav> */}
 
       {/* Header Banner */}
-      <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-card to-secondary/30 p-6 sm:p-8">
-        <div className="max-w-2xl space-y-3">
-          <Badge className="bg-primary text-white gap-1.5 px-3 py-1 font-semibold text-xs">
-            <Sparkles className="h-3.5 w-3.5" /> AI Video Summarization (UC-10)
-          </Badge>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            Kho Video Nấu Chay Trực Quan
-          </h1>
-          <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-            Học nấu ăn chay dễ dàng qua các video chất lượng cao từ Chuyên gia dinh dưỡng và Đầu bếp
-            có kinh nghiệm. Mọi video đều có{' '}
-            <strong>tóm tắt công thức và mốc thời gian tự động từ AI</strong>.
-          </p>
-          <div className="pt-2">
-            <Button asChild className="gap-2 font-semibold shadow-md">
-              <Link href="/videos/new">
-                <UploadCloud className="h-4 w-4" /> Đăng tải video của bạn (UC-05)
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </div>
+      <VideosHeroBanner />
 
       {/* Search and Filters Bar */}
       <div className="space-y-4">

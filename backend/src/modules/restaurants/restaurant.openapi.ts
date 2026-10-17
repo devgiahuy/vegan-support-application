@@ -73,8 +73,17 @@ const discovery = z.object({
   success: z.literal(true),
   data: z.array(place),
   meta: pageMeta.extend({
-    resultsTruncated: z.boolean(),
-    externalDataUnavailable: z.boolean(),
+    resultsTruncated: z
+      .boolean()
+      .describe('Provider page or result cap reached; result set may be incomplete'),
+    externalDataUnavailable: z
+      .boolean()
+      .describe(
+        'At least one provider query or page failed; successfully retrieved places remain available',
+      ),
+    externalResultsSuppressed: z
+      .boolean()
+      .describe('Unreviewed external places omitted because hard dietary constraints apply'),
     provider: z.string(),
     providerResultLimit: z.number(),
     locationStored: z.literal(false),
@@ -131,7 +140,7 @@ export function registerRestaurantOpenApi(registry: OpenAPIRegistry, error: z.Zo
     summary:
       'Nearby approved internal and live provider places; hard diet filtering precedes ranking',
     description:
-      'Coordinates are explicit. DEVICE requires locationConsent=true. Provider results are dietary-unverified and excluded when hard constraints apply. Google content is live only and must be attributed in the UI.',
+      'Coordinates are explicit. DEVICE requires locationConsent=true. Provider results are dietary-unverified and excluded when hard constraints apply. Live provider content must be attributed in the UI. Nearby keyword queries run concurrently; SerpApi shares MAPS_TIMEOUT_MS across all pages/zooms per query and retains successful pages after a later failure. Results are deduplicated, radius-filtered and paginated (limit <= 20).',
     operationId: 'nearbyRestaurants',
     request: { query: nearbyQuerySchema },
     responses: {
@@ -147,6 +156,8 @@ export function registerRestaurantOpenApi(registry: OpenAPIRegistry, error: z.Zo
     path: '/api/v1/restaurants/search',
     tags: ['Restaurants'],
     summary: 'Search nearby restaurants and shops',
+    description:
+      'Hard dietary constraints exclude all unreviewed external data. Provider price/rating/open filters are forwarded to SerpApi; internal records without those assertions are excluded when such filters are requested. Pagination and partial provider failure metadata match nearby discovery.',
     operationId: 'searchRestaurants',
     request: { query: searchQuerySchema },
     responses: {

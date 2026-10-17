@@ -1,11 +1,12 @@
+import { createPrismaClient } from '../../database/client.js';
 import 'dotenv/config';
-import { MediaResourceType, PrismaClient } from '@prisma/client';
+import { MediaResourceType } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
 import { loadConfig } from '../../config/env.js';
 import { CloudinaryMediaProvider } from './cloudinary.provider.js';
 import { StorageRepository } from './storage.repository.js';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const repository = new StorageRepository(prisma);
 const argumentsSet = new Set(process.argv.slice(2));
 const action = process.argv[2] ?? 'reconcile';
@@ -13,7 +14,11 @@ const apply = argumentsSet.has('--apply');
 const checkProvider = argumentsSet.has('--provider');
 
 function json(value: unknown): string {
-  return JSON.stringify(value, (_key, item: unknown) => (typeof item === 'bigint' ? item.toString() : item), 2);
+  return JSON.stringify(
+    value,
+    (_key, item: unknown) => (typeof item === 'bigint' ? item.toString() : item),
+    2,
+  );
 }
 
 async function cleanup(): Promise<void> {
@@ -48,7 +53,8 @@ async function reconcile(): Promise<void> {
   const counterDrift = snapshot.accounts.flatMap((account) => {
     const expectedUsedBytes = usedByUser.get(account.userId) ?? 0n;
     const expectedReservedBytes = reservedByUser.get(account.userId) ?? 0n;
-    return account.usedBytes === expectedUsedBytes && account.reservedBytes === expectedReservedBytes
+    return account.usedBytes === expectedUsedBytes &&
+      account.reservedBytes === expectedReservedBytes
       ? []
       : [
           {
@@ -84,7 +90,11 @@ async function reconcile(): Promise<void> {
     for (const asset of snapshot.assets) {
       const actual = providerByPublicId.get(asset.publicId);
       if (!actual) {
-        providerDrift.push({ assetId: asset.id, publicId: asset.publicId, issue: 'PROVIDER_MISSING' });
+        providerDrift.push({
+          assetId: asset.id,
+          publicId: asset.publicId,
+          issue: 'PROVIDER_MISSING',
+        });
         if (apply) await repository.reconcileAssetMetadata(asset.id, null);
         continue;
       }
@@ -121,7 +131,10 @@ async function reconcile(): Promise<void> {
       providerDrift,
       providerOrphans,
       backfilledAssetsPendingMetadata: snapshot.assets
-        .filter((asset) => asset.backfilled && (asset.bytes === 0n || !asset.mimeType || !asset.extension))
+        .filter(
+          (asset) =>
+            asset.backfilled && (asset.bytes === 0n || !asset.mimeType || !asset.extension),
+        )
         .map((asset) => ({ assetId: asset.id, publicId: asset.publicId })),
     }),
   );
@@ -130,7 +143,12 @@ async function reconcile(): Promise<void> {
 try {
   if (action === 'cleanup') await cleanup();
   else if (action === 'reconcile') await reconcile();
-  else throw new AppError({ statusCode: 400, code: 'INVALID_COMMAND', message: 'Use cleanup or reconcile' });
+  else
+    throw new AppError({
+      statusCode: 400,
+      code: 'INVALID_COMMAND',
+      message: 'Use cleanup or reconcile',
+    });
 } finally {
   await prisma.$disconnect();
 }

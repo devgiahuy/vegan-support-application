@@ -7,6 +7,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { ArticleForm } from '@/features/post/components/article-form';
 import { useArticleDetailQuery, useUpdateArticleMutation } from '@/features/post/queries/post.queries';
 import { getApiErrorMessage } from '@/lib/api-error';
+import { FALLBACK_ARTICLE_COVER_URL } from '@/lib/env';
 import { useAuthStore } from '@/store/useAuthStore';
 
 /** Sửa bài viết của chính mình — `PATCH /posts/:id` rồi gửi lại duyệt. Author-only. */
@@ -72,6 +73,8 @@ export default function EditArticleScreen() {
             title: article.title,
             excerpt: article.excerpt,
             body: article.content,
+            coverImageUrl:
+              article.coverImageUrl && article.coverImageUrl !== FALLBACK_ARTICLE_COVER_URL ? article.coverImageUrl : null,
             tags: article.tags,
             categoryId: article.category.id || null,
           }}

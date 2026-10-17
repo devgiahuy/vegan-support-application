@@ -1,5 +1,13 @@
 import { ChatMessageStatus, ChatOwnerType, ChatRole, FeedbackValue } from '@/common/enums';
-import { BaseMapper, pickField, safeArray, safeDate, safeEnum, safeNumber, safeString } from '@/lib/mapper';
+import {
+  BaseMapper,
+  pickField,
+  safeArray,
+  safeDate,
+  safeEnum,
+  safeNumber,
+  safeString,
+} from '@/lib/mapper';
 import type { PaginationResult } from '@/types/api';
 import type {
   ChatFeedbackRequestDto,
@@ -30,14 +38,26 @@ const ROLE_LABELS: Record<ChatRole, string> = {
   [ChatRole.ASSISTANT]: 'Trợ lý',
 };
 
-const STREAM_EVENT_TYPES = ['message_start', 'content_delta', 'message_complete', 'quota', 'error'] as const;
+const STREAM_EVENT_TYPES = [
+  'message_start',
+  'content_delta',
+  'message_complete',
+  'quota',
+  'error',
+] as const;
 
 function formatResetLabel(iso: string): string {
   if (iso.length === 0) return 'nửa đêm';
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return 'nửa đêm';
-  const time = date.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-  const day = date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit' });
+  const time = date.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const day = date.toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+  });
   return `${time} ${day}`;
 }
 
@@ -47,7 +67,9 @@ export function parseSseEvent(rawBlock: string): StreamEvent {
   for (const line of rawBlock.split('\n')) {
     if (line.startsWith('event:')) {
       const name = line.slice('event:'.length).trim();
-      type = (STREAM_EVENT_TYPES as readonly string[]).includes(name) ? (name as StreamEvent['type']) : 'unknown';
+      type = (STREAM_EVENT_TYPES as readonly string[]).includes(name)
+        ? (name as StreamEvent['type'])
+        : 'unknown';
     } else if (line.startsWith('data:')) {
       dataLines.push(line.slice('data:'.length).trimStart());
     }
@@ -99,7 +121,9 @@ export class ChatMapper extends BaseMapper<ChatSessionDto, ChatSession> {
 
   toSessionList(dto: ChatSessionListResponseDto | null | undefined): PaginationResult<ChatSession> {
     const rawItems = pickField(dto, ['data'], null) as (ChatSessionDto | null)[] | null;
-    const items = this.toModelList(safeArray<ChatSessionDto | null, ChatSessionDto | null>(rawItems, (item) => item));
+    const items = this.toModelList(
+      safeArray<ChatSessionDto | null, ChatSessionDto | null>(rawItems, (item) => item)
+    );
     const meta = pickField(dto, ['meta'], null) as ChatSessionListResponseDto['meta'];
     const page = safeNumber(pickField(meta, ['page'], 1));
     const limit = safeNumber(pickField(meta, ['limit'], 20));
@@ -121,14 +145,20 @@ export class ChatMapper extends BaseMapper<ChatSessionDto, ChatSession> {
 
   toMessage(dto: ChatMessageDto | null | undefined): ChatMessage {
     const role = safeEnum(pickField(dto, ['role'], 'USER'), ChatRole, ChatRole.USER);
-    const feedbackRaw = pickField(dto, ['feedback'], null) as { value?: string } | null;
+    const feedbackRaw = pickField(dto, ['feedback'], null) as {
+      value?: string;
+    } | null;
 
     return {
       id: safeString(pickField(dto, ['id'], '')),
       sessionId: safeString(pickField(dto, ['sessionId', 'session_id'], '')),
       role,
       roleLabel: ROLE_LABELS[role],
-      status: safeEnum(pickField(dto, ['status'], 'COMPLETED'), ChatMessageStatus, ChatMessageStatus.COMPLETED),
+      status: safeEnum(
+        pickField(dto, ['status'], 'COMPLETED'),
+        ChatMessageStatus,
+        ChatMessageStatus.COMPLETED
+      ),
       content: safeString(pickField(dto, ['content'], ''), ''),
       isFallback: pickField<boolean>(dto, ['fallback'], false),
       disclaimer: safeString(pickField(dto, ['disclaimer'], ''), '') || null,
@@ -143,7 +173,9 @@ export class ChatMapper extends BaseMapper<ChatSessionDto, ChatSession> {
 
   toMessageList(dto: ChatMessageListResponseDto | null | undefined): PaginationResult<ChatMessage> {
     const rawItems = pickField(dto, ['data'], null) as (ChatMessageDto | null)[] | null;
-    const items = safeArray<ChatMessageDto | null, ChatMessage>(rawItems, (item) => this.toMessage(item));
+    const items = safeArray<ChatMessageDto | null, ChatMessage>(rawItems, (item) =>
+      this.toMessage(item)
+    );
     const meta = pickField(dto, ['meta'], null) as ChatMessageListResponseDto['meta'];
     const page = safeNumber(pickField(meta, ['page'], 1));
     const limit = safeNumber(pickField(meta, ['limit'], 100));
@@ -176,15 +208,21 @@ export class ChatMapper extends BaseMapper<ChatSessionDto, ChatSession> {
   toQuotaState(payload: Record<string, unknown>, fallbackLimit = 5): QuotaState {
     const limit = safeNumber(pickField(payload, ['limit'], fallbackLimit));
     const used = safeNumber(
-      pickField(payload, ['used'], Math.max(limit - safeNumber(pickField(payload, ['remaining'], limit)), 0))
+      pickField(
+        payload,
+        ['used'],
+        Math.max(limit - safeNumber(pickField(payload, ['remaining'], limit)), 0)
+      )
     );
     const remaining = Math.max(limit - used, 0);
+    const paidRemaining = Math.max(0, safeNumber(pickField(payload, ['paidRemaining'], 0)));
     return {
       used,
       limit,
       remaining,
       resetAtLabel: formatResetLabel(safeString(pickField(payload, ['resetAt', 'reset_at'], ''))),
-      exhausted: remaining === 0,
+      paidRemaining,
+      exhausted: remaining === 0 && paidRemaining === 0,
     };
   }
 

@@ -1,7 +1,11 @@
+import * as React from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Link, type Href } from 'expo-router';
 import { ArrowRight, Clock, Flame } from 'lucide-react-native';
+import { ImageBadge } from '@/components/ui/image-badge';
+import { UserAvatar } from '@/components/ui/user-avatar';
+import { FALLBACK_RECIPE_COVER_URL } from '@/lib/env';
 import { useIconColors } from '@/lib/theme-colors';
 import type { Recipe } from '../types/recipe.model';
 
@@ -12,6 +16,8 @@ import type { Recipe } from '../types/recipe.model';
  */
 export function RecipeCard({ recipe, className }: { recipe: Recipe; className?: string }) {
   const colors = useIconColors();
+  const [imageFailed, setImageFailed] = React.useState(false);
+  const imageUri = !imageFailed && recipe.coverImageUrl ? recipe.coverImageUrl : FALLBACK_RECIPE_COVER_URL;
   const minutes = recipe.totalTimeMinutes;
   const kcal = recipe.nutrition.calories;
   const protein = recipe.nutrition.protein;
@@ -21,17 +27,20 @@ export function RecipeCard({ recipe, className }: { recipe: Recipe; className?: 
       <Pressable
         className={`overflow-hidden rounded-2xl border border-border bg-card ${className ?? ''}`}>
         <View className="relative aspect-[4/3]">
-          <Image
-            source={{ uri: recipe.coverImageUrl }}
-            style={{ width: '100%', height: '100%' }}
-            contentFit="cover"
+          {imageUri ? (
+            <Image
+              source={{ uri: imageUri }}
+              style={{ width: '100%', height: '100%' }}
+              contentFit="cover"
+              onError={() => setImageFailed(true)}
+            />
+          ) : null}
+          {/* Nhãn thời gian: nền/chữ theo theme, đọc được cả chế độ sáng lẫn tối. */}
+          <ImageBadge
+            label={`${minutes} phút`}
+            icon={(color) => <Clock size={12} color={color} />}
+            style={{ position: 'absolute', left: 10, top: 10 }}
           />
-          {/* Màu cố định (không theo theme) — nền là ảnh món ăn, độ sáng thay đổi tuỳ ảnh,
-              nên không thể dựa vào token sáng/tối để đảm bảo tương phản. */}
-          <View className="absolute left-2.5 top-2.5 flex-row items-center gap-1 rounded-full bg-black/70 px-2.5 py-1">
-            <Clock size={12} color="#ffffff" />
-            <Text className="text-xs font-medium text-white">{minutes} phút</Text>
-          </View>
         </View>
 
         <View className="gap-2 p-3.5">
@@ -50,8 +59,9 @@ export function RecipeCard({ recipe, className }: { recipe: Recipe; className?: 
             {recipe.title}
           </Text>
 
-          <View className="mt-1 flex-row items-center justify-between border-t border-border pt-2.5">
-            <Text numberOfLines={1} className="flex-1 text-xs font-medium text-muted-foreground">
+          <View className="mt-1 flex-row items-center gap-2 border-t border-border pt-2.5">
+            <UserAvatar name={recipe.author.name} uri={recipe.author.avatarUrl} size={28} />
+            <Text numberOfLines={1} className="flex-1 text-xs font-medium text-foreground">
               {recipe.author.name}
             </Text>
             <ArrowRight size={14} color={colors.mutedForeground} />

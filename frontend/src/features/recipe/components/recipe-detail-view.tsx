@@ -41,6 +41,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { NutritionFactsPanel } from '@/features/food-data/components/nutrition-facts-panel';
 import { RecipeNutritionCard } from '@/features/recipe-nutrition/components/recipe-nutrition-card';
 import { RecipeCard } from './recipe-card';
+import { RecipeAllergenHighlight } from './recipe-allergen-highlight';
 import type { Recipe } from '../types/recipe.model';
 import {
   getAllergenName,
@@ -347,6 +348,9 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
             </Card>
           </div> */}
 
+          {/* CẢNH BÁO DỊ ỨNG NỔI BẬT */}
+          <RecipeAllergenHighlight allergens={allergens} />
+
           {/* INGREDIENTS CHECKLIST SECTION */}
           <Card className="border-border/60 shadow-sm overflow-hidden">
             <CardHeader className="bg-muted/40 pb-4 border-b flex flex-row items-center justify-between">
@@ -547,6 +551,77 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
             </div>
           </div>
 
+          {/* Tương thích & dị ứng từ backend — chỉ hiện khi có dữ liệu thật */}
+          {/* {hasCompatibilityInfo && (
+            <Card className="border-border/60 shadow-sm">
+              <CardHeader className="pb-3 border-b">
+                <CardTitle className="text-base font-bold flex items-center gap-2 text-foreground">
+                  <ShieldCheck className="h-4 w-4 text-primary" /> Tương thích & dị ứng
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-5 space-y-3 text-sm">
+                {allergens.length > 0 && (
+                  <div>
+                    <p className="text-xs font-semibold text-muted-foreground">
+                      Có thể chứa dị ứng:
+                    </p>
+                    <div className="mt-1.5 flex flex-wrap gap-1.5">
+                      {allergens.map((allergen) => (
+                        <Badge
+                          key={allergen.code}
+                          variant="outline"
+                          className="rounded-full border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                        >
+                          {allergen.name || allergen.code}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {typeof recipe.mealPlannerEligible === 'boolean' && !recipe.mealPlannerEligible && (
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Công thức chưa đủ điều kiện đưa vào thực đơn tự động (nguyên liệu chưa chuẩn hóa
+                    hết hoặc thiếu chỉ số dinh dưỡng).
+                  </p>
+                )}
+                {recipe.traditionWarnings && recipe.traditionWarnings.length > 0 && (
+                  <ul className="space-y-1.5">
+                    {recipe.traditionWarnings.map((w) => (
+                      <li
+                        key={`${w.tradition}-${w.warningCode}`}
+                        className="text-xs text-muted-foreground leading-relaxed"
+                      >
+                        <span className="font-semibold text-foreground">
+                          {w.traditionName || w.traditionLabel || getTraditionName(w.tradition)}:
+                        </span>{' '}
+                        {w.label || w.warningCode}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {incompatibilities.map((c) => {
+                  const patternDisplay =
+                    c.dietPatternName || c.dietPatternLabel || getDietPatternName(c.dietPattern);
+                  const reasonsDisplay =
+                    c.reasonLabels && c.reasonLabels.length > 0
+                      ? c.reasonLabels.join(', ')
+                      : c.reasonCodes && c.reasonCodes.length > 0
+                        ? c.reasonCodes.map(getDietReasonLabel).join(', ')
+                        : 'đang cập nhật nguyên nhân';
+                  return (
+                    <p
+                      key={c.dietPattern}
+                      className="text-xs text-muted-foreground leading-relaxed"
+                    >
+                      <span className="font-semibold text-foreground">{patternDisplay}:</span> chưa
+                      tương thích ({reasonsDisplay}).
+                    </p>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )} */}
+
           {/* REVIEWS & COMMUNITY FEEDBACK — chỉ hiện khi có dữ liệu thật */}
           {((recipe.reviews && recipe.reviews.length > 0) ||
             (summary?.ratingCount ?? 0) > 0 ||
@@ -617,77 +692,6 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
                     Chưa có đánh giá nào. Hãy là người đầu tiên thử nấu và để lại nhận xét!
                   </p>
                 )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Tương thích & dị ứng từ backend — chỉ hiện khi có dữ liệu thật */}
-          {hasCompatibilityInfo && (
-            <Card className="border-border/60 shadow-sm">
-              <CardHeader className="pb-3 border-b">
-                <CardTitle className="text-base font-bold flex items-center gap-2 text-foreground">
-                  <ShieldCheck className="h-4 w-4 text-primary" /> Tương thích & dị ứng
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-5 space-y-3 text-sm">
-                {allergens.length > 0 && (
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground">
-                      Có thể chứa dị ứng:
-                    </p>
-                    <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      {allergens.map((allergen) => (
-                        <Badge
-                          key={allergen.code}
-                          variant="outline"
-                          className="rounded-full border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-                        >
-                          {allergen.name || allergen.code}
-                        </Badge>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {typeof recipe.mealPlannerEligible === 'boolean' && !recipe.mealPlannerEligible && (
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Công thức chưa đủ điều kiện đưa vào thực đơn tự động (nguyên liệu chưa chuẩn hóa
-                    hết hoặc thiếu chỉ số dinh dưỡng).
-                  </p>
-                )}
-                {recipe.traditionWarnings && recipe.traditionWarnings.length > 0 && (
-                  <ul className="space-y-1.5">
-                    {recipe.traditionWarnings.map((w) => (
-                      <li
-                        key={`${w.tradition}-${w.warningCode}`}
-                        className="text-xs text-muted-foreground leading-relaxed"
-                      >
-                        <span className="font-semibold text-foreground">
-                          {w.traditionName || w.traditionLabel || getTraditionName(w.tradition)}:
-                        </span>{' '}
-                        {w.label || w.warningCode}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                {incompatibilities.map((c) => {
-                  const patternDisplay =
-                    c.dietPatternName || c.dietPatternLabel || getDietPatternName(c.dietPattern);
-                  const reasonsDisplay =
-                    c.reasonLabels && c.reasonLabels.length > 0
-                      ? c.reasonLabels.join(', ')
-                      : c.reasonCodes && c.reasonCodes.length > 0
-                        ? c.reasonCodes.map(getDietReasonLabel).join(', ')
-                        : 'đang cập nhật nguyên nhân';
-                  return (
-                    <p
-                      key={c.dietPattern}
-                      className="text-xs text-muted-foreground leading-relaxed"
-                    >
-                      <span className="font-semibold text-foreground">{patternDisplay}:</span> chưa
-                      tương thích ({reasonsDisplay}).
-                    </p>
-                  );
-                })}
               </CardContent>
             </Card>
           )}

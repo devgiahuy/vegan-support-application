@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/store/useAuthStore';
 import { storageApi } from '../api/storage.api';
+import { createOperationKey } from '@/lib/operation-key';
 import { uploadImage } from '../api/image-upload';
 import type { ReservationInput, UploadAttempt } from '../types/storage.model';
 
@@ -30,6 +31,15 @@ export function useUploadImageMutation() {
       onProgress: (percent: number) => void;
       attempt: UploadAttempt;
     }) => uploadImage(input, onProgress, attempt),
+    onSettled: () => client.invalidateQueries({ queryKey: STORAGE_QUERY_KEYS.all }),
+  });
+}
+
+/** Xóa tệp đã tải lên để lấy lại dung lượng; thành công hoặc lỗi đều làm mới số liệu dung lượng. */
+export function useDeleteStorageAssetMutation() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (assetId: string) => storageApi.deleteAsset(assetId, createOperationKey('asset-delete')),
     onSettled: () => client.invalidateQueries({ queryKey: STORAGE_QUERY_KEYS.all }),
   });
 }

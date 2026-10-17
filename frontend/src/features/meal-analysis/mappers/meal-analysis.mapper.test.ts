@@ -339,4 +339,106 @@ describe('MealAnalysisMapper', () => {
     expect(model.summary.dangerCount).toBe(1);
     expect(model.summary.warningCount).toBe(2);
   });
+
+  it('15. Phase 18 v4.1: maps Vietnamese warning fields, targetComparison, userStatus, and estimatedNutrition', () => {
+    const model = mapper.toModel({
+      id: 'analysis-v41',
+      summary: {
+        totalWarnings: 1,
+        userStatus: 'ADVISORY_ADJUSTMENTS',
+        title: 'Có điều chỉnh khuyến nghị',
+        detail: 'Một số chỉ số dinh dưỡng vượt mức khuyến nghị.',
+        advisoryCount: 1,
+        hardConstraintViolationCount: 0,
+        hardConstraintsPreserved: true,
+      },
+      warnings: [
+        {
+          code: 'MACRO_TARGET_EXCEEDED',
+          title: 'Chất béo ước tính đang cao hơn mục tiêu',
+          detail: 'Cả ngày Thứ Tư có lượng chất béo ước tính cao hơn khoảng mục tiêu.',
+          suggestion: 'Bạn có thể giảm khẩu phần hoặc đổi sang món ít dầu hơn.',
+          severity: 'CAUTION',
+          severityLabel: 'Lưu ý',
+          scope: 'SAME_DAY',
+          scopeLabel: 'Cả ngày',
+          targetDate: '2026-09-30',
+          mealType: 'LUNCH',
+          targetComparison: 'ABOVE',
+          evidenceGrade: 'GRADE_A',
+        },
+      ],
+      estimatedNutrition: {
+        estimated: true,
+        targetSource: 'HEALTH_PROFILE_TDEE_GOAL_CONFIG',
+        targetSourceDetail: 'TDEE 2000 kcal x factor 1.0',
+        tolerancePercent: 15,
+        targets: {
+          proteinGrams: 75,
+          fiberGrams: 30,
+          fatGrams: 50,
+          carbohydrateGrams: 250,
+        },
+        days: [
+          {
+            date: '2026-09-30',
+            totals: {
+              proteinGrams: 70,
+              fiberGrams: 28,
+              fatGrams: 62,
+              carbohydrateGrams: 240,
+            },
+            confidence: 0.9,
+            uncertaintyNotes: ['Ước tính theo công thức'],
+          },
+        ],
+      },
+    });
+
+    expect(model.summary.userStatus).toBe('ADVISORY_ADJUSTMENTS');
+    expect(model.summary.advisoryCount).toBe(1);
+    expect(model.summary.hardConstraintsPreserved).toBe(true);
+
+    const w = model.warnings[0];
+    expect(w.title).toBe('Chất béo ước tính đang cao hơn mục tiêu');
+    expect(w.detail).toContain('Thứ Tư');
+    expect(w.suggestion).toContain('giảm khẩu phần');
+    expect(w.severityLabel).toBe('Lưu ý');
+    expect(w.scopeLabel).toBe('Cả ngày');
+    expect(w.targetComparison).toBe('ABOVE');
+
+    expect(model.estimatedNutrition?.estimated).toBe(true);
+    expect(model.estimatedNutrition?.targets.fatGrams).toBe(50);
+    expect(model.estimatedNutrition?.days[0].totals.fatGrams).toBe(62);
+  });
+
+  it('16. US4: suppresses micronutrient completeness warnings and redacts internal jargon/UUIDs', () => {
+    const model = mapper.toModel({
+      id: 'analysis-us4',
+      incompleteDataNotes:
+        'Recipe item 12345678-1234-1234-1234-123456789abc: thiếu dữ liệu cooking-aware',
+      warnings: [
+        {
+          code: 'MICRONUTRIENT_COMPLETENESS',
+          title: 'Chưa đủ vi chất toàn diện',
+          severity: 'HIGH',
+        },
+        {
+          code: 'MACRO_TARGET_EXCEEDED',
+          title: 'Đạm cao hơn mục tiêu',
+          severity: 'CAUTION',
+        },
+      ],
+    });
+
+    // Cảnh báo vi chất kỹ thuật đã được lọc bỏ, chỉ còn cảnh báo đa lượng
+    expect(model.warnings).toHaveLength(1);
+    expect(model.warnings[0].code).toBe('MACRO_TARGET_EXCEEDED');
+
+    // UUID và biệt ngữ cooking-aware đã được chuẩn hóa thân thiện
+    expect(model.incompleteDataNotes).not.toContain('cooking-aware');
+    expect(model.incompleteDataNotes).not.toContain('12345678-1234-1234-1234-123456789abc');
+    expect(model.incompleteDataNotes).toContain('#123456');
+    expect(model.incompleteDataNotes).toContain('ước tính đa lượng');
+  });
 });

@@ -40,8 +40,8 @@ function sha256(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }
 
-function number(value: { toNumber(): number } | number | null): number | null {
-  return value === null ? null : typeof value === 'number' ? value : value.toNumber();
+function number(value: number | null): number | null {
+  return value === null ? null : typeof value === 'number' ? value : value;
 }
 
 function qualityConfidence(quality: FoodDataQuality): number {
@@ -218,7 +218,7 @@ export class ReceiptService {
         expectedVersion: selected.get(candidate.id)!.expectedVersion,
         conversion: await this.resolveConversion(
           candidate.ingredientId,
-          candidate.quantity.toNumber(),
+          candidate.quantity,
           candidate.unit,
         ),
       });
@@ -249,10 +249,10 @@ export class ReceiptService {
                 ? { id: item.ingredient.id, name: item.ingredient.canonicalName }
                 : null,
               unmatchedText: item.unmatchedText ?? null,
-              quantity: item.quantity.toNumber(),
+              quantity: item.quantity,
               unit: item.unit,
               source: item.source,
-              confidence: item.confidence.toNumber(),
+              confidence: item.confidence,
               confirmationStatus: item.confirmationStatus,
               purchasedAt: item.purchasedAt?.toISOString().slice(0, 10) ?? null,
               version: item.version,
@@ -300,7 +300,7 @@ export class ReceiptService {
       job.modelId !== this.provider.model ||
       job.templateVersion !== this.provider.templateVersion
     ) {
-      await this.repository.markFailed(job.id);
+      await this.repository.markFailed(job.id, job.attemptCount);
       return;
     }
     try {
@@ -318,6 +318,7 @@ export class ReceiptService {
       const candidates = await this.mapProviderLines(results);
       await this.repository.saveResults({
         jobId: job.id,
+        expectedAttempt: job.attemptCount,
         inputs: results.map((result) => ({ inputId: result.inputId, error: result.error })),
         candidates,
         metadata: {
@@ -331,7 +332,7 @@ export class ReceiptService {
         },
       });
     } catch {
-      await this.repository.markFailed(job.id);
+      await this.repository.markFailed(job.id, job.attemptCount);
     }
   }
 
@@ -464,10 +465,7 @@ export class ReceiptService {
       const inventory = pantryByIngredient.get(group.ingredient.id) ?? [];
       const convertible = inventory.filter((item) => item.normalizedGrams !== null);
       const unavailableCount = inventory.length - convertible.length;
-      const available = convertible.reduce(
-        (sum, item) => sum + (item.normalizedGrams?.toNumber() ?? 0),
-        0,
-      );
+      const available = convertible.reduce((sum, item) => sum + (item.normalizedGrams ?? 0), 0);
       const required = Number(group.required.toFixed(4));
       if (unavailableCount) {
         group.assumptions.add(
@@ -476,10 +474,7 @@ export class ReceiptService {
         group.confidence = Math.min(group.confidence, 0.5);
       }
       for (const item of convertible)
-        group.confidence = Math.min(
-          group.confidence,
-          item.conversionConfidence?.toNumber() ?? item.confidence.toNumber(),
-        );
+        group.confidence = Math.min(group.confidence, item.conversionConfidence ?? item.confidence);
       return {
         ingredient: group.ingredient,
         required: { value: required, unit: 'g' },
@@ -568,7 +563,7 @@ export class ReceiptService {
       );
       if (!conversion) continue;
       return {
-        normalizedGrams: (quantity / conversion.quantity.toNumber()) * conversion.grams.toNumber(),
+        normalizedGrams: (quantity / conversion.quantity) * conversion.grams,
         status: PantryConversionStatus.CONVERTED,
         source: profile.source.code,
         version: profile.sourceVersion,

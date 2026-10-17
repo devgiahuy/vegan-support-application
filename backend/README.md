@@ -1,7 +1,7 @@
 # Vegan Support Backend
 
 Express/TypeScript API for the Vegan Support Application. Phases 00–26 are present in source,
-migrations, and OpenAPI. They cover accounts, dietary constraints, content and review, food data,
+MongoDB schema provisioning, and OpenAPI. They cover accounts, dietary constraints, content and review, food data,
 nutrition estimates, plans, pantry, storage, Contributor approval, AI workflows, restaurants,
 notifications, and governance. Phase 27 release status and remaining risks are tracked in
 [`docs/RELEASE_CHECKLIST.md`](docs/RELEASE_CHECKLIST.md).
@@ -12,7 +12,7 @@ Endpoint readiness is tracked in `frontend/docs/BACKEND_INTEGRATION.md` and phas
 ## Prerequisites
 
 - Node.js 22 or newer
-- PostgreSQL 14 or newer
+- MongoDB 7 replica set (or MongoDB Atlas); standalone servers cannot run the required transactions
 - npm 10 or newer
 
 The current stack has no Redis dependency.
@@ -23,10 +23,17 @@ The current stack has no Redis dependency.
 2. Set `SEED_MEMBER_PASSWORD` and `SEED_ADMIN_PASSWORD` to distinct local passwords. Change the
    database, JWT, guest-cookie, and provider credentials before any shared deployment.
 3. For a Docker demo, run `docker compose -f docker-compose.yml up --build`. The backend image
-   applies migrations, runs the idempotent seed, then starts the API. `prisma` is a runtime
-   dependency so migration deployment works without a network download.
-4. For a host demo, start PostgreSQL, run `npm ci`, `npm run prisma:migrate:deploy`, `npm run seed`,
-   then `npm run dev` from `backend/`.
+   initializes a local replica set, provisions collections/validators/indexes, runs the idempotent
+   demo seed, then starts the API. Seeding runs on every container startup by default and updates
+   known fixtures. Set `RUN_SEED=false` to skip it. Existing `.env` files with `RUN_SEED=false`
+   must be changed to `true` to enable automatic seeding. A failed seed prevents API startup;
+   check `docker compose logs backend` for the startup stage and error.
+4. For a host demo, run `docker compose up -d mongodb mongo-init` and `docker compose up -d --wait mongodb`,
+   then `npm ci`,
+   `npm run prisma:generate`, `npm run prisma:push`, `npm run seed`, and `npm run dev` from `backend/`.
+   Use the MongoDB URI from `.env.example`. See [`docs/MONGODB_MIGRATION.md`](docs/MONGODB_MIGRATION.md)
+   for schema changes, numeric storage, transaction rules, and optional historical-data import.
+   `prisma:push` is the supported schema command; do not run raw `prisma db push` or `prisma migrate`.
 
 The Docker demo uses a fake maps provider. Local source configuration enables image recognition and
 receipt extraction through the OpenAI adapters by default when `OPENAI_API_KEY` is configured; shared
@@ -51,6 +58,70 @@ Local endpoints:
 - Swagger UI: `http://localhost:4000/api-docs`
 - OpenAPI JSON: `http://localhost:4000/api-docs.json`
 
+## HTTPS webhook tunnel with ngrok (2026-10-14)
+
+The optional `webhook` Compose profile adds an ngrok v3 container forwarding to
+`http://backend:4000` on the Compose network. Normal `docker compose up` does not start it.
+The tunnel exposes the backend HTTP server, including the existing payOS webhook;
+backend authentication and payOS signature verification still apply.
+
+From `backend/`, configure the untracked `.env`:
+
+```dotenv
+NGROK_AUTHTOKEN=<your-ngrok-agent-authtoken>
+NGROK_URL=https://<your-assigned-ngrok-domain>
+NGROK_UPSTREAM=http://backend:4000
+NGROK_INSPECTOR_PORT=4040
+NODE_ENV=development
+BILLING_ENABLED=true
+BILLING_PROVIDER=payos
+BILLING_PUBLIC_URL=https://<your-assigned-ngrok-domain>
+BILLING_RETURN_URL=http://localhost:3000/billing
+PAYOS_CLIENT_ID=<channel-client-id>
+PAYOS_API_KEY=<channel-api-key>
+PAYOS_CHECKSUM_KEY=<channel-checksum-key>
+```
+
+Get the agent authtoken and assigned domain from the [ngrok dashboard](https://dashboard.ngrok.com/).
+Use your actual values, not the placeholders. Compose forwards billing settings into the
+backend container. Billing opt-in requires `NODE_ENV=development` or `test`; the backend
+rejects billing in production. payOS processes real transfers even in development.
+Keep both ngrok and payOS credentials in `.env`, never in the tracked agent config.
+
+```bash
+docker compose --profile webhook up -d --build
+docker compose logs -f ngrok
+```
+
+Open `http://localhost:4040` to inspect requests and find the public HTTPS URL, or run:
+
+```bash
+curl --fail http://localhost:4040/api/tunnels
+curl --fail -H 'ngrok-skip-browser-warning: true' https://<your-assigned-ngrok-domain>/api/v1/health
+```
+
+Wait for the backend schema/seed startup to complete and the public health request to
+succeed before registering `https://<your-assigned-ngrok-domain>/api/v1/billing/payos/webhook`
+on the payOS payment channel. Registration sends a signed sample; the backend verifies it
+and acknowledges it without granting benefits. See [billing setup](../docs/BILLING_DEMO.md).
+
+`NGROK_URL` is optional. If empty, use the HTTPS URL returned by ngrok, set
+`BILLING_PUBLIC_URL` to that origin and run `docker compose up -d --no-deps backend`
+to recreate the backend with the new checkout return origin. Update the payOS webhook
+registration whenever the public URL changes. Changes to `.env` require container
+recreation with `up -d`; `restart` does not reload Compose environment values.
+
+For an API running on the host, set `NGROK_UPSTREAM=http://host.docker.internal:4000`
+and start only the tunnel with `docker compose --profile webhook up -d --no-deps ngrok`.
+For `npm run billing:demo`, use port `4100` and set `BILLING_DEMO_PUBLIC_URL` to the
+ngrok origin when starting the helper. This mode does not start the backend container.
+
+Stop the tunnel with `docker compose --profile webhook stop ngrok`. If port 4040 is
+occupied, change `NGROK_INSPECTOR_PORT` and use that port for the inspector/API above.
+For ngrok authentication or domain errors, check `docker compose logs ngrok`.
+Agent configuration follows the official [Docker guide](https://ngrok.com/docs/using-ngrok-with/docker)
+and [v3 configuration reference](https://ngrok.com/docs/gateway/agent/config/v3).
+
 Profile calculations use manual height, weight, age, sex, and activity inputs. BMR follows the
 Mifflin–St Jeor formula; TDEE factors are 1.2, 1.375, 1.55, 1.725, and 1.9 from sedentary through
 extra-active. Diet rule set v1 is seeded by `npm run seed`, and `PERIODIC` dates are stored as
@@ -67,8 +138,8 @@ media references are checked against the configured cloud, folder, MIME allowlis
 
 Phase 05 adds accent-insensitive search, structured Recipe filters, deterministic related-content
 groups, and backend-enforced profile constraints. Search persists normalized revision text and uses
-PostgreSQL `pg_trgm` GIN indexes; local query-plan evidence is recorded in
-`docs/SEARCH_PERFORMANCE.md`.
+native MongoDB aggregation for discovery and pg_trgm-style title similarity. Dietary constraints
+run before ranking and pagination. Current query limitations are recorded in `docs/SEARCH_PERFORMANCE.md`.
 
 Phase 11 uses the official OpenAI SDK and Responses API behind an `AiProvider` boundary. Model IDs,
 quotas, and the optional `OPENAI_BASE_URL` are configuration. Missing/unavailable access degrades to
@@ -76,7 +147,8 @@ a static safe response without consuming daily quota.
 
 ## Seed data for local API and frontend development
 
-`npm run seed` is idempotent and uses only the existing `SEED_*` credentials. The two approved
+`npm run seed` is idempotent and uses only the existing `SEED_*` credentials. Seeded Contributor
+decisions retain their IDs on re-runs, preventing duplicate decision notifications. The approved
 Contributor fixtures use the same permission set with organization-affiliation and platform-track-record
 approval bases. Basis/evidence is audit and presentation data only; it never participates in RBAC. In
 addition to the configured Member, unified Contributor fixtures, and Admin, the seed derives
@@ -111,7 +183,7 @@ completion gate is lint, typecheck, and build; OpenAPI generation is run wheneve
 To verify the production entry point after building:
 
 ```bash
-DATABASE_URL=postgresql://... FRONTEND_ORIGIN=http://localhost:3000 npm start
+DATABASE_URL='mongodb://localhost:27017/vegan_support?replicaSet=rs0&directConnection=true' FRONTEND_ORIGIN=http://localhost:3000 npm start
 ```
 
 Graceful shutdown is handled for `SIGINT` and `SIGTERM`.

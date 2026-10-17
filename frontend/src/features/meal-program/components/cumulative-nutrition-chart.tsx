@@ -41,7 +41,7 @@ export const CumulativeNutritionChart: React.FC<CumulativeNutritionChartProps> =
                 Năng lượng trung bình ngày
               </p>
               <p className="text-xl font-bold text-foreground">
-                {averageDailyCalories.toLocaleString()}{' '}
+                ~{averageDailyCalories.toLocaleString()}{' '}
                 <span className="text-xs font-normal text-muted-foreground">Kcal/ngày</span>
               </p>
             </div>
@@ -56,7 +56,7 @@ export const CumulativeNutritionChart: React.FC<CumulativeNutritionChartProps> =
             <div>
               <p className="text-xs text-muted-foreground font-medium">Chất đạm trung bình</p>
               <p className="text-xl font-bold text-foreground">
-                {averageMacronutrients.protein}{' '}
+                ~{averageMacronutrients.protein}{' '}
                 <span className="text-xs font-normal text-muted-foreground">
                   g/ngày ({proteinPct}%)
                 </span>
@@ -73,7 +73,7 @@ export const CumulativeNutritionChart: React.FC<CumulativeNutritionChartProps> =
             <div>
               <p className="text-xs text-muted-foreground font-medium">Chất xơ tự nhiên</p>
               <p className="text-xl font-bold text-foreground">
-                {averageMacronutrients.fiber}{' '}
+                ~{averageMacronutrients.fiber}{' '}
                 <span className="text-xs font-normal text-muted-foreground">g/ngày</span>
               </p>
             </div>
@@ -112,19 +112,19 @@ export const CumulativeNutritionChart: React.FC<CumulativeNutritionChartProps> =
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-xs bg-emerald-500 shrink-0" />
               <span>
-                <strong>Đạm:</strong> {averageMacronutrients.protein}g ({proteinPct}%)
+                <strong>Đạm:</strong> ~{averageMacronutrients.protein}g ({proteinPct}%)
               </span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-xs bg-amber-500 shrink-0" />
               <span>
-                <strong>Tinh bột:</strong> {averageMacronutrients.carbs}g ({carbsPct}%)
+                <strong>Tinh bột:</strong> ~{averageMacronutrients.carbs}g ({carbsPct}%)
               </span>
             </div>
             <div className="flex items-center gap-2">
               <span className="w-3 h-3 rounded-xs bg-rose-500 shrink-0" />
               <span>
-                <strong>Chất béo:</strong> {averageMacronutrients.fat}g ({fatPct}%)
+                <strong>Chất béo:</strong> ~{averageMacronutrients.fat}g ({fatPct}%)
               </span>
             </div>
           </div>
@@ -152,7 +152,7 @@ export const CumulativeNutritionChart: React.FC<CumulativeNutritionChartProps> =
                     <span>
                       Tuần {week.weekNumber} ({week.statusLabel})
                     </span>
-                    <span>{dailyAvg.toLocaleString()} Kcal/ngày</span>
+                    <span>~{dailyAvg.toLocaleString()} Kcal/ngày</span>
                   </div>
                   <Progress value={pct} className="h-2" />
                 </div>

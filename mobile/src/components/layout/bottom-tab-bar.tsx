@@ -25,7 +25,7 @@ interface TabConfig {
 /** Khóa là tên route trong `app/(tabs)/`. */
 const TAB_CONFIG: Record<string, TabConfig> = {
   index: { label: 'Trang chủ', icon: House },
-  recipes: { label: 'Món chay', icon: ChefHat },
+  recipes: { label: 'Khám phá', icon: ChefHat },
   restaurants: { label: 'Bản đồ', icon: MapPin },
   profile: { label: 'Hồ sơ', icon: UserRound },
 };
@@ -88,7 +88,7 @@ export function BottomTabBar({ state, navigation, insets }: BottomTabBarProps) {
   const router = useRouter();
   const keyboardVisible = useKeyboardVisible();
   const [fanOpen, setFanOpen] = React.useState(false);
-  const progress = React.useRef(new Animated.Value(0)).current;
+  const [progress] = React.useState(() => new Animated.Value(0));
 
   const animateTo = (open: boolean) => {
     Animated.spring(progress, {

@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { AiRequestStatus, ChatMessageRole, Role, type ChatSession } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
 import type { AppConfig } from '../../config/env.js';
@@ -30,11 +30,11 @@ import {
 const CHAT_TIMEZONE = 'Asia/Ho_Chi_Minh';
 const HISTORY_LIMIT = 20;
 const OUT_OF_SCOPE_RESPONSE =
-  'M�nh ch? h? tr? c�c c�u h?i v? dinh du?ng v� an chay. B?n c� th? h?i v? kh?u ph?n, ngu?n d?m th?c v?t, vitamin, kho�ng ch?t ho?c c�ch x�y d?ng b?a an chay c�n b?ng.';
+  'Mình chỉ hỗ trợ các câu hỏi về dinh dưỡng và ăn chay. Bạn có thể hỏi về khẩu phần, nguồn đạm thực vật, vitamin, khoáng chất hoặc cách xây dựng bữa ăn chay cân bằng.';
 const SAFETY_RESPONSE =
-  'N?i dung n�y c?n du?c chuy�n gia y t? d�nh gi� tr?c ti?p. N?u b?n ho?c ngu?i kh�c dang g?p nguy hi?m, h�y li�n h? d?ch v? c?p c?u d?a phuong ho?c co s? y t? g?n nh?t ngay b�y gi?.';
+  'Nội dung này cần được chuyên gia y tế đánh giá trực tiếp. Nếu bạn hoặc người khác đang gặp nguy hiểm, hãy liên hệ dịch vụ cấp cứu địa phương hoặc cơ sở y tế gần nhất ngay bây giờ.';
 const PROVIDER_FALLBACK_RESPONSE =
-  'D?ch v? tu v?n AI dang t?m th?i kh�ng kh? d?ng. B?n v?n c� th? d�ng t�m ki?m c�ng th?c v� Meal Planner theo quy t?c an to�n, ho?c th? l?i sau.';
+  'Dịch vụ tư vấn AI đang tạm thời không khả dụng. Bạn vẫn có thể dùng tìm kiếm công thức và Meal Planner theo quy tắc an toàn, hoặc thử lại sau.';
 const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/giu;
 const PHONE_PATTERN = /(?<!\d)(?:\+?84|0)(?:[ .-]?\d){8,10}(?!\d)/gu;
 
@@ -94,7 +94,9 @@ function sha256(value: unknown): string {
 }
 
 function redactPii(value: string): string {
-  return value.replace(EMAIL_PATTERN, '[EMAIL_REDACTED]').replace(PHONE_PATTERN, '[PHONE_REDACTED]');
+  return value
+    .replace(EMAIL_PATTERN, '[EMAIL_REDACTED]')
+    .replace(PHONE_PATTERN, '[PHONE_REDACTED]');
 }
 
 function datePartsInTimezone(date: Date): { year: number; month: number; day: number } {
@@ -152,7 +154,7 @@ export class ChatService {
     return this.sessionOutput(
       await this.repository.createSession(
         identity,
-        input.title ?? 'Cu?c tr� chuy?n dinh du?ng',
+        input.title ?? 'Cuộc trò chuyện dinh dưỡng',
         expiresAt,
       ),
     );
@@ -200,7 +202,7 @@ export class ChatService {
       throw new AppError({
         statusCode: 503,
         code: 'AI_FEATURE_DISABLED',
-        message: 'Chatbot dang t?m ngung',
+        message: 'Chatbot đang tạm ngưng',
       });
     }
     const now = new Date();
@@ -225,14 +227,14 @@ export class ChatService {
         throw new AppError({
           statusCode: 409,
           code: 'CHAT_IDEMPOTENCY_CONFLICT',
-          message: 'Idempotency key d� du?c d�ng cho n?i dung kh�c',
+          message: 'Idempotency key đã được dùng cho nội dung khác',
         });
       }
       if (error instanceof ChatRequestInProgressError) {
         throw new AppError({
           statusCode: 409,
           code: 'CHAT_REQUEST_IN_PROGRESS',
-          message: 'Y�u c?u chat v?i idempotency key n�y dang du?c x? l�',
+          message: 'Yêu cầu chat với idempotency key này đang được xử lý',
         });
       }
       throw error;
@@ -263,20 +265,28 @@ export class ChatService {
 
     const window = quotaWindow(now);
     const limit = this.quotaLimit(identity);
-    const reserved = await this.repository.reserveQuota(
-      identity.subjectKey,
-      window.usageDate,
-      limit,
-      turn.assistantMessage.id,
-      new Date(now.getTime() + this.config.ai.timeoutMs + 10_000),
-    );
-    if (reserved.reservationKey !== turn.assistantMessage.id) {
+    const reservationKey = 'CHAT:' + turn.assistantMessage.id + ':' + randomUUID();
+    let reserved: QuotaBucketState;
+    try {
+      reserved = await this.repository.reserveQuota(
+        identity.subjectKey,
+        window.usageDate,
+        limit,
+        reservationKey,
+        new Date(now.getTime() + this.config.ai.timeoutMs + 10_000),
+        identity.type === 'AUTHENTICATED' ? identity.userId : undefined,
+      );
+    } catch (error) {
+      await this.repository.failAssistant(turn.assistantMessage.id, '');
+      throw error;
+    }
+    if (reserved.reservationKey !== reservationKey) {
       await this.repository.failAssistant(turn.assistantMessage.id, '');
       if (reserved.successfulCount >= reserved.quotaLimit) {
         throw new AppError({
           statusCode: 429,
           code: 'AI_QUOTA_EXCEEDED',
-          message: '�� h?t quota chatbot h�m nay',
+          message: 'Đã hết quota chatbot hôm nay',
           fields: {
             limit: [String(reserved.quotaLimit)],
             resetAt: [window.resetAt.toISOString()],
@@ -287,48 +297,55 @@ export class ChatService {
       throw new AppError({
         statusCode: 409,
         code: 'CHAT_REQUEST_IN_PROGRESS',
-        message: 'M?t y�u c?u chat kh�c dang du?c x? l� cho t�i kho?n n�y',
+        message: 'Một yêu cầu chat khác đang được xử lý cho tài khoản này',
       });
     }
 
-    const profile =
-      identity.type === 'AUTHENTICATED'
-        ? await this.repository.findPromptProfile(identity.userId)
-        : null;
-    const personalized = Boolean(
-      profile?.personalizationPreference?.enabled &&
-      profile.personalizationPreference.consentVersion === PERSONALIZATION_CONSENT_VERSION,
-    );
-    const history = await this.repository.findHistory(
-      sessionId,
-      turn.requestMessage.id,
-      HISTORY_LIMIT,
-    );
-    await this.repository.upsertRequestLog({
-      identity,
-      sessionId,
-      requestMessageId: turn.requestMessage.id,
-      provider: this.provider.name,
-      modelId: this.provider.chatModel,
-      redactedMetadata: {
-        promptHash: payloadHash,
-        topicCodes: topics,
-        personalizedContext: personalized,
-        historyMessageCount: history.length,
-      },
-      startedAt: now,
-    });
-    return this.providerStream({
-      identity,
-      requestMessage: turn.requestMessage,
-      assistantMessage: turn.assistantMessage,
-      history,
-      instructions: this.instructions(profile, personalized),
-      topics,
-      window,
-      clientSignal,
-      startedAt: now,
-    });
+    try {
+      const profile =
+        identity.type === 'AUTHENTICATED'
+          ? await this.repository.findPromptProfile(identity.userId)
+          : null;
+      const personalized = Boolean(
+        profile?.personalizationPreference?.enabled &&
+        profile.personalizationPreference.consentVersion === PERSONALIZATION_CONSENT_VERSION,
+      );
+      const history = await this.repository.findHistory(
+        sessionId,
+        turn.requestMessage.id,
+        HISTORY_LIMIT,
+      );
+      await this.repository.upsertRequestLog({
+        identity,
+        sessionId,
+        requestMessageId: turn.requestMessage.id,
+        provider: this.provider.name,
+        modelId: this.provider.chatModel,
+        redactedMetadata: {
+          promptHash: payloadHash,
+          topicCodes: topics,
+          personalizedContext: personalized,
+          historyMessageCount: history.length,
+        },
+        startedAt: now,
+      });
+      return this.providerStream({
+        identity,
+        requestMessage: turn.requestMessage,
+        assistantMessage: turn.assistantMessage,
+        history,
+        instructions: this.instructions(profile, personalized),
+        topics,
+        window,
+        clientSignal,
+        reservationKey,
+        startedAt: now,
+      });
+    } catch (error) {
+      await this.repository.releaseQuota(identity.subjectKey, window.usageDate, reservationKey);
+      await this.repository.failAssistant(turn.assistantMessage.id, '', reservationKey);
+      throw error;
+    }
   }
 
   private async *providerStream(data: {
@@ -341,6 +358,7 @@ export class ChatService {
     window: { usageDate: Date; resetAt: Date };
     clientSignal: AbortSignal;
     startedAt: Date;
+    reservationKey: string;
   }): AsyncIterable<ChatSseEvent> {
     const controller = new AbortController();
     const onClientAbort = () => controller.abort(data.clientSignal.reason);
@@ -364,7 +382,7 @@ export class ChatService {
           replayed: false,
         },
       };
-      await this.repository.markProviderCalled(data.requestMessage.id);
+      await this.repository.markProviderCalled(data.requestMessage.id, data.reservationKey);
       const moderation = await this.provider.moderate(
         redactPii(data.requestMessage.content),
         controller.signal,
@@ -373,7 +391,7 @@ export class ChatService {
         const message = await this.repository.completeNonQuotaTurn({
           subjectKey: data.identity.subjectKey,
           usageDate: data.window.usageDate,
-          reservationKey: data.assistantMessage.id,
+          reservationKey: data.reservationKey,
           assistantMessageId: data.assistantMessage.id,
           content: PROVIDER_FALLBACK_RESPONSE,
           provider: 'local-fallback',
@@ -394,7 +412,7 @@ export class ChatService {
         const message = await this.repository.completeNonQuotaTurn({
           subjectKey: data.identity.subjectKey,
           usageDate: data.window.usageDate,
-          reservationKey: data.assistantMessage.id,
+          reservationKey: data.reservationKey,
           assistantMessageId: data.assistantMessage.id,
           content: SAFETY_RESPONSE,
           provider: this.provider.name,
@@ -412,7 +430,7 @@ export class ChatService {
         return;
       }
 
-      await this.repository.markProviderCalled(data.requestMessage.id);
+      await this.repository.markProviderCalled(data.requestMessage.id, data.reservationKey);
       for await (const chunk of this.provider.streamChat({
         instructions: data.instructions,
         messages: data.history.map((message) => ({
@@ -434,7 +452,7 @@ export class ChatService {
       const completed = await this.repository.completeSuccessfulTurn({
         subjectKey: data.identity.subjectKey,
         usageDate: data.window.usageDate,
-        reservationKey: data.assistantMessage.id,
+        reservationKey: data.reservationKey,
         assistantMessageId: data.assistantMessage.id,
         content,
         provider: this.provider.name,
@@ -447,7 +465,7 @@ export class ChatService {
       });
       settled = true;
       await this.emitChatTopics(data.identity, data.requestMessage.id, data.topics);
-      const quota = this.quotaOutput(completed.quota, data.window.resetAt);
+      const quota = await this.currentQuota(data.identity, data.window);
       yield {
         event: 'message_complete',
         data: { message: this.messageOutput(completed.message), quota },
@@ -460,10 +478,11 @@ export class ChatService {
         await this.repository.releaseQuota(
           data.identity.subjectKey,
           data.window.usageDate,
-          data.assistantMessage.id,
+          data.reservationKey,
         );
-        await this.repository.failAssistant(data.assistantMessage.id, content);
+        await this.repository.failAssistant(data.assistantMessage.id, content, data.reservationKey);
         await this.repository.finishRequestLog(data.requestMessage.id, AiRequestStatus.ABORTED, {
+          processingToken: data.reservationKey,
           latencyMs: Date.now() - data.startedAt.getTime(),
           errorCode: 'CLIENT_ABORTED',
         });
@@ -475,7 +494,7 @@ export class ChatService {
         const message = await this.repository.completeNonQuotaTurn({
           subjectKey: data.identity.subjectKey,
           usageDate: data.window.usageDate,
-          reservationKey: data.assistantMessage.id,
+          reservationKey: data.reservationKey,
           assistantMessageId: data.assistantMessage.id,
           content: PROVIDER_FALLBACK_RESPONSE,
           provider: 'local-fallback',
@@ -500,10 +519,11 @@ export class ChatService {
       await this.repository.releaseQuota(
         data.identity.subjectKey,
         data.window.usageDate,
-        data.assistantMessage.id,
+        data.reservationKey,
       );
-      await this.repository.failAssistant(data.assistantMessage.id, content);
+      await this.repository.failAssistant(data.assistantMessage.id, content, data.reservationKey);
       await this.repository.finishRequestLog(data.requestMessage.id, AiRequestStatus.FAILED, {
+        processingToken: data.reservationKey,
         latencyMs: Date.now() - data.startedAt.getTime(),
         errorCode,
       });
@@ -512,7 +532,7 @@ export class ChatService {
         event: 'error',
         data: {
           code: errorCode,
-          message: 'Lu?ng AI b? gi�n do?n, quota chua b? tr?',
+          message: 'Luồng AI bị gián đoạn, quota chưa bị trừ',
           retryable: true,
           partial: true,
         },
@@ -523,10 +543,11 @@ export class ChatService {
           this.repository.releaseQuota(
             data.identity.subjectKey,
             data.window.usageDate,
-            data.assistantMessage.id,
+            data.reservationKey,
           ),
-          this.repository.failAssistant(data.assistantMessage.id, content),
+          this.repository.failAssistant(data.assistantMessage.id, content, data.reservationKey),
           this.repository.finishRequestLog(data.requestMessage.id, AiRequestStatus.ABORTED, {
+            processingToken: data.reservationKey,
             latencyMs: Date.now() - data.startedAt.getTime(),
             errorCode: 'STREAM_CLOSED',
           }),
@@ -620,7 +641,7 @@ export class ChatService {
     throw new AppError({
       statusCode: 429,
       code: 'AI_RATE_LIMITED',
-      message: 'Qu� nhi?u y�u c?u chatbot t? thi?t b? ho?c m?ng n�y',
+      message: 'Quá nhiều yêu cầu chatbot từ thiết bị hoặc mạng này',
       fields: { retryAfterSeconds: ['60'] },
     });
   }
@@ -634,6 +655,10 @@ export class ChatService {
 
   private async currentQuota(identity: ChatIdentity, window: { usageDate: Date; resetAt: Date }) {
     const state = await this.repository.findQuotaState(identity.subjectKey, window.usageDate);
+    const paidRemaining =
+      identity.type === 'AUTHENTICATED'
+        ? await this.repository.paidChatBalance(identity.userId)
+        : 0;
     return this.quotaOutput(
       state ?? {
         successfulCount: 0,
@@ -642,15 +667,17 @@ export class ChatService {
         reservationExpiresAt: null,
       },
       window.resetAt,
+      paidRemaining,
     );
   }
 
-  private quotaOutput(state: QuotaBucketState, resetAt: Date) {
+  private quotaOutput(state: QuotaBucketState, resetAt: Date, paidRemaining = 0) {
     return {
       limit: state.quotaLimit,
       used: state.successfulCount,
       remaining: Math.max(0, state.quotaLimit - state.successfulCount),
       resetAt: resetAt.toISOString(),
+      paidRemaining,
     };
   }
 
@@ -667,13 +694,13 @@ export class ChatService {
         }
       : null;
     return [
-      'B?n l� tr? l� dinh du?ng an chay b?ng ti?ng Vi?t.',
-      'Ch? tr? l?i trong ph?m vi dinh du?ng v� an chay; kh�ng ch?n do�n ho?c thay th? chuy�n gia y t?.',
-      'Kh�ng du?c n?i l?ng d? ?ng hay b?a d? li?u s?c kh?e, c�ng th?c ho?c ngu?n tham kh?o.',
-      'Tr? l?i ng?n g?n, th?c t? v� n�u r� khi thi?u d? li?u.',
+      'Bạn là trợ lý dinh dưỡng ăn chay bằng tiếng Việt.',
+      'Chỉ trả lời trong phạm vi dinh dưỡng và ăn chay; không chẩn đoán hoặc thay thế chuyên gia y tế.',
+      'Không được nới lỏng dị ứng hay bịa dữ liệu sức khỏe, công thức hoặc nguồn tham khảo.',
+      'Trả lời ngắn gọn, thực tế và nêu rõ khi thiếu dữ liệu.',
       context
-        ? `Context d� consent: ${JSON.stringify(context)}`
-        : 'Kh�ng c� profile context du?c consent.',
+        ? `Context đã consent: ${JSON.stringify(context)}`
+        : 'Không có profile context được consent.',
     ].join('\n');
   }
 
@@ -737,10 +764,10 @@ export class ChatService {
   }
 
   private authRequired() {
-    return new AppError({ statusCode: 401, code: 'AUTH_REQUIRED', message: 'Vui l�ng dang nh?p' });
+    return new AppError({ statusCode: 401, code: 'AUTH_REQUIRED', message: 'Vui lòng đăng nhập' });
   }
 
   private notFound() {
-    return new AppError({ statusCode: 404, code: 'NOT_FOUND', message: 'Kh�ng t�m th?y chat' });
+    return new AppError({ statusCode: 404, code: 'NOT_FOUND', message: 'Không tìm thấy chat' });
   }
 }

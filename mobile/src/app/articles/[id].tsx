@@ -13,6 +13,7 @@ import {
   useRelatedArticlesQuery,
 } from '@/features/post/queries/post.queries';
 import { CommunityPanel } from '@/features/community/components/community-panel';
+import { ChatMarkdown } from '@/features/chat/components/chat-markdown';
 import { ReportButton } from '@/features/safety/components/report-button';
 import { PostStatus } from '@/common/enums';
 import { getApiErrorMessage } from '@/lib/api-error';
@@ -178,9 +179,11 @@ export default function ArticleDetailScreen() {
         </View>
 
         <View className="rounded-2xl border border-border p-4">
-          <Text className="text-sm leading-relaxed text-foreground">
-            {article.content || 'Đang cập nhật nội dung cho bài viết này...'}
-          </Text>
+          {article.content ? (
+            <ChatMarkdown content={article.content} />
+          ) : (
+            <Text className="text-sm leading-relaxed text-foreground">Đang cập nhật nội dung cho bài viết này...</Text>
+          )}
         </View>
 
         {article.tags.length > 0 ? (

@@ -120,8 +120,8 @@ export class FoodDataRepository {
             sourceDate: input.sourceDate ? new Date(input.sourceDate) : null,
             preparation: record.preparation,
             locale: record.locale,
-            ediblePortionPercent: record.ediblePortionPercent,
-            servingGrams: record.servingGrams ?? null,
+            ediblePortionPercent: Number(record.ediblePortionPercent),
+            servingGrams: record.servingGrams == null ? null : Number(record.servingGrams),
             quality: record.quality,
             reviewStatus: FoodDataReviewStatus.APPROVED,
             reviewedById: actorId,
@@ -137,8 +137,8 @@ export class FoodDataRepository {
             ...(input.sourceDate ? { sourceDate: new Date(input.sourceDate) } : {}),
             preparation: record.preparation,
             locale: record.locale,
-            ediblePortionPercent: record.ediblePortionPercent,
-            ...(record.servingGrams ? { servingGrams: record.servingGrams } : {}),
+            ediblePortionPercent: Number(record.ediblePortionPercent),
+            ...(record.servingGrams ? { servingGrams: Number(record.servingGrams) } : {}),
             quality: record.quality,
             reviewStatus: FoodDataReviewStatus.APPROVED,
             reviewedById: actorId,
@@ -179,9 +179,9 @@ export class FoodDataRepository {
               profileId: profile.id,
               unitName: conversion.unitName,
               unitSymbol: conversion.unitSymbol ?? null,
-              quantity: conversion.quantity,
+              quantity: Number(conversion.quantity),
               unitDimension: conversion.unitDimension,
-              grams: conversion.grams,
+              grams: Number(conversion.grams),
               quality: record.quality,
               reviewStatus: FoodDataReviewStatus.APPROVED,
               reviewedById: actorId,
@@ -203,10 +203,10 @@ export class FoodDataRepository {
               },
             },
             update: {
-              valuePer100g: value.valuePer100g,
+              valuePer100g: Number(value.valuePer100g),
               unit: value.unit,
-              minValue: value.minValue ?? null,
-              maxValue: value.maxValue ?? null,
+              minValue: value.minValue == null ? null : Number(value.minValue),
+              maxValue: value.maxValue == null ? null : Number(value.maxValue),
               quality: record.quality,
               reviewStatus: FoodDataReviewStatus.APPROVED,
               reviewedById: actorId,
@@ -215,10 +215,10 @@ export class FoodDataRepository {
             create: {
               profileId: profile.id,
               nutrientId: nutrient.id,
-              valuePer100g: value.valuePer100g,
+              valuePer100g: Number(value.valuePer100g),
               unit: value.unit,
-              minValue: value.minValue ?? null,
-              maxValue: value.maxValue ?? null,
+              minValue: value.minValue == null ? null : Number(value.minValue),
+              maxValue: value.maxValue == null ? null : Number(value.maxValue),
               quality: record.quality,
               reviewStatus: FoodDataReviewStatus.APPROVED,
               reviewedById: actorId,
@@ -394,148 +394,152 @@ export class FoodDataRepository {
       ...(query.populationCode ? { populationCode: query.populationCode } : {}),
       ...(query.ingredientId ? { ingredientId: query.ingredientId } : {}),
     };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.ingredientIntakeGuideline.findMany({
-        where,
-        select: {
-          id: true,
-          populationCode: true,
-          applicability: true,
-          amount: true,
-          unit: true,
-          frequency: true,
-          period: true,
-          advisoryOnly: true,
-          evidenceGrade: true,
-          severity: true,
-          explanation: true,
-          reviewStatus: true,
-          effectiveFrom: true,
-          effectiveTo: true,
-          locale: true,
-          sourceRecordId: true,
-          sourceVersion: true,
-          ingredient: {
-            select: {
-              id: true,
-              canonicalName: true,
-              foodGroup: true,
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.ingredientIntakeGuideline.findMany({
+          where,
+          select: {
+            id: true,
+            populationCode: true,
+            applicability: true,
+            amount: true,
+            unit: true,
+            frequency: true,
+            period: true,
+            advisoryOnly: true,
+            evidenceGrade: true,
+            severity: true,
+            explanation: true,
+            reviewStatus: true,
+            effectiveFrom: true,
+            effectiveTo: true,
+            locale: true,
+            sourceRecordId: true,
+            sourceVersion: true,
+            ingredient: {
+              select: {
+                id: true,
+                canonicalName: true,
+                foodGroup: true,
+              },
+            },
+            source: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+                provider: true,
+                sourceUrl: true,
+                licenseName: true,
+                licenseUrl: true,
+                attribution: true,
+                defaultLocale: true,
+              },
             },
           },
-          source: {
-            select: {
-              id: true,
-              code: true,
-              name: true,
-              provider: true,
-              sourceUrl: true,
-              licenseName: true,
-              licenseUrl: true,
-              attribution: true,
-              defaultLocale: true,
-            },
-          },
-        },
-        orderBy: [{ ingredient: { canonicalName: 'asc' } }, { effectiveFrom: 'desc' }],
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-      this.prisma.ingredientIntakeGuideline.count({ where }),
-    ]);
+          orderBy: [{ ingredient: { canonicalName: 'asc' } }, { effectiveFrom: 'desc' }],
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+        transaction.ingredientIntakeGuideline.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 
   async listCookingMethods(query: FoodDataReadQuery) {
     const now = new Date();
     const where: Prisma.CookingMethodWhereInput = { active: true };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.cookingMethod.findMany({
-        where,
-        select: {
-          id: true,
-          code: true,
-          name: true,
-          description: true,
-          active: true,
-          retentions: {
-            where: approvedNow(now),
-            orderBy: { nutrient: { name: 'asc' } },
-            select: {
-              id: true,
-              factor: true,
-              applicability: true,
-              quality: true,
-              reviewStatus: true,
-              effectiveFrom: true,
-              effectiveTo: true,
-              sourceRecordId: true,
-              sourceVersion: true,
-              nutrient: {
-                select: {
-                  id: true,
-                  code: true,
-                  name: true,
-                  defaultUnit: true,
-                  unitDimension: true,
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.cookingMethod.findMany({
+          where,
+          select: {
+            id: true,
+            code: true,
+            name: true,
+            description: true,
+            active: true,
+            retentions: {
+              where: approvedNow(now),
+              orderBy: { nutrient: { name: 'asc' } },
+              select: {
+                id: true,
+                factor: true,
+                applicability: true,
+                quality: true,
+                reviewStatus: true,
+                effectiveFrom: true,
+                effectiveTo: true,
+                sourceRecordId: true,
+                sourceVersion: true,
+                nutrient: {
+                  select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                    defaultUnit: true,
+                    unitDimension: true,
+                  },
+                },
+                source: {
+                  select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                    provider: true,
+                    sourceUrl: true,
+                    licenseName: true,
+                    licenseUrl: true,
+                    attribution: true,
+                    defaultLocale: true,
+                  },
                 },
               },
-              source: {
-                select: {
-                  id: true,
-                  code: true,
-                  name: true,
-                  provider: true,
-                  sourceUrl: true,
-                  licenseName: true,
-                  licenseUrl: true,
-                  attribution: true,
-                  defaultLocale: true,
+            },
+            yields: {
+              where: approvedNow(now),
+              orderBy: { effectiveFrom: 'desc' },
+              select: {
+                id: true,
+                factor: true,
+                applicability: true,
+                quality: true,
+                reviewStatus: true,
+                effectiveFrom: true,
+                effectiveTo: true,
+                sourceRecordId: true,
+                sourceVersion: true,
+                ingredient: {
+                  select: {
+                    id: true,
+                    canonicalName: true,
+                    foodGroup: true,
+                  },
+                },
+                source: {
+                  select: {
+                    id: true,
+                    code: true,
+                    name: true,
+                    provider: true,
+                    sourceUrl: true,
+                    licenseName: true,
+                    licenseUrl: true,
+                    attribution: true,
+                    defaultLocale: true,
+                  },
                 },
               },
             },
           },
-          yields: {
-            where: approvedNow(now),
-            orderBy: { effectiveFrom: 'desc' },
-            select: {
-              id: true,
-              factor: true,
-              applicability: true,
-              quality: true,
-              reviewStatus: true,
-              effectiveFrom: true,
-              effectiveTo: true,
-              sourceRecordId: true,
-              sourceVersion: true,
-              ingredient: {
-                select: {
-                  id: true,
-                  canonicalName: true,
-                  foodGroup: true,
-                },
-              },
-              source: {
-                select: {
-                  id: true,
-                  code: true,
-                  name: true,
-                  provider: true,
-                  sourceUrl: true,
-                  licenseName: true,
-                  licenseUrl: true,
-                  attribution: true,
-                  defaultLocale: true,
-                },
-              },
-            },
-          },
-        },
-        orderBy: { name: 'asc' },
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-      this.prisma.cookingMethod.count({ where }),
-    ]);
+          orderBy: { name: 'asc' },
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+        transaction.cookingMethod.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 
@@ -549,59 +553,61 @@ export class FoodDataRepository {
         ? { OR: [{ ingredientAId: query.ingredientId }, { ingredientBId: query.ingredientId }] }
         : {}),
     };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.ingredientInteractionRule.findMany({
-        where,
-        select: {
-          id: true,
-          scope: true,
-          direction: true,
-          severity: true,
-          evidenceGrade: true,
-          applicability: true,
-          explanation: true,
-          suggestedAction: true,
-          hardRule: true,
-          reviewStatus: true,
-          effectiveFrom: true,
-          effectiveTo: true,
-          locale: true,
-          sourceRecordId: true,
-          sourceVersion: true,
-          ingredientA: {
-            select: {
-              id: true,
-              canonicalName: true,
-              foodGroup: true,
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.ingredientInteractionRule.findMany({
+          where,
+          select: {
+            id: true,
+            scope: true,
+            direction: true,
+            severity: true,
+            evidenceGrade: true,
+            applicability: true,
+            explanation: true,
+            suggestedAction: true,
+            hardRule: true,
+            reviewStatus: true,
+            effectiveFrom: true,
+            effectiveTo: true,
+            locale: true,
+            sourceRecordId: true,
+            sourceVersion: true,
+            ingredientA: {
+              select: {
+                id: true,
+                canonicalName: true,
+                foodGroup: true,
+              },
+            },
+            ingredientB: {
+              select: {
+                id: true,
+                canonicalName: true,
+                foodGroup: true,
+              },
+            },
+            source: {
+              select: {
+                id: true,
+                code: true,
+                name: true,
+                provider: true,
+                sourceUrl: true,
+                licenseName: true,
+                licenseUrl: true,
+                attribution: true,
+                defaultLocale: true,
+              },
             },
           },
-          ingredientB: {
-            select: {
-              id: true,
-              canonicalName: true,
-              foodGroup: true,
-            },
-          },
-          source: {
-            select: {
-              id: true,
-              code: true,
-              name: true,
-              provider: true,
-              sourceUrl: true,
-              licenseName: true,
-              licenseUrl: true,
-              attribution: true,
-              defaultLocale: true,
-            },
-          },
-        },
-        orderBy: [{ severity: 'desc' }, { effectiveFrom: 'desc' }],
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-      this.prisma.ingredientInteractionRule.count({ where }),
-    ]);
+          orderBy: [{ severity: 'desc' }, { effectiveFrom: 'desc' }],
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+        transaction.ingredientInteractionRule.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 

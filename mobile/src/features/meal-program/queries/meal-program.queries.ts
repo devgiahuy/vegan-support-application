@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { mealProgramApi, type MealProgramQueryParams } from '../api/meal-program.api';
 import type { CreateMealProgramInput, MealProgramAction } from '../types/meal-program.model';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -14,6 +14,19 @@ export function useMealProgramsQuery(params?: MealProgramQueryParams) {
   return useQuery({
     queryKey: MEAL_PROGRAM_QUERY_KEYS.list(params),
     queryFn: () => mealProgramApi.list(params),
+    enabled: isAuthenticated,
+  });
+}
+
+/** Danh sách lộ trình phân trang kiểu "Tải thêm". `params` không chứa `page`. */
+export function useInfiniteMealProgramsQuery(params?: Omit<MealProgramQueryParams, 'page'>) {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  return useInfiniteQuery({
+    queryKey: [...MEAL_PROGRAM_QUERY_KEYS.all, 'infinite', params ?? {}] as const,
+    queryFn: ({ pageParam }) => mealProgramApi.list({ ...params, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) =>
+      lastPage.pagination.page < lastPage.pagination.totalPages ? lastPage.pagination.page + 1 : undefined,
     enabled: isAuthenticated,
   });
 }

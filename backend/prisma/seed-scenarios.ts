@@ -1,3 +1,5 @@
+import type { Prisma } from '@prisma/client';
+import { upsertSeedContributorDecision } from './seed-contributor-decision.js';
 import {
   AiFlagRiskLevel,
   AiFlagStatus,
@@ -28,7 +30,6 @@ import {
   PostRevisionStatus,
   PostStatus,
   PostType,
-  Prisma,
   type PrismaClient,
   RecipeDifficulty,
   ReportStatus,
@@ -372,83 +373,77 @@ export async function seedScenarioData(
   const reporterTwo = users.get(scenarioEmail(input.memberEmail, 'reporter-two'))!;
   const reporterThree = users.get(scenarioEmail(input.memberEmail, 'reporter-three'))!;
 
-  await prisma.$transaction([
-    prisma.contributorApplication.upsert({
-      where: { id: 'a1100000-0000-4000-8000-000000000001' },
-      update: {
-        userId: pendingApplicant.id,
-        claimedApprovalBasis: ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
-        organizationClaim: null,
-        experience: 'Đang chờ Admin đánh giá kinh nghiệm thực hành và đóng góp cộng đồng.',
-        referenceLinks: ['https://example.com/seed/pending-contributor'],
-        source: ContributorApplicationSource.PROFILE,
-        status: ContributorApplicationStatus.PENDING,
-        approvalBasis: null,
-        reviewEvidence: Prisma.DbNull,
-        reviewNote: null,
-        reviewedById: null,
-        reviewedAt: null,
-        reapplyEligibleAt: null,
-      },
-      create: {
-        id: 'a1100000-0000-4000-8000-000000000001',
-        userId: pendingApplicant.id,
-        claimedApprovalBasis: ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
-        organizationClaim: null,
-        experience: 'Đang chờ Admin đánh giá kinh nghiệm thực hành và đóng góp cộng đồng.',
-        referenceLinks: ['https://example.com/seed/pending-contributor'],
-        source: ContributorApplicationSource.PROFILE,
-        status: ContributorApplicationStatus.PENDING,
-      },
-    }),
-    prisma.contributorApplication.upsert({
-      where: { id: 'a1100000-0000-4000-8000-000000000002' },
-      update: {
-        userId: rejectedApplicant.id,
-        claimedApprovalBasis: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
-        organizationClaim: 'Demo rejected organization claim',
-        experience: 'Hồ sơ demo thiếu căn cứ chuyên môn để kiểm tra trạng thái bị từ chối.',
-        referenceLinks: [],
-        source: ContributorApplicationSource.PROFILE,
-        status: ContributorApplicationStatus.REJECTED,
-        approvalBasis: null,
-        reviewEvidence: Prisma.DbNull,
-        reviewNote: 'Cần bổ sung mô tả kinh nghiệm và nguồn tham khảo trước khi nộp lại.',
-        reviewedById: admin.id,
-        reviewedAt: new Date('2026-09-15T05:30:00.000Z'),
-        reapplyEligibleAt: new Date('2026-10-15T05:30:00.000Z'),
-      },
-      create: {
-        id: 'a1100000-0000-4000-8000-000000000002',
-        userId: rejectedApplicant.id,
-        claimedApprovalBasis: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
-        organizationClaim: 'Demo rejected organization claim',
-        experience: 'Hồ sơ demo thiếu căn cứ chuyên môn để kiểm tra trạng thái bị từ chối.',
-        referenceLinks: [],
-        source: ContributorApplicationSource.PROFILE,
-        status: ContributorApplicationStatus.REJECTED,
-        reviewNote: 'Cần bổ sung mô tả kinh nghiệm và nguồn tham khảo trước khi nộp lại.',
-        reviewedById: admin.id,
-        reviewedAt: new Date('2026-09-15T05:30:00.000Z'),
-        reapplyEligibleAt: new Date('2026-10-15T05:30:00.000Z'),
-      },
-    }),
-  ]);
-  await prisma.contributorDecision.deleteMany({
-    where: {
-      applicationId: 'a1100000-0000-4000-8000-000000000002',
-      decision: ContributorDecisionType.REJECTED,
-    },
-  });
-  await prisma.contributorDecision.create({
-    data: {
-      userId: rejectedApplicant.id,
-      applicationId: 'a1100000-0000-4000-8000-000000000002',
-      actorId: admin.id,
-      decision: ContributorDecisionType.REJECTED,
-      reason: 'Cần bổ sung mô tả kinh nghiệm và nguồn tham khảo trước khi nộp lại.',
-      createdAt: new Date('2026-09-15T05:30:00.000Z'),
-    },
+  await prisma.$transaction(async (transaction) =>
+    Promise.all([
+      transaction.contributorApplication.upsert({
+        where: { id: 'a1100000-0000-4000-8000-000000000001' },
+        update: {
+          userId: pendingApplicant.id,
+          claimedApprovalBasis: ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
+          organizationClaim: null,
+          experience: 'Đang chờ Admin đánh giá kinh nghiệm thực hành và đóng góp cộng đồng.',
+          referenceLinks: ['https://example.com/seed/pending-contributor'],
+          source: ContributorApplicationSource.PROFILE,
+          status: ContributorApplicationStatus.PENDING,
+          approvalBasis: null,
+          reviewEvidence: null,
+          reviewNote: null,
+          reviewedById: null,
+          reviewedAt: null,
+          reapplyEligibleAt: null,
+        },
+        create: {
+          id: 'a1100000-0000-4000-8000-000000000001',
+          userId: pendingApplicant.id,
+          claimedApprovalBasis: ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
+          organizationClaim: null,
+          experience: 'Đang chờ Admin đánh giá kinh nghiệm thực hành và đóng góp cộng đồng.',
+          referenceLinks: ['https://example.com/seed/pending-contributor'],
+          source: ContributorApplicationSource.PROFILE,
+          status: ContributorApplicationStatus.PENDING,
+        },
+      }),
+      transaction.contributorApplication.upsert({
+        where: { id: 'a1100000-0000-4000-8000-000000000002' },
+        update: {
+          userId: rejectedApplicant.id,
+          claimedApprovalBasis: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
+          organizationClaim: 'Demo rejected organization claim',
+          experience: 'Hồ sơ demo thiếu căn cứ chuyên môn để kiểm tra trạng thái bị từ chối.',
+          referenceLinks: [],
+          source: ContributorApplicationSource.PROFILE,
+          status: ContributorApplicationStatus.REJECTED,
+          approvalBasis: null,
+          reviewEvidence: null,
+          reviewNote: 'Cần bổ sung mô tả kinh nghiệm và nguồn tham khảo trước khi nộp lại.',
+          reviewedById: admin.id,
+          reviewedAt: new Date('2026-09-15T05:30:00.000Z'),
+          reapplyEligibleAt: new Date('2026-10-15T05:30:00.000Z'),
+        },
+        create: {
+          id: 'a1100000-0000-4000-8000-000000000002',
+          userId: rejectedApplicant.id,
+          claimedApprovalBasis: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
+          organizationClaim: 'Demo rejected organization claim',
+          experience: 'Hồ sơ demo thiếu căn cứ chuyên môn để kiểm tra trạng thái bị từ chối.',
+          referenceLinks: [],
+          source: ContributorApplicationSource.PROFILE,
+          status: ContributorApplicationStatus.REJECTED,
+          reviewNote: 'Cần bổ sung mô tả kinh nghiệm và nguồn tham khảo trước khi nộp lại.',
+          reviewedById: admin.id,
+          reviewedAt: new Date('2026-09-15T05:30:00.000Z'),
+          reapplyEligibleAt: new Date('2026-10-15T05:30:00.000Z'),
+        },
+      }),
+    ]),
+  );
+  await upsertSeedContributorDecision(prisma, {
+    userId: rejectedApplicant.id,
+    applicationId: 'a1100000-0000-4000-8000-000000000002',
+    actorId: admin.id,
+    decision: ContributorDecisionType.REJECTED,
+    reason: 'Cần bổ sung mô tả kinh nghiệm và nguồn tham khảo trước khi nộp lại.',
+    createdAt: new Date('2026-09-15T05:30:00.000Z'),
   });
 
   await prisma.category.upsert({
@@ -484,12 +479,14 @@ export async function seedScenarioData(
       status: CatalogStatus.ARCHIVED,
     },
   });
-  await prisma.$transaction([
-    prisma.ingredientAlias.deleteMany({ where: { ingredientId: archivedIngredient.id } }),
-    prisma.ingredientDietCompatibility.deleteMany({
-      where: { ingredientId: archivedIngredient.id },
-    }),
-  ]);
+  await prisma.$transaction(async (transaction) =>
+    Promise.all([
+      transaction.ingredientAlias.deleteMany({ where: { ingredientId: archivedIngredient.id } }),
+      transaction.ingredientDietCompatibility.deleteMany({
+        where: { ingredientId: archivedIngredient.id },
+      }),
+    ]),
+  );
   await prisma.ingredientAlias.create({
     data: {
       ingredientId: archivedIngredient.id,

@@ -60,15 +60,15 @@ const MEAL_SPLITS: Record<MealType, number> = {
 
 interface RevisionNutritionSnapshot {
   recipeDetail: {
-    vitaminB12Mcg: Prisma.Decimal | null;
-    proteinGrams: Prisma.Decimal | null;
-    fiberGrams: Prisma.Decimal | null;
-    fatGrams: Prisma.Decimal | null;
-    carbsGrams: Prisma.Decimal | null;
+    vitaminB12Mcg: number | null;
+    proteinGrams: number | null;
+    fiberGrams: number | null;
+    fatGrams: number | null;
+    carbsGrams: number | null;
   } | null;
   ingredients: Array<{
     ingredientId: string | null;
-    amount: Prisma.Decimal;
+    amount: number;
     unit: string;
     ingredient: { canonicalName: string } | null;
   }>;
@@ -99,13 +99,13 @@ function dateOnly(date: Date): string {
 }
 
 function planSlotLabel(date: Date, mealType: MealType): string {
-  const weekday = ['Ch? Nh?t', 'Th? Hai', 'Th? Ba', 'Th? Tu', 'Th? Nam', 'Th? S�u', 'Th? B?y'][
+  const weekday = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'][
     date.getUTCDay()
   ];
   const meal = {
-    [MealType.BREAKFAST]: 'b?a s�ng',
-    [MealType.LUNCH]: 'b?a trua',
-    [MealType.DINNER]: 'b?a t?i',
+    [MealType.BREAKFAST]: 'bữa sáng',
+    [MealType.LUNCH]: 'bữa trưa',
+    [MealType.DINNER]: 'bữa tối',
   }[mealType];
   return `${meal} ${weekday} (${String(date.getUTCDate()).padStart(2, '0')}/${String(date.getUTCMonth() + 1).padStart(2, '0')})`;
 }
@@ -146,27 +146,27 @@ export function mealPlanWarningCopy(code: MealPlanWarningCode) {
     RECIPE_REPEATED: {
       severity: 'INFO' as const,
       severityLabel: 'Thông tin' as const,
-      message: 'M?t s? m�n du?c l?p l?i trong tu?n',
+      message: 'Một số món được lặp lại trong tuần',
       detail:
-        'S? m�n ph� h?p v?i y�u c?u an u?ng c?a b?n hi?n c�n h?n ch?, n�n m?t v�i m�n du?c d�ng l?i d? ho�n th�nh th?c don.',
-      suggestion: 'B?n c� th? d?i m?t b?a sang m�n ph� h?p kh�c n?u mu?n th?c don da d?ng hon.',
+        'Số món phù hợp với yêu cầu ăn uống của bạn hiện còn hạn chế, nên một vài món được dùng lại để hoàn thành thực đơn.',
+      suggestion: 'Bạn có thể đổi một bữa sang món phù hợp khác nếu muốn thực đơn đa dạng hơn.',
     },
     UNFILLED_SLOT: {
       severity: 'WARNING' as const,
       severityLabel: 'Nên lưu ý' as const,
-      message: 'M?t s? b?a chua c� m�n ph� h?p',
+      message: 'Một số bữa chưa có món phù hợp',
       detail:
-        'H? th?ng chua t�m th?y m�n d�p ?ng d?ng th?i d? ?ng, nguy�n li?u c?n tr�nh, ch? d? an v� quy t?c truy?n th?ng c?a b?n.',
+        'Hệ thống chưa tìm thấy món đáp ứng đồng thời dị ứng, nguyên liệu cần tránh, chế độ ăn và quy tắc truyền thống của bạn.',
       suggestion:
-        'B?n c� th? th�m m?t m�n ph� h?p ho?c b? sung c�ng th?c m?i r?i t?o l?i th?c don.',
+        'Bạn có thể thêm một món phù hợp hoặc bổ sung công thức mới rồi tạo lại thực đơn.',
     },
     SHOPPING_UNIT_NOT_COMBINED: {
       severity: 'INFO' as const,
       severityLabel: 'Thông tin' as const,
-      message: 'M?t s? nguy�n li?u du?c t�ch th�nh nhi?u d�ng mua s?m',
+      message: 'Một số nguyên liệu được tách thành nhiều dòng mua sắm',
       detail:
-        'C�ng m?t nguy�n li?u dang d�ng c�c don v? kh�c nhau v� chua d? th�ng tin d? c?ng l?i ch�nh x�c.',
-      suggestion: 'B?n c� th? ki?m tra t?ng d�ng v� quy d?i v? c�ng m?t don v? tru?c khi mua.',
+        'Cùng một nguyên liệu đang dùng các đơn vị khác nhau và chưa đủ thông tin để cộng lại chính xác.',
+      suggestion: 'Bạn có thể kiểm tra từng dòng và quy đổi về cùng một đơn vị trước khi mua.',
     },
     CALORIE_TOLERANCE_WIDENED: null,
     MICRONUTRIENT_DATA_PARTIAL: null,
@@ -279,7 +279,7 @@ export class MealPlanService {
       throw new AppError({
         statusCode: 409,
         code: 'HEALTH_PROFILE_INCOMPLETE',
-        message: 'B?n c?n b? sung th�ng tin s?c kh?e tru?c khi t?o th?c don tu?n.',
+        message: 'Bạn cần bổ sung thông tin sức khỏe trước khi tạo thực đơn tuần.',
       });
     }
     const weekStart = dateFromDateOnly(input.weekStart);
@@ -296,7 +296,7 @@ export class MealPlanService {
         throw new AppError({
           statusCode: 409,
           code: 'MEAL_PLAN_SUPERSEDES_INVALID',
-          message: 'Plan du?c regenerate ph?i thu?c c�ng user v� c�ng tu?n',
+          message: 'Plan được regenerate phải thuộc cùng user và cùng tuần',
         });
       }
     }
@@ -512,7 +512,7 @@ export class MealPlanService {
         statusCode: 409,
         code: 'NO_ELIGIBLE_RECIPE',
         message:
-          'Chua t�m th?y m�n thay th? v?a ph� h?p v?i y�u c?u an u?ng c?a b?n v?a g?n m?c nang lu?ng c?a b?a hi?n t?i.',
+          'Chưa tìm thấy món thay thế vừa phù hợp với yêu cầu ăn uống của bạn vừa gần mức năng lượng của bữa hiện tại.',
       });
     }
     const seedHash = sha256(input.seed ?? `${plan.seedHash}:${item.id}:${input.idempotencyKey}`);
@@ -665,7 +665,10 @@ export class MealPlanService {
     const candidateScore = (candidate: PublishedPostRecord) =>
       Math.min(
         ...GENERATED_SERVING_OPTIONS.map((servings) => {
-          const values = scaleMealMacroValues(revisionMacros(candidate.publishedRevision), servings);
+          const values = scaleMealMacroValues(
+            revisionMacros(candidate.publishedRevision),
+            servings,
+          );
           return (
             macroTargetDeviationScore(
               values,
@@ -683,7 +686,9 @@ export class MealPlanService {
         if (score) return score;
         const behavior = (ranking.get(b.id)?.score ?? 0) - (ranking.get(a.id)?.score ?? 0);
         if (behavior) return behavior;
-        return sha256(`${seedHash}:${day}:${a.id}`).localeCompare(sha256(`${seedHash}:${day}:${b.id}`));
+        return sha256(`${seedHash}:${day}:${a.id}`).localeCompare(
+          sha256(`${seedHash}:${day}:${b.id}`),
+        );
       })
       .slice(0, MAX_DAILY_COMBINATION_CANDIDATES);
     const options = shortlist.flatMap((post) =>
@@ -713,7 +718,8 @@ export class MealPlanService {
         (count, option) =>
           count +
           option.post.publishedRevision!.ingredients.filter(
-            (ingredient) => ingredient.ingredientId && !coveredIngredients.has(ingredient.ingredientId),
+            (ingredient) =>
+              ingredient.ingredientId && !coveredIngredients.has(ingredient.ingredientId),
           ).length,
         0,
       );
@@ -736,10 +742,8 @@ export class MealPlanService {
           for (const option of combination)
             counts.set(option.post.id, (counts.get(option.post.id) ?? 0) + 1);
           const varietyPenalty =
-            combination.reduce(
-              (sum, option) => sum + (useCounts.get(option.post.id) ?? 0),
-              0,
-            ) * WEEKLY_REUSE_SCORE_PENALTY +
+            combination.reduce((sum, option) => sum + (useCounts.get(option.post.id) ?? 0), 0) *
+              WEEKLY_REUSE_SCORE_PENALTY +
             [...counts.values()].reduce(
               (sum, count) => sum + Math.max(0, count - 1) * SAME_DAY_REPEAT_SCORE_PENALTY,
               0,
@@ -849,15 +853,15 @@ export class MealPlanService {
     throw new AppError({
       statusCode: 409,
       code: 'DIET_SCHEDULE_REQUIRED',
-      message: 'Vui l�ng ch?n ng�y �p d?ng ch? d? an theo l?ch trong tu?n tru?c khi t?o th?c don.',
+      message: 'Vui lòng chọn ngày áp dụng chế độ ăn theo lịch trong tuần trước khi tạo thực đơn.',
       fields: { availableDates: [...weekDates] },
     });
   }
 
   private explanation(slots: PlannedSlot[], targetCalories: number, goal: MealGoal): string {
     const filled = slots.filter((slot) => slot.data.status === MealSlotStatus.FILLED).length;
-    const goalLabel = { MAINTAIN: 'gi? c�n', LOSE: 'gi?m c�n', GAIN: 'tang c�n' }[goal];
-    return `Th?c don d� x?p ${filled}/${TOTAL_SLOTS} b?a cho m?c ti�u ${goalLabel}, d?a tr�n m?c nang lu?ng kho?ng ${targetCalories} kcal m?i ng�y. D? ?ng, nguy�n li?u c?n tr�nh, ch? d? an v� quy t?c truy?n th?ng c?a b?n lu�n du?c ki?m tra tru?c khi ch?n m�n.`;
+    const goalLabel = { MAINTAIN: 'giữ cân', LOSE: 'giảm cân', GAIN: 'tăng cân' }[goal];
+    return `Thực đơn đã xếp ${filled}/${TOTAL_SLOTS} bữa cho mục tiêu ${goalLabel}, dựa trên mức năng lượng khoảng ${targetCalories} kcal mỗi ngày. Dị ứng, nguyên liệu cần tránh, chế độ ăn và quy tắc truyền thống của bạn luôn được kiểm tra trước khi chọn món.`;
   }
 
   private assertNoHardViolation(reasons: string[]): void {
@@ -867,7 +871,7 @@ export class MealPlanService {
       statusCode: 409,
       code: 'MEAL_PLAN_HARD_CONSTRAINT_VIOLATION',
       message:
-        'M�n n�y kh�ng ph� h?p v?i �t nh?t m?t y�u c?u an u?ng b?t bu?c c?a b?n, nhu d? ?ng, nguy�n li?u c?n tr�nh, ch? d? an ho?c quy t?c truy?n th?ng. Vui l�ng ch?n m�n kh�c.',
+        'Món này không phù hợp với ít nhất một yêu cầu ăn uống bắt buộc của bạn, như dị ứng, nguyên liệu cần tránh, chế độ ăn hoặc quy tắc truyền thống. Vui lòng chọn món khác.',
       fields: { reasons: unique },
     });
   }
@@ -888,8 +892,8 @@ export class MealPlanService {
         .filter((item) => warningList(item.warningCodes).includes(code))
         .map((item) => planSlotLabel(item.date, item.mealType));
       const locationDetail = locations.length
-        ? ` V? tr�: ${locations.join(', ')}.`
-        : ' Luu � n�y �p d?ng cho danh s�ch mua s?m c?a c? tu?n.';
+        ? ` Vị trí: ${locations.join(', ')}.`
+        : ' Lưu ý này áp dụng cho danh sách mua sắm của cả tuần.';
       return [
         {
           code,
@@ -907,28 +911,28 @@ export class MealPlanService {
     if (warnings.includes('UNFILLED_SLOT')) {
       return {
         status: 'HARD_CONSTRAINT_BLOCKED' as const,
-        title: 'M?t s? b?a du?c d? tr?ng d? b?o v? y�u c?u an u?ng c?a b?n',
+        title: 'Một số bữa được để trống để bảo vệ yêu cầu ăn uống của bạn',
         detail:
-          'H? th?ng kh�ng dua m�n kh�ng ph� h?p v�o th?c don. D? ?ng, nguy�n li?u c?n tr�nh, ch? d? an v� quy t?c truy?n th?ng v?n du?c gi? nguy�n.',
-        suggestion: 'B?n c� th? th�m m?t m�n ph� h?p ho?c t?o l?i th?c don khi c� th�m c�ng th?c.',
+          'Hệ thống không đưa món không phù hợp vào thực đơn. Dị ứng, nguyên liệu cần tránh, chế độ ăn và quy tắc truyền thống vẫn được giữ nguyên.',
+        suggestion: 'Bạn có thể thêm một món phù hợp hoặc tạo lại thực đơn khi có thêm công thức.',
         hardConstraintsPreserved: true as const,
       };
     }
     if (warnings.length > 0) {
       return {
         status: 'ADVISORY_ADJUSTMENTS' as const,
-        title: 'Th?c don c� v�i g?i � b?n c� th? di?u ch?nh',
+        title: 'Thực đơn có vài gợi ý bạn có thể điều chỉnh',
         detail:
-          'Kh�ng c� m�n n�o vi ph?m y�u c?u an u?ng b?t bu?c. C�c luu � c�n l?i ch? nh?m gi�p th?c don thu?n ti?n v� da d?ng hon.',
-        suggestion: 'B?n c� th? xem t?ng luu � v� di?u ch?nh n?u th?y ph� h?p.',
+          'Không có món nào vi phạm yêu cầu ăn uống bắt buộc. Các lưu ý còn lại chỉ nhằm giúp thực đơn thuận tiện và đa dạng hơn.',
+        suggestion: 'Bạn có thể xem từng lưu ý và điều chỉnh nếu thấy phù hợp.',
         hardConstraintsPreserved: true as const,
       };
     }
     return {
       status: 'NO_SERIOUS_ISSUE' as const,
-      title: 'Chua th?y v?n d? nghi�m tr?ng trong th?c don',
+      title: 'Chưa thấy vấn đề nghiêm trọng trong thực đơn',
       detail:
-        'C�c m�n d� ch?n ph� h?p v?i y�u c?u an u?ng b?t bu?c theo th�ng tin hi?n c�. Ch? s? dinh du?ng v?n l� s? li?u u?c t�nh.',
+        'Các món đã chọn phù hợp với yêu cầu ăn uống bắt buộc theo thông tin hiện có. Chỉ số dinh dưỡng vẫn là số liệu ước tính.',
       suggestion: null,
       hardConstraintsPreserved: true as const,
     };
@@ -1030,7 +1034,7 @@ export class MealPlanService {
             ? {
                 code: reasonCodes[0] ?? 'NO_HARD_COMPATIBLE_CANDIDATE',
                 reason:
-                  'Chua t�m th?y m�n ph� h?p v?i d? ?ng, nguy�n li?u c?n tr�nh, ch? d? an v� quy t?c truy?n th?ng c?a b?n. B?a n�y du?c d? tr?ng thay v� t? th�m m�n kh�ng ph� h?p.',
+                  'Chưa tìm thấy món phù hợp với dị ứng, nguyên liệu cần tránh, chế độ ăn và quy tắc truyền thống của bạn. Bữa này được để trống thay vì tự thêm món không phù hợp.',
                 hardConstraintsPreserved: true as const,
               }
             : null,
@@ -1071,7 +1075,7 @@ export class MealPlanService {
           knownMetricCount === 4
             ? []
             : [
-                'M?t s? m�n chua c� d? d? li?u d? u?c t�nh ch?t d?m, ch?t xo, ch?t b�o v� tinh b?t. C�c ch? s? trong ng�y c� th? th?p hon th?c t?.',
+                'Một số món chưa có đủ dữ liệu để ước tính chất đạm, chất xơ, chất béo và tinh bột. Các chỉ số trong ngày có thể thấp hơn thực tế.',
               ],
       };
       return {
@@ -1410,7 +1414,7 @@ export class MealPlanService {
     return new AppError({
       statusCode: 404,
       code: 'NOT_FOUND',
-      message: 'Kh�ng t�m th?y th?c don',
+      message: 'Không tìm thấy thực đơn',
     });
   }
 
@@ -1418,7 +1422,7 @@ export class MealPlanService {
     return new AppError({
       statusCode: 409,
       code: 'MEAL_PLAN_VERSION_CONFLICT',
-      message: 'Th?c don d� thay d?i. Vui l�ng t?i l?i tru?c khi thao t�c.',
+      message: 'Thực đơn đã thay đổi. Vui lòng tải lại trước khi thao tác.',
     });
   }
 
@@ -1426,7 +1430,7 @@ export class MealPlanService {
     return new AppError({
       statusCode: 409,
       code: 'MEAL_PLAN_IDEMPOTENCY_CONFLICT',
-      message: 'Y�u c?u n�y d� du?c g?i tru?c d� v?i n?i dung kh�c. Vui l�ng t?i l?i r?i th? l?i.',
+      message: 'Yêu cầu này đã được gửi trước đó với nội dung khác. Vui lòng tải lại rồi thử lại.',
     });
   }
 }

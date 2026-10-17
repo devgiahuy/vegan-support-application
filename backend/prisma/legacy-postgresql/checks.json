@@ -1,0 +1,672 @@
+[
+  {
+    "table": "ai_flags",
+    "name": "ai_flags_reason_codes_array",
+    "definition": "CHECK ((jsonb_typeof(reason_codes) = 'array'::text))"
+  },
+  {
+    "table": "ai_flags",
+    "name": "ai_flags_risk_score_range",
+    "definition": "CHECK (((risk_score >= (0)::numeric) AND (risk_score <= (1)::numeric)))"
+  },
+  {
+    "table": "ai_quota_buckets",
+    "name": "ai_quota_buckets_counts",
+    "definition": "CHECK (((successful_count >= 0) AND (quota_limit > 0) AND (successful_count <= quota_limit)))"
+  },
+  {
+    "table": "ai_quota_buckets",
+    "name": "ai_quota_buckets_reservation_shape",
+    "definition": "CHECK (((reservation_key IS NULL) = (reservation_expires_at IS NULL)))"
+  },
+  {
+    "table": "ai_rate_limit_buckets",
+    "name": "ai_rate_limit_buckets_positive_count",
+    "definition": "CHECK ((count > 0))"
+  },
+  {
+    "table": "ai_request_logs",
+    "name": "ai_request_logs_completion_shape",
+    "definition": "CHECK ((((status = 'IN_PROGRESS'::ai_request_status) AND (completed_at IS NULL)) OR ((status <> 'IN_PROGRESS'::ai_request_status) AND (completed_at IS NOT NULL))))"
+  },
+  {
+    "table": "ai_request_logs",
+    "name": "ai_request_logs_metadata_object",
+    "definition": "CHECK ((jsonb_typeof(redacted_metadata) = 'object'::text))"
+  },
+  {
+    "table": "ai_request_logs",
+    "name": "ai_request_logs_nonnegative",
+    "definition": "CHECK (((provider_call_count >= 0) AND ((latency_ms IS NULL) OR (latency_ms >= 0)) AND ((input_tokens IS NULL) OR (input_tokens >= 0)) AND ((output_tokens IS NULL) OR (output_tokens >= 0))))"
+  },
+  {
+    "table": "ai_request_logs",
+    "name": "ai_request_logs_owner",
+    "definition": "CHECK ((NOT ((user_id IS NOT NULL) AND (guest_id_hash IS NOT NULL))))"
+  },
+  {
+    "table": "behavior_events",
+    "name": "behavior_events_entity_shape",
+    "definition": "CHECK ((((type = ANY (ARRAY['SEARCH'::behavior_event_type, 'CHAT_TOPIC'::behavior_event_type])) AND (entity_id IS NULL)) OR ((type = ANY (ARRAY['VIEW_RECIPE'::behavior_event_type, 'BOOKMARK'::behavior_event_type, 'RATE'::behavior_event_type, 'ACCEPT_MEAL'::behavior_event_type, 'SWAP_MEAL'::behavior_event_type, 'REJECT_MEAL'::behavior_event_type])) AND (entity_id IS NOT NULL))))"
+  },
+  {
+    "table": "behavior_events",
+    "name": "behavior_events_idempotency_key_not_blank",
+    "definition": "CHECK ((length(btrim((idempotency_key)::text)) > 0))"
+  },
+  {
+    "table": "behavior_events",
+    "name": "behavior_events_metadata_object",
+    "definition": "CHECK ((jsonb_typeof(metadata) = 'object'::text))"
+  },
+  {
+    "table": "behavior_events",
+    "name": "behavior_events_payload_hash_hex",
+    "definition": "CHECK ((payload_hash ~ '^[0-9a-f]{64}$'::text))"
+  },
+  {
+    "table": "categories",
+    "name": "categories_parent_not_self_check",
+    "definition": "CHECK (((parent_id IS NULL) OR (parent_id <> id)))"
+  },
+  {
+    "table": "chat_messages",
+    "name": "chat_messages_payload_hash_hex",
+    "definition": "CHECK (((payload_hash IS NULL) OR (payload_hash ~ '^[0-9a-f]{64}$'::text)))"
+  },
+  {
+    "table": "chat_messages",
+    "name": "chat_messages_role_shape",
+    "definition": "CHECK ((((role = 'USER'::chat_message_role) AND (status = 'COMPLETED'::chat_message_status) AND (idempotency_key IS NOT NULL) AND (payload_hash IS NOT NULL) AND (request_message_id IS NULL) AND (provider IS NULL) AND (model_id IS NULL) AND (fallback = false) AND (completed_at IS NOT NULL)) OR ((role = 'ASSISTANT'::chat_message_role) AND (idempotency_key IS NULL) AND (payload_hash IS NULL) AND (request_message_id IS NOT NULL) AND (((status = 'PENDING'::chat_message_status) AND (completed_at IS NULL)) OR ((status = ANY (ARRAY['COMPLETED'::chat_message_status, 'FAILED'::chat_message_status])) AND (completed_at IS NOT NULL))))))"
+  },
+  {
+    "table": "chat_messages",
+    "name": "chat_messages_topic_codes_array",
+    "definition": "CHECK ((jsonb_typeof(topic_codes) = 'array'::text))"
+  },
+  {
+    "table": "chat_sessions",
+    "name": "chat_sessions_exactly_one_owner",
+    "definition": "CHECK (((user_id IS NOT NULL) <> (guest_id_hash IS NOT NULL)))"
+  },
+  {
+    "table": "chat_sessions",
+    "name": "chat_sessions_guest_expiry",
+    "definition": "CHECK ((((guest_id_hash IS NULL) AND (expires_at IS NULL)) OR ((guest_id_hash IS NOT NULL) AND (expires_at IS NOT NULL))))"
+  },
+  {
+    "table": "comments",
+    "name": "comments_content_not_blank",
+    "definition": "CHECK ((length(btrim((content)::text)) > 0))"
+  },
+  {
+    "table": "comments",
+    "name": "comments_parent_not_self",
+    "definition": "CHECK (((parent_id IS NULL) OR (parent_id <> id)))"
+  },
+  {
+    "table": "community_rate_limit_buckets",
+    "name": "community_rate_limit_count_positive",
+    "definition": "CHECK ((count > 0))"
+  },
+  {
+    "table": "contributor_applications",
+    "name": "contributor_applications_claim_consistent",
+    "definition": "CHECK ((((source = 'ADMIN_INVITATION'::contributor_application_source) AND (claimed_approval_basis = 'ADMIN_INVITED'::contributor_approval_basis) AND (invited_by_id IS NOT NULL) AND (invitation_reason IS NOT NULL)) OR ((source <> 'ADMIN_INVITATION'::contributor_application_source) AND (claimed_approval_basis <> 'ADMIN_INVITED'::contributor_approval_basis) AND (invited_by_id IS NULL) AND (invitation_reason IS NULL))))"
+  },
+  {
+    "table": "contributor_applications",
+    "name": "contributor_applications_organization_claim_required",
+    "definition": "CHECK (((claimed_approval_basis <> 'ORGANIZATION_AFFILIATION'::contributor_approval_basis) OR (organization_claim IS NOT NULL)))"
+  },
+  {
+    "table": "contributor_applications",
+    "name": "contributor_applications_review_consistent",
+    "definition": "CHECK ((((status = 'PENDING'::contributor_application_status) AND (approval_basis IS NULL) AND (review_evidence IS NULL) AND (review_note IS NULL) AND (reviewed_by_id IS NULL) AND (reviewed_at IS NULL) AND (reapply_eligible_at IS NULL)) OR ((status = 'APPROVED'::contributor_application_status) AND (approval_basis IS NOT NULL) AND (review_evidence IS NOT NULL) AND (review_note IS NOT NULL) AND (reviewed_by_id IS NOT NULL) AND (reviewed_at IS NOT NULL) AND (reapply_eligible_at IS NULL)) OR ((status = 'REJECTED'::contributor_application_status) AND (approval_basis IS NULL) AND (review_evidence IS NULL) AND (review_note IS NOT NULL) AND (reviewed_by_id IS NOT NULL) AND (reviewed_at IS NOT NULL) AND (reapply_eligible_at IS NOT NULL))))"
+  },
+  {
+    "table": "contributor_decisions",
+    "name": "contributor_decisions_evidence_consistent",
+    "definition": "CHECK ((((decision = 'REJECTED'::contributor_decision_type) AND (approval_basis IS NULL) AND (evidence IS NULL)) OR ((decision = ANY (ARRAY['APPROVED'::contributor_decision_type, 'REVOKED'::contributor_decision_type])) AND (approval_basis IS NOT NULL) AND (evidence IS NOT NULL))))"
+  },
+  {
+    "table": "contributor_decisions",
+    "name": "contributor_decisions_reason_not_blank",
+    "definition": "CHECK ((length(btrim((reason)::text)) > 0))"
+  },
+  {
+    "table": "contributor_profiles",
+    "name": "contributor_profiles_revocation_consistent",
+    "definition": "CHECK ((((revoked_at IS NULL) AND (revoked_by_id IS NULL) AND (revocation_reason IS NULL)) OR ((revoked_at IS NOT NULL) AND (revoked_by_id IS NOT NULL) AND (revocation_reason IS NOT NULL))))"
+  },
+  {
+    "table": "cooking_yield_factors",
+    "name": "cooking_yield_factors_effective_check",
+    "definition": "CHECK (((effective_to IS NULL) OR (effective_to >= effective_from)))"
+  },
+  {
+    "table": "cooking_yield_factors",
+    "name": "cooking_yield_factors_factor_check",
+    "definition": "CHECK ((factor > (0)::numeric))"
+  },
+  {
+    "table": "diet_preferences",
+    "name": "diet_preferences_rule_set_version_check",
+    "definition": "CHECK ((rule_set_version > 0))"
+  },
+  {
+    "table": "diet_rule_definitions",
+    "name": "diet_rule_definitions_scope_check",
+    "definition": "CHECK ((((source = 'DIET_PATTERN'::diet_rule_source) AND (diet_pattern IS NOT NULL) AND (tradition IS NULL)) OR ((source = 'TRADITION'::diet_rule_source) AND (diet_pattern IS NULL) AND (tradition IS NOT NULL))))"
+  },
+  {
+    "table": "diet_rule_definitions",
+    "name": "diet_rule_definitions_version_check",
+    "definition": "CHECK ((rule_set_version > 0))"
+  },
+  {
+    "table": "food_data_suggestions",
+    "name": "food_data_suggestions_confidence_check",
+    "definition": "CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))"
+  },
+  {
+    "table": "food_data_suggestions",
+    "name": "food_data_suggestions_provider_check",
+    "definition": "CHECK ((provider = 'AI_SUGGESTION'::food_data_provider))"
+  },
+  {
+    "table": "health_profiles",
+    "name": "health_profiles_age_check",
+    "definition": "CHECK (((age >= 13) AND (age <= 120)))"
+  },
+  {
+    "table": "health_profiles",
+    "name": "health_profiles_height_check",
+    "definition": "CHECK (((height_cm >= (80)::numeric) AND (height_cm <= (250)::numeric)))"
+  },
+  {
+    "table": "health_profiles",
+    "name": "health_profiles_weight_check",
+    "definition": "CHECK (((weight_kg >= (20)::numeric) AND (weight_kg <= (500)::numeric)))"
+  },
+  {
+    "table": "household_conversions",
+    "name": "household_conversions_dimension_check",
+    "definition": "CHECK ((unit_dimension = ANY (ARRAY['COUNT'::unit_dimension, 'VOLUME'::unit_dimension])))"
+  },
+  {
+    "table": "household_conversions",
+    "name": "household_conversions_positive_check",
+    "definition": "CHECK (((quantity > (0)::numeric) AND (grams > (0)::numeric)))"
+  },
+  {
+    "table": "ingredient_food_profiles",
+    "name": "ingredient_food_profiles_edible_check",
+    "definition": "CHECK (((edible_portion_percent > (0)::numeric) AND (edible_portion_percent <= (100)::numeric)))"
+  },
+  {
+    "table": "ingredient_food_profiles",
+    "name": "ingredient_food_profiles_effective_check",
+    "definition": "CHECK (((effective_to IS NULL) OR (effective_to >= effective_from)))"
+  },
+  {
+    "table": "ingredient_food_profiles",
+    "name": "ingredient_food_profiles_serving_check",
+    "definition": "CHECK (((serving_grams IS NULL) OR (serving_grams > (0)::numeric)))"
+  },
+  {
+    "table": "ingredient_intake_guidelines",
+    "name": "ingredient_intake_guidelines_amount_check",
+    "definition": "CHECK (((amount > (0)::numeric) AND (frequency > (0)::numeric)))"
+  },
+  {
+    "table": "ingredient_intake_guidelines",
+    "name": "ingredient_intake_guidelines_effective_check",
+    "definition": "CHECK (((effective_to IS NULL) OR (effective_to >= effective_from)))"
+  },
+  {
+    "table": "ingredient_interaction_rules",
+    "name": "ingredient_interaction_rules_distinct_check",
+    "definition": "CHECK ((ingredient_a_id <> ingredient_b_id))"
+  },
+  {
+    "table": "ingredient_interaction_rules",
+    "name": "ingredient_interaction_rules_effective_check",
+    "definition": "CHECK (((effective_to IS NULL) OR (effective_to >= effective_from)))"
+  },
+  {
+    "table": "ingredient_interaction_rules",
+    "name": "ingredient_interaction_rules_hard_rule_check",
+    "definition": "CHECK (((NOT hard_rule) OR ((review_status = 'APPROVED'::food_data_review_status) AND (evidence_grade <> 'INSUFFICIENT'::evidence_grade))))"
+  },
+  {
+    "table": "ingredient_interaction_rules",
+    "name": "ingredient_interaction_rules_order_check",
+    "definition": "CHECK (((ingredient_a_id)::text < (ingredient_b_id)::text))"
+  },
+  {
+    "table": "ingredient_nutrient_values",
+    "name": "ingredient_nutrient_values_effective_check",
+    "definition": "CHECK (((effective_to IS NULL) OR (effective_to >= effective_from)))"
+  },
+  {
+    "table": "ingredient_nutrient_values",
+    "name": "ingredient_nutrient_values_range_check",
+    "definition": "CHECK (((value_per_100g >= (0)::numeric) AND ((min_value IS NULL) OR ((min_value >= (0)::numeric) AND (min_value <= value_per_100g))) AND ((max_value IS NULL) OR (max_value >= value_per_100g))))"
+  },
+  {
+    "table": "meal_plan_items",
+    "name": "meal_plan_items_arrays",
+    "definition": "CHECK (((jsonb_typeof(reason_codes) = 'array'::text) AND (jsonb_typeof(warning_codes) = 'array'::text)))"
+  },
+  {
+    "table": "meal_plan_items",
+    "name": "meal_plan_items_filled_shape",
+    "definition": "CHECK ((((status = 'FILLED'::meal_slot_status) AND (calories IS NOT NULL) AND (calories > 0) AND (tolerance_percent IS NOT NULL) AND (((source_type = 'RECIPE'::meal_plan_item_source_type) AND (recipe_id IS NOT NULL) AND (recipe_revision_id IS NOT NULL) AND (custom_meal_id IS NULL) AND (custom_meal_snapshot IS NULL)) OR ((source_type = 'CUSTOM_MEAL'::meal_plan_item_source_type) AND (recipe_id IS NULL) AND (recipe_revision_id IS NULL) AND (custom_meal_id IS NOT NULL) AND (custom_meal_snapshot IS NOT NULL)))) OR ((status = 'UNFILLED'::meal_slot_status) AND (recipe_id IS NULL) AND (recipe_revision_id IS NULL) AND (custom_meal_id IS NULL) AND (custom_meal_snapshot IS NULL) AND (calories IS NULL) AND (tolerance_percent IS NULL))))"
+  },
+  {
+    "table": "meal_plan_items",
+    "name": "meal_plan_items_position_nonnegative",
+    "definition": "CHECK (((\"position\" >= 0) AND (target_calories > 0)))"
+  },
+  {
+    "table": "meal_plan_items",
+    "name": "meal_plan_items_servings_valid",
+    "definition": "CHECK (((servings > (0)::numeric) AND (servings <= (20)::numeric)))"
+  },
+  {
+    "table": "meal_plan_mutations",
+    "name": "meal_plan_mutations_payload_hash_hex",
+    "definition": "CHECK ((payload_hash ~ '^[0-9a-f]{64}$'::text))"
+  },
+  {
+    "table": "meal_plan_mutations",
+    "name": "meal_plan_mutations_positive_version",
+    "definition": "CHECK ((resulting_lock_version > 0))"
+  },
+  {
+    "table": "meal_plan_shopping_items",
+    "name": "meal_plan_shopping_items_positive",
+    "definition": "CHECK (((amount > (0)::numeric) AND (source_item_count > 0)))"
+  },
+  {
+    "table": "meal_plans",
+    "name": "meal_plans_constraint_snapshot_object",
+    "definition": "CHECK ((jsonb_typeof(constraint_snapshot) = 'object'::text))"
+  },
+  {
+    "table": "meal_plans",
+    "name": "meal_plans_hashes_hex",
+    "definition": "CHECK (((payload_hash ~ '^[0-9a-f]{64}$'::text) AND (seed_hash ~ '^[0-9a-f]{64}$'::text)))"
+  },
+  {
+    "table": "meal_plans",
+    "name": "meal_plans_micronutrient_summary_object",
+    "definition": "CHECK ((jsonb_typeof(micronutrient_summary) = 'object'::text))"
+  },
+  {
+    "table": "meal_plans",
+    "name": "meal_plans_positive_values",
+    "definition": "CHECK (((target_calories > 0) AND (version > 0) AND (lock_version > 0)))"
+  },
+  {
+    "table": "meal_plans",
+    "name": "meal_plans_warnings_array",
+    "definition": "CHECK ((jsonb_typeof(warnings) = 'array'::text))"
+  },
+  {
+    "table": "meal_plans",
+    "name": "meal_plans_week_start_monday",
+    "definition": "CHECK ((EXTRACT(isodow FROM week_start) = (1)::numeric))"
+  },
+  {
+    "table": "meal_program_week_alternatives",
+    "name": "meal_program_week_alternatives_rank_valid",
+    "definition": "CHECK (((rank >= 0) AND (rank < 5)))"
+  },
+  {
+    "table": "meal_program_weeks",
+    "name": "meal_program_weeks_index_valid",
+    "definition": "CHECK ((week_index >= 0))"
+  },
+  {
+    "table": "meal_program_weeks",
+    "name": "meal_program_weeks_selection_valid",
+    "definition": "CHECK ((((status = 'READY'::meal_program_week_status) AND (selected_alternative_rank IS NOT NULL) AND (failure IS NULL)) OR ((status = 'FAILED'::meal_program_week_status) AND (selected_alternative_rank IS NULL) AND (failure IS NOT NULL)) OR ((status = 'PENDING'::meal_program_week_status) AND (selected_alternative_rank IS NULL))))"
+  },
+  {
+    "table": "meal_programs",
+    "name": "meal_programs_confirmed_shape",
+    "definition": "CHECK ((((status = 'CONFIRMED'::meal_program_status) AND (confirmed_at IS NOT NULL)) OR ((status <> 'CONFIRMED'::meal_program_status) AND (confirmed_at IS NULL))))"
+  },
+  {
+    "table": "meal_programs",
+    "name": "meal_programs_horizon_valid",
+    "definition": "CHECK (((horizon_weeks >= 2) AND (horizon_weeks <= 12)))"
+  },
+  {
+    "table": "media_assets",
+    "name": "media_assets_bytes_check",
+    "definition": "CHECK (((bytes > 0) OR ((backfilled = true) AND (bytes = 0))))"
+  },
+  {
+    "table": "media_assets",
+    "name": "media_assets_deletion_check",
+    "definition": "CHECK ((((status = ANY (ARRAY['ACTIVE'::media_asset_status, 'DELETING'::media_asset_status])) AND (deleted_at IS NULL)) OR ((status = ANY (ARRAY['DELETED'::media_asset_status, 'PROVIDER_MISSING'::media_asset_status])) AND (deleted_at IS NOT NULL))))"
+  },
+  {
+    "table": "media_assets",
+    "name": "media_assets_dimensions_check",
+    "definition": "CHECK ((((width IS NULL) OR (width > 0)) AND ((height IS NULL) OR (height > 0)) AND ((duration_seconds IS NULL) OR (duration_seconds > (0)::numeric))))"
+  },
+  {
+    "table": "moderation_actions",
+    "name": "moderation_actions_metadata_object",
+    "definition": "CHECK ((jsonb_typeof(metadata) = 'object'::text))"
+  },
+  {
+    "table": "moderation_actions",
+    "name": "moderation_actions_reason_not_blank",
+    "definition": "CHECK ((length(btrim((reason)::text)) > 0))"
+  },
+  {
+    "table": "moderation_actions",
+    "name": "moderation_actions_related_flags_array",
+    "definition": "CHECK ((jsonb_typeof(related_ai_flag_ids) = 'array'::text))"
+  },
+  {
+    "table": "moderation_actions",
+    "name": "moderation_actions_related_reports_array",
+    "definition": "CHECK ((jsonb_typeof(related_report_ids) = 'array'::text))"
+  },
+  {
+    "table": "notifications",
+    "name": "notifications_payload_version_check",
+    "definition": "CHECK ((payload_version = 1))"
+  },
+  {
+    "table": "nutrient_reference_intakes",
+    "name": "nutrient_reference_intakes_effective_check",
+    "definition": "CHECK (((effective_to IS NULL) OR (effective_to >= effective_from)))"
+  },
+  {
+    "table": "nutrient_reference_intakes",
+    "name": "nutrient_reference_intakes_value_check",
+    "definition": "CHECK ((value > (0)::numeric))"
+  },
+  {
+    "table": "nutrient_retention_factors",
+    "name": "nutrient_retention_factors_effective_check",
+    "definition": "CHECK (((effective_to IS NULL) OR (effective_to >= effective_from)))"
+  },
+  {
+    "table": "nutrient_retention_factors",
+    "name": "nutrient_retention_factors_factor_check",
+    "definition": "CHECK (((factor >= (0)::numeric) AND (factor <= (1)::numeric)))"
+  },
+  {
+    "table": "pantry_adjustments",
+    "name": "pantry_adjustments_grams_check",
+    "definition": "CHECK ((((before_grams IS NULL) AND (after_grams IS NULL) AND (normalized_delta_grams IS NULL)) OR ((before_grams IS NOT NULL) AND (after_grams IS NOT NULL) AND (normalized_delta_grams IS NOT NULL) AND (after_grams = (before_grams + normalized_delta_grams)) AND (after_grams >= (0)::numeric))))"
+  },
+  {
+    "table": "pantry_adjustments",
+    "name": "pantry_adjustments_result_check",
+    "definition": "CHECK (((after_quantity = (before_quantity + applied_delta_quantity)) AND (after_quantity >= (0)::numeric)))"
+  },
+  {
+    "table": "pantry_adjustments",
+    "name": "pantry_adjustments_version_check",
+    "definition": "CHECK (((version_before >= 0) AND (version_after = (version_before + 1))))"
+  },
+  {
+    "table": "pantry_items",
+    "name": "pantry_items_confidence_check",
+    "definition": "CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))"
+  },
+  {
+    "table": "pantry_items",
+    "name": "pantry_items_conversion_check",
+    "definition": "CHECK ((((conversion_status = 'CONVERTED'::pantry_conversion_status) AND (normalized_grams IS NOT NULL) AND (normalized_grams >= (0)::numeric) AND (conversion_source IS NOT NULL) AND (conversion_version IS NOT NULL) AND (conversion_confidence IS NOT NULL)) OR ((conversion_status = 'UNKNOWN'::pantry_conversion_status) AND (normalized_grams IS NULL) AND (conversion_source IS NULL) AND (conversion_version IS NULL) AND (conversion_confidence IS NULL))))"
+  },
+  {
+    "table": "pantry_items",
+    "name": "pantry_items_conversion_confidence_check",
+    "definition": "CHECK (((conversion_confidence IS NULL) OR ((conversion_confidence >= (0)::numeric) AND (conversion_confidence <= (1)::numeric))))"
+  },
+  {
+    "table": "pantry_items",
+    "name": "pantry_items_dates_check",
+    "definition": "CHECK ((((opened_at IS NULL) OR (purchased_at IS NULL) OR (opened_at >= purchased_at)) AND ((expires_at IS NULL) OR (purchased_at IS NULL) OR (expires_at >= purchased_at))))"
+  },
+  {
+    "table": "pantry_items",
+    "name": "pantry_items_future_source_check",
+    "definition": "CHECK ((((source = 'MANUAL'::pantry_item_source) AND (source_reference_id IS NULL) AND (confirmation_status = 'CONFIRMED'::pantry_confirmation_status)) OR ((source <> 'MANUAL'::pantry_item_source) AND (source_reference_id IS NOT NULL))))"
+  },
+  {
+    "table": "pantry_items",
+    "name": "pantry_items_identity_check",
+    "definition": "CHECK ((((ingredient_id IS NOT NULL) AND (unmatched_text IS NULL) AND (normalized_unmatched_text IS NULL)) OR ((ingredient_id IS NULL) AND (unmatched_text IS NOT NULL) AND (normalized_unmatched_text IS NOT NULL))))"
+  },
+  {
+    "table": "pantry_items",
+    "name": "pantry_items_quantity_check",
+    "definition": "CHECK ((quantity >= (0)::numeric))"
+  },
+  {
+    "table": "pantry_items",
+    "name": "pantry_items_version_check",
+    "definition": "CHECK ((version > 0))"
+  },
+  {
+    "table": "personalization_preferences",
+    "name": "personalization_preference_state_consistent",
+    "definition": "CHECK ((((enabled = true) AND (consented_at IS NOT NULL) AND (disabled_at IS NULL)) OR ((enabled = false) AND (disabled_at IS NOT NULL))))"
+  },
+  {
+    "table": "post_media",
+    "name": "post_media_bytes_check",
+    "definition": "CHECK (((bytes IS NULL) OR (bytes > 0)))"
+  },
+  {
+    "table": "post_media",
+    "name": "post_media_dimensions_check",
+    "definition": "CHECK ((((width IS NULL) OR (width > 0)) AND ((height IS NULL) OR (height > 0))))"
+  },
+  {
+    "table": "post_media",
+    "name": "post_media_duration_check",
+    "definition": "CHECK (((duration_seconds IS NULL) OR (duration_seconds > (0)::numeric)))"
+  },
+  {
+    "table": "post_ratings",
+    "name": "post_ratings_difficulty_range",
+    "definition": "CHECK (((difficulty >= 1) AND (difficulty <= 5)))"
+  },
+  {
+    "table": "post_ratings",
+    "name": "post_ratings_taste_range",
+    "definition": "CHECK (((taste >= 1) AND (taste <= 5)))"
+  },
+  {
+    "table": "post_revisions",
+    "name": "post_revisions_version_check",
+    "definition": "CHECK ((version > 0))"
+  },
+  {
+    "table": "posts",
+    "name": "posts_version_check",
+    "definition": "CHECK ((version > 0))"
+  },
+  {
+    "table": "recipe_details",
+    "name": "recipe_details_calories_check",
+    "definition": "CHECK (((calories IS NULL) OR (calories >= 0)))"
+  },
+  {
+    "table": "recipe_details",
+    "name": "recipe_details_cook_time_check",
+    "definition": "CHECK ((cook_time_minutes >= 0))"
+  },
+  {
+    "table": "recipe_details",
+    "name": "recipe_details_nutrition_check",
+    "definition": "CHECK ((((protein_grams IS NULL) OR (protein_grams >= (0)::numeric)) AND ((carbs_grams IS NULL) OR (carbs_grams >= (0)::numeric)) AND ((fat_grams IS NULL) OR (fat_grams >= (0)::numeric)) AND ((fiber_grams IS NULL) OR (fiber_grams >= (0)::numeric)) AND ((vitamin_b12_mcg IS NULL) OR (vitamin_b12_mcg >= (0)::numeric))))"
+  },
+  {
+    "table": "recipe_details",
+    "name": "recipe_details_prep_time_check",
+    "definition": "CHECK ((prep_time_minutes >= 0))"
+  },
+  {
+    "table": "recipe_details",
+    "name": "recipe_details_servings_check",
+    "definition": "CHECK ((servings > 0))"
+  },
+  {
+    "table": "recipe_ingredients",
+    "name": "recipe_ingredients_amount_check",
+    "definition": "CHECK ((amount > (0)::numeric))"
+  },
+  {
+    "table": "recipe_ingredients",
+    "name": "recipe_ingredients_position_check",
+    "definition": "CHECK ((\"position\" >= 0))"
+  },
+  {
+    "table": "recipe_nutrition_ai_jobs",
+    "name": "recipe_nutrition_ai_jobs_completion_shape",
+    "definition": "CHECK ((((status = 'IN_PROGRESS'::ai_request_status) AND (completed_at IS NULL)) OR ((status <> 'IN_PROGRESS'::ai_request_status) AND (completed_at IS NOT NULL))))"
+  },
+  {
+    "table": "recipe_nutrition_ai_jobs",
+    "name": "recipe_nutrition_ai_jobs_result_shape",
+    "definition": "CHECK (((result_payload IS NULL) OR (jsonb_typeof(result_payload) = 'object'::text)))"
+  },
+  {
+    "table": "recipe_nutrition_estimate_lines",
+    "name": "recipe_nutrition_estimate_lines_confidence_check",
+    "definition": "CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))"
+  },
+  {
+    "table": "recipe_nutrition_estimate_lines",
+    "name": "recipe_nutrition_estimate_lines_grams_check",
+    "definition": "CHECK ((((normalized_raw_grams IS NULL) OR (normalized_raw_grams >= (0)::numeric)) AND ((edible_raw_grams IS NULL) OR (edible_raw_grams >= (0)::numeric)) AND ((yield_factor IS NULL) OR (yield_factor > (0)::numeric)) AND ((cooked_grams IS NULL) OR (cooked_grams >= (0)::numeric))))"
+  },
+  {
+    "table": "recipe_nutrition_estimate_lines",
+    "name": "recipe_nutrition_estimate_lines_json_check",
+    "definition": "CHECK (((jsonb_typeof(nutrient_coverage) = 'array'::text) AND (jsonb_typeof(source_versions) = 'array'::text) AND (jsonb_typeof(assumptions) = 'array'::text) AND (jsonb_typeof(uncertainty) = 'object'::text)))"
+  },
+  {
+    "table": "recipe_nutrition_estimate_lines",
+    "name": "recipe_nutrition_estimate_lines_position_check",
+    "definition": "CHECK ((\"position\" >= 0))"
+  },
+  {
+    "table": "recipe_nutrition_estimates",
+    "name": "recipe_nutrition_estimates_confidence_check",
+    "definition": "CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))"
+  },
+  {
+    "table": "recipe_nutrition_estimates",
+    "name": "recipe_nutrition_estimates_grams_check",
+    "definition": "CHECK (((total_raw_grams >= (0)::numeric) AND (total_cooked_grams >= (0)::numeric)))"
+  },
+  {
+    "table": "recipe_nutrition_estimates",
+    "name": "recipe_nutrition_estimates_json_check",
+    "definition": "CHECK (((jsonb_typeof(total_nutrients) = 'array'::text) AND (jsonb_typeof(per_serving_nutrients) = 'array'::text) AND (jsonb_typeof(source_versions) = 'array'::text) AND (jsonb_typeof(assumptions) = 'array'::text) AND (jsonb_typeof(uncovered_ingredients) = 'array'::text) AND (jsonb_typeof(uncertainty) = 'object'::text)))"
+  },
+  {
+    "table": "recipe_nutrition_estimates",
+    "name": "recipe_nutrition_estimates_servings_check",
+    "definition": "CHECK ((servings > 0))"
+  },
+  {
+    "table": "recipe_nutrition_estimates",
+    "name": "recipe_nutrition_estimates_version_check",
+    "definition": "CHECK ((version > 0))"
+  },
+  {
+    "table": "recipe_steps",
+    "name": "recipe_steps_duration_check",
+    "definition": "CHECK (((duration_minutes IS NULL) OR (duration_minutes > 0)))"
+  },
+  {
+    "table": "recipe_steps",
+    "name": "recipe_steps_position_check",
+    "definition": "CHECK ((\"position\" >= 0))"
+  },
+  {
+    "table": "recipe_steps",
+    "name": "recipe_steps_positions_array_check",
+    "definition": "CHECK ((jsonb_typeof(affected_ingredient_positions) = 'array'::text))"
+  },
+  {
+    "table": "recipe_steps",
+    "name": "recipe_steps_temperature_check",
+    "definition": "CHECK (((temperature_celsius IS NULL) OR ((temperature_celsius >= (0)::numeric) AND (temperature_celsius <= (400)::numeric))))"
+  },
+  {
+    "table": "reports",
+    "name": "reports_active_key_matches_target",
+    "definition": "CHECK (((status = 'RESOLVED'::report_status) OR ((active_key)::text = (((((reporter_id)::text || ':'::text) || (target_type)::text) || ':'::text) || (target_id)::text))))"
+  },
+  {
+    "table": "reports",
+    "name": "reports_reason_code_not_blank",
+    "definition": "CHECK ((length(btrim((reason_code)::text)) > 0))"
+  },
+  {
+    "table": "reports",
+    "name": "reports_resolution_consistent",
+    "definition": "CHECK ((((status = 'OPEN'::report_status) AND (resolved_decision IS NULL) AND (resolved_reason IS NULL) AND (resolved_by_id IS NULL) AND (resolved_at IS NULL) AND (active_key IS NOT NULL)) OR ((status = 'RESOLVED'::report_status) AND (resolved_decision IS NOT NULL) AND (resolved_reason IS NOT NULL) AND (resolved_by_id IS NOT NULL) AND (resolved_at IS NOT NULL) AND (active_key IS NULL))))"
+  },
+  {
+    "table": "storage_accounts",
+    "name": "storage_accounts_usage_check",
+    "definition": "CHECK (((used_bytes >= 0) AND (reserved_bytes >= 0)))"
+  },
+  {
+    "table": "storage_adjustments",
+    "name": "storage_adjustments_delta_check",
+    "definition": "CHECK ((delta_bytes <> 0))"
+  },
+  {
+    "table": "storage_adjustments",
+    "name": "storage_adjustments_result_check",
+    "definition": "CHECK ((after_bytes = (before_bytes + delta_bytes)))"
+  },
+  {
+    "table": "storage_policies",
+    "name": "storage_policies_quota_check",
+    "definition": "CHECK ((quota_bytes > 0))"
+  },
+  {
+    "table": "storage_policies",
+    "name": "storage_policies_ttl_check",
+    "definition": "CHECK (((reservation_ttl_seconds >= 60) AND (reservation_ttl_seconds <= 86400)))"
+  },
+  {
+    "table": "storage_policies",
+    "name": "storage_policies_version_check",
+    "definition": "CHECK ((version > 0))"
+  },
+  {
+    "table": "storage_policies",
+    "name": "storage_policies_warning_check",
+    "definition": "CHECK (((warning_percent >= 1) AND (warning_percent <= 100)))"
+  },
+  {
+    "table": "storage_reservations",
+    "name": "storage_reservations_bytes_check",
+    "definition": "CHECK (((declared_bytes > 0) AND ((actual_bytes IS NULL) OR (actual_bytes > 0))))"
+  },
+  {
+    "table": "storage_reservations",
+    "name": "storage_reservations_state_check",
+    "definition": "CHECK ((((status = 'RESERVED'::storage_reservation_status) AND (actual_bytes IS NULL) AND (commit_hash IS NULL) AND (committed_at IS NULL) AND (released_at IS NULL)) OR ((status = 'COMMITTED'::storage_reservation_status) AND (actual_bytes IS NOT NULL) AND (commit_hash IS NOT NULL) AND (committed_at IS NOT NULL) AND (released_at IS NULL)) OR ((status = ANY (ARRAY['RELEASED'::storage_reservation_status, 'EXPIRED'::storage_reservation_status])) AND (actual_bytes IS NULL) AND (commit_hash IS NULL) AND (committed_at IS NULL) AND (released_at IS NOT NULL))))"
+  }
+]

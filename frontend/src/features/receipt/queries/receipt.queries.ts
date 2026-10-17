@@ -1,3 +1,6 @@
+import { billingErrorMessage } from '@/features/billing/lib/billing-errors';
+import { useEffect } from 'react';
+import { BILLING_QUERY_KEYS } from '@/features/billing/queries/billing.queries';
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { receiptApi } from '../api/receipt.api';
@@ -23,7 +26,8 @@ export function useReceiptJobQuery(
   jobId: string | null | undefined,
   options?: Omit<UseQueryOptions<ReceiptJob, Error, ReceiptJob>, 'queryKey' | 'queryFn'>
 ) {
-  return useQuery({
+  const allowanceClient = useQueryClient();
+  const result = useQuery({
     queryKey: RECEIPT_QUERY_KEYS.jobDetail(jobId || ''),
     queryFn: () => {
       if (!jobId) throw new Error('ID tác vụ hóa đơn không hợp lệ');
@@ -39,6 +43,13 @@ export function useReceiptJobQuery(
     },
     ...options,
   });
+  const status = result.data?.status;
+  const resultId = result.data?.id;
+  useEffect(() => {
+    if (status && !['QUEUED', 'PROCESSING'].includes(status))
+      void allowanceClient.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
+  }, [status, resultId, allowanceClient]);
+  return result;
 }
 
 /**
@@ -50,6 +61,7 @@ export function useCreateReceiptJobMutation() {
   return useMutation<ReceiptJob, Error, CreateReceiptJobInput>({
     mutationFn: (input) => receiptApi.createJob(input),
     onSuccess: (newJob) => {
+      void queryClient.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
       queryClient.setQueryData(RECEIPT_QUERY_KEYS.jobDetail(newJob.id), newJob);
       toast.success('Bắt đầu bóc tách hóa đơn thành công!');
     },
@@ -69,13 +81,12 @@ export function useUpdateReceiptCandidateMutation(jobId: string) {
   >({
     mutationFn: ({ candidateId, input }) => receiptApi.updateCandidate(jobId, candidateId, input),
     onSuccess: (updatedJob) => {
+      void queryClient.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
       queryClient.setQueryData(RECEIPT_QUERY_KEYS.jobDetail(jobId), updatedJob);
       toast.success('Cập nhật dòng hàng thành công!');
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message || error?.message || 'Lỗi khi cập nhật dòng hàng';
-      toast.error(message);
+    onError: (error: unknown) => {
+      toast.error(billingErrorMessage(error));
     },
   });
 }
@@ -90,15 +101,15 @@ export function useConfirmReceiptJobMutation(jobId: string) {
     mutationFn: (input) => receiptApi.confirmJob(jobId, input),
     onSuccess: (diff) => {
       // Cập nhật cache job detail
+      void queryClient.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
       queryClient.setQueryData(RECEIPT_QUERY_KEYS.jobDetail(jobId), diff.job);
       // Invalidate toàn bộ cache Tủ bếp để số dư cập nhật tức thì
       queryClient.invalidateQueries({ queryKey: PANTRY_QUERY_KEYS.all });
+      void queryClient.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
       toast.success(`Đã thêm ${diff.pantryChanges.length} mặt hàng vào Tủ bếp thành công!`);
     },
-    onError: (error: any) => {
-      const message =
-        error?.response?.data?.message || error?.message || 'Lỗi khi xác nhận nhập tủ bếp';
-      toast.error(message);
+    onError: (error: unknown) => {
+      toast.error(billingErrorMessage(error));
     },
   });
 }
@@ -112,12 +123,12 @@ export function useCancelReceiptJobMutation(jobId: string) {
   return useMutation<ReceiptJob, Error, void>({
     mutationFn: () => receiptApi.cancelJob(jobId),
     onSuccess: (updatedJob) => {
+      void queryClient.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
       queryClient.setQueryData(RECEIPT_QUERY_KEYS.jobDetail(jobId), updatedJob);
       toast.info('Đã hủy tác vụ bóc tách hóa đơn.');
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || error?.message || 'Lỗi khi hủy tác vụ';
-      toast.error(message);
+    onError: (error: unknown) => {
+      toast.error(billingErrorMessage(error));
     },
   });
 }
@@ -131,12 +142,12 @@ export function useRetryReceiptJobMutation(jobId: string) {
   return useMutation<ReceiptJob, Error, string | undefined>({
     mutationFn: (idempotencyKey) => receiptApi.retryJob(jobId, idempotencyKey),
     onSuccess: (updatedJob) => {
+      void queryClient.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
       queryClient.setQueryData(RECEIPT_QUERY_KEYS.jobDetail(jobId), updatedJob);
       toast.info('Đang gửi lại yêu cầu bóc tách...');
     },
-    onError: (error: any) => {
-      const message = error?.response?.data?.message || error?.message || 'Lỗi khi thử lại tác vụ';
-      toast.error(message);
+    onError: (error: unknown) => {
+      toast.error(billingErrorMessage(error));
     },
   });
 }

@@ -88,12 +88,24 @@ export function MealAnalysisCard({
             <div className="mt-1 flex flex-wrap items-center gap-1.5 text-xs">
               <Badge variant="outline" className={scopeConfig.className}>
                 <Layers className="mr-1 size-3" />
-                {scopeConfig.label}
+                {warning.scopeLabel || scopeConfig.label}
               </Badge>
               <Badge variant="outline" className={gradeColor}>
                 <ShieldCheck className="mr-1 size-3" />
                 {warning.evidenceGradeLabel}
               </Badge>
+              {warning.targetComparison && (
+                <Badge
+                  variant="outline"
+                  className={
+                    warning.targetComparison === 'ABOVE'
+                      ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20'
+                      : 'bg-sky-500/10 text-sky-700 dark:text-sky-400 border-sky-500/20'
+                  }
+                >
+                  {warning.targetComparison === 'ABOVE' ? 'Cao hơn mục tiêu' : 'Thấp hơn mục tiêu'}
+                </Badge>
+              )}
               {warning.targetDate && (
                 <span className="text-muted-foreground">• Ngày: {warning.targetDate}</span>
               )}
@@ -103,20 +115,22 @@ export function MealAnalysisCard({
 
         {isDanger ? (
           <Badge variant="destructive" className="text-[11px] font-medium">
-            Nguy cơ cao
+            {warning.severityLabel || 'Nguy cơ cao'}
           </Badge>
         ) : (
           <Badge
             variant="outline"
             className="border-amber-500/30 text-amber-600 dark:text-amber-400 text-[11px] font-medium"
           >
-            Cần lưu ý
+            {warning.severityLabel || 'Cần lưu ý'}
           </Badge>
         )}
       </div>
 
-      {/* Giải thích khoa học */}
-      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{warning.explanation}</p>
+      {/* Giải thích / Chi tiết */}
+      <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+        {warning.detail || warning.explanation}
+      </p>
 
       {/* So sánh định lượng nếu có */}
       {hasMetrics && (
@@ -167,9 +181,9 @@ export function MealAnalysisCard({
 
       {/* Gợi ý điều chỉnh & Nút hành động */}
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-border/50 pt-3">
-        {warning.suggestedAdjustment ? (
+        {warning.suggestion || warning.suggestedAdjustment ? (
           <p className="max-w-[70%] text-[11px] italic text-muted-foreground">
-            💡 {warning.suggestedAdjustment}
+            💡 {warning.suggestion || warning.suggestedAdjustment}
           </p>
         ) : (
           <div />

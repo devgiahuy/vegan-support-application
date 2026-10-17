@@ -21,3 +21,32 @@ export const SUBMIT_DIET_TAG_OPTIONS = [
   { value: 'BUDDHIST', label: 'Chay Phật giáo' },
   { value: 'CHRISTIAN', label: 'Chay Kitô giáo' },
 ] as const;
+
+/** Thang giá 4 mức của nhà cung cấp (`minPrice`/`maxPrice`: 0..4). KHÔNG phải số tiền VND. */
+export const PRICE_LEVEL_OPTIONS = [
+  { value: 0, label: '0$ · Rất rẻ' },
+  { value: 1, label: '1$ · Rẻ' },
+  { value: 2, label: '2$ · Vừa' },
+  { value: 3, label: '3$ · Đắt' },
+  { value: 4, label: '4$ · Rất đắt' },
+] as const;
+
+/** Đánh giá tối thiểu backend chấp nhận: 2..4.5. */
+export const MIN_RATING_OPTIONS = [2, 2.5, 3, 3.5, 4, 4.5] as const;
+
+export const OPEN_STATE_OPTIONS = [
+  { value: 'now', label: 'Đang mở' },
+  { value: '24h', label: 'Mở 24 giờ' },
+] as const;
+
+export const WEEKDAY_OPTIONS = [
+  { value: 'mon', label: 'Thứ 2' },
+  { value: 'tue', label: 'Thứ 3' },
+  { value: 'wed', label: 'Thứ 4' },
+  { value: 'thu', label: 'Thứ 5' },
+  { value: 'fri', label: 'Thứ 6' },
+  { value: 'sat', label: 'Thứ 7' },
+  { value: 'sun', label: 'Chủ nhật' },
+] as const;
+
+export const HOUR_OPTIONS = Array.from({ length: 24 }, (_, hour) => ({ value: hour, label: `${hour}:00` }));

@@ -71,11 +71,12 @@ export default function EditVideoScreen() {
           initial={{
             title: video.title,
             excerpt: video.excerpt,
-            youtubeUrl: video.videoUrl,
+            youtubeUrl: video.provider === 'CLOUDINARY' ? '' : video.videoUrl,
+            uploadedVideo: video.provider === 'CLOUDINARY',
             body: video.summary,
             tags: video.tags,
             categoryId: video.category.id || null,
-            coverMedia: video.coverMedia,
+            coverImageUrl: video.coverMedia?.secureUrl ?? null,
           }}
           submitLabel="Lưu thay đổi"
           isSubmitting={updateMutation.isPending}
@@ -87,10 +88,11 @@ export default function EditVideoScreen() {
                   title: values.title,
                   excerpt: values.excerpt,
                   youtubeUrl: values.youtubeUrl,
+                  videoAssetId: values.videoAssetId,
                   body: values.body,
                   categoryIds: values.categoryIds,
                   tags: values.tags,
-                  coverMedia: values.coverMedia,
+                  coverAssetId: values.coverAssetId,
                   expectedVersion: video.version,
                 },
               });

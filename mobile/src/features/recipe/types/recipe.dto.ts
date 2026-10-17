@@ -19,7 +19,10 @@ export interface RecipeStepDto {
   instruction?: string;
   durationMinutes?: number | null;
   temperatureCelsius?: number | null;
-  cookingMethod?: { id?: string; name?: string } | null;
+  cookingMethodId?: string | null;
+  cookingMethodCode?: string | null;
+  cookingMethodName?: string | null;
+  affectedIngredientPositions?: number[];
 }
 
 export interface TraditionWarningDto {

@@ -2,11 +2,12 @@ import * as React from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import * as Location from 'expo-location';
 import { Link, type Href } from 'expo-router';
-import { ClipboardList, LocateFixed, MapPin, Plus, RotateCcw, Search } from 'lucide-react-native';
+import { ClipboardList, LocateFixed, MapPin, Plus, RotateCcw, Search, SlidersHorizontal } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/state-views';
 import { PrimaryButton } from '@/components/ui/primary-button';
+import { AdvancedFiltersSheet } from '@/features/restaurant/components/advanced-filters-sheet';
 import { RadarMap } from '@/features/restaurant/components/radar-map';
 import { RestaurantCard } from '@/features/restaurant/components/restaurant-card';
 import { useGeocodeMutation, useRestaurantDiscoveryQuery } from '@/features/restaurant/queries/restaurant.queries';
@@ -16,11 +17,14 @@ import {
   MIN_ADDRESS_LENGTH,
   RADIUS_OPTIONS_M,
 } from '@/features/restaurant/schemas/restaurant.schema';
+import { hasSearchKeyword } from '@/features/restaurant/mappers/restaurant.mapper';
 import type {
   LocationQuery,
   LocationSource,
+  RestaurantAdvancedFilters,
   RestaurantDietPattern,
 } from '@/features/restaurant/types/restaurant.model';
+import { countActiveAdvancedFilters } from '@/features/restaurant/utils/restaurant-filters';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { getApiErrorCode, getApiErrorMessage } from '@/lib/api-error';
 import { useIconColors } from '@/lib/theme-colors';
@@ -62,10 +66,15 @@ export default function RestaurantsScreen() {
   const [keyword, setKeyword] = React.useState('');
   const [radiusM, setRadiusM] = React.useState<number>(DEFAULT_RADIUS_M);
   const [dietPattern, setDietPattern] = React.useState<RestaurantDietPattern | undefined>(undefined);
+  const [advanced, setAdvanced] = React.useState<RestaurantAdvancedFilters>({});
+  const [advancedOpen, setAdvancedOpen] = React.useState(false);
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
 
   const geocode = useGeocodeMutation();
   const debouncedKeyword = useDebouncedValue(keyword, 500);
+
+  const activeAdvancedCount = countActiveAdvancedFilters(advanced);
+  const keywordActive = hasSearchKeyword(debouncedKeyword);
 
   const query = React.useMemo<LocationQuery | null>(
     () =>
@@ -76,16 +85,19 @@ export default function RestaurantsScreen() {
             radiusM,
             query: debouncedKeyword,
             dietPattern,
+            // Bộ lọc nâng cao chỉ thuộc endpoint `search`, nên bỏ khỏi khóa truy vấn khi chưa có từ khóa.
+            advanced: keywordActive ? advanced : undefined,
             source: location.source,
           }
         : null,
-    [location, radiusM, debouncedKeyword, dietPattern]
+    [location, radiusM, debouncedKeyword, dietPattern, advanced, keywordActive]
   );
 
   const { data, isLoading, isError, error, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } =
     useRestaurantDiscoveryQuery(query);
   const restaurants = data?.pages.flatMap((page) => page.items) ?? [];
   const meta = data?.pages[data.pages.length - 1]?.meta;
+  const externalResultsSuppressed = data?.pages.some((page) => page.meta.externalResultsSuppressed) ?? false;
   const totalFound = data?.pages[0]?.meta.total ?? restaurants.length;
   const attributions = Array.from(new Set(restaurants.map((item) => item.attribution).filter(Boolean)));
 
@@ -263,6 +275,23 @@ export default function RestaurantsScreen() {
                   })}
                 </View>
               </View>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setAdvancedOpen(true)}
+                className="flex-row items-center justify-between rounded-xl border border-input bg-background px-3.5 py-3">
+                <View className="flex-row items-center gap-2">
+                  <SlidersHorizontal size={16} color={colors.primary} />
+                  <Text className="text-sm font-medium text-foreground">
+                    Bộ lọc nâng cao{activeAdvancedCount > 0 ? ` (${activeAdvancedCount})` : ''}
+                  </Text>
+                </View>
+                <Text className="text-xs text-muted-foreground">Giá · Đánh giá · Giờ mở cửa</Text>
+              </Pressable>
+              {activeAdvancedCount > 0 && !keywordActive ? (
+                <Text className="-mt-1 text-[11px] text-muted-foreground">
+                  Bộ lọc nâng cao chỉ có hiệu lực khi bạn nhập từ khóa tìm kiếm.
+                </Text>
+              ) : null}
             </View>
 
             <RadarMap
@@ -309,6 +338,13 @@ export default function RestaurantsScreen() {
               </Text>
             ) : null}
 
+            {externalResultsSuppressed ? (
+              <Text className="rounded-xl border border-border bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+                Các quán chưa được xác minh đã được loại khỏi kết quả để áp dụng chế độ ăn, dị ứng hoặc thành phần bạn
+                cần tránh.
+              </Text>
+            ) : null}
+
             <View className="gap-3">
               {isLoading ? (
                 <LoadingState message="Đang tìm quán chay quanh bạn..." />
@@ -321,7 +357,11 @@ export default function RestaurantsScreen() {
               ) : restaurants.length === 0 ? (
                 <EmptyState
                   title="Không tìm thấy quán phù hợp"
-                  description="Thử mở rộng bán kính (10 km, 20 km), đổi từ khóa hoặc bỏ bộ lọc chế độ ăn."
+                  description={
+                    externalResultsSuppressed
+                      ? 'Các quán chưa được xác minh đã được loại khỏi kết quả để áp dụng chế độ ăn, dị ứng hoặc thành phần bạn cần tránh. Hãy thử mở rộng bán kính hoặc chọn khu vực khác.'
+                      : 'Thử mở rộng bán kính (10 km, 20 km), đổi từ khóa hoặc bỏ bộ lọc chế độ ăn và bộ lọc nâng cao.'
+                  }
                 />
               ) : (
                 <>
@@ -363,6 +403,17 @@ export default function RestaurantsScreen() {
           </>
         ) : null}
       </View>
+      {advancedOpen ? (
+        <AdvancedFiltersSheet
+          filters={advanced}
+          hasKeyword={keywordActive}
+          onApply={(next) => {
+            setAdvanced(next);
+            setAdvancedOpen(false);
+          }}
+          onClose={() => setAdvancedOpen(false)}
+        />
+      ) : null}
     </SiteScreen>
   );
 }

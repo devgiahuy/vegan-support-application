@@ -2,10 +2,9 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { BookOpen, Plus, Search, BadgeCheck, ArrowUpDown } from 'lucide-react';
+import { Search, BadgeCheck, ArrowUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -14,6 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { PostCard } from '@/features/post/components/post-card';
+import { ArticlesHeroBanner } from '@/features/post/components/articles-hero-banner';
 import type { DietSchool } from '@/features/post/types/post.model';
 import { CategoryType } from '@/common/enums';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
@@ -87,42 +87,7 @@ export default function BlogListingPage() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 lg:px-6 space-y-8">
       {/* Hero Banner Section */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/15 via-primary/5 to-transparent border border-primary/20 p-6 sm:p-10 shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-          <div className="max-w-2xl space-y-3">
-            <Badge className="bg-primary/20 text-primary border-primary/30 font-semibold gap-1.5 px-3 py-1">
-              <BookOpen className="h-3.5 w-3.5" /> Cẩm Nang Thực Dưỡng Chay
-            </Badge>
-            <h1 className="text-2xl sm:text-4xl font-extrabold text-foreground tracking-tight">
-              Kiến Thức &amp; Kinh Nghiệm Ăn Chay Khoa Học
-            </h1>
-            <p className="text-sm sm:text-base text-muted-foreground leading-relaxed">
-              Tổng hợp các bài chia sẻ dinh dưỡng đã được Chuyên gia kiểm chứng, mẹo nấu nước dùng
-              thanh ngọt, và các nét đẹp văn hoá ăn chay Phật giáo, Đạo giáo tại Việt Nam.
-            </p>
-          </div>
-
-          <div className="shrink-0 flex flex-col sm:flex-row gap-3">
-            <Button
-              asChild
-              size="lg"
-              className="rounded-2xl gap-2 font-bold shadow-md shadow-primary/20"
-            >
-              <Link href="/articles/new">
-                <Plus className="h-5 w-5" /> Viết bài chia sẻ mới
-              </Link>
-            </Button>
-            <Button
-              asChild
-              variant="outline"
-              size="lg"
-              className="rounded-2xl gap-2 bg-background/80"
-            >
-              <Link href="/profile?tab=posts">Bài viết của tôi</Link>
-            </Button>
-          </div>
-        </div>
-      </div>
+      <ArticlesHeroBanner />
 
       {/* Filter & Search Bar */}
       <div className="space-y-4">
@@ -167,7 +132,7 @@ export default function BlogListingPage() {
         </div>
 
         {/* Diet School Filter Pills */}
-        <div className="flex flex-wrap items-center gap-2">
+        {/* <div className="flex flex-wrap items-center gap-2">
           {DIET_SCHOOL_FILTERS.map((s) => (
             <Button
               key={s.value}
@@ -179,7 +144,7 @@ export default function BlogListingPage() {
               {s.label}
             </Button>
           ))}
-        </div>
+        </div> */}
 
         {/* Category Pills (danh mục thật từ catalog) */}
         <div className="flex flex-wrap items-center gap-1.5 pt-1 border-t border-border/60">

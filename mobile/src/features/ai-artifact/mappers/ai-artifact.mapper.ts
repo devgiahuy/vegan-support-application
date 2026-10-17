@@ -11,6 +11,8 @@ import type {
   AiArtifactDto,
   AiArtifactResponseDto,
   AiVerificationDto,
+  AiVerificationResponseDto,
+  CreateAiVerificationRequestDto,
   CreateAiArtifactRequestDto,
   NutrientSnapshotDto,
   PublicAiArtifactListResponseDto,
@@ -23,6 +25,7 @@ import type {
   AiArtifactContent,
   AiArtifactListResult,
   AiVerification,
+  CreateAiVerificationInput,
   CreateAiArtifactInput,
   NutrientSnapshot,
   RecognitionItem,
@@ -164,6 +167,7 @@ export class AiArtifactMapper extends BaseMapper<AiArtifactDto, AiArtifact> {
       content: toContent(type, pickField<AiArtifactContentDto | undefined>(dto, ['content'], undefined)),
       authorName:
         safeString(pickField(dto, ['author.name'], '')) || (anonymous ? 'Thành viên ẩn danh' : 'Thành viên VeggieConnect'),
+      authorAnonymous: anonymous,
       status,
       visibility,
       lifecycleVersion: safeNumber(pickField(dto, ['lifecycle.version'], 1), 1),
@@ -182,10 +186,15 @@ export class AiArtifactMapper extends BaseMapper<AiArtifactDto, AiArtifact> {
     return this.toModel(pickField(dto, ['data'], null));
   }
 
+  toVerificationResult(dto: AiVerificationResponseDto | null | undefined): AiArtifact {
+    return this.toModel(pickField(dto, ['data.artifact'], null));
+  }
+
   toListResult(dto: PublicAiArtifactListResponseDto | null | undefined): AiArtifactListResult {
     const items = this.toModelList(pickField(dto, ['data'], null)).filter((item) => item.id.length > 0);
     return {
       items,
+      page: safeNumber(pickField(dto, ['meta.page'], 1), 1),
       total: safeNumber(pickField(dto, ['meta.total'], items.length), items.length),
       totalPages: safeNumber(pickField(dto, ['meta.totalPages'], 1), 1),
     };
@@ -207,6 +216,17 @@ export class AiArtifactMapper extends BaseMapper<AiArtifactDto, AiArtifact> {
 
   toSubmitDto(expectedLifecycleVersion: number): SubmitAiArtifactRequestDto {
     return { expectedLifecycleVersion };
+  }
+
+  toVerificationDto(input: CreateAiVerificationInput): CreateAiVerificationRequestDto {
+    const correction = input.correction.trim();
+    return {
+      expectedArtifactVersion: input.expectedArtifactVersion,
+      conclusion: input.conclusion,
+      scope: input.scope.trim(),
+      evidenceNote: input.evidenceNote.trim(),
+      correction: correction.length > 0 ? correction : null,
+    };
   }
 }
 

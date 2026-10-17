@@ -3,8 +3,8 @@ import { z } from 'zod';
 const databaseUrlSchema = z
   .string()
   .url()
-  .refine((value) => value.startsWith('postgresql://') || value.startsWith('postgres://'), {
-    message: 'must be a PostgreSQL URL',
+  .refine((value) => value.startsWith('mongodb://') || value.startsWith('mongodb+srv://'), {
+    message: 'must be a MongoDB URL',
   });
 
 const bodyLimitSchema = z.string().regex(/^\d+(?:b|kb|mb)$/i, 'must use a byte, kb, or mb suffix');
@@ -96,6 +96,19 @@ const environmentSchema = z
     AI_GUEST_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(60).default(10),
     CHAT_GUEST_COOKIE_SECRET: z.string().min(32).optional(),
     CHAT_GUEST_COOKIE_TTL_DAYS: z.coerce.number().int().min(1).max(30).default(7),
+    BILLING_ENABLED: z.stringbool().default(false),
+    BILLING_PROVIDER: z.literal('payos').default('payos'),
+    BILLING_PUBLIC_URL: z.string().url().default('http://localhost:4000'),
+    BILLING_RETURN_URL: z.string().url().default('http://localhost:3000/billing'),
+    PAYOS_CLIENT_ID: z.preprocess((value) => value === '' ? undefined : value, z.string().trim().min(1).optional()),
+    PAYOS_API_KEY: z.preprocess((value) => value === '' ? undefined : value, z.string().trim().min(1).optional()),
+    PAYOS_CHECKSUM_KEY: z.preprocess((value) => value === '' ? undefined : value, z.string().trim().min(1).optional()),
+    BILLING_ORDER_TTL_MINUTES: z.coerce.number().int().min(5).max(60).default(15),
+    BILLING_PANTRY_BASE_LIMIT: z.coerce.number().int().min(1).max(10000).default(20),
+    BILLING_FRIDGE_TRIAL_JOBS: z.coerce.number().int().min(0).max(100).default(3),
+    BILLING_RECEIPT_TRIAL_JOBS: z.coerce.number().int().min(0).max(100).default(3),
+    BILLING_SCAN_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(5).default(3),
+    BILLING_USAGE_LEASE_SECONDS: z.coerce.number().int().min(300).max(7200).default(1800),
     VISION_ENABLED: z.stringbool().default(true),
     VISION_PROVIDER: z.enum(['fake', 'openai']).default('openai'),
     VISION_MODEL: z.preprocess(
@@ -129,6 +142,9 @@ const environmentSchema = z
     MAPS_TIMEOUT_MS: z.coerce.number().int().min(1000).max(30000).default(5000),
   })
   .superRefine((environment, context) => {
+    if (environment.BILLING_ENABLED && environment.NODE_ENV === 'production') {
+      context.addIssue({ code: 'custom', path: ['BILLING_ENABLED'], message: 'billing rollout is development/test only; payOS itself processes real transfers' });
+    }
     const macroEnergyPercent =
       environment.MEAL_PLAN_PROTEIN_ENERGY_PERCENT +
       environment.MEAL_PLAN_FAT_ENERGY_PERCENT +
@@ -263,6 +279,21 @@ const environmentSchema = z
       guestRateLimitPerMinute: environment.AI_GUEST_RATE_LIMIT_PER_MINUTE,
       guestCookieSecret: environment.CHAT_GUEST_COOKIE_SECRET ?? environment.JWT_ACCESS_SECRET,
       guestCookieTtlDays: environment.CHAT_GUEST_COOKIE_TTL_DAYS,
+    },
+    billing: {
+      enabled: environment.BILLING_ENABLED,
+      provider: environment.BILLING_PROVIDER,
+      publicUrl: environment.BILLING_PUBLIC_URL.replace(/\/$/, ''),
+      returnUrl: environment.BILLING_RETURN_URL,
+      payosClientId: environment.PAYOS_CLIENT_ID,
+      payosApiKey: environment.PAYOS_API_KEY,
+      payosChecksumKey: environment.PAYOS_CHECKSUM_KEY,
+      orderTtlMinutes: environment.BILLING_ORDER_TTL_MINUTES,
+      pantryBaseLimit: environment.BILLING_PANTRY_BASE_LIMIT,
+      fridgeTrialJobs: environment.BILLING_FRIDGE_TRIAL_JOBS,
+      receiptTrialJobs: environment.BILLING_RECEIPT_TRIAL_JOBS,
+      scanMaxAttempts: environment.BILLING_SCAN_MAX_ATTEMPTS,
+      usageLeaseSeconds: environment.BILLING_USAGE_LEASE_SECONDS,
     },
     vision: {
       enabled: environment.VISION_ENABLED,

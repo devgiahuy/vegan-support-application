@@ -37,9 +37,15 @@ export interface MapsProvider {
     lng: number,
     radiusMeters: number,
     filters?: MapsSearchFilters,
-  ): Promise<ExternalPlace[]>;
+  ): Promise<MapsSearchResult>;
   get(placeId: string): Promise<ExternalPlace | null>;
   geocode(address: string): Promise<GeocodeResult | null>;
+}
+
+export interface MapsSearchResult {
+  places: ExternalPlace[];
+  partialFailure: boolean;
+  truncated: boolean;
 }
 
 export interface MapsSearchFilters {
@@ -85,13 +91,15 @@ export { distanceMeters };
 export class FakeMapsProvider implements MapsProvider {
   readonly name = 'FAKE';
 
-  search(query: string, lat: number, lng: number, radiusMeters: number): Promise<ExternalPlace[]> {
+  search(query: string, lat: number, lng: number, radiusMeters: number): Promise<MapsSearchResult> {
     const term = query
       .toLowerCase()
       .replace(/^vegetarian\s+/, '')
       .trim();
-    return Promise.resolve(
-      fakePlaces
+    return Promise.resolve({
+      partialFailure: false,
+      truncated: false,
+      places: fakePlaces
         .filter(
           (place) => distanceMeters(lat, lng, place.latitude, place.longitude) <= radiusMeters,
         )
@@ -107,7 +115,7 @@ export class FakeMapsProvider implements MapsProvider {
           attribution: 'Local demo data',
           fetchedAt: new Date().toISOString(),
         })),
-    );
+    });
   }
 
   get(placeId: string): Promise<ExternalPlace | null> {
@@ -197,7 +205,7 @@ export class GoogleMapsProvider implements MapsProvider {
     lng: number,
     radiusMeters: number,
     _filters?: MapsSearchFilters,
-  ): Promise<ExternalPlace[]> {
+  ): Promise<MapsSearchResult> {
     const raw = await this.request('https://places.googleapis.com/v1/places:searchText', {
       method: 'POST',
       headers: {
@@ -215,9 +223,10 @@ export class GoogleMapsProvider implements MapsProvider {
       }),
     });
     const parsed = z.object({ places: z.array(z.unknown()).optional() }).parse(raw);
-    return (parsed.places ?? [])
+    const places = (parsed.places ?? [])
       .map((item) => this.place(item))
       .filter((item): item is ExternalPlace => item !== null);
+    return { places, partialFailure: false, truncated: (parsed.places?.length ?? 0) >= 20 };
   }
 
   async get(placeId: string): Promise<ExternalPlace | null> {
@@ -287,6 +296,7 @@ const serpApiPlaceSchema = z.object({
 });
 
 const serpApiResponseSchema = z.object({
+  error: z.string().optional(),
   search_metadata: z.object({ status: z.string().optional() }).optional(),
   local_results: z.array(z.unknown()).optional(),
   place_results: z.unknown().optional(),
@@ -295,9 +305,9 @@ const serpApiResponseSchema = z.object({
 
 export class SerpApiMapsProvider implements MapsProvider {
   readonly name = 'SERPAPI';
-  private readonly minimumDiscoveryRadiusMeters = 20_000;
   private readonly searchCacheTtlMs = 5 * 60_000;
-  private readonly searchCache = new Map<string, { expiresAt: number; places: ExternalPlace[] }>();
+  private readonly searchCache = new Map<string, { expiresAt: number; result: MapsSearchResult }>();
+  private readonly pendingSearches = new Map<string, Promise<MapsSearchResult>>();
 
   constructor(
     private readonly apiKey: string,
@@ -305,7 +315,7 @@ export class SerpApiMapsProvider implements MapsProvider {
     private readonly timeoutMs: number,
   ) {}
 
-  private async request(params: Record<string, string>): Promise<unknown> {
+  private async request(params: Record<string, string>, signal?: AbortSignal): Promise<unknown> {
     const url = new URL(this.baseUrl);
     for (const [key, value] of Object.entries({
       ...params,
@@ -314,11 +324,21 @@ export class SerpApiMapsProvider implements MapsProvider {
     })) {
       url.searchParams.set(key, value);
     }
-    const response = await fetch(url, { signal: AbortSignal.timeout(this.timeoutMs) });
+    const response = await fetch(url, {
+      signal: signal ?? AbortSignal.timeout(this.timeoutMs),
+    });
     if (!response.ok) throw new Error(`SerpApi provider HTTP ${response.status}`);
     const body: unknown = await response.json();
     const parsed = serpApiResponseSchema.safeParse(body);
-    if (!parsed.success || parsed.data.search_metadata?.status === 'Error') {
+    if (
+      !parsed.success ||
+      parsed.data.search_metadata?.status === 'Error' ||
+      (parsed.data.error &&
+        !(
+          parsed.data.search_metadata?.status === 'Success' &&
+          /Google hasn.t returned any results for this query/i.test(parsed.data.error)
+        ))
+    ) {
       throw new Error('SerpApi provider returned an invalid response');
     }
     return body;
@@ -371,6 +391,7 @@ export class SerpApiMapsProvider implements MapsProvider {
     filters: MapsSearchFilters | undefined,
     zoom: string,
     start: number,
+    signal: AbortSignal,
   ): Promise<{ places: ExternalPlace[]; hasNext: boolean; rawCount: number }> {
     const filterParams: Record<string, string> = {};
     for (const [key, value] of Object.entries({
@@ -383,14 +404,17 @@ export class SerpApiMapsProvider implements MapsProvider {
     })) {
       if (value !== undefined) filterParams[key] = String(value);
     }
-    const raw = await this.request({
-      q: query,
-      ll: `@${lat},${lng},${zoom}`,
-      type: 'search',
-      no_cache: 'false',
-      ...(start > 0 ? { start: String(start) } : {}),
-      ...filterParams,
-    });
+    const raw = await this.request(
+      {
+        q: query,
+        ll: `@${lat},${lng},${zoom}`,
+        type: 'search',
+        no_cache: 'false',
+        ...(start > 0 ? { start: String(start) } : {}),
+        ...filterParams,
+      },
+      signal,
+    );
     const parsed = serpApiResponseSchema.parse(raw);
     const rawPlaces = parsed.local_results ?? [];
     const places = rawPlaces
@@ -410,8 +434,8 @@ export class SerpApiMapsProvider implements MapsProvider {
     lng: number,
     radiusMeters: number,
     filters?: MapsSearchFilters,
-  ): Promise<ExternalPlace[]> {
-    const discoveryRadiusMeters = Math.max(radiusMeters, this.minimumDiscoveryRadiusMeters);
+  ): Promise<MapsSearchResult> {
+    const discoveryRadiusMeters = radiusMeters;
     const cacheKey = JSON.stringify({
       query,
       lat: lat.toFixed(5),
@@ -420,23 +444,63 @@ export class SerpApiMapsProvider implements MapsProvider {
       filters: filters ?? {},
     });
     const cached = this.searchCache.get(cacheKey);
-    if (cached && cached.expiresAt > Date.now()) return cached.places;
+    if (cached && cached.expiresAt > Date.now()) return cached.result;
+    const pending = this.pendingSearches.get(cacheKey);
+    if (pending) return pending;
+    const search = this.searchUncached(query, lat, lng, discoveryRadiusMeters, filters);
+    this.pendingSearches.set(cacheKey, search);
+    try {
+      const result = await search;
+      // Never turn a transient provider failure or empty response into a five-minute outage.
+      if (!result.partialFailure && result.places.length > 0) {
+        for (const [key, entry] of this.searchCache) {
+          if (entry.expiresAt <= Date.now()) this.searchCache.delete(key);
+        }
+        if (this.searchCache.size >= 100)
+          this.searchCache.delete(this.searchCache.keys().next().value!);
+        this.searchCache.set(cacheKey, { expiresAt: Date.now() + this.searchCacheTtlMs, result });
+      }
+      return result;
+    } finally {
+      this.pendingSearches.delete(cacheKey);
+    }
+  }
 
+  private async searchUncached(
+    query: string,
+    lat: number,
+    lng: number,
+    discoveryRadiusMeters: number,
+    filters?: MapsSearchFilters,
+  ): Promise<MapsSearchResult> {
     const places: ExternalPlace[] = [];
     const seen = new Set<string>();
     const pageSize = 20;
     const maxPagesPerZoom = 3;
+    const signal = AbortSignal.timeout(this.timeoutMs);
+    let successfulPages = 0;
+    let partialFailure = false;
+    let truncated = false;
     for (const zoomLevel of this.searchZooms(discoveryRadiusMeters)) {
       for (let page = 0; page < maxPagesPerZoom; page += 1) {
-        const result = await this.searchPage(
-          query,
-          lat,
-          lng,
-          discoveryRadiusMeters,
-          filters,
-          `${zoomLevel}z`,
-          page * pageSize,
-        );
+        let result: Awaited<ReturnType<SerpApiMapsProvider['searchPage']>>;
+        try {
+          result = await this.searchPage(
+            query,
+            lat,
+            lng,
+            discoveryRadiusMeters,
+            filters,
+            `${zoomLevel}z`,
+            page * pageSize,
+            signal,
+          );
+          successfulPages += 1;
+        } catch (error) {
+          if (successfulPages === 0) throw error;
+          partialFailure = true;
+          break;
+        }
         for (const place of result.places) {
           if (!seen.has(place.placeId)) {
             seen.add(place.placeId);
@@ -444,13 +508,11 @@ export class SerpApiMapsProvider implements MapsProvider {
           }
         }
         if (!result.hasNext || result.rawCount < pageSize) break;
+        if (page === maxPagesPerZoom - 1) truncated = true;
       }
+      if (partialFailure) break;
     }
-    this.searchCache.set(cacheKey, {
-      expiresAt: Date.now() + this.searchCacheTtlMs,
-      places,
-    });
-    return places;
+    return { places, partialFailure, truncated };
   }
 
   async get(placeId: string): Promise<ExternalPlace | null> {

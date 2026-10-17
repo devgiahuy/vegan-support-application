@@ -1,3 +1,4 @@
+import { registerBillingOpenApi } from '../modules/billing/billing.openapi.js';
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import { errorResponseSchema } from '../common/schemas/api-envelope.schemas.js';
 import {
@@ -41,15 +42,15 @@ registry.registerPath({
   method: 'get',
   path: '/api/v1/health',
   tags: ['Foundation'],
-  summary: 'Kiểm tra trạng thái API và PostgreSQL',
+  summary: 'Kiểm tra trạng thái API và MongoDB',
   operationId: 'getHealth',
   responses: {
     200: {
-      description: 'API và PostgreSQL hoạt động bình thường',
+      description: 'API và MongoDB hoạt động bình thường',
       content: { 'application/json': { schema: registeredHealthResponse } },
     },
     503: {
-      description: 'PostgreSQL không khả dụng',
+      description: 'MongoDB không khả dụng',
       content: { 'application/json': { schema: registeredHealthUnavailableResponse } },
     },
   },
@@ -67,6 +68,7 @@ registerMealPlanOpenApi(registry, registeredErrorResponse);
 registerMealAnalysisOpenApi(registry, registeredErrorResponse);
 registerMealProgramOpenApi(registry, registeredErrorResponse);
 registerChatOpenApi(registry, registeredErrorResponse);
+registerBillingOpenApi(registry, registeredErrorResponse);
 registerFoodDataOpenApi(registry, registeredErrorResponse);
 registerRecipeNutritionOpenApi(registry, registeredErrorResponse);
 registerStorageOpenApi(registry, registeredErrorResponse);
@@ -86,10 +88,12 @@ const generatedDocument = generator.generateDocument({
   info: {
     title: 'Vegan Support Application API',
     version: '0.1.0',
-    description: 'REST API contract for the Vegan Support Application.',
+    description:
+      'REST API contract for the Vegan Support Application. Persistence: MongoDB replica set with Prisma; public identifiers remain UUID strings.',
   },
   servers: [{ url: 'http://localhost:4000', description: 'Local development' }],
   tags: [
+    { name: 'Billing', description: 'Sandbox package purchases and allowances' },
     { name: 'Foundation', description: 'Service health and foundation contract' },
     { name: 'Auth', description: 'Authentication and refresh-session lifecycle' },
     { name: 'Users', description: 'Authenticated user contract' },
@@ -150,7 +154,10 @@ const generatedDocument = generator.generateDocument({
     { name: 'Restaurant Admin', description: 'Manual place review and curation' },
     { name: 'Location', description: 'Explicit address geocoding without location history' },
     { name: 'Notifications', description: 'Owner-scoped in-app domain event notifications' },
-    { name: 'AI Governance Admin', description: 'Redacted AI operations, metrics, controls and health' },
+    {
+      name: 'AI Governance Admin',
+      description: 'Redacted AI operations, metrics, controls and health',
+    },
   ],
 });
 

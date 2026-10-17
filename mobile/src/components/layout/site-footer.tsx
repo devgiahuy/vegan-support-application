@@ -34,7 +34,7 @@ const EXPLORE_LINKS: { label: string; href: string }[] = [
   { label: 'Blog & Bài viết', href: '/articles' },
   { label: 'Video', href: '/videos' },
   { label: 'Nhà hàng chay', href: '/restaurants' },
-  { label: 'Danh mục', href: '/categories' },
+  { label: 'Tra cứu dinh dưỡng 100g', href: '/food-data' },
   { label: 'Lên kế hoạch dinh dưỡng', href: '/meal-plans' },
   { label: 'Về VeggieConnect', href: '/about' },
 ];

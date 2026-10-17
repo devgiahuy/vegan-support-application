@@ -284,7 +284,7 @@ export function RecipeNutritionCard({
       )}
 
       {/* Bảng chi tiết vi chất */}
-      <NutrientListTable nutrients={nutrition.perServingNutrients} />
+      {/* <NutrientListTable nutrients={nutrition.perServingNutrients} /> */}
 
       {/* Footer Disclaimer & Ghi chú */}
       <div className="pt-3 border-t border-border/50 flex items-start gap-2 text-[11px] text-muted-foreground leading-relaxed">
@@ -317,7 +317,7 @@ export function RecipeNutritionCard({
                   Cho phép AI ước lượng vi chất còn thiếu
                 </Label>
                 <p className="text-[11px] text-muted-foreground">
-                  Gắn nhãn "AI ước lượng" rõ ràng cho các giá trị bổ trợ.
+                  Gắn nhãn &quot;AI ước lượng&quot; rõ ràng cho các giá trị bổ trợ.
                 </p>
               </div>
               <Switch

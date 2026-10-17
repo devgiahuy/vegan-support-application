@@ -1,6 +1,6 @@
 # Meal Plan / Meal Analysis Warning Changes
 
-**Updated:** 2026-10-02  
+**Updated:** 2026-10-02
 **Scope:** Backend-only user-facing warning copy and additive response metadata
 
 ## What changed

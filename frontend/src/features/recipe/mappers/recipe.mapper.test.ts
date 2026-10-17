@@ -242,4 +242,38 @@ describe('RecipeMapper', () => {
     expect(pagination.metadata.appliedConstraints?.ingredientExclusionCount).toBe(1);
     expect(pagination.metadata.appliedConstraints?.traditions).toEqual(['BUDDHIST']);
   });
+
+  it('maps usageCount defaulting to 0 when missing or null in DTO', () => {
+    const dto = backendRecipeDto();
+    const model = recipeMapper.toModel(dto);
+    expect(model.usageCount).toBe(0);
+  });
+
+  it('maps usageCount correctly when provided in DTO', () => {
+    const dto = backendRecipeDto();
+    dto.recipe = {
+      ...dto.recipe,
+      usageCount: 42,
+    };
+    const model = recipeMapper.toModel(dto);
+    expect(model.usageCount).toBe(42);
+  });
+
+  it('maps isExpertAuthor to true when author role is NUTRITION_EXPERT or EXPERIENCED_COOK', () => {
+    const dto = backendRecipeDto();
+    (dto.author as any) = {
+      ...dto.author,
+      role: 'NUTRITION_EXPERT',
+    };
+    const model = recipeMapper.toModel(dto);
+    expect(model.isExpertAuthor).toBe(true);
+    expect(model.author.isExpert).toBe(true);
+  });
+
+  it('maps isExpertAuthor to false for regular users without verified status', () => {
+    const dto = backendRecipeDto();
+    const model = recipeMapper.toModel(dto);
+    expect(model.isExpertAuthor).toBe(false);
+    expect(model.author.isExpert).toBe(false);
+  });
 });

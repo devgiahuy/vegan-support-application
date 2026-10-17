@@ -2,7 +2,7 @@
 # Foundation
 
 ## GET `/api/v1/health`
-Kiểm tra trạng thái API và PostgreSQL
+Kiểm tra trạng thái API và MongoDB
 - operationId: `getHealth`
 - Params: —
 - Request: —

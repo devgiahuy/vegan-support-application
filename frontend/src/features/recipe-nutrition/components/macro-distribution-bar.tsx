@@ -42,7 +42,7 @@ export function MacroDistributionBar({ macros, servings, className }: MacroDistr
           <div>
             <div className="flex items-baseline gap-1.5">
               <span className="text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-                {calories}
+                ~{calories}
               </span>
               <span className="text-sm font-semibold text-muted-foreground uppercase">kcal</span>
             </div>
@@ -103,7 +103,7 @@ export function MacroDistributionBar({ macros, servings, className }: MacroDistr
               Đạm (Protein)
             </span>
           </div>
-          <div className="text-base sm:text-lg font-bold text-foreground">{proteinGrams}g</div>
+          <div className="text-base sm:text-lg font-bold text-foreground">~{proteinGrams}g</div>
           <p className="text-[11px] text-muted-foreground mt-0.5">{proteinCaloriesPercent}% calo</p>
         </div>
 
@@ -115,7 +115,7 @@ export function MacroDistributionBar({ macros, servings, className }: MacroDistr
               Tinh bột (Carb)
             </span>
           </div>
-          <div className="text-base sm:text-lg font-bold text-foreground">{carbsGrams}g</div>
+          <div className="text-base sm:text-lg font-bold text-foreground">~{carbsGrams}g</div>
           <p className="text-[11px] text-muted-foreground mt-0.5">{carbsCaloriesPercent}% calo</p>
         </div>
 
@@ -125,7 +125,7 @@ export function MacroDistributionBar({ macros, servings, className }: MacroDistr
             <span className="w-2 h-2 rounded-full bg-sky-500" />
             <span className="text-xs font-semibold text-sky-800 dark:text-sky-300">Béo (Fat)</span>
           </div>
-          <div className="text-base sm:text-lg font-bold text-foreground">{fatGrams}g</div>
+          <div className="text-base sm:text-lg font-bold text-foreground">~{fatGrams}g</div>
           <p className="text-[11px] text-muted-foreground mt-0.5">{fatCaloriesPercent}% calo</p>
         </div>
       </div>

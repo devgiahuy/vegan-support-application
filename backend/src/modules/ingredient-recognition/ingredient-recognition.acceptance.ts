@@ -1,13 +1,14 @@
+import { createPrismaClient } from '../../database/client.js';
 import 'dotenv/config';
 import assert from 'node:assert/strict';
-import { PrismaClient, RecognitionJobStatus } from '@prisma/client';
+import { RecognitionJobStatus } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
 import { loadConfig } from '../../config/env.js';
 import { createIngredientVisionProvider } from './ingredient-vision.provider.js';
 import { IngredientRecognitionRepository } from './ingredient-recognition.repository.js';
 import { IngredientRecognitionService } from './ingredient-recognition.service.js';
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const config = loadConfig();
 const repository = new IngredientRecognitionRepository(prisma);
 const service = new IngredientRecognitionService(
@@ -90,7 +91,7 @@ async function main(): Promise<void> {
     assert.equal(ready.status, RecognitionJobStatus.READY);
     const tofu = ready.candidates.find((candidate) => candidate.evidence.length === 2);
     assert(tofu, 'same ingredient across images must deduplicate and retain both evidence refs');
-    assert(ready.candidates.some((candidate) => candidate.confidence.toNumber() < 0.5));
+    assert(ready.candidates.some((candidate) => candidate.confidence < 0.5));
     const unknown = ready.candidates.find(
       (candidate) => candidate.ingredientId === null && candidate.quantity === null,
     );

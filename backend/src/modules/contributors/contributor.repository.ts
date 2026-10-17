@@ -1,3 +1,4 @@
+import { lockDocument } from '../../database/locking.js';
 import {
   ContributorApplicationStatus,
   ContributorApprovalBasis,
@@ -39,10 +40,7 @@ export type ContributorApplicationRecord = Prisma.ContributorApplicationGetPaylo
 export class ContributorRepositoryConflictError extends Error {
   constructor(
     readonly kind:
-      | 'PENDING_EXISTS'
-      | 'ALREADY_REVIEWED'
-      | 'NOT_REVIEWABLE'
-      | 'REVOCATION_NOT_APPLICABLE',
+      'PENDING_EXISTS' | 'ALREADY_REVIEWED' | 'NOT_REVIEWABLE' | 'REVOCATION_NOT_APPLICABLE',
   ) {
     super(kind);
     this.name = 'ContributorRepositoryConflictError';
@@ -110,25 +108,25 @@ export class ContributorRepository {
 
   async listOwn(userId: string, query: OwnContributorApplicationsQuery) {
     const where = { userId } satisfies Prisma.ContributorApplicationWhereInput;
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.contributorApplication.findMany({
-        where,
-        include: applicationInclude,
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-      this.prisma.contributorApplication.count({ where }),
-    ]);
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.contributorApplication.findMany({
+          where,
+          include: applicationInclude,
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+        transaction.contributorApplication.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 
   async listAdmin(query: AdminContributorApplicationsQuery) {
     const where: Prisma.ContributorApplicationWhereInput = {
       ...(query.status ? { status: query.status } : {}),
-      ...(query.claimedApprovalBasis
-        ? { claimedApprovalBasis: query.claimedApprovalBasis }
-        : {}),
+      ...(query.claimedApprovalBasis ? { claimedApprovalBasis: query.claimedApprovalBasis } : {}),
       ...(query.source ? { source: query.source } : {}),
       ...(query.q
         ? {
@@ -141,16 +139,18 @@ export class ContributorRepository {
           }
         : {}),
     };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.contributorApplication.findMany({
-        where,
-        include: applicationInclude,
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-      this.prisma.contributorApplication.count({ where }),
-    ]);
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.contributorApplication.findMany({
+          where,
+          include: applicationInclude,
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+        transaction.contributorApplication.count({ where }),
+      ]),
+    );
     return { records, total };
   }
 
@@ -169,11 +169,7 @@ export class ContributorRepository {
     now: Date,
   ): Promise<ContributorApplicationRecord> {
     return this.prisma.$transaction(async (transaction) => {
-      await transaction.$queryRaw`
-        SELECT "id" FROM "contributor_applications"
-        WHERE "id" = ${applicationId}::uuid
-        FOR UPDATE
-      `;
+      await lockDocument(transaction, 'contributorApplication', { id: applicationId });
       const application = await transaction.contributorApplication.findUnique({
         where: { id: applicationId },
         include: applicationInclude,
@@ -193,7 +189,7 @@ export class ContributorRepository {
           ...reviewData,
           reviewEvidence:
             reviewData.reviewEvidence === null
-              ? Prisma.JsonNull
+              ? null
               : (reviewData.reviewEvidence as Prisma.InputJsonValue),
         },
       });
@@ -265,9 +261,7 @@ export class ContributorRepository {
 
   async revokeContributor(userId: string, actorId: string, reason: string, now: Date) {
     return this.prisma.$transaction(async (transaction) => {
-      await transaction.$queryRaw`
-        SELECT "id" FROM "users" WHERE "id" = ${userId}::uuid FOR UPDATE
-      `;
+      await lockDocument(transaction, 'user', { id: userId });
       const user = await transaction.user.findUnique({
         where: { id: userId },
         include: { contributorProfile: true },
@@ -336,29 +330,38 @@ export class ContributorRepository {
       };
     }
 
-    const [total, published, pendingReview, rejected, comments, votes, ratings, bookmarks, average] =
-      await Promise.all([
-        transaction.post.count({ where: { authorId: application.userId } }),
-        transaction.post.count({
-          where: { authorId: application.userId, status: PostStatus.PUBLISHED },
-        }),
-        transaction.post.count({
-          where: { authorId: application.userId, status: PostStatus.PENDING_REVIEW },
-        }),
-        transaction.post.count({
-          where: { authorId: application.userId, status: PostStatus.REJECTED },
-        }),
-        transaction.comment.count({ where: { post: { authorId: application.userId } } }),
-        transaction.postVote.count({ where: { post: { authorId: application.userId } } }),
-        transaction.postRating.count({
-          where: { active: true, post: { authorId: application.userId } },
-        }),
-        transaction.postBookmark.count({ where: { post: { authorId: application.userId } } }),
-        transaction.postRating.aggregate({
-          where: { active: true, post: { authorId: application.userId } },
-          _avg: { taste: true },
-        }),
-      ]);
+    const [
+      total,
+      published,
+      pendingReview,
+      rejected,
+      comments,
+      votes,
+      ratings,
+      bookmarks,
+      average,
+    ] = await Promise.all([
+      transaction.post.count({ where: { authorId: application.userId } }),
+      transaction.post.count({
+        where: { authorId: application.userId, status: PostStatus.PUBLISHED },
+      }),
+      transaction.post.count({
+        where: { authorId: application.userId, status: PostStatus.PENDING_REVIEW },
+      }),
+      transaction.post.count({
+        where: { authorId: application.userId, status: PostStatus.REJECTED },
+      }),
+      transaction.comment.count({ where: { post: { authorId: application.userId } } }),
+      transaction.postVote.count({ where: { post: { authorId: application.userId } } }),
+      transaction.postRating.count({
+        where: { active: true, post: { authorId: application.userId } },
+      }),
+      transaction.postBookmark.count({ where: { post: { authorId: application.userId } } }),
+      transaction.postRating.aggregate({
+        where: { active: true, post: { authorId: application.userId } },
+        _avg: { taste: true },
+      }),
+    ]);
     return {
       kind: basis,
       capturedAt: now.toISOString(),

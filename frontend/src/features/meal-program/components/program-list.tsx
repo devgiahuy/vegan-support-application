@@ -91,9 +91,9 @@ export const ProgramList: React.FC = () => {
           <p className="text-destructive font-medium">
             Không thể tải danh sách lộ trình dinh dưỡng.
           </p>
-          <p className="text-xs text-muted-foreground">
+          {/* <p className="text-xs text-muted-foreground">
             {error instanceof Error ? error.message : 'Vui lòng kiểm tra lại kết nối mạng.'}
-          </p>
+          </p> */}
         </div>
       ) : data?.items.length === 0 ? (
         <div className="text-center py-16 px-4 rounded-xl border-2 border-dashed border-muted-foreground/20 space-y-4">

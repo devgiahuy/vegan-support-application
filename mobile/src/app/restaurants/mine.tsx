@@ -3,13 +3,13 @@ import { Link, type Href } from 'expo-router';
 import { Plus, Store } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
+import { LoadMoreButton } from '@/components/shared/load-more-button';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/state-views';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { useMyRestaurantsQuery } from '@/features/restaurant/queries/restaurant.queries';
 import type { SubmittedRestaurant } from '@/features/restaurant/types/restaurant.model';
-import { formatDate } from '@/lib/utils';
+import { cn, formatDate } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
-import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/useAuthStore';
 
 function statusStyle(status: SubmittedRestaurant['status']): { badge: string; text: string } {
@@ -22,8 +22,8 @@ function statusStyle(status: SubmittedRestaurant['status']): { badge: string; te
 export default function MyRestaurantsScreen() {
   const colors = useIconColors();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const { data, isLoading, isError, refetch } = useMyRestaurantsQuery();
-  const items = data?.items ?? [];
+  const { data, isLoading, isError, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } = useMyRestaurantsQuery();
+  const items = data?.pages.flatMap((page) => page.items) ?? [];
 
   if (!isAuthenticated) {
     return (
@@ -98,6 +98,11 @@ export default function MyRestaurantsScreen() {
                 </View>
               );
             })}
+            <LoadMoreButton
+              hasNextPage={hasNextPage}
+              isFetchingNextPage={isFetchingNextPage}
+              onPress={() => void fetchNextPage()}
+            />
           </View>
         )}
       </View>

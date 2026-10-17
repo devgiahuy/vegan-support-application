@@ -9,6 +9,8 @@ interface TextFieldProps extends TextInputProps {
   icon?: LucideIcon;
   error?: string;
   rightElement?: React.ReactNode;
+  /** `caps` (mặc định): nhãn in hoa nhỏ; `plain`: nhãn thường như form web. */
+  labelVariant?: 'caps' | 'plain';
 }
 
 /**
@@ -20,6 +22,7 @@ export function TextField({
   icon: Icon,
   error,
   rightElement,
+  labelVariant = 'caps',
   className,
   ...props
 }: TextFieldProps) {
@@ -27,7 +30,12 @@ export function TextField({
 
   return (
     <View className="gap-1.5">
-      <Text className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <Text
+        className={
+          labelVariant === 'plain'
+            ? 'text-sm font-medium text-foreground'
+            : 'text-xs font-semibold uppercase tracking-wider text-muted-foreground'
+        }>
         {label}
       </Text>
       <View className="relative justify-center">

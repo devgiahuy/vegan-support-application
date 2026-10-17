@@ -1,7 +1,7 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { aiArtifactApi } from '../api/ai-artifact.api';
-import type { CreateAiArtifactInput, PublicAiArtifactsQuery } from '../types/ai-artifact.model';
+import type { CreateAiVerificationInput, CreateAiArtifactInput, PublicAiArtifactsQuery } from '../types/ai-artifact.model';
 
 export const AI_ARTIFACT_KEYS = {
   all: ['ai-artifacts'] as const,
@@ -13,6 +13,17 @@ export function usePublicAiArtifactsQuery(query: PublicAiArtifactsQuery = {}) {
   return useQuery({
     queryKey: AI_ARTIFACT_KEYS.public(query),
     queryFn: () => aiArtifactApi.listPublic(query),
+    staleTime: 60 * 1000,
+  });
+}
+
+/** Danh sách tri thức AI công khai phân trang kiểu "Tải thêm". `query` không chứa `page`. */
+export function useInfinitePublicAiArtifactsQuery(query: Omit<PublicAiArtifactsQuery, 'page'> = {}) {
+  return useInfiniteQuery({
+    queryKey: [...AI_ARTIFACT_KEYS.all, 'public-infinite', query] as const,
+    queryFn: ({ pageParam }) => aiArtifactApi.listPublic({ ...query, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => (lastPage.page < lastPage.totalPages ? lastPage.page + 1 : undefined),
     staleTime: 60 * 1000,
   });
 }
@@ -44,6 +55,16 @@ export function useSubmitAiArtifactMutation() {
   return useMutation({
     mutationFn: (vars: { id: string; expectedLifecycleVersion: number }) =>
       aiArtifactApi.submit(vars.id, vars.expectedLifecycleVersion),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: AI_ARTIFACT_KEYS.all });
+    },
+  });
+}
+
+export function useCreateAiVerificationMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateAiVerificationInput) => aiArtifactApi.createVerification(input),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: AI_ARTIFACT_KEYS.all });
     },

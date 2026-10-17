@@ -28,9 +28,9 @@ function hash(value: unknown): string {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }
 
-function decimal(value: { toNumber(): number } | number | null): number | null {
+function decimal(value: number | null): number | null {
   if (value === null) return null;
-  return typeof value === 'number' ? value : value.toNumber();
+  return typeof value === 'number' ? value : value;
 }
 
 export class IngredientRecognitionService {
@@ -202,10 +202,10 @@ export class IngredientRecognitionService {
                 ? { id: item.ingredient.id, name: item.ingredient.canonicalName }
                 : null,
               unmatchedText: item.unmatchedText ?? null,
-              quantity: item.quantity.toNumber(),
+              quantity: item.quantity,
               unit: item.unit,
               source: item.source,
-              confidence: item.confidence.toNumber(),
+              confidence: item.confidence,
               confirmationStatus: item.confirmationStatus,
               version: item.version,
             },
@@ -256,6 +256,7 @@ export class IngredientRecognitionService {
         job.id,
         'RECOGNITION_PROVIDER_UNAVAILABLE',
         'The configured image provider changed. Create a new job with the committed images.',
+        job.attemptCount,
       );
       return;
     }
@@ -272,12 +273,14 @@ export class IngredientRecognitionService {
         job.id,
         results.map((result) => ({ inputId: result.inputId, error: result.error })),
         candidates,
+        job.attemptCount,
       );
     } catch {
       await this.repository.markFailed(
         job.id,
         'RECOGNITION_PROVIDER_UNAVAILABLE',
         'Image recognition is temporarily unavailable. Retry later or add pantry items manually.',
+        job.attemptCount,
       );
     }
   }

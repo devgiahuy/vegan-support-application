@@ -9,7 +9,6 @@ import {
   MapPin,
   Navigation,
   Scale,
-  ShieldAlert,
   Sparkles,
   TrendingUp,
   UtensilsCrossed,
@@ -23,15 +22,9 @@ import { RecipeCard } from '@/features/recipe/components/recipe-card';
 import { useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
 import { useIconColors } from '@/lib/theme-colors';
 
-const STATS = [
-  { icon: UtensilsCrossed, value: '500+', label: 'Món thuần Việt' },
-  { icon: MapPin, value: '50+', label: 'Quán verified' },
-  { icon: TrendingUp, value: '100%', label: 'Đo Calo & Đạm' },
-];
-
 /** Bốn lối vào tra cứu dinh dưỡng — đồng bộ khối "Tra cứu Dinh dưỡng & Kiến thức Khoa học" của web. */
 const KNOWLEDGE_CARDS: {
-  tab: 'INGREDIENT' | 'INTERACTION' | 'COOKING' | 'INTAKE';
+  tab: 'INGREDIENT' | 'INTERACTION' | 'COOKING';
   icon: LucideIcon;
   title: string;
   description: string;
@@ -57,13 +50,6 @@ const KNOWLEDGE_CARDS: {
     title: 'Phương pháp nấu nướng',
     description: 'Hệ số hao hụt khối lượng và bảo tồn vi chất khi luộc, hấp, xào.',
     action: 'Khám phá',
-  },
-  {
-    tab: 'INTAKE',
-    icon: ShieldAlert,
-    title: 'Nhu cầu khuyến nghị & UL',
-    description: 'Chuẩn RDA/AI hằng ngày và giới hạn dung nạp tối đa theo nhóm đối tượng.',
-    action: 'Đối chiếu',
   },
 ];
 
@@ -123,18 +109,6 @@ export default function HomeScreen() {
             <Text className="text-xs font-medium text-primary">Miễn phí 100%</Text>
           </View>
           <Text className="text-xs text-muted-foreground">• Cá nhân hóa theo thể trạng</Text>
-        </View>
-
-        <View className="mt-6 flex-row gap-2.5 border-t border-border pt-5">
-          {STATS.map((s) => (
-            <View key={s.label} className="flex-1 gap-1.5 rounded-2xl border border-border bg-card p-3">
-              <View className="flex-row items-center gap-1.5">
-                <s.icon size={16} color={colors.primary} />
-                <Text className="text-lg font-bold text-primary">{s.value}</Text>
-              </View>
-              <Text className="text-[11px] text-foreground">{s.label}</Text>
-            </View>
-          ))}
         </View>
       </View>
 

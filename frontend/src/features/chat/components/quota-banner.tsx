@@ -29,7 +29,7 @@ export function QuotaBanner({
         )}
       >
         <TriangleAlert className="size-4 text-amber-600 dark:text-amber-400" />
-        <AlertTitle className="font-semibold">Bạn đã dùng hết lượt hỏi hôm nay</AlertTitle>
+        <AlertTitle className="font-semibold">Bạn đã dùng hết lượt hiện có</AlertTitle>
         <AlertDescription className="text-xs leading-relaxed text-amber-800/90 dark:text-amber-300/90">
           Hạn mức ({quota.used}/{quota.limit} câu hỏi) sẽ tự động cấp lại lúc {quota.resetAtLabel}.
           Lịch sử các cuộc hội thoại trước đó vẫn được lưu trữ và có thể xem lại bất kỳ lúc nào.
@@ -49,7 +49,8 @@ export function QuotaBanner({
       >
         <Sparkles className="size-3 text-emerald-600 dark:text-emerald-400" />
         <span>
-          Còn {quota.remaining}/{quota.limit} lượt
+          Còn {quota.remaining}/{quota.limit} lượt miễn phí
+          {(quota.paidRemaining ?? 0) > 0 ? ' + ' + quota.paidRemaining + ' lượt mua thêm' : ''}
         </span>
       </div>
     );
@@ -59,7 +60,9 @@ export function QuotaBanner({
     <p className={cn('flex items-center gap-1.5 text-xs text-muted-foreground', className)}>
       <BatteryMedium className="size-3.5 text-emerald-500" />
       <span>
-        Còn {quota.remaining}/{quota.limit} lượt hôm nay · cấp lại lúc {quota.resetAtLabel}
+        Còn {quota.remaining}/{quota.limit} lượt miễn phí
+        {(quota.paidRemaining ?? 0) > 0 ? ' + ' + quota.paidRemaining + ' lượt mua thêm' : ''} hôm
+        nay · cấp lại lúc {quota.resetAtLabel}
       </span>
     </p>
   );

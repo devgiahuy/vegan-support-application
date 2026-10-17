@@ -1,5 +1,7 @@
 'use client';
 
+import { AllowanceNotice } from '@/features/billing/components/allowance-notice';
+
 import * as React from 'react';
 import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -312,6 +314,9 @@ function AssistantContent() {
           </div>
         )}
 
+        <div className="px-4 pt-3">
+          <AllowanceNotice feature="CHAT" />
+        </div>
         {/* Quota exhausted banner if active */}
         {quota?.exhausted && (
           <div className="px-4 pt-3">

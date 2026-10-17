@@ -20,6 +20,8 @@ export interface CreateArticleInput {
   body: string;
   categoryIds?: string[];
   tags?: string[];
+  /** Id asset ảnh bìa đã tải lên và commit (Phase 15); bỏ trống = không có ảnh bìa. */
+  coverAssetId?: string;
 }
 
 export interface UpdateArticleInput extends CreateArticleInput {
@@ -64,8 +66,7 @@ export const postApi = {
 
   /**
    * Tạo bài viết mới rồi gửi ngay để duyệt: `POST /posts` (type=BLOG) →
-   * `POST /posts/:id/submit`. Chưa hỗ trợ ảnh bìa (cần luồng upload Cloudinary
-   * riêng, ngoài phạm vi task này).
+   * `POST /posts/:id/submit`. Ảnh bìa (nếu có) gắn bằng `assetId` đã commit.
    */
   createArticle: async (input: CreateArticleInput): Promise<Article> => {
     const payload = {
@@ -74,7 +75,9 @@ export const postApi = {
       ...(input.excerpt ? { excerpt: input.excerpt } : {}),
       ...(input.categoryIds?.length ? { categoryIds: input.categoryIds } : {}),
       ...(input.tags?.length ? { tags: input.tags } : {}),
-      media: [],
+      media: input.coverAssetId
+        ? [{ provider: 'CLOUDINARY' as const, kind: 'COVER_IMAGE' as const, assetId: input.coverAssetId }]
+        : [],
       body: input.body,
     };
 
@@ -109,7 +112,9 @@ export const postApi = {
       ...(input.excerpt ? { excerpt: input.excerpt } : {}),
       ...(input.categoryIds?.length ? { categoryIds: input.categoryIds } : {}),
       ...(input.tags?.length ? { tags: input.tags } : {}),
-      media: [],
+      media: input.coverAssetId
+        ? [{ provider: 'CLOUDINARY' as const, kind: 'COVER_IMAGE' as const, assetId: input.coverAssetId }]
+        : [],
       body: input.body,
       expectedVersion: input.expectedVersion,
     };

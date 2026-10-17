@@ -14,6 +14,7 @@ import {
 } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
+import { DatePickerModal } from '@/components/ui/date-field';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import {
   usePreviewDietRulesMutation,
@@ -58,7 +59,7 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 type Step = 'select' | 'review' | 'done';
 
-function OptionPill<T extends string>({
+function OptionPill({
   selected,
   label,
   note,
@@ -112,7 +113,7 @@ export default function DietPreferencesScreen() {
   const [exclusionName, setExclusionName] = React.useState('');
   const [exclusionIngredientId, setExclusionIngredientId] = React.useState<string | null>(null);
   const [exclusionReason, setExclusionReason] = React.useState('');
-  const [dateInput, setDateInput] = React.useState('');
+  const [pickerOpen, setPickerOpen] = React.useState(false);
 
   const previewMutation = usePreviewDietRulesMutation();
   const saveMutation = useSaveDietPreferencesMutation();
@@ -186,8 +187,7 @@ export default function DietPreferencesScreen() {
     setExclusionReason('');
   };
 
-  const addDate = () => {
-    const value = dateInput.trim();
+  const addDate = (value: string) => {
     if (!DATE_RE.test(value)) {
       Alert.alert('Ngày không hợp lệ', 'Ngày phải đúng dạng YYYY-MM-DD (ví dụ 2026-09-15).');
       return;
@@ -197,7 +197,6 @@ export default function DietPreferencesScreen() {
       return;
     }
     setScheduleDates((prev) => [...prev, value].sort());
-    setDateInput('');
   };
 
   const handleSave = async () => {
@@ -443,18 +442,18 @@ export default function DietPreferencesScreen() {
                     ))}
                   </View>
                 ) : null}
-                <View className="flex-row gap-2">
-                  <TextInput
-                    value={dateInput}
-                    onChangeText={setDateInput}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={colors.mutedForeground}
-                    className="flex-1 rounded-xl border border-input bg-background p-2.5 text-sm text-foreground"
-                  />
-                  <Pressable onPress={addDate} className="items-center justify-center rounded-xl bg-primary px-4">
-                    <Text className="text-sm font-semibold text-primary-foreground">Thêm</Text>
-                  </Pressable>
-                </View>
+                <PrimaryButton
+                  label="Thêm ngày chay"
+                  variant="outline"
+                  icon={<CalendarPlus size={16} color={colors.primary} />}
+                  onPress={() => setPickerOpen(true)}
+                />
+                <DatePickerModal
+                  visible={pickerOpen}
+                  title="Chọn ngày chay"
+                  onSelect={addDate}
+                  onClose={() => setPickerOpen(false)}
+                />
               </View>
             ) : null}
 

@@ -156,4 +156,3 @@ intentionally unchanged by this generation-only change.
 Acceptance coverage now verifies daily-combination selection, fiber overshoot
 avoidance, protein compensation, incomplete macro penalization, hard-compatible
 candidate use, 21/21 filling, and variety across 21 comparable alternatives.
-

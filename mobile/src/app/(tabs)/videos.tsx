@@ -1,15 +1,17 @@
 import * as React from 'react';
-import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, Text, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { PlayCircle, Plus, Search, Video } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { CategoryType } from '@/common/enums';
-import { CategoryFilterPills } from '@/features/category/components/category-filter-pills';
+import { DropdownField } from '@/components/ui/dropdown-field';
+import { buildCategoryOptions } from '@/features/category/utils/category-options';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
 import { VideoCard } from '@/features/video/components/video-card';
-import { useVideosQuery } from '@/features/video/queries/video.queries';
+import { LoadMoreButton } from '@/components/shared/load-more-button';
+import { useInfiniteVideosQuery } from '@/features/video/queries/video.queries';
 import { useIconColors } from '@/lib/theme-colors';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -29,18 +31,22 @@ export default function VideosScreen() {
   } = useCategoryTreeQuery(CategoryType.CONTENT_TOPIC);
 
   const {
-    data: videosPagination,
+    data: videoPages,
     isLoading: isVideosLoading,
     isError: isVideosError,
     refetch: refetchVideos,
-  } = useVideosQuery({
+    hasNextPage,
+    fetchNextPage,
+    isFetchingNextPage,
+  } = useInfiniteVideosQuery({
     q: query.trim() || undefined,
     category: categoryId || undefined,
   });
 
-  const videos = videosPagination?.items ?? [];
-  const totalItems = videosPagination?.metadata.totalItems ?? videos.length;
+  const videos = videoPages?.pages.flatMap((page) => page.items) ?? [];
+  const totalItems = videoPages?.pages[0]?.metadata.totalItems ?? videos.length;
   const hasFilters = Boolean(query.trim() || categoryId);
+  const categoryOptions = React.useMemo(() => buildCategoryOptions(categoryTree, 'Tất cả chủ đề'), [categoryTree]);
 
   const resetFilters = () => {
     setQuery('');
@@ -94,20 +100,14 @@ export default function VideosScreen() {
           />
         </View>
 
-        <View className="border-t border-border pt-4">
-          <Text className="mb-2 text-xs text-muted-foreground">Chủ đề</Text>
-          {isCategoryLoading ? (
-            <View className="h-8 rounded-lg bg-muted" />
-          ) : isCategoryError ? (
-            <Pressable onPress={() => void refetchCategories()}>
-              <Text className="text-sm text-primary underline">Không tải được danh mục. Thử lại.</Text>
-            </Pressable>
-          ) : categoryTree.length === 0 ? (
-            <Text className="text-sm text-muted-foreground">Chưa có chủ đề video.</Text>
-          ) : (
-            <CategoryFilterPills items={categoryTree} selectedId={categoryId} onSelect={setCategoryId} />
-          )}
-        </View>
+        <DropdownField
+          label="Chủ đề"
+          value={categoryId}
+          options={categoryOptions}
+          onChange={setCategoryId}
+          status={isCategoryLoading ? 'loading' : isCategoryError ? 'error' : undefined}
+          onRetry={() => void refetchCategories()}
+        />
 
         <View className="gap-4">
           {isVideosLoading ? (
@@ -135,7 +135,16 @@ export default function VideosScreen() {
               ) : null}
             </View>
           ) : (
-            videos.map((video) => <VideoCard key={video.id} video={video} />)
+            <>
+              {videos.map((video) => (
+                <VideoCard key={video.id} video={video} />
+              ))}
+              <LoadMoreButton
+                hasNextPage={hasNextPage}
+                isFetchingNextPage={isFetchingNextPage}
+                onPress={() => void fetchNextPage()}
+              />
+            </>
           )}
         </View>
       </View>

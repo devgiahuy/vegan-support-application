@@ -319,10 +319,9 @@ export function geocodeFixture(address: string): GeocodeResponseDto {
           label: entry.coords.label,
           address: entry.coords.label,
         },
-        meta: null,
       };
     }
   }
 
-  return { success: true, data: { lat: null, lng: null, label: '' }, meta: null };
+  return { success: true, data: null, externalDataUnavailable: true };
 }

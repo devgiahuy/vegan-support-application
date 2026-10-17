@@ -9,6 +9,7 @@ import {
 import type {
   AffectedPlanItemDto,
   AnalysisSummaryDto,
+  EstimatedNutritionAnalysisDto,
   MealPlanAnalysisResponseDto,
   MealWarningDto,
   SwapSuggestionDto,
@@ -16,8 +17,11 @@ import type {
 import type {
   AffectedPlanItem,
   AnalysisSummary,
+  DayEstimatedNutrition,
   DishSourceType,
+  EstimatedNutritionAnalysis,
   EvidenceGrade,
+  MacroTargets,
   MealPlanAnalysis,
   MealWarning,
   MealWarningScope,
@@ -224,6 +228,24 @@ export class MealAnalysisMapper extends BaseMapper<MealPlanAnalysisResponseDto, 
     const suggestedAdjustment =
       safeString(pickField(dto, ['suggestedAdjustment', 'suggested_adjustment'], ''), '') || null;
 
+    const detail = safeString(pickField(dto, ['detail'], ''));
+    const suggestion = pickField(dto, ['suggestion'], null)
+      ? safeString(pickField(dto, ['suggestion'], ''))
+      : null;
+    const severityLabel = safeString(
+      pickField(
+        dto,
+        ['severityLabel', 'severity_label'],
+        severity === 'DANGER' ? 'Nguy hiểm' : 'Cảnh báo'
+      )
+    );
+    const scopeLabel = safeString(pickField(dto, ['scopeLabel', 'scope_label'], ''));
+    const rawTargetComparison = pickField(dto, ['targetComparison', 'target_comparison'], null);
+    const targetComparison =
+      rawTargetComparison === 'ABOVE' || rawTargetComparison === 'BELOW'
+        ? rawTargetComparison
+        : null;
+
     const rawAffected = safeArray(pickField(dto, ['affectedItems', 'affected_items'], []));
     const affectedItems = rawAffected.map((item) =>
       this.mapAffectedItem(item as AffectedPlanItemDto)
@@ -238,10 +260,15 @@ export class MealAnalysisMapper extends BaseMapper<MealPlanAnalysisResponseDto, 
       id,
       code,
       title,
+      detail,
+      suggestion,
       severity,
+      severityLabel,
       scope,
+      scopeLabel,
       targetDate,
       mealType,
+      targetComparison,
       evidenceGrade,
       evidenceGradeLabel,
       evidenceSource,
@@ -311,15 +338,96 @@ export class MealAnalysisMapper extends BaseMapper<MealPlanAnalysisResponseDto, 
         ? safeNumber(pickField(dto, ['sameDayCount', 'same_day_count'], 0), 0)
         : warnings.filter((w) => w.scope === 'SAME_DAY').length;
 
+    const userStatus = safeString(
+      pickField(dto, ['userStatus', 'user_status'], 'NO_SERIOUS_ISSUE')
+    );
+    const title = safeString(pickField(dto, ['title'], ''));
+    const detail = safeString(pickField(dto, ['detail'], ''));
+    const advisoryCount = safeNumber(pickField(dto, ['advisoryCount', 'advisory_count'], 0), 0);
+    const hardConstraintViolationCount = safeNumber(
+      pickField(dto, ['hardConstraintViolationCount', 'hard_constraint_violation_count'], 0),
+      0
+    );
+    const hardConstraintsPreserved = Boolean(
+      pickField(dto, ['hardConstraintsPreserved', 'hard_constraints_preserved'], true)
+    );
+
     return {
       totalWarnings,
       dangerCount,
       warningCount,
+      userStatus,
+      title,
+      detail,
+      advisoryCount,
+      hardConstraintViolationCount,
+      hardConstraintsPreserved,
       dailyLimitViolations,
       compatibilityViolations,
       sameDishCount,
       sameMealCount,
       sameDayCount,
+    };
+  }
+
+  public mapEstimatedNutrition(
+    dto: EstimatedNutritionAnalysisDto | null | undefined
+  ): EstimatedNutritionAnalysis | null {
+    if (!dto || typeof dto !== 'object') return null;
+    const rawTargets = pickField<EstimatedNutritionAnalysisDto['targets'] | null>(
+      dto,
+      ['targets'],
+      null
+    );
+    const rawDays = pickField(dto, ['days'], []) as EstimatedNutritionAnalysisDto['days'];
+
+    const targets: MacroTargets = {
+      proteinGrams: safeNumber(pickField(rawTargets, ['proteinGrams', 'protein_grams'], 0), 0),
+      fiberGrams: safeNumber(pickField(rawTargets, ['fiberGrams', 'fiber_grams'], 0), 0),
+      fatGrams: safeNumber(pickField(rawTargets, ['fatGrams', 'fat_grams'], 0), 0),
+      carbohydrateGrams: safeNumber(
+        pickField(rawTargets, ['carbohydrateGrams', 'carbohydrate_grams'], 0),
+        0
+      ),
+    };
+
+    const days: DayEstimatedNutrition[] = safeArray(rawDays, (day) => {
+      const totalsObj = pickField(day, ['totals'], null);
+      const p = pickField(totalsObj, ['proteinGrams', 'protein_grams'], null);
+      const fb = pickField(totalsObj, ['fiberGrams', 'fiber_grams'], null);
+      const ft = pickField(totalsObj, ['fatGrams', 'fat_grams'], null);
+      const c = pickField(totalsObj, ['carbohydrateGrams', 'carbohydrate_grams'], null);
+
+      return {
+        date: safeString(pickField(day, ['date'], ''), ''),
+        totals: {
+          proteinGrams: p !== null && p !== undefined ? safeNumber(p) : null,
+          fiberGrams: fb !== null && fb !== undefined ? safeNumber(fb) : null,
+          fatGrams: ft !== null && ft !== undefined ? safeNumber(ft) : null,
+          carbohydrateGrams: c !== null && c !== undefined ? safeNumber(c) : null,
+        },
+        confidence: safeNumber(pickField(day, ['confidence'], 1), 1),
+        uncertaintyNotes: safeArray<string, string>(
+          pickField(day, ['uncertaintyNotes', 'uncertainty_notes'], []) as string[],
+          (note) => safeString(note)
+        ),
+      };
+    });
+
+    return {
+      estimated: Boolean(pickField(dto, ['estimated'], true)),
+      targetSource: safeString(
+        pickField(dto, ['targetSource', 'target_source'], 'HEALTH_PROFILE_TDEE_GOAL_CONFIG')
+      ),
+      targetSourceDetail: safeString(
+        pickField(dto, ['targetSourceDetail', 'target_source_detail'], '')
+      ),
+      tolerancePercent: safeNumber(
+        pickField(dto, ['tolerancePercent', 'tolerance_percent'], 15),
+        15
+      ),
+      targets,
+      days,
     };
   }
 
@@ -373,14 +481,38 @@ export class MealAnalysisMapper extends BaseMapper<MealPlanAnalysisResponseDto, 
       incompleteList.length > 0 ||
       safeBoolean(pickField(source, ['hasIncompleteData', 'has_incomplete_data'], false), false);
 
-    const notesVal = pickField(source, ['incompleteDataNotes', 'incomplete_data_notes'], '');
-    const incompleteDataNotes = Array.isArray(notesVal)
-      ? notesVal.join('; ')
-      : safeString(notesVal || (incompleteList.length > 0 ? incompleteList.join('; ') : ''), '') ||
-        null;
+    const rawNotesVal = pickField(source, ['incompleteDataNotes', 'incomplete_data_notes'], '');
+    const rawIncompleteNotes = Array.isArray(rawNotesVal)
+      ? rawNotesVal.join('; ')
+      : safeString(
+          rawNotesVal || (incompleteList.length > 0 ? incompleteList.join('; ') : ''),
+          ''
+        ) || null;
+    const incompleteDataNotes = rawIncompleteNotes
+      ? rawIncompleteNotes
+          .replace(/cooking-aware/gi, 'ước tính đa lượng')
+          .replace(
+            /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi,
+            (uuid) => `#${uuid.slice(0, 6)}`
+          )
+      : null;
 
     const rawWarnings = safeArray(source?.warnings);
-    const warnings = rawWarnings.map((w) => this.mapWarning(w as MealWarningDto));
+    // FR-009 & US4: Loại bỏ các cảnh báo kỹ thuật về thiếu vi chất gây hoang mang
+    const warnings = rawWarnings
+      .filter((w) => {
+        const item = w as MealWarningDto;
+        const code = safeString(item?.code, '').toUpperCase();
+        if (
+          code === 'MICRONUTRIENT_COMPLETENESS' ||
+          code === 'MICRONUTRIENT_INCOMPLETE' ||
+          code === 'MICRONUTRIENT_MISSING'
+        ) {
+          return false;
+        }
+        return true;
+      })
+      .map((w) => this.mapWarning(w as MealWarningDto));
 
     const summary = this.mapSummary(source?.summary, warnings);
 
@@ -397,6 +529,7 @@ export class MealAnalysisMapper extends BaseMapper<MealPlanAnalysisResponseDto, 
       incompleteDataNotes,
       summary,
       warnings,
+      estimatedNutrition: this.mapEstimatedNutrition(source?.estimatedNutrition),
     };
   }
 }

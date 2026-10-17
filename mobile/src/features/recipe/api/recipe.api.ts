@@ -12,7 +12,11 @@ export interface RecipeQueryParams {
   /** UUID hoặc slug danh mục (backend `category`, strict — không gửi `categoryId`). */
   category?: string;
   difficulty?: string;
+  /** Chỉ lấy món có thời gian nấu không vượt quá số phút này (backend `maxCookTimeMinutes`, 0–10080). */
+  maxCookTimeMinutes?: number;
   q?: string;
+  /** Chỉ lấy công thức chứa đủ mọi nguyên liệu chuẩn này (backend `ingredientIds`, tối đa 20). */
+  ingredientIds?: string[];
 }
 
 export interface CreateRecipeIngredientInput {
@@ -28,6 +32,10 @@ export interface CreateRecipeIngredientInput {
 export interface CreateRecipeStepInput {
   instruction: string;
   durationMinutes?: number;
+  /** Chỉ giữ lại khi sửa công thức đã có; form di động chưa cho nhập. */
+  cookingMethodId?: string | null;
+  temperatureCelsius?: number | null;
+  affectedIngredientPositions?: number[];
 }
 
 export interface CreateRecipeInput {
@@ -35,6 +43,8 @@ export interface CreateRecipeInput {
   excerpt?: string;
   categoryIds?: string[];
   tags?: string[];
+  /** Id asset ảnh bìa đã tải lên và commit (Phase 15); bỏ trống = không có ảnh bìa. */
+  coverAssetId?: string;
   servings: number;
   prepTimeMinutes: number;
   cookTimeMinutes: number;
@@ -45,6 +55,7 @@ export interface CreateRecipeInput {
     carbsGrams?: number;
     fatGrams?: number;
     fiberGrams?: number;
+    vitaminB12Mcg?: number;
   };
   ingredients: CreateRecipeIngredientInput[];
   steps: CreateRecipeStepInput[];
@@ -66,7 +77,9 @@ function buildRecipePayload(input: CreateRecipeInput) {
     ...(input.excerpt ? { excerpt: input.excerpt } : {}),
     ...(input.categoryIds?.length ? { categoryIds: input.categoryIds } : {}),
     ...(input.tags?.length ? { tags: input.tags } : {}),
-    media: [],
+    media: input.coverAssetId
+      ? [{ provider: 'CLOUDINARY' as const, kind: 'COVER_IMAGE' as const, assetId: input.coverAssetId }]
+      : [],
     body: stepsToBody(input.steps),
     recipe: {
       servings: input.servings,
@@ -84,6 +97,11 @@ function buildRecipePayload(input: CreateRecipeInput) {
       steps: input.steps.map((step) => ({
         instruction: step.instruction.trim(),
         ...(step.durationMinutes ? { durationMinutes: step.durationMinutes } : {}),
+        ...(step.cookingMethodId ? { cookingMethodId: step.cookingMethodId } : {}),
+        ...(typeof step.temperatureCelsius === 'number' ? { temperatureCelsius: step.temperatureCelsius } : {}),
+        ...(step.affectedIngredientPositions?.length
+          ? { affectedIngredientPositions: step.affectedIngredientPositions }
+          : {}),
       })),
     },
   };
@@ -93,7 +111,12 @@ export const recipeApi = {
   /** Danh sách công thức nấu ăn (phân trang, lọc danh mục/độ khó/từ khóa). `GET /posts?type=RECIPE`. */
   getRecipes: async (params?: RecipeQueryParams): Promise<RecipePaginationResult> => {
     const res = await api.get<RecipeListResponseDto>(API_ENDPOINTS.POSTS.LIST, {
-      params: { ...params, type: PostType.RECIPE },
+      params: {
+        ...params,
+        // Backend nhận danh sách UUID dạng CSV; axios mặc định gửi `ingredientIds[]=...` nên tự nối chuỗi.
+        ingredientIds: params?.ingredientIds?.length ? params.ingredientIds.join(',') : undefined,
+        type: PostType.RECIPE,
+      },
       silent: true,
     });
     return recipeMapper.toPaginationFromEnvelope(res.data.data, res.data.meta);

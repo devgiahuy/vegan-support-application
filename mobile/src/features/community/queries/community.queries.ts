@@ -1,4 +1,5 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { getNextPageNumber } from '@/lib/pagination';
 import { communityApi } from '../api/community.api';
 import type { CommunityQueryParams } from '../types/community.model';
 
@@ -29,6 +30,18 @@ export function useCommentThreadQuery(postId: string, params?: CommunityQueryPar
   return useQuery({
     queryKey: COMMUNITY_QUERY_KEYS.thread(postId, params),
     queryFn: () => communityApi.getThread({ ...params, postId }),
+    enabled: postId.length > 0,
+    staleTime: 30 * 1000,
+  });
+}
+
+/** Bình luận phân trang kiểu "Tải thêm"; key nằm dưới tiền tố `thread` nên mọi mutation bình luận đều làm mới được. */
+export function useInfiniteCommentThreadQuery(postId: string, params?: Omit<CommunityQueryParams, 'page'>) {
+  return useInfiniteQuery({
+    queryKey: [...COMMUNITY_QUERY_KEYS.all, 'thread', postId, 'infinite', params ?? {}] as const,
+    queryFn: ({ pageParam }) => communityApi.getThread({ ...params, postId, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: getNextPageNumber,
     enabled: postId.length > 0,
     staleTime: 30 * 1000,
   });
@@ -90,6 +103,21 @@ export function useRatingMutation() {
     mutationFn: (vars: { postId: string; taste: number; difficulty: number }) =>
       communityApi.putRating(vars.postId, vars.taste, vars.difficulty),
     onSuccess: (_, vars) => invalidatePost(queryClient, vars.postId),
+  });
+}
+
+/** `GET /users/me/bookmarks` phân trang kiểu "Tải thêm" (màn "Đã lưu"). Nằm dưới khóa `bookmarks` nên tự làm mới khi lưu/bỏ lưu. */
+export function useInfiniteMyBookmarksQuery(
+  params?: { limit?: number; type?: 'RECIPE' | 'VIDEO' },
+  options?: { enabled?: boolean }
+) {
+  return useInfiniteQuery({
+    enabled: options?.enabled ?? true,
+    queryKey: [...COMMUNITY_QUERY_KEYS.all, 'bookmarks', 'infinite', params ?? {}] as const,
+    queryFn: ({ pageParam }) => communityApi.getMyBookmarks({ ...params, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: getNextPageNumber,
+    staleTime: 30 * 1000,
   });
 }
 

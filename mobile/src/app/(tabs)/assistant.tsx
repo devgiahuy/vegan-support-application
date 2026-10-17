@@ -1,5 +1,14 @@
+import { AllowanceNotice } from '@/features/billing/components/allowance-notice';
 import * as React from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  View,
+} from 'react-native';
 import { Link, type Href } from 'expo-router';
 import { Compass, History, Plus, Sparkles } from 'lucide-react-native';
 
@@ -8,7 +17,11 @@ import { ErrorState, LoadingState } from '@/components/shared/state-views';
 import { ChatWelcome } from '@/features/chat/components/chat-welcome';
 import { Composer } from '@/features/chat/components/composer';
 import { Disclaimer, FallbackNotice } from '@/features/chat/components/fallback-notice';
-import { MessageBubble, PendingUserBubble, StreamingBubble } from '@/features/chat/components/message-bubble';
+import {
+  MessageBubble,
+  PendingUserBubble,
+  StreamingBubble,
+} from '@/features/chat/components/message-bubble';
 import { QuotaExhaustedBanner, QuotaPill } from '@/features/chat/components/quota-banner';
 import { SessionListSheet } from '@/features/chat/components/session-list-sheet';
 import {
@@ -24,7 +37,9 @@ const SESSION_TITLE_MAX = 60;
 
 function titleFromPrompt(prompt: string): string {
   const oneLine = prompt.replace(/\s+/g, ' ').trim();
-  return oneLine.length > SESSION_TITLE_MAX ? `${oneLine.slice(0, SESSION_TITLE_MAX - 1)}…` : oneLine;
+  return oneLine.length > SESSION_TITLE_MAX
+    ? `${oneLine.slice(0, SESSION_TITLE_MAX - 1)}…`
+    : oneLine;
 }
 
 /**
@@ -42,12 +57,13 @@ export default function AssistantScreen() {
   const createSessionMutation = useCreateChatSessionMutation();
   const sessionsQuery = useChatSessionsQuery();
 
-  const activeSessionId = selectedSessionId ?? sessionsQuery.data?.items?.[0]?.id ?? '';
+  const activeSessionId = selectedSessionId ?? sessionsQuery.data?.pages[0]?.items[0]?.id ?? '';
   const messagesQuery = useChatMessagesQuery(activeSessionId, activeSessionId.length > 0);
   const sendState = useSendChatMessage(activeSessionId);
 
   const messages = messagesQuery.data?.items ?? [];
-  const hasConversation = messages.length > 0 || !!sendState.pendingUserContent || !!sendState.streamingContent;
+  const hasConversation =
+    messages.length > 0 || !!sendState.pendingUserContent || !!sendState.streamingContent;
   const showWelcome = !hasConversation && !messagesQuery.isLoading;
 
   const scrollToEnd = React.useCallback(() => {
@@ -56,7 +72,10 @@ export default function AssistantScreen() {
 
   const startNewChat = () => {
     if (sendState.isStreaming) {
-      Alert.alert('Đang trả lời', 'Hãy chờ trợ lý trả lời xong hoặc bấm Dừng trước khi tạo đoạn chat mới.');
+      Alert.alert(
+        'Đang trả lời',
+        'Hãy chờ trợ lý trả lời xong hoặc bấm Dừng trước khi tạo đoạn chat mới.'
+      );
       return;
     }
     setSelectedSessionId('');
@@ -65,7 +84,10 @@ export default function AssistantScreen() {
 
   const selectSession = (id: string) => {
     if (sendState.isStreaming) {
-      Alert.alert('Đang trả lời', 'Hãy chờ trợ lý trả lời xong hoặc bấm Dừng trước khi đổi đoạn chat.');
+      Alert.alert(
+        'Đang trả lời',
+        'Hãy chờ trợ lý trả lời xong hoặc bấm Dừng trước khi đổi đoạn chat.'
+      );
       return;
     }
     setSelectedSessionId(id);
@@ -98,6 +120,7 @@ export default function AssistantScreen() {
       <SiteHeader />
 
       <View className="gap-2 border-b border-border px-5 pb-3 pt-3">
+        <AllowanceNotice feature="CHAT" />
         <View className="flex-row items-center gap-2">
           <View className="h-9 w-9 items-center justify-center rounded-full bg-primary/10">
             <Sparkles size={17} color={colors.primary} />
@@ -107,19 +130,23 @@ export default function AssistantScreen() {
               Trợ lý dinh dưỡng
             </Text>
             <Text numberOfLines={1} className="text-[11px] text-muted-foreground">
-              {isAuthenticated ? 'Tư vấn chay mang tính tham khảo' : 'Chế độ khách · hạn mức thấp hơn tài khoản'}
+              {isAuthenticated
+                ? 'Tư vấn chay mang tính tham khảo'
+                : 'Chế độ khách · hạn mức thấp hơn tài khoản'}
             </Text>
           </View>
           <Pressable
             onPress={() => setSessionsOpen(true)}
             accessibilityLabel="Danh sách đoạn chat"
-            className="h-9 w-9 items-center justify-center rounded-full bg-muted">
+            className="h-9 w-9 items-center justify-center rounded-full bg-muted"
+          >
             <History size={16} color={colors.foreground} />
           </Pressable>
           <Pressable
             onPress={startNewChat}
             accessibilityLabel="Đoạn chat mới"
-            className="h-9 w-9 items-center justify-center rounded-full bg-primary">
+            className="h-9 w-9 items-center justify-center rounded-full bg-primary"
+          >
             <Plus size={16} color={colors.primaryForeground} />
           </Pressable>
         </View>
@@ -135,41 +162,60 @@ export default function AssistantScreen() {
         </View>
       </View>
 
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1">
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className="flex-1"
+      >
         <ScrollView
           ref={scrollRef}
           className="flex-1"
           contentContainerClassName="grow gap-3.5 px-5 pb-4 pt-4"
           keyboardShouldPersistTaps="handled"
-          onContentSizeChange={scrollToEnd}>
+          onContentSizeChange={scrollToEnd}
+        >
           <FallbackNotice maintenance={sendState.maintenance} />
           <QuotaExhaustedBanner quota={sendState.quota} />
 
           {messagesQuery.isLoading ? (
             <LoadingState message="Đang tải lịch sử..." />
           ) : messagesQuery.isError ? (
-            <ErrorState title="Không tải được lịch sử trò chuyện." onRetry={() => void messagesQuery.refetch()} />
+            <ErrorState
+              title="Không tải được lịch sử trò chuyện."
+              onRetry={() => void messagesQuery.refetch()}
+            />
           ) : showWelcome ? (
-            <ChatWelcome onSelectPrompt={(prompt) => void send(prompt)} disabled={composerDisabled} />
+            <ChatWelcome
+              onSelectPrompt={(prompt) => void send(prompt)}
+              disabled={composerDisabled}
+            />
           ) : (
             <>
               {messages.map((message) => (
                 <MessageBubble key={message.id} message={message} sessionId={activeSessionId} />
               ))}
-              {sendState.pendingUserContent ? <PendingUserBubble text={sendState.pendingUserContent} /> : null}
+              {sendState.pendingUserContent ? (
+                <PendingUserBubble text={sendState.pendingUserContent} />
+              ) : null}
               {sendState.isStreaming ? <StreamingBubble text={sendState.streamingContent} /> : null}
             </>
           )}
 
           {sendState.streamError ? (
             <View className="rounded-2xl border border-destructive/30 bg-destructive/5 p-3">
-              <Text className="text-sm font-semibold text-destructive">{sendState.streamError}</Text>
+              <Text className="text-sm font-semibold text-destructive">
+                {sendState.streamError}
+              </Text>
             </View>
           ) : null}
         </ScrollView>
 
         <View className="gap-2 border-t border-border bg-background px-4 pb-3 pt-2.5">
-          <Composer isStreaming={sendState.isStreaming} disabled={composerDisabled} onSend={send} onAbort={sendState.abort} />
+          <Composer
+            isStreaming={sendState.isStreaming}
+            disabled={composerDisabled}
+            onSend={send}
+            onAbort={sendState.abort}
+          />
           <Disclaimer />
         </View>
       </KeyboardAvoidingView>

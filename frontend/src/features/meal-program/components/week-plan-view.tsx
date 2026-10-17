@@ -88,30 +88,30 @@ export const WeekPlanView: React.FC<WeekPlanViewProps> = ({
         <div className="space-y-0.5">
           <span className="text-xs text-muted-foreground">Tổng năng lượng</span>
           <p className="text-base font-bold text-foreground flex items-center gap-1">
-            <Flame className="w-4 h-4 text-orange-500" />
-            {snapshot.totalCalories.toLocaleString()} Kcal
+            <Flame className="w-4 h-4 text-orange-500" />~{snapshot.totalCalories.toLocaleString()}{' '}
+            Kcal
           </p>
         </div>
         <div className="space-y-0.5">
           <span className="text-xs text-muted-foreground">Chất đạm (Protein)</span>
           <p className="text-base font-semibold text-foreground">
-            {snapshot.macronutrients.protein}g
+            ~{snapshot.macronutrients.protein}g
           </p>
         </div>
         <div className="space-y-0.5">
           <span className="text-xs text-muted-foreground">Tinh bột (Carbs)</span>
           <p className="text-base font-semibold text-foreground">
-            {snapshot.macronutrients.carbs}g
+            ~{snapshot.macronutrients.carbs}g
           </p>
         </div>
         <div className="space-y-0.5">
           <span className="text-xs text-muted-foreground">Chất béo (Fat)</span>
-          <p className="text-base font-semibold text-foreground">{snapshot.macronutrients.fat}g</p>
+          <p className="text-base font-semibold text-foreground">~{snapshot.macronutrients.fat}g</p>
         </div>
         <div className="space-y-0.5">
           <span className="text-xs text-muted-foreground">Chất xơ (Fiber)</span>
           <p className="text-base font-semibold text-foreground">
-            {snapshot.macronutrients.fiber}g
+            ~{snapshot.macronutrients.fiber}g
           </p>
         </div>
       </div>
@@ -134,8 +134,7 @@ export const WeekPlanView: React.FC<WeekPlanViewProps> = ({
                   <span className="font-semibold text-sm text-foreground">{dayTitle}</span>
                 </div>
                 <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium bg-background px-2 py-0.5 rounded-full border">
-                  <Flame className="w-3.5 h-3.5 text-orange-500" />
-                  {day.totalCalories} Kcal
+                  <Flame className="w-3.5 h-3.5 text-orange-500" />~{day.totalCalories} Kcal
                 </span>
               </CardHeader>
 
@@ -193,7 +192,7 @@ export const WeekPlanView: React.FC<WeekPlanViewProps> = ({
                           <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                             <span>{meal.servings} khẩu phần</span>
                             <span className="font-medium text-foreground">
-                              {meal.calories} Kcal
+                              ~{meal.calories} Kcal
                             </span>
                           </div>
                         </div>

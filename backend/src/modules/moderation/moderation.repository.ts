@@ -1,3 +1,5 @@
+import { lockDocument } from '../../database/locking.js';
+import type { Prisma } from '@prisma/client';
 import {
   AiFlagStatus,
   CommentStatus,
@@ -7,7 +9,6 @@ import {
   ModerationTargetType,
   PostRevisionStatus,
   PostStatus,
-  Prisma,
   ReportStatus,
   ReportTargetType,
   Role,
@@ -66,10 +67,6 @@ export interface ModerationActor {
   hasActiveContributorProfile: boolean;
 }
 
-interface IdRow {
-  id: string;
-}
-
 function pagination(page: number, limit: number, total: number) {
   return { page, limit, total, totalPages: total === 0 ? 0 : Math.ceil(total / limit) };
 }
@@ -78,74 +75,74 @@ export class ModerationRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async listReviewQueue(actor: ModerationActor, query: ReviewQueueQuery) {
-    const statuses =
-      actor.role !== Role.ADMIN
-        ? Prisma.sql`ARRAY['PENDING_REVIEW']::"post_revision_status"[]`
-        : query.status
-          ? Prisma.sql`ARRAY[${query.status}::"post_revision_status"]`
-          : Prisma.sql`ARRAY['PENDING_REVIEW', 'FLAGGED', 'QUARANTINED']::"post_revision_status"[]`;
-    const typeFilter = query.type
-      ? Prisma.sql`AND p."type" = ${query.type}::"post_type"`
-      : Prisma.empty;
-    const contributorFilter =
-      actor.role === Role.ADMIN
-        ? Prisma.empty
-        : Prisma.sql`
-            AND u."role" = 'MEMBER'::"user_role"
-            AND p."status" <> 'HIDDEN'::"post_status"
-            AND pr."created_by_id" <> ${actor.userId}::uuid
-            AND NOT EXISTS (
-              SELECT 1 FROM "ai_flags" af
-              WHERE af."post_revision_id" = pr."id" AND af."status" = 'OPEN'::"ai_flag_status"
-            )
-            AND NOT EXISTS (
-              SELECT 1 FROM "reports" r
-              WHERE r."target_type" = 'POST'::"report_target_type"
-                AND r."target_id" = p."id"
-                AND r."status" = 'OPEN'::"report_status"
-                AND r."priority" = 'HIGH'::"moderation_priority"
-            )`;
-    const priorityFilter =
-      query.priority === ModerationPriority.HIGH
-        ? Prisma.sql`AND (
-            EXISTS (SELECT 1 FROM "ai_flags" af WHERE af."post_revision_id" = pr."id" AND af."risk_level" = 'HIGH'::"ai_flag_risk_level" AND af."status" = 'OPEN'::"ai_flag_status")
-            OR EXISTS (SELECT 1 FROM "reports" r WHERE r."target_type" = 'POST'::"report_target_type" AND r."target_id" = p."id" AND r."status" = 'OPEN'::"report_status" AND r."priority" = 'HIGH'::"moderation_priority")
-          )`
+    const highReports = await this.prisma.report.findMany({
+      where: {
+        targetType: ReportTargetType.POST,
+        status: ReportStatus.OPEN,
+        priority: ModerationPriority.HIGH,
+      },
+      select: { targetId: true },
+    });
+    const highIds = highReports.map((report) => report.targetId);
+    const highWhere: Prisma.PostRevisionWhereInput = {
+      OR: [
+        { aiFlags: { some: { riskLevel: 'HIGH', status: AiFlagStatus.OPEN } } },
+        { postId: { in: highIds } },
+      ],
+    };
+    const where: Prisma.PostRevisionWhereInput = {
+      status:
+        actor.role !== Role.ADMIN
+          ? PostRevisionStatus.PENDING_REVIEW
+          : (query.status ?? {
+              in: [
+                PostRevisionStatus.PENDING_REVIEW,
+                PostRevisionStatus.FLAGGED,
+                PostRevisionStatus.QUARANTINED,
+              ],
+            }),
+      post: {
+        status: { notIn: [PostStatus.HIDDEN, PostStatus.DELETED] },
+        ...(query.type ? { type: query.type } : {}),
+        ...(actor.role !== Role.ADMIN ? { author: { role: Role.MEMBER } } : {}),
+      },
+      ...(actor.role !== Role.ADMIN
+        ? {
+            createdById: { not: actor.userId },
+            aiFlags: { none: { status: AiFlagStatus.OPEN } },
+            postId: { notIn: highIds },
+          }
+        : {}),
+      ...(query.priority === ModerationPriority.HIGH
+        ? highWhere
         : query.priority === ModerationPriority.NORMAL
-          ? Prisma.sql`AND NOT (
-              EXISTS (SELECT 1 FROM "ai_flags" af WHERE af."post_revision_id" = pr."id" AND af."risk_level" = 'HIGH'::"ai_flag_risk_level" AND af."status" = 'OPEN'::"ai_flag_status")
-              OR EXISTS (SELECT 1 FROM "reports" r WHERE r."target_type" = 'POST'::"report_target_type" AND r."target_id" = p."id" AND r."status" = 'OPEN'::"report_status" AND r."priority" = 'HIGH'::"moderation_priority")
-            )`
-          : Prisma.empty;
-    const base = Prisma.sql`
-      FROM "post_revisions" pr
-      INNER JOIN "posts" p ON p."id" = pr."post_id" AND p."version" = pr."version"
-      INNER JOIN "users" u ON u."id" = p."author_id"
-      WHERE pr."status" = ANY(${statuses})
-        AND p."status" NOT IN ('HIDDEN'::"post_status", 'DELETED'::"post_status")
-        ${typeFilter}
-        ${contributorFilter}
-        ${priorityFilter}
-    `;
-    const offset = (query.page - 1) * query.limit;
-    const [countRows, rows] = await this.prisma.$transaction([
-      this.prisma.$queryRaw<Array<{ total: bigint }>>(
-        Prisma.sql`SELECT COUNT(*)::bigint AS "total" ${base}`,
-      ),
-      this.prisma.$queryRaw<IdRow[]>(Prisma.sql`
-        SELECT pr."id" ${base}
-        ORDER BY
-          CASE WHEN pr."status" = 'QUARANTINED'::"post_revision_status" THEN 0
-               WHEN pr."status" = 'FLAGGED'::"post_revision_status" THEN 1 ELSE 2 END,
-          pr."created_at" ASC,
-          pr."id" ASC
-        LIMIT ${query.limit} OFFSET ${offset}
-      `),
-    ]);
-    const records = await this.hydrateRevisions(rows.map((row) => row.id));
+          ? { NOT: highWhere }
+          : {}),
+    };
+    // A post's current version must match the submitted revision. Prisma cannot
+    // express equality across two joined documents, so select current post IDs first.
+    const posts = await this.prisma.post.findMany({
+      where: { status: { notIn: [PostStatus.HIDDEN, PostStatus.DELETED] } },
+      select: { id: true, version: true },
+    });
+    const current = posts.map((post) => ({ postId: post.id, version: post.version }));
+    const matchedWhere = { AND: [where, { OR: current }] };
+    const candidates = await this.prisma.postRevision.findMany({
+      where: matchedWhere,
+      select: { id: true, status: true, createdAt: true },
+    });
+    const rank = (status: PostRevisionStatus) =>
+      status === PostRevisionStatus.QUARANTINED ? 0 : status === PostRevisionStatus.FLAGGED ? 1 : 2;
+    candidates.sort(
+      (left, right) =>
+        rank(left.status) - rank(right.status) ||
+        left.createdAt.getTime() - right.createdAt.getTime() ||
+        left.id.localeCompare(right.id),
+    );
+    const page = candidates.slice((query.page - 1) * query.limit, query.page * query.limit);
     return {
-      records,
-      meta: pagination(query.page, query.limit, Number(countRows[0]?.total ?? 0n)),
+      records: await this.hydrateRevisions(page.map((row) => row.id)),
+      meta: pagination(query.page, query.limit, candidates.length),
     };
   }
 
@@ -156,14 +153,19 @@ export class ModerationRepository {
     input: ReviewDecisionInput,
   ): Promise<ReviewRevisionRecord> {
     return this.prisma.$transaction(async (transaction) => {
-      const locked = await transaction.$queryRaw<IdRow[]>(Prisma.sql`
-        SELECT pr."id"
-        FROM "post_revisions" pr
-        INNER JOIN "posts" p ON p."id" = pr."post_id" AND p."version" = pr."version"
-        WHERE p."id" = ${postId}::uuid
-        FOR UPDATE OF p, pr
-      `);
-      const revisionId = locked[0]?.id;
+      await lockDocument(transaction, 'post', { id: postId });
+      const post = await transaction.post.findUnique({
+        where: { id: postId },
+        select: { version: true },
+      });
+      const current = post
+        ? await transaction.postRevision.findFirst({
+            where: { postId, version: post.version },
+            select: { id: true },
+          })
+        : null;
+      const revisionId = current?.id;
+      if (revisionId) await lockDocument(transaction, 'postRevision', { id: revisionId });
       if (!revisionId) throw this.notFound('Không tìm thấy post review target');
       const revision = await transaction.postRevision.findUniqueOrThrow({
         where: { id: revisionId },
@@ -304,15 +306,14 @@ export class ModerationRepository {
     input: ReviewDecisionInput,
   ): Promise<ReviewRevisionRecord> {
     return this.prisma.$transaction(async (transaction) => {
-      const locked = await transaction.$queryRaw<IdRow[]>(Prisma.sql`
-        SELECT pr."id"
-        FROM "post_revisions" pr
-        INNER JOIN "posts" p ON p."id" = pr."post_id"
-        WHERE pr."id" = ${revisionId}::uuid
-          AND p."version" = pr."version"
-        FOR UPDATE OF p, pr
-      `);
-      if (!locked[0]) throw this.notFound('Không tìm thấy revision review target');
+      await lockDocument(transaction, 'postRevision', { id: revisionId });
+      const candidate = await transaction.postRevision.findUnique({
+        where: { id: revisionId },
+        include: { post: true },
+      });
+      if (!candidate || candidate.version !== candidate.post.version)
+        throw this.notFound('Không tìm thấy revision review target');
+      await lockDocument(transaction, 'post', { id: candidate.postId });
       const revision = await transaction.postRevision.findUniqueOrThrow({
         where: { id: revisionId },
         include: reviewRevisionInclude,
@@ -476,16 +477,18 @@ export class ModerationRepository {
       ...(query.priority ? { priority: query.priority } : {}),
       ...(query.targetType ? { targetType: query.targetType } : {}),
     };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.report.findMany({
-        where,
-        include: reportInclude,
-        orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }, { id: 'asc' }],
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-      this.prisma.report.count({ where }),
-    ]);
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.report.findMany({
+          where,
+          include: reportInclude,
+          orderBy: [{ priority: 'asc' }, { createdAt: 'asc' }, { id: 'asc' }],
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+        transaction.report.count({ where }),
+      ]),
+    );
     return { records, meta: pagination(query.page, query.limit, total) };
   }
 
@@ -498,13 +501,14 @@ export class ModerationRepository {
       const initialReport = await transaction.report.findUnique({ where: { id: reportId } });
       if (!initialReport) throw this.notFound('Không tìm thấy report');
       await this.lockReportTarget(transaction, initialReport.targetType, initialReport.targetId);
-      await transaction.$queryRaw<IdRow[]>(Prisma.sql`
-        SELECT "id" FROM "reports"
-        WHERE "target_type" = ${initialReport.targetType}::"report_target_type"
-          AND "target_id" = ${initialReport.targetId}::uuid
-          AND "status" = 'OPEN'::"report_status"
-        FOR UPDATE
-      `);
+      await transaction.report.updateMany({
+        where: {
+          targetType: initialReport.targetType,
+          targetId: initialReport.targetId,
+          status: ReportStatus.OPEN,
+        },
+        data: { lockVersion: { increment: 1 } },
+      });
       const report = await transaction.report.findUniqueOrThrow({ where: { id: reportId } });
       if (report.status !== ReportStatus.OPEN) {
         throw this.conflict('REPORT_ALREADY_RESOLVED', 'Report đã được xử lý');
@@ -568,16 +572,18 @@ export class ModerationRepository {
           }
         : {}),
     };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.user.findMany({
-        where,
-        include: adminUserInclude,
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-      this.prisma.user.count({ where }),
-    ]);
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.user.findMany({
+          where,
+          include: adminUserInclude,
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+        transaction.user.count({ where }),
+      ]),
+    );
     return { records, meta: pagination(query.page, query.limit, total) };
   }
 
@@ -587,10 +593,8 @@ export class ModerationRepository {
     input: UpdateUserStatusInput,
   ): Promise<AdminUserRecord> {
     return this.prisma.$transaction(async (transaction) => {
-      const locked = await transaction.$queryRaw<IdRow[]>(Prisma.sql`
-        SELECT "id" FROM "users" WHERE "id" = ${userId}::uuid FOR UPDATE
-      `);
-      if (!locked.length) throw this.notFound('Không tìm thấy user');
+      const locked = await lockDocument(transaction, 'user', { id: userId });
+      if (!locked) throw this.notFound('Không tìm thấy user');
       const user = await transaction.user.findUniqueOrThrow({
         where: { id: userId },
         include: adminUserInclude,
@@ -637,16 +641,18 @@ export class ModerationRepository {
       ...(query.authorId ? { authorId: query.authorId } : {}),
       ...(query.q ? { content: { contains: query.q, mode: 'insensitive' as const } } : {}),
     };
-    const [records, total] = await this.prisma.$transaction([
-      this.prisma.comment.findMany({
-        where,
-        include: adminCommentInclude,
-        orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
-        skip: (query.page - 1) * query.limit,
-        take: query.limit,
-      }),
-      this.prisma.comment.count({ where }),
-    ]);
+    const [records, total] = await this.prisma.$transaction(async (transaction) =>
+      Promise.all([
+        transaction.comment.findMany({
+          where,
+          include: adminCommentInclude,
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+          skip: (query.page - 1) * query.limit,
+          take: query.limit,
+        }),
+        transaction.comment.count({ where }),
+      ]),
+    );
     return { records, meta: pagination(query.page, query.limit, total) };
   }
 
@@ -750,9 +756,9 @@ export class ModerationRepository {
     targetType: ReportTargetType,
     targetId: string,
   ): Promise<void> {
-    await transaction.$queryRaw<Array<{ locked: boolean }>>(Prisma.sql`
-      SELECT pg_advisory_xact_lock(hashtext(${`${targetType}:${targetId}`})) IS NULL AS "locked"
-    `);
+    await lockDocument(transaction, targetType === ReportTargetType.POST ? 'post' : 'comment', {
+      id: targetId,
+    });
   }
 
   private async applyReportDecision(

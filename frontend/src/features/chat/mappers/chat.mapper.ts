@@ -220,12 +220,14 @@ export class ChatMapper extends BaseMapper<ChatSessionDto, ChatSession> {
       )
     );
     const remaining = Math.max(limit - used, 0);
+    const paidRemaining = Math.max(0, safeNumber(pickField(payload, ['paidRemaining'], 0)));
     return {
       used,
       limit,
       remaining,
       resetAtLabel: formatResetLabel(safeString(pickField(payload, ['resetAt', 'reset_at'], ''))),
-      exhausted: remaining === 0,
+      paidRemaining,
+      exhausted: remaining === 0 && paidRemaining === 0,
     };
   }
 

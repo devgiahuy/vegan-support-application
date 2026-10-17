@@ -7,6 +7,7 @@ export type PantryItemSourceDto = 'MANUAL' | 'FRIDGE_RECOGNITION' | 'RECEIPT';
 export type PantryConfirmationStatusDto = 'CONFIRMED' | 'PENDING' | 'REJECTED';
 export type PantryConversionStatusDto = 'EXACT' | 'APPROXIMATE' | 'UNKNOWN';
 export type PantryAdjustmentTypeDto = 'CONSUME' | 'RESTORE' | 'ADJUST';
+export type PantryExpiryStatusDto = 'GOOD' | 'WARNING' | 'ALERT' | 'EXPIRED';
 
 export interface PantryConversionDto {
   status: PantryConversionStatusDto;
@@ -35,6 +36,9 @@ export interface PantryItemDto {
   openedAt: string | null;
   expiresAt: string | null;
   freshnessNote: string | null;
+  expiryStatus?: PantryExpiryStatusDto | null;
+  daysUntilExpiry?: number | null;
+  expiryStatusAsOf?: string | null;
   version: number;
 }
 

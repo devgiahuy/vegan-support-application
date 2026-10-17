@@ -1,6 +1,24 @@
 /** Chế độ ăn dùng làm bộ lọc cứng ở backend (`dietPattern`). */
 export type RestaurantDietPattern = 'VEGAN' | 'LACTO_OVO';
 
+/** Thứ trong tuần dạng khóa 3 ký tự (contract `openOnDay`). */
+export type RestaurantWeekday = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+
+/**
+ * Bộ lọc nâng cao — backend chỉ nhận ở `GET /restaurants/search`, nên chỉ có hiệu lực khi tìm theo từ khóa.
+ * Giá là thang 4 mức của nhà cung cấp (0..4), KHÔNG phải số tiền VND.
+ */
+export interface RestaurantAdvancedFilters {
+  minPrice?: number;
+  maxPrice?: number;
+  /** 2..4.5 */
+  minRating?: number;
+  openState?: 'now' | '24h';
+  openOnDay?: RestaurantWeekday;
+  /** 0..23 */
+  openAtHour?: number;
+}
+
 /** Nguồn vị trí gửi lên backend: nhập tay/địa chỉ hay lấy từ thiết bị (cần đồng ý). */
 export type LocationSource = 'MANUAL' | 'DEVICE';
 
@@ -52,6 +70,8 @@ export interface RestaurantDiscoveryMeta {
   resultsTruncated: boolean;
   /** Nhà cung cấp bản đồ ngoài không khả dụng, chỉ có dữ liệu nội bộ. */
   externalDataUnavailable: boolean;
+  /** Quán ngoài chưa xác minh đã bị lọc bớt để áp dụng chế độ ăn, dị ứng hoặc thành phần cần tránh. */
+  externalResultsSuppressed: boolean;
 }
 
 export interface RestaurantDiscoveryResult {
@@ -68,6 +88,8 @@ export interface LocationQuery {
   /** Từ khóa món/tên quán; chỉ gọi `search` khi có từ 2 ký tự. */
   query: string;
   dietPattern?: RestaurantDietPattern;
+  /** Chỉ được gửi khi `query` đủ dài để gọi `search`. */
+  advanced?: RestaurantAdvancedFilters;
   source: LocationSource;
 }
 
@@ -98,6 +120,8 @@ export interface SubmittedRestaurant {
 
 export interface SubmittedRestaurantListResult {
   items: SubmittedRestaurant[];
+  page: number;
+  limit: number;
   total: number;
 }
 

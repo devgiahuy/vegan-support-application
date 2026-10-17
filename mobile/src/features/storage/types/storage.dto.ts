@@ -35,7 +35,7 @@ export interface UploadConfigurationDto {
 }
 
 export interface CreateReservationRequestDto {
-  kind: 'COVER_IMAGE' | 'FRIDGE_IMAGE' | 'RECEIPT_IMAGE';
+  kind: 'COVER_IMAGE' | 'FRIDGE_IMAGE' | 'RECEIPT_IMAGE' | 'VIDEO';
   mimeType: string;
   extension: string;
   bytes: number;
@@ -63,4 +63,14 @@ export interface ProviderUploadResponseDto {
   public_id?: string;
   version?: number;
   signature?: string;
+}
+
+export interface DeleteMediaAssetRequestDto {
+  idempotencyKey: string;
+}
+
+/** Phản hồi `DELETE /storage/assets/:id` — chỉ dùng `usage` để cập nhật dung lượng. */
+export interface StorageAssetResponseDto {
+  asset: { id: string };
+  usage: StorageUsageDto;
 }

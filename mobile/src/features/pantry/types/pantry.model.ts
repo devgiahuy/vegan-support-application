@@ -53,6 +53,12 @@ export interface PantryListFilters {
   page?: number;
   limit?: number;
   search?: string;
+  source?: PantryItemSource;
+  /** Chỉ lấy mục đã xác nhận (dùng cho các tab theo hạn dùng). */
+  confirmedOnly?: boolean;
+  /** `YYYY-MM-DD`, bao gồm cả ngày này. */
+  expiresFrom?: string;
+  expiresTo?: string;
   includeZero?: boolean;
 }
 

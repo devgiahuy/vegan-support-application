@@ -531,13 +531,13 @@ export default function HomePage() {
       </section>
 
       {/* Restaurants */}
-      <section className="py-10">
+      {/* <section className="py-10">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-primary">
               <MapPin className="h-4 w-4" /> Bản đồ ẩm thực
             </span>
-            <h2 className="mt-1 text-2xl font-bold tracking-tight md:text-3xl">
+            <h2 className="mt-1 text-5xl font-bold tracking-tight md:text-3xl">
               Khám phá quán chay quanh bạn
             </h2>
           </div>
@@ -572,7 +572,7 @@ export default function HomePage() {
             </Card>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Mobile FAB */}
       <Button

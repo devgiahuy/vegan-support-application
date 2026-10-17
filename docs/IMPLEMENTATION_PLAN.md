@@ -1,12 +1,12 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.1
+**Version:** 4.5
 
-**Updated:** 2026-09-28
+**Updated:** 2026-10-14
 
 **Status:** Approved implementation baseline
 
-**Current backend baseline:** Phases 00–11 completed; Phase 12 is next
+**Current backend baseline:** Phases 00–20 and 23–26 completed; Phases 21–22 and 27 in progress; sandbox billing is a separately approved extension.
 
 ## 1. Document authority
 
@@ -24,7 +24,7 @@ The current API contract may still contain legacy Contributor subtype fields unt
 | D4 | Vegetarian rules | Keep `dietPattern`, `practiceSchedule`, and `tradition`. MVP traditions: Buddhist and Christian. The system proposes rules and the user confirms/toggles each rule. |
 | D5 | Publication | Recipes, handbooks, and videos require manual Admin approval. AI flags and reports are evidence for review, never automatic deletion. |
 | D6 | Health data | MVP web uses user-entered measurements. HealthKit/Health Connect/wearables/phone-sensor research remains in Roadmap Phase 2. |
-| D7 | Persistence | PostgreSQL + Prisma. |
+| D7 | Persistence | MongoDB replica set + Prisma; UUID API identifiers retained. Approved by user on 2026-10-07; preservation of historical database data is not required. |
 | D8 | Backend | Node.js + Express + TypeScript, OpenAPI-first. |
 | D9 | Maps | Internal restaurant records plus a provider adapter for Google Maps/Places/Geocoding. |
 | D10 | Media | Cloudinary and permitted external video URLs; enforce per-file and per-account quotas before payments. |
@@ -40,6 +40,7 @@ The current API contract may still contain legacy Contributor subtype fields unt
 | D20 | Certificates | No certificate verification in MVP. Future evidence badges do not silently introduce Contributor permission tiers. |
 | D21 | Documentation | `docs/SRS.md` is canonical; runtime capability status stays in frontend integration docs; roadmap is separate from implementation phases. |
 | D22 | Safety | Nutrition, freshness, compatibility, BMI, and AI answers are educational support, not diagnosis or guaranteed safety. |
+| D23 | Usage billing | User-approved 2026-10-13 and payOS conversion 2026-10-14: payOS exclusively for new one-time cumulative AI usage/Pantry capacity packages. App rollout remains development/test; payOS checkout is real money, without sandbox or mock fallback. No recurring or media-storage purchase. |
 
 ## 3. MVP scope
 
@@ -273,7 +274,7 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 3. Release expired/failed reservations and decrement committed use only after a valid asset deletion.
 4. Prevent concurrent uploads from exceeding quota.
 5. Return used, reserved, limit, and remaining bytes plus typed quota errors.
-6. Admin may configure policy or grant audited adjustments. MVP has no payment flow.
+6. Admin may configure policy or grant audited adjustments. Media-storage payment remains deferred; the approved sandbox extension sells AI usage and Pantry capacity separately.
 
 ### BL-09 — Custom meals and user tags
 
@@ -367,6 +368,19 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 - Soft-delete or anonymize where legal/audit retention is required.
 - Deletion jobs cover profile, health, behavior, AI, pantry, receipt, recognition, media, and location data according to policy.
 - Public content ownership/display after account deletion follows an explicit policy and audit trail.
+
+### BL-20 — Approved usage billing extension (2026-10-13; payOS conversion 2026-10-14)
+
+- payOS checkout expires after configured TTL (default 15 minutes); expired application orders hide the checkout URL. Retired local/VNPAY checkout and notification routes are removed; the old expiry recovery behavior is historical only.
+- Billing is opt-in and app rollout remains development/test. The provider is now payOS, whose transfers are real even from a development app. Missing Client ID/API key/checksum disables purchases, without mock fallback. Historical balances/orders retain original identity. Application production rollout remains deferred.
+- Signed payOS webhooks trigger an authoritative signed payment-request query. PAID with sufficient received money grants once; UNDERPAID/PROCESSING map to PENDING. Expected order amount/link/reference must match. Extra payment does not change package benefits and requires manual merchant handling. Late fully verified payment may supersede an unfulfilled terminal order; PAID never downgrades.
+- New payOS order code/link/checkout URL are persisted, distinct from application UUID. Ambiguous creates retry/recover the same code. Reconciliation uses an owner-scoped 30-second cooldown. Signed unknown webhook confirmation samples ACK without grants. Browser return/cancel claims are ignored for settlement.
+- Sell one-time cumulative packages for chat credits, fridge jobs, receipt jobs and additional Pantry slots. Demo benefits do not expire or grant roles/media storage. Prices and benefits are snapshotted on each order.
+- Only a verified provider IPN/query result (or guarded local simulation) may grant benefits. Browser return never grants. Duplicate payment events and concurrent callbacks grant once; a verified late success may upgrade an unpaid terminal order, while PAID never downgrades.
+- Chat consumes daily free quota first, then purchased credits. Reserve before provider work; complete atomically with the successful answer. Failures/fallbacks release; replay and stale workers cannot charge again or overwrite a newer attempt.
+- One bounded scan job costs one credit after any image succeeds, including a valid empty analysis. Total failure/cancellation before success releases it. Retries of an already charged job are free, with a configurable default maximum of three processing attempts. Expired queued/processing leases are fenced before release.
+- Pantry capacity counts every undeleted item, including zero quantity. Enforce the limit transactionally for manual creation and both scan confirmations. Existing over-limit items remain readable/editable/deletable; deletion/merge frees capacity. Results require explicit user confirmation before Pantry mutation.
+- Clients share account balances/history and use typed business errors. Mongo validators/indexes, additive queued timestamp backfill, idempotent seed, OpenAPI and consumer documentation are required release gates.
 
 ## 6. RBAC summary
 
@@ -541,5 +555,14 @@ A phase is complete only when:
 
 ## 13. Change record
 
+- **4.5 — 2026-10-14:** User requests all billing moved to payOS and will configure credentials later. New purchases use hosted payOS QR/bank transfer, signed SDK create/query/webhook, persisted unique provider references, partial-payment handling and 30-second reconciliation. Retired providers are read-only history; their routes/configuration are removed. payOS is real money with no sandbox; app production rollout remains deferred.
+
+- **4.4 — 2026-10-14:** Historical local-sandbox expiry fix; superseded for new purchases by payOS conversion 4.5. Retest distinguished 410 valid expiry from invalid signature and exercised repeated refresh rotation.
+
+- **4.3 — 2026-10-13:** User-authorized sandbox billing. Snapshot VND catalog/orders; verified IPN/query reconciliation and idempotent grants; free-first chat; one bounded scan job credit after any successful image; total failures release; charged retries free, default three processing attempts; undeleted Pantry count with transactional enforcement on all insert paths. No production billing, role grants or storage upgrades. Mongo native validators, queued timestamp backfill and worker/credit fencing are required. Checkout returns wait for session restoration and preserve order context.
+
+- **4.2 — 2026-10-08:** Reconcile dev estimated-macro planning/analysis updates with MongoDB persistence; preserve both approved decisions.
+
+- **4.1 — 2026-10-07:** User-approved persistence replacement with MongoDB. Preserve existing API shapes, dietary constraints, authorization and state machines; move SQL checks/indexes, transactional event dispatch and concurrency controls to MongoDB/application equivalents. Fresh schema + seed is the acceptance baseline; historical PostgreSQL data is optional. See `backend/docs/MONGODB_MIGRATION.md`.
 - **4.1 — 2026-09-28:** Clarified four-macro estimated weekly planning/analysis, target provenance, non-blocking manual over-target warnings, and explicit 21-slot/unresolved behavior.
 - **4.0 — 2026-09-18:** Consolidated product decisions after Phase 11 review; added food database, cooking-aware nutrition, unified Contributor, quota, video parity, custom meals/tags, compatibility, multi-week planning, pantry, fridge and receipt workflows; expanded phases to 27; moved all deferred work into the complete Phase 2 roadmap.

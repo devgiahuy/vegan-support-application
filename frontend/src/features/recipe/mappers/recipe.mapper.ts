@@ -36,6 +36,7 @@ import {
   getTraditionName,
 } from '@/common/constants/diet-labels';
 import type {
+  AuthorRole,
   Recipe,
   RecipeAllergen,
   RecipeIngredient,
@@ -121,6 +122,21 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       RECIPE_FALLBACK_COVER
     );
     const author = authorFromDto(dto, 'Bếp Chay An Nhiên');
+    const rawAuthor = pickField<Record<string, unknown> | null>(dto, ['author'], null);
+    const authorRole = pickField<string | undefined>(rawAuthor, ['role'], undefined) as
+      AuthorRole | undefined;
+    const authorVerified = safeBoolean(pickField(rawAuthor, ['verified'], false), false);
+    const expertVerified = safeBoolean(pickField(dto, ['expertVerified'], false), false);
+    const isExpertAuthor =
+      authorRole === 'NUTRITION_EXPERT' ||
+      authorRole === 'EXPERIENCED_COOK' ||
+      authorVerified ||
+      expertVerified;
+
+    const rawUsageCount =
+      pickField<number | null>(detail, ['usageCount'], null) ??
+      pickField<number | null>(dto, ['usageCount'], null);
+    const usageCount = safeNumber(rawUsageCount, 0);
 
     const traditionWarnings: TraditionWarning[] = safeArray<TraditionWarningDto>(
       detail?.traditionWarnings
@@ -181,9 +197,15 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
         name: author.name,
         avatarUrl: author.avatarUrl,
         avatar: author.avatarUrl || 'https://i.pravatar.cc/80?img=32',
-        // Backend không trả trạng thái kiểm chứng tác giả: không claim verified.
-        verified: false,
-        roleTitle: undefined,
+        verified: authorVerified,
+        role: authorRole,
+        roleTitle:
+          authorRole === 'NUTRITION_EXPERT'
+            ? 'Chuyên gia dinh dưỡng'
+            : authorRole === 'EXPERIENCED_COOK'
+              ? 'Đầu bếp chay'
+              : undefined,
+        isExpert: isExpertAuthor,
       },
       category: firstCategory(dto),
       coverImageUrl,
@@ -223,6 +245,8 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       allergens,
       traditionWarnings,
       dietCompatibilities,
+      usageCount,
+      isExpertAuthor,
     };
   }
 

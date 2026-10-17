@@ -1,3 +1,4 @@
+import { AllowanceNotice } from '@/features/billing/components/allowance-notice';
 import * as React from 'react';
 import { Linking, Platform, Pressable, Text, View } from 'react-native';
 import { Image } from 'expo-image';
@@ -160,6 +161,7 @@ function ScanWorkspaceSession({ kind }: { kind: ScanKind }) {
   return (
     <SiteScreen>
       <View className="gap-4 px-5 pt-4 pb-8" style={{ width: '100%', maxWidth: 760, alignSelf: 'center' }}>
+        <AllowanceNotice feature={kind === 'fridge' ? 'FRIDGE' : 'RECEIPT'} />
         <Text className="text-2xl font-bold text-foreground">{title}</Text>
         <Text className="text-sm text-muted-foreground">{SCAN_PROVIDER_MODE === 'fake' ? 'DEV · Kết quả mẫu, không phải nhận diện ảnh thật.' : 'DEV · Provider cấu hình: OpenAI'}</Text>
         {!jobId ? (
@@ -197,9 +199,9 @@ function ScanWorkspaceSession({ kind }: { kind: ScanKind }) {
         <Link href={'/pantry' as Href} asChild><PrimaryButton label="Về tủ bếp" variant="outline" disabled={busy} /></Link>
       </View>
       {editing ? <CandidateEditor key={`${editing.id}:${editing.version}`} candidate={editing} kind={kind} error={error} busy={mutations.edit.isPending} onClose={() => setEditing(null)} onSave={values => void save(editing, values)} /> : null}
-      {review ? <FormSheet title="Xác nhận nhập tủ bếp" busy={mutations.confirm.isPending} onClose={() => setReview(null)}>{review.map(candidate => <Text key={candidate.id} className="text-sm text-foreground">{candidate.name} · {candidate.quantity} {candidate.unit}</Text>)}<PrimaryButton label="Xác nhận nhập" disabled={!review.length} loading={mutations.confirm.isPending} onPress={() => void confirm()} /></FormSheet> : null}
-      {cancelling ? <FormSheet title="Hủy tác vụ này?" busy={mutations.cancel.isPending} onClose={() => setCancelling(false)}><Text className="text-sm text-muted-foreground">Ảnh đã tải lên vẫn được tính vào dung lượng tài khoản.</Text>{error ? <Text className="text-sm text-destructive">{error}</Text> : null}<PrimaryButton label="Xác nhận hủy" loading={mutations.cancel.isPending} onPress={() => void cancel()} /></FormSheet> : null}
-      {rejecting ? <FormSheet title="Loại bỏ nguyên liệu?" busy={mutations.edit.isPending} onClose={() => setRejecting(null)}><Text className="text-sm text-foreground">{rejecting.name}</Text>{error ? <Text className="text-sm text-destructive">{error}</Text> : null}<PrimaryButton label="Xác nhận loại bỏ" loading={mutations.edit.isPending} onPress={() => void save(rejecting, { expectedVersion: rejecting.version, name: rejecting.name, ingredientId: rejecting.ingredient?.id ?? null, quantity: rejecting.quantity, unit: rejecting.unit, freshness: rejecting.freshness, decision: 'REJECT' }, true)} /></FormSheet> : null}
+      {review ? <FormSheet title="Xác nhận nhập tủ bếp" busy={mutations.confirm.isPending} onClose={() => setReview(null)} variant="popup">{review.map(candidate => <Text key={candidate.id} className="text-sm text-foreground">{candidate.name} · {candidate.quantity} {candidate.unit}</Text>)}<PrimaryButton label="Xác nhận nhập" disabled={!review.length} loading={mutations.confirm.isPending} onPress={() => void confirm()} /></FormSheet> : null}
+      {cancelling ? <FormSheet title="Hủy tác vụ này?" busy={mutations.cancel.isPending} onClose={() => setCancelling(false)} variant="popup"><Text className="text-sm text-muted-foreground">Ảnh đã tải lên vẫn được tính vào dung lượng tài khoản.</Text>{error ? <Text className="text-sm text-destructive">{error}</Text> : null}<PrimaryButton label="Xác nhận hủy" loading={mutations.cancel.isPending} onPress={() => void cancel()} /></FormSheet> : null}
+      {rejecting ? <FormSheet title="Loại bỏ nguyên liệu?" busy={mutations.edit.isPending} onClose={() => setRejecting(null)} variant="popup"><Text className="text-sm text-foreground">{rejecting.name}</Text>{error ? <Text className="text-sm text-destructive">{error}</Text> : null}<PrimaryButton label="Xác nhận loại bỏ" loading={mutations.edit.isPending} onPress={() => void save(rejecting, { expectedVersion: rejecting.version, name: rejecting.name, ingredientId: rejecting.ingredient?.id ?? null, quantity: rejecting.quantity, unit: rejecting.unit, freshness: rejecting.freshness, decision: 'REJECT' }, true)} /></FormSheet> : null}
     </SiteScreen>
   );
 }

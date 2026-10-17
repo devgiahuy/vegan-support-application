@@ -1,0 +1,1544 @@
+{
+  "User": {
+    "relations": {},
+    "decimals": {},
+    "lengths": {
+      "email": 320,
+      "displayName": 100,
+      "avatarUrl": 2048
+    },
+    "dates": []
+  },
+  "Notification": {
+    "relations": {
+      "owner": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {
+      "type": 50,
+      "title": 160,
+      "summary": 300,
+      "link": 300,
+      "dedupeKey": 180
+    },
+    "dates": []
+  },
+  "Restaurant": {
+    "relations": {
+      "submitter": "SetNull",
+      "reviewer": "SetNull"
+    },
+    "decimals": {
+      "latitude": {
+        "precision": 9,
+        "scale": 6
+      },
+      "longitude": {
+        "precision": 9,
+        "scale": 6
+      }
+    },
+    "lengths": {
+      "name": 180,
+      "normalizedName": 180,
+      "address": 500,
+      "normalizedAddress": 500,
+      "reviewReason": 1000
+    },
+    "dates": []
+  },
+  "RestaurantExternalRef": {
+    "relations": {
+      "restaurant": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {
+      "provider": 50,
+      "placeId": 255
+    },
+    "dates": []
+  },
+  "RestaurantProviderPlace": {
+    "relations": {},
+    "decimals": {
+      "latitude": {
+        "precision": 9,
+        "scale": 6
+      },
+      "longitude": {
+        "precision": 9,
+        "scale": 6
+      },
+      "rating": {
+        "precision": 3,
+        "scale": 1
+      }
+    },
+    "lengths": {
+      "provider": 50,
+      "placeId": 255,
+      "name": 180,
+      "address": 500,
+      "price": 50,
+      "openState": 100,
+      "phone": 80,
+      "website": 1000,
+      "thumbnailUrl": 1000,
+      "mapsUrl": 1000,
+      "attribution": 500
+    },
+    "dates": []
+  },
+  "RestaurantAudit": {
+    "relations": {
+      "restaurant": "Cascade",
+      "actor": "Restrict"
+    },
+    "decimals": {},
+    "lengths": {
+      "action": 30,
+      "reason": 1000
+    },
+    "dates": []
+  },
+  "Category": {
+    "relations": {
+      "parent": "Restrict"
+    },
+    "decimals": {},
+    "lengths": {
+      "name": 120,
+      "slug": 140
+    },
+    "dates": []
+  },
+  "CategoryProposal": {
+    "relations": {
+      "proposedBy": "Cascade",
+      "parent": "Restrict",
+      "reviewedBy": "SetNull",
+      "resolvedCategory": "SetNull"
+    },
+    "decimals": {},
+    "lengths": {
+      "name": 120,
+      "slug": 140,
+      "reviewNote": 1000
+    },
+    "dates": []
+  },
+  "Ingredient": {
+    "relations": {},
+    "decimals": {},
+    "lengths": {
+      "canonicalName": 160,
+      "normalizedName": 160
+    },
+    "dates": []
+  },
+  "PantryItem": {
+    "relations": {
+      "owner": "Cascade",
+      "ingredient": "Restrict"
+    },
+    "decimals": {
+      "quantity": {
+        "precision": 14,
+        "scale": 4
+      },
+      "normalizedGrams": {
+        "precision": 16,
+        "scale": 4
+      },
+      "conversionConfidence": {
+        "precision": 5,
+        "scale": 4
+      },
+      "confidence": {
+        "precision": 5,
+        "scale": 4
+      }
+    },
+    "lengths": {
+      "unmatchedText": 160,
+      "normalizedUnmatchedText": 160,
+      "unit": 40,
+      "conversionSource": 80,
+      "conversionVersion": 120,
+      "freshnessNote": 5000
+    },
+    "dates": ["purchasedAt", "openedAt", "expiresAt"]
+  },
+  "PantryAdjustment": {
+    "relations": {
+      "owner": "Cascade",
+      "pantryItem": "Restrict",
+      "mergedFromItem": "Restrict"
+    },
+    "decimals": {
+      "inputQuantity": {
+        "precision": 14,
+        "scale": 4
+      },
+      "appliedDeltaQuantity": {
+        "precision": 14,
+        "scale": 4
+      },
+      "normalizedDeltaGrams": {
+        "precision": 16,
+        "scale": 4
+      },
+      "beforeQuantity": {
+        "precision": 14,
+        "scale": 4
+      },
+      "afterQuantity": {
+        "precision": 14,
+        "scale": 4
+      },
+      "beforeGrams": {
+        "precision": 16,
+        "scale": 4
+      },
+      "afterGrams": {
+        "precision": 16,
+        "scale": 4
+      }
+    },
+    "lengths": {
+      "idempotencyKey": 160,
+      "requestHash": 64,
+      "inputUnit": 40,
+      "reason": 5000
+    },
+    "dates": []
+  },
+  "RecognitionJob": {
+    "relations": {
+      "owner": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {
+      "provider": 40,
+      "modelId": 100,
+      "templateVersion": 80,
+      "idempotencyKey": 160,
+      "requestHash": 64,
+      "errorCode": 100,
+      "errorMessage": 500,
+      "confirmationKey": 160,
+      "confirmationHash": 64,
+      "lastRetryKey": 160,
+      "lastRetryHash": 64
+    },
+    "dates": []
+  },
+  "RecognitionInput": {
+    "relations": {
+      "job": "Cascade",
+      "asset": "Restrict"
+    },
+    "decimals": {},
+    "lengths": {
+      "errorCode": 100,
+      "errorMessage": 500
+    },
+    "dates": []
+  },
+  "RecognitionCandidate": {
+    "relations": {
+      "job": "Cascade",
+      "ingredient": "Restrict",
+      "pantryItem": "Restrict"
+    },
+    "decimals": {
+      "quantity": {
+        "precision": 14,
+        "scale": 4
+      },
+      "confidence": {
+        "precision": 5,
+        "scale": 4
+      },
+      "matchConfidence": {
+        "precision": 5,
+        "scale": 4
+      }
+    },
+    "lengths": {
+      "detectedName": 160,
+      "normalizedName": 160,
+      "unit": 40,
+      "freshnessObservation": 2000,
+      "uncertaintyNote": 2000,
+      "pantryAction": 20
+    },
+    "dates": []
+  },
+  "RecognitionCandidateEvidence": {
+    "relations": {
+      "candidate": "Cascade",
+      "input": "Cascade"
+    },
+    "decimals": {
+      "confidence": {
+        "precision": 5,
+        "scale": 4
+      }
+    },
+    "lengths": {
+      "observation": 2000
+    },
+    "dates": []
+  },
+  "ReceiptJob": {
+    "relations": {
+      "owner": "Cascade"
+    },
+    "decimals": {
+      "totalAmount": {
+        "precision": 14,
+        "scale": 2
+      },
+      "metadataConfidence": {
+        "precision": 5,
+        "scale": 4
+      }
+    },
+    "lengths": {
+      "provider": 40,
+      "modelId": 100,
+      "templateVersion": 80,
+      "idempotencyKey": 160,
+      "requestHash": 64,
+      "merchantName": 200,
+      "currency": 3,
+      "errorCode": 100,
+      "errorMessage": 500,
+      "confirmationKey": 160,
+      "confirmationHash": 64,
+      "lastRetryKey": 160,
+      "lastRetryHash": 64
+    },
+    "dates": ["purchasedAt"]
+  },
+  "ReceiptInput": {
+    "relations": {
+      "job": "Cascade",
+      "asset": "Restrict"
+    },
+    "decimals": {},
+    "lengths": {
+      "errorCode": 100,
+      "errorMessage": 500
+    },
+    "dates": []
+  },
+  "ReceiptCandidate": {
+    "relations": {
+      "job": "Cascade",
+      "input": "Cascade",
+      "ingredient": "Restrict",
+      "pantryItem": "Restrict"
+    },
+    "decimals": {
+      "quantity": {
+        "precision": 14,
+        "scale": 4
+      },
+      "unitPrice": {
+        "precision": 14,
+        "scale": 2
+      },
+      "lineTotal": {
+        "precision": 14,
+        "scale": 2
+      },
+      "confidence": {
+        "precision": 5,
+        "scale": 4
+      },
+      "matchConfidence": {
+        "precision": 5,
+        "scale": 4
+      }
+    },
+    "lengths": {
+      "lineText": 1000,
+      "detectedName": 160,
+      "normalizedName": 160,
+      "unit": 40,
+      "currency": 3,
+      "uncertaintyNote": 2000,
+      "pantryAction": 20
+    },
+    "dates": []
+  },
+  "AiArtifact": {
+    "relations": {
+      "owner": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {
+      "snapshotHash": 64,
+      "title": 160,
+      "summary": 5000
+    },
+    "dates": []
+  },
+  "AiVerification": {
+    "relations": {
+      "artifact": "Cascade",
+      "reviewer": "Restrict",
+      "supersedes": "Restrict"
+    },
+    "decimals": {},
+    "lengths": {
+      "scope": 2000,
+      "evidenceNote": 10000,
+      "correction": 10000
+    },
+    "dates": []
+  },
+  "AiVerificationAdminAction": {
+    "relations": {
+      "verification": "Restrict",
+      "actor": "Restrict",
+      "replacementVerification": "Restrict"
+    },
+    "decimals": {},
+    "lengths": {
+      "reason": 10000
+    },
+    "dates": []
+  },
+  "Post": {
+    "relations": {
+      "author": "Restrict",
+      "deletedBy": "SetNull",
+      "hiddenBy": "SetNull",
+      "publishedRevision": "SetNull"
+    },
+    "decimals": {},
+    "lengths": {
+      "slug": 220,
+      "hiddenReason": 1000
+    },
+    "dates": []
+  },
+  "Comment": {
+    "relations": {
+      "post": "Cascade",
+      "author": "Restrict",
+      "parent": "Restrict",
+      "hiddenBy": "SetNull"
+    },
+    "decimals": {},
+    "lengths": {
+      "content": 2000,
+      "hiddenReason": 1000
+    },
+    "dates": []
+  },
+  "PostVote": {
+    "relations": {
+      "user": "Cascade",
+      "post": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {},
+    "dates": []
+  },
+  "PostRating": {
+    "relations": {
+      "user": "Cascade",
+      "post": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {},
+    "dates": []
+  },
+  "PostBookmark": {
+    "relations": {
+      "user": "Cascade",
+      "post": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {},
+    "dates": []
+  },
+  "CommunityRateLimitBucket": {
+    "relations": {
+      "user": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {},
+    "dates": []
+  },
+  "PostRevision": {
+    "relations": {
+      "post": "Cascade",
+      "createdBy": "Restrict",
+      "reviewedBy": "SetNull"
+    },
+    "decimals": {},
+    "lengths": {
+      "title": 200,
+      "normalizedTitle": 200,
+      "excerpt": 500,
+      "normalizedExcerpt": 500,
+      "reviewNote": 2000
+    },
+    "dates": []
+  },
+  "Report": {
+    "relations": {
+      "reporter": "Restrict",
+      "resolvedBy": "SetNull"
+    },
+    "decimals": {},
+    "lengths": {
+      "reasonCode": 120,
+      "details": 2000,
+      "activeKey": 160,
+      "resolvedReason": 2000
+    },
+    "dates": []
+  },
+  "AiFlag": {
+    "relations": {
+      "postRevision": "Cascade",
+      "reviewedBy": "SetNull"
+    },
+    "decimals": {
+      "riskScore": {
+        "precision": 5,
+        "scale": 4
+      }
+    },
+    "lengths": {
+      "provider": 80,
+      "model": 120,
+      "ruleVersion": 40
+    },
+    "dates": []
+  },
+  "ModerationAction": {
+    "relations": {
+      "actor": "Restrict"
+    },
+    "decimals": {},
+    "lengths": {
+      "reason": 2000
+    },
+    "dates": []
+  },
+  "PersonalizationPreference": {
+    "relations": {
+      "user": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {
+      "consentVersion": 80
+    },
+    "dates": []
+  },
+  "BehaviorEvent": {
+    "relations": {
+      "user": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {
+      "idempotencyKey": 120,
+      "dedupeKey": 255,
+      "payloadHash": 64,
+      "consentVersion": 80
+    },
+    "dates": []
+  },
+  "MealPlan": {
+    "relations": {
+      "user": "Cascade",
+      "supersedes": "SetNull"
+    },
+    "decimals": {},
+    "lengths": {
+      "idempotencyKey": 120,
+      "payloadHash": 64,
+      "seedHash": 64,
+      "algorithmVersion": 80,
+      "recommendationVersion": 80
+    },
+    "dates": ["weekStart"]
+  },
+  "MealAnalysis": {
+    "relations": {
+      "mealPlan": "Cascade"
+    },
+    "decimals": {
+      "confidence": {
+        "precision": 5,
+        "scale": 4
+      }
+    },
+    "lengths": {
+      "algorithmVersion": 80,
+      "inputFingerprint": 64,
+      "disclaimer": 1000
+    },
+    "dates": []
+  },
+  "MealProgram": {
+    "relations": {
+      "user": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {
+      "title": 200,
+      "timezone": 64,
+      "idempotencyKey": 120,
+      "payloadHash": 64
+    },
+    "dates": ["startDate"]
+  },
+  "MealProgramWeek": {
+    "relations": {
+      "mealProgram": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {},
+    "dates": ["weekStart"]
+  },
+  "MealProgramWeekAlternative": {
+    "relations": {
+      "week": "Cascade",
+      "mealPlan": "Restrict"
+    },
+    "decimals": {},
+    "lengths": {
+      "seed": 120
+    },
+    "dates": []
+  },
+  "MealProgramAnalysis": {
+    "relations": {
+      "mealProgram": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {
+      "inputFingerprint": 64
+    },
+    "dates": []
+  },
+  "MealProgramMutation": {
+    "relations": {
+      "user": "Cascade",
+      "mealProgram": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {
+      "idempotencyKey": 120,
+      "payloadHash": 64
+    },
+    "dates": []
+  },
+  "MealPlanItem": {
+    "relations": {
+      "mealPlan": "Cascade",
+      "recipe": "Restrict",
+      "recipeRevision": "Restrict",
+      "customMeal": "Restrict"
+    },
+    "decimals": {
+      "servings": {
+        "precision": 6,
+        "scale": 2
+      },
+      "tolerancePercent": {
+        "precision": 5,
+        "scale": 2
+      }
+    },
+    "lengths": {},
+    "dates": ["date"]
+  },
+  "MealPlanShoppingItem": {
+    "relations": {
+      "mealPlan": "Cascade",
+      "ingredient": "Restrict"
+    },
+    "decimals": {
+      "amount": {
+        "precision": 14,
+        "scale": 3
+      }
+    },
+    "lengths": {
+      "canonicalName": 160,
+      "unit": 40
+    },
+    "dates": []
+  },
+  "MealPlanMutation": {
+    "relations": {
+      "user": "Cascade",
+      "mealPlan": "Cascade",
+      "mealPlanItem": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {
+      "idempotencyKey": 120,
+      "payloadHash": 64
+    },
+    "dates": []
+  },
+  "ChatSession": {
+    "relations": {
+      "user": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {
+      "guestIdHash": 64,
+      "title": 160
+    },
+    "dates": []
+  },
+  "ChatMessage": {
+    "relations": {
+      "session": "Cascade",
+      "requestMessage": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {
+      "idempotencyKey": 120,
+      "payloadHash": 64,
+      "provider": 40,
+      "modelId": 100,
+      "providerResponseId": 160
+    },
+    "dates": []
+  },
+  "ChatFeedback": {
+    "relations": {
+      "message": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {
+      "reason": 500
+    },
+    "dates": []
+  },
+  "AiRequestLog": {
+    "relations": {
+      "session": "SetNull",
+      "requestMessage": "Cascade",
+      "user": "SetNull"
+    },
+    "decimals": {},
+    "lengths": {
+      "guestIdHash": 64,
+      "provider": 40,
+      "modelId": 100,
+      "errorCode": 100
+    },
+    "dates": []
+  },
+  "AiGovernanceEvent": {
+    "relations": {},
+    "decimals": {
+      "confidence": {
+        "precision": 5,
+        "scale": 4
+      },
+      "coverage": {
+        "precision": 5,
+        "scale": 4
+      }
+    },
+    "lengths": {
+      "capability": 40,
+      "provider": 80,
+      "modelId": 100,
+      "templateVersion": 80,
+      "correlationId": 128,
+      "status": 30,
+      "errorClass": 60,
+      "safetyOutcome": 40
+    },
+    "dates": []
+  },
+  "AiCapabilityControl": {
+    "relations": {},
+    "decimals": {},
+    "lengths": {
+      "capability": 40,
+      "provider": 80
+    },
+    "dates": []
+  },
+  "AiCapabilityControlAudit": {
+    "relations": {},
+    "decimals": {},
+    "lengths": {
+      "capability": 40,
+      "provider": 80,
+      "reason": 500
+    },
+    "dates": []
+  },
+  "AiQuotaBucket": {
+    "relations": {},
+    "decimals": {},
+    "lengths": {
+      "subjectKey": 64,
+      "reservationKey": 160
+    },
+    "dates": ["usageDate"]
+  },
+  "AiRateLimitBucket": {
+    "relations": {},
+    "decimals": {},
+    "lengths": {
+      "keyHash": 64
+    },
+    "dates": []
+  },
+  "RecipeDetail": {
+    "relations": {
+      "revision": "Cascade"
+    },
+    "decimals": {
+      "proteinGrams": {
+        "precision": 8,
+        "scale": 2
+      },
+      "carbsGrams": {
+        "precision": 8,
+        "scale": 2
+      },
+      "fatGrams": {
+        "precision": 8,
+        "scale": 2
+      },
+      "fiberGrams": {
+        "precision": 8,
+        "scale": 2
+      },
+      "vitaminB12Mcg": {
+        "precision": 8,
+        "scale": 2
+      }
+    },
+    "lengths": {},
+    "dates": []
+  },
+  "RecipeIngredient": {
+    "relations": {
+      "revision": "Cascade",
+      "ingredient": "Restrict"
+    },
+    "decimals": {
+      "amount": {
+        "precision": 10,
+        "scale": 2
+      }
+    },
+    "lengths": {
+      "displayName": 160,
+      "normalizedName": 160,
+      "unit": 40
+    },
+    "dates": []
+  },
+  "RecipeStep": {
+    "relations": {
+      "revision": "Cascade",
+      "cookingMethod": "Restrict"
+    },
+    "decimals": {
+      "temperatureCelsius": {
+        "precision": 6,
+        "scale": 2
+      }
+    },
+    "lengths": {
+      "instruction": 5000
+    },
+    "dates": []
+  },
+  "RecipeDietCompatibility": {
+    "relations": {
+      "revision": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {},
+    "dates": []
+  },
+  "RecipeNutritionEstimate": {
+    "relations": {
+      "revision": "Cascade"
+    },
+    "decimals": {
+      "totalRawGrams": {
+        "precision": 18,
+        "scale": 6
+      },
+      "totalCookedGrams": {
+        "precision": 18,
+        "scale": 6
+      },
+      "confidence": {
+        "precision": 5,
+        "scale": 4
+      }
+    },
+    "lengths": {
+      "calculationVersion": 40,
+      "recipeFingerprint": 64,
+      "disclaimer": 1000
+    },
+    "dates": []
+  },
+  "RecipeNutritionEstimateLine": {
+    "relations": {
+      "estimate": "Cascade",
+      "recipeIngredient": "SetNull",
+      "ingredient": "SetNull"
+    },
+    "decimals": {
+      "normalizedRawGrams": {
+        "precision": 18,
+        "scale": 6
+      },
+      "edibleRawGrams": {
+        "precision": 18,
+        "scale": 6
+      },
+      "yieldFactor": {
+        "precision": 9,
+        "scale": 6
+      },
+      "cookedGrams": {
+        "precision": 18,
+        "scale": 6
+      },
+      "confidence": {
+        "precision": 5,
+        "scale": 4
+      }
+    },
+    "lengths": {
+      "displayName": 160,
+      "uncoveredReason": 160
+    },
+    "dates": []
+  },
+  "RecipeNutritionAiJob": {
+    "relations": {
+      "revision": "Cascade",
+      "estimate": "SetNull"
+    },
+    "decimals": {},
+    "lengths": {
+      "provider": 40,
+      "modelId": 100,
+      "requestPayloadHash": 64,
+      "errorCode": 100
+    },
+    "dates": []
+  },
+  "PostCategory": {
+    "relations": {
+      "revision": "Cascade",
+      "category": "Restrict"
+    },
+    "decimals": {},
+    "lengths": {},
+    "dates": []
+  },
+  "PostTag": {
+    "relations": {
+      "revision": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {
+      "normalizedTag": 80,
+      "tag": 80
+    },
+    "dates": []
+  },
+  "PostMedia": {
+    "relations": {
+      "revision": "Cascade",
+      "asset": "Restrict"
+    },
+    "decimals": {
+      "durationSeconds": {
+        "precision": 10,
+        "scale": 2
+      }
+    },
+    "lengths": {
+      "publicId": 255,
+      "secureUrl": 2048,
+      "mimeType": 100
+    },
+    "dates": []
+  },
+  "StoragePolicy": {
+    "relations": {
+      "updatedBy": "SetNull"
+    },
+    "decimals": {},
+    "lengths": {
+      "code": 80,
+      "name": 160
+    },
+    "dates": []
+  },
+  "StorageAccount": {
+    "relations": {
+      "user": "Cascade",
+      "policy": "Restrict"
+    },
+    "decimals": {},
+    "lengths": {},
+    "dates": []
+  },
+  "StorageReservation": {
+    "relations": {
+      "account": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {
+      "idempotencyKey": 120,
+      "requestHash": 64,
+      "commitHash": 64,
+      "declaredMimeType": 100,
+      "declaredExtension": 16,
+      "releaseReason": 120
+    },
+    "dates": []
+  },
+  "MediaAsset": {
+    "relations": {
+      "owner": "Restrict",
+      "deletedBy": "SetNull",
+      "account": "Restrict",
+      "reservation": "SetNull"
+    },
+    "decimals": {
+      "durationSeconds": {
+        "precision": 10,
+        "scale": 2
+      }
+    },
+    "lengths": {
+      "publicId": 255,
+      "secureUrl": 2048,
+      "mimeType": 100,
+      "extension": 16,
+      "providerEtag": 128,
+      "deletionIdempotencyKey": 120
+    },
+    "dates": []
+  },
+  "StorageAdjustment": {
+    "relations": {
+      "account": "Restrict",
+      "user": "Restrict",
+      "actor": "Restrict"
+    },
+    "decimals": {},
+    "lengths": {
+      "idempotencyKey": 120,
+      "requestHash": 64,
+      "reason": 5000
+    },
+    "dates": []
+  },
+  "IngredientAlias": {
+    "relations": {
+      "ingredient": "Cascade",
+      "source": "Restrict"
+    },
+    "decimals": {},
+    "lengths": {
+      "alias": 160,
+      "normalizedAlias": 160,
+      "locale": 20,
+      "sourceRecordId": 160
+    },
+    "dates": []
+  },
+  "FoodDataSource": {
+    "relations": {},
+    "decimals": {},
+    "lengths": {
+      "code": 80,
+      "name": 200,
+      "sourceUrl": 2048,
+      "licenseName": 200,
+      "licenseUrl": 2048,
+      "attribution": 5000,
+      "defaultLocale": 20
+    },
+    "dates": []
+  },
+  "FoodDataImportBatch": {
+    "relations": {
+      "source": "Restrict"
+    },
+    "decimals": {},
+    "lengths": {
+      "idempotencyKey": 160,
+      "sourceVersion": 120,
+      "payloadHash": 64
+    },
+    "dates": ["sourceDate"]
+  },
+  "IngredientFoodProfile": {
+    "relations": {
+      "ingredient": "Restrict",
+      "source": "Restrict",
+      "importBatch": "SetNull"
+    },
+    "decimals": {
+      "ediblePortionPercent": {
+        "precision": 5,
+        "scale": 2
+      },
+      "servingGrams": {
+        "precision": 12,
+        "scale": 4
+      }
+    },
+    "lengths": {
+      "sourceRecordId": 160,
+      "sourceVersion": 120,
+      "preparation": 120,
+      "locale": 20
+    },
+    "dates": ["sourceDate", "effectiveFrom", "effectiveTo"]
+  },
+  "HouseholdConversion": {
+    "relations": {
+      "profile": "Cascade"
+    },
+    "decimals": {
+      "quantity": {
+        "precision": 12,
+        "scale": 4
+      },
+      "grams": {
+        "precision": 12,
+        "scale": 4
+      }
+    },
+    "lengths": {
+      "unitName": 100,
+      "unitSymbol": 30
+    },
+    "dates": []
+  },
+  "Nutrient": {
+    "relations": {},
+    "decimals": {},
+    "lengths": {
+      "code": 80,
+      "name": 160,
+      "defaultUnit": 20,
+      "description": 5000
+    },
+    "dates": []
+  },
+  "IngredientNutrientValue": {
+    "relations": {
+      "profile": "Cascade",
+      "nutrient": "Restrict"
+    },
+    "decimals": {
+      "valuePer100g": {
+        "precision": 18,
+        "scale": 8
+      },
+      "minValue": {
+        "precision": 18,
+        "scale": 8
+      },
+      "maxValue": {
+        "precision": 18,
+        "scale": 8
+      }
+    },
+    "lengths": {
+      "unit": 20
+    },
+    "dates": ["effectiveFrom", "effectiveTo"]
+  },
+  "NutrientReferenceIntake": {
+    "relations": {
+      "nutrient": "Restrict",
+      "source": "Restrict"
+    },
+    "decimals": {
+      "value": {
+        "precision": 18,
+        "scale": 8
+      }
+    },
+    "lengths": {
+      "populationCode": 120,
+      "unit": 20,
+      "sourceRecordId": 160,
+      "sourceVersion": 120,
+      "locale": 20
+    },
+    "dates": ["effectiveFrom", "effectiveTo"]
+  },
+  "IngredientIntakeGuideline": {
+    "relations": {
+      "ingredient": "Restrict",
+      "source": "Restrict"
+    },
+    "decimals": {
+      "amount": {
+        "precision": 18,
+        "scale": 8
+      },
+      "frequency": {
+        "precision": 10,
+        "scale": 4
+      }
+    },
+    "lengths": {
+      "populationCode": 120,
+      "unit": 30,
+      "explanation": 5000,
+      "sourceRecordId": 160,
+      "sourceVersion": 120,
+      "locale": 20
+    },
+    "dates": ["effectiveFrom", "effectiveTo"]
+  },
+  "CookingMethod": {
+    "relations": {},
+    "decimals": {},
+    "lengths": {
+      "code": 80,
+      "name": 160,
+      "description": 5000
+    },
+    "dates": []
+  },
+  "NutrientRetentionFactor": {
+    "relations": {
+      "cookingMethod": "Restrict",
+      "nutrient": "Restrict",
+      "source": "Restrict"
+    },
+    "decimals": {
+      "factor": {
+        "precision": 7,
+        "scale": 6
+      }
+    },
+    "lengths": {
+      "sourceRecordId": 160,
+      "sourceVersion": 120
+    },
+    "dates": ["effectiveFrom", "effectiveTo"]
+  },
+  "CookingYieldFactor": {
+    "relations": {
+      "cookingMethod": "Restrict",
+      "ingredient": "Restrict",
+      "source": "Restrict"
+    },
+    "decimals": {
+      "factor": {
+        "precision": 7,
+        "scale": 6
+      }
+    },
+    "lengths": {
+      "sourceRecordId": 160,
+      "sourceVersion": 120
+    },
+    "dates": ["effectiveFrom", "effectiveTo"]
+  },
+  "IngredientInteractionRule": {
+    "relations": {
+      "ingredientA": "Restrict",
+      "ingredientB": "Restrict",
+      "source": "Restrict"
+    },
+    "decimals": {},
+    "lengths": {
+      "explanation": 5000,
+      "suggestedAction": 5000,
+      "sourceRecordId": 160,
+      "sourceVersion": 120,
+      "locale": 20
+    },
+    "dates": ["effectiveFrom", "effectiveTo"]
+  },
+  "FoodDataSuggestion": {
+    "relations": {},
+    "decimals": {
+      "confidence": {
+        "precision": 5,
+        "scale": 4
+      }
+    },
+    "lengths": {
+      "rationale": 5000,
+      "reviewNote": 2000
+    },
+    "dates": []
+  },
+  "AllergenDefinition": {
+    "relations": {},
+    "decimals": {},
+    "lengths": {
+      "code": 100,
+      "label": 160
+    },
+    "dates": []
+  },
+  "IngredientAllergen": {
+    "relations": {
+      "ingredient": "Cascade",
+      "allergen": "Restrict"
+    },
+    "decimals": {},
+    "lengths": {
+      "allergenCode": 100
+    },
+    "dates": []
+  },
+  "IngredientDietCompatibility": {
+    "relations": {
+      "ingredient": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {},
+    "dates": []
+  },
+  "IngredientTraditionWarning": {
+    "relations": {
+      "ingredient": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {
+      "warningCode": 120,
+      "label": 180
+    },
+    "dates": []
+  },
+  "RefreshSession": {
+    "relations": {
+      "user": "Cascade",
+      "replacedBy": "SetNull"
+    },
+    "decimals": {},
+    "lengths": {
+      "tokenHash": 64,
+      "revokeReason": 50,
+      "deviceInfo": 500
+    },
+    "dates": []
+  },
+  "ContributorApplication": {
+    "relations": {
+      "user": "Cascade",
+      "invitedBy": "Restrict",
+      "reviewedBy": "SetNull"
+    },
+    "decimals": {},
+    "lengths": {
+      "organizationClaim": 500,
+      "invitationReason": 5000,
+      "reviewNote": 5000
+    },
+    "dates": []
+  },
+  "ContributorProfile": {
+    "relations": {
+      "user": "Cascade",
+      "approvedBy": "Restrict",
+      "revokedBy": "Restrict",
+      "sourceApplication": "Restrict"
+    },
+    "decimals": {},
+    "lengths": {
+      "revocationReason": 5000
+    },
+    "dates": []
+  },
+  "ContributorDecision": {
+    "relations": {
+      "user": "Restrict",
+      "application": "Restrict",
+      "actor": "Restrict"
+    },
+    "decimals": {},
+    "lengths": {
+      "reason": 5000
+    },
+    "dates": []
+  },
+  "HealthProfile": {
+    "relations": {
+      "user": "Cascade"
+    },
+    "decimals": {
+      "heightCm": {
+        "precision": 5,
+        "scale": 2
+      },
+      "weightKg": {
+        "precision": 6,
+        "scale": 2
+      },
+      "bmi": {
+        "precision": 6,
+        "scale": 2
+      },
+      "bmr": {
+        "precision": 8,
+        "scale": 2
+      },
+      "tdee": {
+        "precision": 8,
+        "scale": 2
+      }
+    },
+    "lengths": {},
+    "dates": []
+  },
+  "DietPreference": {
+    "relations": {
+      "user": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {},
+    "dates": []
+  },
+  "DietRuleDefinition": {
+    "relations": {},
+    "decimals": {},
+    "lengths": {
+      "code": 120,
+      "label": 180
+    },
+    "dates": []
+  },
+  "DietPreferenceRule": {
+    "relations": {
+      "user": "Cascade",
+      "ruleDefinition": "Restrict"
+    },
+    "decimals": {},
+    "lengths": {},
+    "dates": []
+  },
+  "DietScheduleDate": {
+    "relations": {
+      "user": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {},
+    "dates": ["date"]
+  },
+  "UserAllergy": {
+    "relations": {
+      "user": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {
+      "allergenCode": 100,
+      "label": 160
+    },
+    "dates": []
+  },
+  "UserIngredientExclusion": {
+    "relations": {
+      "user": "Cascade",
+      "ingredient": "SetNull"
+    },
+    "decimals": {},
+    "lengths": {
+      "ingredientName": 160,
+      "normalizedName": 160,
+      "reason": 500
+    },
+    "dates": []
+  },
+  "CustomMeal": {
+    "relations": {
+      "owner": "Cascade"
+    },
+    "decimals": {
+      "userProteinGrams": {
+        "precision": 8,
+        "scale": 2
+      },
+      "userCarbsGrams": {
+        "precision": 8,
+        "scale": 2
+      },
+      "userFatGrams": {
+        "precision": 8,
+        "scale": 2
+      },
+      "userFiberGrams": {
+        "precision": 8,
+        "scale": 2
+      }
+    },
+    "lengths": {
+      "name": 200,
+      "sourceNote": 2000
+    },
+    "dates": []
+  },
+  "CustomMealIngredient": {
+    "relations": {
+      "customMeal": "Cascade",
+      "ingredient": "Restrict"
+    },
+    "decimals": {
+      "amount": {
+        "precision": 10,
+        "scale": 2
+      }
+    },
+    "lengths": {
+      "displayName": 160,
+      "normalizedName": 160,
+      "unit": 40
+    },
+    "dates": []
+  },
+  "CustomMealPhoto": {
+    "relations": {
+      "customMeal": "Cascade",
+      "asset": "Restrict"
+    },
+    "decimals": {},
+    "lengths": {},
+    "dates": []
+  },
+  "CustomMealTag": {
+    "relations": {
+      "customMeal": "Cascade"
+    },
+    "decimals": {},
+    "lengths": {
+      "tag": 80,
+      "normalizedTag": 80
+    },
+    "dates": []
+  }
+}

@@ -11,7 +11,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_API_URL: z
     .string()
     .url('NEXT_PUBLIC_API_URL phải là URL hợp lệ')
-    .default('http://localhost:8080/api/v1'),
+    .default('http://localhost:4000/api/v1'),
   NEXT_PUBLIC_APP_URL: z
     .string()
     .url('NEXT_PUBLIC_APP_URL phải là URL hợp lệ')

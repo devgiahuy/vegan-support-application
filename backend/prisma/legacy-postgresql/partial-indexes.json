@@ -1,0 +1,27 @@
+[
+  {
+    "table": "ai_verifications",
+    "name": "ai_verifications_one_active_per_artifact",
+    "definition": "CREATE UNIQUE INDEX ai_verifications_one_active_per_artifact ON public.ai_verifications USING btree (artifact_id) WHERE (status = 'ACTIVE'::ai_verification_status)"
+  },
+  {
+    "table": "categories",
+    "name": "categories_child_type_parent_id_slug_key",
+    "definition": "CREATE UNIQUE INDEX categories_child_type_parent_id_slug_key ON public.categories USING btree (type, parent_id, slug) WHERE (parent_id IS NOT NULL)"
+  },
+  {
+    "table": "categories",
+    "name": "categories_root_type_slug_key",
+    "definition": "CREATE UNIQUE INDEX categories_root_type_slug_key ON public.categories USING btree (type, slug) WHERE (parent_id IS NULL)"
+  },
+  {
+    "table": "contributor_applications",
+    "name": "contributor_applications_one_pending_per_user",
+    "definition": "CREATE UNIQUE INDEX contributor_applications_one_pending_per_user ON public.contributor_applications USING btree (user_id) WHERE (status = 'PENDING'::contributor_application_status)"
+  },
+  {
+    "table": "storage_policies",
+    "name": "storage_policies_one_default",
+    "definition": "CREATE UNIQUE INDEX storage_policies_one_default ON public.storage_policies USING btree (is_default) WHERE (is_default = true)"
+  }
+]

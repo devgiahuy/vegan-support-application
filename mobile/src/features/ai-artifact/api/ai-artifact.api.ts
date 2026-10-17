@@ -3,11 +3,13 @@ import api from '@/lib/axios';
 import { aiArtifactMapper } from '../mappers/ai-artifact.mapper';
 import type {
   AiArtifactResponseDto,
+  AiVerificationResponseDto,
   PublicAiArtifactListResponseDto,
 } from '../types/ai-artifact.dto';
 import type {
   AiArtifact,
   AiArtifactListResult,
+  CreateAiVerificationInput,
   CreateAiArtifactInput,
   PublicAiArtifactsQuery,
 } from '../types/ai-artifact.model';
@@ -45,10 +47,24 @@ export const aiArtifactApi = {
     return aiArtifactMapper.toSingle(res.data);
   },
 
+  /** Ghi ý kiến thẩm định của Contributor/Admin cho bản ghi AI đã submit. */
+  createVerification: async (input: CreateAiVerificationInput): Promise<AiArtifact> => {
+    const res = await api.post<AiVerificationResponseDto>(
+      API_ENDPOINTS.AI_ARTIFACTS.VERIFICATIONS(input.artifactId),
+      aiArtifactMapper.toVerificationDto(input),
+      { silent: true }
+    );
+    return aiArtifactMapper.toVerificationResult(res.data);
+  },
+
   /** Danh sách tri thức AI công khai (không cần đăng nhập). */
   listPublic: async (query: PublicAiArtifactsQuery = {}): Promise<AiArtifactListResult> => {
     const res = await api.get<PublicAiArtifactListResponseDto>(API_ENDPOINTS.AI_ARTIFACTS.PUBLIC, {
-      params: { limit: query.limit ?? 50, ...(query.type ? { type: query.type } : {}) },
+      params: {
+        limit: query.limit ?? 50,
+        ...(query.page ? { page: query.page } : {}),
+        ...(query.type ? { type: query.type } : {}),
+      },
       silent: true,
     });
     return aiArtifactMapper.toListResult(res.data);

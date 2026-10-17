@@ -12,7 +12,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 /**
  * Đăng công thức mới — `POST /posts` (type=RECIPE) + `POST /posts/:id/submit` ngay
  * sau đó để gửi duyệt. Nguyên liệu gắn nguyên liệu chuẩn và các bước nấu có cấu trúc.
- * Chưa hỗ trợ ảnh bìa (cần luồng upload riêng).
+ * Ảnh bìa tải lên qua luồng reserve → Cloudinary → commit và gắn bằng `assetId`.
  */
 export default function CreateRecipeScreen() {
   const router = useRouter();

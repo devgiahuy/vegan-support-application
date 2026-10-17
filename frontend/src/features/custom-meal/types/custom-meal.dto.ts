@@ -61,10 +61,12 @@ export interface CustomMealResponseDto {
   userProteinGrams?: number | null;
   userCarbsGrams?: number | null;
   userFatGrams?: number | null;
+  userFiberGrams?: number | null;
   // Fallback alias
   userProtein?: number | null;
   userCarbs?: number | null;
   userFat?: number | null;
+  userFiber?: number | null;
   calculatedCalories?: number | null;
   calculatedProtein?: number | null;
   calculatedCarbs?: number | null;
@@ -91,6 +93,7 @@ export interface CustomMealListItemDto {
   userProteinGrams?: number | null;
   userCarbsGrams?: number | null;
   userFatGrams?: number | null;
+  userFiberGrams?: number | null;
   calculatedCalories?: number | null;
   nutritionCoverage?: string;
   coverageRatio?: number;
@@ -140,6 +143,7 @@ export interface CreateCustomMealRequestDto {
   userProteinGrams?: number;
   userCarbsGrams?: number;
   userFatGrams?: number;
+  userFiberGrams?: number;
   deletePolicy?: 'BLOCK' | 'RETAIN_SNAPSHOT';
   tags?: string[];
   ingredients: CreateCustomMealIngredientRequestDto[];
@@ -154,6 +158,7 @@ export interface UpdateCustomMealRequestDto {
   userProteinGrams?: number | null;
   userCarbsGrams?: number | null;
   userFatGrams?: number | null;
+  userFiberGrams?: number | null;
   deletePolicy?: 'BLOCK' | 'RETAIN_SNAPSHOT';
   tags?: string[];
   ingredients?: CreateCustomMealIngredientRequestDto[];

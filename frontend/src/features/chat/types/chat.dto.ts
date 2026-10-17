@@ -107,6 +107,7 @@ export interface ChatStreamEventPayload {
   used?: number | string;
   limit?: number | string;
   remaining?: number | string;
+  paidRemaining?: number | string;
   resetAt?: string | null;
   code?: string;
   message?: string;

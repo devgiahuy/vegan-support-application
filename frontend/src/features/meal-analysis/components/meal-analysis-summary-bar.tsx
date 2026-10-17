@@ -108,14 +108,23 @@ export function MealAnalysisSummaryBar({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h3 className="text-sm font-semibold text-foreground">
-                {isStale
-                  ? 'Thực đơn đã thay đổi — Cần phân tích lại'
-                  : hasDanger
-                    ? `Phát hiện ${summary.dangerCount} nguy cơ vượt ngưỡng an toàn`
-                    : hasWarning
-                      ? `Có ${summary.warningCount} điểm cần lưu ý về dinh dưỡng`
-                      : 'Thực đơn đạt chuẩn an toàn dinh dưỡng'}
+                {summary.title ||
+                  (isStale
+                    ? 'Thực đơn đã thay đổi — Cần phân tích lại'
+                    : hasDanger
+                      ? `Phát hiện ${summary.dangerCount} nguy cơ vượt ngưỡng an toàn`
+                      : hasWarning
+                        ? `Có ${summary.warningCount} điểm cần lưu ý về dinh dưỡng`
+                        : 'Thực đơn đạt chuẩn an toàn dinh dưỡng')}
               </h3>
+              {summary.hardConstraintsPreserved && (
+                <Badge
+                  variant="outline"
+                  className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs"
+                >
+                  ✓ Bảo toàn ăn kiêng
+                </Badge>
+              )}
               {isStale && (
                 <Badge
                   variant="outline"
@@ -136,9 +145,10 @@ export function MealAnalysisSummaryBar({
               )}
             </div>
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {isStale
-                ? 'Một hoặc nhiều món ăn vừa được chỉnh sửa. Vui lòng bấm phân tích lại để làm tươi kết quả kiểm tra.'
-                : `Phân tích lúc ${formattedAnalyzedAt} • Tổng cộng ${summary.totalWarnings} cảnh báo (${summary.dangerCount} nguy cơ, ${summary.warningCount} chú ý).`}
+              {summary.detail ||
+                (isStale
+                  ? 'Một hoặc nhiều món ăn vừa được chỉnh sửa. Vui lòng bấm phân tích lại để làm tươi kết quả kiểm tra.'
+                  : `Phân tích lúc ${formattedAnalyzedAt} • Tổng cộng ${summary.totalWarnings} cảnh báo (${summary.dangerCount} nguy cơ, ${summary.warningCount} chú ý).`)}
             </p>
           </div>
         </div>
@@ -191,6 +201,48 @@ export function MealAnalysisSummaryBar({
           >
             Xem danh sách chi tiết &darr;
           </a>
+        </div>
+      )}
+
+      {/* Thanh tiến độ so sánh 4 macro dinh dưỡng ước tính */}
+      {analysis.estimatedNutrition && analysis.estimatedNutrition.targets && (
+        <div className="mt-3 border-t border-border/50 pt-3">
+          <div className="flex flex-wrap items-center justify-between text-xs text-muted-foreground mb-2">
+            <span className="font-medium text-foreground">
+              Mục tiêu 4 chất đa lượng ước tính (TDEE):
+            </span>
+            {analysis.estimatedNutrition.tolerancePercent > 0 && (
+              <span className="text-[11px]">
+                Dung sai hướng dẫn: ±{analysis.estimatedNutrition.tolerancePercent}%
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="rounded-md bg-muted/40 p-2 text-center">
+              <div className="text-[11px] text-muted-foreground">Đạm (Protein)</div>
+              <div className="text-xs font-semibold text-foreground">
+                ~{analysis.estimatedNutrition.targets.proteinGrams}g
+              </div>
+            </div>
+            <div className="rounded-md bg-muted/40 p-2 text-center">
+              <div className="text-[11px] text-muted-foreground">Chất xơ (Fiber)</div>
+              <div className="text-xs font-semibold text-foreground">
+                ~{analysis.estimatedNutrition.targets.fiberGrams}g
+              </div>
+            </div>
+            <div className="rounded-md bg-muted/40 p-2 text-center">
+              <div className="text-[11px] text-muted-foreground">Chất béo (Fat)</div>
+              <div className="text-xs font-semibold text-foreground">
+                ~{analysis.estimatedNutrition.targets.fatGrams}g
+              </div>
+            </div>
+            <div className="rounded-md bg-muted/40 p-2 text-center">
+              <div className="text-[11px] text-muted-foreground">Tinh bột (Carbs)</div>
+              <div className="text-xs font-semibold text-foreground">
+                ~{analysis.estimatedNutrition.targets.carbohydrateGrams}g
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

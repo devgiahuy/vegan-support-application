@@ -1,3 +1,7 @@
+import { AppError } from '../../common/errors/app-error.js';
+import type { EntitlementService } from '../entitlements/entitlement.service.js';
+import { lockDocument } from '../../database/locking.js';
+import type { Prisma } from '@prisma/client';
 import {
   FoodDataReviewStatus,
   MediaAssetStatus,
@@ -5,7 +9,6 @@ import {
   PantryAdjustmentType,
   PantryConfirmationStatus,
   PantryItemSource,
-  Prisma,
   ReceiptCandidateStatus,
   ReceiptInputStatus,
   ReceiptJobStatus,
@@ -57,7 +60,10 @@ export interface ConversionSnapshot {
 }
 
 export class ReceiptRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly entitlements?: EntitlementService,
+  ) {}
 
   findOwnedAssets(ownerId: string, assetIds: string[]) {
     return this.prisma.mediaAsset.findMany({
@@ -80,6 +86,7 @@ export class ReceiptRepository {
     requestHash: string;
   }): Promise<{ job: ReceiptJobRecord; created: boolean }> {
     return this.prisma.$transaction(async (transaction) => {
+      await lockDocument(transaction, 'user', { id: data.ownerId });
       const existing = await transaction.receiptJob.findUnique({
         where: {
           ownerId_idempotencyKey: {
@@ -102,16 +109,19 @@ export class ReceiptRepository {
         },
         include: jobInclude,
       });
+      await this.entitlements?.reserve(transaction, data.ownerId, 'RECEIPT', 'RECEIPT:' + job.id);
       return { job, created: true };
     });
   }
 
-  findOwnedJob(ownerId: string, id: string) {
+  async findOwnedJob(ownerId: string, id: string) {
+    await this.entitlements?.recover(new Date(), ownerId);
     return this.prisma.receiptJob.findFirst({ where: { id, ownerId }, include: jobInclude });
   }
 
   async startProcessing(ownerId: string, id: string): Promise<ReceiptJobRecord | null> {
     return this.prisma.$transaction(async (transaction) => {
+      await lockDocument(transaction, 'user', { id: ownerId });
       const updated = await transaction.receiptJob.updateMany({
         where: { id, ownerId, status: ReceiptJobStatus.QUEUED },
         data: {
@@ -135,6 +145,7 @@ export class ReceiptRepository {
 
   async saveResults(data: {
     jobId: string;
+    expectedAttempt?: number;
     inputs: Array<{ inputId: string; error: { code: string; message: string } | null }>;
     candidates: ReceiptCandidateData[];
     metadata: {
@@ -147,8 +158,14 @@ export class ReceiptRepository {
   }): Promise<ReceiptJobRecord> {
     return this.prisma.$transaction(async (transaction) => {
       const current = await transaction.receiptJob.findUniqueOrThrow({ where: { id: data.jobId } });
-      if (current.status !== ReceiptJobStatus.PROCESSING) {
-        return transaction.receiptJob.findUniqueOrThrow({ where: { id: data.jobId }, include: jobInclude });
+      if (
+        current.status !== ReceiptJobStatus.PROCESSING ||
+        (data.expectedAttempt !== undefined && current.attemptCount !== data.expectedAttempt)
+      ) {
+        return transaction.receiptJob.findUniqueOrThrow({
+          where: { id: data.jobId },
+          include: jobInclude,
+        });
       }
       for (const input of data.inputs) {
         await transaction.receiptInput.update({
@@ -162,8 +179,16 @@ export class ReceiptRepository {
             : { status: ReceiptInputStatus.PROCESSED, errorCode: null, errorMessage: null },
         });
       }
-      if (data.candidates.length) await transaction.receiptCandidate.createMany({ data: data.candidates.map((candidate) => ({ jobId: data.jobId, ...candidate })) });
+      if (data.candidates.length)
+        await transaction.receiptCandidate.createMany({
+          data: data.candidates.map((candidate) => ({ jobId: data.jobId, ...candidate })),
+        });
       const failedCount = data.inputs.filter((input) => input.error).length;
+      await this.entitlements?.settle(
+        transaction,
+        'RECEIPT:' + data.jobId,
+        failedCount < data.inputs.length,
+      );
       await transaction.receiptJob.update({
         where: { id: data.jobId },
         data: {
@@ -185,19 +210,33 @@ export class ReceiptRepository {
             : null,
         },
       });
-      return transaction.receiptJob.findUniqueOrThrow({ where: { id: data.jobId }, include: jobInclude });
+      return transaction.receiptJob.findUniqueOrThrow({
+        where: { id: data.jobId },
+        include: jobInclude,
+      });
     });
   }
 
-  async markFailed(id: string): Promise<void> {
-    await this.prisma.receiptJob.updateMany({
-      where: { id, status: ReceiptJobStatus.PROCESSING },
-      data: {
-        status: ReceiptJobStatus.FAILED,
-        errorCode: 'RECEIPT_PROVIDER_UNAVAILABLE',
-        errorMessage: 'Receipt extraction is temporarily unavailable. Retry later or update pantry manually.',
-        processingCompletedAt: new Date(),
-      },
+  async markFailed(id: string, expectedAttempt?: number): Promise<void> {
+    await this.prisma.$transaction(async (transaction) => {
+      const job = await transaction.receiptJob.findUnique({ where: { id } });
+      if (
+        !job ||
+        job.status !== ReceiptJobStatus.PROCESSING ||
+        (expectedAttempt !== undefined && job.attemptCount !== expectedAttempt)
+      )
+        return;
+      await lockDocument(transaction, 'user', { id: job.ownerId });
+      await transaction.receiptJob.update({
+        where: { id },
+        data: {
+          status: ReceiptJobStatus.FAILED,
+          errorCode: 'RECEIPT_PROVIDER_UNAVAILABLE',
+          errorMessage: 'Phân tích tạm thời không khả dụng. Lần thử này không trừ thêm lượt.',
+          processingCompletedAt: new Date(),
+        },
+      });
+      await this.entitlements?.settle(transaction, 'RECEIPT:' + id, false);
     });
   }
 
@@ -261,16 +300,22 @@ export class ReceiptRepository {
         data: { ...data, version: { increment: 1 } },
       });
       if (!updated.count) throw new ReceiptVersionConflictError();
-      return transaction.receiptJob.findUniqueOrThrow({ where: { id: jobId }, include: jobInclude });
+      return transaction.receiptJob.findUniqueOrThrow({
+        where: { id: jobId },
+        include: jobInclude,
+      });
     });
   }
 
   async cancel(ownerId: string, id: string): Promise<ReceiptJobRecord | null> {
     return this.prisma.$transaction(async (transaction) => {
+      await lockDocument(transaction, 'user', { id: ownerId });
       const job = await transaction.receiptJob.findFirst({ where: { id, ownerId } });
       if (!job) return null;
-      if (job.status === ReceiptJobStatus.CANCELLED) return transaction.receiptJob.findUniqueOrThrow({ where: { id }, include: jobInclude });
+      if (job.status === ReceiptJobStatus.CANCELLED)
+        return transaction.receiptJob.findUniqueOrThrow({ where: { id }, include: jobInclude });
       if (job.status === ReceiptJobStatus.CONFIRMED) throw new ReceiptConflictError();
+      await this.entitlements?.settle(transaction, 'RECEIPT:' + id, false);
       await transaction.receiptJob.update({
         where: { id },
         data: { status: ReceiptJobStatus.CANCELLED, cancelledAt: new Date() },
@@ -281,18 +326,44 @@ export class ReceiptRepository {
 
   async queueRetry(ownerId: string, id: string, key: string, requestHash: string) {
     return this.prisma.$transaction(async (transaction) => {
+      await lockDocument(transaction, 'user', { id: ownerId });
       const job = await transaction.receiptJob.findFirst({ where: { id, ownerId } });
       if (!job) return null;
       if (job.lastRetryKey === key) {
         if (job.lastRetryHash !== requestHash) throw new ReceiptConflictError();
-        return { job: await transaction.receiptJob.findUniqueOrThrow({ where: { id }, include: jobInclude }), replay: true };
+        return {
+          job: await transaction.receiptJob.findUniqueOrThrow({
+            where: { id },
+            include: jobInclude,
+          }),
+          replay: true,
+        };
       }
-      if (job.status !== ReceiptJobStatus.FAILED && job.status !== ReceiptJobStatus.PARTIAL_FAILED) throw new ReceiptConflictError();
+      if (job.status !== ReceiptJobStatus.FAILED && job.status !== ReceiptJobStatus.PARTIAL_FAILED)
+        throw new ReceiptConflictError();
+      if (
+        this.entitlements?.config.billing.enabled &&
+        job.attemptCount >= this.entitlements.config.billing.scanMaxAttempts
+      )
+        throw new AppError({
+          statusCode: 409,
+          code: 'SCAN_RETRY_LIMIT_EXCEEDED',
+          message: 'Đã hết số lần thử lại cho tác vụ này. Tạo tác vụ mới để tiếp tục.',
+        });
+      await this.entitlements?.reserve(transaction, ownerId, 'RECEIPT', 'RECEIPT:' + id);
       await transaction.receiptJob.update({
         where: { id },
-        data: { status: ReceiptJobStatus.QUEUED, lastRetryKey: key, lastRetryHash: requestHash },
+        data: {
+          status: ReceiptJobStatus.QUEUED,
+          queuedAt: new Date(),
+          lastRetryKey: key,
+          lastRetryHash: requestHash,
+        },
       });
-      return { job: await transaction.receiptJob.findUniqueOrThrow({ where: { id }, include: jobInclude }), replay: false };
+      return {
+        job: await transaction.receiptJob.findUniqueOrThrow({ where: { id }, include: jobInclude }),
+        replay: false,
+      };
     });
   }
 
@@ -302,35 +373,50 @@ export class ReceiptRepository {
     candidates: Array<{ id: string; expectedVersion: number; conversion: ConversionSnapshot }>;
     idempotencyKey: string;
     requestHash: string;
-  }): Promise<{ job: ReceiptJobRecord; changes: Array<{ candidateId: string; action: 'CREATED' | 'UPDATED' }> }> {
+  }): Promise<{
+    job: ReceiptJobRecord;
+    changes: Array<{ candidateId: string; action: 'CREATED' | 'UPDATED' }>;
+  }> {
     return this.prisma.$transaction(async (transaction) => {
-      await transaction.$queryRaw(Prisma.sql`SELECT id FROM users WHERE id = ${data.ownerId}::uuid FOR UPDATE`);
+      await lockDocument(transaction, 'user', { id: data.ownerId });
       const job = await transaction.receiptJob.findFirst({
         where: { id: data.jobId, ownerId: data.ownerId },
         include: jobInclude,
       });
       if (!job) throw new ReceiptConflictError();
       if (job.status === ReceiptJobStatus.CONFIRMED) {
-        if (job.confirmationKey !== data.idempotencyKey || job.confirmationHash !== data.requestHash) throw new ReceiptConflictError();
+        if (
+          job.confirmationKey !== data.idempotencyKey ||
+          job.confirmationHash !== data.requestHash
+        )
+          throw new ReceiptConflictError();
         return {
           job,
           changes: job.candidates
             .filter((candidate) => candidate.status === ReceiptCandidateStatus.CONFIRMED)
             .map((candidate) => ({
               candidateId: candidate.id,
-              action: candidate.pantryAction === 'UPDATED' ? ('UPDATED' as const) : ('CREATED' as const),
+              action:
+                candidate.pantryAction === 'UPDATED' ? ('UPDATED' as const) : ('CREATED' as const),
             })),
         };
       }
-      if (job.status !== ReceiptJobStatus.READY && job.status !== ReceiptJobStatus.PARTIAL_FAILED) throw new ReceiptConflictError();
+      if (job.status !== ReceiptJobStatus.READY && job.status !== ReceiptJobStatus.PARTIAL_FAILED)
+        throw new ReceiptConflictError();
       const requested = new Map(data.candidates.map((item) => [item.id, item]));
       const selected = job.candidates.filter((candidate) => requested.has(candidate.id));
       if (selected.length !== requested.size) throw new ReceiptConflictError();
       const changes: Array<{ candidateId: string; action: 'CREATED' | 'UPDATED' }> = [];
       for (const candidate of selected) {
         const request = requested.get(candidate.id)!;
-        if (candidate.version !== request.expectedVersion || candidate.status === ReceiptCandidateStatus.REJECTED || candidate.quantity === null || !candidate.unit) throw new ReceiptVersionConflictError();
-        const quantity = candidate.quantity.toNumber();
+        if (
+          candidate.version !== request.expectedVersion ||
+          candidate.status === ReceiptCandidateStatus.REJECTED ||
+          candidate.quantity === null ||
+          !candidate.unit
+        )
+          throw new ReceiptVersionConflictError();
+        const quantity = candidate.quantity;
         const existing = await transaction.pantryItem.findFirst({
           where: {
             ownerId: data.ownerId,
@@ -346,8 +432,8 @@ export class ReceiptRepository {
         let pantryItemId: string;
         let action: 'CREATED' | 'UPDATED';
         if (existing) {
-          const beforeQuantity = existing.quantity.toNumber();
-          const beforeGrams = existing.normalizedGrams?.toNumber() ?? null;
+          const beforeQuantity = existing.quantity;
+          const beforeGrams = existing.normalizedGrams ?? null;
           const afterQuantity = beforeQuantity + quantity;
           const afterGrams =
             beforeGrams !== null && request.conversion.normalizedGrams !== null
@@ -358,7 +444,7 @@ export class ReceiptRepository {
             data: {
               quantity: afterQuantity,
               normalizedGrams: afterGrams,
-              confidence: Math.min(existing.confidence.toNumber(), candidate.confidence.toNumber()),
+              confidence: Math.min(existing.confidence, candidate.confidence),
               version: { increment: 1 },
             },
           });
@@ -385,6 +471,7 @@ export class ReceiptRepository {
           pantryItemId = existing.id;
           action = 'UPDATED';
         } else {
+          await this.entitlements?.assertPantryCapacity(transaction, data.ownerId);
           const created = await transaction.pantryItem.create({
             data: {
               ownerId: data.ownerId,
@@ -452,7 +539,10 @@ export class ReceiptRepository {
         },
       });
       return {
-        job: await transaction.receiptJob.findUniqueOrThrow({ where: { id: job.id }, include: jobInclude }),
+        job: await transaction.receiptJob.findUniqueOrThrow({
+          where: { id: job.id },
+          include: jobInclude,
+        }),
         changes,
       };
     });
@@ -460,12 +550,20 @@ export class ReceiptRepository {
 
   findPublishedRecipes(ids: string[]) {
     return this.prisma.post.findMany({
-      where: { id: { in: ids }, type: 'RECIPE', status: 'PUBLISHED', publishedRevisionId: { not: null } },
+      where: {
+        id: { in: ids },
+        type: 'RECIPE',
+        status: 'PUBLISHED',
+        publishedRevisionId: { not: null },
+      },
       include: {
         publishedRevision: {
           include: {
             recipeDetail: true,
-            ingredients: { include: { ingredient: { select: { id: true, canonicalName: true } } }, orderBy: { position: 'asc' } },
+            ingredients: {
+              include: { ingredient: { select: { id: true, canonicalName: true } } },
+              orderBy: { position: 'asc' },
+            },
           },
         },
       },
@@ -476,7 +574,10 @@ export class ReceiptRepository {
     return this.prisma.customMeal.findMany({
       where: { id: { in: ids }, ownerId, deletedAt: null },
       include: {
-        ingredients: { include: { ingredient: { select: { id: true, canonicalName: true } } }, orderBy: { position: 'asc' } },
+        ingredients: {
+          include: { ingredient: { select: { id: true, canonicalName: true } } },
+          orderBy: { position: 'asc' },
+        },
       },
     });
   }

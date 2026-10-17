@@ -1,0 +1,4 @@
+{
+  "recognition_jobs": { "queued_at": { "$ifNull": ["$created_at", "$$NOW"] } },
+  "receipt_jobs": { "queued_at": { "$ifNull": ["$created_at", "$$NOW"] } }
+}

@@ -2,13 +2,24 @@ import * as React from 'react';
 import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Link, type Href, useRouter } from 'expo-router';
-import { BookOpen, ChefHat, FileText, History, Pencil, Search, Trash2, Video as VideoIcon } from 'lucide-react-native';
+import {
+  BookOpen,
+  ChefHat,
+  FileText,
+  History,
+  Pencil,
+  Search,
+  Trash2,
+  Video as VideoIcon,
+  type LucideIcon,
+} from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
+import { LoadMoreButton } from '@/components/shared/load-more-button';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
-import { useArticlesQuery, useDeletePostMutation } from '@/features/post/queries/post.queries';
-import { useVideosQuery } from '@/features/video/queries/video.queries';
+import { useInfiniteRecipesQuery } from '@/features/recipe/queries/recipe.queries';
+import { useDeletePostMutation, useInfiniteArticlesQuery } from '@/features/post/queries/post.queries';
+import { useInfiniteVideosQuery } from '@/features/video/queries/video.queries';
 import { PostStatus } from '@/common/enums';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { useIconColors } from '@/lib/theme-colors';
@@ -44,11 +55,11 @@ const TYPE_LABEL: Record<ContentType, string> = {
   VIDEO: 'Video',
 };
 
-function typeIcon(type: ContentType) {
-  if (type === 'RECIPE') return ChefHat;
-  if (type === 'VIDEO') return VideoIcon;
-  return BookOpen;
-}
+const TYPE_ICON: Record<ContentType, LucideIcon> = {
+  RECIPE: ChefHat,
+  BLOG: BookOpen,
+  VIDEO: VideoIcon,
+};
 
 function detailHref(item: MyContentItem): Href {
   if (item.type === 'RECIPE') return `/recipes/${item.id}` as Href;
@@ -103,7 +114,7 @@ function MyContentRow({
   onHistory: (item: MyContentItem) => void;
   isDeleting: boolean;
 }) {
-  const TypeIcon = typeIcon(item.type);
+  const TypeIcon = TYPE_ICON[item.type];
   return (
     <View className="gap-2 rounded-2xl border border-border bg-card p-3">
       <Link href={detailHref(item)} asChild>
@@ -176,23 +187,41 @@ export default function MyContentScreen() {
   const [historyItem, setHistoryItem] = React.useState<MyContentItem | null>(null);
 
   const {
-    data: recipesPagination,
+    data: recipePages,
     isLoading: isRecipesLoading,
     isError: isRecipesError,
     refetch: refetchRecipes,
-  } = useRecipesQuery({ limit: 50 });
+    hasNextPage: hasMoreRecipes,
+    fetchNextPage: fetchMoreRecipes,
+    isFetchingNextPage: isFetchingMoreRecipes,
+  } = useInfiniteRecipesQuery({ limit: 50 });
   const {
-    data: articlesPagination,
+    data: articlePages,
     isLoading: isArticlesLoading,
     isError: isArticlesError,
     refetch: refetchArticles,
-  } = useArticlesQuery({ limit: 50 });
+    hasNextPage: hasMoreArticles,
+    fetchNextPage: fetchMoreArticles,
+    isFetchingNextPage: isFetchingMoreArticles,
+  } = useInfiniteArticlesQuery({ limit: 50 });
   const {
-    data: videosPagination,
+    data: videoPages,
     isLoading: isVideosLoading,
     isError: isVideosError,
     refetch: refetchVideos,
-  } = useVideosQuery({ limit: 50 });
+    hasNextPage: hasMoreVideos,
+    fetchNextPage: fetchMoreVideos,
+    isFetchingNextPage: isFetchingMoreVideos,
+  } = useInfiniteVideosQuery({ limit: 50 });
+
+  // Backend chưa có API "bài đăng của tôi" nên phải duyệt các danh sách chung; "Tải thêm" nạp trang kế của cả 3 loại.
+  const hasMore = Boolean(hasMoreRecipes || hasMoreArticles || hasMoreVideos);
+  const isFetchingMore = isFetchingMoreRecipes || isFetchingMoreArticles || isFetchingMoreVideos;
+  const fetchMore = () => {
+    if (hasMoreRecipes) void fetchMoreRecipes();
+    if (hasMoreArticles) void fetchMoreArticles();
+    if (hasMoreVideos) void fetchMoreVideos();
+  };
 
   const deleteMutation = useDeletePostMutation();
 
@@ -207,7 +236,7 @@ export default function MyContentScreen() {
   const myItems = React.useMemo<MyContentItem[]>(() => {
     if (!currentUserId) return [];
 
-    const fromRecipes: MyContentItem[] = (recipesPagination?.items ?? [])
+    const fromRecipes: MyContentItem[] = (recipePages?.pages.flatMap((page) => page.items) ?? [])
       .filter((r) => r.author.id === currentUserId)
       .map((r) => ({
         id: r.id,
@@ -221,7 +250,7 @@ export default function MyContentScreen() {
         formattedPublishedAt: r.formattedPublishedAt,
       }));
 
-    const fromArticles: MyContentItem[] = (articlesPagination?.items ?? [])
+    const fromArticles: MyContentItem[] = (articlePages?.pages.flatMap((page) => page.items) ?? [])
       .filter((a) => a.author.id === currentUserId)
       .map((a) => ({
         id: a.id,
@@ -235,7 +264,7 @@ export default function MyContentScreen() {
         formattedPublishedAt: a.formattedPublishedAt,
       }));
 
-    const fromVideos: MyContentItem[] = (videosPagination?.items ?? [])
+    const fromVideos: MyContentItem[] = (videoPages?.pages.flatMap((page) => page.items) ?? [])
       .filter((v) => v.author.id === currentUserId)
       .map((v) => ({
         id: v.id,
@@ -250,7 +279,7 @@ export default function MyContentScreen() {
       }));
 
     return [...fromRecipes, ...fromArticles, ...fromVideos];
-  }, [recipesPagination?.items, articlesPagination?.items, videosPagination?.items, currentUserId]);
+  }, [recipePages?.pages, articlePages?.pages, videoPages?.pages, currentUserId]);
 
   const filteredItems = React.useMemo(() => {
     let list = myItems;
@@ -399,6 +428,7 @@ export default function MyContentScreen() {
                 isDeleting={deleteMutation.isPending}
               />
             ))}
+            <LoadMoreButton hasNextPage={hasMore} isFetchingNextPage={isFetchingMore} onPress={fetchMore} />
           </View>
         )}
       </View>
