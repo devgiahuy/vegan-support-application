@@ -184,7 +184,21 @@ export class ContentService {
       revision = await this.repository.findRevision(post.publishedRevisionId);
     }
     if (!revision) throw this.notFoundError();
-    return this.postOutput(post, revision);
+    const usageUserCount =
+      post.type === PostType.RECIPE ? await this.repository.recipeUsageUserCount(post.id) : null;
+    return this.postOutput(
+      post,
+      revision,
+      usageUserCount === null
+        ? undefined
+        : {
+            usageUserCount,
+            usageTracking: 'MEAL_PLAN_ADDITION',
+            cookedUserCount: null,
+            limitation:
+              'Hệ thống chỉ đo số người dùng riêng biệt đã thêm công thức vào kế hoạch bữa ăn; chưa theo dõi việc đã nấu hoặc hoàn thành món.',
+          },
+    );
   }
 
   async createPost(actor: ContentActor, input: CreatePostInput): Promise<PostOutput> {
@@ -562,6 +576,12 @@ export class ContentService {
   private postOutput(
     post: PostIdentityRecord | PublishedPostRecord,
     revision: RevisionRecord,
+    statistics?: {
+      usageUserCount: number;
+      usageTracking: 'MEAL_PLAN_ADDITION';
+      cookedUserCount: null;
+      limitation: string;
+    },
   ): PostOutput {
     const common = {
       id: post.id,
@@ -639,6 +659,7 @@ export class ContentService {
             temperatureCelsius: step.temperatureCelsius ? Number(step.temperatureCelsius) : null,
             affectedIngredientPositions: stepPositions(step.affectedIngredientPositions),
           })),
+          ...(statistics ? { statistics } : {}),
         },
       };
     }

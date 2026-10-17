@@ -279,7 +279,12 @@ export class AiReviewRepository {
         });
         if (!reviewer) throw new AiReviewConflictError('ARTIFACT_STATE');
         const active = await transaction.aiVerification.findFirst({
-          where: { artifactId: artifact.id, status: AiVerificationStatus.ACTIVE },
+          where: {
+            artifactId: artifact.id,
+            artifactVersion: artifact.version,
+            reviewerId: data.reviewerId,
+            status: AiVerificationStatus.ACTIVE,
+          },
           select: { id: true },
         });
         if (active) throw new AiReviewConflictError('VERIFICATION_EXISTS');
@@ -346,6 +351,19 @@ export class AiReviewRepository {
         throw new AiReviewConflictError('VERIFICATION_VERSION');
       if (current.status !== AiVerificationStatus.ACTIVE)
         throw new AiReviewConflictError('VERIFICATION_STATE');
+      if (data.action === 'OVERRIDE') {
+        const actorActive = await transaction.aiVerification.findFirst({
+          where: {
+            artifactId: current.artifactId,
+            artifactVersion: current.artifactVersion,
+            reviewerId: data.actorId,
+            status: AiVerificationStatus.ACTIVE,
+            id: { not: current.id },
+          },
+          select: { id: true },
+        });
+        if (actorActive) throw new AiReviewConflictError('VERIFICATION_EXISTS');
+      }
       const nextStatus =
         data.action === 'OVERRIDE' ? AiVerificationStatus.SUPERSEDED : AiVerificationStatus.REVOKED;
       const updated = await transaction.aiVerification.update({
