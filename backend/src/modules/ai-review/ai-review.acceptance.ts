@@ -48,6 +48,16 @@ async function main(): Promise<void> {
   const service = new AiReviewService(new AiReviewRepository(prisma));
   const owner = await prisma.user.findUniqueOrThrow({ where: { email: 'member@example.com' } });
   const admin = await prisma.user.findUniqueOrThrow({ where: { email: 'admin@example.com' } });
+  const extraReviewer = await prisma.user.upsert({
+    where: { email: 'phase23-statistics-reviewer@example.com' },
+    update: { role: Role.ADMIN, status: 'ACTIVE' },
+    create: {
+      email: 'phase23-statistics-reviewer@example.com',
+      passwordHash: 'acceptance-only-not-a-login-credential',
+      displayName: 'Phase 23 statistics reviewer',
+      role: Role.ADMIN,
+    },
+  });
   const contributors = await prisma.contributorProfile.findMany({
     where: { revokedAt: null, user: { role: Role.CONTRIBUTOR } },
     include: { user: true },
@@ -365,8 +375,65 @@ async function main(): Promise<void> {
         evidenceNote: 'Concurrent alternative opinion.',
       }),
     ]);
-    assert.equal(concurrent.filter((result) => result.status === 'fulfilled').length, 1);
-    assert.equal(concurrent.filter((result) => result.status === 'rejected').length, 1);
+    assert.equal(
+      concurrent.filter((result) => result.status === 'fulfilled').length,
+      2,
+      'distinct eligible reviewers may hold simultaneous effective verifications',
+    );
+
+    const receiptRecord = await prisma.aiArtifact.findUniqueOrThrow({
+      where: { id: receiptArtifact.id },
+      include: { verifications: true },
+    });
+    const activeReviewerIds = new Set(
+      receiptRecord.verifications
+        .filter((verification) => verification.status === 'ACTIVE')
+        .map((verification) => verification.reviewerId),
+    );
+    for (const reviewer of [platform, organization, invited, admin, extraReviewer]) {
+      if (activeReviewerIds.has(reviewer.id)) continue;
+      await service.verify({ userId: reviewer.id, role: reviewer.role }, receiptArtifact.id, {
+        expectedArtifactVersion: receiptArtifact.version,
+        conclusion: AiVerificationConclusion.VERIFIED,
+        scope: 'Thống kê kiểm chứng hiệu lực',
+        evidenceNote: 'Bằng chứng kiểm thử xác nhận ý kiến độc lập của người kiểm chứng.',
+      });
+    }
+    const fiveVerifierPage = await service.listPublic({ page: 1, limit: 50 });
+    const fiveVerifierArtifact = fiveVerifierPage.data.find(
+      (artifact) => artifact.id === receiptArtifact.id,
+    );
+    assert(fiveVerifierArtifact);
+    assert.deepEqual(fiveVerifierArtifact.statistics, {
+      verificationCount: 5,
+      verifiedByUserCount: 5,
+    });
+
+    const adminVerification = await prisma.aiVerification.findFirstOrThrow({
+      where: { artifactId: receiptArtifact.id, reviewerId: admin.id, status: 'ACTIVE' },
+    });
+    const adminOverride = await service.adminAction(admin.id, adminVerification.id, {
+      action: 'OVERRIDE',
+      expectedVersion: adminVerification.version,
+      reason: 'Kiểm thử thay thế ý kiến nhưng vẫn giữ nguyên một người kiểm chứng.',
+      conclusion: AiVerificationConclusion.VERIFIED,
+      scope: 'Thống kê kiểm chứng hiệu lực sau thay thế',
+      evidenceNote: 'Bản thay thế có hiệu lực; bản cũ chỉ còn trong lịch sử kiểm toán.',
+      correction: null,
+    });
+    assert.deepEqual(adminOverride.artifact.statistics, {
+      verificationCount: 5,
+      verifiedByUserCount: 5,
+    });
+    const revoked = await service.adminAction(admin.id, adminOverride.verification.id, {
+      action: 'REVOKE',
+      expectedVersion: adminOverride.verification.version,
+      reason: 'Kiểm thử bản ghi bị thu hồi không còn được tính.',
+    });
+    assert.deepEqual(revoked.artifact.statistics, {
+      verificationCount: 4,
+      verifiedByUserCount: 4,
+    });
 
     const originalBefore = await prisma.aiVerification.findUniqueOrThrow({
       where: { id: organizationResult.verification.id },
@@ -422,6 +489,8 @@ async function main(): Promise<void> {
       'sourceId',
       'provider',
       'modelId',
+      'reviewerId',
+      extraReviewer.id,
     ]) {
       assert(!publicText.includes(forbidden), `public DTO leaked ${forbidden}`);
     }
@@ -443,6 +512,7 @@ async function main(): Promise<void> {
     });
     await prisma.post.deleteMany({ where: { authorId: owner.id, slug: { startsWith: prefix } } });
     await prisma.chatSession.deleteMany({ where: { title: { startsWith: prefix } } });
+    await prisma.user.deleteMany({ where: { email: 'phase23-statistics-reviewer@example.com' } });
   }
 }
 

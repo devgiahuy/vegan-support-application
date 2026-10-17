@@ -161,9 +161,9 @@ export async function applyMongoSchema(database) {
     ],
     [
       'ai_verifications',
-      { artifact_id: 1 },
+      { artifact_id: 1, artifact_version: 1, reviewer_id: 1 },
       { status: 'ACTIVE' },
-      'ai_verifications_one_active_per_artifact',
+      'ai_verifications_one_active_per_reviewer',
     ],
   ];
   for (const [table, key, partialFilterExpression, name] of special)

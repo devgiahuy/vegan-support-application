@@ -205,7 +205,7 @@ export class IngredientRecognitionRepository {
           errorCode: failedCount > 0 ? 'PARTIAL_PROVIDER_FAILURE' : null,
           errorMessage:
             failedCount > 0
-              ? `${String(failedCount)} image(s) could not be analyzed; available results are retained.`
+              ? `Không thể phân tích ${String(failedCount)} ảnh; kết quả hợp lệ từ các ảnh khác vẫn được giữ lại.`
               : null,
         },
       });
@@ -259,6 +259,34 @@ export class IngredientRecognitionRepository {
       select: { ingredient: { select: { id: true, canonicalName: true } } },
     });
     return alias?.ingredient ?? null;
+  }
+
+  async resolveIngredients(normalizedNames: string[]) {
+    const uniqueNames = [...new Set(normalizedNames)];
+    if (uniqueNames.length === 0)
+      return new Map<string, { id: string; canonicalName: string }>();
+    const [direct, aliases] = await Promise.all([
+      this.prisma.ingredient.findMany({
+        where: { normalizedName: { in: uniqueNames }, status: 'ACTIVE' },
+        select: { id: true, canonicalName: true, normalizedName: true },
+      }),
+      this.prisma.ingredientAlias.findMany({
+        where: {
+          normalizedAlias: { in: uniqueNames },
+          reviewStatus: 'APPROVED',
+          ingredient: { status: 'ACTIVE' },
+        },
+        select: {
+          normalizedAlias: true,
+          ingredient: { select: { id: true, canonicalName: true } },
+        },
+      }),
+    ]);
+    const resolved = new Map<string, { id: string; canonicalName: string }>();
+    for (const ingredient of direct) resolved.set(ingredient.normalizedName, ingredient);
+    for (const alias of aliases)
+      if (!resolved.has(alias.normalizedAlias)) resolved.set(alias.normalizedAlias, alias.ingredient);
+    return resolved;
   }
 
   resolveIngredientById(id: string) {

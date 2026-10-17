@@ -75,7 +75,7 @@ export function registerAiReviewOpenApi(registry: OpenAPIRegistry, errorSchema: 
     path: '/api/v1/ai-artifacts/{id}/verifications',
     tags: ['AI Verification'],
     summary: 'Verify a submitted public artifact',
-    description: 'Any active approved Contributor or Admin may verify; approval basis is never consulted and self-review is forbidden.',
+    description: 'Any active approved Contributor or Admin may verify; approval basis is never consulted and self-review is forbidden. Each reviewer may have at most one ACTIVE verification for the current artifact version. Artifact responses expose effective verificationCount and distinct verifiedByUserCount without reviewer IDs.',
     operationId: 'createAiVerification',
     security,
     request: { params: aiArtifactParamsSchema, body: { content: json(verificationRequest) } },

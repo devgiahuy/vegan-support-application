@@ -219,7 +219,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     tags: ['Content'],
     summary: 'Lấy content detail theo UUID hoặc slug',
     description:
-      'Guest/non-owner chỉ thấy active published revision. Owner/Admin thấy revision mới nhất để tiếp tục edit; soft-deleted content trả 410 cho owner/Admin và 404 cho public.',
+      'Guest/non-owner chỉ thấy active published revision. Owner/Admin thấy revision mới nhất để tiếp tục edit; soft-deleted content trả 410 cho owner/Admin và 404 cho public. Recipe detail có statistics.usageUserCount là số user riêng biệt đã thêm recipe vào meal plan chưa xóa; usageTracking=MEAL_PLAN_ADDITION và cookedUserCount=null vì backend chưa theo dõi sự kiện đã nấu/hoàn thành.',
     operationId: 'getPost',
     request: { params: postIdentifierParamsSchema },
     responses: {

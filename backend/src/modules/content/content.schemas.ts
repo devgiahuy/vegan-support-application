@@ -371,6 +371,15 @@ const recipeOutputSchema = z
     dietCompatibilities: z.array(recipeCompatibilitySchema),
     ingredients: z.array(recipeIngredientSchema),
     steps: z.array(recipeStepSchema),
+    statistics: z
+      .object({
+        usageUserCount: z.number().int().nonnegative(),
+        usageTracking: z.literal('MEAL_PLAN_ADDITION'),
+        cookedUserCount: z.null(),
+        limitation: z.string(),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 

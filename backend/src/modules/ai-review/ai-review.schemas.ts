@@ -168,6 +168,12 @@ export const aiArtifactSchema = z.object({
     sharedAt: z.string().datetime().nullable(),
   }),
   activeVerification: verificationSchema.nullable(),
+  statistics: z
+    .object({
+      verificationCount: z.number().int().nonnegative(),
+      verifiedByUserCount: z.number().int().nonnegative(),
+    })
+    .strict(),
   verificationHistory: z.array(verificationSchema),
   createdAt: z.string().datetime(),
 });

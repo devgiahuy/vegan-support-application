@@ -90,6 +90,27 @@ export interface AiReviewActor {
   role: Role;
 }
 
+export function effectiveVerificationStatistics(
+  artifactVersion: number,
+  ownerId: string,
+  verifications: ReadonlyArray<{
+    status: AiVerificationStatus;
+    artifactVersion: number;
+    reviewerId: string;
+  }>,
+): { verificationCount: number; verifiedByUserCount: number } {
+  const effective = verifications.filter(
+    (verification) =>
+      verification.status === AiVerificationStatus.ACTIVE &&
+      verification.artifactVersion === artifactVersion &&
+      verification.reviewerId !== ownerId,
+  );
+  return {
+    verificationCount: effective.length,
+    verifiedByUserCount: new Set(effective.map((verification) => verification.reviewerId)).size,
+  };
+}
+
 export class AiReviewService {
   constructor(private readonly repository: AiReviewRepository) {}
 
@@ -323,6 +344,11 @@ export class AiReviewService {
       },
       activeVerification:
         history.find((verification) => verification.status === AiVerificationStatus.ACTIVE) ?? null,
+      statistics: effectiveVerificationStatistics(
+        record.version,
+        record.ownerId,
+        record.verifications,
+      ),
       verificationHistory: history,
       createdAt: record.createdAt.toISOString(),
     };

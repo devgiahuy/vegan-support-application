@@ -18,7 +18,7 @@ export const createRecognitionJobSchema = z
   })
   .strict()
   .refine((input) => new Set(input.imageAssetIds).size === input.imageAssetIds.length, {
-    message: 'Image asset IDs must be unique',
+    message: 'Mã tài sản ảnh không được trùng lặp',
     path: ['imageAssetIds'],
   });
 
@@ -39,7 +39,7 @@ export const updateRecognitionCandidateSchema = z
   })
   .strict()
   .refine((input) => Object.keys(input).some((key) => key !== 'expectedVersion'), {
-    message: 'Provide at least one candidate change',
+    message: 'Cần cung cấp ít nhất một thay đổi cho nguyên liệu nhận diện',
   });
 
 export const confirmRecognitionJobSchema = z
@@ -56,7 +56,7 @@ export const confirmRecognitionJobSchema = z
   .refine(
     (input) => new Set(input.candidates.map((item) => item.id)).size === input.candidates.length,
     {
-      message: 'Candidate IDs must be unique',
+      message: 'Mã nguyên liệu nhận diện không được trùng lặp',
       path: ['candidates'],
     },
   );
@@ -90,6 +90,7 @@ const candidateSchema = z.object({
       imageId: z.string().uuid(),
       imagePosition: z.number().int(),
       confidence: z.number(),
+      uncertaintyNote: z.string().nullable(),
     }),
   ),
 });

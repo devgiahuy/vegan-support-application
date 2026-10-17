@@ -33,6 +33,74 @@ function decimal(value: number | null): number | null {
   return typeof value === 'number' ? value : value;
 }
 
+function evidenceObservation(
+  quantity: number | null,
+  unit: string | null,
+  uncertaintyNote: string | null,
+): string {
+  const estimate =
+    quantity !== null && unit
+      ? `Ước tính trong ảnh: ${String(quantity)} ${unit}.`
+      : 'Không xác định được số lượng hoặc đơn vị từ ảnh.';
+  return uncertaintyNote ? `${estimate} ${uncertaintyNote}` : estimate;
+}
+
+export function deduplicateVisionCandidates(
+  results: VisionImageResult[],
+  resolvedIngredients: ReadonlyMap<string, { id: string; canonicalName: string }>,
+): DeduplicatedCandidateData[] {
+  const groups = new Map<string, DeduplicatedCandidateData>();
+  for (const result of results) {
+    if (result.error) continue;
+    for (const candidate of result.candidates) {
+      const normalizedName = normalizeVietnameseText(candidate.name);
+      if (!normalizedName) continue;
+      const ingredient = resolvedIngredients.get(normalizedName) ?? null;
+      const key = ingredient ? `ingredient:${ingredient.id}` : `unknown:${normalizedName}`;
+      const existing = groups.get(key);
+      const evidence = {
+        inputId: result.inputId,
+        confidence: candidate.confidence,
+        observation: evidenceObservation(
+          candidate.quantity,
+          candidate.unit,
+          candidate.uncertaintyNote,
+        ),
+      };
+      if (!existing) {
+        groups.set(key, {
+          ingredientId: ingredient?.id ?? null,
+          detectedName: ingredient?.canonicalName ?? candidate.name,
+          normalizedName: ingredient
+            ? normalizeVietnameseText(ingredient.canonicalName)
+            : normalizedName,
+          quantity: candidate.quantity,
+          unit: candidate.unit,
+          freshnessObservation: candidate.freshnessObservation,
+          confidence: candidate.confidence,
+          matchConfidence: ingredient ? 0.9 : null,
+          uncertaintyNote: candidate.uncertaintyNote,
+          evidence: [evidence],
+        });
+        continue;
+      }
+      const quantityConflict =
+        existing.quantity !== candidate.quantity || existing.unit !== candidate.unit;
+      if (candidate.confidence > existing.confidence) {
+        existing.quantity = candidate.quantity;
+        existing.unit = candidate.unit;
+        existing.confidence = candidate.confidence;
+        existing.freshnessObservation = candidate.freshnessObservation;
+      }
+      existing.uncertaintyNote = quantityConflict
+        ? `Phát hiện trùng lặp từ ${String(existing.evidence.length + 1)} ảnh với ước tính số lượng hoặc đơn vị khác nhau. Hệ thống giữ ước tính từ bằng chứng có độ tin cậy cao hơn, không cộng dồn; vui lòng kiểm tra và chỉnh sửa trước khi xác nhận.`
+        : `Phát hiện cùng nguyên liệu trong ${String(existing.evidence.length + 1)} ảnh. Số lượng không được cộng dồn vì các ảnh có thể chụp trùng cùng vật thể; vui lòng kiểm tra trước khi xác nhận.`;
+      existing.evidence.push(evidence);
+    }
+  }
+  return [...groups.values()];
+}
+
 export class IngredientRecognitionService {
   constructor(
     private readonly repository: IngredientRecognitionRepository,
@@ -46,7 +114,7 @@ export class IngredientRecognitionService {
       throw new AppError({
         statusCode: 422,
         code: 'RECOGNITION_IMAGE_LIMIT_EXCEEDED',
-        message: `A recognition job accepts at most ${String(this.config.vision.maxImages)} images.`,
+        message: `Mỗi tác vụ nhận diện chấp nhận tối đa ${String(this.config.vision.maxImages)} ảnh.`,
       });
     }
     const assets = await this.repository.findOwnedAssets(ownerId, input.imageAssetIds);
@@ -81,7 +149,7 @@ export class IngredientRecognitionService {
       throw new AppError({
         statusCode: 409,
         code: 'RECOGNITION_IDEMPOTENCY_CONFLICT',
-        message: 'The idempotency key was already used with different images.',
+        message: 'Khóa chống lặp đã được sử dụng với một nhóm ảnh khác.',
       });
     }
     if (result.created) this.schedule(ownerId, result.job.id);
@@ -117,7 +185,7 @@ export class IngredientRecognitionService {
           throw new AppError({
             statusCode: 422,
             code: 'RECOGNITION_INGREDIENT_INVALID',
-            message: 'The selected ingredient is not active.',
+            message: 'Nguyên liệu đã chọn không còn hoạt động.',
           });
         }
         detectedName = ingredient.canonicalName;
@@ -131,7 +199,7 @@ export class IngredientRecognitionService {
       throw new AppError({
         statusCode: 422,
         code: 'RECOGNITION_CANDIDATE_INVALID',
-        message: 'Candidate name must contain letters or numbers.',
+        message: 'Tên nguyên liệu nhận diện phải chứa chữ cái hoặc chữ số.',
       });
     }
     const quantity = input.quantity === undefined ? decimal(current.quantity) : input.quantity;
@@ -140,7 +208,7 @@ export class IngredientRecognitionService {
       throw new AppError({
         statusCode: 422,
         code: 'RECOGNITION_QUANTITY_INCOMPLETE',
-        message: 'Quantity and unit must either both be provided or both be empty.',
+        message: 'Số lượng và đơn vị phải được cung cấp cùng nhau hoặc cùng để trống.',
       });
     }
     const data: Prisma.RecognitionCandidateUncheckedUpdateManyInput = {
@@ -255,7 +323,7 @@ export class IngredientRecognitionService {
       await this.repository.markFailed(
         job.id,
         'RECOGNITION_PROVIDER_UNAVAILABLE',
-        'The configured image provider changed. Create a new job with the committed images.',
+        'Cấu hình nhà cung cấp nhận diện ảnh đã thay đổi. Hãy tạo tác vụ mới với các ảnh đã được xác nhận lưu trữ.',
         job.attemptCount,
       );
       return;
@@ -279,7 +347,7 @@ export class IngredientRecognitionService {
       await this.repository.markFailed(
         job.id,
         'RECOGNITION_PROVIDER_UNAVAILABLE',
-        'Image recognition is temporarily unavailable. Retry later or add pantry items manually.',
+        'Tính năng nhận diện ảnh tạm thời không khả dụng. Hãy thử lại sau hoặc thêm nguyên liệu vào kho theo cách thủ công.',
         job.attemptCount,
       );
     }
@@ -292,53 +360,15 @@ export class IngredientRecognitionService {
   }
 
   private async deduplicate(results: VisionImageResult[]): Promise<DeduplicatedCandidateData[]> {
-    const groups = new Map<string, DeduplicatedCandidateData>();
-    for (const result of results) {
-      if (result.error) continue;
-      for (const candidate of result.candidates) {
-        const normalizedName = normalizeVietnameseText(candidate.name);
-        if (!normalizedName) continue;
-        const ingredient = await this.repository.resolveIngredient(normalizedName);
-        const key = ingredient ? `ingredient:${ingredient.id}` : `unknown:${normalizedName}`;
-        const existing = groups.get(key);
-        const evidence = {
-          inputId: result.inputId,
-          confidence: candidate.confidence,
-          observation: candidate.uncertaintyNote,
-        };
-        if (!existing) {
-          groups.set(key, {
-            ingredientId: ingredient?.id ?? null,
-            detectedName: ingredient?.canonicalName ?? candidate.name,
-            normalizedName: ingredient
-              ? normalizeVietnameseText(ingredient.canonicalName)
-              : normalizedName,
-            quantity: candidate.quantity,
-            unit: candidate.unit,
-            freshnessObservation: candidate.freshnessObservation,
-            confidence: candidate.confidence,
-            matchConfidence: ingredient ? 0.9 : null,
-            uncertaintyNote: candidate.uncertaintyNote,
-            evidence: [evidence],
-          });
-          continue;
-        }
-        const sameUnit = existing.unit !== null && existing.unit === candidate.unit;
-        if (sameUnit && existing.quantity !== null && candidate.quantity !== null) {
-          existing.quantity = Number((existing.quantity + candidate.quantity).toFixed(4));
-        } else if (candidate.confidence > existing.confidence) {
-          existing.quantity = candidate.quantity;
-          existing.unit = candidate.unit;
-        }
-        if (candidate.confidence > existing.confidence) {
-          existing.confidence = candidate.confidence;
-          existing.freshnessObservation = candidate.freshnessObservation;
-        }
-        existing.uncertaintyNote = `Đã tổng hợp từ ${String(existing.evidence.length + 1)} ảnh; hãy kiểm tra lại số lượng và nhận xét trước khi xác nhận.`;
-        existing.evidence.push(evidence);
-      }
-    }
-    return [...groups.values()];
+    const normalizedNames = results.flatMap((result) =>
+      result.error
+        ? []
+        : result.candidates
+            .map((candidate) => normalizeVietnameseText(candidate.name))
+            .filter((name) => name.length > 0),
+    );
+    const resolvedIngredients = await this.repository.resolveIngredients(normalizedNames);
+    return deduplicateVisionCandidates(results, resolvedIngredients);
   }
 
   private serializeJob(job: RecognitionJobRecord) {
@@ -377,6 +407,7 @@ export class IngredientRecognitionService {
             imageId: item.input.id,
             imagePosition: item.input.position,
             confidence: decimal(item.confidence) ?? 0,
+            uncertaintyNote: item.observation ?? null,
           }))
           .sort((left, right) => left.imagePosition - right.imagePosition),
       })),
@@ -397,7 +428,7 @@ export class IngredientRecognitionService {
       throw new AppError({
         statusCode: 503,
         code: 'RECOGNITION_PROVIDER_UNAVAILABLE',
-        message: 'Image recognition is currently disabled. Add pantry items manually.',
+        message: 'Tính năng nhận diện ảnh hiện đang tắt. Hãy thêm nguyên liệu vào kho theo cách thủ công.',
       });
     }
   }
@@ -407,7 +438,7 @@ export class IngredientRecognitionService {
       statusCode: 422,
       code: 'RECOGNITION_IMAGE_INVALID',
       message:
-        'Every image must be an owned, committed fridge image with a supported type and size.',
+        'Mỗi ảnh phải thuộc sở hữu của bạn, đã được xác nhận lưu trữ, và có định dạng cùng kích thước được hỗ trợ.',
     });
   }
 
@@ -415,7 +446,7 @@ export class IngredientRecognitionService {
     return new AppError({
       statusCode: 404,
       code: 'RECOGNITION_JOB_NOT_FOUND',
-      message: 'Recognition job was not found.',
+      message: 'Không tìm thấy tác vụ nhận diện.',
     });
   }
 
@@ -425,7 +456,7 @@ export class IngredientRecognitionService {
       return new AppError({
         statusCode: 409,
         code: 'RECOGNITION_VERSION_CONFLICT',
-        message: 'Recognition candidate changed; refresh before continuing.',
+        message: 'Nguyên liệu nhận diện đã thay đổi; hãy tải lại dữ liệu trước khi tiếp tục.',
       });
     }
     if (error instanceof RecognitionIncompleteError) {
@@ -439,7 +470,7 @@ export class IngredientRecognitionService {
       return new AppError({
         statusCode: 409,
         code: 'RECOGNITION_STATE_CONFLICT',
-        message: 'Recognition job is not in a state that permits this action.',
+        message: 'Trạng thái hiện tại của tác vụ nhận diện không cho phép thao tác này.',
       });
     }
     return error instanceof Error ? error : new Error('Unknown recognition error');

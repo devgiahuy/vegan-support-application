@@ -91,11 +91,13 @@ async function main(): Promise<void> {
     assert.equal(ready.status, RecognitionJobStatus.READY);
     const tofu = ready.candidates.find((candidate) => candidate.evidence.length === 2);
     assert(tofu, 'same ingredient across images must deduplicate and retain both evidence refs');
+    assert.equal(tofu.quantity, 120, 'duplicate quantities must retain conservative evidence, not sum');
     assert(ready.candidates.some((candidate) => candidate.confidence < 0.5));
     const unknown = ready.candidates.find(
       (candidate) => candidate.ingredientId === null && candidate.quantity === null,
     );
     assert(unknown, 'fake fixture must contain an unknown ingredient');
+    assert.equal(unknown.evidence.length, 2, 'merged unknown candidate must retain both images');
     assert.equal(unknown.detectedName, 'rau lá chưa xác định');
     assert.match(unknown.uncertaintyNote ?? '', /Chưa có đủ chi tiết/);
     assert.match(tofu.freshnessObservation ?? '', /ảnh|ánh sáng/);
@@ -119,6 +121,11 @@ async function main(): Promise<void> {
     });
     assert.equal(confirmed.pantryChanges.length, 1);
     assert.equal(confirmed.pantryChanges[0]?.pantryItem.quantity, 3);
+    assert.equal(
+      confirmed.pantryChanges[0]?.candidateId,
+      unknown.id,
+      'a merged candidate must remain editable and confirmable',
+    );
     const confirmReplay = await service.confirm(member.id, ready.id, {
       candidates: [{ id: unknown.id, expectedVersion: editedUnknown.version }],
       idempotencyKey: `${acceptancePrefix}confirm`,
