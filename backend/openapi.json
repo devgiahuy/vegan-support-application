@@ -4674,6 +4674,34 @@
                           ],
                           "additionalProperties": false
                         }
+                      },
+                      "statistics": {
+                        "type": "object",
+                        "properties": {
+                          "usageUserCount": {
+                            "type": "integer",
+                            "minimum": 0
+                          },
+                          "usageTracking": {
+                            "type": "string",
+                            "enum": [
+                              "MEAL_PLAN_ADDITION"
+                            ]
+                          },
+                          "cookedUserCount": {
+                            "type": "null"
+                          },
+                          "limitation": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "usageUserCount",
+                          "usageTracking",
+                          "cookedUserCount",
+                          "limitation"
+                        ],
+                        "additionalProperties": false
                       }
                     },
                     "required": [
@@ -5881,6 +5909,34 @@
                             ],
                             "additionalProperties": false
                           }
+                        },
+                        "statistics": {
+                          "type": "object",
+                          "properties": {
+                            "usageUserCount": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "usageTracking": {
+                              "type": "string",
+                              "enum": [
+                                "MEAL_PLAN_ADDITION"
+                              ]
+                            },
+                            "cookedUserCount": {
+                              "type": "null"
+                            },
+                            "limitation": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "usageUserCount",
+                            "usageTracking",
+                            "cookedUserCount",
+                            "limitation"
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
@@ -7174,6 +7230,34 @@
                             ],
                             "additionalProperties": false
                           }
+                        },
+                        "statistics": {
+                          "type": "object",
+                          "properties": {
+                            "usageUserCount": {
+                              "type": "integer",
+                              "minimum": 0
+                            },
+                            "usageTracking": {
+                              "type": "string",
+                              "enum": [
+                                "MEAL_PLAN_ADDITION"
+                              ]
+                            },
+                            "cookedUserCount": {
+                              "type": "null"
+                            },
+                            "limitation": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "usageUserCount",
+                            "usageTracking",
+                            "cookedUserCount",
+                            "limitation"
+                          ],
+                          "additionalProperties": false
                         }
                       },
                       "required": [
@@ -22437,12 +22521,19 @@
                           },
                           "confidence": {
                             "type": "number"
+                          },
+                          "uncertaintyNote": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
                           }
                         },
                         "required": [
                           "imageId",
                           "imagePosition",
-                          "confidence"
+                          "confidence",
+                          "uncertaintyNote"
                         ]
                       }
                     }
@@ -22721,12 +22812,19 @@
                               },
                               "confidence": {
                                 "type": "number"
+                              },
+                              "uncertaintyNote": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
                               }
                             },
                             "required": [
                               "imageId",
                               "imagePosition",
-                              "confidence"
+                              "confidence",
+                              "uncertaintyNote"
                             ]
                           }
                         }
@@ -24928,6 +25026,24 @@
                   "createdAt"
                 ]
               },
+              "statistics": {
+                "type": "object",
+                "properties": {
+                  "verificationCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "verifiedByUserCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "verificationCount",
+                  "verifiedByUserCount"
+                ],
+                "additionalProperties": false
+              },
               "verificationHistory": {
                 "type": "array",
                 "items": {
@@ -25042,6 +25158,7 @@
               "author",
               "lifecycle",
               "activeVerification",
+              "statistics",
               "verificationHistory",
               "createdAt"
             ]
@@ -25507,6 +25624,24 @@
                     "createdAt"
                   ]
                 },
+                "statistics": {
+                  "type": "object",
+                  "properties": {
+                    "verificationCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "verifiedByUserCount": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "verificationCount",
+                    "verifiedByUserCount"
+                  ],
+                  "additionalProperties": false
+                },
                 "verificationHistory": {
                   "type": "array",
                   "items": {
@@ -25621,6 +25756,7 @@
                 "author",
                 "lifecycle",
                 "activeVerification",
+                "statistics",
                 "verificationHistory",
                 "createdAt"
               ]
@@ -26112,6 +26248,24 @@
                       "createdAt"
                     ]
                   },
+                  "statistics": {
+                    "type": "object",
+                    "properties": {
+                      "verificationCount": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "verifiedByUserCount": {
+                        "type": "integer",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "verificationCount",
+                      "verifiedByUserCount"
+                    ],
+                    "additionalProperties": false
+                  },
                   "verificationHistory": {
                     "type": "array",
                     "items": {
@@ -26226,6 +26380,7 @@
                   "author",
                   "lifecycle",
                   "activeVerification",
+                  "statistics",
                   "verificationHistory",
                   "createdAt"
                 ]
@@ -33439,7 +33594,7 @@
           "Content"
         ],
         "summary": "Lấy content detail theo UUID hoặc slug",
-        "description": "Guest/non-owner chỉ thấy active published revision. Owner/Admin thấy revision mới nhất để tiếp tục edit; soft-deleted content trả 410 cho owner/Admin và 404 cho public.",
+        "description": "Guest/non-owner chỉ thấy active published revision. Owner/Admin thấy revision mới nhất để tiếp tục edit; soft-deleted content trả 410 cho owner/Admin và 404 cho public. Recipe detail có statistics.usageUserCount là số user riêng biệt đã thêm recipe vào meal plan chưa xóa; usageTracking=MEAL_PLAN_ADDITION và cookedUserCount=null vì backend chưa theo dõi sự kiện đã nấu/hoàn thành.",
         "operationId": "getPost",
         "parameters": [
           {
@@ -56123,7 +56278,8 @@
         "tags": [
           "Ingredient Recognition"
         ],
-        "summary": "Get recognition progress and editable candidates",
+        "summary": "Get recognition progress and consolidated editable candidates",
+        "description": "Candidates are deduplicated across successful images by canonical ingredient, approved alias, or normalized Vietnamese name. Overlapping quantities are never summed automatically; conflicts retain conservative higher-confidence evidence, uncertainty notes, and per-image references for user review.",
         "operationId": "getIngredientRecognitionJob",
         "security": [
           {
@@ -57636,7 +57792,7 @@
           "AI Verification"
         ],
         "summary": "Verify a submitted public artifact",
-        "description": "Any active approved Contributor or Admin may verify; approval basis is never consulted and self-review is forbidden.",
+        "description": "Any active approved Contributor or Admin may verify; approval basis is never consulted and self-review is forbidden. Each reviewer may have at most one ACTIVE verification for the current artifact version. Artifact responses expose effective verificationCount and distinct verifiedByUserCount without reviewer IDs.",
         "operationId": "createAiVerification",
         "security": [
           {

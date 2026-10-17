@@ -46,7 +46,7 @@ feature completion percentage changed.
 
 Restaurant integration remains 100% → 100%. Reconciled the `dev` redesign with MongoDB migration fixes: real pagination, identity cache, cancellation, location consent, scoped keyword search, partial/suppressed empty notices and correct review payload. Preserve dev admin, macro planning/analysis and mobile features. Backend lint/typecheck/build, frontend typecheck/build and 577 tests pass; Mongo schema/seed and meal/vision/receipt acceptance pass. Mobile native/export checks were not rerun because its imported source has no conflict or additional edits.
 
-## Mobile completion — Updated 2026-10-03
+## Mobile completion — Updated 2026-10-14
 
 | Capability | Mobile status | Remaining gate |
 | --- | --- | --- |
@@ -54,6 +54,8 @@ Restaurant integration remains 100% → 100%. Reconciled the `dev` redesign with
 | Pantry-aware shopping preview | Implemented: recipes/custom meals, servings, missing/surplus/unresolved lines | Live acceptance |
 | Profile storage tab and avatar upload | Implemented: quota, image picker/camera, signed reservation upload, commit/release and retry recovery; real Cloudinary signed upload/commit verified for scan images | Native permission/camera tests and avatar-specific acceptance |
 | Fridge/receipt scanning | Integrated end-to-end in opted-in dev runtime under the user-approved exception: pick/upload, job/poll, correction/rejection, explicit Pantry confirmation, cancel/retry; Pantry links and resumable routes | Backend remains `IN_PROGRESS`; real OpenAI credit/accuracy acceptance and native camera/permissions pending. Production disabled |
+
+2026-10-14 follow-up from `Cần sử lý wdp301.docx`: mobile resolved the actionable non-backend items without adding native SDK dependencies. The restaurant radar map now lets the user select a pin and open the provider map/directions URL when available; meal-plan detail explicitly displays calories from the backend `targetCalories` contract instead of recomputing a web-only TDEE ±300 target; Pantry quantity adjustment explains that `RESTORE` is a return/undo action, not a purchase flow. Video detail already opens through Expo in-app browser, and true embedded video playback plus native map SDK remain dependency/API-key decisions outside this no-new-SDK pass.
 
 Mobile typecheck, targeted lint, all 23 related tests, Android export and web export (65 routes) passed for the fake-provider integration; both dev workflows passed HTTP and browser acceptance. On the user's subsequent request, the current preview switched to real OpenAI on backend port 4003 / mobile web port 8084. Both new job identities were verified as openai, but requests still fail with 429 credit_balance_exhausted. Mobile labels match the current configuration; typecheck, targeted lint and provider-policy tests pass after the switch. Existing fake jobs retain their old results; start a new scan. This record does not change web totals or claim successful real recognition/native completion. All 36 migrations remain applied. Setup: `mobile/docs/SCAN_DEV.md`.
 

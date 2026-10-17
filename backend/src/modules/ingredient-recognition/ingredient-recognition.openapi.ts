@@ -61,7 +61,9 @@ export function registerIngredientRecognitionOpenApi(
     method: 'get',
     path: '/api/v1/ingredient-recognition/jobs/{id}',
     tags: ['Ingredient Recognition'],
-    summary: 'Get recognition progress and editable candidates',
+    summary: 'Get recognition progress and consolidated editable candidates',
+    description:
+      'Candidates are deduplicated across successful images by canonical ingredient, approved alias, or normalized Vietnamese name. Overlapping quantities are never summed automatically; conflicts retain conservative higher-confidence evidence, uncertainty notes, and per-image references for user review.',
     operationId: 'getIngredientRecognitionJob',
     security,
     request: { params: recognitionJobParamsSchema },

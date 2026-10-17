@@ -167,6 +167,30 @@ export class ContentActorInactiveError extends Error {
 export class ContentRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  async recipeUsageUserCount(postId: string): Promise<number> {
+    const result = await this.prisma.mealPlanItem.aggregateRaw({
+      pipeline: [
+        { $match: { recipe_id: postId, source_type: 'RECIPE', status: 'FILLED' } },
+        {
+          $lookup: {
+            from: 'meal_plans',
+            localField: 'meal_plan_id',
+            foreignField: '_id',
+            as: 'meal_plan',
+          },
+        },
+        { $unwind: '$meal_plan' },
+        { $match: { 'meal_plan.deleted_at': null } },
+        { $group: { _id: '$meal_plan.user_id' } },
+        { $count: 'count' },
+      ],
+    });
+    if (!Array.isArray(result) || result.length === 0) return 0;
+    const first = result[0];
+    if (!first || typeof first !== 'object' || Array.isArray(first)) return 0;
+    return typeof first.count === 'number' ? first.count : 0;
+  }
+
   async searchPublished(
     criteria: ContentSearchCriteria,
     constraints: SearchConstraints,

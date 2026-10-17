@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.34
+**Version:** 4.35
 
 **Cập nhật:** 14/10/2026
 
@@ -60,6 +60,10 @@ Changelog 2026-10-14 (4.33): web/mobile mapper migration and real-transfer UI di
 Historical changelog: 4.29 introduced VNPAY/local simulation; 4.30 fixed local checkout expiry. These are superseded for new purchases by payOS.
 
 Changelog 2026-10-14 (4.34): live payOS channel verification omits the unsigned success field despite its required SDK/documentation type. Accept this field as optional without changing signed data or settlement authorization. Signed unknown confirmation samples ACK; invalid signatures/shapes still return 400. No consumer DTO or database change; sync generated OpenAPI. Credentialed QR/PENDING checks passed separately; actual payment/native-device acceptance remains open.
+
+Changelog 2026-10-14 (4.35): optional Docker `webhook` profile adds ngrok v3 for the existing payOS webhook, with a loopback-only inspector and configurable container/host upstream. Compose now forwards existing billing/payOS settings to the backend. Configure the ngrok HTTPS origin as `BILLING_PUBLIC_URL` (or `BILLING_DEMO_PUBLIC_URL` for the host demo) and register `/api/v1/billing/payos/webhook` on the payment channel; see [setup](../../backend/README.md#https-webhook-tunnel-with-ngrok-2026-10-14). No route, DTO, authorization, settlement rule, database or endpoint readiness change. After user credential configuration, Docker build/start and live HTTPS smoke checks passed: health/OpenAPI 200, unauthenticated billing 401, locally signed unknown webhook sample/replay 200, invalid signatures/unsigned payloads 400. The tunnel forwards to `http://backend:4000` and its origin matches `BILLING_PUBLIC_URL`. No payment order or checkout was created; an actual provider payment/settlement callback remains unverified.
+
+Provider webhook verification 2026-10-14, 22:07 Asia/Ho_Chi_Minh: the official payOS SDK `webhooks.confirm` accepted the user's existing ngrok webhook URL. The provider's validation POST reached the Docker backend and returned 200; its captured payload signature verified with the configured channel checksum. Tampering that captured signature returned 400 `BILLING_SIGNATURE_INVALID`. Confirmation registers/reconfirms the same requested URL; no checkout or bank transfer was performed. This verifies live provider-to-backend connectivity and validation, not paid-order settlement.
 
 ### Mobile integration record — 2026-10-03
 

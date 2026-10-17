@@ -1,0 +1,6 @@
+version: '3'
+agent:
+  # Listen inside the container; Compose publishes this only on host loopback.
+  web_addr: 0.0.0.0:4040
+  log: stdout
+  log_format: json

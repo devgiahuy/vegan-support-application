@@ -11,7 +11,7 @@ import type { IngredientRecognitionService } from './ingredient-recognition.serv
 
 function ownerId(request: Request): string {
   if (request.auth) return request.auth.userId;
-  throw new AppError({ statusCode: 401, code: 'AUTH_REQUIRED', message: 'Authentication required' });
+  throw new AppError({ statusCode: 401, code: 'AUTH_REQUIRED', message: 'Vui lòng đăng nhập' });
 }
 
 export class IngredientRecognitionController {

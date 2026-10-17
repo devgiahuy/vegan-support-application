@@ -269,6 +269,10 @@ export function PantryItemSheet({
             onChangeText={setAmount}
             keyboardType={type === 'ADJUST' ? 'numbers-and-punctuation' : 'decimal-pad'}
           />
+          <Text className="text-xs leading-5 text-muted-foreground">
+            Hoàn trả chỉ dùng khi bạn cần trả lại phần đã ghi nhận là đã dùng. Nếu vừa mua thêm, hãy dùng
+            &quot;Thêm nguyên liệu&quot; hoặc quét hóa đơn để giữ đúng nguồn dữ liệu.
+          </Text>
           <TextField label="Lý do" value={reason} onChangeText={setReason} maxLength={5000} />
         </>
       ) : (

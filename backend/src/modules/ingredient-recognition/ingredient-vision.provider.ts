@@ -122,6 +122,14 @@ export class FakeIngredientVisionProvider implements IngredientVisionProvider {
               confidence: 0.48,
               uncertaintyNote: 'Một phần nguyên liệu bị che khuất.',
             },
+            {
+              name: 'rau lá chưa xác định',
+              quantity: null,
+              unit: null,
+              freshnessObservation: null,
+              confidence: 0.28,
+              uncertaintyNote: 'Chưa có đủ chi tiết nhìn thấy để đề xuất một nguyên liệu chuẩn.',
+            },
           ],
           error: null,
         };
