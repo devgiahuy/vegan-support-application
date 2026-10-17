@@ -1,5 +1,14 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-15] — Đánh giá kiến trúc và luồng frontend
+
+- Mục tiêu: đánh giá cấu trúc/setup và data flows thực tế theo yêu cầu người dùng, đối chiếu ARCHITECTURE và repository instructions.
+- Đã làm: kiểm kê 685 TypeScript/TSX files, 33 features, 50 pages (37 client); đọc/tracing các tầng nền và feature đại diện; quét AST import boundaries; phân tích auth session/cache, diet invalidation, fixture fallback, nullable nutrition, public rendering, env/gates và component responsibilities. Đọc next-best-practices/codegraph; CodeGraph tool/CLI không có nên dùng direct source/AST.
+- Tài liệu tạo/sửa: thêm `docs/FRONTEND_ARCHITECTURE_REVIEW_2026-10-15.md` v1.0; cập nhật `docs/PROGRESS.md` và entry này. Working tree đã có sửa `src/features/auth/components/login-form.tsx` khi bắt đầu review.
+- Verify: TypeScript noEmit/incremental=false pass; Vitest 602 tests/50 files pass; Next.js 16.3.4 production build pass. Full ESLint fail với 89 errors/347 warnings, gồm explicit any ở QueryClient. Lượt test đầu lỗi sandbox TEMP ENOENT, chạy lại với temp workspace riêng cho command thì pass; lượt build đầu bị SWC Access denied trong sandbox, chạy ngoài sandbox thì pass. Không thay config để né check. HTML prerender `/` có restore-session message, không có main/h1; browser không được chạy trong review.
+- PROGRESS: giữ nguyên % feature, append lịch sử review; không đánh dấu các gap đã sửa hoặc nâng production readiness.
+- Còn lại: cần browser cases cho forced logout → login user khác, allergy update với cache còn fresh, refresh race/cross-tab và failure paths; chưa đo LCP/bundle/a11y hoặc thử dịch vụ ngoài. Báo cáo ưu tiên các sửa behavior đó trước refactor file lớn. `git diff --check` được kiểm tra ở bước bàn giao tài liệu.
+
 ## [2026-10-14] — Chuẩn bị PR backend rồi frontend vào dev
 
 - Mục tiêu: tạo hai PR theo thứ tự người dùng yêu cầu, giữ checkout chính backend-only và nhánh UI phụ thuộc backend.
