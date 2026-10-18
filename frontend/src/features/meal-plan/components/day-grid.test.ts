@@ -65,6 +65,7 @@ describe('DayGrid Helpers & Logic', () => {
       unresolvedCode: null,
       recipeId: filled ? `recipe-${mealType}` : '',
       recipeTitle: filled ? `Món ${mealType}` : '',
+      coverImageUrl: null,
       sourceType: 'RECIPE' as const,
       isCustomMeal: false,
       customMealId: null,
@@ -132,6 +133,60 @@ describe('DayGrid Helpers & Logic', () => {
       expect(result.hasWarning).toBe(true);
       expect(result.overWarnings.length).toBeGreaterThanOrEqual(3);
       expect(result.overWarnings[0]).toContain('Calo vượt');
+    });
+
+    it('tổng hợp chính xác chất xơ và tinh bột từ các ô bữa ăn khi không có estimatedTotals', () => {
+      const slots = {
+        [MealType.BREAKFAST]: {
+          ...mockSlot(MealType.BREAKFAST, 560, 19, 12, 91),
+          fiber: 10,
+        },
+        [MealType.LUNCH]: {
+          ...mockSlot(MealType.LUNCH, 600, 25, 14, 85),
+          fiber: 10,
+        },
+        [MealType.DINNER]: {
+          ...mockSlot(MealType.DINNER, 520, 20, 10, 75),
+          fiber: 10,
+        },
+      };
+
+      const result = computeDayNutrition(slots, null, 2000, null);
+
+      expect(result.dayCalories).toBe(1680);
+      expect(result.protein).toBe(64);
+      expect(result.fat).toBe(36);
+      expect(result.carbs).toBe(251);
+      expect(result.fiber).toBe(30);
+      expect(result.hasWarning).toBe(false);
+    });
+
+    it('ưu tiên giá trị từ estimatedTotals khi backend đã tổng hợp sẵn', () => {
+      const slots = {
+        [MealType.BREAKFAST]: {
+          ...mockSlot(MealType.BREAKFAST, 560, 19, 12, 91),
+          fiber: 15,
+        },
+        [MealType.LUNCH]: mockSlot(MealType.LUNCH, 0, 0, 0, 0, false),
+        [MealType.DINNER]: mockSlot(MealType.DINNER, 0, 0, 0, 0, false),
+      };
+
+      const backendEstimatedTotals = {
+        proteinGrams: 70,
+        fiberGrams: 35,
+        fatGrams: 40,
+        carbohydrateGrams: 220,
+        estimated: true,
+        confidence: 0.95,
+        uncertaintyNotes: [],
+      };
+
+      const result = computeDayNutrition(slots, backendEstimatedTotals, 2000, null);
+
+      expect(result.protein).toBe(70);
+      expect(result.fiber).toBe(35);
+      expect(result.fat).toBe(40);
+      expect(result.carbs).toBe(220);
     });
   });
 });

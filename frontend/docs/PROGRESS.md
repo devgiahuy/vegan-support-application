@@ -1,5 +1,16 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Meal Plan Data & Item Nutrition Sync — Updated 2026-10-17
+
+Feature `032-meal-plan-data-sync` hoàn thành 100% (0% → 100%):
+- Đồng bộ toàn diện dữ liệu thực đơn tuần theo cập nhật từ Backend Leader (`LEADER_MEAL_PLAN_DATA_CHANGES.md`).
+- Hỗ trợ đầy đủ 4 chỉ số dinh dưỡng đa lượng ước tính (`proteinGrams`, `fiberGrams`, `fatGrams`, `carbohydrateGrams`) ở cấp độ slot item trên tất cả các luồng tạo mới, xem chi tiết, đổi món và thêm món thủ công; các giá trị này được scale tỷ lệ theo số khẩu phần (`servings`).
+- Hiển thị hình ảnh đại diện của 12 công thức thuần chay mới từ Unsplash kèm component `SlotThumbnail` (Next.js Image) với fallback an toàn khi gặp sự cố mạng (CLS = 0).
+- Loại trừ triệt để 8 fixtures thử nghiệm giả lập (`*-demo`) khỏi modal chọn/đổi món `MealPlanItemSelector`.
+- Đảm bảo tỷ lệ lấp đầy 100% (21/21 slots cho Thứ Hai – Chủ Nhật) đối với thực đơn tiêu chuẩn.
+- Bổ sung 3 unit tests mapper và 2 test cases cho day-grid: toàn bộ 23 mapper tests và 9 day-grid tests pass 100%. Typecheck `npx tsc --noEmit` đạt 0 lỗi.
+- Đồng bộ tài liệu tích hợp `BACKEND_INTEGRATION.md` lên Version 4.36 (ngày 17/10/2026).
+
 ## Frontend architecture review — Updated 2026-10-15
 
 Completed a source/configuration review at HEAD `894b875` plus the current working tree. Report: [FRONTEND_ARCHITECTURE_REVIEW_2026-10-15.md](FRONTEND_ARCHITECTURE_REVIEW_2026-10-15.md), version 1.0. Feature completion percentages remain at their recorded values because this task evaluates existing implementation. Priority findings cover fixture success on live failures, session cache isolation, diet/allergy invalidation and unknown nutrient values. Typecheck, 602 tests/50 files and production build pass; full lint remains 89 errors/347 warnings. Public home HTML was checked and currently contains the session-restoration placeholder without the main content. Browser reproductions and runtime fixes are follow-up work.

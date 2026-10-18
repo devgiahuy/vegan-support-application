@@ -1,5 +1,20 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-17] — Đồng bộ dữ liệu thực đơn tuần & dinh dưỡng từng món (032-meal-plan-data-sync)
+
+- **Mục tiêu**: Đồng bộ toàn diện dữ liệu thực đơn tuần phía frontend theo các thay đổi của backend leader (`frontend/docs/LEADER_MEAL_PLAN_DATA_CHANGES.md`), hỗ trợ 4 chỉ số dinh dưỡng đa lượng (`proteinGrams`, `fiberGrams`, `fatGrams`, `carbohydrateGrams`) cho từng ô bữa ăn, hiển thị ảnh đại diện công thức thực tế mới và loại trừ fixtures demo.
+- **Đã làm**:
+  - DTO & Model: cập nhật `MealSlotDto` và `MealSlot` UI Model bổ sung trường `coverImageUrl: string | null`, bảo đảm các trường dinh dưỡng đa lượng không âm (`protein`, `fiber`, `fat`, `carbs`) và `servings >= 1`.
+  - Mapper: cập nhật `MealPlanMapper.toSlot` trích xuất chính xác 4 chỉ số đa lượng ưu tiên từ slot item DTO (đã scale theo servings) và trích xuất `coverImageUrl` từ `recipe` hoặc `customMeal`.
+  - UI Component: cập nhật `SlotCard` trong `src/features/meal-plan/components/day-grid.tsx` tích hợp `SlotThumbnail` (Next.js `<Image>`) với cơ chế dự phòng an toàn (fallback sang placeholder icon `UtensilsCrossed` khi lỗi tải ảnh); hiển thị đầy đủ dòng thông tin Đạm/Bột/Béo/Xơ cho từng món.
+  - Bộ lọc chọn món: cập nhật `MealPlanItemSelector` loại trừ triệt để 8 công thức thử nghiệm giả lập (`*-demo`) khỏi danh sách chọn công thức cộng đồng.
+  - Tests: bổ sung 3 unit tests cho `meal-plan.mapper.test.ts` (kiểm tra alias snake_case, `coverImageUrl` Unsplash và servings > 1) và 2 test cases cho `day-grid.test.ts` (tổng hợp slot macros và ưu tiên `estimatedTotals`).
+  - Tài liệu: Nâng cấp `BACKEND_INTEGRATION.md` lên version 4.36 (ngày 17/10/2026), ghi nhận thay đổi dữ liệu thực đơn tuần, cập nhật `PROGRESS.md` và `WORK-LOG.md`.
+- **Verify**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 32 tests meal plan pass 100% (23 mapper tests, 9 day-grid tests).
+  - Production build: `npm run build` thành công.
+
 ## [2026-10-15] — Đánh giá kiến trúc và luồng frontend
 
 - Mục tiêu: đánh giá cấu trúc/setup và data flows thực tế theo yêu cầu người dùng, đối chiếu ARCHITECTURE và repository instructions.

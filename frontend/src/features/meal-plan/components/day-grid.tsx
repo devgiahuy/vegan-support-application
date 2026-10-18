@@ -1,4 +1,5 @@
 import * as React from 'react';
+import Image from 'next/image';
 import { Calendar, UtensilsCrossed, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -61,6 +62,7 @@ function createPlaceholderSlot(date: string, mealType: MealType): MealSlot {
     unresolvedCode: null,
     recipeId: '',
     recipeTitle: '',
+    coverImageUrl: null,
     sourceType: 'RECIPE',
     isCustomMeal: false,
     customMealId: null,
@@ -84,6 +86,29 @@ const UNRESOLVED_LABELS: Record<string, string> = {
   EXCLUDED_INGREDIENT: 'Chứa nguyên liệu cần tránh',
   HARD_CONSTRAINT_BLOCKED: 'Bảo vệ yêu cầu ăn kiêng',
 };
+
+function SlotThumbnail({ src, alt }: { src: string | null; alt: string }) {
+  const [hasError, setHasError] = React.useState(false);
+  if (!src || hasError) {
+    return (
+      <div className="w-12 h-12 rounded-lg bg-muted/40 border border-border/40 flex items-center justify-center shrink-0 text-muted-foreground/60">
+        <UtensilsCrossed className="w-5 h-5" />
+      </div>
+    );
+  }
+  return (
+    <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-muted/20 border border-border/50">
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        className="object-cover"
+        sizes="48px"
+        onError={() => setHasError(true)}
+      />
+    </div>
+  );
+}
 
 function SlotCard({
   slot,
@@ -120,24 +145,27 @@ function SlotCard({
           )}
         </div>
         {slot.filled ? (
-          <div className="space-y-1">
-            <p className="text-sm font-semibold leading-snug text-foreground line-clamp-2">
-              {slot.recipeTitle}
-            </p>
-            {slot.protein > 0 || slot.carbs > 0 || slot.fat > 0 || slot.fiber > 0 ? (
-              <p className="text-xs text-muted-foreground">
-                Đạm {slot.protein}g · Bột {slot.carbs}g · Béo {slot.fat}g
-                {slot.fiber > 0 && ` · Xơ ${slot.fiber}g`}
-                {slot.servings > 0 && ` · ${slot.servings} khẩu phần`}
+          <div className="flex items-start gap-2.5">
+            <SlotThumbnail src={slot.coverImageUrl} alt={slot.recipeTitle} />
+            <div className="space-y-1 min-w-0 flex-1">
+              <p className="text-sm font-semibold leading-snug text-foreground line-clamp-2">
+                {slot.recipeTitle}
               </p>
-            ) : (
-              slot.servings > 0 && (
+              {slot.protein > 0 || slot.carbs > 0 || slot.fat > 0 || slot.fiber > 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  {slot.servings} khẩu phần{' '}
-                  {slot.customMealCoverage ? `· ${slot.customMealCoverage}` : ''}
+                  Đạm {slot.protein}g · Bột {slot.carbs}g · Béo {slot.fat}g
+                  {slot.fiber > 0 && ` · Xơ ${slot.fiber}g`}
+                  {slot.servings > 0 && ` · ${slot.servings} khẩu phần`}
                 </p>
-              )
-            )}
+              ) : (
+                slot.servings > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {slot.servings} khẩu phần{' '}
+                    {slot.customMealCoverage ? `· ${slot.customMealCoverage}` : ''}
+                  </p>
+                )
+              )}
+            </div>
           </div>
         ) : (
           <div className="py-1.5 space-y-1.5">

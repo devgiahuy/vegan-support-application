@@ -12,6 +12,7 @@ export interface MealSlot {
   unresolvedCode: string | null;
   recipeId: string;
   recipeTitle: string;
+  coverImageUrl: string | null;
   sourceType: 'RECIPE' | 'CUSTOM_MEAL';
   isCustomMeal: boolean;
   customMealId: string | null;

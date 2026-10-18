@@ -46,12 +46,16 @@ export interface MealSlotDto {
     calories?: number | string;
     userCalories?: number | string;
     calculatedCalories?: number | string;
+    coverPhotoUrl?: string | null;
+    cover_photo_url?: string | null;
   } | null;
   custom_meal?: {
     id?: string;
     name?: string;
     nutritionCoverage?: string;
     nutrition_coverage?: string;
+    coverPhotoUrl?: string | null;
+    cover_photo_url?: string | null;
   } | null;
   recipe?: {
     id?: string;
@@ -59,7 +63,8 @@ export interface MealSlotDto {
     slug?: string;
     title?: string;
     name?: string;
-    coverImageUrl?: string;
+    coverImageUrl?: string | null;
+    cover_image_url?: string | null;
     difficulty?: string;
     calories?: number | string;
     protein?: number | string;
@@ -67,6 +72,8 @@ export interface MealSlotDto {
     fat?: number | string;
     servings?: number | string;
   } | null;
+  coverImageUrl?: string | null;
+  cover_image_url?: string | null;
 }
 
 export interface MealPlanDaySlotsDto {

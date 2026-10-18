@@ -1,8 +1,8 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.35
+**Version:** 4.36
 
-**Cập nhật:** 14/10/2026
+**Cập nhật:** 17/10/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
@@ -13,6 +13,22 @@
 ---
 
 ## 1. Source of truth và status
+
+### Meal Plan Data & Item Nutrition Sync — 2026-10-17
+
+Đồng bộ dữ liệu thực đơn tuần theo cập nhật từ Backend Leader (`LEADER_MEAL_PLAN_DATA_CHANGES.md`):
+- 4 chỉ số dinh dưỡng đa lượng ước tính (`proteinGrams`, `fiberGrams`, `fatGrams`, `carbohydrateGrams`) được hỗ trợ đầy đủ trên tất cả các endpoint liên quan đến ô bữa ăn: `POST /meal-plans/generate`, `GET /meal-plans/:id`, `PATCH /meal-plans/:id/items/:itemId/swap`, và `PATCH /meal-plans/:id/items/:itemId/manual-add`. Các giá trị này được scale tỷ lệ theo số khẩu phần (`servings`).
+- Danh mục công thức lập thực đơn được bổ sung 12 công thức thuần chay thực tế mới (4 sáng, 4 trưa, 4 tối) với hình ảnh đại diện từ `images.unsplash.com`.
+- 8 fixtures thử nghiệm giả lập (`*-demo`) đã được gỡ bỏ (`DELETED`) khỏi kho tìm kiếm/đổi món, đảm bảo 0% món demo xuất hiện trong giao diện người dùng.
+- Tỷ lệ lấp đầy món ăn tự động đạt 100% (21/21 slots cho Thứ Hai – Chủ Nhật) đối với hồ sơ thuần chay tiêu chuẩn.
+- UI Model `MealSlot` đã tích hợp `coverImageUrl` và hiển thị thumbnail với cơ chế dự phòng an toàn (fallback) chống vỡ layout.
+
+| Method | Endpoint | Status | FE integrated | Notes |
+| --- | --- | --- | --- | --- |
+| POST | `/meal-plans/generate` | `READY` | Yes (2026-10-17) | Tạo thực đơn 21/21 slots; 4 chỉ số đa lượng slot-level; 12 công thức mới, loại bỏ demo fixtures |
+| GET | `/meal-plans/:id` | `READY` | Yes (2026-10-17) | Trả về 21 slots với đầy đủ slot macros, coverImageUrl, tổng dinh dưỡng ngày |
+| PATCH | `/meal-plans/:id/items/:itemId/swap` | `READY` | Yes (2026-10-17) | Đổi món an toàn, trả về item mới kèm 4 chỉ số đa lượng |
+| PATCH | `/meal-plans/:id/items/:itemId/manual-add` | `READY` | Yes (2026-10-17) | Thêm món công thức hoặc món cá nhân với servings >= 1, tính đúng tỷ lệ macro |
 
 ### Usage billing extension — payOS conversion 2026-10-14
 
@@ -52,6 +68,8 @@ Completed migration: recognize payos in mappers, allow new purchases only for pa
 | `BILLING_RECONCILE_COOLDOWN` | Wait at least 30 seconds |
 | `BILLING_CHECKOUT_EXPIRED` | Historical retired local-checkout code; not emitted by current billing routes |
 | `ENTITLEMENT_QUOTA_EXCEEDED`, `PANTRY_CAPACITY_EXCEEDED`, `SCAN_RETRY_LIMIT_EXCEEDED` | Existing quota/capacity/retry handling |
+
+Changelog 2026-10-17 (4.36): hoàn thành đồng bộ dữ liệu thực đơn tuần theo cập nhật của backend leader (`LEADER_MEAL_PLAN_DATA_CHANGES.md`). Bổ sung 4 chỉ số dinh dưỡng đa lượng (`proteinGrams`, `fiberGrams`, `fatGrams`, `carbohydrateGrams`) cho shared item DTO trên các endpoint generate, detail, swap và manual-add. Tích hợp `coverImageUrl` và thumbnail hiển thị kèm cơ chế dự phòng an toàn (fallback) cho 12 công thức thuần chay mới từ Unsplash; loại trừ hoàn toàn 8 fixtures demo giả lập khỏi UI chọn món; xác minh 21/21 slots lấp đầy 100%. Toàn bộ 23 mapper tests và 9 day-grid tests pass 100%, npx tsc 0 lỗi.
 
 Changelog 2026-10-14 (4.32): user-authorized payOS conversion replaces routes/configuration and preserves historical orders. Signed SDK create/query/webhook, persisted references, partial-payment handling and 30-second checks. Backend gates pass; affected clients remain CHANGING until migration. No external merchant request.
 

@@ -261,66 +261,80 @@ export const MealPlanItemSelector: React.FC<MealPlanItemSelectorProps> = ({
               </div>
             )}
 
-            {!isRecipesLoading && recipesData?.items.length === 0 && (
-              <div className="text-center py-8 text-xs text-muted-foreground border border-dashed rounded-lg bg-muted/10 p-4">
-                Không tìm thấy công thức món chay nào phù hợp với từ khóa.
-              </div>
-            )}
+            {!isRecipesLoading &&
+              (!recipesData?.items ||
+                recipesData.items.filter(
+                  (recipe) =>
+                    !recipe.slug?.endsWith('-demo') &&
+                    !recipe.slug?.includes('-demo-') &&
+                    !recipe.title.toLowerCase().includes('demo')
+                ).length === 0) && (
+                <div className="text-center py-8 text-xs text-muted-foreground border border-dashed rounded-lg bg-muted/10 p-4">
+                  Không tìm thấy công thức món chay nào phù hợp với từ khóa.
+                </div>
+              )}
 
             {!isRecipesLoading &&
-              recipesData?.items.map((recipe) => (
-                <div
-                  key={recipe.id}
-                  onClick={() => handleSelectRecipe(recipe)}
-                  className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/40 cursor-pointer transition-colors group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="relative w-12 h-12 rounded-md overflow-hidden bg-muted/30 shrink-0 border">
-                      {recipe.coverImageUrl ? (
-                        <Image
-                          src={recipe.coverImageUrl}
-                          alt={recipe.title}
-                          fill
-                          className="object-cover"
-                        />
-                      ) : (
-                        <div className="flex items-center justify-center w-full h-full text-muted-foreground/50">
-                          <BookOpen className="w-5 h-5" />
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
-                          {recipe.title}
-                        </h4>
-                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
-                          Công thức
-                        </Badge>
-                      </div>
-                      <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
-                        {recipe.nutrition?.calories ? (
-                          <span className="flex items-center gap-0.5 text-orange-600 dark:text-orange-400 font-medium">
-                            <Flame className="w-3 h-3" />
-                            {Math.round(recipe.nutrition.calories)} kcal
-                          </span>
-                        ) : null}
-                        <span>{recipe.servings || 1} khẩu phần</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-xs gap-1 text-primary shrink-0 hover:bg-primary/10"
+              recipesData?.items
+                .filter(
+                  (recipe) =>
+                    !recipe.slug?.endsWith('-demo') &&
+                    !recipe.slug?.includes('-demo-') &&
+                    !recipe.title.toLowerCase().includes('demo')
+                )
+                .map((recipe) => (
+                  <div
+                    key={recipe.id}
+                    onClick={() => handleSelectRecipe(recipe)}
+                    className="flex items-center justify-between p-3 rounded-lg border bg-card hover:bg-muted/40 cursor-pointer transition-colors group"
                   >
-                    <Check className="w-3.5 h-3.5" />
-                    Chọn
-                  </Button>
-                </div>
-              ))}
+                    <div className="flex items-center gap-3">
+                      <div className="relative w-12 h-12 rounded-md overflow-hidden bg-muted/30 shrink-0 border">
+                        {recipe.coverImageUrl ? (
+                          <Image
+                            src={recipe.coverImageUrl}
+                            alt={recipe.title}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <div className="flex items-center justify-center w-full h-full text-muted-foreground/50">
+                            <BookOpen className="w-5 h-5" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-xs font-semibold text-foreground group-hover:text-primary transition-colors">
+                            {recipe.title}
+                          </h4>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                            Công thức
+                          </Badge>
+                        </div>
+                        <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
+                          {recipe.nutrition?.calories ? (
+                            <span className="flex items-center gap-0.5 text-orange-600 dark:text-orange-400 font-medium">
+                              <Flame className="w-3 h-3" />
+                              {Math.round(recipe.nutrition.calories)} kcal
+                            </span>
+                          ) : null}
+                          <span>{recipe.servings || 1} khẩu phần</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="text-xs gap-1 text-primary shrink-0 hover:bg-primary/10"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      Chọn
+                    </Button>
+                  </div>
+                ))}
           </TabsContent>
         </Tabs>
       </DialogContent>
