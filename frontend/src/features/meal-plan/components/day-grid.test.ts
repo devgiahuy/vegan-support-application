@@ -133,5 +133,54 @@ describe('DayGrid Helpers & Logic', () => {
       expect(result.overWarnings.length).toBeGreaterThanOrEqual(3);
       expect(result.overWarnings[0]).toContain('Calo vượt');
     });
+
+    describe('chất xơ là mức tối thiểu, không phải mức trần', () => {
+      const slots = {
+        [MealType.BREAKFAST]: mockSlot(MealType.BREAKFAST, 600, 25, 15, 80),
+        [MealType.LUNCH]: mockSlot(MealType.LUNCH, 900, 40, 35, 108),
+        [MealType.DINNER]: mockSlot(MealType.DINNER, 450, 16, 16, 65),
+      };
+      const targets = {
+        tolerancePercent: 15,
+        proteinGrams: 110,
+        fatGrams: 73.33,
+        fiberGrams: 30.8,
+        carbohydrateGrams: 275,
+        estimated: true as const,
+        source: 'TEST',
+        sourceDetail: 'Test targets',
+      };
+      const totals = (fiberGrams: number) => ({
+        proteinGrams: 81,
+        fiberGrams,
+        fatGrams: 66,
+        carbohydrateGrams: 253,
+        estimated: true,
+        confidence: 1,
+        uncertaintyNotes: [],
+      });
+
+      it('không cảnh báo khi xơ cao hơn mục tiêu nhưng chưa quá cao (35.75g / 30.8g)', () => {
+        const result = computeDayNutrition(slots, totals(35.75), 2200, targets);
+        expect(result.isFiberOver).toBe(false);
+        expect(result.hasWarning).toBe(false);
+      });
+
+      it('chỉ cảnh báo khi xơ vượt ngưỡng thận trọng tuyệt đối', () => {
+        const result = computeDayNutrition(slots, totals(85), 2200, targets);
+        expect(result.isFiberOver).toBe(true);
+        expect(result.overWarnings[0]).toContain('Chất xơ');
+      });
+
+      it('không báo vượt vì sai số làm tròn ngưỡng (protein 126.4g trong ngưỡng 126.5g)', () => {
+        const result = computeDayNutrition(
+          slots,
+          { ...totals(30), proteinGrams: 126.4 },
+          2200,
+          targets
+        );
+        expect(result.isProteinOver).toBe(false);
+      });
+    });
   });
 });

@@ -1,6 +1,7 @@
 import { AppError } from '../../common/errors/app-error.js';
 import type { EntitlementService } from '../entitlements/entitlement.service.js';
 import { lockDocument } from '../../database/locking.js';
+import { planAppendedCandidates } from './ingredient-recognition.merge.js';
 import type { Prisma } from '@prisma/client';
 import {
   MediaAssetStatus,
@@ -17,7 +18,7 @@ import {
 
 const jobInclude = {
   inputs: {
-    include: { asset: { select: { id: true, secureUrl: true } } },
+    include: { asset: { select: { id: true, secureUrl: true, providerEtag: true } } },
     orderBy: { position: 'asc' as const },
   },
   candidates: {
@@ -130,12 +131,69 @@ export class IngredientRecognitionRepository {
         },
       });
       if (!updated.count) return null;
-      await transaction.recognitionCandidate.deleteMany({ where: { jobId: id } });
-      await transaction.recognitionInput.updateMany({
-        where: { jobId: id },
-        data: { status: RecognitionInputStatus.PENDING, errorCode: null, errorMessage: null },
+      const pending = await transaction.recognitionInput.count({
+        where: { jobId: id, status: RecognitionInputStatus.PENDING },
       });
+      // Stored candidates (and the user's edits to them) are never discarded. A job with images
+      // waiting for analysis (newly added, or interrupted) only analyses those. Otherwise this is
+      // a retry, which re-runs just the images that failed.
+      if (!pending)
+        await transaction.recognitionInput.updateMany({
+          where: { jobId: id, status: RecognitionInputStatus.FAILED },
+          data: { status: RecognitionInputStatus.PENDING, errorCode: null, errorMessage: null },
+        });
       return transaction.recognitionJob.findUniqueOrThrow({ where: { id }, include: jobInclude });
+    });
+  }
+
+  /**
+   * Attaches additional images to a reviewable job and queues them for analysis. Existing
+   * candidates are kept; the new readings are merged in when processing completes. The usage
+   * reservation is keyed by job, so an already-spent job does not consume another credit.
+   */
+  async appendInputs(
+    ownerId: string,
+    id: string,
+    assetIds: string[],
+  ): Promise<{ job: RecognitionJobRecord; queued: boolean } | null> {
+    return this.prisma.$transaction(async (transaction) => {
+      await lockDocument(transaction, 'user', { id: ownerId });
+      const job = await transaction.recognitionJob.findFirst({
+        where: { id, ownerId },
+        include: jobInclude,
+      });
+      if (!job) return null;
+      if (
+        job.status !== RecognitionJobStatus.READY &&
+        job.status !== RecognitionJobStatus.PARTIAL_FAILED &&
+        job.status !== RecognitionJobStatus.FAILED
+      )
+        throw new RecognitionConflictError();
+      const attached = new Set(job.inputs.map((input) => input.assetId));
+      const fresh = assetIds.filter((assetId) => !attached.has(assetId));
+      if (!fresh.length) return { job, queued: false };
+      const firstPosition = Math.max(-1, ...job.inputs.map((input) => input.position)) + 1;
+      await this.entitlements?.reserve(transaction, ownerId, 'FRIDGE', 'FRIDGE:' + id);
+      for (const [offset, assetId] of fresh.entries())
+        await transaction.recognitionInput.create({
+          data: { jobId: id, assetId, position: firstPosition + offset },
+        });
+      await transaction.recognitionJob.update({
+        where: { id },
+        data: {
+          status: RecognitionJobStatus.QUEUED,
+          queuedAt: new Date(),
+          errorCode: null,
+          errorMessage: null,
+        },
+      });
+      return {
+        job: await transaction.recognitionJob.findUniqueOrThrow({
+          where: { id },
+          include: jobInclude,
+        }),
+        queued: true,
+      };
     });
   }
 
@@ -168,7 +226,36 @@ export class IngredientRecognitionRepository {
             : { status: RecognitionInputStatus.PROCESSED, errorCode: null, errorMessage: null },
         });
       }
-      for (const candidate of candidates) {
+      const stored = await transaction.recognitionCandidate.findMany({
+        where: { jobId },
+        include: { evidence: { select: { inputId: true } } },
+      });
+      const plan = planAppendedCandidates(
+        stored.map((candidate) => ({
+          id: candidate.id,
+          ingredientId: candidate.ingredientId,
+          normalizedName: candidate.normalizedName,
+          quantity: candidate.quantity,
+          unit: candidate.unit,
+          confidence: candidate.confidence,
+          status: candidate.status,
+          editedByUser: candidate.editedByUser,
+          evidenceInputIds: candidate.evidence.map((item) => item.inputId),
+        })),
+        candidates,
+      );
+      for (const update of plan.updates) {
+        if (update.data)
+          await transaction.recognitionCandidate.update({
+            where: { id: update.id },
+            data: { ...update.data, version: { increment: 1 } },
+          });
+        if (update.evidence.length)
+          await transaction.recognitionCandidateEvidence.createMany({
+            data: update.evidence.map((item) => ({ candidateId: update.id, ...item })),
+          });
+      }
+      for (const candidate of plan.creates) {
         await transaction.recognitionCandidate.create({
           data: {
             jobId,
@@ -185,14 +272,21 @@ export class IngredientRecognitionRepository {
           },
         });
       }
-      const failedCount = inputResults.filter((result) => result.error).length;
+      // Status reflects every image on the job, not only the ones analysed in this pass.
+      const allInputs = await transaction.recognitionInput.findMany({
+        where: { jobId },
+        select: { status: true },
+      });
+      const failedCount = allInputs.filter(
+        (input) => input.status === RecognitionInputStatus.FAILED,
+      ).length;
       await this.entitlements?.settle(
         transaction,
         'FRIDGE:' + jobId,
-        failedCount < inputResults.length,
+        inputResults.some((result) => !result.error),
       );
       const status =
-        failedCount === inputResults.length
+        failedCount === allInputs.length
           ? RecognitionJobStatus.FAILED
           : failedCount > 0
             ? RecognitionJobStatus.PARTIAL_FAILED

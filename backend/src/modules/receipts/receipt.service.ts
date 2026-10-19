@@ -7,6 +7,7 @@ import {
 } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
 import type { AppConfig } from '../../config/env.js';
+import { uniqueAssetIdsByContent } from '../../common/media/asset-dedup.js';
 import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 import type { ReceiptExtractionProvider, ReceiptProviderImageResult } from './receipt.provider.js';
 import {
@@ -17,6 +18,7 @@ import {
   ReceiptVersionConflictError,
 } from './receipt.repository.js';
 import type {
+  AddReceiptImagesInput,
   ConfirmReceiptJobInput,
   CreateReceiptJobInput,
   RetryReceiptJobInput,
@@ -75,32 +77,14 @@ export class ReceiptService {
 
   async create(ownerId: string, input: CreateReceiptJobInput) {
     this.ensureEnabled();
-    if (input.imageAssetIds.length > this.config.receipt.maxImages) {
-      throw new AppError({
-        statusCode: 422,
-        code: 'RECEIPT_IMAGE_LIMIT_EXCEEDED',
-        message: `A receipt job accepts at most ${String(this.config.receipt.maxImages)} images.`,
-      });
-    }
-    const assets = await this.repository.findOwnedAssets(ownerId, input.imageAssetIds);
-    const byId = new Map(assets.map((asset) => [asset.id, asset]));
-    if (assets.length !== input.imageAssetIds.length) throw this.invalidImage();
-    for (const id of input.imageAssetIds) {
-      const asset = byId.get(id);
-      if (
-        !asset?.mimeType ||
-        !(
-          this.config.receipt.provider === 'openai' ? OPENAI_IMAGE_MIME_TYPES : IMAGE_MIME_TYPES
-        ).has(asset.mimeType) ||
-        asset.bytes > BigInt(this.config.receipt.maxImageBytes)
-      ) {
-        throw this.invalidImage();
-      }
-    }
+    if (input.imageAssetIds.length > this.config.receipt.maxImages) throw this.imageLimit();
+    const byId = await this.loadValidAssets(ownerId, input.imageAssetIds);
+    // The same photo uploaded twice is stored as two assets; analyse its content only once.
+    const assetIds = uniqueAssetIdsByContent(input.imageAssetIds, byId);
     const requestHash = sha256({ imageAssetIds: input.imageAssetIds });
     const result = await this.repository.createJob({
       ownerId,
-      assetIds: input.imageAssetIds,
+      assetIds,
       provider: this.provider.name,
       modelId: this.provider.model,
       templateVersion: this.provider.templateVersion,
@@ -116,6 +100,32 @@ export class ReceiptService {
     }
     if (result.created) this.schedule(ownerId, result.job.id);
     return this.serializeJob(result.job);
+  }
+
+  /**
+   * Adds more photos to a reviewable job. Lines read from them are merged into the existing
+   * candidates (repeated lines collapse, nothing already read or edited is lost).
+   */
+  async addImages(ownerId: string, id: string, input: AddReceiptImagesInput) {
+    this.ensureEnabled();
+    const job = await this.repository.findOwnedJob(ownerId, id);
+    if (!job) throw this.notFound();
+    const byId = await this.loadValidAssets(ownerId, input.imageAssetIds);
+    const attached = new Set(job.inputs.map((item) => item.assetId));
+    const assetIds = uniqueAssetIdsByContent(
+      input.imageAssetIds.filter((assetId) => !attached.has(assetId)),
+      byId,
+      job.inputs.map((item) => item.asset.providerEtag),
+    );
+    if (job.inputs.length + assetIds.length > this.config.receipt.maxImages) throw this.imageLimit();
+    try {
+      const result = await this.repository.appendInputs(ownerId, id, assetIds);
+      if (!result) throw this.notFound();
+      if (result.queued) this.schedule(ownerId, id);
+      return this.serializeJob(result.job);
+    } catch (error) {
+      throw this.mapConflict(error);
+    }
   }
 
   async get(ownerId: string, id: string) {
@@ -305,11 +315,13 @@ export class ReceiptService {
     }
     try {
       const results = await this.provider.extract(
-        job.inputs.map((input) => ({
-          id: input.id,
-          position: input.position,
-          url: input.asset.secureUrl,
-        })),
+        job.inputs
+          .filter((input) => input.status === 'PENDING')
+          .map((input) => ({
+            id: input.id,
+            position: input.position,
+            url: input.asset.secureUrl,
+          })),
       );
       const successful = results.filter((result) => !result.error);
       const bestMetadata = successful
@@ -647,6 +659,33 @@ export class ReceiptService {
         message: 'Receipt extraction is currently disabled.',
       });
     }
+  }
+
+  private async loadValidAssets(ownerId: string, assetIds: string[]) {
+    const assets = await this.repository.findOwnedAssets(ownerId, assetIds);
+    const byId = new Map(assets.map((asset) => [asset.id, asset]));
+    if (assets.length !== assetIds.length) throw this.invalidImage();
+    const allowedTypes =
+      this.config.receipt.provider === 'openai' ? OPENAI_IMAGE_MIME_TYPES : IMAGE_MIME_TYPES;
+    for (const id of assetIds) {
+      const asset = byId.get(id);
+      if (
+        !asset?.mimeType ||
+        !allowedTypes.has(asset.mimeType) ||
+        asset.bytes > BigInt(this.config.receipt.maxImageBytes)
+      ) {
+        throw this.invalidImage();
+      }
+    }
+    return byId;
+  }
+
+  private imageLimit(): AppError {
+    return new AppError({
+      statusCode: 422,
+      code: 'RECEIPT_IMAGE_LIMIT_EXCEEDED',
+      message: `A receipt job accepts at most ${String(this.config.receipt.maxImages)} images.`,
+    });
   }
 
   private invalidImage(): AppError {

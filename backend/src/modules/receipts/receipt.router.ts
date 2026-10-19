@@ -3,6 +3,7 @@ import { validateBody, validateParams } from '../../common/validation/validate-r
 import type { AuthenticationMiddleware } from '../auth/authentication.middleware.js';
 import type { ReceiptController } from './receipt.controller.js';
 import {
+  addReceiptImagesSchema,
   confirmReceiptJobSchema,
   createReceiptJobSchema,
   receiptCandidateParamsSchema,
@@ -20,6 +21,12 @@ export function createReceiptRouter(
   router.use(authentication.authenticate);
   router.post('/receipt-jobs', validateBody(createReceiptJobSchema), controller.create);
   router.get('/receipt-jobs/:id', validateParams(receiptJobParamsSchema), controller.get);
+  router.post(
+    '/receipt-jobs/:id/images',
+    validateParams(receiptJobParamsSchema),
+    validateBody(addReceiptImagesSchema),
+    controller.addImages,
+  );
   router.patch(
     '/receipt-jobs/:id/candidates/:candidateId',
     validateParams(receiptCandidateParamsSchema),
