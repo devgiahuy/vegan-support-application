@@ -6,6 +6,7 @@ import {
 import type { AuthenticationMiddleware } from '../auth/authentication.middleware.js';
 import type { IngredientRecognitionController } from './ingredient-recognition.controller.js';
 import {
+  addRecognitionImagesSchema,
   confirmRecognitionJobSchema,
   createRecognitionJobSchema,
   recognitionCandidateParamsSchema,
@@ -30,6 +31,13 @@ export function createIngredientRecognitionRouter(
     authentication.authenticate,
     validateParams(recognitionJobParamsSchema),
     controller.get,
+  );
+  router.post(
+    '/jobs/:id/images',
+    authentication.authenticate,
+    validateParams(recognitionJobParamsSchema),
+    validateBody(addRecognitionImagesSchema),
+    controller.addImages,
   );
   router.patch(
     '/jobs/:id/candidates/:candidateId',

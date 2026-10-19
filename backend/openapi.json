@@ -22204,6 +22204,24 @@
         ],
         "additionalProperties": false
       },
+      "AddRecognitionImagesRequest": {
+        "type": "object",
+        "properties": {
+          "imageAssetIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 12
+          }
+        },
+        "required": [
+          "imageAssetIds"
+        ],
+        "additionalProperties": false
+      },
       "UpdateRecognitionCandidateRequest": {
         "type": "object",
         "properties": {
@@ -23035,6 +23053,24 @@
         "required": [
           "imageAssetIds",
           "idempotencyKey"
+        ],
+        "additionalProperties": false
+      },
+      "AddReceiptImagesRequest": {
+        "type": "object",
+        "properties": {
+          "imageAssetIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "minItems": 1,
+            "maxItems": 8
+          }
+        },
+        "required": [
+          "imageAssetIds"
         ],
         "additionalProperties": false
       },
@@ -56334,6 +56370,124 @@
         }
       }
     },
+    "/api/v1/ingredient-recognition/jobs/{id}/images": {
+      "post": {
+        "tags": [
+          "Ingredient Recognition"
+        ],
+        "summary": "Add more images to an unconfirmed recognition job and merge the new readings",
+        "description": "Allowed while the job is READY, PARTIAL_FAILED or FAILED. Only the new images are analysed. Ingredients already found keep their user edits and rejections and gain the new image as evidence; ingredients not seen before are added. Quantities are never summed because photos may overlap. Images already attached, or with identical content to an attached image, are ignored. The job returns to QUEUED and is polled like a new job; it does not consume another usage credit once the job has been charged. The total image count is capped by the recognition image limit.",
+        "operationId": "addIngredientRecognitionJobImages",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddRecognitionImagesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Job queued with the new images (or unchanged when nothing new was added)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecognitionJobResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Request could not be completed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/ingredient-recognition/jobs/{id}/candidates/{candidateId}": {
       "patch": {
         "tags": [
@@ -56898,6 +57052,124 @@
             }
           },
           "404": {
+            "description": "Business or validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/receipt-jobs/{id}/images": {
+      "post": {
+        "tags": [
+          "Receipts"
+        ],
+        "summary": "Add more images to an unconfirmed receipt job and merge the new lines",
+        "description": "Allowed while the job is READY, PARTIAL_FAILED or FAILED. Only the new images are analysed; candidates already read or edited are kept and lines repeated from a different image collapse into one (quantities are never summed). Images already attached, or with identical content to an attached image, are ignored. The job returns to QUEUED and is polled like a new job; it does not consume another usage credit once the job has been charged. The total image count is capped by the receipt image limit.",
+        "operationId": "addReceiptJobImages",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddReceiptImagesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Job queued with the new images (or unchanged when nothing new was added)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptJobResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Business or validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Business or validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Business or validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Business or validation error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          },
+          "503": {
             "description": "Business or validation error",
             "content": {
               "application/json": {

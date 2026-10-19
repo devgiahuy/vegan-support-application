@@ -22,6 +22,14 @@ export const createRecognitionJobSchema = z
     path: ['imageAssetIds'],
   });
 
+export const addRecognitionImagesSchema = z
+  .object({ imageAssetIds: z.array(z.string().uuid()).min(1).max(12) })
+  .strict()
+  .refine((input) => new Set(input.imageAssetIds).size === input.imageAssetIds.length, {
+    message: 'Mã tài sản ảnh không được trùng lặp',
+    path: ['imageAssetIds'],
+  });
+
 export const recognitionJobParamsSchema = z.object({ id: z.string().uuid() }).strict();
 export const recognitionCandidateParamsSchema = z
   .object({ id: z.string().uuid(), candidateId: z.string().uuid() })
@@ -139,6 +147,7 @@ export const recognitionConfirmationEnvelopeSchema = z.object({
   }),
 });
 
+export type AddRecognitionImagesInput = z.infer<typeof addRecognitionImagesSchema>;
 export type CreateRecognitionJobInput = z.infer<typeof createRecognitionJobSchema>;
 export type UpdateRecognitionCandidateInput = z.infer<typeof updateRecognitionCandidateSchema>;
 export type ConfirmRecognitionJobInput = z.infer<typeof confirmRecognitionJobSchema>;

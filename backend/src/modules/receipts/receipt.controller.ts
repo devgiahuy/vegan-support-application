@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { AppError } from '../../common/errors/app-error.js';
 import { getValidatedBody, getValidatedParams } from '../../common/validation/validate-request.js';
 import type {
+  AddReceiptImagesInput,
   ConfirmReceiptJobInput,
   CreateReceiptJobInput,
   RetryReceiptJobInput,
@@ -20,6 +21,15 @@ export class ReceiptController {
 
   create = async (request: Request, response: Response): Promise<void> => {
     const job = await this.service.create(ownerId(request), getValidatedBody<CreateReceiptJobInput>(request));
+    response.status(202).json({ success: true, data: job });
+  };
+
+  addImages = async (request: Request, response: Response): Promise<void> => {
+    const job = await this.service.addImages(
+      ownerId(request),
+      getValidatedParams<{ id: string }>(request).id,
+      getValidatedBody<AddReceiptImagesInput>(request),
+    );
     response.status(202).json({ success: true, data: job });
   };
 

@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { AppError } from '../../common/errors/app-error.js';
 import { getValidatedBody, getValidatedParams } from '../../common/validation/validate-request.js';
 import type {
+  AddRecognitionImagesInput,
   ConfirmRecognitionJobInput,
   CreateRecognitionJobInput,
   RetryRecognitionJobInput,
@@ -21,6 +22,15 @@ export class IngredientRecognitionController {
     const job = await this.service.create(
       ownerId(request),
       getValidatedBody<CreateRecognitionJobInput>(request),
+    );
+    response.status(202).json({ success: true, data: job });
+  };
+
+  addImages = async (request: Request, response: Response): Promise<void> => {
+    const job = await this.service.addImages(
+      ownerId(request),
+      getValidatedParams<{ id: string }>(request).id,
+      getValidatedBody<AddRecognitionImagesInput>(request),
     );
     response.status(202).json({ success: true, data: job });
   };

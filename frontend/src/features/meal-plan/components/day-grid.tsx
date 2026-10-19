@@ -160,6 +160,9 @@ function SlotCard({
   );
 }
 
+/** Ngưỡng thận trọng tuyệt đối cho chất xơ (g/ngày), đồng bộ với backend `FIBER_UPPER_CAUTION_GRAMS`. */
+const FIBER_UPPER_CAUTION_GRAMS = 70;
+
 export interface DayNutritionInfo {
   dayCalories: number;
   protein: number;
@@ -213,44 +216,49 @@ export function computeDayNutrition(
   const dailyCalTarget = targetCalories && targetCalories > 0 ? targetCalories : 2000;
   const tolerancePercent = nutritionTargets?.tolerancePercent ?? 20;
 
-  const maxCal = Math.round(dailyCalTarget * (1 + tolerancePercent / 100));
+  const toleranceFactor = 1 + tolerancePercent / 100;
+
+  // So sánh với ngưỡng chưa làm tròn để không báo "vượt" vì sai số làm tròn.
+  const maxCal = dailyCalTarget * toleranceFactor;
 
   const targetProtein = nutritionTargets?.proteinGrams ?? Math.round((dailyCalTarget * 0.15) / 4);
-  const maxProtein = Math.round(targetProtein * (1 + tolerancePercent / 100));
+  const maxProtein = targetProtein * toleranceFactor;
 
   const targetFat = nutritionTargets?.fatGrams ?? Math.round((dailyCalTarget * 0.25) / 9);
-  const maxFat = Math.round(targetFat * (1 + tolerancePercent / 100));
+  const maxFat = targetFat * toleranceFactor;
 
+  // Chất xơ là mức tối thiểu khuyến nghị (không phải mức trần): ăn nhiều hơn mục tiêu là bình thường.
+  // Chỉ cảnh báo khi lượng xơ rất cao, khớp ngưỡng thận trọng của backend.
   const targetFiber = nutritionTargets?.fiberGrams ?? Math.round((dailyCalTarget / 1000) * 14);
-  const maxFiber = Math.round(targetFiber * (1 + tolerancePercent / 100));
+  const maxFiber = Math.max(targetFiber * toleranceFactor, FIBER_UPPER_CAUTION_GRAMS);
 
   const overWarnings: string[] = [];
 
   const isCalorieOver = dayCalories > maxCal;
   if (isCalorieOver) {
     overWarnings.push(
-      `Calo vượt ${dayCalories - maxCal} kcal (${dayCalories} / mục tiêu ~${dailyCalTarget} kcal, tối đa ~${maxCal} kcal)`
+      `Calo vượt ${Math.round(dayCalories - maxCal)} kcal (${dayCalories} / mục tiêu ~${dailyCalTarget} kcal, tối đa ~${Math.round(maxCal)} kcal)`
     );
   }
 
   const isProteinOver = targetProtein > 0 && protein > maxProtein;
   if (isProteinOver) {
     overWarnings.push(
-      `Chất đạm (Protein) vượt ${(protein - maxProtein).toFixed(1)}g (${protein}g / mục tiêu ~${targetProtein}g, tối đa ~${maxProtein}g)`
+      `Chất đạm (Protein) vượt ${(protein - maxProtein).toFixed(1)}g (${protein}g / mục tiêu ~${targetProtein}g, tối đa ~${Math.round(maxProtein)}g)`
     );
   }
 
   const isFatOver = targetFat > 0 && fat > maxFat;
   if (isFatOver) {
     overWarnings.push(
-      `Chất béo (Fat) vượt ${(fat - maxFat).toFixed(1)}g (${fat}g / mục tiêu ~${targetFat}g, tối đa ~${maxFat}g)`
+      `Chất béo (Fat) vượt ${(fat - maxFat).toFixed(1)}g (${fat}g / mục tiêu ~${targetFat}g, tối đa ~${Math.round(maxFat)}g)`
     );
   }
 
   const isFiberOver = targetFiber > 0 && fiber !== null && fiber > maxFiber;
   if (isFiberOver && fiber !== null) {
     overWarnings.push(
-      `Chất xơ (Fiber) vượt ${(fiber - maxFiber).toFixed(1)}g (${fiber}g / khuyến nghị ~${targetFiber}g)`
+      `Chất xơ (Fiber) rất cao: ${fiber}g/ngày (mục tiêu tối thiểu ~${targetFiber}g). Nên tăng chất xơ từ từ và uống đủ nước.`
     );
   }
 

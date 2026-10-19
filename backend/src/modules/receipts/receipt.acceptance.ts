@@ -1,7 +1,7 @@
 import { createPrismaClient } from '../../database/client.js';
 import 'dotenv/config';
 import assert from 'node:assert/strict';
-import { ReceiptJobStatus } from '@prisma/client';
+import { MediaKind, MediaResourceType, ReceiptJobStatus } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
 import { loadConfig } from '../../config/env.js';
 import { createReceiptExtractionProvider } from './receipt.provider.js';
@@ -14,6 +14,11 @@ const repository = new ReceiptRepository(prisma);
 const service = new ReceiptService(repository, createReceiptExtractionProvider(config), config);
 const prefix = 'phase22-acceptance-';
 const customMealId = '22000000-0000-4000-8000-000000000100';
+const twinAssetIds = [
+  '22000000-0000-4000-8000-0000000000b1',
+  '22000000-0000-4000-8000-0000000000b2',
+  '22000000-0000-4000-8000-0000000000b3',
+] as const;
 
 async function cleanup(ownerId: string): Promise<void> {
   const jobs = await prisma.receiptJob.findMany({
@@ -25,7 +30,12 @@ async function cleanup(ownerId: string): Promise<void> {
     job.candidates.flatMap((candidate) => (candidate.pantryItemId ? [candidate.pantryItemId] : [])),
   );
   await prisma.$transaction(async (transaction) => {
-    if (jobIds.length) await transaction.receiptJob.deleteMany({ where: { id: { in: jobIds } } });
+    if (jobIds.length) {
+      await transaction.receiptCandidate.deleteMany({ where: { jobId: { in: jobIds } } });
+      await transaction.receiptInput.deleteMany({ where: { jobId: { in: jobIds } } });
+      await transaction.receiptJob.deleteMany({ where: { id: { in: jobIds } } });
+    }
+    await transaction.mediaAsset.deleteMany({ where: { id: { in: [...twinAssetIds] } } });
     if (pantryIds.length) {
       await transaction.pantryAdjustment.deleteMany({
         where: { ownerId, pantryItemId: { in: pantryIds } },
@@ -142,6 +152,67 @@ async function main(): Promise<void> {
       ReceiptJobStatus.CANCELLED,
     );
 
+    // Same photo uploaded twice, then more photos added to the same job.
+    const primary = await prisma.mediaAsset.findUniqueOrThrow({
+      where: { id: '22000000-0000-4000-8000-000000000001' },
+    });
+    for (const [index, id] of twinAssetIds.entries()) {
+      await prisma.mediaAsset.create({
+        data: {
+          id,
+          ownerId: owner.id,
+          kind: MediaKind.RECEIPT_IMAGE,
+          resourceType: MediaResourceType.IMAGE,
+          publicId: `seed/receipts/phase22-twin-${String(index)}`,
+          secureUrl: primary.secureUrl,
+          mimeType: 'image/jpeg',
+          extension: '.jpg',
+          bytes: primary.bytes,
+          // b1 and b2 are the same file uploaded twice; b3 is a different photo of the same lines.
+          providerEtag: index < 2 ? 'phase22-twin-etag' : 'phase22-other-etag',
+        },
+      });
+    }
+    const twin = await service.create(owner.id, {
+      imageAssetIds: [twinAssetIds[0], twinAssetIds[1]],
+      idempotencyKey: `${prefix}twin`,
+    });
+    assert.equal(twin.images.length, 1, 'identical content uploaded twice is analysed once');
+    const twinReady = await waitForTerminal(owner.id, twin.id);
+    assert.equal(twinReady.status, ReceiptJobStatus.READY);
+    assert.equal(twinReady.candidates.length, 2);
+    const twinUnknown = twinReady.candidates.find((candidate) => candidate.ingredientId === null);
+    assert(twinUnknown);
+    await service.updateCandidate(owner.id, twin.id, twinUnknown.id, {
+      expectedVersion: twinUnknown.version,
+      detectedName: 'rau đã sửa tay',
+      decision: 'KEEP',
+    });
+    const unchanged = await service.addImages(owner.id, twin.id, {
+      imageAssetIds: [twinAssetIds[0], twinAssetIds[1]],
+    });
+    assert.equal(unchanged.status, ReceiptJobStatus.READY, 'nothing new means nothing is queued');
+    assert.equal(unchanged.images.length, 1);
+    const appended = await service.addImages(owner.id, twin.id, { imageAssetIds: [twinAssetIds[2]] });
+    assert.equal(appended.images.length, 2);
+    const merged = await waitForTerminal(owner.id, twin.id);
+    assert.equal(merged.status, ReceiptJobStatus.READY);
+    assert.equal(merged.candidates.length, 2, 'lines repeated from the new photo are not duplicated');
+    assert(
+      merged.candidates.some((candidate) => candidate.detectedName === 'rau đã sửa tay'),
+      'user edits survive an appended image',
+    );
+    await service.addImages(owner.id, twin.id, {
+      imageAssetIds: ['22000000-0000-4000-8000-000000000002'],
+    });
+    const mergedPartial = await waitForTerminal(owner.id, twin.id);
+    assert.equal(mergedPartial.status, ReceiptJobStatus.PARTIAL_FAILED);
+    assert.equal(mergedPartial.candidates.length, 2, 'a failed extra image keeps earlier results');
+    await assert.rejects(
+      () => service.addImages(owner.id, cancellable.id, { imageAssetIds: [twinAssetIds[2]] }),
+      (error: unknown) => error instanceof AppError && error.code === 'RECEIPT_STATE_CONFLICT',
+    );
+
     const beforeOwnership = await prisma.receiptJob.count({ where: { ownerId: admin.id } });
     await assert.rejects(
       () =>
@@ -246,7 +317,7 @@ async function main(): Promise<void> {
       'current confirmed pantry must expose extra inventory',
     );
     console.info(
-      'Phase 22 fake-provider acceptance passed: duplicate retry, unknown correction, partial extraction, confirmation boundary, ownership, multi-meal aggregation, reviewed conversion, unit mismatch, insufficient/extra pantry, and unresolved lines.',
+      'Phase 22 fake-provider acceptance passed: duplicate retry, duplicate-content collapse, appended images merge, unknown correction, partial extraction, confirmation boundary, ownership, multi-meal aggregation, reviewed conversion, unit mismatch, insufficient/extra pantry, and unresolved lines.',
     );
   } finally {
     await cleanup(owner.id);

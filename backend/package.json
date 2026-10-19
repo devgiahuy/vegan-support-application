@@ -28,6 +28,7 @@
     "vision:acceptance": "tsx src/modules/ingredient-recognition/ingredient-recognition.acceptance.ts",
     "vision:dedup-acceptance": "tsx src/modules/ingredient-recognition/ingredient-recognition-dedup.acceptance.ts",
     "receipts:acceptance": "tsx src/modules/receipts/receipt.acceptance.ts",
+    "receipts:dedup-acceptance": "tsx src/modules/receipts/receipt-dedup.acceptance.ts",
     "openai-images:acceptance": "tsx src/modules/ai-images/openai-image.acceptance.ts",
     "ai-review:acceptance": "tsx src/modules/ai-review/ai-review.acceptance.ts",
     "verification-statistics:acceptance": "tsx src/modules/ai-review/verification-statistics.acceptance.ts",

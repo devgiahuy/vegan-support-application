@@ -1,6 +1,7 @@
 import type { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import type { z } from '../../common/validation/zod.js';
 import {
+  addReceiptImagesSchema,
   confirmReceiptJobSchema,
   createReceiptJobSchema,
   receiptCandidateParamsSchema,
@@ -20,6 +21,7 @@ const errors = (schema: z.ZodTypeAny, statuses: number[]) =>
 
 export function registerReceiptOpenApi(registry: OpenAPIRegistry, errorSchema: z.ZodTypeAny): void {
   const createRequest = registry.register('CreateReceiptJobRequest', createReceiptJobSchema);
+  const addImagesRequest = registry.register('AddReceiptImagesRequest', addReceiptImagesSchema);
   const updateRequest = registry.register('UpdateReceiptCandidateRequest', updateReceiptCandidateSchema);
   const confirmRequest = registry.register('ConfirmReceiptJobRequest', confirmReceiptJobSchema);
   const retryRequest = registry.register('RetryReceiptJobRequest', retryReceiptJobSchema);
@@ -48,6 +50,17 @@ export function registerReceiptOpenApi(registry: OpenAPIRegistry, errorSchema: z
     security,
     request: { params: receiptJobParamsSchema },
     responses: { 200: { description: 'Owner-scoped receipt job', content: json(jobResponse) }, ...errors(errorSchema, [401, 404]) },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/receipt-jobs/{id}/images',
+    tags: ['Receipts'],
+    summary: 'Add more images to an unconfirmed receipt job and merge the new lines',
+    description: 'Allowed while the job is READY, PARTIAL_FAILED or FAILED. Only the new images are analysed; candidates already read or edited are kept and lines repeated from a different image collapse into one (quantities are never summed). Images already attached, or with identical content to an attached image, are ignored. The job returns to QUEUED and is polled like a new job; it does not consume another usage credit once the job has been charged. The total image count is capped by the receipt image limit.',
+    operationId: 'addReceiptJobImages',
+    security,
+    request: { params: receiptJobParamsSchema, body: { content: json(addImagesRequest) } },
+    responses: { 202: { description: 'Job queued with the new images (or unchanged when nothing new was added)', content: json(jobResponse) }, ...errors(errorSchema, [401, 404, 409, 422, 503]) },
   });
   registry.registerPath({
     method: 'patch',

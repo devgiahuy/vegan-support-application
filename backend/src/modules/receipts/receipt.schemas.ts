@@ -23,6 +23,14 @@ export const createReceiptJobSchema = z
     path: ['imageAssetIds'],
   });
 
+export const addReceiptImagesSchema = z
+  .object({ imageAssetIds: z.array(z.string().uuid()).min(1).max(8) })
+  .strict()
+  .refine((input) => new Set(input.imageAssetIds).size === input.imageAssetIds.length, {
+    message: 'Image asset IDs must be unique',
+    path: ['imageAssetIds'],
+  });
+
 export const receiptJobParamsSchema = z.object({ id: z.string().uuid() }).strict();
 export const receiptCandidateParamsSchema = z
   .object({ id: z.string().uuid(), candidateId: z.string().uuid() })
@@ -211,6 +219,7 @@ export const shoppingGapEnvelopeSchema = z.object({
   }),
 });
 
+export type AddReceiptImagesInput = z.infer<typeof addReceiptImagesSchema>;
 export type CreateReceiptJobInput = z.infer<typeof createReceiptJobSchema>;
 export type UpdateReceiptCandidateInput = z.infer<typeof updateReceiptCandidateSchema>;
 export type ConfirmReceiptJobInput = z.infer<typeof confirmReceiptJobSchema>;

@@ -83,6 +83,12 @@ assert(
 );
 assert.equal(isMacroOverTarget(114, 100, 15), false);
 assert.equal(isMacroOverTarget(116, 100, 15), true);
+assert.equal(
+  isMacroOverTarget(40, 28, 15, 'FIBER'),
+  false,
+  'fibre is a floor-type target: exceeding it moderately must not be flagged',
+);
+assert.equal(isMacroOverTarget(75, 28, 15, 'FIBER'), true, 'very high fibre keeps a precaution');
 
 assert.equal(normalizeDisplayUnit('grams'), 'g');
 assert.equal(normalizeDisplayUnit('Kilogram'), 'kg');

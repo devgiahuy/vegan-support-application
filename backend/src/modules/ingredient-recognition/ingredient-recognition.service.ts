@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { RecognitionCandidateStatus, type Prisma } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
 import type { AppConfig } from '../../config/env.js';
+import { uniqueAssetIdsByContent } from '../../common/media/asset-dedup.js';
 import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 import type { IngredientVisionProvider, VisionImageResult } from './ingredient-vision.provider.js';
 import {
@@ -13,6 +14,7 @@ import {
   type RecognitionJobRecord,
 } from './ingredient-recognition.repository.js';
 import type {
+  AddRecognitionImagesInput,
   ConfirmRecognitionJobInput,
   CreateRecognitionJobInput,
   RetryRecognitionJobInput,
@@ -50,6 +52,7 @@ export function deduplicateVisionCandidates(
   resolvedIngredients: ReadonlyMap<string, { id: string; canonicalName: string }>,
 ): DeduplicatedCandidateData[] {
   const groups = new Map<string, DeduplicatedCandidateData>();
+  const providerNotes = new Map<string, string | null>();
   for (const result of results) {
     if (result.error) continue;
     for (const candidate of result.candidates) {
@@ -68,6 +71,7 @@ export function deduplicateVisionCandidates(
         ),
       };
       if (!existing) {
+        providerNotes.set(key, candidate.uncertaintyNote);
         groups.set(key, {
           ingredientId: ingredient?.id ?? null,
           detectedName: ingredient?.canonicalName ?? candidate.name,
@@ -92,9 +96,12 @@ export function deduplicateVisionCandidates(
         existing.confidence = candidate.confidence;
         existing.freshnessObservation = candidate.freshnessObservation;
       }
-      existing.uncertaintyNote = quantityConflict
+      const mergeNote = quantityConflict
         ? `Phát hiện trùng lặp từ ${String(existing.evidence.length + 1)} ảnh với ước tính số lượng hoặc đơn vị khác nhau. Hệ thống giữ ước tính từ bằng chứng có độ tin cậy cao hơn, không cộng dồn; vui lòng kiểm tra và chỉnh sửa trước khi xác nhận.`
         : `Phát hiện cùng nguyên liệu trong ${String(existing.evidence.length + 1)} ảnh. Số lượng không được cộng dồn vì các ảnh có thể chụp trùng cùng vật thể; vui lòng kiểm tra trước khi xác nhận.`;
+      // Keep what the provider said about the item itself and replace only the previous merge note.
+      const providerNote = providerNotes.get(key);
+      existing.uncertaintyNote = providerNote ? `${providerNote} ${mergeNote}` : mergeNote;
       existing.evidence.push(evidence);
     }
   }
@@ -110,35 +117,14 @@ export class IngredientRecognitionService {
 
   async create(ownerId: string, input: CreateRecognitionJobInput) {
     this.ensureEnabled();
-    if (input.imageAssetIds.length > this.config.vision.maxImages) {
-      throw new AppError({
-        statusCode: 422,
-        code: 'RECOGNITION_IMAGE_LIMIT_EXCEEDED',
-        message: `Mỗi tác vụ nhận diện chấp nhận tối đa ${String(this.config.vision.maxImages)} ảnh.`,
-      });
-    }
-    const assets = await this.repository.findOwnedAssets(ownerId, input.imageAssetIds);
-    const byId = new Map(assets.map((asset) => [asset.id, asset]));
-    if (assets.length !== input.imageAssetIds.length) throw this.invalidImage();
-    for (const assetId of input.imageAssetIds) {
-      const asset = byId.get(assetId);
-      if (
-        !asset ||
-        !asset.mimeType ||
-        !(
-          this.config.vision.provider === 'openai'
-            ? OPENAI_IMAGE_MIME_TYPES
-            : ALLOWED_IMAGE_MIME_TYPES
-        ).has(asset.mimeType) ||
-        asset.bytes > BigInt(this.config.vision.maxImageBytes)
-      ) {
-        throw this.invalidImage();
-      }
-    }
+    if (input.imageAssetIds.length > this.config.vision.maxImages) throw this.imageLimit();
+    const byId = await this.loadValidAssets(ownerId, input.imageAssetIds);
+    // The same photo uploaded twice is stored as two assets; analyse its content only once.
+    const assetIds = uniqueAssetIdsByContent(input.imageAssetIds, byId);
     const requestHash = hash({ imageAssetIds: input.imageAssetIds });
     const result = await this.repository.createJob({
       ownerId,
-      assetIds: input.imageAssetIds,
+      assetIds,
       provider: this.provider.name,
       modelId: this.provider.model,
       templateVersion: this.provider.templateVersion,
@@ -154,6 +140,32 @@ export class IngredientRecognitionService {
     }
     if (result.created) this.schedule(ownerId, result.job.id);
     return this.serializeJob(result.job);
+  }
+
+  /**
+   * Adds more photos to a reviewable job. Ingredients read from them are merged into the existing
+   * candidates (user edits and rejections are kept, quantities are never summed).
+   */
+  async addImages(ownerId: string, id: string, input: AddRecognitionImagesInput) {
+    this.ensureEnabled();
+    const job = await this.repository.findOwnedJob(ownerId, id);
+    if (!job) throw this.notFound();
+    const byId = await this.loadValidAssets(ownerId, input.imageAssetIds);
+    const attached = new Set(job.inputs.map((item) => item.assetId));
+    const assetIds = uniqueAssetIdsByContent(
+      input.imageAssetIds.filter((assetId) => !attached.has(assetId)),
+      byId,
+      job.inputs.map((item) => item.asset.providerEtag),
+    );
+    if (job.inputs.length + assetIds.length > this.config.vision.maxImages) throw this.imageLimit();
+    try {
+      const result = await this.repository.appendInputs(ownerId, id, assetIds);
+      if (!result) throw this.notFound();
+      if (result.queued) this.schedule(ownerId, id);
+      return this.serializeJob(result.job);
+    } catch (error) {
+      throw this.mapConflict(error);
+    }
   }
 
   async get(ownerId: string, id: string) {
@@ -330,11 +342,13 @@ export class IngredientRecognitionService {
     }
     try {
       const results = await this.provider.recognize(
-        job.inputs.map((input) => ({
-          id: input.id,
-          position: input.position,
-          url: input.asset.secureUrl,
-        })),
+        job.inputs
+          .filter((input) => input.status === 'PENDING')
+          .map((input) => ({
+            id: input.id,
+            position: input.position,
+            url: input.asset.secureUrl,
+          })),
       );
       const candidates = await this.deduplicate(results);
       await this.repository.saveResults(
@@ -431,6 +445,34 @@ export class IngredientRecognitionService {
         message: 'Tính năng nhận diện ảnh hiện đang tắt. Hãy thêm nguyên liệu vào kho theo cách thủ công.',
       });
     }
+  }
+
+  private async loadValidAssets(ownerId: string, assetIds: string[]) {
+    const assets = await this.repository.findOwnedAssets(ownerId, assetIds);
+    const byId = new Map(assets.map((asset) => [asset.id, asset]));
+    if (assets.length !== assetIds.length) throw this.invalidImage();
+    const allowedTypes =
+      this.config.vision.provider === 'openai' ? OPENAI_IMAGE_MIME_TYPES : ALLOWED_IMAGE_MIME_TYPES;
+    for (const assetId of assetIds) {
+      const asset = byId.get(assetId);
+      if (
+        !asset ||
+        !asset.mimeType ||
+        !allowedTypes.has(asset.mimeType) ||
+        asset.bytes > BigInt(this.config.vision.maxImageBytes)
+      ) {
+        throw this.invalidImage();
+      }
+    }
+    return byId;
+  }
+
+  private imageLimit(): AppError {
+    return new AppError({
+      statusCode: 422,
+      code: 'RECOGNITION_IMAGE_LIMIT_EXCEEDED',
+      message: `Mỗi tác vụ nhận diện chấp nhận tối đa ${String(this.config.vision.maxImages)} ảnh.`,
+    });
   }
 
   private invalidImage(): AppError {
