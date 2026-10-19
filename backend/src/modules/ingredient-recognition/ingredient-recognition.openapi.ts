@@ -1,6 +1,7 @@
 import type { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import type { z } from '../../common/validation/zod.js';
 import {
+  addRecognitionImagesSchema,
   confirmRecognitionJobSchema,
   createRecognitionJobSchema,
   recognitionConfirmationEnvelopeSchema,
@@ -17,6 +18,10 @@ export function registerIngredientRecognitionOpenApi(
   errorSchema: z.ZodTypeAny,
 ): void {
   const createRequest = registry.register('CreateRecognitionJobRequest', createRecognitionJobSchema);
+  const addImagesRequest = registry.register(
+    'AddRecognitionImagesRequest',
+    addRecognitionImagesSchema,
+  );
   const updateRequest = registry.register(
     'UpdateRecognitionCandidateRequest',
     updateRecognitionCandidateSchema,
@@ -70,6 +75,27 @@ export function registerIngredientRecognitionOpenApi(
     responses: {
       200: { description: 'Owner-scoped job detail', content: { 'application/json': { schema: jobResponse } } },
       ...errors([401, 404]),
+    },
+  });
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/ingredient-recognition/jobs/{id}/images',
+    tags: ['Ingredient Recognition'],
+    summary: 'Add more images to an unconfirmed recognition job and merge the new readings',
+    description:
+      'Allowed while the job is READY, PARTIAL_FAILED or FAILED. Only the new images are analysed. Ingredients already found keep their user edits and rejections and gain the new image as evidence; ingredients not seen before are added. Quantities are never summed because photos may overlap. Images already attached, or with identical content to an attached image, are ignored. The job returns to QUEUED and is polled like a new job; it does not consume another usage credit once the job has been charged. The total image count is capped by the recognition image limit.',
+    operationId: 'addIngredientRecognitionJobImages',
+    security,
+    request: {
+      params: recognitionJobParamsSchema,
+      body: { content: { 'application/json': { schema: addImagesRequest } } },
+    },
+    responses: {
+      202: {
+        description: 'Job queued with the new images (or unchanged when nothing new was added)',
+        content: { 'application/json': { schema: jobResponse } },
+      },
+      ...errors([401, 404, 409, 422, 503]),
     },
   });
   registry.registerPath({

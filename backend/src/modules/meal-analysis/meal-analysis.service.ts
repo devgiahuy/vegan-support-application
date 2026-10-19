@@ -14,6 +14,7 @@ import {
   emptyMealMacroValues,
   estimateMealMacroTargets,
   isMacroOverTarget,
+  macroUpperLimit,
 } from '../../common/nutrition/meal-macros.js';
 import type { AppConfig } from '../../config/env.js';
 import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
@@ -640,7 +641,7 @@ export class MealAnalysisService {
         const measured = matching.reduce((sum, entry) => sum + entry.amount, 0);
         const target = targets[metric.key];
         if (!matching.length || target === null) continue;
-        const above = isMacroOverTarget(measured, target, targets.tolerancePercent);
+        const above = isMacroOverTarget(measured, target, targets.tolerancePercent, metric.code);
         const hasCompleteDayData = matching.length === items.length;
         const below =
           hasCompleteDayData && measured < target * (1 - targets.tolerancePercent / 100);
@@ -671,9 +672,9 @@ export class MealAnalysisService {
           measured: { value: Number(measured.toFixed(2)), unit: 'g' },
           limit: {
             value: Number(
-              (
-                target *
-                (1 + ((direction === 'ABOVE' ? 1 : -1) * targets.tolerancePercent) / 100)
+              (direction === 'ABOVE'
+                ? macroUpperLimit(target, targets.tolerancePercent, metric.code)
+                : target * (1 - targets.tolerancePercent / 100)
               ).toFixed(2),
             ),
             unit: 'g',

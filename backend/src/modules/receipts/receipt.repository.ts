@@ -1,6 +1,7 @@
 import { AppError } from '../../common/errors/app-error.js';
 import type { EntitlementService } from '../entitlements/entitlement.service.js';
 import { lockDocument } from '../../database/locking.js';
+import { mergeReceiptLines } from './receipt.dedup.js';
 import type { Prisma } from '@prisma/client';
 import {
   FoodDataReviewStatus,
@@ -18,7 +19,7 @@ import {
 
 const jobInclude = {
   inputs: {
-    include: { asset: { select: { id: true, secureUrl: true } } },
+    include: { asset: { select: { id: true, secureUrl: true, providerEtag: true } } },
     orderBy: { position: 'asc' as const },
   },
   candidates: {
@@ -134,12 +135,66 @@ export class ReceiptRepository {
         },
       });
       if (!updated.count) return null;
-      await transaction.receiptCandidate.deleteMany({ where: { jobId: id } });
-      await transaction.receiptInput.updateMany({
-        where: { jobId: id },
-        data: { status: ReceiptInputStatus.PENDING, errorCode: null, errorMessage: null },
+      const pending = await transaction.receiptInput.count({
+        where: { jobId: id, status: ReceiptInputStatus.PENDING },
       });
+      // Stored candidates (and the user's edits to them) are never discarded. A job with images
+      // waiting for analysis (newly added, or interrupted) only analyses those. Otherwise this is
+      // a retry, which re-runs just the images that failed.
+      if (!pending)
+        await transaction.receiptInput.updateMany({
+          where: { jobId: id, status: ReceiptInputStatus.FAILED },
+          data: { status: ReceiptInputStatus.PENDING, errorCode: null, errorMessage: null },
+        });
       return transaction.receiptJob.findUniqueOrThrow({ where: { id }, include: jobInclude });
+    });
+  }
+
+  /**
+   * Attaches additional images to a reviewable job and queues them for analysis. Existing
+   * candidates are kept; the new lines are merged in when processing completes. The usage
+   * reservation is keyed by job, so an already-spent job does not consume another credit.
+   */
+  async appendInputs(
+    ownerId: string,
+    id: string,
+    assetIds: string[],
+  ): Promise<{ job: ReceiptJobRecord; queued: boolean } | null> {
+    return this.prisma.$transaction(async (transaction) => {
+      await lockDocument(transaction, 'user', { id: ownerId });
+      const job = await transaction.receiptJob.findFirst({
+        where: { id, ownerId },
+        include: jobInclude,
+      });
+      if (!job) return null;
+      if (
+        job.status !== ReceiptJobStatus.READY &&
+        job.status !== ReceiptJobStatus.PARTIAL_FAILED &&
+        job.status !== ReceiptJobStatus.FAILED
+      )
+        throw new ReceiptConflictError();
+      const attached = new Set(job.inputs.map((input) => input.assetId));
+      const fresh = assetIds.filter((assetId) => !attached.has(assetId));
+      if (!fresh.length) return { job, queued: false };
+      const firstPosition = Math.max(-1, ...job.inputs.map((input) => input.position)) + 1;
+      await this.entitlements?.reserve(transaction, ownerId, 'RECEIPT', 'RECEIPT:' + id);
+      for (const [offset, assetId] of fresh.entries())
+        await transaction.receiptInput.create({
+          data: { jobId: id, assetId, position: firstPosition + offset },
+        });
+      await transaction.receiptJob.update({
+        where: { id },
+        data: {
+          status: ReceiptJobStatus.QUEUED,
+          queuedAt: new Date(),
+          errorCode: null,
+          errorMessage: null,
+        },
+      });
+      return {
+        job: await transaction.receiptJob.findUniqueOrThrow({ where: { id }, include: jobInclude }),
+        queued: true,
+      };
     });
   }
 
@@ -179,30 +234,57 @@ export class ReceiptRepository {
             : { status: ReceiptInputStatus.PROCESSED, errorCode: null, errorMessage: null },
         });
       }
-      if (data.candidates.length)
+      const stored = await transaction.receiptCandidate.findMany({
+        where: { jobId: data.jobId },
+        select: {
+          inputId: true,
+          ingredientId: true,
+          lineText: true,
+          normalizedName: true,
+          quantity: true,
+          unit: true,
+          lineTotal: true,
+        },
+      });
+      const { kept } = mergeReceiptLines(stored, data.candidates);
+      if (kept.length)
         await transaction.receiptCandidate.createMany({
-          data: data.candidates.map((candidate) => ({ jobId: data.jobId, ...candidate })),
+          data: kept.map((candidate) => ({ jobId: data.jobId, ...candidate })),
         });
-      const failedCount = data.inputs.filter((input) => input.error).length;
+      // Status reflects every image on the job, not only the ones analysed in this pass.
+      const allInputs = await transaction.receiptInput.findMany({
+        where: { jobId: data.jobId },
+        select: { status: true },
+      });
+      const failedCount = allInputs.filter(
+        (input) => input.status === ReceiptInputStatus.FAILED,
+      ).length;
       await this.entitlements?.settle(
         transaction,
         'RECEIPT:' + data.jobId,
-        failedCount < data.inputs.length,
+        data.inputs.some((input) => !input.error),
       );
+      const adoptNewMetadata =
+        current.metadataConfidence === null ||
+        (data.metadata.confidence ?? -1) > current.metadataConfidence;
       await transaction.receiptJob.update({
         where: { id: data.jobId },
         data: {
           status:
-            failedCount === data.inputs.length
+            failedCount === allInputs.length
               ? ReceiptJobStatus.FAILED
               : failedCount > 0
                 ? ReceiptJobStatus.PARTIAL_FAILED
                 : ReceiptJobStatus.READY,
-          merchantName: data.metadata.merchantName,
-          purchasedAt: data.metadata.purchasedAt,
-          currency: data.metadata.currency,
-          totalAmount: data.metadata.totalAmount,
-          metadataConfidence: data.metadata.confidence,
+          ...(adoptNewMetadata
+            ? {
+                merchantName: data.metadata.merchantName,
+                purchasedAt: data.metadata.purchasedAt,
+                currency: data.metadata.currency,
+                totalAmount: data.metadata.totalAmount,
+                metadataConfidence: data.metadata.confidence,
+              }
+            : {}),
           processingCompletedAt: new Date(),
           errorCode: failedCount ? 'PARTIAL_RECEIPT_EXTRACTION' : null,
           errorMessage: failedCount
