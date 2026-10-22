@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
-  "source": "http://localhost:4100/api-docs.json",
-  "generatedAt": "2026-10-14T10:13:05.005Z",
+  "source": "..\\backend\\openapi.json",
+  "generatedAt": "2026-10-19T04:55:08.137Z",
   "stats": {
-    "operations": 176,
+    "operations": 178,
     "groups": 40,
-    "schemas": 154
+    "schemas": 156
   },
   "operations": [
     {
@@ -7101,7 +7101,7 @@
       "method": "GET",
       "path": "/api/v1/ingredient-recognition/jobs/{id}",
       "group": "Ingredient Recognition",
-      "summary": "Get recognition progress and editable candidates",
+      "summary": "Get recognition progress and consolidated editable candidates",
       "operationId": "getIngredientRecognitionJob",
       "params": [
         {
@@ -7116,6 +7116,36 @@
         "200": "RecognitionJobResponse",
         "401": "ErrorResponse",
         "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ingredient-recognition/jobs/{id}/images",
+      "group": "Ingredient Recognition",
+      "summary": "Add more images to an unconfirmed recognition job and merge the new readings",
+      "operationId": "addIngredientRecognitionJobImages",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "AddRecognitionImagesRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "202": "RecognitionJobResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse",
+        "503": "ErrorResponse"
       }
     },
     {
@@ -7275,6 +7305,36 @@
         "200": "ReceiptJobResponse",
         "401": "ErrorResponse",
         "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/receipt-jobs/{id}/images",
+      "group": "Receipts",
+      "summary": "Add more images to an unconfirmed receipt job and merge the new lines",
+      "operationId": "addReceiptJobImages",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "AddReceiptImagesRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "202": "ReceiptJobResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse",
+        "503": "ErrorResponse"
       }
     },
     {

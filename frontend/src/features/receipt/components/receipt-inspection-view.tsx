@@ -30,6 +30,7 @@ import {
 import type { ReceiptCandidate, ReceiptConfirmationDiff, ReceiptJob } from '../types/receipt.model';
 import { AiArtifactType } from '@/common/enums';
 import { SaveArtifactButton } from '@/features/ai-artifacts';
+import { ReceiptAddPhotosButton } from './receipt-add-photos-button';
 
 interface ReceiptInspectionViewProps {
   job: ReceiptJob;
@@ -82,15 +83,39 @@ export function ReceiptInspectionView({
     })
   );
 
-  // Đồng bộ lại khi job thay đổi
+  // Đồng bộ lại khi job thay đổi, bảo toàn các chỉnh sửa thủ công của người dùng
   useEffect(() => {
-    setItems(
-      job.candidates.map((c) => {
+    setItems((prevItems) => {
+      const prevMap = new Map(prevItems.map((it) => [it.id, it]));
+      return job.candidates.map((c) => {
+        const existing = prevMap.get(c.id);
         const qVal =
           c.quantity.value !== null && c.quantity.value !== undefined
             ? String(c.quantity.value)
             : '';
         const qUnit = c.quantity.unit || '';
+
+        if (existing) {
+          const isUserEdited =
+            existing.name !== existing.initialName ||
+            existing.quantity !== existing.initialQuantity ||
+            existing.unit !== existing.initialUnit ||
+            existing.isRejected !== existing.initialIsRejected;
+
+          return {
+            ...existing,
+            version: c.version,
+            confidencePercent: c.confidencePercent,
+            confidenceTier: c.confidenceTier,
+            uncertaintyNote: c.uncertaintyNote,
+            pricing: c.pricing,
+            name: isUserEdited ? existing.name : c.name,
+            quantity: isUserEdited ? existing.quantity : qVal,
+            unit: isUserEdited ? existing.unit : qUnit,
+            isRejected: isUserEdited ? existing.isRejected : c.isRejected,
+          };
+        }
+
         return {
           id: c.id,
           name: c.name,
@@ -110,8 +135,8 @@ export function ReceiptInspectionView({
           initialUnit: qUnit,
           initialIsRejected: c.isRejected,
         };
-      })
-    );
+      });
+    });
   }, [job.id, job.candidates]);
 
   const updateItem = (id: string, updates: Partial<EditableReceiptCandidateItem>) => {
@@ -282,6 +307,8 @@ export function ReceiptInspectionView({
             size="sm"
             className="text-xs"
           />
+
+          <ReceiptAddPhotosButton job={job} disabled={isSaving} size="sm" className="text-xs" />
 
           {job.canCancel && (
             <Button

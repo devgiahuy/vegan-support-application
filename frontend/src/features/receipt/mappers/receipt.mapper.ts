@@ -172,6 +172,10 @@ export class ReceiptMapper extends BaseMapper<ReceiptJobResponseDto, ReceiptJob>
     const canConfirm = isReadyForReview && activeCandidates.length > 0;
     const canRetry = status === 'FAILED' || status === 'PARTIAL_FAILED';
     const canCancel = !isConfirmed && !isCancelled;
+    const canAddImages =
+      (status === 'READY' || status === 'PARTIAL_FAILED' || status === 'FAILED') &&
+      !isProcessing &&
+      images.length < 4;
 
     return {
       id,
@@ -198,6 +202,7 @@ export class ReceiptMapper extends BaseMapper<ReceiptJobResponseDto, ReceiptJob>
       canConfirm,
       canRetry,
       canCancel,
+      canAddImages,
     };
   }
 

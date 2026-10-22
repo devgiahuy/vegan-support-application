@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.36
+**Version:** 4.37
 
 **Cập nhật:** 19/10/2026
 
@@ -13,6 +13,17 @@
 ---
 
 ## 1. Source of truth và status
+
+### Scan & Macro Enhancements (Feature 033) — 2026-10-19
+
+- **Meal Plan Macros**: Ngưỡng cảnh báo chất xơ được nâng lên `FIBER_UPPER_CAUTION_GRAMS = 70` g/ngày (chất xơ 14g/1000 kcal là mức tối thiểu khuyến nghị, không phạt điểm khi vượt và chỉ cảnh báo thận trọng khi vượt 70g/ngày kèm khuyến nghị bổ sung nước). So sánh dinh dưỡng trên frontend sử dụng giá trị số thực chưa làm tròn.
+- **Image Deduplication & Non-destructive Retries**: Lọc trùng ảnh qua ETag Cloudinary; gộp các dòng in giống nhau qua nhiều ảnh hóa đơn (không nhân đôi số tiền/số lượng); bảo toàn ghi chú không chắc chắn `uncertaintyNote` và bằng chứng ảnh khi gộp nguyên liệu tủ lạnh. Khi retry (`onRetry`), chỉ chạy lại ảnh lỗi mà không ghi đè chỉnh sửa thủ công.
+- **Add Images to Unconfirmed Jobs**: Tích hợp nút "Thêm ảnh" (`ReceiptAddPhotosButton`, `FridgeAddPhotosButton`) gọi `POST /api/v1/receipt-jobs/:id/images` và `POST /api/v1/ingredient-recognition/jobs/:id/images`. Chặn khi vượt quá giới hạn (hóa đơn tối đa 4, tủ lạnh tối đa 6), bảo toàn các chỉnh sửa và từ chối của người dùng.
+
+| Method | Endpoint                                          | Status        | FE integrated    | Notes                                                                                                                          |
+| ------ | ------------------------------------------------- | ------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| POST   | `/api/v1/ingredient-recognition/jobs/{id}/images` | `IN_PROGRESS` | Yes (2026-10-19) | Thêm ảnh vào job tủ lạnh chưa xác nhận (tối đa 6 ảnh); gộp ứng viên không cộng dồn số lượng; FE: `features/ingredient-vision` |
+| POST   | `/api/v1/receipt-jobs/{id}/images`                | `IN_PROGRESS` | Yes (2026-10-19) | Thêm ảnh vào job hóa đơn chưa xác nhận (tối đa 4 ảnh); gộp dòng mới, dòng lặp qua nhiều ảnh không nhân đôi; FE: `features/receipt` |
 
 ### Meal Plan Data & Item Nutrition Sync — 2026-10-17
 
@@ -1354,7 +1365,7 @@ Một frontend/backend capability chỉ được xem là tích hợp xong khi:
 | POST   | /api/v1/ingredient-recognition/jobs/{id}/confirm                  | `IN_PROGRESS` | Yes           | 2026-09-26         | Idempotent transactional confirmation diff; sole pantry mutation boundary; FE: `features/ingredient-vision`                                |
 | POST   | /api/v1/ingredient-recognition/jobs/{id}/cancel                   | `IN_PROGRESS` | Yes           | 2026-09-26         | Idempotent cancel before confirmation; committed images remain storage-accounted; FE: `features/ingredient-vision`                         |
 | POST   | /api/v1/ingredient-recognition/jobs/{id}/retry                    | `IN_PROGRESS` | Yes           | 2026-10-19         | Idempotent retry for `FAILED`/`PARTIAL_FAILED`; only failed images re-analysed, existing candidates kept; FE: `features/ingredient-vision` |
-| POST   | /api/v1/ingredient-recognition/jobs/{id}/images                   | `IN_PROGRESS` | No            | 2026-10-19         | Add images to an unconfirmed job; new images analysed and merged into existing candidates; FE not integrated                               |
+| POST   | /api/v1/ingredient-recognition/jobs/{id}/images                   | `IN_PROGRESS` | Yes           | 2026-10-19         | Add images to an unconfirmed job; new images analysed and merged into existing candidates; FE: `features/ingredient-vision`                               |
 
 **Business rules (backend-enforced):**
 
@@ -1389,7 +1400,7 @@ Một frontend/backend capability chỉ được xem là tích hợp xong khi:
 | POST   | /api/v1/receipt-jobs/{id}/confirm                  | `IN_PROGRESS` | Yes           | 2026-09-26         | Transactional confirmation diff; sole pantry mutation boundary; FE: `features/receipt`                                      |
 | POST   | `/api/v1/receipt-jobs/{id}/cancel`                 | `IN_PROGRESS` | Yes           | 2026-09-26         | Idempotent cancel before confirmation; committed images remain storage-accounted; FE: `features/receipt`                    |
 | POST   | `/api/v1/receipt-jobs/{id}/retry`                  | `IN_PROGRESS` | Yes           | 2026-10-19         | Idempotent retry for failed/partially failed extraction; only failed images re-analysed, lines kept; FE: `features/receipt` |
-| POST   | `/api/v1/receipt-jobs/{id}/images`                 | `IN_PROGRESS` | No            | 2026-10-19         | Add images to an unconfirmed job; new lines merged, repeated lines collapsed; FE not integrated                             |
+| POST   | `/api/v1/receipt-jobs/{id}/images`                 | `IN_PROGRESS` | Yes           | 2026-10-19         | Add images to an unconfirmed job; new lines merged, repeated lines collapsed; FE: `features/receipt`                        |
 | POST   | `/api/v1/shopping-lists/preview`                   | READY         | Yes           | 2026-09-26         | Selected recipes/custom-meals minus confirmed pantry quantities; FE: `features/receipt`                                     |
 
 **Business rules (backend-enforced):**

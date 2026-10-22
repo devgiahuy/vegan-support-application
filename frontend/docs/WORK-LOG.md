@@ -1,5 +1,22 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-19] — Hiệu chỉnh cảnh báo dinh dưỡng thực đơn & nâng cấp quét ảnh thông minh (033-scan-and-macro-enhancements)
+
+- **Mục tiêu**: Hiệu chỉnh cảnh báo chất xơ thực đơn (14g/1000 kcal là mức tối thiểu khuyến nghị, chỉ cảnh báo khi > 70g/ngày, so sánh số thực chưa làm tròn); lọc trùng ảnh qua Cloudinary ETag; gộp dòng lặp qua nhiều ảnh hóa đơn (không nhân đôi số tiền/số lượng); bảo toàn ghi chú nghi vấn `uncertaintyNote` của AI khi gộp nguyên liệu tủ lạnh; bổ sung nút "Thêm ảnh" (`POST .../images`) và giữ nguyên toàn bộ chỉnh sửa tay khi retry (`onRetry`).
+- **Đã làm**:
+  - Hằng số & Endpoints: Khai báo tập trung `ADD_IMAGES` cho `RECEIPT_JOBS` (`/receipt-jobs/:id/images`) và `INGREDIENT_RECOGNITION` (`/ingredient-recognition/jobs/:id/images`) trong `src/common/constants/api-endpoints.ts`.
+  - DTO & Models: Định nghĩa `AddReceiptImagesRequestDto`, `AddFridgeImagesRequestDto`; bổ sung `canAddImages`, mã lỗi nghiệp vụ giới hạn ảnh & xung đột trạng thái trong `receipt.model.ts` và `ingredient-recognition.model.ts`.
+  - Dinh dưỡng thực đơn (US1): Cập nhật `computeDayNutrition` trong `src/features/meal-plan/components/day-grid.tsx` áp dụng `FIBER_UPPER_CAUTION_GRAMS = 70`, so sánh ngưỡng chưa làm tròn và hiển thị lời khuyên uống đủ nước. Thêm 3 test cases vào `day-grid.test.ts` (12/12 passing).
+  - Mappers & Mapping Tests (US2): Cập nhật `receipt.mapper.ts` và `ingredient-recognition.mapper.ts` trích xuất `canAddImages`, bảo toàn `uncertaintyNote` và bằng chứng ảnh `evidence`. Bổ sung unit tests cho cả hai mapper trong `receipt.mapper.test.ts` và `ingredient-recognition.mapper.test.ts` (24/24 passing).
+  - API & TanStack Query (US3): Viết API functions `addReceiptImages`, `addFridgeImages` và Query mutations `useAddReceiptImagesMutation`, `useAddFridgeImagesMutation`.
+  - UI Components (US3): Tạo `ReceiptAddPhotosButton` và `FridgeAddPhotosButton` với kiểm soát số lượng ảnh (tối đa 4 ảnh hóa đơn, 6 ảnh tủ lạnh) và trạng thái upload; tích hợp vào `ReceiptInspectionView` và `CandidateReviewScreen`.
+  - Bảo toàn chỉnh sửa người dùng: Xây dựng cơ chế đồng bộ state `useEffect` so sánh đối chiếu với giá trị ban đầu để giữ nguyên toàn bộ các sửa đổi thủ công và lựa chọn từ chối khi job cập nhật. Cập nhật nhãn và tooltip trên `ReceiptProgressTracker` và `RecognitionProgressTracker` giải thích rõ việc retry chỉ chạy lại ảnh lỗi.
+  - Hợp đồng & Tài liệu: Đồng bộ OpenAPI Swagger sang catalog frontend bằng `node scripts/sync-swagger.mjs ../backend/openapi.json` (178 endpoints, 40 nhóm). Nâng cấp `BACKEND_INTEGRATION.md` lên Version 4.37, cập nhật trạng thái tích hợp của 2 endpoint thành `Yes`. Cập nhật `PROGRESS.md` và `WORK-LOG.md`.
+- **Verify**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test -- src/features/meal-plan src/features/receipt src/features/ingredient-vision`: 36 tests pass 100% (12 day-grid tests, 12 receipt tests, 12 ingredient-recognition tests).
+  - Production build: `npm run build` thành công.
+
 ## [2026-10-17] — Đồng bộ dữ liệu thực đơn tuần & dinh dưỡng từng món (032-meal-plan-data-sync)
 
 - **Mục tiêu**: Đồng bộ toàn diện dữ liệu thực đơn tuần phía frontend theo các thay đổi của backend leader (`frontend/docs/LEADER_MEAL_PLAN_DATA_CHANGES.md`), hỗ trợ 4 chỉ số dinh dưỡng đa lượng (`proteinGrams`, `fiberGrams`, `fatGrams`, `carbohydrateGrams`) cho từng ô bữa ăn, hiển thị ảnh đại diện công thức thực tế mới và loại trừ fixtures demo.

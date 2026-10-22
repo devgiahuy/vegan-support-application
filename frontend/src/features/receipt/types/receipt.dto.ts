@@ -152,3 +152,7 @@ export interface ReceiptConfirmationEnvelopeDto {
   success: true;
   data: ReceiptConfirmationResponseDto;
 }
+
+export interface AddReceiptImagesRequestDto {
+  imageAssetIds: string[];
+}

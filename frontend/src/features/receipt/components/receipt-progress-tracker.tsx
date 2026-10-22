@@ -44,9 +44,11 @@ export function ReceiptProgressTracker({
             <p className="text-sm text-muted-foreground">
               {job.isProcessing
                 ? `Đang nhận diện ký tự và bóc tách các dòng sản phẩm (${progress.completedImages}/${progress.totalImages} ảnh)...`
-                : job.isReadyForReview
-                  ? 'Bóc tách hoàn tất! Vui lòng đối chiếu với ảnh hóa đơn bên trái và kiểm duyệt danh sách sản phẩm.'
-                  : issue?.message || 'Tiến trình xử lý hóa đơn.'}
+                : job.status === 'PARTIAL_FAILED'
+                  ? 'Một số ảnh gặp sự cố bóc tách. Bạn có thể bấm "Thử lại ảnh lỗi" để phân tích lại ảnh lỗi mà vẫn giữ nguyên kết quả hiện có.'
+                  : job.isReadyForReview
+                    ? 'Bóc tách hoàn tất! Vui lòng đối chiếu với ảnh hóa đơn bên trái và kiểm duyệt danh sách sản phẩm.'
+                    : issue?.message || 'Tiến trình xử lý hóa đơn.'}
             </p>
           </div>
         </div>
@@ -77,6 +79,7 @@ export function ReceiptProgressTracker({
               size="sm"
               onClick={onRetry}
               disabled={isRetrying}
+              title="Chỉ phân tích lại các ảnh bị lỗi, giữ nguyên dữ liệu đã bóc tách"
               className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white"
             >
               {isRetrying ? (
@@ -84,7 +87,7 @@ export function ReceiptProgressTracker({
               ) : (
                 <RefreshCw className="h-3.5 w-3.5 mr-1.5" />
               )}
-              Thử lại tác vụ
+              {job.status === 'PARTIAL_FAILED' ? 'Thử lại ảnh lỗi' : 'Thử lại tác vụ'}
             </Button>
           )}
         </div>

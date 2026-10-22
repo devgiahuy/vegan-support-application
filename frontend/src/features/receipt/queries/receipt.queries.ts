@@ -151,3 +151,22 @@ export function useRetryReceiptJobMutation(jobId: string) {
     },
   });
 }
+
+/**
+ * Mutation bổ sung ảnh vào tác vụ bóc tách hóa đơn
+ */
+export function useAddReceiptImagesMutation(jobId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation<ReceiptJob, Error, { imageAssetIds: string[] }>({
+    mutationFn: (payload) => receiptApi.addImages(jobId, payload),
+    onSuccess: (updatedJob) => {
+      queryClient.setQueryData(RECEIPT_QUERY_KEYS.jobDetail(jobId), updatedJob);
+      void queryClient.invalidateQueries({ queryKey: RECEIPT_QUERY_KEYS.jobDetail(jobId) });
+      toast.success('Đã thêm ảnh bổ sung, đang tiến hành phân tích...');
+    },
+    onError: (error: unknown) => {
+      toast.error(billingErrorMessage(error));
+    },
+  });
+}

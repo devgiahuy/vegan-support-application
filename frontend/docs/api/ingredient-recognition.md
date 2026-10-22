@@ -9,11 +9,18 @@ Create an asynchronous multi-image fridge recognition job
 - Responses: `202` → RecognitionJobResponse, `401` → ErrorResponse, `409` → ErrorResponse, `422` → ErrorResponse, `423` → ErrorResponse, `503` → ErrorResponse
 
 ## GET `/api/v1/ingredient-recognition/jobs/{id}`
-Get recognition progress and editable candidates
+Get recognition progress and consolidated editable candidates
 - operationId: `getIngredientRecognitionJob`
 - Params: `path:id* (string)`
 - Request: —
 - Responses: `200` → RecognitionJobResponse, `401` → ErrorResponse, `404` → ErrorResponse
+
+## POST `/api/v1/ingredient-recognition/jobs/{id}/images`
+Add more images to an unconfirmed recognition job and merge the new readings
+- operationId: `addIngredientRecognitionJobImages`
+- Params: `path:id* (string)`
+- Request: `AddRecognitionImagesRequest`
+- Responses: `202` → RecognitionJobResponse, `401` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `422` → ErrorResponse, `423` → ErrorResponse, `503` → ErrorResponse
 
 ## PATCH `/api/v1/ingredient-recognition/jobs/{id}/candidates/{candidateId}`
 Correct or reject a recognition candidate
@@ -45,6 +52,26 @@ Retry a failed or partially failed recognition job
 
 ---
 ### Schemas dùng trong nhóm
+
+#### AddRecognitionImagesRequest
+```json
+{
+  "type": "object",
+  "required": [
+    "imageAssetIds"
+  ],
+  "properties": {
+    "imageAssetIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      }
+    }
+  },
+  "additionalProperties": false
+}
+```
 
 #### ConfirmRecognitionJobRequest
 ```json

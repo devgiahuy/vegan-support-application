@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { billingErrorMessage } from '@/features/billing/lib/billing-errors';
 import { BILLING_QUERY_KEYS } from '@/features/billing/queries/billing.queries';
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
@@ -156,6 +157,31 @@ export function useRetryRecognitionJobMutation() {
         retriedJob
       );
       toast.info('Đã xếp hàng thử lại nhận diện hình ảnh');
+    },
+  });
+}
+
+/**
+ * Mutation bổ sung ảnh vào tác vụ nhận diện thực phẩm tủ lạnh
+ */
+export function useAddFridgeImagesMutation(jobId: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (payload: { imageAssetIds: string[] }) =>
+      ingredientRecognitionApi.addImages(jobId, payload),
+    onSuccess: (updatedJob) => {
+      queryClient.setQueryData(
+        INGREDIENT_RECOGNITION_QUERY_KEYS.jobDetail(updatedJob.id),
+        updatedJob
+      );
+      void queryClient.invalidateQueries({
+        queryKey: INGREDIENT_RECOGNITION_QUERY_KEYS.jobDetail(updatedJob.id),
+      });
+      toast.success('Đã thêm ảnh bổ sung, đang phân tích...');
+    },
+    onError: (error: unknown) => {
+      toast.error(billingErrorMessage(error));
     },
   });
 }

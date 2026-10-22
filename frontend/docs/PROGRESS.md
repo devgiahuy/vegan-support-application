@@ -1,5 +1,29 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Scan & Macro Enhancements — Updated 2026-10-19
+
+Feature `033-scan-and-macro-enhancements` hoàn thành 100% (0% → 100%):
+- **Cảnh báo dinh dưỡng thực đơn & ngưỡng chất xơ (US1)**:
+  - Nâng ngưỡng cảnh báo chất xơ lên `FIBER_UPPER_CAUTION_GRAMS = 70` g/ngày (chất xơ 14g/1000 kcal là mức khuyến nghị tối thiểu, không phạt điểm và không cảnh báo vượt khi <= 70g/ngày).
+  - So sánh ngưỡng calo, đạm, béo, xơ trên frontend bằng giá trị số thực chính xác chưa làm tròn (tránh sai số làm tròn 0.1g bị cảnh báo lệch).
+  - Giữ nguyên cảnh báo thiếu chất xơ và bổ sung thông điệp thận trọng uống đủ nước khi > 70g/ngày.
+  - Toàn bộ 12 test cases của `day-grid.test.ts` pass 100%.
+- **Lọc trùng ảnh & gộp ứng viên quét thông minh (US2)**:
+  - Lọc bỏ ảnh trùng nội dung qua ETag Cloudinary.
+  - Hóa đơn: Gộp các dòng in giống nhau qua nhiều ảnh (không nhân đôi số tiền/số lượng); giữ nguyên các dòng lặp trong cùng 1 ảnh (mua nhiều lần cùng món).
+  - Tủ lạnh: Bảo toàn ghi chú nghi vấn `uncertaintyNote` và danh sách bằng chứng ảnh `evidence` khi gộp ứng viên, ngăn chặn lỗi ghi đè ghi chú AI.
+  - Cập nhật DTO, UI Model, Mappers cho `receipt` và `ingredient-vision`; unit tests mapper cho cả hai module pass 100% (24/24 tests).
+- **Thêm ảnh vào phiên quét & retry không phá hủy dữ liệu (US3)**:
+  - Tích hợp 2 endpoints mới: `POST /api/v1/receipt-jobs/:id/images` và `POST /api/v1/ingredient-recognition/jobs/:id/images`.
+  - Thêm các components nút "Thêm ảnh": `ReceiptAddPhotosButton` và `FridgeAddPhotosButton` với kiểm soát giới hạn ảnh (tối đa 4 ảnh hóa đơn, 6 ảnh tủ lạnh), tích hợp upload Cloudinary, vô hiệu hóa khi đang xử lý.
+  - Tích hợp vào màn hình kiểm duyệt `ReceiptInspectionView` và `CandidateReviewScreen`.
+  - Cơ chế đồng bộ state không phá hủy: giữ nguyên toàn bộ các chỉnh sửa thủ công và lựa chọn từ chối của người dùng khi có dữ liệu ảnh mới hoặc khi chạy lại (`onRetry` chỉ phân tích ảnh lỗi).
+  - Cập nhật thông điệp tiến trình và nút thử lại trong `ReceiptProgressTracker` và `RecognitionProgressTracker`.
+- **Hợp đồng & Xác minh**:
+  - Cập nhật `BACKEND_INTEGRATION.md` lên Version 4.37, cập nhật trạng thái tích hợp của 2 endpoint thành `Yes`.
+  - Chạy `npm run sync:swagger` đồng bộ 178 endpoints, 40 nhóm tài liệu.
+  - Vượt qua toàn bộ cổng kiểm tra chất lượng: `npx tsc --noEmit` (0 lỗi), `npm test` (toàn bộ tests pass), `npm run build` (Next.js build thành công).
+
 ## Meal Plan Data & Item Nutrition Sync — Updated 2026-10-17
 
 Feature `032-meal-plan-data-sync` hoàn thành 100% (0% → 100%):

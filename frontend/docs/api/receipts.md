@@ -15,6 +15,13 @@ Get receipt metadata, progress, and editable candidate lines
 - Request: —
 - Responses: `200` → ReceiptJobResponse, `401` → ErrorResponse, `404` → ErrorResponse
 
+## POST `/api/v1/receipt-jobs/{id}/images`
+Add more images to an unconfirmed receipt job and merge the new lines
+- operationId: `addReceiptJobImages`
+- Params: `path:id* (string)`
+- Request: `AddReceiptImagesRequest`
+- Responses: `202` → ReceiptJobResponse, `401` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `422` → ErrorResponse, `423` → ErrorResponse, `503` → ErrorResponse
+
 ## PATCH `/api/v1/receipt-jobs/{id}/candidates/{candidateId}`
 Correct or reject a receipt candidate
 - operationId: `updateReceiptCandidate`
@@ -45,6 +52,26 @@ Retry failed or partially failed receipt extraction
 
 ---
 ### Schemas dùng trong nhóm
+
+#### AddReceiptImagesRequest
+```json
+{
+  "type": "object",
+  "required": [
+    "imageAssetIds"
+  ],
+  "properties": {
+    "imageAssetIds": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "format": "uuid"
+      }
+    }
+  },
+  "additionalProperties": false
+}
+```
 
 #### ConfirmReceiptJobRequest
 ```json

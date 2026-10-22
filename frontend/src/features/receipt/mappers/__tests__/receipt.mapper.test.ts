@@ -343,4 +343,70 @@ describe('ReceiptMapper', () => {
     expect(confirmDto.candidates).toEqual([{ id: 'c1', expectedVersion: 1 }]);
     expect(confirmDto.idempotencyKey).toBe('confirm-key');
   });
+
+  it('kiểm tra tính toán canAddImages và bảo toàn ghi chú không chắc chắn khi gộp dòng', () => {
+    // READY với 2 ảnh -> canAddImages = true
+    const readyDto: ReceiptJobResponseDto = {
+      id: 'job-ready',
+      status: 'READY',
+      progress: { completedImages: 2, totalImages: 2 },
+      receipt: {
+        merchantName: 'Siêu thị',
+        purchasedAt: null,
+        currency: 'VND',
+        totalAmount: 100000,
+        confidence: 0.9,
+      },
+      images: [
+        { id: 'img-1', position: 0, url: 'url1', status: 'PROCESSED', issue: null },
+        { id: 'img-2', position: 1, url: 'url2', status: 'PROCESSED', issue: null },
+      ],
+      candidates: [
+        {
+          id: 'c1',
+          imageId: 'img-1',
+          lineText: 'DUA LEO 15000',
+          name: 'Dưa leo',
+          ingredientSuggestion: null,
+          quantity: { value: 500, unit: 'g' },
+          pricing: { unitPrice: 15000, lineTotal: 15000, currency: 'VND' },
+          confidence: 0.85,
+          uncertaintyNote: 'Dòng xuất hiện ở nhiều ảnh hóa đơn, đã gộp thành một dòng.',
+          status: 'PROPOSED',
+          version: 1,
+        },
+      ],
+      attempt: 1,
+      issue: null,
+      createdAt: '2026-10-19T00:00:00.000Z',
+      updatedAt: '2026-10-19T00:01:00.000Z',
+      completedAt: null,
+      confirmedAt: null,
+    };
+    const readyJob = mapper.toModel(readyDto);
+
+    expect(readyJob.canAddImages).toBe(true);
+    expect(readyJob.candidates[0].uncertaintyNote).toBe(
+      'Dòng xuất hiện ở nhiều ảnh hóa đơn, đã gộp thành một dòng.'
+    );
+
+    // Khi đã đạt trần 4 ảnh -> canAddImages = false
+    const fullJob = mapper.toModel({
+      ...readyDto,
+      images: [
+        { id: 'img-1', position: 0, url: 'url1', status: 'PROCESSED', issue: null },
+        { id: 'img-2', position: 1, url: 'url2', status: 'PROCESSED', issue: null },
+        { id: 'img-3', position: 2, url: 'url3', status: 'PROCESSED', issue: null },
+        { id: 'img-4', position: 3, url: 'url4', status: 'PROCESSED', issue: null },
+      ],
+    });
+    expect(fullJob.canAddImages).toBe(false);
+
+    // Khi đang PROCESSING -> canAddImages = false
+    const processingJob = mapper.toModel({
+      ...readyDto,
+      status: 'PROCESSING',
+    });
+    expect(processingJob.canAddImages).toBe(false);
+  });
 });

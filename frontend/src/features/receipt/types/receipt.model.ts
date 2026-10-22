@@ -110,7 +110,21 @@ export interface ReceiptJob {
   canConfirm: boolean;
   canRetry: boolean;
   canCancel: boolean;
+  canAddImages: boolean;
 }
+
+export type ReceiptErrorCode =
+  | 'RECEIPT_IMAGE_LIMIT_EXCEEDED'
+  | 'RECEIPT_STATE_CONFLICT'
+  | 'RECEIPT_NOT_FOUND'
+  | 'RECEIPT_CANDIDATE_NOT_FOUND'
+  | 'RECEIPT_CANDIDATE_VERSION_CONFLICT';
+
+export const RECEIPT_ERROR_MESSAGES: Record<string, string> = {
+  RECEIPT_IMAGE_LIMIT_EXCEEDED: 'Phiên quét hóa đơn chỉ cho phép tối đa 4 ảnh.',
+  RECEIPT_STATE_CONFLICT:
+    'Phiên quét đang trong quá trình xử lý. Vui lòng chờ hoàn tất trước khi bổ sung thêm ảnh.',
+};
 
 export interface ReceiptConfirmationPantryItem {
   id: string;

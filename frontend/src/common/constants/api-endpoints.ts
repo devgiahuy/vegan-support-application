@@ -255,6 +255,7 @@ export const API_ENDPOINTS = {
     CONFIRM: (id: string) => `/ingredient-recognition/jobs/${id}/confirm`,
     CANCEL: (id: string) => `/ingredient-recognition/jobs/${id}/cancel`,
     RETRY: (id: string) => `/ingredient-recognition/jobs/${id}/retry`,
+    ADD_IMAGES: (id: string) => `/ingredient-recognition/jobs/${id}/images`,
   },
   // Phase 22: Receipt Analysis & Shopping Gaps
   RECEIPT_JOBS: {
@@ -265,6 +266,7 @@ export const API_ENDPOINTS = {
     CONFIRM: (id: string) => `/receipt-jobs/${id}/confirm`,
     CANCEL: (id: string) => `/receipt-jobs/${id}/cancel`,
     RETRY: (id: string) => `/receipt-jobs/${id}/retry`,
+    ADD_IMAGES: (id: string) => `/receipt-jobs/${id}/images`,
   },
   SHOPPING_LISTS: {
     PREVIEW: '/shopping-lists/preview',

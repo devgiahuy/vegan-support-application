@@ -44,9 +44,11 @@ export function RecognitionProgressTracker({
             <p className="text-sm text-muted-foreground">
               {job.isProcessing
                 ? `Đang phân tích hình ảnh và nhận diện thực phẩm (${progress.completedImages}/${progress.totalImages} ảnh)...`
-                : job.isReadyForReview
-                  ? 'Hoàn thành phân tích! Vui lòng rà soát lại các ứng viên bên dưới.'
-                  : issue?.message || 'Tiến trình nhận diện thực phẩm.'}
+                : status === 'PARTIAL_FAILED'
+                  ? 'Một số ảnh gặp sự cố. Bạn có thể bấm "Thử lại ảnh lỗi" để phân tích lại ảnh lỗi mà không mất các nguyên liệu đã nhận diện.'
+                  : job.isReadyForReview
+                    ? 'Hoàn thành phân tích! Vui lòng rà soát lại các ứng viên bên dưới.'
+                    : issue?.message || 'Tiến trình nhận diện thực phẩm.'}
             </p>
           </div>
         </div>
@@ -76,6 +78,7 @@ export function RecognitionProgressTracker({
               size="sm"
               onClick={onRetry}
               disabled={isRetrying}
+              title="Chỉ phân tích lại các ảnh bị lỗi, giữ nguyên dữ liệu đã nhận diện"
               className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs flex items-center gap-1.5"
             >
               {isRetrying ? (
@@ -83,7 +86,7 @@ export function RecognitionProgressTracker({
               ) : (
                 <RefreshCw className="h-3.5 w-3.5" />
               )}
-              <span>Thử lại</span>
+              <span>{status === 'PARTIAL_FAILED' ? 'Thử lại ảnh lỗi' : 'Thử lại'}</span>
             </Button>
           )}
         </div>

@@ -1,6 +1,7 @@
 import api from '@/lib/axios';
 import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
 import type {
+  AddFridgeImagesRequestDto,
   RecognitionJobEnvelopeDto,
   RecognitionConfirmationEnvelopeDto,
 } from '../types/ingredient-recognition.dto';
@@ -101,6 +102,18 @@ export const ingredientRecognitionApi = {
 
     const res = await api.post<RecognitionJobEnvelopeDto>(
       API_ENDPOINTS.INGREDIENT_RECOGNITION.RETRY(jobId),
+      payload,
+      { showErrorToast: true }
+    );
+    return ingredientRecognitionMapper.toModel(res.data.data);
+  },
+
+  /**
+   * Bổ sung ảnh vào phiên quét tủ lạnh chưa xác nhận (READY, PARTIAL_FAILED, FAILED)
+   */
+  addImages: async (jobId: string, payload: AddFridgeImagesRequestDto): Promise<RecognitionJob> => {
+    const res = await api.post<RecognitionJobEnvelopeDto>(
+      API_ENDPOINTS.INGREDIENT_RECOGNITION.ADD_IMAGES(jobId),
       payload,
       { showErrorToast: true }
     );

@@ -91,7 +91,21 @@ export interface RecognitionJob {
   isFailed: boolean;
   canRetry: boolean;
   canConfirm: boolean;
+  canAddImages: boolean;
 }
+
+export type RecognitionErrorCode =
+  | 'RECOGNITION_IMAGE_LIMIT_EXCEEDED'
+  | 'RECOGNITION_STATE_CONFLICT'
+  | 'RECOGNITION_NOT_FOUND'
+  | 'RECOGNITION_CANDIDATE_NOT_FOUND'
+  | 'RECOGNITION_CANDIDATE_VERSION_CONFLICT';
+
+export const RECOGNITION_ERROR_MESSAGES: Record<string, string> = {
+  RECOGNITION_IMAGE_LIMIT_EXCEEDED: 'Phiên quét tủ lạnh chỉ cho phép tối đa 6 ảnh.',
+  RECOGNITION_STATE_CONFLICT:
+    'Phiên quét đang trong quá trình xử lý. Vui lòng chờ hoàn tất trước khi bổ sung thêm ảnh.',
+};
 
 export interface RecognitionConfirmedPantryItem {
   id: string;
