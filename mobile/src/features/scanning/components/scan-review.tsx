@@ -1,7 +1,7 @@
 import * as React from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
-import { ArrowRight, Calendar, Camera, CheckCircle2, CircleAlert, CreditCard, Maximize2, Pencil, Receipt, RotateCcw, Sparkles, Store, Trash2 } from 'lucide-react-native';
+import { ArrowRight, Calendar, Camera, Check, CircleAlert, CreditCard, Maximize2, Pencil, Receipt, RotateCcw, Sparkles, Store, Trash2 } from 'lucide-react-native';
 import { FormSheet } from '@/components/shared/form-sheet';
 import { LoadingState } from '@/components/shared/state-views';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -14,8 +14,10 @@ type Filter = 'all' | 'active' | 'rejected';
 
 function formatMoney(amount: number | null, currency: string | null): string {
   if (amount === null) return '—';
-  try { return new Intl.NumberFormat('vi-VN', currency ? { style: 'currency', currency } : undefined).format(amount); }
-  catch { return `${amount} ${currency ?? ''}`.trim(); }
+  const code = currency ?? 'VND';
+  if (code === 'VND') return `${amount.toLocaleString('vi-VN')} ₫`;
+  try { return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: code }).format(amount); }
+  catch { return `${amount.toLocaleString('vi-VN')} ${code}`; }
 }
 
 function formatDate(value: string | null): string {
@@ -23,6 +25,14 @@ function formatDate(value: string | null): string {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString('vi-VN');
 }
+
+/** Dòng chữ thô OCR: gộp khoảng trắng liên tiếp (hóa đơn thường căn cột bằng nhiều dấu cách) để không bị dãn rộng. */
+function compactLineText(text: string | null): string {
+  if (!text) return '';
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+const MONO_FONT = Platform.select({ ios: 'Menlo', default: 'monospace' });
 
 function Metric({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: string; accent?: boolean }) {
   return (
@@ -164,25 +174,30 @@ export function ScanReview({ job, busy, error, onSave, onEdit, onRetry, onCancel
           return (
             <View key={draft.id} className={cn('gap-3 rounded-xl border p-3.5', draft.rejected ? 'border-dashed border-border bg-muted/30 opacity-60' : 'border-border bg-card')}>
               <View className="gap-1.5">
-                <TextInput accessibilityLabel={`Tên ${candidate.name}`} editable={!locked} value={draft.name} placeholder="Tên nguyên liệu..." placeholderTextColor={colors.mutedForeground}
+                <TextInput accessibilityLabel={`Tên ${candidate.name}`} style={{ marginLeft: -8 }} editable={!locked} value={draft.name} placeholder="Tên nguyên liệu..." placeholderTextColor={colors.mutedForeground}
                   onChangeText={value => update(draft.id, { name: value })} maxLength={160}
-                  className={cn(inputClass, 'font-semibold', draft.rejected ? 'text-muted-foreground line-through' : '')} />
+                  className={cn('h-10 rounded-lg border border-transparent bg-transparent px-2 text-base font-semibold focus:border-input', draft.rejected ? 'text-muted-foreground line-through' : 'text-foreground')} />
                 {!fridge ? (
-                  <View className="flex-row items-center gap-1.5 pl-0.5">
-                    <View className="rounded bg-muted px-1.5 py-0.5"><Text className="text-[10px] font-bold uppercase text-muted-foreground">OCR</Text></View>
-                    <Text numberOfLines={2} className="flex-1 text-xs text-muted-foreground">{candidate.lineText || '(Không có dòng chữ gốc)'}</Text>
+                  <View className="flex-row flex-wrap items-center justify-between gap-x-4 gap-y-1.5 pl-0.5">
+                    <View className="shrink flex-row items-center gap-1.5">
+                      <View className="rounded bg-muted px-1.5 py-0.5"><Text className="text-[10px] font-bold uppercase text-muted-foreground">OCR</Text></View>
+                      <Text numberOfLines={1} style={{ fontFamily: MONO_FONT }} className="shrink text-xs text-muted-foreground">{compactLineText(candidate.lineText) || '(Không có dòng chữ gốc)'}</Text>
+                    </View>
+                    <View className="flex-row flex-wrap items-center gap-2">
+                      {candidate.lineTotal !== null ? (
+                        <View className="rounded-md border border-emerald-200/50 bg-emerald-50 px-2 py-0.5 dark:border-emerald-800/50 dark:bg-emerald-950/30"><Text className="text-xs font-medium text-emerald-700 dark:text-emerald-400">{formatMoney(candidate.lineTotal, candidate.currency)}{candidate.unitPrice !== null ? <Text className="text-[11px] font-normal text-muted-foreground"> ({formatMoney(candidate.unitPrice, candidate.currency)}/{draft.unit || 'đv'})</Text> : null}</Text></View>
+                      ) : null}
+                      <Text className="text-[11px] text-muted-foreground">Độ tin cậy: {Math.round(candidate.confidence * 100)}%</Text>
+                    </View>
                   </View>
                 ) : null}
                 <View className="flex-row flex-wrap items-center gap-x-2 gap-y-1 pl-0.5">
                   {draft.rejected && !fridge ? <View className="rounded-md bg-destructive/10 px-1.5 py-0.5"><Text className="text-[11px] text-destructive">Đã loại bỏ</Text></View> : null}
                   {!draft.rejected && !fridge && isScanDraftDirty(draft) ? <View className="rounded-md border border-input px-1.5 py-0.5"><Text className="text-[11px] text-primary">Đã sửa</Text></View> : null}
                   {candidate.ingredient && !draft.rejected ? (
-                    <View className="flex-row items-center gap-1"><CheckCircle2 size={12} color={colors.primary} /><Text className="text-xs font-medium text-primary">Khớp: {candidate.ingredient.name}</Text></View>
+                    <View className="flex-row items-center gap-1 rounded-full border border-emerald-200/60 bg-emerald-50 px-2 py-0.5 dark:border-emerald-800/60 dark:bg-emerald-950/40"><Check size={12} color={colors.primary} /><Text className="text-[11px] text-emerald-700 dark:text-emerald-300">Khớp: {candidate.ingredient.name}</Text></View>
                   ) : null}
-                  {!fridge && candidate.lineTotal !== null ? (
-                    <View className="rounded-md border border-primary/20 bg-primary/10 px-2 py-0.5"><Text className="text-xs font-medium text-primary">{formatMoney(candidate.lineTotal, candidate.currency)}{candidate.unitPrice !== null ? <Text className="text-[11px] font-normal text-muted-foreground"> ({formatMoney(candidate.unitPrice, candidate.currency)}/{draft.unit || 'đv'})</Text> : null}</Text></View>
-                  ) : null}
-                  {!fridge || !candidate.ingredient ? <Text className="text-[11px] text-muted-foreground">Độ tin cậy: {Math.round(candidate.confidence * 100)}%</Text> : null}
+                  {fridge && !candidate.ingredient ? <Text className="text-[11px] text-muted-foreground">Độ tin cậy: {Math.round(candidate.confidence * 100)}%</Text> : null}
                   {fridge && candidate.freshness ? <Text className="text-[11px] text-warning">· {candidate.freshness}</Text> : null}
                   {candidate.uncertainty && !draft.rejected ? <View className="flex-row items-center gap-1"><CircleAlert size={12} color={colors.cta} /><Text className="text-[11px] text-warning">{candidate.uncertainty}</Text></View> : null}
                 </View>
@@ -195,7 +210,7 @@ export function ScanReview({ job, busy, error, onSave, onEdit, onRetry, onCancel
                 </View>
                 <View className="flex-1 gap-1">
                   <Text className="text-[11px] font-medium text-muted-foreground">Đơn vị</Text>
-                  <TextInput accessibilityLabel={`Đơn vị ${candidate.name}`} editable={!locked} value={draft.unit} placeholder="g, kg, quả..." placeholderTextColor={colors.mutedForeground}
+                  <TextInput accessibilityLabel={`Đơn vị ${candidate.name}`} editable={!locked} value={draft.unit} placeholder="g, kg..." placeholderTextColor={colors.mutedForeground}
                     maxLength={40} autoCapitalize="none" onFocus={() => setUnitFocus(draft.id)} onBlur={() => setUnitFocus(current => current === draft.id ? null : current)}
                     onChangeText={value => update(draft.id, { unit: value })} className={inputClass} />
                 </View>
@@ -203,7 +218,7 @@ export function ScanReview({ job, busy, error, onSave, onEdit, onRetry, onCancel
                   <View className="flex-row items-center">
                     <Pressable accessibilityRole="button" accessibilityLabel={`Chỉnh sửa nâng cao ${candidate.name}`} disabled={busy} onPress={() => onEdit({ ...candidate, name: draft.name.trim() || candidate.name, unit: draft.unit.trim() || candidate.unit, quantity: Number(draft.quantity.replace(',', '.')) > 0 ? Number(draft.quantity.replace(',', '.')) : candidate.quantity })} className="h-10 w-10 items-center justify-center"><Pencil size={18} color={colors.mutedForeground} /></Pressable>
                     {draft.rejected ? (
-                      <Pressable accessibilityRole="button" accessibilityLabel={`Khôi phục ${candidate.name}`} disabled={busy} onPress={() => update(draft.id, { rejected: false })} className="h-10 w-10 items-center justify-center"><RotateCcw size={18} color={colors.primary} /></Pressable>
+                      <Pressable accessibilityRole="button" accessibilityLabel={`Khôi phục ${candidate.name}`} disabled={busy} onPress={() => update(draft.id, { rejected: false })} className="h-10 flex-row items-center gap-1 rounded-lg border border-border px-2.5"><RotateCcw size={14} color={colors.primary} /><Text className="text-xs text-emerald-600 dark:text-emerald-400">Khôi phục</Text></Pressable>
                     ) : (
                       <Pressable accessibilityRole="button" accessibilityLabel={`Loại bỏ ${candidate.name}`} disabled={busy} onPress={() => update(draft.id, { rejected: true })} className="h-10 w-10 items-center justify-center"><Trash2 size={18} color={colors.mutedForeground} /></Pressable>
                     )}
