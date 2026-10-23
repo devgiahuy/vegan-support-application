@@ -10,12 +10,13 @@ import {
   Camera,
   Info,
   FlaskConical,
-  Bookmark,
   BookOpen,
   CalendarDays,
   ChevronRight,
   Leaf,
   LogOut,
+  Package,
+  Receipt,
   RefreshCw,
   ShieldCheck,
   Sparkles,
@@ -534,18 +535,6 @@ export default function ProfileScreen() {
               <ChevronRight size={16} color={colors.mutedForeground} />
             </Pressable>
           </Link>
-          <Link href={'/bookmarks' as Href} asChild>
-            <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                <Bookmark size={18} color={colors.primary} />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-semibold text-foreground">Đã lưu</Text>
-                <Text className="mt-0.5 text-xs text-muted-foreground">Công thức và video bạn đã lưu lại.</Text>
-              </View>
-              <ChevronRight size={16} color={colors.mutedForeground} />
-            </Pressable>
-          </Link>
           <Link href={'/custom-meals' as Href} asChild>
             <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
               <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
@@ -577,11 +566,17 @@ export default function ProfileScreen() {
           <Link href={'/billing' as Href} asChild>
             <Pressable
               accessibilityRole="link"
-              className="min-h-14 flex-row items-center justify-between border-b border-border p-4"
+              className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted"
             >
-              <Text className="text-sm font-semibold text-foreground">
-                Gói tiện ích · Mua thêm lượt AI và ô tủ đồ ăn
-              </Text>
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <Package size={18} color={colors.primary} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-semibold text-foreground">Gói tiện ích</Text>
+                <Text className="mt-0.5 text-xs text-muted-foreground">
+                  Mua thêm lượt AI và ô tủ đồ ăn.
+                </Text>
+              </View>
               <ChevronRight size={16} color={colors.mutedForeground} />
             </Pressable>
           </Link>
@@ -594,6 +589,20 @@ export default function ProfileScreen() {
                 <Text className="text-sm font-semibold text-foreground">Tủ bếp</Text>
                 <Text className="mt-0.5 text-xs text-muted-foreground">
                   Quản lý nguyên liệu đã xác nhận, số lượng và hạn dùng.
+                </Text>
+              </View>
+              <ChevronRight size={16} color={colors.mutedForeground} />
+            </Pressable>
+          </Link>
+          <Link href={'/receipts' as Href} asChild>
+            <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
+              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                <Receipt size={18} color={colors.primary} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-semibold text-foreground">Hóa đơn mua sắm</Text>
+                <Text className="mt-0.5 text-xs text-muted-foreground">
+                  Quét hóa đơn, đối chiếu và cập nhật Tủ bếp.
                 </Text>
               </View>
               <ChevronRight size={16} color={colors.mutedForeground} />

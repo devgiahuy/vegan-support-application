@@ -47,7 +47,7 @@ const WEEK_STATUS_LABELS: Record<ProgramWeekStatus, string> = {
 const DEFAULT_MAX_REGENERATIONS = 2;
 const SAMPLE_DISH_COUNT = 3;
 
-function idempotencyKey(prefix: string): string {
+export function idempotencyKey(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
@@ -293,7 +293,7 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
       horizonWeeks: input.horizonWeeks,
       alternativesPerWeek: input.alternativesPerWeek ?? 2,
       ...(input.seed?.trim() ? { seed: input.seed.trim() } : {}),
-      idempotencyKey: idempotencyKey('meal-program'),
+      idempotencyKey: input.idempotencyKey ?? idempotencyKey('meal-program'),
     };
   }
 

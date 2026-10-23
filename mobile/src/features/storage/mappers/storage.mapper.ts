@@ -71,6 +71,8 @@ export class StorageMapper extends BaseMapper<StorageUsageResponseDto, StorageAc
       occupiedPercent: Math.min(100, Math.max(0, percent)),
       overQuota: dto.overQuota,
       warning: dto.overQuota || percent >= dto.warningPercent,
+      critical: dto.overQuota || percent >= 100,
+      warningPercent: dto.warningPercent,
     };
   }
   toModel(dto: StorageUsageResponseDto | null | undefined): StorageAccount {

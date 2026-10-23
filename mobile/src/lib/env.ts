@@ -53,6 +53,12 @@ export function buildYoutubeThumbnailUrl(videoId: string): string {
   return YOUTUBE_THUMBNAIL_TEMPLATE.replace('{id}', encodeURIComponent(videoId));
 }
 
+/**
+ * URL style của bản đồ MapLibre (ví dụ `https://tiles.openfreemap.org/styles/bright`, miễn phí, không cần key).
+ * Để trống = không dùng bản đồ thật, màn quán chay hiển thị bản đồ "radar" thay thế.
+ */
+export const MAP_STYLE_URL: string = readOptional(process.env.EXPO_PUBLIC_MAP_STYLE_URL);
+
 /** Mẫu URL chỉ đường, chứa `{lat}` và `{lng}` của điểm đến. Để trống = ẩn nút "Chỉ đường". */
 const DIRECTIONS_URL_TEMPLATE: string = readOptional(process.env.EXPO_PUBLIC_MAPS_DIRECTIONS_URL_TEMPLATE);
 

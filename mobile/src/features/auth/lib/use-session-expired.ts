@@ -9,7 +9,6 @@ const PROTECTED_PREFIXES = [
   '/profile',
   '/assistant',
   '/pantry',
-  '/bookmarks',
   '/my-content',
   '/custom-meals',
   '/meal-plans',

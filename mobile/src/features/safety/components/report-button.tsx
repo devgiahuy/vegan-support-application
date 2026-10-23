@@ -116,11 +116,14 @@ export function ReportButton({
   targetId,
   authorId,
   compact = false,
+  layout = 'full',
 }: {
   targetType: ReportTargetType;
   targetId: string;
   authorId?: string;
   compact?: boolean;
+  /** `inline`: nút ngắn "Báo cáo" chia đều chiều ngang để đặt cạnh các nút khác trong một hàng. */
+  layout?: 'full' | 'inline';
 }) {
   const colors = useIconColors();
   const currentUserId = useAuthStore((state) => state.user?.id);
@@ -158,8 +161,9 @@ export function ReportButton({
   return (
     <>
       <PrimaryButton
-        label={reported ? 'Đã gửi báo cáo' : 'Báo cáo vi phạm'}
+        label={reported ? 'Đã báo cáo' : layout === 'inline' ? 'Báo cáo' : 'Báo cáo vi phạm'}
         variant="outline"
+        className={layout === 'inline' ? 'flex-1' : undefined}
         disabled={reported}
         icon={<Flag size={16} color={colors.foreground} />}
         onPress={() => setOpen(true)}

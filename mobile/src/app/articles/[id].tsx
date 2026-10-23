@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Alert, Pressable, Share, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Link, type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { AlertTriangle, ArrowLeft, Clock, Hourglass, Pencil, Share2, Trash2 } from 'lucide-react-native';
+import { AlertTriangle, Clock, Hourglass, Pencil, Share2, Trash2 } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -80,14 +80,7 @@ export default function ArticleDetailScreen() {
           <Text className="mt-2 text-center text-sm text-muted-foreground">
             Bài viết bạn đang tìm có thể đã bị xóa hoặc không tồn tại.
           </Text>
-          <View className="mt-6 flex-row gap-3">
-            <Link href={'/articles' as Href} asChild>
-              <PrimaryButton
-                label="Quay lại danh sách"
-                variant="outline"
-                icon={<ArrowLeft size={16} color={colors.foreground} />}
-              />
-            </Link>
+          <View className="mt-6">
             <PrimaryButton label="Thử lại" onPress={() => void refetch()} />
           </View>
         </View>

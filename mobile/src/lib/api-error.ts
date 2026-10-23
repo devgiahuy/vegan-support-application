@@ -23,6 +23,11 @@ export const isNetworkError = (error: unknown): boolean => {
   return false;
 };
 
+/** Kiểm tra lỗi hết thời gian chờ (đã gửi request nhưng máy chủ chưa kịp trả lời). */
+export const isTimeoutError = (error: unknown): boolean => {
+  return isAxiosError(error) && (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT');
+};
+
 /** Lấy HTTP status code từ lỗi API. */
 export const getApiErrorStatus = (error: unknown): number | undefined => {
   if (isAxiosError(error)) {

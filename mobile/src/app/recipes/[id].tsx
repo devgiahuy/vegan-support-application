@@ -4,7 +4,6 @@ import { Image } from 'expo-image';
 import { Link, type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   AlertTriangle,
-  ArrowLeft,
   CalendarPlus,
   Clock,
   Dumbbell,
@@ -134,14 +133,7 @@ export default function RecipeDetailScreen() {
           <Text className="mt-2 text-center text-sm text-muted-foreground">
             Công thức bạn đang tìm kiếm có thể đã bị xóa hoặc không tồn tại.
           </Text>
-          <View className="mt-6 flex-row gap-3">
-            <Link href={'/recipes' as Href} asChild>
-              <PrimaryButton
-                label="Quay lại danh sách"
-                variant="outline"
-                icon={<ArrowLeft size={16} color={colors.foreground} />}
-              />
-            </Link>
+          <View className="mt-6">
             <PrimaryButton label="Thử lại" onPress={() => void refetch()} />
           </View>
         </View>

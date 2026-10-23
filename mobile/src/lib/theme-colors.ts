@@ -15,6 +15,8 @@ export const ICON_COLORS = {
     primaryForeground: '#ffffff',
     destructive: '#d32f2f',
     cta: '#ff8f00',
+    warning: '#b45309',
+    info: '#2563eb',
   },
   dark: {
     background: '#0b1410',
@@ -25,6 +27,8 @@ export const ICON_COLORS = {
     primaryForeground: '#06210b',
     destructive: '#f87171',
     cta: '#ffa726',
+    warning: '#fbbf24',
+    info: '#60a5fa',
   },
 } as const;
 

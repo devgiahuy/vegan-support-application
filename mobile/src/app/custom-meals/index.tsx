@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Text, TextInput, View } from 'react-native';
 import { Link, type Href } from 'expo-router';
 import { Plus, Search, Utensils } from 'lucide-react-native';
 import { SiteScreen } from '@/components/layout/site-screen';
@@ -13,20 +13,14 @@ import {
 import type { CustomMeal } from '@/features/custom-meal/types/custom-meal.model';
 import { getCustomMealErrorMessage } from '@/features/custom-meal/utils/custom-meal-errors';
 import { useIconColors } from '@/lib/theme-colors';
-import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/useAuthStore';
 
 export default function CustomMealsScreen() {
   const colors = useIconColors();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const [activeTag, setActiveTag] = React.useState<string | null>(null);
-  // Danh sách đầy đủ dùng để gom các tag đã có; khi chọn tag thì lọc ở backend (`tag`) để không bỏ sót món ở trang sau.
-  const allQuery = useInfiniteCustomMealsQuery({ limit: 20 });
-  const tagQuery = useInfiniteCustomMealsQuery({ limit: 20, tag: activeTag ?? undefined }, activeTag !== null);
   const { data, isLoading, isError, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } =
-    activeTag === null ? allQuery : tagQuery;
+    useInfiniteCustomMealsQuery({ limit: 20 });
   const meals = React.useMemo(() => data?.pages.flatMap((page) => page.items) ?? [], [data?.pages]);
-  const loadedForTags = allQuery.data?.pages;
   const deleteMutation = useDeleteCustomMealMutation();
   const [search, setSearch] = React.useState('');
 
@@ -61,19 +55,6 @@ export default function CustomMealsScreen() {
       ]
     );
   };
-
-  // Backend không trả tổng hợp tag nên chỉ liệt kê tag của các món đã tải (sắp theo mức dùng), không hiển thị số đếm.
-  const tags = React.useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const page of loadedForTags ?? []) {
-      for (const meal of page.items) {
-        for (const tag of meal.tags) counts.set(tag, (counts.get(tag) ?? 0) + 1);
-      }
-    }
-    return Array.from(counts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .map(([tag]) => tag);
-  }, [loadedForTags]);
 
   if (!isAuthenticated) {
     return (
@@ -126,30 +107,6 @@ export default function CustomMealsScreen() {
             />
           </Link>
         </View>
-
-        {tags.length > 0 ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-5 px-5">
-            <View className="flex-row gap-2">
-              {[null as string | null, ...tags].map((option) => {
-                const selected = activeTag === option;
-                return (
-                  <Pressable
-                    key={option ?? 'all'}
-                    onPress={() => setActiveTag(option)}
-                    className={cn('rounded-full px-3 py-1.5', selected ? 'bg-primary' : 'bg-muted')}>
-                    <Text
-                      className={cn(
-                        'text-xs font-medium',
-                        selected ? 'text-primary-foreground' : 'text-muted-foreground'
-                      )}>
-                      {option ? `#${option}` : 'Tất cả'}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          </ScrollView>
-        ) : null}
 
         {isLoading ? (
           [1, 2].map((item) => <View key={item} className="h-72 rounded-2xl border border-border bg-muted" />)

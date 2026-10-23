@@ -40,8 +40,8 @@ For Android Emulator use `http://10.0.2.2:4003/api/v1` as API URL. For a physica
 - Select up to six fridge images or four receipt images; reorder/remove before submission. JPEG/PNG/WebP and the backend upload policy are enforced.
 - Upload is real: reserve, signed Cloudinary upload, commit, then create the job from committed asset IDs. Successfully committed images are retained on create retry; lost commit responses retry the original reservation rather than reupload.
 - The job ID remains in the URL so refresh can resume progress. Polling stops at terminal states. Owner-scoped query keys and a session-keyed workspace prevent another account inheriting previous scan state.
-- Correct canonical identity/name, quantity/unit, freshness observations, and receipt line/pricing fields; reject unwanted candidates. Unknown quantities remain unknown and cannot be selected for confirmation.
-- Confirmation lists the selected quantities and sends their expected versions. Only this operation updates Pantry and invalidates Pantry/shopping-preview caches. Lost-response retries reuse operation keys.
+- The upload and review screens mirror the web layout (`/pantry/scan`, `/receipts/scan`). Review edits name, quantity and unit inline per candidate; the pencil opens the advanced editor (ingredient link, freshness/receipt fields) and the bin rejects or restores a candidate locally. Unknown quantities remain unknown and must be entered before saving.
+- "Lưu vào Tủ bếp" validates every kept candidate, persists the edited/rejected ones with their expected versions, then confirms all kept candidates in one call. Renaming a candidate clears its suggested ingredient link. Only this operation updates Pantry and invalidates Pantry/shopping-preview caches. Lost-response retries reuse operation keys.
 - Cancel and retry call the backend job APIs. Cancellation does not reclaim committed images; these remain quota-accounted. Retry regenerates candidates, so old selections are cleared.
 - Confirmation with fake results still changes the local development database. Treat the resulting inventory as demo data, not the contents of the uploaded photo.
 

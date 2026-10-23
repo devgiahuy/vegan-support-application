@@ -6,6 +6,10 @@ export interface StorageUsage {
   occupiedPercent: number;
   overQuota: boolean;
   warning: boolean;
+  /** Dùng hết (hoặc vượt) hạn mức: không tải thêm được. */
+  critical: boolean;
+  /** Ngưỡng % bắt đầu cảnh báo do chính sách backend quy định. */
+  warningPercent: number;
 }
 
 export interface StorageAccount {

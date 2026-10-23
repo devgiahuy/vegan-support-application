@@ -1,4 +1,4 @@
-import { getApiErrorCode, getApiErrorMessage } from '@/lib/api-error';
+import { getApiErrorCode, getApiErrorMessage, isTimeoutError } from '@/lib/api-error';
 
 /** Thông báo lỗi nghiệp vụ cho lộ trình nhiều tuần (luôn dựa vào `error.code`). */
 export function getMealProgramErrorMessage(error: unknown): string {
@@ -24,6 +24,9 @@ export function getMealProgramErrorMessage(error: unknown): string {
     case 'NO_ELIGIBLE_RECIPE':
       return 'Không đủ món phù hợp với chế độ ăn của bạn để tạo thực đơn cho tuần này.';
     default:
+      if (isTimeoutError(error)) {
+        return 'Hệ thống đang tạo thực đơn nên phản hồi chậm hơn dự kiến. Hãy đợi một lát, kiểm tra lại danh sách lộ trình hoặc bấm thử lại.';
+      }
       return getApiErrorMessage(error, 'Không thể hoàn tất thao tác. Vui lòng thử lại.');
   }
 }

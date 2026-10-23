@@ -1,15 +1,13 @@
 import { createChatIdempotencyKey } from '@/features/chat/utils/idempotency';
 import * as React from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Link, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useQueryClient } from '@tanstack/react-query';
-import { ChevronLeft } from 'lucide-react-native';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { LoadingState } from '@/components/shared/state-views';
 import { useAuthStore } from '@/store/useAuthStore';
-import { useIconColors } from '@/lib/theme-colors';
 import { billingErrorMessage } from '@/features/billing/lib/billing-errors';
 import {
   billingCheckMessage,
@@ -111,7 +109,6 @@ function OrderCard({
 
 export default function BillingScreen() {
   const authenticated = useAuthStore((state) => state.isAuthenticated);
-  const colors = useIconColors();
   const client = useQueryClient();
   const params = useLocalSearchParams<{ orderId?: string }>();
   const initialId =
@@ -159,12 +156,6 @@ export default function BillingScreen() {
   return (
     <SiteScreen>
       <View className="gap-6 px-4 pb-10 pt-5">
-        <Link href={'/(tabs)/profile' as Href} asChild>
-          <Pressable accessibilityRole="link" className="min-h-11 flex-row items-center gap-2">
-            <ChevronLeft size={20} color={colors.foreground} />
-            <Text className="text-sm text-foreground">Hồ sơ</Text>
-          </Pressable>
-        </Link>
         <View className="gap-2">
           <Text className="text-sm font-semibold text-primary">Gói tiện ích VeggieConnect</Text>
           <Text className="text-3xl font-bold text-foreground">Thêm lượt, chủ động hơn</Text>
@@ -212,11 +203,11 @@ export default function BillingScreen() {
               </View>
             ) : (
               <>
-                <View className="gap-3">
+                <View className="flex-row flex-wrap justify-between gap-y-3">
                   {allowances.data?.usageRows.map((row) => (
                     <View
                       key={row.label}
-                      className="gap-1 rounded-xl border border-border bg-card p-4"
+                      className="w-[48.5%] gap-1 rounded-xl border border-border bg-card p-3"
                     >
                       <Text className="text-sm text-muted-foreground">{row.label}</Text>
                       <Text className="text-xl font-semibold text-foreground">{row.value}</Text>
@@ -352,12 +343,14 @@ export default function BillingScreen() {
                 </View>
               ))}
             </View>
-            <Link href={'/pantry' as Href} asChild>
-              <PrimaryButton label="Mở tủ đồ ăn" variant="outline" />
-            </Link>
-            <Link href={'/(tabs)/assistant' as Href} asChild>
-              <PrimaryButton label="Trở lại chat AI" variant="outline" />
-            </Link>
+            <View className="flex-row gap-2">
+              <Link href={'/pantry' as Href} asChild>
+                <PrimaryButton label="Mở tủ đồ ăn" variant="outline" className="flex-1" />
+              </Link>
+              <Link href={'/(tabs)/assistant' as Href} asChild>
+                <PrimaryButton label="Trở lại chat AI" variant="outline" className="flex-1" />
+              </Link>
+            </View>
           </>
         )}
       </View>

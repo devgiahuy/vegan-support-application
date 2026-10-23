@@ -12,6 +12,7 @@ import {
 import { Link, type Href } from 'expo-router';
 import { Compass, History, Plus, Sparkles } from 'lucide-react-native';
 
+import { useKeyboardVisible } from '@/components/layout/bottom-tab-bar';
 import { SiteHeader } from '@/components/layout/site-header';
 import { ErrorState, LoadingState } from '@/components/shared/state-views';
 import { ChatWelcome } from '@/features/chat/components/chat-welcome';
@@ -112,6 +113,7 @@ export default function AssistantScreen() {
     }
   };
 
+  const keyboardVisible = useKeyboardVisible();
   const quotaExhausted = sendState.quota?.exhausted === true;
   const composerDisabled = sendState.maintenance || quotaExhausted;
 
@@ -209,7 +211,8 @@ export default function AssistantScreen() {
           ) : null}
         </ScrollView>
 
-        <View className="gap-2 border-t border-border bg-background px-4 pb-3 pt-2.5">
+        {/* Nút "Thêm" của thanh tab nổi lên 24dp phía trên thanh nên chừa chỗ để không che lời nhắc; khi bàn phím mở thì thanh tab ẩn. */}
+        <View className={`gap-2 border-t border-border bg-background px-4 pt-2.5 ${keyboardVisible ? 'pb-3' : 'pb-9'}`}>
           <Composer
             isStreaming={sendState.isStreaming}
             disabled={composerDisabled}

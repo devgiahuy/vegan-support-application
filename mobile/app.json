@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "VeggieConnect",
-    "slug": "mobile",
+    "slug": "veggieconnect",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -17,7 +17,15 @@
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "output": "static",
@@ -45,16 +53,38 @@
           "microphonePermission": "Cho phép VeggieConnect dùng micro khi bạn quay video nấu ăn để đăng lên."
         }
       ],
+      "@maplibre/maplibre-react-native",
       [
         "expo-location",
         {
           "locationAlwaysAndWhenInUsePermission": "Cho phép VeggieConnect truy cập vị trí để tìm quán chay gần bạn."
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": false
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6efabf50-9e97-4da9-ae4f-ac9ac36b9209"
+      }
+    },
+    "owner": "huypg",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/6efabf50-9e97-4da9-ae4f-ac9ac36b9209"
     }
   }
 }

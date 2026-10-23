@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Alert, Modal, Pressable, Text, TextInput, View } from 'react-native';
 import { Link, type Href, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, CalendarRange, CheckCircle2, Lock, Pencil, RefreshCw } from 'lucide-react-native';
+import { CalendarRange, CheckCircle2, Lock, Pencil } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
 import { ErrorState, LoadingState } from '@/components/shared/state-views';
@@ -89,7 +89,7 @@ export default function MealProgramDetailScreen() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { id } = useLocalSearchParams<{ id?: string }>();
   const programId = typeof id === 'string' ? id : '';
-  const { data: program, error, isLoading, isError, refetch, isRefetching } = useMealProgramDetailQuery(programId);
+  const { data: program, error, isLoading, isError, refetch } = useMealProgramDetailQuery(programId);
   const updateMutation = useUpdateMealProgramMutation(programId);
 
   const [tab, setTab] = React.useState<DetailTab>('weeks');
@@ -139,12 +139,6 @@ export default function MealProgramDetailScreen() {
     return (
       <SiteScreen>
         <View className="gap-3 px-5 pt-6">
-          <Link href={'/meal-programs' as Href} asChild>
-            <Pressable className="flex-row items-center gap-1.5">
-              <ArrowLeft size={15} color={colors.foreground} />
-              <Text className="text-xs font-semibold text-foreground">Danh sách lộ trình</Text>
-            </Pressable>
-          </Link>
           <ErrorState
             title="Không tìm thấy lộ trình."
             description={getMealProgramErrorMessage(error)}
@@ -192,23 +186,8 @@ export default function MealProgramDetailScreen() {
   };
 
   return (
-    <SiteScreen>
+    <SiteScreen onRefresh={() => refetch()}>
       <View className="gap-4 px-5 pt-4">
-        <View className="flex-row items-center justify-between">
-          <Link href={'/meal-programs' as Href} asChild>
-            <Pressable className="flex-row items-center gap-1.5">
-              <ArrowLeft size={15} color={colors.foreground} />
-              <Text className="text-xs font-semibold text-foreground">Danh sách lộ trình</Text>
-            </Pressable>
-          </Link>
-          <Pressable
-            disabled={busy || isRefetching}
-            onPress={() => void refetch()}
-            className="h-9 w-9 items-center justify-center rounded-full bg-muted">
-            <RefreshCw size={15} color={colors.foreground} />
-          </Pressable>
-        </View>
-
         <View className="gap-3 rounded-2xl border border-border bg-card p-4">
           <View className="flex-row items-start justify-between gap-3">
             <View className="flex-1">

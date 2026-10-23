@@ -22,6 +22,8 @@ const reserved: UploadReservation = {
     occupiedPercent: 10,
     overQuota: false,
     warning: false,
+    critical: false,
+    warningPercent: 80,
   },
   upload: {
     url: 'https://upload.example.com',

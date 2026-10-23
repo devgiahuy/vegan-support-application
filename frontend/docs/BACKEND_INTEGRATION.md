@@ -1,8 +1,8 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.37
+**Version:** 4.38
 
-**Cập nhật:** 19/10/2026
+**Cập nhật:** 23/10/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
@@ -80,6 +80,8 @@ Completed migration: recognize payos in mappers, allow new purchases only for pa
 | `BILLING_RECONCILE_COOLDOWN`                                                          | Wait at least 30 seconds                                                                                                                                        |
 | `BILLING_CHECKOUT_EXPIRED`                                                            | Historical retired local-checkout code; not emitted by current billing routes                                                                                   |
 | `ENTITLEMENT_QUOTA_EXCEEDED`, `PANTRY_CAPACITY_EXCEEDED`, `SCAN_RETRY_LIMIT_EXCEEDED` | Existing quota/capacity/retry handling                                                                                                                          |
+
+Changelog 2026-10-23 (4.38): mobile-only; không đổi endpoint, contract hay trạng thái. Màn "Khám phá quán chay" thêm bản đồ MapLibre (`@maplibre/maplibre-react-native`, style từ `EXPO_PUBLIC_MAP_STYLE_URL`, mặc định OpenFreeMap) dùng lại dữ liệu `GET /restaurants/nearby|search` (lat/lng, `source`). Chỉ vẽ ghim cho quán `INTERNAL` (đã duyệt) và `FAKE` (demo); quán `GOOGLE`/`SERPAPI` chỉ hiện ở danh sách vì điều khoản nhà cung cấp không cho hiển thị nội dung của họ trên bản đồ của bên khác. Kéo bản đồ không gọi API: nút "Tìm khu vực này" đặt tâm tìm kiếm mới (vẫn gửi `lat/lng/radiusMeters`, chưa dùng `north/south/east/west`). Chỉ đường mở Google Maps bằng liên kết ngoài (`mapsUrl` hoặc `EXPO_PUBLIC_MAPS_DIRECTIONS_URL_TEMPLATE`). Thứ tự ưu tiên: MapLibre native (cần development build) → MapLibre GL JS trong WebView (chạy được trong Expo Go, cần mạng để tải thư viện từ CDN) → bản đồ radar khi thiếu `EXPO_PUBLIC_MAP_STYLE_URL` hoặc WebView không tải được. Chưa chạy trên thiết bị; mobile typecheck, lint và unit test pass. Khoảng trống còn lại: cần thêm dữ liệu quán nội bộ để bản đồ có nhiều ghim.
 
 Changelog 2026-10-17 (4.36): hoàn thành đồng bộ dữ liệu thực đơn tuần theo cập nhật của backend leader (`LEADER_MEAL_PLAN_DATA_CHANGES.md`). Bổ sung 4 chỉ số dinh dưỡng đa lượng (`proteinGrams`, `fiberGrams`, `fatGrams`, `carbohydrateGrams`) cho shared item DTO trên các endpoint generate, detail, swap và manual-add. Tích hợp `coverImageUrl` và thumbnail hiển thị kèm cơ chế dự phòng an toàn (fallback) cho 12 công thức thuần chay mới từ Unsplash; loại trừ hoàn toàn 8 fixtures demo giả lập khỏi UI chọn món; xác minh 21/21 slots lấp đầy 100%. Toàn bộ 23 mapper tests và 9 day-grid tests pass 100%, npx tsc 0 lỗi.
 

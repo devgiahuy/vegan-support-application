@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { Share, Text, View } from 'react-native';
-import { Link, type Href, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Calendar, FileCheck2, History, Settings2, Share2, User } from 'lucide-react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { Calendar, FileCheck2, History, Settings2, Share2, User } from 'lucide-react-native';
 
 import { UserRole } from '@/common/enums';
 import { SiteScreen } from '@/components/layout/site-screen';
@@ -47,12 +47,6 @@ export default function AiKnowledgeDetailScreen() {
   }, [artifact, hasNextPage, isFetchingNextPage, isError, fetchNextPage]);
   const searching = !artifact && (hasNextPage || isFetchingNextPage);
 
-  const back = (
-    <Link href={'/ai-knowledge' as Href} asChild>
-      <PrimaryButton label="Về danh sách tri thức" variant="outline" icon={<ArrowLeft size={15} color={colors.foreground} />} />
-    </Link>
-  );
-
   return (
     <SiteScreen>
       <View className="gap-4 px-5 pt-4">
@@ -68,7 +62,6 @@ export default function AiKnowledgeDetailScreen() {
               title="Liên kết không khả dụng"
               description="Tri thức AI này không tồn tại hoặc chủ sở hữu đã thu hồi quyền chia sẻ công khai."
             />
-            {back}
           </View>
         ) : (
           <>
@@ -183,8 +176,6 @@ export default function AiKnowledgeDetailScreen() {
                 ))}
               </View>
             ) : null}
-
-            {back}
 
             <ShareArtifactSheet artifact={artifact} visible={shareOpen} onClose={() => setShareOpen(false)} />
             {verifyOpen ? <VerificationSheet artifact={artifact} onClose={() => setVerifyOpen(false)} /> : null}

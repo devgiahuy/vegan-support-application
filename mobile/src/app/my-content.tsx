@@ -3,15 +3,14 @@ import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-nativ
 import { Image } from 'expo-image';
 import { Link, type Href, useRouter } from 'expo-router';
 import {
-  BookOpen,
-  ChefHat,
+  Eye,
   FileText,
   History,
   Pencil,
+  Plus,
   Search,
   Trash2,
-  Video as VideoIcon,
-  type LucideIcon,
+  UtensilsCrossed,
 } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
@@ -24,6 +23,8 @@ import { PostStatus } from '@/common/enums';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { useIconColors } from '@/lib/theme-colors';
 import { ReviewHistorySheet } from '@/features/review/components/review-history-sheet';
+import { BookmarksList } from '@/features/community/components/bookmarks-list';
+import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/useAuthStore';
 
 type ContentType = 'RECIPE' | 'BLOG' | 'VIDEO';
@@ -33,6 +34,7 @@ interface MyContentItem {
   type: ContentType;
   title: string;
   excerpt: string;
+  categoryName: string;
   coverImageUrl: string;
   status: PostStatus;
   statusLabel: string;
@@ -42,10 +44,10 @@ interface MyContentItem {
 
 const STATUS_FILTERS: { value: 'ALL' | PostStatus; label: string }[] = [
   { value: 'ALL', label: 'Tất cả' },
-  { value: PostStatus.PUBLISHED, label: 'Đã xuất bản' },
+  { value: PostStatus.PUBLISHED, label: 'Đã duyệt' },
   { value: PostStatus.PENDING_REVIEW, label: 'Chờ duyệt' },
-  { value: PostStatus.REJECTED, label: 'Từ chối' },
-  { value: PostStatus.FLAGGED, label: 'Cần chỉnh sửa' },
+  { value: PostStatus.REJECTED, label: 'Bị từ chối' },
+  { value: PostStatus.FLAGGED, label: 'Cần sửa' },
   { value: PostStatus.DRAFT, label: 'Bản nháp' },
 ];
 
@@ -53,12 +55,6 @@ const TYPE_LABEL: Record<ContentType, string> = {
   RECIPE: 'Công thức',
   BLOG: 'Cẩm nang',
   VIDEO: 'Video',
-};
-
-const TYPE_ICON: Record<ContentType, LucideIcon> = {
-  RECIPE: ChefHat,
-  BLOG: BookOpen,
-  VIDEO: VideoIcon,
 };
 
 function detailHref(item: MyContentItem): Href {
@@ -73,34 +69,23 @@ function editHref(item: MyContentItem): Href {
   return `/articles/${item.id}/edit` as Href;
 }
 
-function statusBadgeClass(status: PostStatus): string {
+/** Màu nhãn trạng thái — cùng bảng màu với web, có biến thể tối để chữ luôn đọc được. */
+function statusTone(status: PostStatus): { badge: string; text: string } {
   switch (status) {
     case PostStatus.PUBLISHED:
-      return 'bg-emerald-500/10';
+      return { badge: 'border-emerald-500/30 bg-emerald-500/15', text: 'text-emerald-600 dark:text-emerald-400' };
     case PostStatus.PENDING_REVIEW:
-      return 'bg-amber-500/10';
+      return { badge: 'border-amber-500/30 bg-amber-500/15', text: 'text-amber-600 dark:text-amber-400' };
     case PostStatus.REJECTED:
+      return { badge: 'border-destructive/30 bg-destructive/15', text: 'text-destructive' };
     case PostStatus.FLAGGED:
-      return 'bg-destructive/10';
+      return { badge: 'border-orange-500/30 bg-orange-500/15', text: 'text-orange-600 dark:text-orange-400' };
     default:
-      return 'bg-muted';
+      return { badge: 'border-transparent bg-muted', text: 'text-muted-foreground' };
   }
 }
 
-function statusTextClass(status: PostStatus): string {
-  switch (status) {
-    case PostStatus.PUBLISHED:
-      return 'text-emerald-600';
-    case PostStatus.PENDING_REVIEW:
-      return 'text-amber-600';
-    case PostStatus.REJECTED:
-    case PostStatus.FLAGGED:
-      return 'text-destructive';
-    default:
-      return 'text-muted-foreground';
-  }
-}
-
+/** Thẻ một bài đăng — đồng bộ thẻ "Quản lý bài viết cá nhân" của web: ảnh bìa, nhãn trạng thái/loại, tiêu đề, trích đoạn, thao tác. */
 function MyContentRow({
   item,
   colors,
@@ -114,56 +99,74 @@ function MyContentRow({
   onHistory: (item: MyContentItem) => void;
   isDeleting: boolean;
 }) {
-  const TypeIcon = TYPE_ICON[item.type];
+  const tone = statusTone(item.status);
   return (
-    <View className="gap-2 rounded-2xl border border-border bg-card p-3">
+    <View className="overflow-hidden rounded-2xl border border-border bg-card">
       <Link href={detailHref(item)} asChild>
-        <Pressable className="flex-row items-center gap-3">
-          <View className="h-16 w-16 overflow-hidden rounded-xl bg-muted">
+        <Pressable>
+          <View className="h-32 w-full bg-muted">
             {item.coverImageUrl ? (
               <Image source={{ uri: item.coverImageUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-            ) : null}
+            ) : (
+              <View className="flex-1 items-center justify-center">
+                <UtensilsCrossed size={26} color={colors.mutedForeground} />
+              </View>
+            )}
           </View>
-          <View className="flex-1 gap-1">
-            <View className="flex-row items-center gap-1">
-              <TypeIcon size={12} color={colors.primary} />
-              <Text className="text-[11px] font-semibold uppercase tracking-wide text-primary">
-                {TYPE_LABEL[item.type]}
-              </Text>
+          <View className="gap-1.5 p-4 pb-2">
+            <View className="flex-row flex-wrap items-center gap-x-2 gap-y-1">
+              <View className={cn('rounded-full border px-2.5 py-0.5', tone.badge)}>
+                <Text className={cn('text-[11px] font-medium', tone.text)}>{item.statusLabel}</Text>
+              </View>
+              <View className="rounded-full border border-border px-2 py-0.5">
+                <Text className="text-[10px] text-foreground">{TYPE_LABEL[item.type]}</Text>
+              </View>
+              {item.categoryName ? (
+                <Text numberOfLines={1} className="text-xs text-muted-foreground">
+                  • {item.categoryName}
+                </Text>
+              ) : null}
             </View>
-            <Text numberOfLines={2} className="text-sm font-semibold text-foreground">
+            <Text className="text-xs text-muted-foreground">
+              {item.formattedPublishedAt ? `Đăng ngày ${item.formattedPublishedAt}` : 'Chưa xuất bản'}
+            </Text>
+            <Text numberOfLines={2} className="text-base font-semibold leading-snug text-foreground">
               {item.title}
             </Text>
-            {item.formattedPublishedAt ? (
-              <Text className="text-xs text-muted-foreground">{item.formattedPublishedAt}</Text>
+            {item.excerpt ? (
+              <Text numberOfLines={1} className="text-xs text-muted-foreground">
+                {item.excerpt}
+              </Text>
             ) : null}
-          </View>
-          <View className={`rounded-full px-2 py-1 ${statusBadgeClass(item.status)}`}>
-            <Text className={`text-[11px] font-semibold ${statusTextClass(item.status)}`}>{item.statusLabel}</Text>
           </View>
         </Pressable>
       </Link>
-      <View className="flex-row gap-2 border-t border-border pt-2">
+      <View className="flex-row items-center justify-between px-3 pb-3 pt-1">
         <Pressable
           onPress={() => onHistory(item)}
-          className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl bg-muted py-2">
-          <History size={13} color={colors.foreground} />
-          <Text className="text-xs font-semibold text-foreground">Lịch sử duyệt</Text>
+          className="flex-row items-center gap-1.5 rounded-xl px-2.5 py-2 active:bg-muted">
+          <History size={14} color={colors.mutedForeground} />
+          <Text className="text-xs font-medium text-muted-foreground">Lịch sử duyệt</Text>
         </Pressable>
-        <Link href={editHref(item)} asChild>
-          <Pressable className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl bg-muted py-2">
-            <Pencil size={13} color={colors.foreground} />
-            <Text className="text-xs font-semibold text-foreground">Sửa</Text>
+        <View className="flex-row gap-1">
+          <Link href={detailHref(item)} asChild>
+            <Pressable accessibilityLabel="Xem chi tiết" className="h-9 w-9 items-center justify-center rounded-xl active:bg-muted">
+              <Eye size={16} color={colors.foreground} />
+            </Pressable>
+          </Link>
+          <Link href={editHref(item)} asChild>
+            <Pressable accessibilityLabel="Sửa" className="h-9 w-9 items-center justify-center rounded-xl active:bg-muted">
+              <Pencil size={16} color={colors.foreground} />
+            </Pressable>
+          </Link>
+          <Pressable
+            accessibilityLabel="Xoá"
+            onPress={() => onDelete(item)}
+            disabled={isDeleting}
+            className="h-9 w-9 items-center justify-center rounded-xl active:bg-destructive/10">
+            <Trash2 size={16} color={colors.destructive} />
           </Pressable>
-        </Link>
-        <Pressable
-          onPress={() => onDelete(item)}
-          disabled={isDeleting}
-          className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl bg-destructive/10 py-2"
-        >
-          <Trash2 size={13} color={colors.destructive} />
-          <Text className="text-xs font-semibold text-destructive">Xoá</Text>
-        </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -243,6 +246,7 @@ export default function MyContentScreen() {
         type: 'RECIPE',
         title: r.title,
         excerpt: r.description,
+        categoryName: r.category.name,
         coverImageUrl: r.coverImageUrl,
         status: r.status,
         statusLabel: r.statusLabel,
@@ -257,6 +261,7 @@ export default function MyContentScreen() {
         type: 'BLOG',
         title: a.title,
         excerpt: a.excerpt,
+        categoryName: a.category.name,
         coverImageUrl: a.coverImageUrl,
         status: a.status,
         statusLabel: a.statusLabel,
@@ -271,6 +276,7 @@ export default function MyContentScreen() {
         type: 'VIDEO',
         title: v.title,
         excerpt: v.excerpt,
+        categoryName: v.category.name,
         coverImageUrl: v.thumbnailUrl,
         status: v.status,
         statusLabel: v.statusLabel,
@@ -339,54 +345,68 @@ export default function MyContentScreen() {
   }
 
   return (
-    <SiteScreen>
-      <View className="gap-4 px-5 pt-4">
-        <View>
-          <Text className="text-2xl font-bold tracking-tight text-foreground">Bài viết của tôi</Text>
-          <Text className="mt-1 text-sm text-muted-foreground">
-            Công thức, cẩm nang và video bạn đã đăng — xem lịch sử duyệt, sửa hoặc xoá.
-          </Text>
-          <Text className="mt-1 text-xs leading-relaxed text-muted-foreground">
-            Danh sách này lấy từ nội dung đã xuất bản. Bản nháp hoặc bài đang chờ duyệt chưa hiển thị ở đây; hãy
-            mở &quot;Lịch sử duyệt&quot; của bài để xem các bản chỉnh sửa đang chờ.
-          </Text>
+    <SiteScreen onRefresh={async () => refetchAll()}>
+      <View className="gap-4 px-5 pb-4 pt-4">
+        <View className="gap-3 rounded-2xl border border-border bg-card p-4">
+          <View className="gap-1">
+            <Text className="text-lg font-bold text-foreground">Quản lý bài viết cá nhân</Text>
+            <Text className="text-xs leading-5 text-muted-foreground">
+              Quản lý công thức, cẩm nang, video của bạn và theo dõi trạng thái kiểm duyệt.
+            </Text>
+          </View>
+          <View className="flex-row gap-2">
+            <Link href={'/articles/new' as Href} asChild>
+              <PrimaryButton
+                label="Viết bài mới"
+                className="h-11 flex-1"
+                icon={<Plus size={16} color={colors.primaryForeground} />}
+              />
+            </Link>
+            <Link href={'/recipes/new' as Href} asChild>
+              <PrimaryButton
+                label="Đăng công thức"
+                variant="outline"
+                className="h-11 flex-1"
+                icon={<UtensilsCrossed size={16} color={colors.primary} />}
+              />
+            </Link>
+          </View>
         </View>
+
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-5" contentContainerClassName="gap-1.5 px-5">
+          {STATUS_FILTERS.map((f) => {
+            const count =
+              f.value === 'ALL' ? myItems.length : myItems.filter((item) => item.status === f.value).length;
+            const active = statusFilter === f.value;
+            return (
+              <Pressable
+                key={f.value}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                onPress={() => setStatusFilter(f.value)}
+                className={cn('rounded-full px-3 py-1.5', active ? 'bg-primary' : 'bg-secondary')}>
+                <Text className={cn('text-xs font-medium', active ? 'text-primary-foreground' : 'text-secondary-foreground')}>
+                  {f.label} ({count})
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
 
         <View className="flex-row items-center gap-2 rounded-xl border border-input bg-background px-3">
           <Search size={16} color={colors.mutedForeground} />
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Tìm theo tiêu đề..."
+            placeholder="Tìm bài viết của bạn..."
             placeholderTextColor={colors.mutedForeground}
-            className="flex-1 py-2.5 text-sm text-foreground"
+            className="h-10 flex-1 text-sm text-foreground"
           />
         </View>
 
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-5 px-5">
-          <View className="flex-row gap-2">
-            {STATUS_FILTERS.map((f) => {
-              const count =
-                f.value === 'ALL' ? myItems.length : myItems.filter((item) => item.status === f.value).length;
-              const active = statusFilter === f.value;
-              return (
-                <Pressable
-                  key={f.value}
-                  onPress={() => setStatusFilter(f.value)}
-                  className={`rounded-full px-3 py-1.5 ${active ? 'bg-primary' : 'bg-muted'}`}
-                >
-                  <Text className={`text-xs font-semibold ${active ? 'text-primary-foreground' : 'text-foreground'}`}>
-                    {f.label} ({count})
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </ScrollView>
-
         {isLoading ? (
           <View className="gap-3">
-            {[1, 2, 3].map((i) => (
+            {[1, 2].map((i) => (
               <View key={i} className="h-28 rounded-2xl border border-border bg-muted" />
             ))}
           </View>
@@ -400,21 +420,26 @@ export default function MyContentScreen() {
             </View>
           </View>
         ) : filteredItems.length === 0 ? (
-          <View className="items-center rounded-2xl border border-dashed border-border p-6">
-            <FileText size={22} color={colors.mutedForeground} />
-            <Text className="mt-2 text-center font-semibold text-foreground">
-              {myItems.length === 0 ? 'Bạn chưa đăng nội dung nào' : 'Không có bài đăng phù hợp bộ lọc'}
-            </Text>
-            <Text className="mt-1 text-center text-sm text-muted-foreground">
+          <View className="items-center gap-2 rounded-2xl border border-dashed border-border p-6">
+            <Text className="text-center text-sm text-muted-foreground">
               {myItems.length === 0
-                ? 'Đăng công thức, bài chia sẻ hoặc video đầu tiên của bạn.'
-                : 'Thử đổi bộ lọc trạng thái hoặc từ khoá tìm kiếm.'}
+                ? 'Chưa có bài viết hoặc công thức nào trong danh mục này.'
+                : 'Không có bài đăng phù hợp bộ lọc. Thử đổi trạng thái hoặc từ khoá tìm kiếm.'}
             </Text>
-            {myItems.length === 0 ? (
-              <View className="mt-4 w-full">
-                <PrimaryButton label="Viết công thức mới" onPress={() => router.push('/recipes/new' as Href)} />
-              </View>
-            ) : null}
+            <View className="flex-row flex-wrap items-center justify-center gap-2 pt-1">
+              <Pressable
+                onPress={() => router.push('/recipes/new' as Href)}
+                className="flex-row items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5">
+                <Plus size={13} color={colors.foreground} />
+                <Text className="text-xs font-medium text-foreground">Đăng công thức mới</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => router.push('/articles/new' as Href)}
+                className="flex-row items-center gap-1 rounded-full border border-border bg-card px-3 py-1.5">
+                <Plus size={13} color={colors.foreground} />
+                <Text className="text-xs font-medium text-foreground">Viết cẩm nang mới</Text>
+              </Pressable>
+            </View>
           </View>
         ) : (
           <View className="gap-3">
@@ -431,6 +456,19 @@ export default function MyContentScreen() {
             <LoadMoreButton hasNextPage={hasMore} isFetchingNextPage={isFetchingMore} onPress={fetchMore} />
           </View>
         )}
+
+        <Text className="text-[11px] leading-4 text-muted-foreground">
+          Danh sách lấy từ nội dung đã xuất bản. Bản nháp hoặc bài đang chờ duyệt chưa hiển thị ở đây; hãy mở
+          &quot;Lịch sử duyệt&quot; của bài để xem các bản chỉnh sửa đang chờ.
+        </Text>
+
+        <View className="gap-3 rounded-2xl border border-border bg-card p-4">
+          <View>
+            <Text className="text-base font-bold text-foreground">Nội dung đã lưu</Text>
+            <Text className="mt-0.5 text-xs text-muted-foreground">Món ăn và video bạn đã lưu để xem lại sau.</Text>
+          </View>
+          <BookmarksList />
+        </View>
       </View>
       <ReviewHistorySheet
         postId={historyItem?.id ?? null}

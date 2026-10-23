@@ -249,7 +249,7 @@ export default function MealPlansScreen() {
         <Link href={'/pantry' as Href} asChild>
           <Pressable className="flex-row items-center justify-center gap-1.5 rounded-xl border border-input py-2.5">
             <Warehouse size={14} color={colors.primary} />
-            <Text className="text-xs font-semibold text-foreground">Tu bep</Text>
+            <Text className="text-xs font-semibold text-foreground">Tủ bếp</Text>
           </Pressable>
         </Link>
 

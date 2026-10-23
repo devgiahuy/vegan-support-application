@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { Check, ChevronDown, X } from 'lucide-react-native';
+import { Check, ChevronDown, Plus, X } from 'lucide-react-native';
 
 import { useIconColors } from '@/lib/theme-colors';
 import { cn } from '@/lib/utils';
@@ -10,7 +10,7 @@ export interface DropdownOption<T> {
   label: string;
   /** Nhãn ngắn hiển thị trong ô đóng (mặc định dùng `label`); danh sách trong popup vẫn dùng `label` đầy đủ. */
   shortLabel?: string;
-  /** Thụt lề cho mục con (0 = mục gốc). */
+  /** Mục con (> 0): thụt lề và có dấu "+" đứng trước để phân biệt với mục gốc (0). */
   depth?: number;
 }
 
@@ -45,6 +45,9 @@ export function DropdownField<T extends string | number | null>({
   const selected = options.find((option) => option.value === value);
   const display =
     status === 'loading' ? 'Đang tải...' : status === 'error' ? 'Lỗi · Thử lại' : (selected?.shortLabel ?? selected?.label ?? 'Chọn');
+
+  // Danh sách có mục con thì mục gốc in đậm để dễ phân biệt với mục con.
+  const hasHierarchy = options.some((option) => (option.depth ?? 0) > 0);
 
   const onPressTrigger = () => (status === 'error' ? onRetry?.() : setOpen(true));
 
@@ -120,6 +123,7 @@ export function DropdownField<T extends string | number | null>({
               style={{ flexGrow: 0 }}>
               {options.map((option) => {
                 const isSelected = option.value === value;
+                const isChild = (option.depth ?? 0) > 0;
                 return (
                   <Pressable
                     key={String(option.value)}
@@ -134,11 +138,16 @@ export function DropdownField<T extends string | number | null>({
                       'min-h-12 flex-row items-center gap-2 rounded-xl py-2.5 pr-3',
                       isSelected ? 'bg-primary/10' : ''
                     )}>
+                    {isChild ? <Plus size={12} color={isSelected ? colors.primary : colors.mutedForeground} /> : null}
                     <Text
                       className={cn(
                         'flex-1 text-sm',
-                        isSelected ? 'font-semibold text-primary' : 'text-foreground',
-                        (option.depth ?? 0) > 0 ? 'text-[13px]' : ''
+                        isSelected
+                          ? 'font-semibold text-primary'
+                          : hasHierarchy && !isChild
+                            ? 'font-semibold text-foreground'
+                            : 'text-foreground',
+                        isChild ? 'text-[13px]' : ''
                       )}>
                       {option.label}
                     </Text>

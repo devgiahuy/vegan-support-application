@@ -1,3 +1,4 @@
+import { IncompleteDataNotice } from './incomplete-data-notice';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BookMarked, TriangleAlert, X } from 'lucide-react-native';
 
@@ -125,12 +126,7 @@ export function AnalysisWarningModal({
             ) : null}
 
             {warning.incompleteDataNotes.length > 0 ? (
-              <View className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
-                <Text className="text-xs font-semibold text-amber-800">Dữ liệu chưa đầy đủ</Text>
-                <Text className="mt-1 text-xs leading-relaxed text-amber-800">
-                  {warning.incompleteDataNotes.join(' · ')}
-                </Text>
-              </View>
+              <IncompleteDataNotice notes={warning.incompleteDataNotes} compact />
             ) : null}
 
             <Text className="text-[11px] italic text-muted-foreground">

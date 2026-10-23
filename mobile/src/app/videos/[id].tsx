@@ -157,9 +157,10 @@ export default function VideoDetailScreen() {
           </View>
         </View>
 
-        <View className="gap-2">
+        <View className="flex-row gap-2">
           <PrimaryButton
             label="Mở video"
+            className="flex-1"
             disabled={!video.videoUrl}
             icon={<ExternalLink size={16} color={colors.primaryForeground} />}
             onPress={() => void openVideo()}
@@ -167,12 +168,12 @@ export default function VideoDetailScreen() {
           <PrimaryButton
             label="Chia sẻ"
             variant="outline"
+            className="flex-1"
             icon={<Share2 size={16} color={colors.foreground} />}
             onPress={shareVideo}
           />
+          {!isOwner ? <ReportButton targetType="POST" targetId={video.id} layout="inline" /> : null}
         </View>
-
-        {!isOwner ? <ReportButton targetType="POST" targetId={video.id} /> : null}
 
         <CommunityPanel postId={video.id} showBookmark commentPlaceholder="Chia sẻ cảm nhận hoặc câu hỏi về video..." />
 
@@ -183,16 +184,6 @@ export default function VideoDetailScreen() {
               <Text className="font-bold text-foreground">Tóm tắt công thức</Text>
             </View>
             <Text className="mt-3 text-sm leading-relaxed text-muted-foreground">{video.summary}</Text>
-          </View>
-        ) : null}
-
-        {video.tags.length > 0 ? (
-          <View className="flex-row flex-wrap gap-2">
-            {video.tags.map((tag) => (
-              <View key={tag} className="rounded-md bg-muted px-2.5 py-1">
-                <Text className="text-xs font-medium text-muted-foreground">#{tag}</Text>
-              </View>
-            ))}
           </View>
         ) : null}
 

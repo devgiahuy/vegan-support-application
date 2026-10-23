@@ -48,7 +48,6 @@ export default function RootLayout() {
           <Stack.Screen name="videos/[id]/edit" />
           <Stack.Screen name="meal-plans/[id]" />
           <Stack.Screen name="search" />
-          <Stack.Screen name="bookmarks" />
           <Stack.Screen name="contributor-status" />
           <Stack.Screen name="diet-preferences" />
           <Stack.Screen name="diet-schedule" />

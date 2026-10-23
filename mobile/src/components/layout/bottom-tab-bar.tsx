@@ -67,7 +67,7 @@ function toRad(deg: number) {
 }
 
 /** Ẩn thanh tab khi bàn phím mở trên Android để không đè lên ô nhập liệu. */
-function useKeyboardVisible() {
+export function useKeyboardVisible() {
   const [visible, setVisible] = React.useState(false);
 
   React.useEffect(() => {

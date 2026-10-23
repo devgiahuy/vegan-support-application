@@ -15,6 +15,7 @@ import {
   isValidDateOnly,
   snapToNextMonday,
 } from '@/features/meal-program/utils/meal-program-dates';
+import { idempotencyKey } from '@/features/meal-program/mappers/meal-program.mapper';
 import { getMealProgramErrorMessage } from '@/features/meal-program/utils/meal-program-errors';
 import { getApiErrorCode } from '@/lib/api-error';
 import { useIconColors } from '@/lib/theme-colors';
@@ -67,6 +68,7 @@ export default function NewMealProgramScreen() {
   const [dateNotice, setDateNotice] = React.useState<string | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [needsProfile, setNeedsProfile] = React.useState(false);
+  const attemptRef = React.useRef<{ signature: string; key: string } | null>(null);
 
   const changeDate = (value: string) => {
     setDateNotice(null);
@@ -88,8 +90,21 @@ export default function NewMealProgramScreen() {
       return;
     }
     date = date.trim();
+    // Cùng nội dung thì dùng lại một khóa: bấm thử lại sau khi hết thời gian chờ sẽ nối tiếp lộ trình đã tạo, không tạo trùng.
+    const signature = JSON.stringify({ title: title.trim(), goal, date, horizonWeeks });
+    if (attemptRef.current?.signature !== signature) {
+      attemptRef.current = { signature, key: idempotencyKey('meal-program') };
+    }
     try {
-      const created = await mutation.mutateAsync({ title, goal, startDate: date, horizonWeeks, alternativesPerWeek: 2 });
+      const created = await mutation.mutateAsync({
+        title,
+        goal,
+        startDate: date,
+        horizonWeeks,
+        alternativesPerWeek: 2,
+        idempotencyKey: attemptRef.current.key,
+      });
+      attemptRef.current = null;
       router.replace(`/meal-programs/${created.id}` as Href);
     } catch (error) {
       const code = getApiErrorCode(error);
