@@ -82,6 +82,13 @@ Retry failed or partially failed receipt extraction
     "idempotencyKey"
   ],
   "properties": {
+    "receiptReviewDecision": {
+      "type": "string",
+      "enum": [
+        "SAME_RECEIPT",
+        "SEPARATE_RECEIPTS"
+      ]
+    },
     "candidates": {
       "type": "array",
       "items": {
@@ -197,6 +204,7 @@ Retry failed or partially failed receipt extraction
       "type": "object",
       "required": [
         "job",
+        "duplicateCandidates",
         "pantryChanges"
       ],
       "properties": {
@@ -205,6 +213,9 @@ Retry failed or partially failed receipt extraction
           "required": [
             "id",
             "status",
+            "reviewRequired",
+            "identityDecisionRequired",
+            "receiptReviewDecision",
             "progress",
             "receipt",
             "images",
@@ -223,6 +234,21 @@ Retry failed or partially failed receipt extraction
             },
             "status": {
               "type": "string",
+              "_truncated": true
+            },
+            "reviewRequired": {
+              "type": "boolean",
+              "_truncated": true
+            },
+            "identityDecisionRequired": {
+              "type": "boolean",
+              "_truncated": true
+            },
+            "receiptReviewDecision": {
+              "type": [
+                "string",
+                "null"
+              ],
               "_truncated": true
             },
             "progress": {
@@ -276,17 +302,19 @@ Retry failed or partially failed receipt extraction
             }
           }
         },
-        "pantryChanges": {
+        "duplicateCandidates": {
           "type": "array",
           "items": {
             "type": "object",
             "_truncated": true
           }
-        }
-      }
-    }
-  }
-}
+        },
+        "pantryChanges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "_truncated":
+  …(truncated — xem api-catalog.json)
 ```
 
 #### ReceiptJobResponse
@@ -309,6 +337,9 @@ Retry failed or partially failed receipt extraction
       "required": [
         "id",
         "status",
+        "reviewRequired",
+        "identityDecisionRequired",
+        "receiptReviewDecision",
         "progress",
         "receipt",
         "images",
@@ -335,6 +366,23 @@ Retry failed or partially failed receipt extraction
             "FAILED",
             "CONFIRMED",
             "CANCELLED"
+          ]
+        },
+        "reviewRequired": {
+          "type": "boolean"
+        },
+        "identityDecisionRequired": {
+          "type": "boolean"
+        },
+        "receiptReviewDecision": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "SAME_RECEIPT",
+            "SEPARATE_RECEIPTS",
+            null
           ]
         },
         "progress": {
@@ -409,28 +457,6 @@ Retry failed or partially failed receipt extraction
           }
         },
         "candidates": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "_truncated": true
-          }
-        },
-        "attempt": {
-          "type": "integer"
-        },
-        "issue": {
-          "type": [
-            "object",
-            "null"
-          ],
-          "required": [
-            "code",
-            "message"
-          ],
-          "properties": {
-            "code": {
-              "type": "string",
-              "_truncated":
   …(truncated — xem api-catalog.json)
 ```
 

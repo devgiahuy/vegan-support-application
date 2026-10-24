@@ -27,6 +27,7 @@ const server = createServer(async (request, response) => {
     (body.text as { format: { name: string } }).format.name === 'receipt_candidates';
   const payload = isReceipt
     ? {
+        receiptNumber: 'CV-20260927-1',
         merchantName: 'Chợ Việt',
         purchasedAt: '2026-09-27',
         currency: 'VND',
@@ -43,6 +44,9 @@ const server = createServer(async (request, response) => {
             currency: 'VND',
             confidence: 0.8,
             uncertaintyNote: null,
+            classification: 'FOOD_OR_INGREDIENT',
+            classificationConfidence: 0.9,
+            classificationReason: null,
           },
         ],
       }
@@ -120,6 +124,8 @@ try {
   assert.equal(requests.length, callsBeforeRejectedUrl, 'untrusted URL must never reach OpenAI');
   const receiptResults = await receipt.extract([{ id: randomUUID(), position: 0, url }]);
   assert.equal(receiptResults[0]?.lines[0]?.lineText, 'DAU HU 400G 24000');
+  assert.equal(receiptResults[0]?.lines[0]?.classification, 'FOOD_OR_INGREDIENT');
+  assert.equal(receiptResults[0]?.receiptNumber, 'CV-20260927-1');
   assert.equal(receiptResults[0]?.currency, 'VND');
   assert(
     requests.some(

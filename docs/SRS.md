@@ -1,8 +1,8 @@
 # Software Requirements Specification — Vegan Support Application
 
-**Version:** 1.2
+**Version:** 1.4
 
-**Updated:** 2026-10-14
+**Updated:** 2026-10-24
 
 **Status:** Approved product baseline
 
@@ -94,6 +94,7 @@ When a user selects a diet pattern or tradition, the backend provides a default 
 - Administrators manage food-type and recipe categories and normalized ingredients.
 - Members create and manage recipes, handbooks, videos, and their revisions.
 - Recipes use structured ingredients and structured cooking steps in addition to descriptive text.
+- A signed-in author may request an editable AI recipe draft from a title, description, and ordered ingredient names without uploading an image. The suggestion cannot create or publish a post; the author reviews it and saves through the normal draft/review flow.
 - Published content is searchable and viewable according to visibility rules.
 
 ### FR-03 Community
@@ -150,6 +151,8 @@ When a user selects a diet pattern or tradition, the backend provides a default 
 - Accept multiple fridge/ingredient images in one recognition job.
 - AI proposes detected ingredients, estimated quantities, and freshness observations; the user confirms or edits results before they affect planning.
 - Receipt analysis extracts candidate purchased items and quantities. The user confirms or edits candidates before inventory changes.
+- Receipt intake distinguishes different purchases from repeat photos of one receipt. Exact repeats, including receipts without a visible number whose remaining metadata and complete line multiset match, do not increase pantry quantity again. Partial photos of one receipt are merged for user review before confirmation.
+- Receipt analysis excludes clearly non-food goods from pantry candidates and tells the user which lines were excluded and why. Ready-to-eat foods and drinks remain candidates; uncertain classifications stay available for review. The user can restore an excluded line before confirmation.
 - Generate several recipe/meal options from confirmed pantry data; the user chooses before compatibility analysis and plan insertion.
 - Produce a shopping-gap list from confirmed inventory, selected recipes, serving counts, and unit conversions.
 - The system must not make definitive food-safety claims from images.

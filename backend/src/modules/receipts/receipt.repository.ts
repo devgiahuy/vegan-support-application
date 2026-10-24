@@ -1,7 +1,13 @@
 import { AppError } from '../../common/errors/app-error.js';
 import type { EntitlementService } from '../entitlements/entitlement.service.js';
 import { lockDocument } from '../../database/locking.js';
-import { mergeReceiptLines } from './receipt.dedup.js';
+import {
+  compareReceiptImages,
+  mergeReceiptLines,
+  receiptLineKeys,
+  type ReceiptImageIdentity,
+  type ReceiptLineIdentity,
+} from './receipt.dedup.js';
 import type { Prisma } from '@prisma/client';
 import {
   FoodDataReviewStatus,
@@ -50,6 +56,10 @@ export interface ReceiptCandidateData {
   confidence: number;
   matchConfidence: number | null;
   uncertaintyNote: string | null;
+  aiClassification?: 'FOOD_OR_INGREDIENT' | 'NON_FOOD' | 'UNCERTAIN';
+  classificationConfidence?: number | null;
+  classificationReason?: string | null;
+  status?: ReceiptCandidateStatus;
 }
 
 export interface ConversionSnapshot {
@@ -60,11 +70,79 @@ export interface ConversionSnapshot {
   confidence: number | null;
 }
 
+function imageIdentity(input: ReceiptJobRecord['inputs'][number]): ReceiptImageIdentity {
+  return {
+    inputId: input.id,
+    receiptNumber: input.receiptNumber,
+    merchantName: input.merchantName,
+    purchasedAt: input.purchasedAt?.toISOString().slice(0, 10) ?? null,
+    currency: input.currency,
+    totalAmount: input.totalAmount,
+  };
+}
+
+function linesForInput(job: ReceiptJobRecord, inputId: string): ReceiptLineIdentity[] {
+  return job.candidates.filter((candidate) => candidate.inputId === inputId);
+}
+
+function comparisonLines(job: ReceiptJobRecord, inputId: string): ReceiptLineIdentity[] {
+  const input = job.inputs.find((item) => item.id === inputId);
+  if (!input || job.receiptReviewDecision !== 'SAME_RECEIPT')
+    return linesForInput(job, inputId);
+  const relatedInputIds = new Set(
+    job.inputs
+      .filter(
+        (source) =>
+          compareReceiptImages(
+            imageIdentity(input),
+            linesForInput(job, input.id),
+            imageIdentity(source),
+            linesForInput(job, source.id),
+          ) !== 'DISTINCT',
+      )
+      .map((source) => source.id),
+  );
+  return job.candidates.filter((candidate) => {
+    if (candidate.status !== ReceiptCandidateStatus.CONFIRMED || candidate.duplicateOfJobId)
+      return false;
+    return relatedInputIds.has(candidate.inputId);
+  });
+}
+
+function matchingLine(left: ReceiptLineIdentity, right: ReceiptLineIdentity): boolean {
+  const keys = new Set(receiptLineKeys(right));
+  return receiptLineKeys(left).some((key) => keys.has(key));
+}
+
 export class ReceiptRepository {
   constructor(
     private readonly prisma: PrismaClient,
     private readonly entitlements?: EntitlementService,
   ) {}
+
+  private async confirmedJobsOnDates(
+    transaction: Prisma.TransactionClient,
+    ownerId: string,
+    currentJobId: string,
+    inputs: Array<{ purchasedAt: Date | null }>,
+  ): Promise<ReceiptJobRecord[]> {
+    const dates = [
+      ...new Set(
+        inputs.flatMap((input) => (input.purchasedAt ? [input.purchasedAt.toISOString()] : [])),
+      ),
+    ].map((value) => new Date(value));
+    if (!dates.length) return [];
+    const matchedInputs = await transaction.receiptInput.findMany({
+      where: {
+        purchasedAt: { in: dates },
+        job: { ownerId, status: ReceiptJobStatus.CONFIRMED, id: { not: currentJobId } },
+      },
+      select: { jobId: true },
+    });
+    const ids = [...new Set(matchedInputs.map((input) => input.jobId))];
+    if (!ids.length) return [];
+    return transaction.receiptJob.findMany({ where: { id: { in: ids } }, include: jobInclude });
+  }
 
   findOwnedAssets(ownerId: string, assetIds: string[]) {
     return this.prisma.mediaAsset.findMany({
@@ -201,7 +279,15 @@ export class ReceiptRepository {
   async saveResults(data: {
     jobId: string;
     expectedAttempt?: number;
-    inputs: Array<{ inputId: string; error: { code: string; message: string } | null }>;
+    inputs: Array<{
+      inputId: string;
+      error: { code: string; message: string } | null;
+      receiptNumber: string | null;
+      merchantName: string | null;
+      purchasedAt: Date | null;
+      currency: string | null;
+      totalAmount: number | null;
+    }>;
     candidates: ReceiptCandidateData[];
     metadata: {
       merchantName: string | null;
@@ -231,9 +317,34 @@ export class ReceiptRepository {
                 errorCode: input.error.code,
                 errorMessage: input.error.message,
               }
-            : { status: ReceiptInputStatus.PROCESSED, errorCode: null, errorMessage: null },
+            : {
+                status: ReceiptInputStatus.PROCESSED,
+                errorCode: null,
+                errorMessage: null,
+                receiptNumber: input.receiptNumber,
+                merchantName: input.merchantName,
+                purchasedAt: input.purchasedAt,
+                currency: input.currency,
+                totalAmount: input.totalAmount,
+              },
         });
       }
+      const allImageRows = await transaction.receiptInput.findMany({
+        where: { jobId: data.jobId },
+      });
+      const images = new Map<string, ReceiptImageIdentity>(
+        allImageRows.map((input) => [
+          input.id,
+          {
+            inputId: input.id,
+            receiptNumber: input.receiptNumber,
+            merchantName: input.merchantName,
+            purchasedAt: input.purchasedAt?.toISOString().slice(0, 10) ?? null,
+            currency: input.currency,
+            totalAmount: input.totalAmount,
+          },
+        ]),
+      );
       const stored = await transaction.receiptCandidate.findMany({
         where: { jobId: data.jobId },
         select: {
@@ -246,11 +357,53 @@ export class ReceiptRepository {
           lineTotal: true,
         },
       });
-      const { kept } = mergeReceiptLines(stored, data.candidates);
+      const { kept, reviewRequired, identityDecisionRequired } = mergeReceiptLines(
+        stored,
+        data.candidates,
+        images,
+      );
       if (kept.length)
         await transaction.receiptCandidate.createMany({
           data: kept.map((candidate) => ({ jobId: data.jobId, ...candidate })),
         });
+      const assembled = await transaction.receiptJob.findUniqueOrThrow({
+        where: { id: data.jobId },
+        include: jobInclude,
+      });
+      const priorJobs = await this.confirmedJobsOnDates(
+        transaction,
+        current.ownerId,
+        current.id,
+        assembled.inputs,
+      );
+      const crossJobReview = assembled.inputs.some((input) =>
+        priorJobs.some((priorJob) =>
+          priorJob.inputs.some(
+            (priorInput) =>
+              compareReceiptImages(
+                imageIdentity(input),
+                linesForInput(assembled, input.id),
+                imageIdentity(priorInput),
+                comparisonLines(priorJob, priorInput.id),
+              ) === 'SAME_RECEIPT_REVIEW',
+          ),
+        ),
+      );
+      const crossJobDecision = assembled.inputs.some(
+        (input) =>
+          priorJobs.some((priorJob) =>
+            priorJob.inputs.some(
+              (priorInput) =>
+                (!input.receiptNumber || !priorInput.receiptNumber) &&
+                compareReceiptImages(
+                  imageIdentity(input),
+                  linesForInput(assembled, input.id),
+                  imageIdentity(priorInput),
+                  comparisonLines(priorJob, priorInput.id),
+                ) === 'SAME_RECEIPT_REVIEW',
+            ),
+          ),
+      );
       // Status reflects every image on the job, not only the ones analysed in this pass.
       const allInputs = await transaction.receiptInput.findMany({
         where: { jobId: data.jobId },
@@ -285,6 +438,9 @@ export class ReceiptRepository {
                 metadataConfidence: data.metadata.confidence,
               }
             : {}),
+          reviewRequired: current.reviewRequired || reviewRequired || crossJobReview,
+          identityDecisionRequired:
+            current.identityDecisionRequired || identityDecisionRequired || crossJobDecision,
           processingCompletedAt: new Date(),
           errorCode: failedCount ? 'PARTIAL_RECEIPT_EXTRACTION' : null,
           errorMessage: failedCount
@@ -455,9 +611,11 @@ export class ReceiptRepository {
     candidates: Array<{ id: string; expectedVersion: number; conversion: ConversionSnapshot }>;
     idempotencyKey: string;
     requestHash: string;
+    receiptReviewDecision?: 'SAME_RECEIPT' | 'SEPARATE_RECEIPTS' | null;
   }): Promise<{
     job: ReceiptJobRecord;
     changes: Array<{ candidateId: string; action: 'CREATED' | 'UPDATED' }>;
+    duplicates: Array<{ candidateId: string; sourceJobId: string }>;
   }> {
     return this.prisma.$transaction(async (transaction) => {
       await lockDocument(transaction, 'user', { id: data.ownerId });
@@ -481,14 +639,60 @@ export class ReceiptRepository {
               action:
                 candidate.pantryAction === 'UPDATED' ? ('UPDATED' as const) : ('CREATED' as const),
             })),
+          duplicates: job.candidates
+            .filter(
+              (candidate) =>
+                candidate.status === ReceiptCandidateStatus.REJECTED && candidate.duplicateOfJobId,
+            )
+            .map((candidate) => ({
+              candidateId: candidate.id,
+              sourceJobId: candidate.duplicateOfJobId!,
+            })),
         };
       }
       if (job.status !== ReceiptJobStatus.READY && job.status !== ReceiptJobStatus.PARTIAL_FAILED)
         throw new ReceiptConflictError();
+      if (job.identityDecisionRequired && !data.receiptReviewDecision)
+        throw new AppError({
+          statusCode: 409,
+          code: 'RECEIPT_REVIEW_DECISION_REQUIRED',
+          message: 'Vui lòng xác nhận các ảnh này thuộc cùng hóa đơn hay các hóa đơn khác nhau.',
+        });
       const requested = new Map(data.candidates.map((item) => [item.id, item]));
       const selected = job.candidates.filter((candidate) => requested.has(candidate.id));
       if (selected.length !== requested.size) throw new ReceiptConflictError();
       const changes: Array<{ candidateId: string; action: 'CREATED' | 'UPDATED' }> = [];
+      const duplicates: Array<{ candidateId: string; sourceJobId: string }> = [];
+      const priorJobs = await this.confirmedJobsOnDates(
+        transaction,
+        data.ownerId,
+        job.id,
+        job.inputs,
+      );
+      const lateAmbiguous = job.inputs.some(
+        (input) =>
+          priorJobs.some((priorJob) =>
+            priorJob.inputs.some(
+              (priorInput) =>
+                (!input.receiptNumber || !priorInput.receiptNumber) &&
+                compareReceiptImages(
+                  imageIdentity(input),
+                  linesForInput(job, input.id),
+                  imageIdentity(priorInput),
+                  comparisonLines(priorJob, priorInput.id),
+                ) === 'SAME_RECEIPT_REVIEW',
+            ),
+          ),
+      );
+      if (lateAmbiguous && !data.receiptReviewDecision)
+        throw new AppError({
+          statusCode: 409,
+          code: 'RECEIPT_REVIEW_DECISION_REQUIRED',
+          message: 'Vui lòng xác nhận các ảnh này thuộc cùng hóa đơn hay các hóa đơn khác nhau.',
+        });
+      const usedPriorCandidates = new Set<string>();
+      const countedWithinJob: typeof selected = [];
+      let reviewRequired = job.reviewRequired;
       for (const candidate of selected) {
         const request = requested.get(candidate.id)!;
         if (
@@ -498,6 +702,70 @@ export class ReceiptRepository {
           !candidate.unit
         )
           throw new ReceiptVersionConflictError();
+        const currentInput = job.inputs.find((input) => input.id === candidate.inputId)!;
+        let duplicateSource: { jobId: string; candidateId: string } | null = null;
+        if (data.receiptReviewDecision === 'SAME_RECEIPT') {
+          const withinJob = countedWithinJob.find((item) => {
+            if (item.inputId === currentInput.id || !matchingLine(candidate, item)) return false;
+            const priorInput = job.inputs.find((input) => input.id === item.inputId)!;
+            return (
+              (!currentInput.receiptNumber || !priorInput.receiptNumber) &&
+              compareReceiptImages(
+                imageIdentity(currentInput),
+                linesForInput(job, currentInput.id),
+                imageIdentity(priorInput),
+                linesForInput(job, priorInput.id),
+              ) === 'SAME_RECEIPT_REVIEW'
+            );
+          });
+          if (withinJob) duplicateSource = { jobId: job.id, candidateId: withinJob.id };
+        }
+        if (!duplicateSource) {
+          for (const priorJob of priorJobs) {
+            for (const priorInput of priorJob.inputs) {
+              const priorLines = comparisonLines(priorJob, priorInput.id);
+              const relation = compareReceiptImages(
+                imageIdentity(currentInput),
+                linesForInput(job, currentInput.id),
+                imageIdentity(priorInput),
+                priorLines,
+              );
+              if (relation === 'DISTINCT') continue;
+              if (
+                relation === 'SAME_RECEIPT_REVIEW' &&
+                (!currentInput.receiptNumber || !priorInput.receiptNumber) &&
+                data.receiptReviewDecision === 'SEPARATE_RECEIPTS'
+              )
+                continue;
+              if (relation === 'SAME_RECEIPT_REVIEW') reviewRequired = true;
+              const priorCandidate = priorJob.candidates.find(
+                (item) =>
+                  priorLines.includes(item) &&
+                  item.status === ReceiptCandidateStatus.CONFIRMED &&
+                  !usedPriorCandidates.has(item.id) &&
+                  matchingLine(candidate, item),
+              );
+              if (priorCandidate) {
+                duplicateSource = { jobId: priorJob.id, candidateId: priorCandidate.id };
+                break;
+              }
+            }
+            if (duplicateSource) break;
+          }
+        }
+        if (duplicateSource) {
+          usedPriorCandidates.add(duplicateSource.candidateId);
+          duplicates.push({ candidateId: candidate.id, sourceJobId: duplicateSource.jobId });
+          await transaction.receiptCandidate.update({
+            where: { id: candidate.id },
+            data: {
+              status: ReceiptCandidateStatus.REJECTED,
+              duplicateOfJobId: duplicateSource.jobId,
+              version: { increment: 1 },
+            },
+          });
+          continue;
+        }
         const quantity = candidate.quantity;
         const existing = await transaction.pantryItem.findFirst({
           where: {
@@ -598,6 +866,7 @@ export class ReceiptRepository {
           action = 'CREATED';
         }
         changes.push({ candidateId: candidate.id, action });
+        countedWithinJob.push(candidate);
         await transaction.receiptCandidate.update({
           where: { id: candidate.id },
           data: { status: ReceiptCandidateStatus.CONFIRMED, pantryItemId, pantryAction: action },
@@ -618,6 +887,9 @@ export class ReceiptRepository {
           confirmationKey: data.idempotencyKey,
           confirmationHash: data.requestHash,
           confirmedAt: new Date(),
+          reviewRequired: reviewRequired || lateAmbiguous,
+          identityDecisionRequired: job.identityDecisionRequired || lateAmbiguous,
+          receiptReviewDecision: data.receiptReviewDecision ?? null,
         },
       });
       return {
@@ -626,6 +898,7 @@ export class ReceiptRepository {
           include: jobInclude,
         }),
         changes,
+        duplicates,
       };
     });
   }

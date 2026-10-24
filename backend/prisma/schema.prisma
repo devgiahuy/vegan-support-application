@@ -679,6 +679,12 @@ enum ReceiptCandidateStatus {
   CONFIRMED
 }
 
+enum ReceiptItemClassification {
+  FOOD_OR_INGREDIENT
+  NON_FOOD
+  UNCERTAIN
+}
+
 enum AiArtifactType {
   CHAT_ANSWER
   RECIPE_NUTRITION
@@ -1177,6 +1183,9 @@ model ReceiptJob {
   currency              String?
   totalAmount           Float?             @map("total_amount")
   metadataConfidence    Float?             @map("metadata_confidence")
+  reviewRequired        Boolean            @default(false) @map("review_required")
+  identityDecisionRequired Boolean         @default(false) @map("identity_decision_required")
+  receiptReviewDecision String?            @map("receipt_review_decision")
   errorCode             String?            @map("error_code")
   errorMessage          String?            @map("error_message")
   confirmationKey       String?            @map("confirmation_key")
@@ -1207,6 +1216,11 @@ model ReceiptInput {
   assetId          String             @map("asset_id")
   position         Int
   status           ReceiptInputStatus @default(PENDING)
+  receiptNumber    String?            @map("receipt_number")
+  merchantName     String?            @map("merchant_name")
+  purchasedAt      DateTime?          @map("purchased_at")
+  currency         String?
+  totalAmount      Float?             @map("total_amount")
   errorCode        String?            @map("error_code")
   errorMessage     String?            @map("error_message")
   createdAt        DateTime           @default(now()) @map("created_at")
@@ -1218,6 +1232,8 @@ model ReceiptInput {
   @@unique([jobId, position])
   @@unique([jobId, assetId])
   @@index([assetId])
+  @@index([receiptNumber, merchantName, purchasedAt])
+  @@index([purchasedAt, jobId])
   @@map("receipt_inputs")
 }
 
@@ -1238,11 +1254,15 @@ model ReceiptCandidate {
   confidence       Float
   matchConfidence  Float?                 @map("match_confidence")
   uncertaintyNote  String?                @map("uncertainty_note")
+  aiClassification ReceiptItemClassification @default(FOOD_OR_INGREDIENT) @map("ai_classification")
+  classificationReason String?             @map("classification_reason")
+  classificationConfidence Float?         @map("classification_confidence")
   status           ReceiptCandidateStatus @default(PROPOSED)
   version          Int                    @default(1)
   editedByUser     Boolean                @default(false) @map("edited_by_user")
   pantryItemId     String?                @map("pantry_item_id")
   pantryAction     String?                @map("pantry_action")
+  duplicateOfJobId String?                @map("duplicate_of_job_id")
   createdAt        DateTime               @default(now()) @map("created_at")
   updatedAt        DateTime               @updatedAt @map("updated_at")
   job              ReceiptJob             @relation(fields: [jobId], references: [id], onDelete: NoAction, onUpdate: NoAction)

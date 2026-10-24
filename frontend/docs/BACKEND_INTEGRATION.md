@@ -1,8 +1,8 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.38
+**Version:** 4.40
 
-**Cập nhật:** 23/10/2026
+**Cập nhật:** 24/10/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
@@ -13,6 +13,23 @@
 ---
 
 ## 1. Source of truth và status
+
+### Receipt non-food classification — 2026-10-24
+
+Receipt template `receipt-v3` adds `aiClassification`, `classificationConfidence`, and `classificationReason` to editable candidate lines. Clearly non-food goods are initially rejected and returned separately in `excludedItems[]`; `notices[]` contains `RECEIPT_NON_FOOD_ITEMS_EXCLUDED` with a count and Vietnamese message. Ready-to-eat foods and drinks remain in `candidates[]`; uncertain products also remain for review. To restore a mistaken exclusion, PATCH its `excludedItems[].id` with `expectedVersion` and `decision: "KEEP"`, then include it in the normal confirmation selection. Excluded lines cannot change Pantry without this correction and explicit confirmation.
+
+The configured real OpenAI API successfully extracted a synthetic Vietnamese receipt (receipt number, total, three food lines and dish soap as `NON_FOOD`) and generated a recipe suggestion from text. The temporary Cloudinary test image was deleted. Physical receipt and wider provider validation remain open; receipt and recipe capabilities stay `IN_PROGRESS`. Existing frontend receipt consumers do not yet show `notices[]` or `excludedItems[]` and need DTO/Model/Mapper/UI migration before marking the new contract integrated.
+
+### Receipt identity and AI recipe draft preview — 2026-10-24
+
+| Method | Endpoint | Status | FE integrated | Notes |
+| --- | --- | --- | --- | --- |
+| POST | `/api/v1/recipe-drafts/generate` | `IN_PROGRESS` | No | Authenticated text-only AI preview from `title`, `description`, `ingredientNames[]`; returns an editable `draft` shaped for `POST /posts`, subjective confidence/assumptions and provider provenance. Does not save or publish content. Live provider validation remains. |
+| POST/GET/POST | `/api/v1/receipt-jobs`, `/api/v1/receipt-jobs/{id}`, `/api/v1/receipt-jobs/{id}/confirm` | `IN_PROGRESS` | Yes (legacy fields) | Provider template `receipt-v3`; per-image `receiptNumber`, merchant/date/currency/total; `reviewRequired` and `identityDecisionRequired` on job; `duplicateOfJobId` on candidate; `notices[]` and `excludedItems[]` report non-food exclusions; confirmation adds `duplicateCandidates[]`. Exact repeated purchases do not increment Pantry; partial photos of the same receipt require review. |
+
+Frontend migration: run `npm run sync:swagger` before changing consumers. Map the additive receipt image metadata, `reviewRequired`, `identityDecisionRequired`, `receiptReviewDecision`, `duplicateOfJobId` and `duplicateCandidates` into DTO/Model/Mapper/API/query layers and show which lines were skipped. When `identityDecisionRequired=true` (including a partial match where only one image shows the receipt number), require an explicit `receiptReviewDecision` (`SAME_RECEIPT` or `SEPARATE_RECEIPTS`) on confirmation; the backend returns `RECEIPT_REVIEW_DECISION_REQUIRED` otherwise. The existing receipt screen currently ignores these fields and cannot complete that review. For recipe generation, add the endpoint constant, separate request/response DTOs, UI Model, Mapper/API/query and mapper tests; let the author edit all generated fields before calling existing `POST /posts`. Never render AI quantities as verified nutrition values. No image is sent to AI.
+
+Errors: `RECIPE_DRAFT_UNAVAILABLE` (503) means the provider/capability is disabled or not configured; offer manual recipe entry. `RECIPE_DRAFT_GENERATION_FAILED` (503) means generation or structured-output validation failed; preserve input and offer retry/manual entry. `RECEIPT_REVIEW_DECISION_REQUIRED` (409) means the user must choose whether ambiguous no-number photos are one receipt or separate purchases. Existing receipt version/idempotency errors remain unchanged. Receipt status stays `IN_PROGRESS` until live Vietnamese receipt checks and the updated frontend review flow are verified.
 
 ### Scan & Macro Enhancements (Feature 033) — 2026-10-19
 
@@ -80,6 +97,10 @@ Completed migration: recognize payos in mappers, allow new purchases only for pa
 | `BILLING_RECONCILE_COOLDOWN`                                                          | Wait at least 30 seconds                                                                                                                                        |
 | `BILLING_CHECKOUT_EXPIRED`                                                            | Historical retired local-checkout code; not emitted by current billing routes                                                                                   |
 | `ENTITLEMENT_QUOTA_EXCEEDED`, `PANTRY_CAPACITY_EXCEEDED`, `SCAN_RETRY_LIMIT_EXCEEDED` | Existing quota/capacity/retry handling                                                                                                                          |
+
+Changelog 2026-10-24 (4.40): receipt-v3 phân loại mặt hàng; chỉ hàng không phải thực phẩm được loại mặc định và báo qua `notices[]`/`excludedItems[]`, có thể khôi phục bằng PATCH. Thực phẩm ăn liền được giữ. Ảnh hóa đơn tổng hợp và gợi ý công thức text đã qua OpenAI thật; kiểm chứng hóa đơn chụp thực tế và FE migration vẫn còn.
+
+Changelog 2026-10-24 (4.39): backend bổ sung số hóa đơn và metadata từng ảnh, phân biệt hóa đơn khác nhau trước khi gộp dòng; ảnh chụp thiếu của cùng hóa đơn đặt `reviewRequired`, dòng đã xác nhận ở job trước được báo trong `duplicateCandidates` và không cộng kho lần nữa. Thêm API preview công thức AI chỉ từ text, không lưu post và không dùng ảnh. FE cần đồng bộ OpenAPI và bổ sung DTO/Model/Mapper/UI cho thông tin review; live-provider validation vẫn còn.
 
 Changelog 2026-10-24 (4.38): mobile-only; không đổi endpoint, contract hay trạng thái. Màn "Khám phá quán chay" thêm bản đồ MapLibre GL JS chạy trong WebView (`react-native-webview`, style từ `EXPO_PUBLIC_MAP_STYLE_URL`, mặc định OpenFreeMap) dùng lại dữ liệu `GET /restaurants/nearby|search` (lat/lng, `source`); không cần build native, chạy được trong Expo Go. Thiếu style hoặc WebView không tải được thì dùng bản đồ radar. Chỉ vẽ ghim cho quán `INTERNAL` (đã duyệt) và `FAKE` (demo); quán `GOOGLE`/`SERPAPI` chỉ hiện ở danh sách vì điều khoản nhà cung cấp không cho hiển thị nội dung của họ trên bản đồ của bên khác. Kéo bản đồ không gọi API: nút "Tìm trong vùng đang xem" đặt tâm tìm kiếm mới (vẫn gửi `lat/lng/radiusMeters`, chưa dùng `north/south/east/west`). Chỉ đường mở Google Maps bằng liên kết ngoài (`mapsUrl` hoặc `EXPO_PUBLIC_MAPS_DIRECTIONS_URL_TEMPLATE`). Chưa chạy trên thiết bị; mobile typecheck, lint và unit test pass. Khoảng trống còn lại: cần thêm dữ liệu quán nội bộ (có `allergenFreeCodes`) để bản đồ có nhiều ghim.
 
@@ -1025,6 +1046,9 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `RECEIPT_VERSION_CONFLICT`                    | Refetch the job before editing or confirming candidates                                                    |
 | `RECEIPT_STATE_CONFLICT`                      | Refetch status; do not confirm cancelled, processing, or differently confirmed jobs                        |
 | `RECEIPT_PROVIDER_UNAVAILABLE`                | Keep the committed images/job for retry or offer manual Pantry entry                                       |
+| `RECEIPT_REVIEW_DECISION_REQUIRED`            | Ask whether ambiguous no-number photos are one receipt or separate purchases before confirmation          |
+| `RECIPE_DRAFT_UNAVAILABLE`                    | Offer manual recipe entry while AI provider/capability is unavailable                                      |
+| `RECIPE_DRAFT_GENERATION_FAILED`              | Keep title/description/ingredient names; retry or enter the recipe manually                                |
 | `SHOPPING_MEAL_NOT_FOUND`                     | Remove inaccessible/stale recipe or custom-meal selections and recalculate                                 |
 | `AI_ARTIFACT_VERSION_CONFLICT`                | Refetch artifact/version trước khi share/verify (planned Phase 23)                                         |
 | `SELF_VERIFICATION_FORBIDDEN`                 | Không cho Contributor tự verify artifact của mình (planned Phase 23)                                       |
@@ -1397,12 +1421,12 @@ Một frontend/backend capability chỉ được xem là tích hợp xong khi:
 | Method | Endpoint                                           | Status        | FE integrated | FE integrated date | Notes                                                                                                                       |
 | ------ | -------------------------------------------------- | ------------- | ------------- | ------------------ | --------------------------------------------------------------------------------------------------------------------------- |
 | POST   | /api/v1/receipt-jobs                               | `IN_PROGRESS` | Yes           | 2026-09-26         | Attach 1–4 owned committed `RECEIPT_IMAGE` assets; async OCR/parsing job; FE: `features/receipt`                            |
-| GET    | /api/v1/receipt-jobs/{id}                          | `IN_PROGRESS` | Yes           | 2026-09-26         | Owner-only job status, receipt metadata, candidate lines, confidence/uncertainty; FE: `features/receipt`                    |
+| GET    | /api/v1/receipt-jobs/{id}                          | `IN_PROGRESS` | Yes (legacy)  | 2026-09-26         | Owner-only job status, per-image receipt metadata, `reviewRequired`/`identityDecisionRequired`, candidate lines; FE needs updated review UI |
 | PATCH  | /api/v1/receipt-jobs/{id}/candidates/{candidateId} | `IN_PROGRESS` | Yes           | 2026-09-26         | Optimistic concurrency update for canonical/quantity/price or rejection; FE: `features/receipt`                             |
-| POST   | /api/v1/receipt-jobs/{id}/confirm                  | `IN_PROGRESS` | Yes           | 2026-09-26         | Transactional confirmation diff; sole pantry mutation boundary; FE: `features/receipt`                                      |
+| POST   | /api/v1/receipt-jobs/{id}/confirm                  | `IN_PROGRESS` | Yes (legacy)  | 2026-09-26         | Transactional pantry diff and `duplicateCandidates`; ambiguous no-number photos require `receiptReviewDecision`; FE migration required |
 | POST   | `/api/v1/receipt-jobs/{id}/cancel`                 | `IN_PROGRESS` | Yes           | 2026-09-26         | Idempotent cancel before confirmation; committed images remain storage-accounted; FE: `features/receipt`                    |
 | POST   | `/api/v1/receipt-jobs/{id}/retry`                  | `IN_PROGRESS` | Yes           | 2026-10-19         | Idempotent retry for failed/partially failed extraction; only failed images re-analysed, lines kept; FE: `features/receipt` |
-| POST   | `/api/v1/receipt-jobs/{id}/images`                 | `IN_PROGRESS` | Yes           | 2026-10-19         | Add images to an unconfirmed job; new lines merged, repeated lines collapsed; FE: `features/receipt`                        |
+| POST   | `/api/v1/receipt-jobs/{id}/images`                 | `IN_PROGRESS` | Yes (legacy)  | 2026-10-19         | Add images to an unconfirmed job; lines merge only within the same identified receipt; FE: `features/receipt` |
 | POST   | `/api/v1/shopping-lists/preview`                   | READY         | Yes           | 2026-09-26         | Selected recipes/custom-meals minus confirmed pantry quantities; FE: `features/receipt`                                     |
 
 **Business rules (backend-enforced):**
@@ -1413,7 +1437,8 @@ Một frontend/backend capability chỉ được xem là tích hợp xong khi:
 - Idempotency & Concurrency: Candidate edits require `expectedVersion` to guard against concurrent overwrites (`RECEIPT_CANDIDATE_VERSION_CONFLICT`).
 - Confirmation Safety: Confirmation accepts explicit `{ id, expectedVersion }[]` array and idempotency key, invalidating pantry cache on client.
 - Shopping Gap Pantry Authority: Only confirmed, positive pantry balances offset recipe requirement grams. Inconvertible or unresolved items are placed into `unresolvedItems`.
-- AI-generated candidate names, uncertainty notes, and extraction issues are Vietnamese. Raw merchant names and original `lineText` remain unmodified.
+- AI-generated candidate names, uncertainty notes, and extraction issues are Vietnamese. Raw merchant names and original `lineText` remain unmodified. Receipt numbers and per-image metadata are preserved where legible; different receipts accumulate even if a product line matches. Same-receipt partial photos set `reviewRequired`; exact or overlapping previously confirmed lines are reported in `duplicateCandidates` and do not add Pantry quantity again.
+- Clearly non-food receipt lines are persisted for audit but omitted from `candidates[]`; `excludedItems[]` and `notices[]` explain their exclusion. Ready-to-eat foods remain candidates. A mistaken exclusion can be restored by owner PATCH with `decision: "KEEP"` before explicit confirmation.
 
 ### 6.18 AI Artifacts & Unified Contributor Verification — Phase 23
 

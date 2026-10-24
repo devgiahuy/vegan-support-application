@@ -117,7 +117,8 @@ export class ReceiptService {
       byId,
       job.inputs.map((item) => item.asset.providerEtag),
     );
-    if (job.inputs.length + assetIds.length > this.config.receipt.maxImages) throw this.imageLimit();
+    if (job.inputs.length + assetIds.length > this.config.receipt.maxImages)
+      throw this.imageLimit();
     try {
       const result = await this.repository.appendInputs(ownerId, id, assetIds);
       if (!result) throw this.notFound();
@@ -216,6 +217,16 @@ export class ReceiptService {
     const selected = new Map(input.candidates.map((candidate) => [candidate.id, candidate]));
     const candidates = [];
     for (const candidate of job.candidates.filter((item) => selected.has(item.id))) {
+      if (
+        candidate.status === ReceiptCandidateStatus.REJECTED &&
+        candidate.aiClassification === 'NON_FOOD'
+      ) {
+        throw new AppError({
+          statusCode: 409,
+          code: 'RECEIPT_CANDIDATE_EXCLUDED',
+          message: 'Mặt hàng này đã được loại vì không phải thực phẩm. Hãy khôi phục trước khi xác nhận.',
+        });
+      }
       if (candidate.quantity === null || !candidate.unit) {
         throw new AppError({
           statusCode: 422,
@@ -233,7 +244,11 @@ export class ReceiptService {
         ),
       });
     }
-    const requestHash = sha256({ jobId, candidates: input.candidates });
+    const requestHash = sha256({
+      jobId,
+      candidates: input.candidates,
+      receiptReviewDecision: input.receiptReviewDecision ?? null,
+    });
     try {
       const result = await this.repository.confirm({
         ownerId,
@@ -241,12 +256,14 @@ export class ReceiptService {
         candidates,
         idempotencyKey: input.idempotencyKey,
         requestHash,
+        receiptReviewDecision: input.receiptReviewDecision ?? null,
       });
       const pantryByCandidate = new Map(
         result.job.candidates.map((candidate) => [candidate.id, candidate.pantryItem]),
       );
       return {
         job: this.serializeJob(result.job),
+        duplicateCandidates: result.duplicates,
         pantryChanges: result.changes.map((change) => {
           const item = pantryByCandidate.get(change.candidateId);
           if (!item) throw new Error('Confirmed receipt candidate is missing its pantry item');
@@ -331,7 +348,15 @@ export class ReceiptService {
       await this.repository.saveResults({
         jobId: job.id,
         expectedAttempt: job.attemptCount,
-        inputs: results.map((result) => ({ inputId: result.inputId, error: result.error })),
+        inputs: results.map((result) => ({
+          inputId: result.inputId,
+          error: result.error,
+          receiptNumber: result.receiptNumber,
+          merchantName: result.merchantName,
+          purchasedAt: result.purchasedAt ? new Date(`${result.purchasedAt}T00:00:00.000Z`) : null,
+          currency: result.currency,
+          totalAmount: result.totalAmount,
+        })),
         candidates,
         metadata: {
           merchantName: bestMetadata?.merchantName ?? null,
@@ -519,7 +544,19 @@ export class ReceiptService {
       for (const line of result.lines) {
         const normalizedName = normalizeVietnameseText(line.name);
         if (!normalizedName) continue;
-        const ingredient = await this.repository.resolveIngredient(normalizedName);
+        const excluded = line.classification === 'NON_FOOD';
+        const ingredient = excluded
+          ? null
+          : await this.repository.resolveIngredient(normalizedName);
+        const uncertaintyNote =
+          line.classification === 'UNCERTAIN'
+            ? [
+                line.uncertaintyNote,
+                'Chưa chắc mặt hàng này là thực phẩm; vui lòng kiểm tra trước khi xác nhận.',
+              ]
+                .filter(Boolean)
+                .join(' ')
+            : line.uncertaintyNote;
         candidates.push({
           inputId: result.inputId,
           ingredientId: ingredient?.id ?? null,
@@ -535,7 +572,13 @@ export class ReceiptService {
           currency: line.currency,
           confidence: line.confidence,
           matchConfidence: ingredient ? 0.9 : null,
-          uncertaintyNote: line.uncertaintyNote,
+          uncertaintyNote,
+          aiClassification: line.classification,
+          classificationConfidence: line.classificationConfidence,
+          classificationReason: excluded
+            ? line.classificationReason ?? 'Mặt hàng này không phải thực phẩm.'
+            : line.classificationReason,
+          status: excluded ? ReceiptCandidateStatus.REJECTED : ReceiptCandidateStatus.PROPOSED,
         });
       }
     }
@@ -592,6 +635,11 @@ export class ReceiptService {
   }
 
   private serializeJob(job: ReceiptJobRecord) {
+    const excluded = job.candidates.filter(
+      (candidate) =>
+        candidate.status === ReceiptCandidateStatus.REJECTED &&
+        candidate.aiClassification === 'NON_FOOD',
+    );
     return {
       id: job.id,
       status: job.status,
@@ -606,14 +654,40 @@ export class ReceiptService {
         totalAmount: number(job.totalAmount),
         confidence: number(job.metadataConfidence),
       },
+      reviewRequired: job.reviewRequired,
+      identityDecisionRequired: job.identityDecisionRequired,
+      receiptReviewDecision: job.receiptReviewDecision,
+      notices: excluded.length
+        ? [{
+            code: 'RECEIPT_NON_FOOD_ITEMS_EXCLUDED' as const,
+            message: `Đã loại ${excluded.length} mặt hàng không phải thực phẩm. Bạn có thể xem và khôi phục nếu cần.`,
+            count: excluded.length,
+          }]
+        : [],
+      excludedItems: excluded.map((candidate) => ({
+        id: candidate.id,
+        imageId: candidate.input.id,
+        lineText: candidate.lineText,
+        name: candidate.detectedName,
+        reason: candidate.classificationReason ?? 'Mặt hàng không phải thực phẩm.',
+        confidence: number(candidate.classificationConfidence) ?? 0,
+        version: candidate.version,
+      })),
       images: job.inputs.map((input) => ({
         id: input.id,
         position: input.position,
         url: input.asset.secureUrl,
         status: input.status,
+        receiptNumber: input.receiptNumber,
+        merchantName: input.merchantName,
+        purchasedAt: input.purchasedAt?.toISOString().slice(0, 10) ?? null,
+        currency: input.currency,
+        totalAmount: number(input.totalAmount),
         issue: input.errorMessage ?? null,
       })),
-      candidates: job.candidates.map((candidate) => ({
+      candidates: job.candidates
+        .filter((candidate) => !excluded.some((item) => item.id === candidate.id))
+        .map((candidate) => ({
         id: candidate.id,
         imageId: candidate.input.id,
         lineText: candidate.lineText,
@@ -633,9 +707,13 @@ export class ReceiptService {
         },
         confidence: number(candidate.confidence) ?? 0,
         uncertaintyNote: candidate.uncertaintyNote ?? null,
+        aiClassification: candidate.aiClassification,
+        classificationReason: candidate.classificationReason,
+        classificationConfidence: number(candidate.classificationConfidence),
         status: candidate.status,
+        duplicateOfJobId: candidate.duplicateOfJobId,
         version: candidate.version,
-      })),
+        })),
       attempt: job.attemptCount,
       issue: job.errorCode
         ? { code: job.errorCode, message: job.errorMessage ?? 'Không thể hoàn tất đọc hóa đơn.' }

@@ -19,6 +19,7 @@ const fallback: Record<Capability, string> = {
   NUTRITION: 'DETERMINISTIC_PARTIAL',
   VISION: 'MANUAL_PANTRY_ENTRY',
   RECEIPT: 'MANUAL_PANTRY_ENTRY',
+  RECIPE_DRAFT: 'MANUAL_RECIPE_ENTRY',
   VERIFICATION: 'HUMAN_REVIEW',
 };
 
@@ -96,6 +97,13 @@ export class AiGovernanceService {
         provider: this.config.receipt.provider,
         modelId: this.config.receipt.model,
         environmentEnabled: this.config.receipt.enabled,
+      },
+      {
+        capability: 'RECIPE_DRAFT' as const,
+        provider: this.config.ai.provider,
+        modelId: this.config.ai.recipeModel,
+        environmentEnabled: this.config.ai.recipeEnabled &&
+          (this.config.ai.provider === 'fake' || Boolean(this.config.ai.openAiApiKey)),
       },
     ];
   }

@@ -89,11 +89,36 @@ async function main(): Promise<void> {
     assert.equal(replay.id, created.id, 'duplicate receipt create must replay');
     const ready = await waitForTerminal(owner.id, created.id);
     assert.equal(ready.status, ReceiptJobStatus.READY);
+    const readyView = await service.get(owner.id, ready.id);
+    assert.equal(readyView.candidates.length, 3);
+    assert(
+      readyView.candidates.some((candidate) => candidate.name === 'bánh mì đóng gói'),
+      'ready-to-eat food remains available for confirmation',
+    );
+    assert.equal(readyView.excludedItems.length, 1);
+    assert.equal(readyView.excludedItems[0]?.name, 'nước rửa chén');
+    assert.equal(readyView.notices[0]?.code, 'RECEIPT_NON_FOOD_ITEMS_EXCLUDED');
+    await assert.rejects(
+      () =>
+        service.confirm(owner.id, ready.id, {
+          candidates: [
+            {
+              id: readyView.excludedItems[0]!.id,
+              expectedVersion: readyView.excludedItems[0]!.version,
+            },
+          ],
+          idempotencyKey: `${prefix}excluded-confirm`,
+        }),
+      (error: unknown) =>
+        error instanceof AppError && error.code === 'RECEIPT_CANDIDATE_EXCLUDED',
+    );
     assert.equal(
       await prisma.pantryItem.count({ where: { ownerId: owner.id, sourceReferenceId: ready.id } }),
       0,
     );
-    const unknown = ready.candidates.find((candidate) => candidate.ingredientId === null);
+    const unknown = ready.candidates.find(
+      (candidate) => candidate.lineText === 'RAU XANH 2 30000',
+    );
     assert(unknown, 'fake receipt must include an unknown line');
     assert.equal(unknown.detectedName, 'rau xanh chưa xác định');
     assert.equal(
@@ -173,6 +198,209 @@ async function main(): Promise<void> {
         },
       });
     }
+    const repeatedJob = await service.create(owner.id, {
+      imageAssetIds: [twinAssetIds[2]],
+      idempotencyKey: `${prefix}cross-job-duplicate`,
+    });
+    const repeatedReady = await waitForTerminal(owner.id, repeatedJob.id);
+    const repeatedUnknown = repeatedReady.candidates.find(
+      (candidate) => candidate.lineText === 'RAU XANH 2 30000',
+    );
+    assert(repeatedUnknown);
+    const repeatedEdited = await service.updateCandidate(owner.id, repeatedReady.id, repeatedUnknown.id, {
+      expectedVersion: repeatedUnknown.version,
+      detectedName: 'rau xanh đã chỉnh sửa',
+      quantity: 3,
+      unit: 'bó',
+      decision: 'KEEP',
+    });
+    const repeatedCorrected = repeatedEdited.candidates.find(
+      (candidate) => candidate.id === repeatedUnknown.id,
+    );
+    assert(repeatedCorrected);
+    const repeatedConfirmation = await service.confirm(owner.id, repeatedJob.id, {
+      candidates: [{ id: repeatedUnknown.id, expectedVersion: repeatedCorrected.version }],
+      idempotencyKey: `${prefix}cross-job-confirm`,
+    });
+    assert.equal(
+      repeatedConfirmation.pantryChanges.length,
+      0,
+      'cross-job duplicate must not increase pantry',
+    );
+    assert.deepEqual(repeatedConfirmation.duplicateCandidates, [
+      { candidateId: repeatedUnknown.id, sourceJobId: ready.id },
+    ]);
+    assert.equal(
+      (
+        await prisma.pantryItem.findUniqueOrThrow({
+          where: { id: confirmed.pantryChanges[0].pantryItem.id },
+        })
+      ).quantity,
+      3,
+    );
+    const ambiguous = await repository.createJob({
+      ownerId: owner.id,
+      assetIds: [twinAssetIds[0], twinAssetIds[2]],
+      provider: 'fake',
+      modelId: config.receipt.model,
+      templateVersion: config.receipt.templateVersion,
+      idempotencyKey: `${prefix}ambiguous`,
+      requestHash: `${prefix}ambiguous`,
+    });
+    const ambiguousRunning = await repository.startProcessing(owner.id, ambiguous.job.id);
+    assert(ambiguousRunning);
+    const [firstInput, secondInput] = ambiguousRunning.inputs;
+    assert(firstInput && secondInput);
+    const metadata = {
+      receiptNumber: null,
+      merchantName: 'Another Market',
+      purchasedAt: new Date('2026-09-24T00:00:00.000Z'),
+      currency: 'VND',
+      totalAmount: 50000,
+      error: null,
+    };
+    const candidate = (inputId: string, name: string, lineTotal: number) => ({
+      inputId,
+      ingredientId: null,
+      lineText: `${name} ${lineTotal}`,
+      detectedName: name,
+      normalizedName: name.toLowerCase(),
+      quantity: 1,
+      unit: 'g',
+      unitPrice: lineTotal,
+      lineTotal,
+      currency: 'VND',
+      confidence: 0.9,
+      matchConfidence: null,
+      uncertaintyNote: null,
+    });
+    const ambiguousReady = await repository.saveResults({
+      jobId: ambiguous.job.id,
+      expectedAttempt: ambiguousRunning.attemptCount,
+      inputs: [
+        { inputId: firstInput.id, ...metadata, receiptNumber: 'MIXED-1' },
+        { inputId: secondInput.id, ...metadata },
+      ],
+      candidates: [
+        candidate(firstInput.id, 'Bí đỏ', 20000),
+        candidate(secondInput.id, 'Bí đỏ', 20000),
+        candidate(secondInput.id, 'Cà rốt', 30000),
+      ],
+      metadata: {
+        merchantName: 'Another Market',
+        purchasedAt: metadata.purchasedAt,
+        currency: 'VND',
+        totalAmount: 50000,
+        confidence: 0.9,
+      },
+    });
+    assert.equal(ambiguousReady.reviewRequired, true);
+    assert.equal(ambiguousReady.identityDecisionRequired, true);
+    assert.equal(
+      ambiguousReady.candidates.length,
+      3,
+      'a cropped receipt number keeps partial lines for explicit review',
+    );
+    const ambiguousSelection = ambiguousReady.candidates.map((item) => ({
+      id: item.id,
+      expectedVersion: item.version,
+    }));
+    await assert.rejects(
+      () =>
+        service.confirm(owner.id, ambiguous.job.id, {
+          candidates: ambiguousSelection,
+          idempotencyKey: `${prefix}ambiguous-confirm`,
+        }),
+      (error: unknown) =>
+        error instanceof AppError && error.code === 'RECEIPT_REVIEW_DECISION_REQUIRED',
+    );
+    const mergedAmbiguous = await service.confirm(owner.id, ambiguous.job.id, {
+      candidates: ambiguousSelection,
+      idempotencyKey: `${prefix}ambiguous-confirm`,
+      receiptReviewDecision: 'SAME_RECEIPT',
+    });
+    assert.equal(mergedAmbiguous.pantryChanges.length, 2);
+    assert.equal(mergedAmbiguous.duplicateCandidates.length, 1);
+    const croppedAgain = await repository.createJob({
+      ownerId: owner.id,
+      assetIds: [twinAssetIds[0]],
+      provider: 'fake',
+      modelId: config.receipt.model,
+      templateVersion: config.receipt.templateVersion,
+      idempotencyKey: `${prefix}cropped-again`,
+      requestHash: `${prefix}cropped-again`,
+    });
+    const croppedRunning = await repository.startProcessing(owner.id, croppedAgain.job.id);
+    assert(croppedRunning);
+    const croppedInput = croppedRunning.inputs[0];
+    assert(croppedInput);
+    const croppedReady = await repository.saveResults({
+      jobId: croppedAgain.job.id,
+      expectedAttempt: croppedRunning.attemptCount,
+      inputs: [{ inputId: croppedInput.id, ...metadata, receiptNumber: 'MIXED-1' }],
+      candidates: [candidate(croppedInput.id, 'Cà rốt', 30000)],
+      metadata: {
+        merchantName: 'Another Market',
+        purchasedAt: metadata.purchasedAt,
+        currency: 'VND',
+        totalAmount: 50000,
+        confidence: 0.9,
+      },
+    });
+    assert.equal(croppedReady.identityDecisionRequired, true);
+    const croppedResult = await service.confirm(owner.id, croppedAgain.job.id, {
+      candidates: [
+        {
+          id: croppedReady.candidates[0]!.id,
+          expectedVersion: croppedReady.candidates[0]!.version,
+        },
+      ],
+      idempotencyKey: `${prefix}cropped-again-confirm`,
+      receiptReviewDecision: 'SAME_RECEIPT',
+    });
+    assert.equal(croppedResult.pantryChanges.length, 0);
+    assert.deepEqual(croppedResult.duplicateCandidates, [
+      { candidateId: croppedReady.candidates[0]!.id, sourceJobId: ambiguous.job.id },
+    ]);
+    const separate = await repository.createJob({
+      ownerId: owner.id,
+      assetIds: [twinAssetIds[1]],
+      provider: 'fake',
+      modelId: config.receipt.model,
+      templateVersion: config.receipt.templateVersion,
+      idempotencyKey: `${prefix}separate`,
+      requestHash: `${prefix}separate`,
+    });
+    const separateRunning = await repository.startProcessing(owner.id, separate.job.id);
+    assert(separateRunning);
+    const separateInput = separateRunning.inputs[0];
+    assert(separateInput);
+    const separateReady = await repository.saveResults({
+      jobId: separate.job.id,
+      expectedAttempt: separateRunning.attemptCount,
+      inputs: [{ inputId: separateInput.id, ...metadata }],
+      candidates: [candidate(separateInput.id, 'Bí đỏ', 20000)],
+      metadata: {
+        merchantName: 'Another Market',
+        purchasedAt: metadata.purchasedAt,
+        currency: 'VND',
+        totalAmount: 50000,
+        confidence: 0.9,
+      },
+    });
+    assert.equal(separateReady.identityDecisionRequired, true);
+    const separateResult = await service.confirm(owner.id, separate.job.id, {
+      candidates: [
+        {
+          id: separateReady.candidates[0]!.id,
+          expectedVersion: separateReady.candidates[0]!.version,
+        },
+      ],
+      idempotencyKey: `${prefix}separate-confirm`,
+      receiptReviewDecision: 'SEPARATE_RECEIPTS',
+    });
+    assert.equal(separateResult.pantryChanges.length, 1, 'separate purchase must accumulate');
+    assert.equal(separateResult.duplicateCandidates.length, 0);
     const twin = await service.create(owner.id, {
       imageAssetIds: [twinAssetIds[0], twinAssetIds[1]],
       idempotencyKey: `${prefix}twin`,
@@ -180,8 +408,20 @@ async function main(): Promise<void> {
     assert.equal(twin.images.length, 1, 'identical content uploaded twice is analysed once');
     const twinReady = await waitForTerminal(owner.id, twin.id);
     assert.equal(twinReady.status, ReceiptJobStatus.READY);
-    assert.equal(twinReady.candidates.length, 2);
-    const twinUnknown = twinReady.candidates.find((candidate) => candidate.ingredientId === null);
+    assert.equal(twinReady.candidates.length, 4);
+    const excludedTwin = twinReady.candidates.find(
+      (candidate) => candidate.aiClassification === 'NON_FOOD',
+    );
+    assert(excludedTwin);
+    const restored = await service.updateCandidate(owner.id, twin.id, excludedTwin.id, {
+      expectedVersion: excludedTwin.version,
+      decision: 'KEEP',
+    });
+    assert.equal(restored.excludedItems.length, 0, 'the user can restore a misclassified item');
+    assert(restored.candidates.some((candidate) => candidate.id === excludedTwin.id));
+    const twinUnknown = twinReady.candidates.find(
+      (candidate) => candidate.lineText === 'RAU XANH 2 30000',
+    );
     assert(twinUnknown);
     await service.updateCandidate(owner.id, twin.id, twinUnknown.id, {
       expectedVersion: twinUnknown.version,
@@ -193,11 +433,17 @@ async function main(): Promise<void> {
     });
     assert.equal(unchanged.status, ReceiptJobStatus.READY, 'nothing new means nothing is queued');
     assert.equal(unchanged.images.length, 1);
-    const appended = await service.addImages(owner.id, twin.id, { imageAssetIds: [twinAssetIds[2]] });
+    const appended = await service.addImages(owner.id, twin.id, {
+      imageAssetIds: [twinAssetIds[2]],
+    });
     assert.equal(appended.images.length, 2);
     const merged = await waitForTerminal(owner.id, twin.id);
     assert.equal(merged.status, ReceiptJobStatus.READY);
-    assert.equal(merged.candidates.length, 2, 'lines repeated from the new photo are not duplicated');
+    assert.equal(
+      merged.candidates.length,
+      4,
+      'lines repeated from the new photo are not duplicated',
+    );
     assert(
       merged.candidates.some((candidate) => candidate.detectedName === 'rau đã sửa tay'),
       'user edits survive an appended image',
@@ -207,7 +453,7 @@ async function main(): Promise<void> {
     });
     const mergedPartial = await waitForTerminal(owner.id, twin.id);
     assert.equal(mergedPartial.status, ReceiptJobStatus.PARTIAL_FAILED);
-    assert.equal(mergedPartial.candidates.length, 2, 'a failed extra image keeps earlier results');
+    assert.equal(mergedPartial.candidates.length, 4, 'a failed extra image keeps earlier results');
     await assert.rejects(
       () => service.addImages(owner.id, cancellable.id, { imageAssetIds: [twinAssetIds[2]] }),
       (error: unknown) => error instanceof AppError && error.code === 'RECEIPT_STATE_CONFLICT',
@@ -317,7 +563,7 @@ async function main(): Promise<void> {
       'current confirmed pantry must expose extra inventory',
     );
     console.info(
-      'Phase 22 fake-provider acceptance passed: duplicate retry, duplicate-content collapse, appended images merge, unknown correction, partial extraction, confirmation boundary, ownership, multi-meal aggregation, reviewed conversion, unit mismatch, insufficient/extra pantry, and unresolved lines.',
+      'Phase 22 fake-provider acceptance passed: duplicate retry, cross-job duplicate protection, ambiguous no-number review, duplicate-content collapse, appended images merge, unknown correction, partial extraction, confirmation boundary, ownership, multi-meal aggregation, reviewed conversion, unit mismatch, insufficient/extra pantry, and unresolved lines.',
     );
   } finally {
     await cleanup(owner.id);

@@ -1,12 +1,14 @@
 # Backend Implementation Phases
 
-**Version:** 3.13
+**Version:** 3.15
 
-**Updated:** 2026-10-14
+**Updated:** 2026-10-24
 
 **Stack:** Node.js · Express · TypeScript · MongoDB replica set · Prisma · Zod · OpenAPI
 
 **Current baseline:** Phases 00–20 and 23–26 completed; Phases 21–22 and 27 are in progress. OpenAI image adapters are implemented for Phase 21/22, but live Vietnamese image and receipt validation remains before production readiness.
+
+User-approved 2026-10-24 maintenance extends Phase 22 receipt identity/partial-photo handling and adds a text-only AI recipe draft preview to the existing content flow. Follow-up receipt classification keeps edible and ready-to-eat products, excludes clearly non-food goods with a visible notice and restores them on user correction. A synthetic Vietnamese receipt and recipe prompt passed the configured real OpenAI API; physical receipt accuracy and the remaining phase gate are still open, so Phase 22 remains `IN_PROGRESS`.
 
 This document splits the backend into independently implementable, verifiable, and committable phases. Every new session uses the matching prompt under `backend/docs/prompts/` and derives current state from the repository, not from previous chat history.
 

@@ -43,6 +43,13 @@ Soft-delete content thuộc quyền sở hữu
 - Request: —
 - Responses: `200` → DeletePostResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
+## POST `/api/v1/recipe-drafts/generate`
+Generate an editable recipe draft from a title, description and ingredient names
+- operationId: `generateRecipeDraft`
+- Params: —
+- Request: `GenerateRecipeDraftRequest`
+- Responses: `200` → GenerateRecipeDraftResponse, `400` → ErrorResponse, `401` → ErrorResponse, `423` → ErrorResponse, `503` → ErrorResponse
+
 ---
 ### Schemas dùng trong nhóm
 
@@ -275,6 +282,151 @@ Soft-delete content thuộc quyền sở hữu
     }
   },
   "additionalProperties": false
+}
+```
+
+#### GenerateRecipeDraftRequest
+```json
+{
+  "type": "object",
+  "required": [
+    "title",
+    "description",
+    "ingredientNames"
+  ],
+  "properties": {
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "ingredientNames": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "additionalProperties": false
+}
+```
+
+#### GenerateRecipeDraftResponse
+```json
+{
+  "type": "object",
+  "required": [
+    "success",
+    "data"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "enum": [
+        true
+      ]
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "draft",
+        "ingredientConfidence",
+        "confidence",
+        "assumptions",
+        "provenance"
+      ],
+      "properties": {
+        "draft": {
+          "type": "object",
+          "required": [
+            "type",
+            "title",
+            "body",
+            "recipe"
+          ],
+          "properties": {
+            "type": {
+              "type": "string",
+              "_truncated": true
+            },
+            "title": {
+              "type": "string",
+              "_truncated": true
+            },
+            "slug": {
+              "type": "string",
+              "_truncated": true
+            },
+            "excerpt": {
+              "type": "string",
+              "_truncated": true
+            },
+            "categoryIds": {
+              "type": "array",
+              "_truncated": true
+            },
+            "tags": {
+              "type": "array",
+              "_truncated": true
+            },
+            "media": {
+              "type": "array",
+              "_truncated": true
+            },
+            "body": {
+              "type": "string",
+              "_truncated": true
+            },
+            "recipe": {
+              "type": "object",
+              "_truncated": true
+            }
+          },
+          "additionalProperties": false
+        },
+        "ingredientConfidence": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "_truncated": true
+          }
+        },
+        "confidence": {
+          "type": "number"
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "_truncated": true
+          }
+        },
+        "provenance": {
+          "type": "object",
+          "required": [
+            "provider",
+            "model",
+            "templateVersion"
+          ],
+          "properties": {
+            "provider": {
+              "type": "string",
+              "_truncated": true
+            },
+            "model": {
+              "type": "string",
+              "_truncated": true
+            },
+            "templateVersion": {
+              "type": "string",
+              "_truncated": true
+            }
+          }
+        }
+      }
+    }
+  }
 }
 ```
 

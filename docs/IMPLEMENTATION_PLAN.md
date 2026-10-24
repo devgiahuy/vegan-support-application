@@ -1,8 +1,8 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.5
+**Version:** 4.7
 
-**Updated:** 2026-10-14
+**Updated:** 2026-10-24
 
 **Status:** Approved implementation baseline
 
@@ -35,12 +35,13 @@ The current API contract may still contain legacy Contributor subtype fields unt
 | D15 | Custom meals | Users may add private meals outside the public catalog, photos, and arbitrary user-created tags such as `shopee`; no marketplace API is implied. |
 | D16 | Planning horizon | Support weekly plans first, then multi-week programs with cumulative and repeated-pattern analysis. |
 | D17 | Recognition | Fridge input supports multiple images and quantity estimates. User confirmation is required before pantry/plan changes. |
-| D18 | Receipts | Extract candidate purchased ingredients, require user confirmation, then update pantry and compute shopping gaps. |
+| D18 | Receipts | Extract candidate purchased ingredients, identify repeat photos by receipt number/merchant/date or exact complete metadata and line multiset when the number is absent, merge partial photos for user review, and only then update pantry on explicit confirmation. Different receipts accumulate. |
 | D19 | Video | Enforce storage first. Videos use recipe/handbook review parity. Formal DMCA and advanced audio/frame moderation are Roadmap Phase 2. |
 | D20 | Certificates | No certificate verification in MVP. Future evidence badges do not silently introduce Contributor permission tiers. |
 | D21 | Documentation | `docs/SRS.md` is canonical; runtime capability status stays in frontend integration docs; roadmap is separate from implementation phases. |
 | D22 | Safety | Nutrition, freshness, compatibility, BMI, and AI answers are educational support, not diagnosis or guaranteed safety. |
 | D23 | Usage billing | User-approved 2026-10-13 and payOS conversion 2026-10-14: payOS exclusively for new one-time cumulative AI usage/Pantry capacity packages. App rollout remains development/test; payOS checkout is real money, without sandbox or mock fallback. No recurring or media-storage purchase. |
+| D24 | AI recipe draft | Accept title, description and ordered ingredient names without image analysis; return editable amount/unit/serving/time/step suggestions. The author edits and saves via the existing DRAFT content flow. AI output does not publish or become canonical nutrition data. Approved by user 2026-10-24. |
 
 ## 3. MVP scope
 
@@ -312,6 +313,8 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 3. AI may estimate item, amount, unit, and freshness observation. Never state definitive food safety.
 4. The user confirms/edits/rejects candidates before pantry update.
 5. Receipt extraction follows the same confirmation boundary and records source image/job.
+5a. Compare receipt identity before merging line items. Different visible receipt numbers remain separate even when a product line matches. When either photo lacks a number, an exact match requires merchant, date, total, currency and the full line multiset; partial matches require the user to choose same receipt or separate purchases before confirmation. Confirmed overlap never increments Pantry twice, including across jobs.
+5b. Keep edible food, ready-to-eat products and drinks as receipt candidates. AI may initially exclude clearly non-food goods; persist the original line and reason, return an exclusion notice and allow the user to restore a mistaken exclusion before confirmation. Uncertain lines remain available for review. Excluded lines never affect Pantry unless restored and explicitly confirmed.
 6. Meal suggestions use confirmed pantry state and offer multiple candidates.
 7. Shopping gaps are computed only after recipe/custom-meal choice, servings, unit conversion, and confirmed pantry inventory.
 8. Shopping items show required, available, missing, unit, conversion assumptions, and confidence.
