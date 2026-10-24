@@ -56,6 +56,10 @@ export interface ReceiptCandidateData {
   confidence: number;
   matchConfidence: number | null;
   uncertaintyNote: string | null;
+  aiClassification?: 'FOOD_OR_INGREDIENT' | 'NON_FOOD' | 'UNCERTAIN';
+  classificationConfidence?: number | null;
+  classificationReason?: string | null;
+  status?: ReceiptCandidateStatus;
 }
 
 export interface ConversionSnapshot {

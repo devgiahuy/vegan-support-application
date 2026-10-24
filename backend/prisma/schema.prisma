@@ -679,6 +679,12 @@ enum ReceiptCandidateStatus {
   CONFIRMED
 }
 
+enum ReceiptItemClassification {
+  FOOD_OR_INGREDIENT
+  NON_FOOD
+  UNCERTAIN
+}
+
 enum AiArtifactType {
   CHAT_ANSWER
   RECIPE_NUTRITION
@@ -1248,6 +1254,9 @@ model ReceiptCandidate {
   confidence       Float
   matchConfidence  Float?                 @map("match_confidence")
   uncertaintyNote  String?                @map("uncertainty_note")
+  aiClassification ReceiptItemClassification @default(FOOD_OR_INGREDIENT) @map("ai_classification")
+  classificationReason String?             @map("classification_reason")
+  classificationConfidence Float?         @map("classification_confidence")
   status           ReceiptCandidateStatus @default(PROPOSED)
   version          Int                    @default(1)
   editedByUser     Boolean                @default(false) @map("edited_by_user")

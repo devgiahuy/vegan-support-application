@@ -132,7 +132,7 @@ const environmentSchema = z
       (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
       z.string().trim().min(1).max(100).optional(),
     ),
-    RECEIPT_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('receipt-v2'),
+    RECEIPT_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('receipt-v3'),
     RECEIPT_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(256).max(8192).default(4096),
     RECEIPT_MAX_IMAGES: z.coerce.number().int().min(1).max(8).default(4),
     RECEIPT_MAX_IMAGE_BYTES: z.coerce.number().int().min(1).max(25_000_000).default(10_000_000),

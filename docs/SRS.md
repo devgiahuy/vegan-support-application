@@ -1,6 +1,6 @@
 # Software Requirements Specification — Vegan Support Application
 
-**Version:** 1.3
+**Version:** 1.4
 
 **Updated:** 2026-10-24
 
@@ -152,6 +152,7 @@ When a user selects a diet pattern or tradition, the backend provides a default 
 - AI proposes detected ingredients, estimated quantities, and freshness observations; the user confirms or edits results before they affect planning.
 - Receipt analysis extracts candidate purchased items and quantities. The user confirms or edits candidates before inventory changes.
 - Receipt intake distinguishes different purchases from repeat photos of one receipt. Exact repeats, including receipts without a visible number whose remaining metadata and complete line multiset match, do not increase pantry quantity again. Partial photos of one receipt are merged for user review before confirmation.
+- Receipt analysis excludes clearly non-food goods from pantry candidates and tells the user which lines were excluded and why. Ready-to-eat foods and drinks remain candidates; uncertain classifications stay available for review. The user can restore an excluded line before confirmation.
 - Generate several recipe/meal options from confirmed pantry data; the user chooses before compatibility analysis and plan insertion.
 - Produce a shopping-gap list from confirmed inventory, selected recipes, serving counts, and unit conversions.
 - The system must not make definitive food-safety claims from images.

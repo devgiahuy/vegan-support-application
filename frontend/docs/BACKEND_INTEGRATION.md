@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.39
+**Version:** 4.40
 
 **Cập nhật:** 24/10/2026
 
@@ -14,12 +14,18 @@
 
 ## 1. Source of truth và status
 
+### Receipt non-food classification — 2026-10-24
+
+Receipt template `receipt-v3` adds `aiClassification`, `classificationConfidence`, and `classificationReason` to editable candidate lines. Clearly non-food goods are initially rejected and returned separately in `excludedItems[]`; `notices[]` contains `RECEIPT_NON_FOOD_ITEMS_EXCLUDED` with a count and Vietnamese message. Ready-to-eat foods and drinks remain in `candidates[]`; uncertain products also remain for review. To restore a mistaken exclusion, PATCH its `excludedItems[].id` with `expectedVersion` and `decision: "KEEP"`, then include it in the normal confirmation selection. Excluded lines cannot change Pantry without this correction and explicit confirmation.
+
+The configured real OpenAI API successfully extracted a synthetic Vietnamese receipt (receipt number, total, three food lines and dish soap as `NON_FOOD`) and generated a recipe suggestion from text. The temporary Cloudinary test image was deleted. Physical receipt and wider provider validation remain open; receipt and recipe capabilities stay `IN_PROGRESS`. Existing frontend receipt consumers do not yet show `notices[]` or `excludedItems[]` and need DTO/Model/Mapper/UI migration before marking the new contract integrated.
+
 ### Receipt identity and AI recipe draft preview — 2026-10-24
 
 | Method | Endpoint | Status | FE integrated | Notes |
 | --- | --- | --- | --- | --- |
 | POST | `/api/v1/recipe-drafts/generate` | `IN_PROGRESS` | No | Authenticated text-only AI preview from `title`, `description`, `ingredientNames[]`; returns an editable `draft` shaped for `POST /posts`, subjective confidence/assumptions and provider provenance. Does not save or publish content. Live provider validation remains. |
-| POST/GET/POST | `/api/v1/receipt-jobs`, `/api/v1/receipt-jobs/{id}`, `/api/v1/receipt-jobs/{id}/confirm` | `IN_PROGRESS` | Yes (legacy fields) | Provider template `receipt-v2`; per-image `receiptNumber`, merchant/date/currency/total; `reviewRequired` and `identityDecisionRequired` on job; `duplicateOfJobId` on candidate; confirmation adds `duplicateCandidates[]`. Exact repeated purchases do not increment Pantry; partial photos of the same receipt require review. |
+| POST/GET/POST | `/api/v1/receipt-jobs`, `/api/v1/receipt-jobs/{id}`, `/api/v1/receipt-jobs/{id}/confirm` | `IN_PROGRESS` | Yes (legacy fields) | Provider template `receipt-v3`; per-image `receiptNumber`, merchant/date/currency/total; `reviewRequired` and `identityDecisionRequired` on job; `duplicateOfJobId` on candidate; `notices[]` and `excludedItems[]` report non-food exclusions; confirmation adds `duplicateCandidates[]`. Exact repeated purchases do not increment Pantry; partial photos of the same receipt require review. |
 
 Frontend migration: run `npm run sync:swagger` before changing consumers. Map the additive receipt image metadata, `reviewRequired`, `identityDecisionRequired`, `receiptReviewDecision`, `duplicateOfJobId` and `duplicateCandidates` into DTO/Model/Mapper/API/query layers and show which lines were skipped. When `identityDecisionRequired=true` (including a partial match where only one image shows the receipt number), require an explicit `receiptReviewDecision` (`SAME_RECEIPT` or `SEPARATE_RECEIPTS`) on confirmation; the backend returns `RECEIPT_REVIEW_DECISION_REQUIRED` otherwise. The existing receipt screen currently ignores these fields and cannot complete that review. For recipe generation, add the endpoint constant, separate request/response DTOs, UI Model, Mapper/API/query and mapper tests; let the author edit all generated fields before calling existing `POST /posts`. Never render AI quantities as verified nutrition values. No image is sent to AI.
 
@@ -91,6 +97,8 @@ Completed migration: recognize payos in mappers, allow new purchases only for pa
 | `BILLING_RECONCILE_COOLDOWN`                                                          | Wait at least 30 seconds                                                                                                                                        |
 | `BILLING_CHECKOUT_EXPIRED`                                                            | Historical retired local-checkout code; not emitted by current billing routes                                                                                   |
 | `ENTITLEMENT_QUOTA_EXCEEDED`, `PANTRY_CAPACITY_EXCEEDED`, `SCAN_RETRY_LIMIT_EXCEEDED` | Existing quota/capacity/retry handling                                                                                                                          |
+
+Changelog 2026-10-24 (4.40): receipt-v3 phân loại mặt hàng; chỉ hàng không phải thực phẩm được loại mặc định và báo qua `notices[]`/`excludedItems[]`, có thể khôi phục bằng PATCH. Thực phẩm ăn liền được giữ. Ảnh hóa đơn tổng hợp và gợi ý công thức text đã qua OpenAI thật; kiểm chứng hóa đơn chụp thực tế và FE migration vẫn còn.
 
 Changelog 2026-10-24 (4.39): backend bổ sung số hóa đơn và metadata từng ảnh, phân biệt hóa đơn khác nhau trước khi gộp dòng; ảnh chụp thiếu của cùng hóa đơn đặt `reviewRequired`, dòng đã xác nhận ở job trước được báo trong `duplicateCandidates` và không cộng kho lần nữa. Thêm API preview công thức AI chỉ từ text, không lưu post và không dùng ảnh. FE cần đồng bộ OpenAPI và bổ sung DTO/Model/Mapper/UI cho thông tin review; live-provider validation vẫn còn.
 
@@ -1430,6 +1438,7 @@ Một frontend/backend capability chỉ được xem là tích hợp xong khi:
 - Confirmation Safety: Confirmation accepts explicit `{ id, expectedVersion }[]` array and idempotency key, invalidating pantry cache on client.
 - Shopping Gap Pantry Authority: Only confirmed, positive pantry balances offset recipe requirement grams. Inconvertible or unresolved items are placed into `unresolvedItems`.
 - AI-generated candidate names, uncertainty notes, and extraction issues are Vietnamese. Raw merchant names and original `lineText` remain unmodified. Receipt numbers and per-image metadata are preserved where legible; different receipts accumulate even if a product line matches. Same-receipt partial photos set `reviewRequired`; exact or overlapping previously confirmed lines are reported in `duplicateCandidates` and do not add Pantry quantity again.
+- Clearly non-food receipt lines are persisted for audit but omitted from `candidates[]`; `excludedItems[]` and `notices[]` explain their exclusion. Ready-to-eat foods remain candidates. A mistaken exclusion can be restored by owner PATCH with `decision: "KEEP"` before explicit confirmation.
 
 ### 6.18 AI Artifacts & Unified Contributor Verification — Phase 23
 

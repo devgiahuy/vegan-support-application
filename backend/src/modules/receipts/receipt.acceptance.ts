@@ -89,11 +89,36 @@ async function main(): Promise<void> {
     assert.equal(replay.id, created.id, 'duplicate receipt create must replay');
     const ready = await waitForTerminal(owner.id, created.id);
     assert.equal(ready.status, ReceiptJobStatus.READY);
+    const readyView = await service.get(owner.id, ready.id);
+    assert.equal(readyView.candidates.length, 3);
+    assert(
+      readyView.candidates.some((candidate) => candidate.name === 'bánh mì đóng gói'),
+      'ready-to-eat food remains available for confirmation',
+    );
+    assert.equal(readyView.excludedItems.length, 1);
+    assert.equal(readyView.excludedItems[0]?.name, 'nước rửa chén');
+    assert.equal(readyView.notices[0]?.code, 'RECEIPT_NON_FOOD_ITEMS_EXCLUDED');
+    await assert.rejects(
+      () =>
+        service.confirm(owner.id, ready.id, {
+          candidates: [
+            {
+              id: readyView.excludedItems[0]!.id,
+              expectedVersion: readyView.excludedItems[0]!.version,
+            },
+          ],
+          idempotencyKey: `${prefix}excluded-confirm`,
+        }),
+      (error: unknown) =>
+        error instanceof AppError && error.code === 'RECEIPT_CANDIDATE_EXCLUDED',
+    );
     assert.equal(
       await prisma.pantryItem.count({ where: { ownerId: owner.id, sourceReferenceId: ready.id } }),
       0,
     );
-    const unknown = ready.candidates.find((candidate) => candidate.ingredientId === null);
+    const unknown = ready.candidates.find(
+      (candidate) => candidate.lineText === 'RAU XANH 2 30000',
+    );
     assert(unknown, 'fake receipt must include an unknown line');
     assert.equal(unknown.detectedName, 'rau xanh chưa xác định');
     assert.equal(
@@ -383,8 +408,20 @@ async function main(): Promise<void> {
     assert.equal(twin.images.length, 1, 'identical content uploaded twice is analysed once');
     const twinReady = await waitForTerminal(owner.id, twin.id);
     assert.equal(twinReady.status, ReceiptJobStatus.READY);
-    assert.equal(twinReady.candidates.length, 2);
-    const twinUnknown = twinReady.candidates.find((candidate) => candidate.ingredientId === null);
+    assert.equal(twinReady.candidates.length, 4);
+    const excludedTwin = twinReady.candidates.find(
+      (candidate) => candidate.aiClassification === 'NON_FOOD',
+    );
+    assert(excludedTwin);
+    const restored = await service.updateCandidate(owner.id, twin.id, excludedTwin.id, {
+      expectedVersion: excludedTwin.version,
+      decision: 'KEEP',
+    });
+    assert.equal(restored.excludedItems.length, 0, 'the user can restore a misclassified item');
+    assert(restored.candidates.some((candidate) => candidate.id === excludedTwin.id));
+    const twinUnknown = twinReady.candidates.find(
+      (candidate) => candidate.lineText === 'RAU XANH 2 30000',
+    );
     assert(twinUnknown);
     await service.updateCandidate(owner.id, twin.id, twinUnknown.id, {
       expectedVersion: twinUnknown.version,
@@ -404,7 +441,7 @@ async function main(): Promise<void> {
     assert.equal(merged.status, ReceiptJobStatus.READY);
     assert.equal(
       merged.candidates.length,
-      2,
+      4,
       'lines repeated from the new photo are not duplicated',
     );
     assert(
@@ -416,7 +453,7 @@ async function main(): Promise<void> {
     });
     const mergedPartial = await waitForTerminal(owner.id, twin.id);
     assert.equal(mergedPartial.status, ReceiptJobStatus.PARTIAL_FAILED);
-    assert.equal(mergedPartial.candidates.length, 2, 'a failed extra image keeps earlier results');
+    assert.equal(mergedPartial.candidates.length, 4, 'a failed extra image keeps earlier results');
     await assert.rejects(
       () => service.addImages(owner.id, cancellable.id, { imageAssetIds: [twinAssetIds[2]] }),
       (error: unknown) => error instanceof AppError && error.code === 'RECEIPT_STATE_CONFLICT',

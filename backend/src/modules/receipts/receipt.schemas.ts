@@ -1,4 +1,9 @@
-import { PantryItemSource, ReceiptCandidateStatus, ReceiptJobStatus } from '@prisma/client';
+import {
+  PantryItemSource,
+  ReceiptCandidateStatus,
+  ReceiptItemClassification,
+  ReceiptJobStatus,
+} from '@prisma/client';
 import {
   mediaUrlSchema,
   optionalNullableTrimmedTextSchema,
@@ -128,6 +133,9 @@ const receiptCandidateSchema = z.object({
   }),
   confidence: z.number().min(0).max(1),
   uncertaintyNote: z.string().nullable(),
+  aiClassification: z.nativeEnum(ReceiptItemClassification),
+  classificationReason: z.string().nullable(),
+  classificationConfidence: z.number().min(0).max(1).nullable(),
   status: z.nativeEnum(ReceiptCandidateStatus),
   duplicateOfJobId: z.string().uuid().nullable(),
   version: z.number().int().positive(),
@@ -139,6 +147,24 @@ export const receiptJobResponseSchema = z.object({
   reviewRequired: z.boolean(),
   identityDecisionRequired: z.boolean(),
   receiptReviewDecision: z.enum(['SAME_RECEIPT', 'SEPARATE_RECEIPTS']).nullable(),
+  notices: z.array(
+    z.object({
+      code: z.literal('RECEIPT_NON_FOOD_ITEMS_EXCLUDED'),
+      message: z.string(),
+      count: z.number().int().positive(),
+    }),
+  ),
+  excludedItems: z.array(
+    z.object({
+      id: z.string().uuid(),
+      imageId: z.string().uuid(),
+      lineText: z.string(),
+      name: z.string(),
+      reason: z.string(),
+      confidence: z.number().min(0).max(1),
+      version: z.number().int().positive(),
+    }),
+  ),
   progress: z.object({ completedImages: z.number().int(), totalImages: z.number().int() }),
   receipt: z.object({
     merchantName: z.string().nullable(),

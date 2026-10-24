@@ -1,6 +1,6 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.6
+**Version:** 4.7
 
 **Updated:** 2026-10-24
 
@@ -314,6 +314,7 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 4. The user confirms/edits/rejects candidates before pantry update.
 5. Receipt extraction follows the same confirmation boundary and records source image/job.
 5a. Compare receipt identity before merging line items. Different visible receipt numbers remain separate even when a product line matches. When either photo lacks a number, an exact match requires merchant, date, total, currency and the full line multiset; partial matches require the user to choose same receipt or separate purchases before confirmation. Confirmed overlap never increments Pantry twice, including across jobs.
+5b. Keep edible food, ready-to-eat products and drinks as receipt candidates. AI may initially exclude clearly non-food goods; persist the original line and reason, return an exclusion notice and allow the user to restore a mistaken exclusion before confirmation. Uncertain lines remain available for review. Excluded lines never affect Pantry unless restored and explicitly confirmed.
 6. Meal suggestions use confirmed pantry state and offer multiple candidates.
 7. Shopping gaps are computed only after recipe/custom-meal choice, servings, unit conversion, and confirmed pantry inventory.
 8. Shopping items show required, available, missing, unit, conversion assumptions, and confidence.
