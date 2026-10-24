@@ -41,6 +41,7 @@
     "prisma:migrate:verification-stats": "node scripts/migrate-ai-verification-reviewers.mjs deploy",
     "prisma:migrate:verification-stats:status": "node scripts/migrate-ai-verification-reviewers.mjs status",
     "seed": "prisma db seed",
+    "db:import-restaurants": "tsx prisma/import-restaurants.ts",
     "prisma:push": "node scripts/mongo-schema.mjs",
     "db:validators:generate": "node scripts/build-mongo-validators.mjs",
     "db:migrate:postgres-to-mongo": "node scripts/migrate-postgres-to-mongo.mjs"

@@ -34,7 +34,7 @@ export function useSearchHere(center: { lat: number; lng: number }, onSearchHere
 }
 
 /**
- * Khung chung quanh bề mặt bản đồ (MapLibre native, WebView hoặc radar). TRONG bản đồ chỉ có nút định vị và nút phóng/thu
+ * Khung chung quanh bề mặt bản đồ (MapLibre trong WebView hoặc radar). TRONG bản đồ chỉ có nút định vị và nút phóng/thu
  * (`showZoom`); mọi ghi chú, nút "Tìm trong vùng đang xem" và thẻ quán đang chọn nằm bên dưới để không che bản đồ.
  */
 export function MapFrame({

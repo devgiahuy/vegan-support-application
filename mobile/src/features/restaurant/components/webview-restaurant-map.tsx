@@ -13,9 +13,8 @@ const MIN_ZOOM = 3;
 const MAX_ZOOM = 19;
 
 /**
- * Bản đồ MapLibre GL JS chạy trong WebView — dùng được trong Expo Go (không cần development build), kém mượt hơn bản
- * native. Cùng quy tắc ghim (chỉ quán nội bộ) và cùng khung điều khiển với bản native. Khi trang bản đồ không tải được
- * (mất mạng, CDN lỗi) thì gọi `onFailed` để màn hình chuyển sang bản đồ radar.
+ * Bản đồ MapLibre GL JS chạy trong WebView — dùng được trong Expo Go, không cần build native. Chỉ vẽ ghim cho quán nội bộ
+ * đã duyệt. Khi trang bản đồ không tải được (mất mạng, CDN lỗi) thì gọi `onFailed` để màn hình chuyển sang bản đồ radar.
  */
 export function WebViewRestaurantMap({
   items,
