@@ -6,6 +6,14 @@ describe('site-footer-routes', () => {
     expect(HIDDEN_FOOTER_PREFIXES).toContain('/assistant');
     expect(HIDDEN_FOOTER_PREFIXES).toContain('/meal-plans');
     expect(HIDDEN_FOOTER_PREFIXES).toContain('/restaurants');
+    expect(HIDDEN_FOOTER_PREFIXES).toContain('/pantry');
+    expect(HIDDEN_FOOTER_PREFIXES).toContain('/receipts/scan');
+  });
+
+  it('hides footer on /pantry, /pantry/scan and /receipts/scan', () => {
+    expect(isFooterHidden('/pantry')).toBe(true);
+    expect(isFooterHidden('/pantry/scan')).toBe(true);
+    expect(isFooterHidden('/receipts/scan')).toBe(true);
   });
 
   it('hides footer on /meal-plans and subpaths', () => {

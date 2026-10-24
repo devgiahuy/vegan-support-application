@@ -26,16 +26,35 @@ export class RecipeDraftService {
     }
     try {
       const suggestion = await this.provider.suggest(input);
-      if (
-        suggestion.ingredients.length !== input.ingredientNames.length ||
-        suggestion.steps.some((step) =>
-          step.affectedIngredientPositions.some(
-            (position) => position >= input.ingredientNames.length,
-          ),
-        )
-      ) {
-        throw new Error('Recipe draft ingredient count or step reference is invalid');
+
+      // Normalize ingredients: ensure count matches input.ingredientNames exactly
+      let ingredients = suggestion.ingredients;
+      if (ingredients.length < input.ingredientNames.length) {
+        const missing = input.ingredientNames.length - ingredients.length;
+        const padding = Array.from({ length: missing }, () => ({
+          amount: 100,
+          unit: 'g',
+          optional: false,
+          confidence: 0.3,
+        }));
+        ingredients = [...ingredients, ...padding];
+      } else if (ingredients.length > input.ingredientNames.length) {
+        ingredients = ingredients.slice(0, input.ingredientNames.length);
       }
+
+      // Normalize step references: ensure affectedIngredientPositions are integers and within bounds
+      const steps = suggestion.steps.map((step) => ({
+        instruction: step.instruction,
+        ...(step.durationMinutes === null ? {} : { durationMinutes: step.durationMinutes }),
+        affectedIngredientPositions: Array.from(
+          new Set(
+            step.affectedIngredientPositions.filter(
+              (pos) => Number.isInteger(pos) && pos >= 0 && pos < input.ingredientNames.length,
+            ),
+          ),
+        ),
+      }));
+
       const draft = createRecipePostRequestSchema.parse({
         type: 'RECIPE',
         title: input.title,
@@ -50,17 +69,13 @@ export class RecipeDraftService {
           cookTimeMinutes: suggestion.cookTimeMinutes,
           difficulty: suggestion.difficulty,
           nutrition: {},
-          ingredients: suggestion.ingredients.map((item, position) => ({
-            displayName: input.ingredientNames[position],
+          ingredients: ingredients.map((item, position) => ({
+            displayName: input.ingredientNames[position] ?? `Nguyên liệu ${position + 1}`,
             amount: item.amount,
             unit: item.unit,
             optional: item.optional,
           })),
-          steps: suggestion.steps.map((step) => ({
-            instruction: step.instruction,
-            ...(step.durationMinutes === null ? {} : { durationMinutes: step.durationMinutes }),
-            affectedIngredientPositions: step.affectedIngredientPositions,
-          })),
+          steps,
         },
       });
       await this.governance.record({
@@ -74,7 +89,7 @@ export class RecipeDraftService {
       });
       return {
         draft,
-        ingredientConfidence: suggestion.ingredients.map((item) => item.confidence),
+        ingredientConfidence: ingredients.map((item) => item.confidence),
         confidence: suggestion.confidence,
         assumptions: suggestion.assumptions,
         provenance: {
@@ -83,7 +98,8 @@ export class RecipeDraftService {
           templateVersion: this.provider.templateVersion,
         },
       };
-    } catch {
+    } catch (error) {
+      console.error('[RecipeDraftService] Generate failed:', error);
       await this.governance.record({
         capability: 'RECIPE_DRAFT',
         provider: this.provider.name,

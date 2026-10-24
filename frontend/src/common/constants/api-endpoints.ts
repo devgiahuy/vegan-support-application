@@ -268,6 +268,10 @@ export const API_ENDPOINTS = {
     RETRY: (id: string) => `/receipt-jobs/${id}/retry`,
     ADD_IMAGES: (id: string) => `/receipt-jobs/${id}/images`,
   },
+  // Phase 24: AI Recipe Draft Suggestion
+  RECIPE_DRAFTS: {
+    GENERATE: '/recipe-drafts/generate',
+  },
   SHOPPING_LISTS: {
     PREVIEW: '/shopping-lists/preview',
   },

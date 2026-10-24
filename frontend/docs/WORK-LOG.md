@@ -1,5 +1,182 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-24] — Loại bỏ hoàn toàn nút Lưu tri thức AI trên toàn bộ các màn hình kiểm duyệt và thẻ dinh dưỡng
+
+- **Mục tiêu**: Loại bỏ nút "Lưu tri thức AI" trên các màn hình người dùng, bao gồm màn hình kiểm duyệt nhận diện tủ lạnh (`/pantry/scan`) và thẻ phân tích dinh dưỡng công thức (`RecipeNutritionCard`).
+- **Nguyên nhân & giải pháp**:
+  - Tính năng Tri thức AI (AI Artifacts - Phase 23) đã được ẩn ở trang public. Việc hiển thị nút "Lưu tri thức AI" trên các thanh công cụ kiểm duyệt hàng ngày làm rối luồng giao diện người dùng.
+  - *Đã làm*:
+    - Gỡ bỏ component `SaveArtifactButton` và import không dùng (`AiArtifactType`) khỏi thanh công cụ kiểm duyệt `CandidateReviewScreen` (`src/features/ingredient-vision/components/candidate-review-screen.tsx`).
+    - Gỡ bỏ component `SaveArtifactButton` khỏi thanh công cụ phân tích dinh dưỡng `RecipeNutritionCard` (`src/features/recipe-nutrition/components/recipe-nutrition-card.tsx`).
+- **Verify**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 51 test suites, 619 tests pass 100%.
+  - `npm run build`: Turbopack build thành công 47/47 routes.
+
+## [2026-10-24] — Giữ cố định ảnh chụp tủ lạnh khi cuộn trang tại /pantry/scan (Sticky Left Column)
+
+- **Mục tiêu**: Khi người dùng cuộn chuột xuống để rà soát danh sách nguyên liệu dài trong màn hình kiểm duyệt tại route `/pantry/scan`, khối hiển thị ảnh chụp tủ lạnh bên trái vẫn được ghim cố định (sticky) trên màn hình để đối chiếu thuận tiện.
+- **Nguyên nhân cốt lõi phát hiện & giải pháp**:
+  - Trong `CandidateReviewScreen` (`src/features/ingredient-vision/components/candidate-review-screen.tsx`), class `lg:sticky lg:top-24` trước đây bị đặt nhầm vào thẻ card con (`rounded-2xl`) thay vì cột grid cha (`lg:col-span-5`).
+  - Do grid container cha có class `items-start` (`align-items: flex-start`), thẻ cột `lg:col-span-5` có chiều cao co lại vừa khít với nội dung card (~500px). Vì khối cha không có không gian cuộn dôi dư, thẻ card con không thể trượt sticky được và bị cuốn trôi ngay khi người dùng cuộn qua.
+  - *Giải pháp*:
+    - Di chuyển định nghĩa sticky sang cột grid cha: `<div className="lg:col-span-5 space-y-4 lg:sticky lg:top-20">`.
+    - Khi đặt `lg:sticky lg:top-20` trực tiếp lên grid item của container 12 cột, containing block của nó chính là toàn bộ grid container (cao 1500px+ theo danh sách nguyên liệu bên phải).
+    - Khối ảnh chụp tủ lạnh, các góc ảnh thumbnails và hộp hướng dẫn sẽ ghim mượt mà cách đỉnh màn hình 80px (ngay dưới header thanh điều hướng) trong suốt quá trình người dùng cuộn duyệt danh sách nguyên liệu.
+- **Verify**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 51 test suites, 619 tests pass 100%.
+  - `npm run build`: Turbopack build thành công 47/47 routes.
+
+## [2026-10-24] — Loại bỏ nút Lưu tri thức AI & thay thế hộp thoại xác nhận hủy bằng ConfirmDialog tại /receipts/scan
+
+- **Mục tiêu**:
+  1. Loại bỏ nút "Lưu tri thức AI" trên giao diện kiểm duyệt hóa đơn tại route `/receipts/scan` (và `/receipts/:id`).
+  2. Thay thế hoàn toàn hộp thoại xác nhận hủy tác vụ mặc định của trình duyệt (`window.confirm`) bằng modal xác nhận chuẩn trong mã nguồn (`ConfirmDialog`).
+- **Nguyên nhân cốt lõi phát hiện & giải pháp**:
+  - **Nút Lưu tri thức AI**: Nút `SaveArtifactButton` hiển thị trên thanh công cụ kiểm tra hóa đơn `ReceiptInspectionView` không cần thiết trong luồng người dùng quét hóa đơn nhập kho thông thường. Đã loại bỏ component này và các import thừa (`AiArtifactType`, `SaveArtifactButton`).
+  - **Hộp thoại browser `window.confirm`**: Phương thức `window.confirm('Bạn có chắc chắn muốn hủy tác vụ bóc tách hóa đơn này không?')` chặn luồng chính (blocking UI thread), giao diện không đồng bộ với thiết kế của ứng dụng.
+  - *Giải pháp*:
+    - Tích hợp component `ConfirmDialog` từ `@/components/shared/confirm-dialog`.
+    - Quản lý trạng thái `isCancelConfirmOpen` trong `ReceiptInspectionView`.
+    - Kết nối hành vi hủy từ cả 3 vị trí kích hoạt:
+      1. Nút "Hủy bóc tách" trong tiến trình đang xử lý (`ReceiptProgressTracker`).
+      2. Nút "Hủy tác vụ" trên thanh công cụ xem xét kết quả OCR.
+      3. Nút "Hủy bỏ" trên thanh điều khiển lưu kết quả ở chân trang (Footer bar).
+    - Hộp thoại hiển thị rõ ràng tiêu đề, cảnh báo mất dữ liệu chưa lưu, nút "Hủy tác vụ" với kiểu màu đỏ (`danger`), hiển thị trạng thái đang xử lý (`loading`) khi mutation đang thực thi và tự động điều hướng về `/pantry` hoặc gọi callback `onCancel`.
+- **Verify**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 51 test suites, 619 tests pass 100%.
+  - `npm run build`: Turbopack build thành công 47/47 routes.
+
+## [2026-10-24] — Ẩn triệt để chức năng Khám phá Tri thức AI trên giao diện
+
+- **Mục tiêu**: Thực hiện ẩn toàn bộ giao diện và lối vào tính năng "Khám phá Tri thức AI" theo yêu cầu người dùng:
+  1. Loại bỏ mục "Khám phá Tri thức AI" khỏi Dropdown Menu trên Header chính (`site-header.tsx`).
+  2. Loại bỏ nút "Khám phá" (icon Globe) trên thanh công cụ của trang Trợ lý AI (`/assistant/page.tsx`).
+  3. Cấu hình trang `/assistant/public` tự động điều hướng (HTTP 307 redirect) về `/assistant`, ngăn chặn trang mồ côi (No Orphan Pages rule).
+  4. Ẩn tùy chọn và hộp thoại chia sẻ công khai khi lưu tri thức AI (`SaveArtifactButton`), chuyển luồng lưu trữ hoàn toàn sang kho dữ liệu cá nhân ở chế độ Riêng tư.
+  5. Cập nhật `SaveArtifactDialog` (loại bỏ checkbox ẩn danh chia sẻ công khai và các ghi chú công khai ra cộng đồng).
+- **Files thay đổi**:
+  - `src/components/layout/site-header.tsx`: Bỏ mục DropdownMenuItem Khám phá Tri thức AI.
+  - `src/app/(site)/assistant/page.tsx`: Bỏ nút Khám phá câu trả lời công khai.
+  - `src/app/(site)/assistant/public/page.tsx`: Chuyển hướng `redirect('/assistant')`.
+  - `src/features/ai-artifacts/components/save-artifact-button.tsx`: Bỏ popup chia sẻ công khai, hiển thị toast lưu thành công vào kho cá nhân.
+  - `src/features/ai-artifacts/components/save-artifact-dialog.tsx`: Bỏ checkbox ẩn danh khi chia sẻ, cập nhật mô tả lưu trữ riêng tư.
+- **Verify**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 51 test suites, 619 tests pass 100%.
+  - `npm run build`: Next.js Turbopack build thành công toàn bộ 47/47 routes.
+
+
+
+## [2026-10-24] — Tối ưu luồng Chế độ ăn, đồng bộ Avatar, tinh chỉnh Custom Meals, ẩn Footer & Quota AI trực quan
+
+- **Mục tiêu**: Xử lý 7 vấn đề theo yêu cầu người dùng:
+  1. Đặc tả và khắc phục lỗi luồng tạo chế độ ăn (/speckit-specify, wizard chưa rõ ràng, lỗi Zod validation khi lưu).
+  2. Đồng bộ hiển thị Avatar tức thì trong Profile và trên Navbar sau khi upload ảnh thành công.
+  3. Ẩn nút "Bài viết của tôi" bị điều hướng sai trên hero banner của Articles và Videos.
+  4. Sửa lỗi giao diện trang `/custom-meals/new` và bảo vệ route dynamic `/custom-meals/:id`.
+  5. Ẩn footer tại `/pantry`, `/pantry/scan`, `/receipts/scan`.
+  6. Ngăn chặn hiện tượng tự động nhảy/cuộn trang xuống cuối khi upload ảnh quét tại `/receipts/scan` và `/pantry/scan`.
+  7. Tinh chỉnh component hiển thị Quota AI (`AllowanceNotice`) với màu sắc và huy hiệu nổi bật giúp người dùng dễ nhận biết số lượt còn lại.
+- **Nguyên nhân cốt lõi phát hiện & giải pháp**:
+  - **Lỗi tạo chế độ ăn**:
+    - Backend `ingredientExclusionInputSchema` ràng buộc `reason: z.string().trim().min(1).max(500).optional()` với `.strict()`. Khi gửi `reason: ""` (chuỗi rỗng), backend ném lỗi 400 Bad Request. Tương tự với `label: ""` trong allergies.
+    - Wizard 1 bước cồng kềnh, không phân cấp giữa 3 trụ cột (Tradition/Diet/Goal) và các quy tắc tuân thủ/kiêng kỵ.
+    - *Giải pháp*: Tạo spec `specs/033-diet-preference-workflow/spec.md`. Nâng cấp `DietWizard` thành Stepper 2 bước trực quan (Bước 1: Chọn bộ ba thiết lập -> Bước 2: Tùy chỉnh quy tắc & kiêng kỵ). Khử trùng payload tự động xóa bỏ `reason` và `label` nếu rỗng. Bổ sung cảnh báo chọn ngày nếu chọn `PERIODIC`. Thêm nút "Thay đổi chế độ ăn" và chế độ chỉnh sửa/xem tại `CurrentDietCard` và `/profile?tab=diet`.
+  - **Avatar không hiển thị ngay**:
+    - `AvatarUploader` chỉ tải ảnh lên Cloudinary và cập nhật state nội bộ form; nếu người dùng không bấm nút "Lưu thay đổi", ảnh không được persist xuống DB và không đồng bộ vào `useAuthStore` hoặc `detailedProfile`.
+    - *Giải pháp*: Bổ sung callback `onAutoSave` vào `AvatarUploader`. Trong `BasicProfileForm`, ngay khi Cloudinary upload hoàn tất, hàm `handleAutoSaveAvatar` gọi ngay `patchBasicProfile({ avatarUrl })`, tự động cập nhật auth store, cache profile và cập nhật ngay lập tức avatar trên Navbar và Profile Header Banner. Gắn shortcut bấm vào icon camera ở header avatar để nhảy đến form.
+  - **Nút "Bài viết của tôi"**:
+    - Nút dẫn sai tới `/profile?tab=posts` (tab không tồn tại). Đã ẩn nút trên `ArticlesHeroBanner` và `VideosHeroBanner`.
+  - **Lỗi giao diện `/custom-meals/new` & route `/custom-meals/:id`**:
+    - Dòng nguyên liệu tràn ngang trên màn hình hẹp (< 640px). Đã cấu hình flex-wrap / grid responsive 2 dòng.
+    - Lưới ảnh và lưới dinh dưỡng bị chia 4 cột trong cột phụ 1/3 sidebar trên desktop khiến nội dung bị đè bẹp. Đã đổi thành `grid-cols-2 gap-2.5`.
+    - Route dynamic `/custom-meals/[id]/page.tsx` khi truy cập `/custom-meals/new` vô tình kích hoạt API fetch custom-meal với id="new". Đã bổ sung guard redirect sang `/custom-meals/new` và `enabled: id !== 'new'`.
+  - **Ẩn Footer**:
+    - Bổ sung `/pantry` và `/receipts/scan` vào `HIDDEN_FOOTER_PREFIXES` trong `src/components/layout/site-footer-routes.ts`. Cập nhật unit test `site-footer-routes.test.ts`.
+  - **Trang bị nhảy cuộn khi upload ảnh**:
+    - Khi ảnh được upload hoặc job quét được tạo, focus hoặc component re-render khiến viewport nhảy xuống đáy trang. Đã bổ sung cơ chế cuộn mượt về đầu trang (`window.scrollTo({ top: 0 })`) trong `FridgeUploadZone`, `ReceiptUploadZone`, `ReceiptScanClientView`, và `FridgeScanClientView`.
+  - **Quota AI nổi bật**:
+    - Thiết kế lại `AllowanceNotice`: icon màu riêng biệt theo tính năng (Hóa đơn: Rose, Tủ lạnh: Emerald, Chat: Sky, Pantry: Amber), nền gradient sang trọng, huy hiệu quota với số lượt còn lại in đậm rõ nét, trạng thái cảnh báo khi hết lượt và nút mua thêm quyền lợi nổi bật.
+- **Verify**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 51 test suites, 619 tests pass 100%.
+  - `npm run build`: Next.js Turbopack build thành công 47/47 routes.
+
+## [2026-10-24] — Khắc phục lỗi UI nhảy trang & dịch chuyển cuộn khi mở Dropdown danh sách món ăn
+
+- **Mục tiêu**: Xử lý triệt để hiện tượng khi người dùng nhấp mở dropdown "Danh mục món ăn" (hoặc các dropdown Select khác), toàn bộ trang web tự động bị dịch/cuộn xuống một khoảng (làm phần tiêu đề "Biểu mẫu biên tập công thức" bị cuộn khuất lên trên, và thẻ "1. Thông tin chung của món ăn" bị giật mạnh).
+- **Nguyên nhân cốt lõi phát hiện**:
+  1. **Hành vi tự động scrollIntoView của Radix UI**: Trong component `@radix-ui/react-select`, khi dropdown mở ra và định vị xong (`isPositioned === true`), hàm `focusFirst()` tự động duyệt qua các node con và gọi `candidate?.scrollIntoView({ block: "nearest" })` cùng `candidate?.focus()`. Do dropdown menu nằm bên dưới trigger và có nhiều mục (chiều cao ~320px+), trình duyệt nhận định item/menu nằm sát hoặc tràn mép dưới màn hình nên tự động cuộn cửa sổ (`window`) xuống để hiển thị trọn vẹn item được focus, khiến giao diện bị giật nảy lên trên.
+  2. **Tác động từ quy tắc CSS chuyển đổi vị trí Header**: Trước đó, việc ép `header.sticky` sang `position: fixed` khi body khóa cuộn làm thanh điều hướng (cao 64px) rời khỏi luồng tài liệu thông thường, khiến phần `<main>` bên dưới bị kéo giật ngược lên 64px, kết hợp với hành vi `scrollIntoView` tạo ra hiện tượng dịch chuyển rất rõ rệt.
+  3. **Thuộc tính overflow & margin của react-remove-scroll**: Thư viện khóa cuộn tự ý thêm `margin-right` và `overflow: hidden` vào body gây giật giàn trang ngang và dọc.
+- **Đã làm**:
+  - **Chặn đứng tự động cuộn trang trong Select (`src/components/ui/select.tsx`)**:
+    - Ghi đè phương thức `node.scrollIntoView` trên cả `SelectContent` và `SelectItem`. Thay vì để trình duyệt cuộn cả cửa sổ `window`, `scrollIntoView` chỉ cuộn thanh cuộn cục bộ bên trong khung nhìn của menu `[data-radix-select-viewport]`.
+    - Bọc `node.focus` trên `SelectTrigger`, `SelectContent` và `SelectItem` để luôn truyền `{ preventScroll: true }`, ngăn chặn 100% việc trình duyệt tự động nhảy trang khi focus item.
+    - Cấu hình `position = 'popper'` và khống chế `max-h-72` (288px) kèm cuộn nội bộ mượt mà, giúp dropdown luôn vừa vặn trong màn hình mà không tràn lấn.
+  - **Triệt tiêu hiện tượng giật giàn trang (CLS) (`src/app/globals.css`)**:
+    - Thay thế quy tắc cũ bằng:
+      ```css
+      body[data-scroll-locked] {
+        overflow: visible !important;
+        margin-right: 0px !important;
+      }
+      ```
+    - Giữ `body` luôn `overflow: visible`, giúp `SiteHeader` giữ nguyên `position: sticky; top: 0` tự nhiên trong luồng tài liệu, không bao giờ bị mất 64px chiều cao, không giật trang, và thanh cuộn không bị nhảy ngang.
+- **Verify**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 51 test suites, 618 tests pass 100%.
+  - `npm run build`: Turbopack build thành công 47/47 routes.
+
+## [2026-10-24] — Khắc phục lỗi Timeout & chuẩn hóa xử lý lỗi khi AI gợi ý công thức trên 4 nguyên liệu (032-ai-recipe-draft)
+
+- **Mục tiêu**: Điều tra và xử lý triệt để sự cố API `POST /api/v1/recipe-drafts/generate` bị lỗi khi người dùng nhập trên 4 nguyên liệu vào ô "Các nguyên liệu chính bạn có sẵn", gây ra toast lỗi kép "Lỗi gợi ý công thức: Không thể kết nối đến máy chủ. Vui lòng kiểm tra đường truyền."
+- **Nguyên nhân cốt lõi phát hiện**:
+  - Phía Frontend Axios có cấu hình mặc định `timeout: 15000` (15 giây).
+  - Khi danh sách nguyên liệu từ 5 món trở lên, OpenAI Response API với JSON Schema strict cần tạo đầy đủ các bước thực hiện tuần tự, tham chiếu chỉ số nguyên liệu và tính toán định lượng chi tiết, thời gian phản hồi thực tế từ 16 đến 27 giây (ví dụ: 6 nguyên liệu mất ~19.4 giây, 7 nguyên liệu mất ~26.5 giây).
+  - Đúng thời điểm 15,000ms, Axios phía client tự ngắt kết nối (`ECONNABORTED`), backend ghi nhận log `responseTime: 15000, msg: "request aborted"`, làm frontend nhận định nhầm là mất mạng (`!error.response && error.request`).
+  - Request thiếu cờ `silent: true` khiến Axios response interceptor bắn một thông báo lỗi mạng chung đồng thời với thông báo `toastApiError` trong query mutation, gây ra hiện tượng 2 toast đỏ đè lên nhau.
+  - Phía backend: `RecipeDraftService` trước đây ném ngoại lệ cứng khi số lượng nguyên liệu hoặc chỉ số `affectedIngredientPositions` bị lệch, thay vì chuẩn hóa phòng vệ.
+- **Đã làm**:
+  - **Frontend Client (`recipeDraftApi.generateDraft`)**:
+    - Bổ sung cấu hình request riêng `{ timeout: 60000, silent: true }` cho lời gọi `api.post` gợi ý công thức AI. Cho phép client kiên nhẫn chờ quá trình sinh công thức phức tạp trong tối đa 60 giây.
+    - Kích hoạt `silent: true` để ngăn chặn interceptor toàn cục của Axios bắn toast lỗi thừa, trao toàn quyền kiểm soát UX thông báo cho mutation hook.
+  - **Frontend Query Hook (`useGenerateRecipeDraftMutation`)**:
+    - Bổ sung nhánh xử lý lỗi chuyên biệt khi xảy ra `ECONNABORTED` (`isAxiosError(err) && err.code === 'ECONNABORTED'`), hiển thị thông điệp thân thiện: *"Quá thời gian phản hồi: Quá trình tạo gợi ý mất nhiều thời gian hơn dự kiến do có nhiều nguyên liệu. Vui lòng thử lại hoặc giảm bớt số lượng nguyên liệu."*
+  - **Backend Service (`RecipeDraftService`)**:
+    - Chuẩn hóa phòng vệ dữ liệu (defensive normalization): tự động cắt lát hoặc bổ sung đệm an toàn nếu độ dài mảng nguyên liệu sai khác với input; lọc và khử trùng `affectedIngredientPositions` trong phạm vi hợp lệ `[0, ingredientNames.length - 1]`, loại bỏ hoàn toàn nguy cơ ném ngoại lệ làm hỏng cả request.
+    - Cập nhật biến môi trường `AI_TIMEOUT_MS=60000` trong `backend/.env`, `docker-compose.yml` và `backend/src/config/env.ts`.
+    - Build lại Docker container `backend-backend-1` và kiểm thử trực tiếp thành công với 6 nguyên liệu (sinh thành công trong 19.4s).
+- **Verify**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 51 test suites, 618 tests pass 100%.
+  - `npm run build`: Turbopack build thành công 47/47 routes.
+  - Test trực tiếp `RecipeDraftService` trong backend container với 6 nguyên liệu: thành công 100% trong 19.4s, dữ liệu nguyên liệu & bước nấu trả về đầy đủ.
+
+
+## [2026-10-24] — Tích hợp Trợ lý AI khởi tạo công thức & tối ưu hóa luồng tạo công thức mới (032-ai-recipe-draft)
+
+- **Mục tiêu**: Tối ưu hóa giao diện tạo công thức mới tại route `/recipes/new`, giải quyết tình trạng giao diện cồng kềnh (hơn 50 trường nhập liệu trống). Cho phép người dùng nhập tên món ăn, mô tả ngắn và danh sách tên nguyên liệu có sẵn để AI tự động tính toán định lượng (gam/muỗng), khẩu phần, thời gian nấu, độ khó và các bước thực hiện tuần tự, hỗ trợ xem trước và nạp an toàn vào biểu mẫu.
+- **Đã làm**:
+  - Hằng số & Endpoints: Bổ sung `API_ENDPOINTS.RECIPE_DRAFTS.GENERATE = '/recipe-drafts/generate'` tại `src/common/constants/api-endpoints.ts`.
+  - DTO & UI Model: Tạo `src/features/recipe/types/recipe-draft.dto.ts` và `recipe-draft.model.ts` đặc tả `GenerateRecipeDraftRequestDto`, `GenerateRecipeDraftResponseDto`, `RecipeDraftPrompt`, `RecipeDraftSuggestion`.
+  - Mapper & Unit Tests: Xây dựng `RecipeDraftMapper` kế thừa `BaseMapper` tại `src/features/recipe/mappers/recipe-draft.mapper.ts` kèm logic chuyển đổi sang `RecipeFormValues`; viết 6 unit test cases tại `recipe-draft.mapper.test.ts` (pass 100%).
+  - API & Mutation Hook: Viết API client `recipeDraftApi.generateDraft` và hook `useGenerateRecipeDraftMutation` tại `recipe-draft.queries.ts`, xử lý chuyên biệt các mã lỗi 503 `RECIPE_DRAFT_UNAVAILABLE` và `RECIPE_DRAFT_GENERATION_FAILED`.
+  - UI Components:
+    - Tạo `TagInput` (`src/features/recipe/components/tag-input.tsx`) cho phép gõ Enter/dấu phẩy để tạo chip nguyên liệu và chọn nhanh từ danh mục nguyên liệu thuần chay phổ biến.
+    - Tạo `RecipeDraftPreviewDialog` (`src/features/recipe/components/recipe-draft-preview-dialog.tsx`) hiển thị chi tiết gợi ý AI với huy hiệu độ tin cậy, bảng nguyên liệu định lượng, các bước tuần tự và các giả định ẩm thực.
+    - Tạo `AiRecipeDraftAssistant` (`src/features/recipe/components/ai-recipe-draft-assistant.tsx`) khối thẻ trên cùng với trạng thái loading trực quan và liên kết cuộn tới form thủ công.
+    - Tạo `OverwriteConfirmDialog` (`src/features/recipe/components/overwrite-confirm-dialog.tsx`) bảo vệ chống ghi đè khi form đã có dữ liệu nhập tay.
+  - Form Integration & UX Optimization: Mở rộng `RecipeEditorForm` hỗ trợ `RecipeEditorFormHandle` (`setDraftValues`, `isDirty`, `hasUserContent`); cập nhật `src/app/(site)/recipes/new/page.tsx` nạp dữ liệu mượt mà từ bản nháp AI vào form và cuộn mượt xuống editor. Tách phần tải ảnh bìa thành khối riêng ("4. Hình ảnh thành phẩm món ăn") đặt sau các bước thực hiện, triệt tiêu hoàn toàn hiện tượng giật/nhảy giao diện (CLS - Cumulative Layout Shift) khi tải ảnh lên.
+  - Tài liệu: Cập nhật `BACKEND_INTEGRATION.md` endpoint status thành `Yes (2026-10-24)`, cập nhật `PROGRESS.md` và `WORK-LOG.md`.
+- **Verify**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 51 test suites, 618 tests pass 100%.
+  - `npm run build`: Next.js 16.3.4 Turbopack build thành công 100%, 47 static/dynamic pages tối ưu hóa hoàn tất.
+
 ## [2026-10-19] — Hiệu chỉnh cảnh báo dinh dưỡng thực đơn & nâng cấp quét ảnh thông minh (033-scan-and-macro-enhancements)
 
 - **Mục tiêu**: Hiệu chỉnh cảnh báo chất xơ thực đơn (14g/1000 kcal là mức tối thiểu khuyến nghị, chỉ cảnh báo khi > 70g/ngày, so sánh số thực chưa làm tròn); lọc trùng ảnh qua Cloudinary ETag; gộp dòng lặp qua nhiều ảnh hóa đơn (không nhân đôi số tiền/số lượng); bảo toàn ghi chú nghi vấn `uncertaintyNote` của AI khi gộp nguyên liệu tủ lạnh; bổ sung nút "Thêm ảnh" (`POST .../images`) và giữ nguyên toàn bộ chỉnh sửa tay khi retry (`onRetry`).

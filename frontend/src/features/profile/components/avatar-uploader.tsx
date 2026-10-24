@@ -23,19 +23,22 @@ function validateAvatarFile(file: File): string | null {
 }
 
 /**
- * Uploader ảnh đại diện: chọn file → xin reservation → upload Cloudinary
- * → commit reservation → trả `secureUrl` qua `onChange`.
+ * Uploader ảnh đại diện: chọn file -> xin reservation -> upload Cloudinary
+ * -> commit reservation -> cập nhật profile ngay lập tức (onAutoSave) để hiển thị
+ * đồng bộ trên navbar và trang cá nhân.
  */
 export function AvatarUploader({
   value,
   fallbackInitials,
   disabled = false,
   onChange,
+  onAutoSave,
 }: {
   value: string;
   fallbackInitials: string;
   disabled?: boolean;
   onChange: (url: string, isMock: boolean) => void;
+  onAutoSave?: (url: string | null) => Promise<void>;
 }) {
   const [isUploading, setIsUploading] = React.useState(false);
   const [uploadPercent, setUploadPercent] = React.useState(0);
@@ -58,7 +61,11 @@ export function AvatarUploader({
       });
 
       onChange(asset.secureUrl, false);
-      toast.success('Đã tải ảnh đại diện lên thành công!');
+      if (onAutoSave) {
+        await onAutoSave(asset.secureUrl);
+      } else {
+        toast.success('Đã tải ảnh đại diện lên thành công!');
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Không thể tải ảnh lên';
       toast.error('Lỗi khi tải ảnh', { description: msg });
@@ -69,26 +76,29 @@ export function AvatarUploader({
     }
   };
 
-  const handleRemove = () => {
+  const handleRemove = async () => {
     onChange('', false);
+    if (onAutoSave) {
+      await onAutoSave(null);
+    }
   };
 
   return (
     <div className="flex items-center gap-4">
-      <Avatar className="h-16 w-16 rounded-2xl">
+      <Avatar className="h-16 w-16 rounded-2xl border border-border/60 shadow-sm">
         {trimmed.length > 0 && <AvatarImage src={trimmed} alt="Xem trước ảnh đại diện" />}
-        <AvatarFallback className="rounded-2xl bg-primary/10 text-xl text-primary">
+        <AvatarFallback className="rounded-2xl bg-primary/10 text-xl font-bold text-primary">
           {fallbackInitials || 'U'}
         </AvatarFallback>
       </Avatar>
 
       <div className="flex-1 space-y-2">
-        <p className="text-sm font-medium">Ảnh đại diện</p>
+        <p className="text-sm font-semibold text-foreground">Ảnh đại diện</p>
         {isUploading ? (
           <div className="w-full max-w-xs space-y-2">
             <p className="flex items-center gap-2 text-xs font-semibold text-foreground">
               <Loader2 className="h-4 w-4 animate-spin text-primary" />
-              Đang tải ảnh lên... {uploadPercent}%
+              Đang tải ảnh và cập nhật hồ sơ... {uploadPercent}%
             </p>
             <Progress value={uploadPercent} className="h-2" />
           </div>
@@ -98,31 +108,31 @@ export function AvatarUploader({
               type="button"
               variant="secondary"
               size="sm"
-              className="rounded-full"
+              className="rounded-full text-xs font-medium"
               disabled={disabled || isUploading}
               onClick={() => fileInputRef.current?.click()}
             >
-              <ImagePlus className="h-4 w-4" /> {trimmed ? 'Thay ảnh khác' : 'Chọn ảnh'}
+              <ImagePlus className="h-4 w-4 mr-1.5" /> {trimmed ? 'Thay ảnh khác' : 'Chọn ảnh mới'}
             </Button>
             {trimmed && (
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+                className="rounded-full text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
                 disabled={disabled || isUploading}
-                onClick={handleRemove}
+                onClick={() => void handleRemove()}
               >
-                <Trash2 className="h-4 w-4" /> Xóa ảnh
+                <Trash2 className="h-3.5 w-3.5 mr-1" /> Xóa ảnh
               </Button>
             )}
           </div>
         )}
-        <p className="text-xs text-muted-foreground">JPG, PNG, WebP • Tối đa 5 MB.</p>
+        <p className="text-xs text-muted-foreground">JPG, PNG, WebP hoặc AVIF • Tối đa 10 MB.</p>
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/jpeg,image/png,image/webp"
+          accept="image/jpeg,image/png,image/webp,image/avif"
           className="hidden"
           disabled={disabled || isUploading}
           aria-label="Chọn ảnh đại diện"

@@ -28,8 +28,7 @@ import {
   useUpdateReceiptCandidateMutation,
 } from '../queries/receipt.queries';
 import type { ReceiptCandidate, ReceiptConfirmationDiff, ReceiptJob } from '../types/receipt.model';
-import { AiArtifactType } from '@/common/enums';
-import { SaveArtifactButton } from '@/features/ai-artifacts';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import { ReceiptAddPhotosButton } from './receipt-add-photos-button';
 
 interface ReceiptInspectionViewProps {
@@ -49,6 +48,7 @@ export function ReceiptInspectionView({
   const [editingCandidate, setEditingCandidate] = useState<ReceiptCandidate | null>(null);
   const [filterTab, setFilterTab] = useState<'all' | 'active' | 'rejected'>('all');
   const [isSavingLocal, setIsSavingLocal] = useState(false);
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
 
   const confirmMutation = useConfirmReceiptJobMutation(job.id);
   const cancelMutation = useCancelReceiptJobMutation(job.id);
@@ -237,14 +237,17 @@ export function ReceiptInspectionView({
     }
   };
 
-  const handleCancelInternal = async () => {
-    if (window.confirm('Bạn có chắc chắn muốn hủy tác vụ bóc tách hóa đơn này không?')) {
+  const handleConfirmCancelJob = async () => {
+    try {
       await cancelMutation.mutateAsync();
+      setIsCancelConfirmOpen(false);
       if (onCancel) {
         onCancel();
       } else {
         router.push('/pantry');
       }
+    } catch (err) {
+      console.error('Lỗi khi hủy tác vụ bóc tách:', err);
     }
   };
 
@@ -258,12 +261,24 @@ export function ReceiptInspectionView({
       <div className="space-y-6">
         <ReceiptProgressTracker
           job={job}
-          onCancel={handleCancelInternal}
+          onCancel={() => setIsCancelConfirmOpen(true)}
           isCancelling={cancelMutation.isPending}
         />
         <div className="max-w-md mx-auto aspect-3/4 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800">
           <ReceiptImageViewer images={job.images} />
         </div>
+
+        <ConfirmDialog
+          open={isCancelConfirmOpen}
+          onOpenChange={setIsCancelConfirmOpen}
+          title="Hủy tác vụ bóc tách hóa đơn"
+          description="Bạn có chắc chắn muốn hủy tác vụ bóc tách hóa đơn này không? Tiến trình và các dữ liệu bóc tách chưa lưu sẽ bị xóa."
+          confirmLabel="Hủy tác vụ"
+          cancelLabel="Quay lại"
+          danger
+          loading={cancelMutation.isPending}
+          onConfirm={handleConfirmCancelJob}
+        />
       </div>
     );
   }
@@ -298,16 +313,6 @@ export function ReceiptInspectionView({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <SaveArtifactButton
-            type={AiArtifactType.RECEIPT_EXTRACTION}
-            sourceId={job.id}
-            defaultTitle={`Bóc tách hóa đơn: ${job.receiptMetadata?.merchantName || 'Mua sắm thực phẩm'}`}
-            defaultSummary={`Trích xuất ${job.candidates.length} mặt hàng từ hóa đơn mua sắm ngày ${job.receiptMetadata?.formattedDate || ''}.`}
-            variant="outline"
-            size="sm"
-            className="text-xs"
-          />
-
           <ReceiptAddPhotosButton job={job} disabled={isSaving} size="sm" className="text-xs" />
 
           {job.canCancel && (
@@ -315,7 +320,7 @@ export function ReceiptInspectionView({
               type="button"
               variant="outline"
               size="sm"
-              onClick={handleCancelInternal}
+              onClick={() => setIsCancelConfirmOpen(true)}
               disabled={isSaving || cancelMutation.isPending}
               className="text-xs text-muted-foreground hover:text-destructive"
             >
@@ -510,7 +515,7 @@ export function ReceiptInspectionView({
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={handleCancelInternal}
+                    onClick={() => setIsCancelConfirmOpen(true)}
                     disabled={isSaving}
                     className="text-xs text-muted-foreground hover:text-destructive"
                   >
@@ -566,6 +571,19 @@ export function ReceiptInspectionView({
         }}
         candidate={editingCandidate}
         jobId={job.id}
+      />
+
+      {/* Modal xác nhận hủy tác vụ */}
+      <ConfirmDialog
+        open={isCancelConfirmOpen}
+        onOpenChange={setIsCancelConfirmOpen}
+        title="Hủy tác vụ bóc tách hóa đơn"
+        description="Bạn có chắc chắn muốn hủy tác vụ bóc tách hóa đơn này không? Mọi thông tin và dữ liệu bóc tách chưa lưu sẽ bị xóa."
+        confirmLabel="Hủy tác vụ"
+        cancelLabel="Quay lại"
+        danger
+        loading={cancelMutation.isPending}
+        onConfirm={handleConfirmCancelJob}
       />
     </div>
   );

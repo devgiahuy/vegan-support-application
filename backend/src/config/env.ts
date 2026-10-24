@@ -95,7 +95,7 @@ const environmentSchema = z
     AI_RECIPE_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('recipe-draft-v1'),
     AI_RECIPE_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(512).max(8192).default(4096),
     AI_TOPIC_RULE_VERSION: z.string().trim().min(1).max(80).default('topic-boundary-v1'),
-    AI_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(120_000).default(30_000),
+    AI_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(120_000).default(60_000),
     AI_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(64).max(4_096).default(800),
     AI_GUEST_DAILY_QUOTA: z.coerce.number().int().min(1).max(100).default(5),
     AI_MEMBER_DAILY_QUOTA: z.coerce.number().int().min(1).max(500).default(20),

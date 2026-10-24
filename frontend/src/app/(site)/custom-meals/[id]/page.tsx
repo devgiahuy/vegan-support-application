@@ -36,7 +36,13 @@ export default function CustomMealDetailPage() {
   const router = useRouter();
   const id = typeof params.id === 'string' ? params.id : '';
 
-  const { data: meal, isLoading, isError, refetch } = useCustomMealDetailQuery(id);
+  React.useEffect(() => {
+    if (id === 'new') {
+      router.replace('/custom-meals/new');
+    }
+  }, [id, router]);
+
+  const { data: meal, isLoading, isError, refetch } = useCustomMealDetailQuery(id, id !== 'new');
   const deleteMutation = useDeleteCustomMealMutation();
   const attachMediaMutation = useAttachCustomMealMediaMutation(id);
   const deleteMediaMutation = useDeleteCustomMealMediaMutation(id);

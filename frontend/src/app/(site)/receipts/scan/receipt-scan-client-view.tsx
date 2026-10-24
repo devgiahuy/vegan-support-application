@@ -37,10 +37,17 @@ export function ReceiptScanClientView() {
     refetch,
   } = useReceiptJobQuery(activeJobId);
 
+  React.useEffect(() => {
+    if (activeJobId && typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [activeJobId]);
+
   const handleJobCreated = (newJob: ReceiptJob) => {
     setActiveJobId(newJob.id);
     if (typeof window !== 'undefined') {
       window.history.replaceState(null, '', `/receipts/scan?jobId=${newJob.id}`);
+      window.scrollTo({ top: 0, behavior: 'instant' });
     }
   };
 

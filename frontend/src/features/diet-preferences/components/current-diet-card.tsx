@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Pencil } from 'lucide-react';
+import { Pencil, Settings2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -19,8 +19,15 @@ function toShortDate(iso: string): string {
 /**
  * Card tóm tắt chế độ ăn hiện tại. Với lịch chay kỳ, cho phép thêm/bớt ngày
  * ngay tại đây (lưu qua `PUT /users/me/diet-schedule`), không cần chạy lại wizard.
+ * Hỗ trợ nút "Thay đổi chế độ ăn" để mở wizard chỉnh sửa khi cần.
  */
-export function CurrentDietCard({ summary }: { summary: DietPreferenceSummary }) {
+export function CurrentDietCard({
+  summary,
+  onChangeDiet,
+}: {
+  summary: DietPreferenceSummary;
+  onChangeDiet?: () => void;
+}) {
   const saveMutation = useSaveDietScheduleMutation();
   const [editing, setEditing] = React.useState(false);
   const [draftDates, setDraftDates] = React.useState<string[]>([]);
@@ -50,43 +57,65 @@ export function CurrentDietCard({ summary }: { summary: DietPreferenceSummary })
   };
 
   return (
-    <Card>
-      <CardContent className="space-y-3 p-6">
-        <div className="flex flex-wrap items-start justify-between gap-2">
+    <Card className="border border-primary/20 bg-card shadow-sm">
+      <CardContent className="space-y-4 p-6">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="font-semibold">Chế độ ăn hiện tại</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {summary.dietPatternLabel} · {summary.practiceScheduleLabel} ·{' '}
-              {summary.traditionLabel}
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold text-foreground">Chế độ ăn hiện tại của bạn</h2>
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400">
+                Đang áp dụng
+              </span>
+            </div>
+            <p className="mt-1.5 text-sm font-medium text-foreground/90">
+              <span className="font-semibold text-primary">{summary.dietPatternLabel}</span> ·{' '}
+              {summary.practiceScheduleLabel} · {summary.traditionLabel}
             </p>
           </div>
-          {isPeriodic && !editing && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-1.5 rounded-full"
-              onClick={openEditor}
-            >
-              <Pencil className="h-3.5 w-3.5" /> Sửa ngày chay kỳ
-            </Button>
-          )}
+
+          <div className="flex flex-wrap items-center gap-2">
+            {isPeriodic && !editing && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 rounded-full text-xs"
+                onClick={openEditor}
+              >
+                <Pencil className="h-3.5 w-3.5" /> Sửa ngày chay kỳ
+              </Button>
+            )}
+            {!editing && onChangeDiet && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 rounded-full text-xs border-primary/40 text-primary hover:bg-primary/5"
+                onClick={onChangeDiet}
+              >
+                <Settings2 className="h-3.5 w-3.5" /> Thay đổi chế độ ăn
+              </Button>
+            )}
+          </div>
         </div>
 
         {isPeriodic && !editing && (
-          <p className="text-sm text-muted-foreground">
+          <div className="rounded-xl border border-border/70 bg-muted/30 p-3 text-xs sm:text-sm">
+            <span className="font-semibold text-foreground">
+              Ngày chay kỳ ({summary.scheduleDates.length}):
+            </span>{' '}
             {summary.scheduleDates.length > 0 ? (
-              <>
-                Ngày chay kỳ ({summary.scheduleDates.length}):{' '}
+              <span className="text-muted-foreground">
                 {summary.scheduleDates.map(toShortDate).join(', ')}
-              </>
+              </span>
             ) : (
-              'Chưa chọn ngày chay kỳ nào.'
+              <span className="text-amber-600 font-medium">
+                Chưa chọn ngày chay kỳ nào. Bấm nút &quot;Sửa ngày chay kỳ&quot; để thêm.
+              </span>
             )}
-          </p>
+          </div>
         )}
 
         {isPeriodic && editing && (
-          <div className="space-y-3 rounded-xl border p-4">
+          <div className="space-y-3 rounded-xl border p-4 bg-muted/20">
             <ScheduleDatePicker dates={draftDates} onChange={setDraftDates} />
             {error && (
               <Alert variant="destructive">
@@ -117,9 +146,12 @@ export function CurrentDietCard({ summary }: { summary: DietPreferenceSummary })
         )}
 
         {summary.requiresRuleReview && (
-          <p className="text-sm text-amber-600">
-            Bộ quy tắc đã thay đổi — vui lòng xem lại và xác nhận bên dưới.
-          </p>
+          <Alert variant="destructive" className="py-2.5">
+            <AlertDescription className="text-xs">
+              Bộ quy tắc đã thay đổi — vui lòng bấm &quot;Thay đổi chế độ ăn&quot; để xem lại và xác
+              nhận.
+            </AlertDescription>
+          </Alert>
         )}
       </CardContent>
     </Card>

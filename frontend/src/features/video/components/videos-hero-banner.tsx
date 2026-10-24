@@ -118,18 +118,6 @@ export function VideosHeroBanner() {
                   <span>Đăng video nấu chay</span>
                 </Link>
               </Button>
-
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="rounded-2xl gap-2 bg-background/80 hover:bg-background/95 backdrop-blur-md border border-border/90 hover:border-primary/40 text-foreground font-semibold shadow-xs transition-all duration-200 active:scale-[0.98] h-12 px-5 text-sm sm:text-base"
-              >
-                <Link href="/profile?tab=posts">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
-                  <span>Bài viết &amp; Công thức của tôi</span>
-                </Link>
-              </Button>
             </motion.div>
 
             {/* Content Pillars Micro-Pills */}

@@ -13,7 +13,6 @@ import {
   Menu,
   Plus,
   ArrowDown,
-  Globe,
 } from 'lucide-react';
 import { LoadingState } from '@/components/shared/loading-state';
 import { ErrorState } from '@/components/shared/error-state';
@@ -290,19 +289,6 @@ function AssistantContent() {
             >
               <Plus className="size-3.5" />
               <span>Mới</span>
-            </Button>
-
-            {/* Khám phá câu trả lời công khai */}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => router.push('/assistant/public')}
-              className="hidden h-8 gap-1.5 rounded-xl px-2.5 text-xs sm:inline-flex"
-              aria-label="Khám phá câu trả lời công khai"
-            >
-              <Globe className="size-3.5" />
-              <span>Khám phá</span>
             </Button>
           </div>
         </header>

@@ -178,7 +178,7 @@ export const CustomMealForm: React.FC<CustomMealFormProps> = ({
       : 1;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl mx-auto">
+    <form onSubmit={handleSubmit} className="space-y-6 w-full">
       {/* Header nút quay lại và hành động */}
       <div className="flex items-center justify-between">
         <Button

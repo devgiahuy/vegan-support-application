@@ -113,6 +113,9 @@ export function ReceiptUploadZone({ onJobCreated, disabled = false }: ReceiptUpl
 
     if (newItems.length > 0) {
       setSelectedImages((prev) => [...prev, ...newItems]);
+      if (typeof window !== 'undefined') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     }
   };
 
@@ -298,7 +301,7 @@ export function ReceiptUploadZone({ onJobCreated, disabled = false }: ReceiptUpl
               Chọn ảnh từ thiết bị
             </Button>
 
-            <Button
+            {/* <Button
               type="button"
               variant="outline"
               size="default"
@@ -308,7 +311,7 @@ export function ReceiptUploadZone({ onJobCreated, disabled = false }: ReceiptUpl
             >
               <Camera className="size-4 mr-2" />
               Chụp ảnh trực tiếp
-            </Button>
+            </Button> */}
           </div>
 
           <div className="mt-6 flex flex-wrap items-center justify-center gap-2 text-xs text-muted-foreground">

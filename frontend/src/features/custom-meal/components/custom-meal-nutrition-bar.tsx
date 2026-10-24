@@ -68,7 +68,7 @@ export const CustomMealNutritionBar: React.FC<CustomMealNutritionBarProps> = ({
       </div>
 
       {/* Thông số dinh dưỡng chính */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center py-1">
+      <div className="grid grid-cols-2 gap-2.5 text-center py-1">
         <div className="rounded-xl bg-muted/40 p-3 flex flex-col justify-center">
           <span className="text-xs text-muted-foreground font-medium block mb-1">Năng lượng</span>
           <span className="text-base font-bold text-foreground">

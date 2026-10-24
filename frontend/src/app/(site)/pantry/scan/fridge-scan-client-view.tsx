@@ -37,8 +37,17 @@ export function FridgeScanClientView() {
   const cancelMutation = useCancelRecognitionJobMutation();
   const retryMutation = useRetryRecognitionJobMutation();
 
+  React.useEffect(() => {
+    if (activeJobId && typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [activeJobId]);
+
   const handleJobCreated = (newJob: RecognitionJob) => {
     setActiveJobId(newJob.id);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
   };
 
   const handleConfirm = async () => {

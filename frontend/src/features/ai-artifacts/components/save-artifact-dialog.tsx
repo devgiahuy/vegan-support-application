@@ -5,7 +5,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Bookmark, Lock, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -48,8 +47,6 @@ export function SaveArtifactDialog({
     register,
     handleSubmit,
     reset,
-    watch,
-    setValue,
     formState: { errors },
   } = useForm<CreateAiArtifactFormData>({
     resolver: zodResolver(createAiArtifactSchema),
@@ -61,8 +58,6 @@ export function SaveArtifactDialog({
       authorAnonymous: true,
     },
   });
-
-  const authorAnonymous = watch('authorAnonymous');
 
   React.useEffect(() => {
     if (open) {
@@ -97,8 +92,8 @@ export function SaveArtifactDialog({
             <DialogTitle>Lưu thành Tri thức AI</DialogTitle>
           </div>
           <DialogDescription>
-            Đóng gói kết quả AI này thành một bản ghi bất biến để bạn có thể xem lại hoặc chia sẻ
-            cho cộng đồng.
+            Đóng gói kết quả AI này thành một bản ghi bất biến để bạn có thể xem lại trong kho dữ
+            liệu cá nhân.
           </DialogDescription>
         </DialogHeader>
 
@@ -128,29 +123,11 @@ export function SaveArtifactDialog({
             )}
           </div>
 
-          <div className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3">
-            <Checkbox
-              id="authorAnonymous"
-              checked={authorAnonymous}
-              onCheckedChange={(checked) =>
-                setValue('authorAnonymous', checked === true, { shouldValidate: true })
-              }
-            />
-            <div className="space-y-1 leading-none">
-              <Label htmlFor="authorAnonymous" className="text-sm font-medium cursor-pointer">
-                Ẩn danh tác giả khi chia sẻ công khai
-              </Label>
-              <p className="text-xs text-muted-foreground">
-                Tên của bạn sẽ hiển thị là &quot;Thành viên ẩn danh&quot; để bảo vệ quyền riêng tư.
-              </p>
-            </div>
-          </div>
-
           <div className="rounded-md bg-muted/50 p-2.5 text-xs text-muted-foreground flex items-center gap-2">
             <Lock className="size-4 shrink-0 text-muted-foreground" />
             <span>
-              Sau khi tạo, bản ghi ở chế độ <strong>Riêng tư</strong>. Bạn có thể bật chia sẻ công
-              khai bất cứ lúc nào.
+              Bản ghi này được lưu trữ an toàn ở chế độ <strong>Riêng tư</strong> trong kho dữ liệu
+              cá nhân của bạn.
             </span>
           </div>
 

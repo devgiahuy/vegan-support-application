@@ -34,8 +34,6 @@ import type {
   RecognitionCandidate,
   RecognitionConfirmationDiff,
 } from '../types/ingredient-recognition.model';
-import { AiArtifactType } from '@/common/enums';
-import { SaveArtifactButton } from '@/features/ai-artifacts';
 import { FridgeAddPhotosButton } from './fridge-add-photos-button';
 
 interface CandidateReviewScreenProps {
@@ -330,16 +328,6 @@ export function CandidateReviewScreen({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <SaveArtifactButton
-            type={AiArtifactType.FRIDGE_RECOGNITION}
-            sourceId={job.id}
-            defaultTitle="Nhận diện nguyên liệu từ ảnh tủ lạnh"
-            defaultSummary={`Kết quả AI nhận diện được ${job.candidates.length} nguyên liệu thực phẩm từ ảnh chụp tủ lạnh.`}
-            variant="outline"
-            size="sm"
-            className="text-xs"
-          />
-
           <FridgeAddPhotosButton job={job} disabled={isSaving} size="sm" className="text-xs" />
 
           <Button
@@ -372,8 +360,8 @@ export function CandidateReviewScreen({
       {/* CHIA LÀM 2 PHẦN TRÊN TRANG */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
         {/* PHẦN BÊN TRÁI (5 CỘT TRÊN DESKTOP): HIỂN THỊ ẢNH TỦ LẠNH */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-card p-4 sm:p-5 shadow-xs space-y-3 lg:sticky lg:top-24">
+        <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-20">
+          <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-card p-4 sm:p-5 shadow-xs space-y-3">
             <div className="flex items-center justify-between gap-2 pb-2 border-b border-border/60">
               <div className="flex items-center gap-2">
                 <Camera className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />

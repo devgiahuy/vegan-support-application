@@ -1,5 +1,57 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Diet Workflow, Avatar Auto-Sync, Custom Meals Polish & AI Quota Highlights — Updated 2026-10-24
+
+Feature `033-diet-preference-workflow` và các cải tiến UI/UX hoàn thành 100%:
+- **Tối ưu trải nghiệm quét tủ lạnh (/pantry/scan)**:
+  - Ẩn/gỡ bỏ hoàn toàn nút "Lưu tri thức AI" trên thanh công cụ kiểm duyệt tủ lạnh và thẻ dinh dưỡng.
+  - Ghim cố định (sticky) khối hiển thị ảnh chụp tủ lạnh bên trái khi cuộn danh sách nguyên liệu tại `/pantry/scan`.
+- **Tối ưu trải nghiệm quét hóa đơn (/receipts/scan)**:
+  - Loại bỏ nút Lưu tri thức AI trên giao diện kiểm duyệt hóa đơn và thay thế `window.confirm` hủy tác vụ bằng modal chuẩn `ConfirmDialog`.
+- **Đặc tả & Khắc phục luồng Chế độ ăn (033-diet-preference-workflow)**:
+  - Tài liệu đặc tả `specs/033-diet-preference-workflow/spec.md` với User Stories (P1/P2), Acceptance Criteria, Edge Cases.
+  - Nâng cấp `DietWizard` thành quy trình 2 bước: Bước 1 (Bộ ba Thiết lập) & Bước 2 (Quy tắc tuân thủ, Kiêng kỵ, Dị ứng).
+  - Tự động chuẩn hóa & khử trùng payload (loại bỏ `reason: ""` và `label: ""`) tương thích 100% với backend Zod schema.
+  - Bổ sung cảnh báo chọn ngày khi chọn chu kỳ `PERIODIC` và hỗ trợ chuyển đổi linh hoạt giữa xem và sửa trong `CurrentDietCard` & `/profile?tab=diet`.
+- **Đồng bộ Avatar tự động**:
+  - Tự động gọi API cập nhật profile ngay khi upload ảnh avatar lên Cloudinary thành công.
+  - Đồng bộ tức thì state hiển thị trên Navbar và Profile Header Banner mà không cần người dùng bấm lưu thủ công.
+- **Ẩn nút "Bài viết của tôi" & Sửa giao diện Custom Meals**:
+  - Ẩn nút direct không hợp lệ trên Articles & Videos Hero Banner.
+  - Chống tràn ngang dòng nguyên liệu trên mobile (< 640px) và tối ưu hóa lưới ảnh/dinh dưỡng 2 cột trong sidebar 1/3 desktop.
+  - Bổ sung guard chống xung đột ID tại `/custom-meals/[id]` khi người dùng truy cập route `new`.
+- **Ẩn Footer & Chống nhảy trang khi upload ảnh**:
+  - Ẩn Site Footer tại các trang quét và pantry: `/pantry`, `/pantry/scan`, `/receipts/scan`.
+  - Khắc phục hiện tượng nhảy cuộn xuống đáy trang khi tải ảnh hóa đơn và tủ lạnh.
+- **Giao diện Hạn ngạch AI (AllowanceNotice) trực quan**:
+  - Phân màu và icon độc lập theo từng tính năng (Hóa đơn, Tủ lạnh, Trợ lý chat, Kho lưu trữ).
+  - Huy hiệu hiển thị số lượt còn lại nổi bật, cảnh báo khi chạm hạn ngạch 0 lượt.
+- **Xác minh chất lượng**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 51 test suites, 619 tests pass 100%.
+  - `npm run build`: Next.js Turbopack build thành công 47/47 routes.
+
+## AI-Assisted Recipe Draft Creation Flow — Updated 2026-10-24
+
+Feature `032-ai-recipe-draft` hoàn thành 100% (0% → 100%):
+- **Gợi ý định lượng & các bước công thức AI (US1 - MVP)**:
+  - Khai báo endpoint `RECIPE_DRAFTS.GENERATE = '/recipe-drafts/generate'` tại `src/common/constants/api-endpoints.ts`.
+  - Bộ DTO và UI Model chặt chẽ cho prompt và bản nháp (`recipe-draft.dto.ts`, `recipe-draft.model.ts`).
+  - Mapper kế thừa `BaseMapper` (`recipe-draft.mapper.ts`) kèm hàm `toFormValues`; unit test suite độc lập pass 100% (6/6 tests).
+  - Component `TagInput` nhập nguyên liệu dạng chips nhanh với phím Enter/dấu phẩy và gợi ý nhanh nguyên liệu thuần chay phổ biến.
+  - Component `AiRecipeDraftAssistant` và `RecipeDraftPreviewDialog` hiển thị đầy đủ khẩu phần, thời gian, độ khó, định lượng nguyên liệu kèm độ tin cậy, các bước tuần tự và các giả định ẩm thực.
+- **Nạp dữ liệu biểu mẫu & Tác giả làm chủ nội dung (US2)**:
+  - Nâng cấp `RecipeEditorForm` hỗ trợ `RecipeEditorFormHandle` (`setDraftValues`, `isDirty`, `hasUserContent`).
+  - Kết nối luồng trên `/recipes/new`, tự động điền các trường và cuộn mượt xuống biểu mẫu đầy đủ để tác giả chọn danh mục, tải ảnh bìa và gửi duyệt.
+- **Bảo vệ ghi đè dữ liệu & Xử lý lỗi dịch vụ AI (US3)**:
+  - Component `OverwriteConfirmDialog` cảnh báo khi form đã có nội dung nhập tay trước đó.
+  - Xử lý mã lỗi `503` (`RECIPE_DRAFT_UNAVAILABLE`, `RECIPE_DRAFT_GENERATION_FAILED`), lưu giữ 100% prompt đầu vào và cho phép chuyển sang nhập thủ công.
+- **Xác minh chất lượng & Hợp đồng**:
+  - `BACKEND_INTEGRATION.md` cập nhật endpoint `/api/v1/recipe-drafts/generate` thành `Yes (2026-10-24)`.
+  - `npx tsc --noEmit` đạt 0 lỗi type.
+  - `npm test` toàn bộ 51 test suites với 618 tests pass 100%.
+  - `npm run build` Next.js biên dịch thành công 100%.
+
 ## Scan & Macro Enhancements — Updated 2026-10-19
 
 Feature `033-scan-and-macro-enhancements` hoàn thành 100% (0% → 100%):

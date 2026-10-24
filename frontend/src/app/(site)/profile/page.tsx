@@ -109,6 +109,7 @@ export default function ProfilePage() {
   const shouldReduceMotion = useReducedMotion();
   const [healthSyncEnabled, setHealthSyncEnabled] = React.useState(true);
   const [isWhyDialogOpen, setIsWhyDialogOpen] = React.useState(false);
+  const [isEditingDiet, setIsEditingDiet] = React.useState(false);
 
   const {
     data: detailedProfile,
@@ -257,9 +258,14 @@ export default function ProfilePage() {
                   {detailedProfile.user.initials || 'U'}
                 </AvatarFallback>
               </Avatar>
-              <span className="absolute -bottom-2 -right-2 rounded-full bg-background p-1.5 shadow">
+              <button
+                type="button"
+                onClick={() => setTab('info')}
+                className="absolute -bottom-2 -right-2 rounded-full bg-background p-1.5 shadow border border-border/50 hover:scale-105 transition-transform cursor-pointer"
+                title="Thay đổi ảnh đại diện"
+              >
                 <Camera className="h-4 w-4 text-primary" />
-              </span>
+              </button>
             </div>
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-2">
@@ -278,14 +284,14 @@ export default function ProfilePage() {
                 {detailedProfile.user.email}
               </p>
               <div className="mt-3 grid max-w-md grid-cols-3 gap-4">
-                <div>
+                {/* <div>
                   <p className="text-lg font-bold text-primary">12</p>
                   <p className="text-xs text-muted-foreground">Công thức đăng</p>
-                </div>
-                <div>
+                </div> */}
+                {/* <div>
                   <p className="text-lg font-bold text-primary">1,850</p>
                   <p className="text-xs text-muted-foreground">Điểm sống lành</p>
-                </div>
+                </div> */}
                 <div>
                   <p className="text-lg font-bold text-primary">{detailedProfile.memberSince}</p>
                   <p className="text-xs text-muted-foreground">Ngày tham gia</p>
@@ -552,25 +558,32 @@ export default function ProfilePage() {
                   onRetry={() => void refetchProfile()}
                 />
               )}
-              {!isProfileLoading && !isProfileError && detailedProfile?.diet && (
-                <CurrentDietCard summary={detailedProfile.diet} />
-              )}
-              {!isProfileLoading && !isProfileError && (
-                <DietWizard
-                  initialSelection={
-                    detailedProfile?.diet
-                      ? {
-                          dietPattern: detailedProfile.diet.dietPattern,
-                          practiceSchedule: detailedProfile.diet.practiceSchedule,
-                          tradition: detailedProfile.diet.tradition,
-                        }
-                      : null
-                  }
-                  scheduleSlot={(preference) => (
-                    <ScheduleEditor initialDates={preference.schedule?.dates ?? []} />
-                  )}
+              {!isProfileLoading && !isProfileError && detailedProfile?.diet && !isEditingDiet && (
+                <CurrentDietCard
+                  summary={detailedProfile.diet}
+                  onChangeDiet={() => setIsEditingDiet(true)}
                 />
               )}
+              {!isProfileLoading &&
+                !isProfileError &&
+                (!detailedProfile?.diet || isEditingDiet) && (
+                  <DietWizard
+                    initialSelection={
+                      detailedProfile?.diet
+                        ? {
+                            dietPattern: detailedProfile.diet.dietPattern,
+                            practiceSchedule: detailedProfile.diet.practiceSchedule,
+                            tradition: detailedProfile.diet.tradition,
+                          }
+                        : null
+                    }
+                    onCancel={detailedProfile?.diet ? () => setIsEditingDiet(false) : undefined}
+                    onSaved={() => setIsEditingDiet(false)}
+                    scheduleSlot={(preference) => (
+                      <ScheduleEditor initialDates={preference.schedule?.dates ?? []} />
+                    )}
+                  />
+                )}
             </div>
           )}
 
