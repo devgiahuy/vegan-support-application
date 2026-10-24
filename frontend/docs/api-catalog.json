@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
-  "source": "..\\backend\\openapi.json",
-  "generatedAt": "2026-10-19T04:55:08.137Z",
+  "source": "../backend/openapi.json",
+  "generatedAt": "2026-10-24T06:27:28.618Z",
   "stats": {
-    "operations": 178,
+    "operations": 179,
     "groups": 40,
-    "schemas": 156
+    "schemas": 158
   },
   "operations": [
     {
@@ -1113,6 +1113,27 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/recipe-drafts/generate",
+      "group": "Content",
+      "summary": "Generate an editable recipe draft from a title, description and ingredient names",
+      "operationId": "generateRecipeDraft",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "GenerateRecipeDraftRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "GenerateRecipeDraftResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "423": "ErrorResponse",
+        "503": "ErrorResponse"
       }
     },
     {

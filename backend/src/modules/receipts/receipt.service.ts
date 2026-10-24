@@ -117,7 +117,8 @@ export class ReceiptService {
       byId,
       job.inputs.map((item) => item.asset.providerEtag),
     );
-    if (job.inputs.length + assetIds.length > this.config.receipt.maxImages) throw this.imageLimit();
+    if (job.inputs.length + assetIds.length > this.config.receipt.maxImages)
+      throw this.imageLimit();
     try {
       const result = await this.repository.appendInputs(ownerId, id, assetIds);
       if (!result) throw this.notFound();
@@ -233,7 +234,11 @@ export class ReceiptService {
         ),
       });
     }
-    const requestHash = sha256({ jobId, candidates: input.candidates });
+    const requestHash = sha256({
+      jobId,
+      candidates: input.candidates,
+      receiptReviewDecision: input.receiptReviewDecision ?? null,
+    });
     try {
       const result = await this.repository.confirm({
         ownerId,
@@ -241,12 +246,14 @@ export class ReceiptService {
         candidates,
         idempotencyKey: input.idempotencyKey,
         requestHash,
+        receiptReviewDecision: input.receiptReviewDecision ?? null,
       });
       const pantryByCandidate = new Map(
         result.job.candidates.map((candidate) => [candidate.id, candidate.pantryItem]),
       );
       return {
         job: this.serializeJob(result.job),
+        duplicateCandidates: result.duplicates,
         pantryChanges: result.changes.map((change) => {
           const item = pantryByCandidate.get(change.candidateId);
           if (!item) throw new Error('Confirmed receipt candidate is missing its pantry item');
@@ -331,7 +338,15 @@ export class ReceiptService {
       await this.repository.saveResults({
         jobId: job.id,
         expectedAttempt: job.attemptCount,
-        inputs: results.map((result) => ({ inputId: result.inputId, error: result.error })),
+        inputs: results.map((result) => ({
+          inputId: result.inputId,
+          error: result.error,
+          receiptNumber: result.receiptNumber,
+          merchantName: result.merchantName,
+          purchasedAt: result.purchasedAt ? new Date(`${result.purchasedAt}T00:00:00.000Z`) : null,
+          currency: result.currency,
+          totalAmount: result.totalAmount,
+        })),
         candidates,
         metadata: {
           merchantName: bestMetadata?.merchantName ?? null,
@@ -606,11 +621,19 @@ export class ReceiptService {
         totalAmount: number(job.totalAmount),
         confidence: number(job.metadataConfidence),
       },
+      reviewRequired: job.reviewRequired,
+      identityDecisionRequired: job.identityDecisionRequired,
+      receiptReviewDecision: job.receiptReviewDecision,
       images: job.inputs.map((input) => ({
         id: input.id,
         position: input.position,
         url: input.asset.secureUrl,
         status: input.status,
+        receiptNumber: input.receiptNumber,
+        merchantName: input.merchantName,
+        purchasedAt: input.purchasedAt?.toISOString().slice(0, 10) ?? null,
+        currency: input.currency,
+        totalAmount: number(input.totalAmount),
         issue: input.errorMessage ?? null,
       })),
       candidates: job.candidates.map((candidate) => ({
@@ -634,6 +657,7 @@ export class ReceiptService {
         confidence: number(candidate.confidence) ?? 0,
         uncertaintyNote: candidate.uncertaintyNote ?? null,
         status: candidate.status,
+        duplicateOfJobId: candidate.duplicateOfJobId,
         version: candidate.version,
       })),
       attempt: job.attemptCount,

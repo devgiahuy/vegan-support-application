@@ -58,6 +58,7 @@ export const updateReceiptCandidateSchema = z
 
 export const confirmReceiptJobSchema = z
   .object({
+    receiptReviewDecision: z.enum(['SAME_RECEIPT', 'SEPARATE_RECEIPTS']).optional(),
     candidates: z
       .array(
         z.object({ id: z.string().uuid(), expectedVersion: z.number().int().positive() }).strict(),
@@ -103,6 +104,11 @@ const receiptImageSchema = z.object({
   position: z.number().int().nonnegative(),
   url: mediaUrlSchema,
   status: z.enum(['PENDING', 'PROCESSED', 'FAILED']),
+  receiptNumber: z.string().nullable(),
+  merchantName: z.string().nullable(),
+  purchasedAt: z.string().nullable(),
+  currency: z.string().nullable(),
+  totalAmount: z.number().nullable(),
   issue: z.string().nullable(),
 });
 
@@ -123,12 +129,16 @@ const receiptCandidateSchema = z.object({
   confidence: z.number().min(0).max(1),
   uncertaintyNote: z.string().nullable(),
   status: z.nativeEnum(ReceiptCandidateStatus),
+  duplicateOfJobId: z.string().uuid().nullable(),
   version: z.number().int().positive(),
 });
 
 export const receiptJobResponseSchema = z.object({
   id: z.string().uuid(),
   status: z.nativeEnum(ReceiptJobStatus),
+  reviewRequired: z.boolean(),
+  identityDecisionRequired: z.boolean(),
+  receiptReviewDecision: z.enum(['SAME_RECEIPT', 'SEPARATE_RECEIPTS']).nullable(),
   progress: z.object({ completedImages: z.number().int(), totalImages: z.number().int() }),
   receipt: z.object({
     merchantName: z.string().nullable(),
@@ -156,6 +166,9 @@ export const receiptConfirmationEnvelopeSchema = z.object({
   success: z.literal(true),
   data: z.object({
     job: receiptJobResponseSchema,
+    duplicateCandidates: z.array(
+      z.object({ candidateId: z.string().uuid(), sourceJobId: z.string().uuid() }),
+    ),
     pantryChanges: z.array(
       z.object({
         candidateId: z.string().uuid(),

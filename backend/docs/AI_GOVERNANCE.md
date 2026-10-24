@@ -1,6 +1,6 @@
 # Phase 26 AI governance operations
 
-**Updated:** 2026-09-27
+**Updated:** 2026-10-24
 
 The Admin-only `/api/v1/admin/ai/*` routes expose operational metadata. Every route requires an active authenticated Administrator. Responses use `Cache-Control: private, no-store`. No route returns a prompt, chat message, health profile, image URL, receipt line, provider payload, feedback reason, verification evidence note, or API credential.
 
@@ -12,7 +12,7 @@ The request page is ordered newest first and capped at 100 rows. Date windows ar
 
 ## Controls and fallbacks
 
-`AI_CHAT_ENABLED`, `VISION_ENABLED`, and `RECEIPT_ENABLED` in the environment are upper bounds. The Admin control table can turn a configured capability/provider off, but cannot override a disabled environment setting or select a provider that is not configured. Each invocation reads the authoritative database control; a database read failure prevents the provider call. A PATCH requires the current version (zero before the first change) and one allowlisted reason: `PROVIDER_INCIDENT`, `QUALITY_INVESTIGATION`, `SAFETY_HOLD`, `PLANNED_MAINTENANCE`, or `RESTORE_SERVICE`. This prevents an audit reason from carrying raw sensitive text. Updates and immutable actor/reason/version audit rows commit together. Admins can page through them at `GET /api/v1/admin/ai/features/audit`. In-flight requests may finish after a toggle; new calls see the new state.
+`AI_CHAT_ENABLED`, `AI_RECIPE_ENABLED`, `VISION_ENABLED`, and `RECEIPT_ENABLED` in the environment are upper bounds. The Admin control table can turn a configured capability/provider off, but cannot override a disabled environment setting or select a provider that is not configured. Each invocation reads the authoritative database control; a database read failure prevents the provider call. A PATCH requires the current version (zero before the first change) and one allowlisted reason: `PROVIDER_INCIDENT`, `QUALITY_INVESTIGATION`, `SAFETY_HOLD`, `PLANNED_MAINTENANCE`, or `RESTORE_SERVICE`. This prevents an audit reason from carrying raw sensitive text. Updates and immutable actor/reason/version audit rows commit together. Admins can page through them at `GET /api/v1/admin/ai/features/audit`. In-flight requests may finish after a toggle; new calls see the new state.
 
 `AI_FALLBACK_MODEL`, `AI_CHAT_TEMPLATE_VERSION`, `AI_NUTRITION_TEMPLATE_VERSION`, and `AI_TOPIC_RULE_VERSION` are deployment configuration, alongside existing provider/model and quota variables. The fallback and topic-rule identifiers are audit labels for local responses; no provider is invoked for those responses.
 
@@ -23,6 +23,7 @@ The request page is ordered newest first and capped at 100 rows. Date windows ar
 | NUTRITION | Deterministic or partial calculation, marked provider unavailable |
 | VISION | Job fails with an explicit provider-unavailable state; user may enter pantry items manually |
 | RECEIPT | Job fails with an explicit provider-unavailable state; user may enter pantry items manually |
+| RECIPE_DRAFT | Text-only draft preview returns `RECIPE_DRAFT_UNAVAILABLE`; the author may enter the recipe manually |
 
 Verification is a human workflow with outcome metrics, not a model capability or a toggle target.
 

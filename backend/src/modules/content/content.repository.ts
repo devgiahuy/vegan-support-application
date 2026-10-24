@@ -168,7 +168,7 @@ export class ContentRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
   async recipeUsageUserCount(postId: string): Promise<number> {
-    const result = await this.prisma.mealPlanItem.aggregateRaw({
+    const result: unknown = await this.prisma.mealPlanItem.aggregateRaw({
       pipeline: [
         { $match: { recipe_id: postId, source_type: 'RECIPE', status: 'FILLED' } },
         {
@@ -186,9 +186,10 @@ export class ContentRepository {
       ],
     });
     if (!Array.isArray(result) || result.length === 0) return 0;
-    const first = result[0];
+    const first: unknown = result[0];
     if (!first || typeof first !== 'object' || Array.isArray(first)) return 0;
-    return typeof first.count === 'number' ? first.count : 0;
+    const count: unknown = 'count' in first ? first.count : undefined;
+    return typeof count === 'number' ? count : 0;
   }
 
   async searchPublished(

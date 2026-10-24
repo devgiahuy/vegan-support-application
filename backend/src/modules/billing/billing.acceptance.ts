@@ -645,7 +645,7 @@ try {
   const receiptReady = await receiptRepo.saveResults({
     jobId: receiptRunning.id,
     expectedAttempt: receiptRunning.attemptCount,
-    inputs: [{ inputId: receiptRunning.inputs[0]!.id, error: null }],
+    inputs: [{ inputId: receiptRunning.inputs[0]!.id, error: null, receiptNumber: null, merchantName: null, purchasedAt: null, currency: null, totalAmount: null }],
     candidates: [
       {
         inputId: receiptRunning.inputs[0]!.id,

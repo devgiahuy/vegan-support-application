@@ -49,6 +49,10 @@ import { ModeratedPublicationPolicy } from './modules/content/content-publicatio
 import { ContentRepository } from './modules/content/content.repository.js';
 import { createPostsRouter } from './modules/content/content.router.js';
 import { ContentService } from './modules/content/content.service.js';
+import { RecipeDraftController } from './modules/content/recipe-draft.controller.js';
+import { createRecipeDraftProvider } from './modules/content/recipe-draft.provider.js';
+import { createRecipeDraftRouter } from './modules/content/recipe-draft.router.js';
+import { RecipeDraftService } from './modules/content/recipe-draft.service.js';
 import { MediaService } from './modules/content/media.service.js';
 import { ModerationController } from './modules/moderation/moderation.controller.js';
 import { ModerationRepository } from './modules/moderation/moderation.repository.js';
@@ -226,6 +230,9 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   const billing = new BillingService(database.client, entitlements, config);
   const baseAiProvider = createAiProvider(config);
   const aiGovernance = new AiGovernanceService(database.client, config, baseAiProvider.chatModel);
+  const recipeDraftController = new RecipeDraftController(
+    new RecipeDraftService(createRecipeDraftProvider(config), aiGovernance, config),
+  );
   const aiProvider = governAiProvider(baseAiProvider, aiGovernance, config);
   const chatController = new ChatController(
     new ChatService(
@@ -363,6 +370,7 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/chat', createChatRouter(chatController, authentication));
   app.use('/api/v1/posts', createRecipeNutritionRouter(recipeNutritionController, authentication));
   app.use('/api/v1/posts', createPostsRouter(contentController, authentication));
+  app.use('/api/v1/recipe-drafts', createRecipeDraftRouter(recipeDraftController, authentication));
   app.use('/api/v1/posts', createCommunityPostsRouter(communityController, authentication));
   app.use('/api/v1/comments', createCommentsRouter(communityController, authentication));
   app.use('/api/v1/storage', createStorageRouter(storageController, authentication));

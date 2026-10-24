@@ -185,6 +185,7 @@ Last 24 hours failures, fallback, provider availability and controls
             "NUTRITION",
             "VISION",
             "RECEIPT",
+            "RECIPE_DRAFT",
             "VERIFICATION"
           ]
         },
