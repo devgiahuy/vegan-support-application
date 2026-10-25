@@ -40,6 +40,7 @@ export const ALLOWED_IMAGE_HOSTNAMES: ReadonlySet<string> = new Set([
   'lh3.googleusercontent.com',
   'res.cloudinary.com',
   'i.pravatar.cc',
+  'upload.wikimedia.org',
   'i.ytimg.com',
   'img.youtube.com',
 ]);

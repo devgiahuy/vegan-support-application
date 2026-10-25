@@ -23,21 +23,6 @@ export const mediaAssetDefinitions: readonly SeedMediaAssetItem[] = [
   // 1. RECIPE COVERS (Ảnh bìa món ăn - Tỉ lệ 16:9 hoặc 4:3)
   // ==========================================
   {
-    publicId: 'seed/recipes/pho-chay-ha-noi',
-    secureUrl: '/seed/recipes/pho-chay-ha-noi.png',
-    resourceType: MediaResourceType.IMAGE,
-    kind: MediaKind.COVER_IMAGE,
-    ownerEmail: 'platform.contributor@example.com',
-    mimeType: 'image/png',
-    extension: '.png',
-    bytes: 655114,
-    width: 1200,
-    height: 800,
-    aspectRatio: '3:2',
-    recommendedResolution: '1200 x 800 px',
-    description: 'Tô Phở Chay Hà Nội nóng hổi nghi ngút khói, nước dùng trong veo ánh vàng, bánh phở mềm, nấm hương tỉa hoa, hạt sen ninh mềm, sườn non chay áp chảo và hành boaro thái nhỏ.',
-  },
-  {
     publicId: 'seed/recipes/bun-bo-hue-chay',
     secureUrl: '/seed/recipes/bun-bo-hue-chay.png',
     resourceType: MediaResourceType.IMAGE,
@@ -50,7 +35,8 @@ export const mediaAssetDefinitions: readonly SeedMediaAssetItem[] = [
     height: 800,
     aspectRatio: '3:2',
     recommendedResolution: '1200 x 800 px',
-    description: 'Tô Bún Bò Huế chay màu nước dùng đỏ sa tế sả ớt bắt mắt, sợi bún to, chả lụa chay, đậu hũ chiên phồng, nấm đùi gà cắt lát, ăn kèm đĩa bắp chuối bào và rau thơm.',
+    description:
+      'Tô Bún Bò Huế chay màu nước dùng đỏ sa tế sả ớt bắt mắt, sợi bún to, chả lụa chay, đậu hũ chiên phồng, nấm đùi gà cắt lát, ăn kèm đĩa bắp chuối bào và rau thơm.',
   },
   {
     publicId: 'seed/recipes/ca-ri-chay-khoai-nam',
@@ -65,7 +51,8 @@ export const mediaAssetDefinitions: readonly SeedMediaAssetItem[] = [
     height: 800,
     aspectRatio: '3:2',
     recommendedResolution: '1200 x 800 px',
-    description: 'Tô Cà Ri Chay màu vàng nghệ óng ả sóng sánh nước cốt dừa, có khoai lang mật, cà rốt tỉa hoa, nấm bào ngư xám và đậu hũ rán, ăn kèm ổ bánh mì nướng giòn.',
+    description:
+      'Tô Cà Ri Chay màu vàng nghệ óng ả sóng sánh nước cốt dừa, có khoai lang mật, cà rốt tỉa hoa, nấm bào ngư xám và đậu hũ rán, ăn kèm ổ bánh mì nướng giòn.',
   },
   {
     publicId: 'seed/recipes/nam-dong-co-kho-tieu',
@@ -80,7 +67,8 @@ export const mediaAssetDefinitions: readonly SeedMediaAssetItem[] = [
     height: 800,
     aspectRatio: '3:2',
     recommendedResolution: '1200 x 800 px',
-    description: 'Tộ đất kho Nấm Đông Cô tai dày bóng mượt, sốt kẹo màu cánh gián, rắc tiêu xanh nguyên chùm và tiêu đen xay thơm nức mũi.',
+    description:
+      'Tộ đất kho Nấm Đông Cô tai dày bóng mượt, sốt kẹo màu cánh gián, rắc tiêu xanh nguyên chùm và tiêu đen xay thơm nức mũi.',
   },
   {
     publicId: 'seed/recipes/canh-chua-chay-nam-bo',
@@ -95,52 +83,8 @@ export const mediaAssetDefinitions: readonly SeedMediaAssetItem[] = [
     height: 800,
     aspectRatio: '3:2',
     recommendedResolution: '1200 x 800 px',
-    description: 'Bát Canh Chua Chay Nam Bộ rực rỡ sắc màu: cà chua đỏ mọng, dứa vàng ươm, đậu bắp xanh non, bắp ngọt, đậu hũ non trắng mềm và ngò gai ngò rí.',
-  },
-  {
-    publicId: 'seed/recipes/goi-cuon-chay-ngu-sac',
-    secureUrl: '/seed/recipes/goi-cuon-chay-ngu-sac.jpg',
-    resourceType: MediaResourceType.IMAGE,
-    kind: MediaKind.COVER_IMAGE,
-    ownerEmail: 'platform.contributor@example.com',
-    mimeType: 'image/jpeg',
-    extension: '.jpg',
-    bytes: 83886,
-    width: 1200,
-    height: 800,
-    aspectRatio: '3:2',
-    recommendedResolution: '1200 x 800 px',
-    description: 'Đĩa Gỏi Cuốn Chay ngũ sắc cuộn tròn trong bánh tráng trong suốt thấy rõ nhân đậu hũ, cà rốt, ớt chuông, bơ và rau xanh, bên cạnh là chén sốt bơ đậu phộng rắc đậu phộng rang.',
-  },
-  {
-    publicId: 'seed/recipes/com-chien-trai-dua',
-    secureUrl: '/seed/recipes/com-chien-trai-dua.jpg',
-    resourceType: MediaResourceType.IMAGE,
-    kind: MediaKind.COVER_IMAGE,
-    ownerEmail: 'platform.contributor@example.com',
-    mimeType: 'image/jpeg',
-    extension: '.jpg',
-    bytes: 32892,
-    width: 1200,
-    height: 800,
-    aspectRatio: '3:2',
-    recommendedResolution: '1200 x 800 px',
-    description: 'Cơm Chiên Gạo Lứt Trái Dứa trình bày sang trọng trong nửa quả dứa khoét ruột, đầy ắp hạt điều rang vàng, cà rốt thái hạt lựu và nấm đùi gà.',
-  },
-  {
-    publicId: 'seed/recipes/banh-mi-chay-pate-nam',
-    secureUrl: '/seed/recipes/banh-mi-chay-pate-nam.jpg',
-    resourceType: MediaResourceType.IMAGE,
-    kind: MediaKind.COVER_IMAGE,
-    ownerEmail: 'org.contributor@example.com',
-    mimeType: 'image/jpeg',
-    extension: '.jpg',
-    bytes: 39000,
-    width: 1200,
-    height: 800,
-    aspectRatio: '3:2',
-    recommendedResolution: '1200 x 800 px',
-    description: 'Ổ Bánh Mì Chay vỏ giòn rụm kẹp đẫm pate nấm đậu gà mịn béo, chả lụa chay, dưa leo, ngò rí và đồ chua cà rốt củ cải trắng.',
+    description:
+      'Bát Canh Chua Chay Nam Bộ rực rỡ sắc màu: cà chua đỏ mọng, dứa vàng ươm, đậu bắp xanh non, bắp ngọt, đậu hũ non trắng mềm và ngò gai ngò rí.',
   },
   {
     publicId: 'seed/recipes/sup-bi-do-kem-dua',
@@ -155,7 +99,8 @@ export const mediaAssetDefinitions: readonly SeedMediaAssetItem[] = [
     height: 800,
     aspectRatio: '3:2',
     recommendedResolution: '1200 x 800 px',
-    description: 'Bát Súp Bí Đỏ màu cam ấm áp sánh mịn, rưới vệt nước cốt dừa trang trí hình xoắn ốc nghệ thuật, rắc hạt bí ngô xanh giòn tan lên bề mặt.',
+    description:
+      'Bát Súp Bí Đỏ màu cam ấm áp sánh mịn, rưới vệt nước cốt dừa trang trí hình xoắn ốc nghệ thuật, rắc hạt bí ngô xanh giòn tan lên bề mặt.',
   },
   {
     publicId: 'seed/recipes/chao-yen-mach-nam-huong',
@@ -170,7 +115,8 @@ export const mediaAssetDefinitions: readonly SeedMediaAssetItem[] = [
     height: 800,
     aspectRatio: '3:2',
     recommendedResolution: '1200 x 800 px',
-    description: 'Bát Cháo Yến Mạch sánh dẻo thơm phức mùi dầu mè, nấm hương xào thơm, hạt sen ninh bở và chút ngò rí tiêu xay rắc nhẹ.',
+    description:
+      'Bát Cháo Yến Mạch sánh dẻo thơm phức mùi dầu mè, nấm hương xào thơm, hạt sen ninh bở và chút ngò rí tiêu xay rắc nhẹ.',
   },
   {
     publicId: 'seed/recipes/salad-bo-dau-ga',
@@ -185,22 +131,8 @@ export const mediaAssetDefinitions: readonly SeedMediaAssetItem[] = [
     height: 800,
     aspectRatio: '3:2',
     recommendedResolution: '1200 x 800 px',
-    description: 'Đĩa Salad Bơ Quả Đậu Gà tươi mọng: bơ sáp cắt miếng vuông, đậu gà bùi bở, cà chua bi, cải bó xôi non và hạt chia rắc nhẹ cùng sốt chanh dây.',
-  },
-  {
-    publicId: 'seed/recipes/sinh-to-xanh-cai-bo-xoi-chuoi',
-    secureUrl: '/seed/recipes/sinh-to-xanh-cai-bo-xoi.webp',
-    resourceType: MediaResourceType.IMAGE,
-    kind: MediaKind.COVER_IMAGE,
-    ownerEmail: 'org.contributor@example.com',
-    mimeType: 'image/webp',
-    extension: '.webp',
-    bytes: 77442,
-    width: 1200,
-    height: 800,
-    aspectRatio: '3:2',
-    recommendedResolution: '1200 x 800 px',
-    description: 'Ly Sinh Tố Xanh màu ngọc bích mịn màng cắm ống hút tre, phủ lớp bọt mịn, rắc hạt chia và lát chuối mỏng trên miệng ly.',
+    description:
+      'Đĩa Salad Bơ Quả Đậu Gà tươi mọng: bơ sáp cắt miếng vuông, đậu gà bùi bở, cà chua bi, cải bó xôi non và hạt chia rắc nhẹ cùng sốt chanh dây.',
   },
   {
     publicId: 'seed/recipes/sua-hat-sen-dau-do',
@@ -215,7 +147,8 @@ export const mediaAssetDefinitions: readonly SeedMediaAssetItem[] = [
     height: 800,
     aspectRatio: '3:2',
     recommendedResolution: '1200 x 800 px',
-    description: 'Cốc gốm đựng Sữa Hạt Sen Đậu Đỏ màu hồng phớt ấm áp, có làn khói nhẹ bay lên, bên cạnh là hũ thủy tinh đựng hạt sen và đậu đỏ khô.',
+    description:
+      'Cốc gốm đựng Sữa Hạt Sen Đậu Đỏ màu hồng phớt ấm áp, có làn khói nhẹ bay lên, bên cạnh là hũ thủy tinh đựng hạt sen và đậu đỏ khô.',
   },
 
   // ==========================================
@@ -234,7 +167,8 @@ export const mediaAssetDefinitions: readonly SeedMediaAssetItem[] = [
     height: 675,
     aspectRatio: '16:9',
     recommendedResolution: '1200 x 675 px',
-    description: 'Infographic minh họa khoa học về cấu trúc Vitamin B12, men dinh dưỡng (Nutritional Yeast) và các nguồn thực phẩm tăng cường vi chất.',
+    description:
+      'Infographic minh họa khoa học về cấu trúc Vitamin B12, men dinh dưỡng (Nutritional Yeast) và các nguồn thực phẩm tăng cường vi chất.',
   },
   {
     publicId: 'seed/handbooks/protein-pairing-cover',
@@ -249,7 +183,8 @@ export const mediaAssetDefinitions: readonly SeedMediaAssetItem[] = [
     height: 675,
     aspectRatio: '16:9',
     recommendedResolution: '1200 x 675 px',
-    description: 'Hình chụp nghệ thuật bàn thực phẩm giàu đạm thực vật: các thố đậu gà, đậu lăng, tempeh, đậu hũ, hạt quinoa và yến mạch sắp đặt hài hòa.',
+    description:
+      'Hình chụp nghệ thuật bàn thực phẩm giàu đạm thực vật: các thố đậu gà, đậu lăng, tempeh, đậu hũ, hạt quinoa và yến mạch sắp đặt hài hòa.',
   },
   {
     publicId: 'seed/handbooks/meal-prep-cover',
@@ -264,7 +199,8 @@ export const mediaAssetDefinitions: readonly SeedMediaAssetItem[] = [
     height: 675,
     aspectRatio: '16:9',
     recommendedResolution: '1200 x 675 px',
-    description: 'Hình chụp góc thẳng từ trên xuống (flat lay) 5 hộp thủy tinh meal prep đựng các món cơm gạo lứt, rau củ nướng và đậu hũ ngăn nắp cho 5 ngày làm việc.',
+    description:
+      'Hình chụp góc thẳng từ trên xuống (flat lay) 5 hộp thủy tinh meal prep đựng các món cơm gạo lứt, rau củ nướng và đậu hũ ngăn nắp cho 5 ngày làm việc.',
   },
   {
     publicId: 'seed/handbooks/vegan-traditions-cover',
@@ -279,7 +215,8 @@ export const mediaAssetDefinitions: readonly SeedMediaAssetItem[] = [
     height: 675,
     aspectRatio: '16:9',
     recommendedResolution: '1200 x 675 px',
-    description: 'Hình ảnh thanh tịnh nhẹ nhàng biểu trưng cho ẩm thực chay: đĩa gỏi cuốn xanh tươi, đóa hoa sen trắng và chén trà ấm thảo mộc.',
+    description:
+      'Hình ảnh thanh tịnh nhẹ nhàng biểu trưng cho ẩm thực chay: đĩa gỏi cuốn xanh tươi, đóa hoa sen trắng và chén trà ấm thảo mộc.',
   },
 
   // ==========================================
@@ -299,7 +236,8 @@ export const mediaAssetDefinitions: readonly SeedMediaAssetItem[] = [
     durationSeconds: 720,
     aspectRatio: '16:9',
     recommendedResolution: '1920 x 1080 px (FHD)',
-    description: 'Video hướng dẫn nấu nước dùng phở chay ngọt thanh tự nhiên từ hạt sen, nấm hương và củ cải trắng.',
+    description:
+      'Video hướng dẫn nấu nước dùng phở chay ngọt thanh tự nhiên từ hạt sen, nấm hương và củ cải trắng.',
   },
   {
     publicId: 'seed/videos/video-bua-toi-15-phut',
@@ -315,7 +253,8 @@ export const mediaAssetDefinitions: readonly SeedMediaAssetItem[] = [
     durationSeconds: 900,
     aspectRatio: '16:9',
     recommendedResolution: '1920 x 1080 px (FHD)',
-    description: 'Video hướng dẫn nấu bữa tối chay nhanh gọn trong 15 phút với đậu hũ xào nấm và canh chua thanh mát.',
+    description:
+      'Video hướng dẫn nấu bữa tối chay nhanh gọn trong 15 phút với đậu hũ xào nấm và canh chua thanh mát.',
   },
   {
     publicId: 'seed/videos/video-sua-hat-sen',
@@ -351,7 +290,8 @@ export const mediaAssetDefinitions: readonly SeedMediaAssetItem[] = [
     height: 960,
     aspectRatio: '4:3',
     recommendedResolution: '1280 x 960 px',
-    description: 'Ảnh chụp chính diện ngăn mát tủ lạnh gia đình: nhìn rõ 2 bìa đậu hũ trắng trong hộp nước, 1 cây bông cải xanh, 3 củ cà rốt và một khay nấm bào ngư tươi.',
+    description:
+      'Ảnh chụp chính diện ngăn mát tủ lạnh gia đình: nhìn rõ 2 bìa đậu hũ trắng trong hộp nước, 1 cây bông cải xanh, 3 củ cà rốt và một khay nấm bào ngư tươi.',
   },
   {
     id: '21000000-0000-4000-8000-000000000002',
@@ -387,6 +327,7 @@ export const mediaAssetDefinitions: readonly SeedMediaAssetItem[] = [
     height: 1600,
     aspectRatio: '9:16 (Dọc)',
     recommendedResolution: '1024 x 1600 px',
-    description: 'Ảnh chụp dọc hóa đơn thanh toán siêu thị thực tế rõ nét: các mặt hàng nông sản và thực phẩm chay kèm đơn giá và tổng tiền.',
+    description:
+      'Ảnh chụp dọc hóa đơn thanh toán siêu thị thực tế rõ nét: các mặt hàng nông sản và thực phẩm chay kèm đơn giá và tổng tiền.',
   },
 ] as const;

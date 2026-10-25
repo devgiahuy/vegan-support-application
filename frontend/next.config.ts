@@ -8,6 +8,8 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
       { protocol: 'https', hostname: 'res.cloudinary.com' },
       { protocol: 'https', hostname: 'i.pravatar.cc' },
+      // Ảnh công thức mẫu có giấy phép mở từ Wikimedia Commons.
+      { protocol: 'https', hostname: 'upload.wikimedia.org' },
       // Thumbnail ảnh bìa video YouTube (resolveVideoCover đổi watch URL sang i.ytimg.com).
       { protocol: 'https', hostname: 'i.ytimg.com' },
       { protocol: 'https', hostname: 'img.youtube.com' },

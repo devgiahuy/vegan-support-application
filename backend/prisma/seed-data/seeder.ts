@@ -7,6 +7,7 @@ import {
   ContributorApplicationStatus,
   ContributorDecisionType,
   DietPattern,
+  FoodDataImportStatus,
   FoodDataQuality,
   FoodDataProvider,
   FoodDataReviewStatus,
@@ -28,6 +29,9 @@ import {
 import { createHash } from 'node:crypto';
 import { upsertSeedContributorDecision } from '../seed-contributor-decision.js';
 import { normalizeVietnameseText } from '../../src/modules/catalog/catalog.normalization.js';
+import { USDA_SR_LEGACY_SOURCE, type IngredientSeedItem } from './ingredients.data.js';
+import { DRI_SOURCE, type NutrientCode } from './nutrients.data.js';
+import type { SeedRecipeDefinition } from './recipes.data.js';
 import {
   allergenDefinitions,
   bookmarkDefinitions,
@@ -56,6 +60,84 @@ function postTagRows(tags: readonly string[]) {
 
 function hasEncodingDamage(value: string | null): boolean {
   return value !== null && /\uFFFD|[ÃÄÆ]|[\p{L}]\?+[\p{L}]|â[\u0080-\u00bf]/u.test(value);
+}
+
+const round1 = (value: number) => Math.round(value * 10) / 10;
+const round2 = (value: number) => Math.round(value * 100) / 100;
+
+interface RecipeFacts {
+  perServing: Partial<Record<NutrientCode, number>>;
+  totalRawGrams: number;
+  uncovered: Array<{ position: number; displayName: string; reason: string }>;
+  sources: string[];
+  proxyCount: number;
+  allergenCodes: string[];
+  traditionWarnings: Array<{ tradition: Tradition; warningCode: string; label: string }>;
+  vegan: boolean;
+  lactoOvo: boolean;
+}
+
+function ingredientGrams(definition: IngredientSeedItem, amount: number, unit: string) {
+  if (unit === 'g') return amount;
+  if (unit === 'kg') return amount * 1000;
+  const conversion = definition.conversions.find((item) => item.unitName === unit);
+  return conversion ? (amount / conversion.quantity) * conversion.grams : null;
+}
+
+function deriveRecipeFacts(
+  recipe: SeedRecipeDefinition,
+  definitions: Map<string, IngredientSeedItem>,
+): RecipeFacts {
+  const totals: Partial<Record<NutrientCode, number>> = {};
+  const uncovered: RecipeFacts['uncovered'] = [];
+  const sources = new Set<string>();
+  const allergens = new Set<string>();
+  const warnings = new Map<string, RecipeFacts['traditionWarnings'][number]>();
+  let totalRawGrams = 0;
+  let proxyCount = 0;
+  let vegan = true;
+  let lactoOvo = true;
+  recipe.ingredients.forEach((item, position) => {
+    const definition = definitions.get(item.ingredientNormalizedName);
+    if (!definition) throw new Error(`Unknown ingredient ${item.ingredientNormalizedName}`);
+    definition.allergens.forEach((code) => allergens.add(code));
+    vegan &&= definition.vegan;
+    lactoOvo &&= definition.lactoOvo;
+    if (definition.buddhistWarning)
+      warnings.set(definition.buddhistWarning[0], {
+        tradition: Tradition.BUDDHIST,
+        warningCode: definition.buddhistWarning[0],
+        label: `${definition.buddhistWarning[1]}: ${item.displayName.toLowerCase()}`,
+      });
+    const grams = ingredientGrams(definition, item.amount, item.unit);
+    if (grams !== null) totalRawGrams += grams;
+    if (!definition.nutrientSource || grams === null) {
+      uncovered.push({
+        position,
+        displayName: item.displayName,
+        reason: definition.nutrientSource ? 'UNIT_NOT_CONVERTIBLE' : 'NO_CANONICAL_PROFILE',
+      });
+      return;
+    }
+    sources.add(String(definition.nutrientSource.fdcId));
+    if (definition.nutrientSource.match === 'PROXY') proxyCount++;
+    for (const [code, value] of Object.entries(definition.nutrients) as [NutrientCode, number][])
+      totals[code] = (totals[code] ?? 0) + (value * grams) / 100;
+  });
+  const perServing = Object.fromEntries(
+    Object.entries(totals).map(([code, value]) => [code, value / recipe.servings]),
+  ) as Partial<Record<NutrientCode, number>>;
+  return {
+    perServing,
+    totalRawGrams,
+    uncovered,
+    sources: [...sources].sort(),
+    proxyCount,
+    allergenCodes: [...allergens].sort(),
+    traditionWarnings: [...warnings.values()],
+    vegan,
+    lactoOvo,
+  };
 }
 
 async function repairSeedRevisionText(
@@ -105,7 +187,6 @@ export async function seedComprehensiveData(
   },
 ): Promise<void> {
   const { adminId, defaultPasswordHash } = options;
-  const effectiveFrom = new Date('2026-01-01');
 
   // ==========================================
   // 1. ALLERGENS
@@ -160,31 +241,109 @@ export async function seedComprehensiveData(
   }
 
   // ==========================================
-  // 3. FOOD DATA SOURCE & NUTRIENTS
+  // 3. FOOD DATA SOURCES & NUTRIENTS
   // ==========================================
+  // Project-authored records (educational interaction notes) keep this source.
   const projectSource = await prisma.foodDataSource.upsert({
     where: { code: 'PROJECT_DEMO_V1' },
     update: {
-      name: 'VeggieConnect Curated Plant Food Knowledge Base',
+      name: 'VeggieConnect curated notes',
       provider: FoodDataProvider.MANUAL,
       licenseName: 'CC0-1.0',
       licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
       attribution:
-        'VeggieConnect scientific plant nutrition dataset; evidence-graded educational references.',
+        'Project-authored educational summaries; each record cites its published references.',
       defaultLocale: 'vi-VN',
       active: true,
     },
     create: {
       code: 'PROJECT_DEMO_V1',
-      name: 'VeggieConnect Curated Plant Food Knowledge Base',
+      name: 'VeggieConnect curated notes',
       provider: FoodDataProvider.MANUAL,
       licenseName: 'CC0-1.0',
       licenseUrl: 'https://creativecommons.org/publicdomain/zero/1.0/',
       attribution:
-        'VeggieConnect scientific plant nutrition dataset; evidence-graded educational references.',
+        'Project-authored educational summaries; each record cites its published references.',
       defaultLocale: 'vi-VN',
       active: true,
     },
+  });
+  const usdaSourceData = {
+    name: USDA_SR_LEGACY_SOURCE.name,
+    provider: FoodDataProvider.USDA_FDC,
+    sourceUrl: USDA_SR_LEGACY_SOURCE.sourceUrl,
+    licenseName: USDA_SR_LEGACY_SOURCE.licenseName,
+    licenseUrl: USDA_SR_LEGACY_SOURCE.licenseUrl,
+    attribution: USDA_SR_LEGACY_SOURCE.attribution,
+    defaultLocale: 'en-US',
+    active: true,
+  };
+  const usdaSource = await prisma.foodDataSource.upsert({
+    where: { code: USDA_SR_LEGACY_SOURCE.code },
+    update: usdaSourceData,
+    create: { code: USDA_SR_LEGACY_SOURCE.code, ...usdaSourceData },
+  });
+  const driSourceData = {
+    name: DRI_SOURCE.name,
+    provider: FoodDataProvider.MANUAL,
+    sourceUrl: DRI_SOURCE.sourceUrl,
+    licenseName: DRI_SOURCE.licenseName,
+    licenseUrl: DRI_SOURCE.licenseUrl,
+    attribution: DRI_SOURCE.attribution,
+    defaultLocale: 'en-US',
+    active: true,
+  };
+  const driSource = await prisma.foodDataSource.upsert({
+    where: { code: DRI_SOURCE.code },
+    update: driSourceData,
+    create: { code: DRI_SOURCE.code, ...driSourceData },
+  });
+
+  // Data seeded before the 2026-10-26 normalization used project-authored values. Retire them
+  // instead of deleting so history stays auditable; the reviewed sources below replace them.
+  const supersededAt = new Date('2026-10-26T00:00:00.000Z');
+  const seedDataEffectiveFrom = supersededAt;
+  const superseded = { reviewStatus: FoodDataReviewStatus.SUPERSEDED, effectiveTo: supersededAt };
+  const legacyProfiles = await prisma.ingredientFoodProfile.findMany({
+    where: {
+      sourceId: projectSource.id,
+      sourceVersion: '1.0',
+      sourceRecordId: { startsWith: 'profile-' },
+      reviewStatus: { not: FoodDataReviewStatus.SUPERSEDED },
+    },
+    select: { id: true },
+  });
+  if (legacyProfiles.length) {
+    const profileIds = legacyProfiles.map((profile) => profile.id);
+    await prisma.ingredientNutrientValue.updateMany({
+      where: { profileId: { in: profileIds } },
+      data: superseded,
+    });
+    await prisma.householdConversion.updateMany({
+      where: { profileId: { in: profileIds } },
+      data: { reviewStatus: FoodDataReviewStatus.SUPERSEDED },
+    });
+    await prisma.ingredientFoodProfile.updateMany({
+      where: { id: { in: profileIds } },
+      data: superseded,
+    });
+  }
+  await prisma.nutrientReferenceIntake.updateMany({
+    where: {
+      sourceId: projectSource.id,
+      sourceVersion: '1.0',
+      sourceRecordId: { startsWith: 'ref-' },
+      reviewStatus: { not: FoodDataReviewStatus.SUPERSEDED },
+    },
+    data: superseded,
+  });
+  await prisma.ingredientInteractionRule.updateMany({
+    where: {
+      sourceId: projectSource.id,
+      sourceVersion: '1.0',
+      reviewStatus: { not: FoodDataReviewStatus.SUPERSEDED },
+    },
+    data: superseded,
   });
 
   const nutrientMap = new Map<string, { id: string; defaultUnit: string }>();
@@ -210,49 +369,39 @@ export async function seedComprehensiveData(
     nutrientMap.set(definition.code, { id: nutrient.id, defaultUnit: definition.defaultUnit });
   }
 
-  // Reference intakes
+  // Reference intakes (NASEM DRI, adults 19-50)
   for (const ref of nutrientReferenceIntakes) {
     const nutrient = nutrientMap.get(ref.nutrientCode);
     if (!nutrient) continue;
-    const sourceRecordId = `ref-${ref.nutrientCode.toLowerCase()}-${ref.populationCode.toLowerCase()}`;
+    const sourceRecordId = `${ref.nutrientCode}:${ref.referenceType}:${ref.populationCode}`;
+    const data = {
+      nutrientId: nutrient.id,
+      referenceType: ref.referenceType,
+      populationCode: ref.populationCode,
+      applicability: { ...ref.applicability, ...(ref.note ? { note: ref.note } : {}) },
+      value: ref.value,
+      unit: ref.unit,
+      warningEligible: ref.warningEligible ?? false,
+      sourceVersion: DRI_SOURCE.sourceVersion,
+      locale: 'vi-VN',
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+    };
     await prisma.nutrientReferenceIntake.upsert({
       where: {
         sourceId_sourceRecordId_effectiveFrom: {
-          sourceId: projectSource.id,
+          sourceId: driSource.id,
           sourceRecordId,
-          effectiveFrom,
+          effectiveFrom: seedDataEffectiveFrom,
         },
       },
-      update: {
-        nutrientId: nutrient.id,
-        referenceType: ref.referenceType,
-        populationCode: ref.populationCode,
-        applicability: { minAge: 18 },
-        value: ref.value,
-        unit: ref.unit,
-        warningEligible: 'warningEligible' in ref ? Boolean(ref.warningEligible) : false,
-        sourceVersion: '1.0',
-        locale: 'vi-VN',
-        reviewStatus: FoodDataReviewStatus.APPROVED,
-        reviewedById: adminId,
-        reviewedAt: new Date(),
-      },
+      update: data,
       create: {
-        nutrientId: nutrient.id,
-        sourceId: projectSource.id,
-        referenceType: ref.referenceType,
-        populationCode: ref.populationCode,
-        applicability: { minAge: 18 },
-        value: ref.value,
-        unit: ref.unit,
-        warningEligible: 'warningEligible' in ref ? Boolean(ref.warningEligible) : false,
+        ...data,
+        sourceId: driSource.id,
         sourceRecordId,
-        sourceVersion: '1.0',
-        locale: 'vi-VN',
-        reviewStatus: FoodDataReviewStatus.APPROVED,
-        reviewedById: adminId,
-        reviewedAt: new Date(),
-        effectiveFrom,
+        effectiveFrom: seedDataEffectiveFrom,
       },
     });
   }
@@ -269,8 +418,53 @@ export async function seedComprehensiveData(
   }
 
   // ==========================================
-  // 4. CANONICAL INGREDIENTS (60+ items)
+  // 4. CANONICAL INGREDIENTS (USDA FoodData Central SR Legacy)
   // ==========================================
+  const importPayload = ingredientDefinitions.map((def) => ({
+    normalizedName: def.normalizedName,
+    fdcId: def.nutrientSource?.fdcId ?? null,
+    ndbNumber: def.nutrientSource?.ndbNumber ?? null,
+    usdaDescription: def.nutrientSource?.description ?? null,
+    match: def.nutrientSource?.match ?? null,
+    note: def.note ?? null,
+    nutrientNotes: def.nutrientNotes ?? [],
+  }));
+  const importPayloadHash = createHash('sha256')
+    .update(JSON.stringify(importPayload))
+    .digest('hex');
+  const importBatchData = {
+    sourceVersion: USDA_SR_LEGACY_SOURCE.sourceVersion,
+    sourceDate: new Date(USDA_SR_LEGACY_SOURCE.sourceDate),
+    payloadHash: importPayloadHash,
+    status: FoodDataImportStatus.COMMITTED,
+    stagedPayload: importPayload,
+    summary: {
+      dataset: USDA_SR_LEGACY_SOURCE.dataset,
+      ingredients: importPayload.length,
+      withProfile: importPayload.filter((item) => item.fdcId !== null).length,
+      proxyMatches: importPayload.filter((item) => item.match === 'PROXY').length,
+      withoutProfile: importPayload
+        .filter((item) => item.fdcId === null)
+        .map((item) => item.normalizedName),
+    },
+    committedAt: seedDataEffectiveFrom,
+  };
+  const importBatch = await prisma.foodDataImportBatch.upsert({
+    where: {
+      sourceId_idempotencyKey: {
+        sourceId: usdaSource.id,
+        idempotencyKey: 'seed-sr-legacy-2018-04',
+      },
+    },
+    update: importBatchData,
+    create: {
+      ...importBatchData,
+      sourceId: usdaSource.id,
+      idempotencyKey: 'seed-sr-legacy-2018-04',
+      createdById: adminId,
+    },
+  });
+
   const ingredientMap = new Map<
     string,
     { id: string; canonicalName: string; normalizedName: string }
@@ -346,42 +540,52 @@ export async function seedComprehensiveData(
       });
     }
 
-    // Food Profile & Conversions
-    const sourceRecordId = `profile-${def.normalizedName}`;
+    // No public-domain record: leave the ingredient without a nutrient profile.
+    const nutrientSource = def.nutrientSource;
+    if (!nutrientSource) continue;
+
+    const quality =
+      nutrientSource.match === 'EXACT' ? FoodDataQuality.REVIEWED : FoodDataQuality.ESTIMATED;
+    const sourceRecordId =
+      nutrientSource.match === 'EXACT'
+        ? String(nutrientSource.fdcId)
+        : `${nutrientSource.fdcId}:proxy:${def.normalizedName.replaceAll(' ', '-')}`;
+    const profileData = {
+      ingredientId: ingredient.id,
+      importBatchId: importBatch.id,
+      sourceDate: new Date(USDA_SR_LEGACY_SOURCE.sourceDate),
+      preparation: 'raw',
+      locale: 'en-US',
+      servingGrams: 100,
+      ediblePortionPercent: 100,
+      quality,
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+      effectiveTo: null,
+    };
     const profile = await prisma.ingredientFoodProfile.upsert({
       where: {
         sourceId_sourceRecordId_sourceVersion: {
-          sourceId: projectSource.id,
+          sourceId: usdaSource.id,
           sourceRecordId,
-          sourceVersion: '1.0',
+          sourceVersion: USDA_SR_LEGACY_SOURCE.sourceVersion,
         },
       },
-      update: {
-        ingredientId: ingredient.id,
-        servingGrams: 100,
-        ediblePortionPercent: 100,
-        quality: FoodDataQuality.REVIEWED,
-        reviewStatus: FoodDataReviewStatus.APPROVED,
-        reviewedById: adminId,
-        reviewedAt: new Date(),
-      },
+      update: profileData,
       create: {
-        ingredientId: ingredient.id,
-        sourceId: projectSource.id,
+        ...profileData,
+        sourceId: usdaSource.id,
         sourceRecordId,
-        sourceVersion: '1.0',
-        servingGrams: 100,
-        ediblePortionPercent: 100,
-        quality: FoodDataQuality.REVIEWED,
-        reviewStatus: FoodDataReviewStatus.APPROVED,
-        reviewedById: adminId,
-        reviewedAt: new Date(),
-        effectiveFrom,
+        sourceVersion: USDA_SR_LEGACY_SOURCE.sourceVersion,
+        effectiveFrom: seedDataEffectiveFrom,
       },
     });
 
     // Household conversions
     for (const conv of def.conversions) {
+      const conversionQuality =
+        conv.basis === 'USDA_PORTION' ? FoodDataQuality.REVIEWED : FoodDataQuality.ESTIMATED;
       await prisma.householdConversion.upsert({
         where: {
           profileId_unitName_quantity: {
@@ -390,14 +594,19 @@ export async function seedComprehensiveData(
             quantity: conv.quantity,
           },
         },
-        update: { grams: conv.grams, quality: FoodDataQuality.REVIEWED },
+        update: {
+          grams: conv.grams,
+          unitDimension: conv.unitDimension,
+          quality: conversionQuality,
+          reviewStatus: FoodDataReviewStatus.APPROVED,
+        },
         create: {
           profileId: profile.id,
           unitName: conv.unitName,
           quantity: conv.quantity,
           unitDimension: conv.unitDimension,
           grams: conv.grams,
-          quality: FoodDataQuality.REVIEWED,
+          quality: conversionQuality,
           reviewStatus: FoodDataReviewStatus.APPROVED,
           reviewedById: adminId,
           reviewedAt: new Date(),
@@ -405,97 +614,79 @@ export async function seedComprehensiveData(
       });
     }
 
-    // Nutrient values per 100g
-    const nutrientFields: Array<[string, number | undefined]> = [
-      ['ENERGY_KCAL', def.nutrients.energyKcal],
-      ['PROTEIN', def.nutrients.protein],
-      ['FAT', def.nutrients.fat],
-      ['CARBS', def.nutrients.carbs],
-      ['FIBER', def.nutrients.fiber],
-      ['IRON', def.nutrients.iron],
-      ['CALCIUM', def.nutrients.calcium],
-      ['VITAMIN_C', def.nutrients.vitaminC],
-      ['VITAMIN_B12', def.nutrients.vitaminB12],
-    ];
-
-    for (const [nCode, val] of nutrientFields) {
-      if (val === undefined) continue;
-      const n = nutrientMap.get(nCode);
-      if (!n) continue;
+    // Nutrient values per 100 g edible portion
+    for (const nutrientDefinition of nutrientDefinitions) {
+      const value = def.nutrients[nutrientDefinition.code];
+      if (value === undefined) continue;
+      const nutrient = nutrientMap.get(nutrientDefinition.code);
+      if (!nutrient) continue;
       await prisma.ingredientNutrientValue.upsert({
         where: {
           profileId_nutrientId_effectiveFrom: {
             profileId: profile.id,
-            nutrientId: n.id,
-            effectiveFrom,
+            nutrientId: nutrient.id,
+            effectiveFrom: seedDataEffectiveFrom,
           },
         },
-        update: { valuePer100g: val, unit: n.defaultUnit, quality: FoodDataQuality.REVIEWED },
+        update: {
+          valuePer100g: value,
+          unit: nutrient.defaultUnit,
+          quality,
+          reviewStatus: FoodDataReviewStatus.APPROVED,
+        },
         create: {
           profileId: profile.id,
-          nutrientId: n.id,
-          valuePer100g: val,
-          unit: n.defaultUnit,
-          quality: FoodDataQuality.REVIEWED,
+          nutrientId: nutrient.id,
+          valuePer100g: value,
+          unit: nutrient.defaultUnit,
+          quality,
           reviewStatus: FoodDataReviewStatus.APPROVED,
           reviewedById: adminId,
           reviewedAt: new Date(),
-          effectiveFrom,
+          effectiveFrom: seedDataEffectiveFrom,
         },
       });
     }
   }
 
-  // Interaction rules
+  // Interaction rules (advisory pairing notes with published references)
   for (const ir of interactionRuleDefinitions) {
     const ingA = ingredientMap.get(ir.ingredientANormalized);
     const ingB = ingredientMap.get(ir.ingredientBNormalized);
     if (!ingA || !ingB) continue;
     const [firstIng, secondIng] = ingA.id < ingB.id ? [ingA, ingB] : [ingB, ingA];
-    const ingredientAId = firstIng.id;
-    const ingredientBId = secondIng.id;
     const ruleRecordId = `rule-${firstIng.normalizedName}-${secondIng.normalizedName}-${ir.scope.toLowerCase()}`;
+    const data = {
+      direction: ir.direction,
+      severity: ir.severity,
+      evidenceGrade: ir.evidenceGrade,
+      explanation: ir.explanation,
+      suggestedAction: ir.suggestedAction,
+      hardRule: ir.hardRule,
+      applicability: { population: 'ADULT_GENERAL', references: ir.references },
+      locale: 'vi-VN',
+      reviewStatus: FoodDataReviewStatus.APPROVED,
+      reviewedById: adminId,
+      reviewedAt: new Date(),
+    };
     await prisma.ingredientInteractionRule.upsert({
       where: {
-        ingredientAId_ingredientBId_scope_sourceId_sourceVersion_effectiveFrom: {
-          ingredientAId,
-          ingredientBId,
-          scope: ir.scope,
+        sourceId_sourceRecordId_effectiveFrom: {
           sourceId: projectSource.id,
-          sourceVersion: '1.0',
-          effectiveFrom,
+          sourceRecordId: ruleRecordId,
+          effectiveFrom: seedDataEffectiveFrom,
         },
       },
-      update: {
-        direction: ir.direction,
-        severity: ir.severity,
-        evidenceGrade: ir.evidenceGrade,
-        explanation: ir.explanation,
-        suggestedAction: ir.suggestedAction,
-        hardRule: ir.hardRule,
-        applicability: { note: 'Scientific evidence baseline' },
-        reviewStatus: FoodDataReviewStatus.APPROVED,
-        reviewedById: adminId,
-        reviewedAt: new Date(),
-      },
+      update: data,
       create: {
-        ingredientAId,
-        ingredientBId,
+        ...data,
+        ingredientAId: firstIng.id,
+        ingredientBId: secondIng.id,
         sourceId: projectSource.id,
         sourceRecordId: ruleRecordId,
-        sourceVersion: '1.0',
+        sourceVersion: '2.0',
         scope: ir.scope,
-        direction: ir.direction,
-        severity: ir.severity,
-        evidenceGrade: ir.evidenceGrade,
-        explanation: ir.explanation,
-        suggestedAction: ir.suggestedAction,
-        hardRule: ir.hardRule,
-        applicability: { note: 'Scientific evidence baseline' },
-        reviewStatus: FoodDataReviewStatus.APPROVED,
-        reviewedById: adminId,
-        reviewedAt: new Date(),
-        effectiveFrom,
+        effectiveFrom: seedDataEffectiveFrom,
       },
     });
   }
@@ -713,12 +904,76 @@ export async function seedComprehensiveData(
   // ==========================================
   // 6. RECIPES
   // ==========================================
+  // Nutrition, allergen codes, tradition warnings and diet compatibility are derived from the
+  // canonical ingredient catalogue so they always match the ingredient list.
+  const ingredientDefinitionMap = new Map(
+    ingredientDefinitions.map((definition) => [definition.normalizedName, definition]),
+  );
   const postMap = new Map<string, { id: string }>();
+  const recipeFactsMap = new Map<string, RecipeFacts>();
   for (const rDef of recipeDefinitions) {
+    const facts = deriveRecipeFacts(rDef, ingredientDefinitionMap);
+    recipeFactsMap.set(rDef.slug, facts);
     const author = userMap.get(rDef.authorEmail.toLowerCase()) ?? { id: adminId };
     const catId =
       categoryIdMap.get(`${CategoryType.FOOD_TYPE}:${rDef.categorySlug}`) ??
       categoryIdMap.get(`${CategoryType.RECIPE_GROUP}:${rDef.categorySlug}`);
+    const ingredientRows = rDef.ingredients.map((ing, idx) => {
+      const canonical = ingredientMap.get(ing.ingredientNormalizedName);
+      if (!canonical)
+        throw new Error(
+          `Recipe ${rDef.slug} references unknown ingredient ${ing.ingredientNormalizedName}`,
+        );
+      return {
+        position: idx,
+        ingredientId: canonical.id,
+        displayName: ing.displayName,
+        normalizedName: normalizeVietnameseText(ing.displayName),
+        amount: ing.amount,
+        unit: ing.unit,
+        resolutionStatus: IngredientResolutionStatus.EXACT,
+      };
+    });
+    const stepRows = rDef.steps.map((st) => ({
+      position: st.position,
+      instruction: st.instruction,
+      durationMinutes: st.durationMinutes,
+      cookingMethodId: st.cookingMethodCode
+        ? (cookingMethodMap.get(st.cookingMethodCode)?.id ?? null)
+        : null,
+      affectedIngredientPositions: st.affectedIngredientPositions,
+    }));
+    const detailData = {
+      servings: rDef.servings,
+      prepTimeMinutes: rDef.prepTimeMinutes,
+      cookTimeMinutes: rDef.cookTimeMinutes,
+      difficulty: rDef.difficulty,
+      calories: Math.round(facts.perServing.ENERGY_KCAL ?? 0),
+      proteinGrams: round1(facts.perServing.PROTEIN ?? 0),
+      carbsGrams: round1(facts.perServing.CARBS ?? 0),
+      fatGrams: round1(facts.perServing.FAT ?? 0),
+      fiberGrams: round1(facts.perServing.FIBER ?? 0),
+      vitaminB12Mcg: facts.uncovered.length
+        ? null
+        : Math.round((facts.perServing.VITAMIN_B12 ?? 0) * 100) / 100,
+      mealPlannerEligible: rDef.mealPlannerEligible,
+      allergenCodes: facts.allergenCodes,
+      traditionWarnings: facts.traditionWarnings,
+    };
+    const fixtureSnapshot = JSON.stringify({
+      title: rDef.title,
+      excerpt: rDef.excerpt,
+      body: rDef.body,
+      categoryIds: catId ? [catId] : [],
+      tags: [...rDef.tags].map(normalizeVietnameseText).sort(),
+      ingredients: ingredientRows.map(({ ingredientId, displayName, amount, unit }) => ({
+        ingredientId,
+        displayName,
+        amount,
+        unit,
+      })),
+      steps: stepRows,
+    });
 
     let post = await prisma.post.findUnique({ where: { slug: rDef.slug } });
     if (!post) {
@@ -728,23 +983,62 @@ export async function seedComprehensiveData(
           type: PostType.RECIPE,
           slug: rDef.slug,
           status: PostStatus.PUBLISHED,
-          version: 1,
+          version: 0,
           publishedAt: new Date('2026-09-20T00:00:00.000Z'),
         },
       });
     }
     postMap.set(rDef.slug, post);
 
-    let revision = await prisma.postRevision.findUnique({
-      where: { postId_version: { postId: post.id, version: 1 } },
-    });
+    const current = post.publishedRevisionId
+      ? await prisma.postRevision.findUnique({
+          where: { id: post.publishedRevisionId },
+          include: {
+            ingredients: { orderBy: { position: 'asc' } },
+            recipeSteps: { orderBy: { position: 'asc' } },
+            tags: true,
+            categories: true,
+          },
+        })
+      : null;
+    const currentSnapshot = current
+      ? JSON.stringify({
+          title: current.title,
+          excerpt: current.excerpt,
+          body: current.body,
+          categoryIds: current.categories.map((category) => category.categoryId).sort(),
+          tags: current.tags.map((tag) => tag.normalizedTag).sort(),
+          ingredients: current.ingredients.map(({ ingredientId, displayName, amount, unit }) => ({
+            ingredientId,
+            displayName,
+            amount,
+            unit,
+          })),
+          steps: current.recipeSteps.map((step) => ({
+            position: step.position,
+            instruction: step.instruction,
+            durationMinutes: step.durationMinutes,
+            cookingMethodId: step.cookingMethodId,
+            affectedIngredientPositions: step.affectedIngredientPositions,
+          })),
+        })
+      : null;
 
-    if (!revision) {
-      revision = await prisma.postRevision.create({
+    let revisionId = current?.id ?? null;
+    if (currentSnapshot !== fixtureSnapshot) {
+      // Publish curated content as a new revision so earlier versions (and anything that
+      // references them, such as meal plans) stay intact.
+      const latest = await prisma.postRevision.findFirst({
+        where: { postId: post.id },
+        orderBy: { version: 'desc' },
+        select: { version: true },
+      });
+      const version = Math.max(post.version, latest?.version ?? 0) + 1;
+      const revision = await prisma.postRevision.create({
         data: {
           postId: post.id,
           createdById: author.id,
-          version: 1,
+          version,
           status: PostRevisionStatus.PUBLISHED,
           title: rDef.title,
           normalizedTitle: normalizeVietnameseText(rDef.title),
@@ -754,181 +1048,81 @@ export async function seedComprehensiveData(
           normalizedBody: normalizeVietnameseText(rDef.body),
           ...(catId ? { categories: { create: [{ categoryId: catId }] } } : {}),
           tags: { create: postTagRows(rDef.tags) },
-          media: {
-            create: {
-              kind: MediaKind.COVER_IMAGE,
-              provider: MediaProvider.CLOUDINARY,
-              secureUrl: rDef.coverMedia.secureUrl,
-              publicId: rDef.coverMedia.publicId,
-              width: rDef.coverMedia.width,
-              height: rDef.coverMedia.height,
-              position: 0,
-            },
-          },
-          recipeDetail: {
-            create: {
-              servings: rDef.servings,
-              prepTimeMinutes: rDef.prepTimeMinutes,
-              cookTimeMinutes: rDef.cookTimeMinutes,
-              difficulty: rDef.difficulty,
-              calories: rDef.calories,
-              proteinGrams: rDef.proteinGrams,
-              carbsGrams: rDef.carbsGrams,
-              fatGrams: rDef.fatGrams,
-              fiberGrams: rDef.fiberGrams,
-              vitaminB12Mcg: rDef.vitaminB12Mcg ?? null,
-              mealPlannerEligible: rDef.mealPlannerEligible,
-              allergenCodes: rDef.allergenCodes,
-              traditionWarnings: rDef.traditionWarnings,
-            },
-          },
-          ingredients: {
-            create: rDef.ingredients.map((ing, idx) => {
-              const canonical = ingredientMap.get(ing.ingredientNormalizedName);
-              return {
-                position: idx,
-                ingredientId: canonical?.id,
-                displayName: ing.displayName,
-                normalizedName: normalizeVietnameseText(ing.displayName),
-                amount: ing.amount,
-                unit: ing.unit,
-                resolutionStatus: canonical
-                  ? IngredientResolutionStatus.EXACT
-                  : IngredientResolutionStatus.UNKNOWN,
-              };
-            }),
-          },
-          recipeSteps: {
-            create: rDef.steps.map((st) => {
-              const method = st.cookingMethodCode
-                ? cookingMethodMap.get(st.cookingMethodCode)
-                : undefined;
-              return {
-                position: st.position,
-                instruction: st.instruction,
-                durationMinutes: st.durationMinutes,
-                cookingMethodId: method?.id,
-                affectedIngredientPositions: st.affectedIngredientPositions,
-              };
-            }),
-          },
+          recipeDetail: { create: detailData },
+          ingredients: { create: ingredientRows },
+          recipeSteps: { create: stepRows },
           dietCompatibility: {
             create: [
-              { dietPattern: DietPattern.VEGAN, compatible: true, reasonCodes: [] },
-              { dietPattern: DietPattern.LACTO_OVO, compatible: true, reasonCodes: [] },
+              {
+                dietPattern: DietPattern.VEGAN,
+                compatible: facts.vegan,
+                reasonCodes: facts.vegan ? [] : ['NON_VEGAN_INGREDIENT'],
+              },
+              {
+                dietPattern: DietPattern.LACTO_OVO,
+                compatible: facts.lactoOvo,
+                reasonCodes: facts.lactoOvo ? [] : ['NON_LACTO_OVO_INGREDIENT'],
+              },
             ],
           },
         },
       });
-    }
-
-    revision = await repairSeedRevisionText(prisma, revision, rDef);
-    const storedIngredients = await prisma.recipeIngredient.findMany({
-      where: { revisionId: revision.id },
-    });
-    for (const ingredient of storedIngredients) {
-      const fixture = rDef.ingredients[ingredient.position];
-      if (fixture && hasEncodingDamage(ingredient.displayName)) {
-        await prisma.recipeIngredient.update({
-          where: { id: ingredient.id },
-          data: {
-            displayName: fixture.displayName,
-            normalizedName: normalizeVietnameseText(fixture.displayName),
-          },
-        });
-      }
-    }
-    const storedSteps = await prisma.recipeStep.findMany({ where: { revisionId: revision.id } });
-    for (const step of storedSteps) {
-      const fixture = rDef.steps.find((candidate) => candidate.position === step.position);
-      if (fixture && hasEncodingDamage(step.instruction)) {
-        await prisma.recipeStep.update({
-          where: { id: step.id },
-          data: { instruction: fixture.instruction },
-        });
-      }
-    }
-
-    // Keep the compact recipe nutrition fields synchronized on repeat seeds;
-    // previously these values were written only when the revision was new.
-    await prisma.recipeDetail.upsert({
-      where: { revisionId: revision.id },
-      update: {
-        servings: rDef.servings,
-        prepTimeMinutes: rDef.prepTimeMinutes,
-        cookTimeMinutes: rDef.cookTimeMinutes,
-        difficulty: rDef.difficulty,
-        calories: rDef.calories,
-        proteinGrams: rDef.proteinGrams,
-        carbsGrams: rDef.carbsGrams,
-        fatGrams: rDef.fatGrams,
-        fiberGrams: rDef.fiberGrams,
-        vitaminB12Mcg: rDef.vitaminB12Mcg ?? null,
-        mealPlannerEligible: rDef.mealPlannerEligible,
-        allergenCodes: rDef.allergenCodes,
-        traditionWarnings: rDef.traditionWarnings,
-      },
-      create: {
-        revisionId: revision.id,
-        servings: rDef.servings,
-        prepTimeMinutes: rDef.prepTimeMinutes,
-        cookTimeMinutes: rDef.cookTimeMinutes,
-        difficulty: rDef.difficulty,
-        calories: rDef.calories,
-        proteinGrams: rDef.proteinGrams,
-        carbsGrams: rDef.carbsGrams,
-        fatGrams: rDef.fatGrams,
-        fiberGrams: rDef.fiberGrams,
-        vitaminB12Mcg: rDef.vitaminB12Mcg ?? null,
-        mealPlannerEligible: rDef.mealPlannerEligible,
-        allergenCodes: rDef.allergenCodes,
-        traditionWarnings: rDef.traditionWarnings,
-      },
-    });
-
-    if (post.status === PostStatus.PUBLISHED && post.publishedRevisionId !== revision.id) {
-      await prisma.post.update({
+      post = await prisma.post.update({
         where: { id: post.id },
-        data: { publishedRevisionId: revision.id },
+        data: {
+          version,
+          status: PostStatus.PUBLISHED,
+          publishedRevisionId: revision.id,
+        },
       });
-      post.publishedRevisionId = revision.id;
+      postMap.set(rDef.slug, post);
+      revisionId = revision.id;
     }
+    if (!revisionId) continue;
 
-    await prisma.postMedia.upsert({
-      where: { revisionId_kind: { revisionId: revision.id, kind: MediaKind.COVER_IMAGE } },
-      update: {
-        secureUrl: rDef.coverMedia.secureUrl,
-        publicId: rDef.coverMedia.publicId,
-        width: rDef.coverMedia.width,
-        height: rDef.coverMedia.height,
-        bytes: rDef.coverMedia.bytes,
-      },
-      create: {
-        revisionId: revision.id,
-        kind: MediaKind.COVER_IMAGE,
+    await prisma.recipeDetail.upsert({
+      where: { revisionId },
+      update: detailData,
+      create: { revisionId, ...detailData },
+    });
+
+    if (rDef.coverMedia) {
+      const cover = {
         provider: MediaProvider.CLOUDINARY,
         secureUrl: rDef.coverMedia.secureUrl,
         publicId: rDef.coverMedia.publicId,
         width: rDef.coverMedia.width,
         height: rDef.coverMedia.height,
         bytes: rDef.coverMedia.bytes,
-        position: 0,
-      },
-    });
+      };
+      await prisma.postMedia.upsert({
+        where: { revisionId_kind: { revisionId, kind: MediaKind.COVER_IMAGE } },
+        update: { ...cover, assetId: null },
+        create: { revisionId, kind: MediaKind.COVER_IMAGE, position: 0, ...cover },
+      });
+    } else {
+      await prisma.postMedia.deleteMany({
+        where: { revisionId, kind: MediaKind.COVER_IMAGE },
+      });
+    }
   }
 
-  // RecipeDetail keeps the compact macro fields used by meal planning, while
-  // the detail page reads the versioned Phase 13 nutrition estimate. Persist
-  // the recipe definition's curated per-serving values into that contract so
-  // seeded dishes display the same calories/macros declared in recipes.data.
+  // RecipeDetail keeps the compact macro fields used by meal planning, while the detail page
+  // reads the versioned nutrition estimate. Persist the catalogue-derived values into that
+  // contract with their USDA provenance, assumptions and uncovered ingredients.
+  const nutrientNames = new Map(
+    nutrientDefinitions.map((definition) => [definition.code, definition]),
+  );
   for (const rDef of recipeDefinitions) {
     const recipe = postMap.get(rDef.slug);
-    if (!recipe) continue;
+    const facts = recipeFactsMap.get(rDef.slug);
+    if (!recipe || !facts) continue;
+    const post = await prisma.post.findUniqueOrThrow({ where: { id: recipe.id } });
+    if (!post.publishedRevisionId) continue;
 
-    const revision = await prisma.postRevision.findFirstOrThrow({
-      where: { postId: recipe.id, version: 1 },
+    const revision = await prisma.postRevision.findUniqueOrThrow({
+      where: { id: post.publishedRevisionId },
       include: {
-        post: true,
         ingredients: { orderBy: { position: 'asc' } },
         recipeSteps: { orderBy: { position: 'asc' } },
       },
@@ -938,7 +1132,7 @@ export async function seedComprehensiveData(
         JSON.stringify({
           calculationVersion: 'recipe-nutrition-v1',
           revisionId: revision.id,
-          postVersion: revision.post.version,
+          postVersion: post.version,
           servings: rDef.servings,
           ingredients: revision.ingredients.map((ingredient) => ({
             id: ingredient.id,
@@ -954,6 +1148,7 @@ export async function seedComprehensiveData(
             affectedIngredientPositions: step.affectedIngredientPositions,
             position: step.position,
           })),
+          seedDataset: USDA_SR_LEGACY_SOURCE.sourceVersion,
         }),
       )
       .digest('hex');
@@ -964,55 +1159,53 @@ export async function seedComprehensiveData(
     });
     if (currentEstimate?.recipeFingerprint === recipeFingerprint) continue;
 
-    const perServingNutrients = [
-      {
-        nutrientCode: 'ENERGY_KCAL',
-        nutrientName: 'Năng lượng',
-        unit: 'kcal',
-        amount: rDef.calories,
-      },
-      { nutrientCode: 'PROTEIN', nutrientName: 'Protein', unit: 'g', amount: rDef.proteinGrams },
-      { nutrientCode: 'CARBS', nutrientName: 'Carbohydrate', unit: 'g', amount: rDef.carbsGrams },
-      { nutrientCode: 'FAT', nutrientName: 'Chất béo', unit: 'g', amount: rDef.fatGrams },
-      { nutrientCode: 'FIBER', nutrientName: 'Chất xơ', unit: 'g', amount: rDef.fiberGrams },
-      ...(rDef.vitaminB12Mcg === undefined
-        ? []
-        : [
-            {
-              nutrientCode: 'VITAMIN_B12',
-              nutrientName: 'Vitamin B12',
-              unit: 'mcg',
-              amount: rDef.vitaminB12Mcg,
-            },
-          ]),
-    ].map((nutrient) => ({
-      ...nutrient,
-      origin: NutritionValueOrigin.USER_PROVIDED,
-      confidence: 0.8,
-      min: Math.round(nutrient.amount * 0.9 * 100) / 100,
-      max: Math.round(nutrient.amount * 1.1 * 100) / 100,
+    const confidence = facts.uncovered.length ? 0.7 : facts.proxyCount ? 0.8 : 0.85;
+    const toAmounts = (values: Partial<Record<NutrientCode, number>>, multiplier: number) =>
+      nutrientDefinitions
+        .filter((definition) => values[definition.code] !== undefined)
+        .map((definition) => {
+          const amount = round2((values[definition.code] ?? 0) * multiplier);
+          return {
+            nutrientCode: definition.code,
+            nutrientName: nutrientNames.get(definition.code)?.name ?? definition.code,
+            unit: definition.defaultUnit,
+            amount,
+            origin: NutritionValueOrigin.CANONICAL_CALCULATED,
+            confidence,
+            min: round2(amount * 0.85),
+            max: round2(amount * 1.15),
+          };
+        });
+    const perServingNutrients = toAmounts(facts.perServing, 1);
+    const totalNutrients = toAmounts(facts.perServing, rDef.servings);
+    const sourceVersions = facts.sources.map((sourceRecordId) => ({
+      sourceCode: USDA_SR_LEGACY_SOURCE.code,
+      sourceVersion: USDA_SR_LEGACY_SOURCE.sourceVersion,
+      sourceRecordId,
     }));
-    const totalNutrients = perServingNutrients.map((nutrient) => ({
-      ...nutrient,
-      amount: nutrient.amount * rDef.servings,
-      min: nutrient.min * rDef.servings,
-      max: nutrient.max * rDef.servings,
-    }));
-    const sourceVersions = [
-      {
-        sourceCode: projectSource.code,
-        sourceVersion: '1.0',
-        sourceRecordId: `recipe-seed:${rDef.slug}`,
-        kind: 'CURATED_RECIPE_NUTRITION',
-      },
-    ];
     const assumptions = [
       {
-        code: 'CURATED_RECIPE_MACROS',
-        message: 'Per-serving nutrition values are curated seed data declared with the recipe.',
-        origin: NutritionValueOrigin.USER_PROVIDED,
+        code: 'RAW_INGREDIENT_BASIS',
+        message:
+          'Tổng dinh dưỡng được cộng từ khối lượng nguyên liệu sống theo giá trị USDA SR Legacy; chưa áp dụng hệ số hao hụt khi nấu.',
+        origin: NutritionValueOrigin.CANONICAL_CALCULATED,
       },
+      ...(facts.proxyCount
+        ? [
+            {
+              code: 'PROXY_FOOD_RECORDS',
+              message: `${facts.proxyCount} nguyên liệu dùng bản ghi USDA gần nhất (ước tính), xem ghi chú nguồn của từng nguyên liệu.`,
+              origin: NutritionValueOrigin.CANONICAL_CALCULATED,
+            },
+          ]
+        : []),
     ];
+    const uncoveredIngredients = facts.uncovered.map((item) => ({
+      recipeIngredientId: revision.ingredients[item.position]?.id ?? null,
+      position: item.position,
+      displayName: item.displayName,
+      reason: item.reason,
+    }));
 
     await prisma.$transaction(async (transaction) => {
       await transaction.recipeNutritionEstimate.updateMany({
@@ -1032,22 +1225,23 @@ export async function seedComprehensiveData(
           calculationVersion: 'recipe-nutrition-v1',
           recipeFingerprint,
           servings: rDef.servings,
-          totalRawGrams: 0,
+          totalRawGrams: round2(facts.totalRawGrams),
           totalCookedGrams: 0,
           totalNutrients,
           perServingNutrients,
           sourceVersions,
           assumptions,
-          uncoveredIngredients: [],
-          confidence: 0.8,
+          uncoveredIngredients,
+          confidence,
           uncertainty: {
-            method: 'CURATED_RECIPE_MACROS',
-            relativeRangePercent: 10,
+            method: 'RAW_INGREDIENT_SUM',
+            relativeRangePercent: 15,
+            uncoveredIngredientCount: facts.uncovered.length,
           },
           aiUsed: false,
           providerDown: false,
           disclaimer:
-            'Số liệu dinh dưỡng theo khẩu phần là dữ liệu ước tính được biên soạn cho món mẫu và chỉ mang tính tham khảo.',
+            'Số liệu dinh dưỡng được tính từ dữ liệu USDA FoodData Central cho nguyên liệu sống, chỉ mang tính tham khảo và có thể khác khi nấu.',
         },
       });
     });
@@ -1574,6 +1768,6 @@ export async function seedComprehensiveData(
 
   await normalizeAllergyCatalog(prisma, adminId);
   console.info(
-    'Successfully seeded comprehensive VeggieConnect sample dataset with 60+ ingredients, 25 recipes, 4 handbooks, 3 videos, community, pantry, and media assets.',
+    `Successfully seeded VeggieConnect sample dataset: ${ingredientDefinitions.length} ingredients (USDA FDC SR Legacy), ${recipeDefinitions.length} recipes, handbooks, videos, community, pantry, and media assets.`,
   );
 }

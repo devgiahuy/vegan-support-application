@@ -20,63 +20,63 @@ export interface SeedCustomMealDefinition {
   }>;
 }
 
+// User-entered totals equal the sum of the listed ingredients' USDA SR Legacy values
+// (raw weights), so the sample matches what the nutrition calculator would report.
 export const customMealDefinitions: readonly SeedCustomMealDefinition[] = [
-  // 1. Overnight Oats Hạt Chia Việt Quất của Huy (Member)
   {
     id: '18000000-0000-4000-8000-000000000001',
     userEmail: 'member@example.com',
-    name: 'Bát Yến Mạch Ngâm Hạt Chia & Chuối Đông Lạnh',
-    notes: 'Yến mạch ngâm qua đêm cùng sữa đậu nành, hạt chia và chuối tiêu. Tiện lợi cho bữa sáng sau khi tập gym.',
+    name: 'Yến Mạch Ngâm Hạt Chia Chuối Hạt Điều',
+    notes:
+      'Yến mạch ngâm qua đêm với nước, hạt chia và chuối; rắc hạt điều khi ăn. Không dùng đậu phộng vì dị ứng.',
     servings: 1,
-    userCalories: 380,
-    userProteinGrams: 15,
-    userCarbsGrams: 62,
-    userFatGrams: 8,
+    userCalories: 488,
+    userProteinGrams: 14.4,
+    userCarbsGrams: 78.4,
+    userFatGrams: 15.5,
     nutritionCoverage: NutritionCoverage.COMPLETE,
-    tags: ['bữa sáng gym', 'overnight oats', 'nhanh dưới 5 phút', 'shopee'],
+    tags: ['bữa sáng', 'overnight oats', 'chuẩn bị trước', 'shopee'],
     ingredients: [
-      { ingredientNormalizedName: 'yen mach', displayName: 'Yến mạch cán dẹt', amount: 60, unit: 'g' },
-      { ingredientNormalizedName: 'hat chia', displayName: 'Hạt chia hữu cơ', amount: 15, unit: 'g' },
-      { ingredientNormalizedName: 'chuoi', displayName: 'Chuối tiêu cắt lát', amount: 100, unit: 'g' },
-      { ingredientNormalizedName: 'dau phong', displayName: 'Bơ đậu phộng quết', amount: 15, unit: 'g' },
+      { ingredientNormalizedName: 'yen mach', displayName: 'Yến mạch cán', amount: 60, unit: 'g' },
+      { ingredientNormalizedName: 'hat chia', displayName: 'Hạt chia', amount: 15, unit: 'g' },
+      { ingredientNormalizedName: 'chuoi', displayName: 'Chuối chín', amount: 118, unit: 'g' },
+      { ingredientNormalizedName: 'hat dieu', displayName: 'Hạt điều', amount: 15, unit: 'g' },
     ],
   },
-
-  // 2. Cơm Gạo Lứt Muối Mè Rong Biển
   {
     id: '18000000-0000-4000-8000-000000000002',
     userEmail: 'member.buddhist@example.com',
-    name: 'Cơm Gạo Lứt Muối Mè Dưỡng Sinh Ohsawa',
-    notes: 'Bữa cơm dưỡng sinh thanh tịnh vào ngày rằm, nhai kỹ 50 lần mỗi miếng để hấp thu tinh túy.',
+    name: 'Cơm Gạo Lứt Muối Mè',
+    notes: 'Bữa cơm đơn giản ngày rằm: cơm gạo lứt chấm muối mè rang.',
     servings: 1,
-    userCalories: 310,
-    userProteinGrams: 7,
-    userCarbsGrams: 52,
-    userFatGrams: 9,
+    userCalories: 351,
+    userProteinGrams: 7.8,
+    userCarbsGrams: 63.3,
+    userFatGrams: 7.5,
     nutritionCoverage: NutritionCoverage.COMPLETE,
-    tags: ['thực dưỡng', 'ngày rằm', 'gạo lứt muối mè'],
+    tags: ['ngày rằm', 'gạo lứt', 'muối mè'],
     ingredients: [
-      { ingredientNormalizedName: 'gao lut', displayName: 'Cơm gạo lứt huyết rồng', amount: 150, unit: 'g' },
-      { ingredientNormalizedName: 'me trang', displayName: 'Muối mè rang thơm', amount: 15, unit: 'g' },
+      { ingredientNormalizedName: 'gao lut', displayName: 'Gạo lứt', amount: 80, unit: 'g' },
+      { ingredientNormalizedName: 'me trang', displayName: 'Mè trắng rang', amount: 10, unit: 'g' },
+      { ingredientNormalizedName: 'muoi', displayName: 'Muối', amount: 1, unit: 'g' },
     ],
   },
-
-  // 3. Sinh Tố Bơ Đậu Hũ Non Cacao
   {
     id: '18000000-0000-4000-8000-000000000003',
     userEmail: 'member.weightloss@example.com',
-    name: 'Sinh Tố Bơ Đậu Hũ Non Vị Cacao No Lâu',
-    notes: 'Đậu hũ non tạo kết cấu mềm mượt như kem mousse socola, giàu đạm và không chứa đường sữa.',
+    name: 'Sinh Tố Bơ Đậu Hũ Non Chuối',
+    notes: 'Đậu hũ non xay cùng bơ và chuối cho sinh tố sánh mịn, không thêm đường.',
     servings: 1,
-    userCalories: 260,
-    userProteinGrams: 12,
-    userCarbsGrams: 24,
-    userFatGrams: 14,
-    nutritionCoverage: NutritionCoverage.PARTIAL,
-    tags: ['sinh tố keto', 'giảm mỡ', 'đậu hũ non'],
+    userCalories: 241,
+    userProteinGrams: 13.2,
+    userCarbsGrams: 21.7,
+    userFatGrams: 13.8,
+    nutritionCoverage: NutritionCoverage.COMPLETE,
+    tags: ['sinh tố', 'đậu hũ non', 'không đường'],
     ingredients: [
-      { ingredientNormalizedName: 'dau hu non', displayName: 'Đậu hũ non mát lạnh', amount: 150, unit: 'g' },
-      { ingredientNormalizedName: 'bo sap', displayName: 'Bơ sáp chín', amount: 80, unit: 'g' },
+      { ingredientNormalizedName: 'dau hu non', displayName: 'Đậu hũ non', amount: 150, unit: 'g' },
+      { ingredientNormalizedName: 'bo sap', displayName: 'Bơ chín', amount: 80, unit: 'g' },
+      { ingredientNormalizedName: 'chuoi', displayName: 'Chuối chín', amount: 60, unit: 'g' },
     ],
   },
 ] as const;
