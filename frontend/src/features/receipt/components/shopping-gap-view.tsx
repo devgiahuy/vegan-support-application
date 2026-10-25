@@ -1,23 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
-import {
-  ShoppingCart,
-  CheckCircle2,
-  AlertCircle,
-  HelpCircle,
-  RefreshCw,
-  Loader2,
-  Calendar,
-  Layers,
-} from 'lucide-react';
+import { ShoppingCart, CheckCircle2, AlertCircle, RefreshCw, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Pagination } from '@/components/shared/pagination';
 import { useShoppingGapPreviewQuery } from '../queries/shopping.queries';
 import { ShoppingGapItemRow } from './shopping-gap-item-row';
 import { UnresolvedItemsCard } from './unresolved-items-card';
 import type { SelectedMealInput } from '../types/shopping-gap.model';
+
+const PAGE_SIZE = 5;
 
 interface ShoppingGapViewProps {
   meals: SelectedMealInput[];
@@ -26,6 +19,9 @@ interface ShoppingGapViewProps {
 
 export function ShoppingGapView({ meals, className = '' }: ShoppingGapViewProps) {
   const [filterTab, setFilterTab] = useState<'missing' | 'all' | 'ready'>('missing');
+  const [missingPage, setMissingPage] = useState(1);
+  const [readyPage, setReadyPage] = useState(1);
+  const [allPage, setAllPage] = useState(1);
 
   const {
     data: preview,
@@ -37,6 +33,48 @@ export function ShoppingGapView({ meals, className = '' }: ShoppingGapViewProps)
   } = useShoppingGapPreviewQuery(meals, {
     enabled: meals.length > 0,
   });
+
+  const missingItems = preview?.missingItems ?? [];
+  const readyItems = preview?.readyItems ?? [];
+  const items = preview?.items ?? [];
+
+  const totalMissingPages = Math.ceil(missingItems.length / PAGE_SIZE);
+  const totalReadyPages = Math.ceil(readyItems.length / PAGE_SIZE);
+  const totalAllPages = Math.ceil(items.length / PAGE_SIZE);
+
+  // Đảm bảo trang hiện tại luôn hợp lệ khi số lượng phần tử thay đổi
+  React.useEffect(() => {
+    if (missingPage > totalMissingPages && totalMissingPages > 0) {
+      setMissingPage(1);
+    }
+  }, [totalMissingPages, missingPage]);
+
+  React.useEffect(() => {
+    if (readyPage > totalReadyPages && totalReadyPages > 0) {
+      setReadyPage(1);
+    }
+  }, [totalReadyPages, readyPage]);
+
+  React.useEffect(() => {
+    if (allPage > totalAllPages && totalAllPages > 0) {
+      setAllPage(1);
+    }
+  }, [totalAllPages, allPage]);
+
+  const paginatedMissingItems = React.useMemo(() => {
+    const start = (missingPage - 1) * PAGE_SIZE;
+    return missingItems.slice(start, start + PAGE_SIZE);
+  }, [missingItems, missingPage]);
+
+  const paginatedReadyItems = React.useMemo(() => {
+    const start = (readyPage - 1) * PAGE_SIZE;
+    return readyItems.slice(start, start + PAGE_SIZE);
+  }, [readyItems, readyPage]);
+
+  const paginatedAllItems = React.useMemo(() => {
+    const start = (allPage - 1) * PAGE_SIZE;
+    return items.slice(start, start + PAGE_SIZE);
+  }, [items, allPage]);
 
   if (meals.length === 0) {
     return (
@@ -82,8 +120,7 @@ export function ShoppingGapView({ meals, className = '' }: ShoppingGapViewProps)
     );
   }
 
-  const { items, readyItems, missingItems, unresolvedItems, summary, formattedPantryAsOf } =
-    preview;
+  const { unresolvedItems, summary, formattedPantryAsOf } = preview;
 
   return (
     <div className={`space-y-6 ${className}`}>
@@ -188,9 +225,33 @@ export function ShoppingGapView({ meals, className = '' }: ShoppingGapViewProps)
               </p>
             </div>
           ) : (
-            missingItems.map((item) => (
-              <ShoppingGapItemRow key={item.ingredientId || item.ingredientName} item={item} />
-            ))
+            <>
+              <div className="space-y-3">
+                {paginatedMissingItems.map((item) => (
+                  <ShoppingGapItemRow
+                    key={item.ingredientId || item.ingredientName}
+                    item={item}
+                    hideSourceMeals
+                    hideConversion
+                  />
+                ))}
+              </div>
+
+              {totalMissingPages > 1 && (
+                <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-neutral-200 dark:border-neutral-800 text-xs text-muted-foreground">
+                  <span>
+                    Hiển thị {(missingPage - 1) * PAGE_SIZE + 1} -{' '}
+                    {Math.min(missingPage * PAGE_SIZE, missingItems.length)} trên tổng số{' '}
+                    {missingItems.length} sản phẩm cần mua
+                  </span>
+                  <Pagination
+                    page={missingPage}
+                    totalPages={totalMissingPages}
+                    onChange={setMissingPage}
+                  />
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
 
@@ -201,17 +262,67 @@ export function ShoppingGapView({ meals, className = '' }: ShoppingGapViewProps)
               Chưa có nguyên liệu nào có sẵn đủ số lượng trong tủ bếp.
             </div>
           ) : (
-            readyItems.map((item) => (
-              <ShoppingGapItemRow key={item.ingredientId || item.ingredientName} item={item} />
-            ))
+            <>
+              <div className="space-y-3">
+                {paginatedReadyItems.map((item) => (
+                  <ShoppingGapItemRow
+                    key={item.ingredientId || item.ingredientName}
+                    item={item}
+                    hideSourceMeals
+                    hideConversion
+                  />
+                ))}
+              </div>
+
+              {totalReadyPages > 1 && (
+                <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-neutral-200 dark:border-neutral-800 text-xs text-muted-foreground">
+                  <span>
+                    Hiển thị {(readyPage - 1) * PAGE_SIZE + 1} -{' '}
+                    {Math.min(readyPage * PAGE_SIZE, readyItems.length)} trên tổng số{' '}
+                    {readyItems.length} sản phẩm đã có đủ
+                  </span>
+                  <Pagination
+                    page={readyPage}
+                    totalPages={totalReadyPages}
+                    onChange={setReadyPage}
+                  />
+                </div>
+              )}
+            </>
           )}
         </TabsContent>
 
         {/* Tab Tất cả */}
         <TabsContent value="all" className="space-y-3">
-          {items.map((item) => (
-            <ShoppingGapItemRow key={item.ingredientId || item.ingredientName} item={item} />
-          ))}
+          {items.length === 0 ? (
+            <div className="p-8 text-center rounded-2xl border border-dashed border-neutral-200 dark:border-neutral-800 text-muted-foreground text-sm">
+              Chưa có nguyên liệu nào trong danh sách.
+            </div>
+          ) : (
+            <>
+              <div className="space-y-3">
+                {paginatedAllItems.map((item) => (
+                  <ShoppingGapItemRow
+                    key={item.ingredientId || item.ingredientName}
+                    item={item}
+                    hideSourceMeals
+                    hideConversion
+                  />
+                ))}
+              </div>
+
+              {totalAllPages > 1 && (
+                <div className="pt-3 flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-neutral-200 dark:border-neutral-800 text-xs text-muted-foreground">
+                  <span>
+                    Hiển thị {(allPage - 1) * PAGE_SIZE + 1} -{' '}
+                    {Math.min(allPage * PAGE_SIZE, items.length)} trên tổng số {items.length} sản
+                    phẩm
+                  </span>
+                  <Pagination page={allPage} totalPages={totalAllPages} onChange={setAllPage} />
+                </div>
+              )}
+            </>
+          )}
         </TabsContent>
       </Tabs>
     </div>

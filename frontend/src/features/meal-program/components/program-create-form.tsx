@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -25,6 +25,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useCreateMealProgramMutation } from '../queries/meal-program.queries';
+import { isAxiosError, getApiErrorMessage } from '@/lib/api-error';
 import type { MealProgramGoalDto } from '../types/meal-program.dto';
 import {
   formatVietnameseDate,
@@ -97,9 +98,18 @@ const createProgramSchema = z.object({
 
 type CreateProgramFormData = z.infer<typeof createProgramSchema>;
 
+function createIdempotencyKey(): string {
+  const id =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return `meal-program-${id}`;
+}
+
 export const ProgramCreateForm: React.FC = () => {
   const router = useRouter();
   const createMutation = useCreateMealProgramMutation();
+  const pendingCreate = useRef<{ signature: string; idempotencyKey: string } | null>(null);
 
   const detectedTimezone =
     typeof Intl !== 'undefined'
@@ -159,22 +169,37 @@ export const ProgramCreateForm: React.FC = () => {
   };
 
   const onSubmit = async (data: CreateProgramFormData) => {
+    const request = {
+      title: data.title.trim(),
+      goal: data.goal,
+      startDate: data.startDate,
+      timezone: data.timezone,
+      horizonWeeks: data.horizonWeeks,
+      alternativesPerWeek: 2,
+    };
+    const signature = JSON.stringify(request);
+    if (pendingCreate.current?.signature !== signature) {
+      pendingCreate.current = { signature, idempotencyKey: createIdempotencyKey() };
+    }
+
     try {
       const created = await createMutation.mutateAsync({
-        title: data.title.trim(),
-        goal: data.goal,
-        startDate: data.startDate,
-        timezone: data.timezone,
-        horizonWeeks: data.horizonWeeks,
-        alternativesPerWeek: 2,
+        ...request,
+        idempotencyKey: pendingCreate.current.idempotencyKey,
       });
 
+      pendingCreate.current = null;
       toast.success('Khởi tạo lộ trình dinh dưỡng thành công!');
       router.push(`/meal-programs/${created.id}`);
     } catch (err: unknown) {
-      const errorMsg =
-        err instanceof Error ? err.message : 'Có lỗi xảy ra khi tạo lộ trình. Vui lòng thử lại.';
-      toast.error(errorMsg);
+      if (isAxiosError(err) && (err.code === 'ECONNABORTED' || !err.response)) {
+        toast.error('Chưa nhận được phản hồi từ máy chủ', {
+          description:
+            'Lộ trình có thể vẫn đang được tạo. Hãy thử lại với cùng thông tin để tiếp tục yêu cầu trước.',
+        });
+        return;
+      }
+      toast.error(getApiErrorMessage(err, 'Không thể tạo lộ trình. Vui lòng thử lại.'));
     }
   };
 
