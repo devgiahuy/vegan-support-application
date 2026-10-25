@@ -48,14 +48,19 @@ export function ExclusionEditor({
         </Badge>
       </div>
 
-      {value.length > 0 && (
+      {value.length > 0 ? (
         <ul className="flex flex-wrap gap-1.5">
           {value.map((e) => (
             <li
               key={e.ingredientName.toLowerCase()}
-              className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs text-secondary-foreground"
+              className="inline-flex items-center gap-1.5 rounded-full bg-secondary/80 border border-secondary-foreground/10 px-3 py-1 text-xs text-secondary-foreground"
             >
-              {e.ingredientName}
+              <span className="font-medium">{e.ingredientName}</span>
+              {e.reason && (
+                <span className="text-[10px] text-muted-foreground bg-background/60 rounded px-1.5 py-0.5">
+                  {e.reason}
+                </span>
+              )}
               <button
                 type="button"
                 aria-label={`Xóa kiêng ${e.ingredientName}`}
@@ -66,13 +71,17 @@ export function ExclusionEditor({
                     )
                   )
                 }
-                className="text-muted-foreground hover:text-foreground"
+                className="ml-0.5 text-muted-foreground hover:text-destructive transition-colors p-0.5 rounded-full hover:bg-background/80 cursor-pointer"
               >
-                <X className="h-3 w-3" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </li>
           ))}
         </ul>
+      ) : (
+        <p className="text-xs text-muted-foreground italic">
+          Chưa có nguyên liệu kiêng nào. Nhập tên nguyên liệu bạn muốn loại trừ hoàn toàn bên dưới.
+        </p>
       )}
 
       <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">

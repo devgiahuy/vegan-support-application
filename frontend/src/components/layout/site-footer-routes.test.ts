@@ -8,6 +8,7 @@ describe('site-footer-routes', () => {
     expect(HIDDEN_FOOTER_PREFIXES).toContain('/restaurants');
     expect(HIDDEN_FOOTER_PREFIXES).toContain('/pantry');
     expect(HIDDEN_FOOTER_PREFIXES).toContain('/receipts/scan');
+    expect(HIDDEN_FOOTER_PREFIXES).toContain('/profile');
   });
 
   it('hides footer on /pantry, /pantry/scan and /receipts/scan', () => {
@@ -32,13 +33,17 @@ describe('site-footer-routes', () => {
     expect(isFooterHidden('/assistant')).toBe(true);
   });
 
+  it('hides footer on /profile and subpaths', () => {
+    expect(isFooterHidden('/profile')).toBe(true);
+    expect(isFooterHidden('/profile/settings')).toBe(true);
+  });
+
   it('keeps footer visible on content routes', () => {
     expect(isFooterHidden('/')).toBe(false);
     expect(isFooterHidden('/recipes')).toBe(false);
     expect(isFooterHidden('/recipes/rec-001')).toBe(false);
     expect(isFooterHidden('/categories')).toBe(false);
     expect(isFooterHidden('/blogs')).toBe(false);
-    expect(isFooterHidden('/profile')).toBe(false);
   });
 
   it('handles null, empty, or undefined safely', () => {

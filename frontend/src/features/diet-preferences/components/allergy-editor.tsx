@@ -22,6 +22,12 @@ const SEVERITY_OPTIONS = [
   { value: 'SEVERE', label: 'Nặng' },
 ] as const;
 
+const SEVERITY_LABELS: Record<string, string> = {
+  MILD: 'Nhẹ',
+  MODERATE: 'Trung bình',
+  SEVERE: 'Nặng',
+};
+
 /**
  * Quản lý dị ứng. Dị ứng luôn là ràng buộc cứng ở backend — UI chỉ thêm/xóa,
  * không có công tắc tắt.
@@ -64,29 +70,37 @@ export function AllergyEditor({
         </Badge>
       </div>
 
-      {value.length > 0 && (
+      {value.length > 0 ? (
         <ul className="flex flex-wrap gap-1.5">
           {value.map((a) => (
             <li
               key={a.allergenCode}
-              className="inline-flex items-center gap-1 rounded-full bg-secondary px-2.5 py-1 text-xs text-secondary-foreground"
-              title={a.severity ? `Mức độ: ${a.severity}` : undefined}
+              className="inline-flex items-center gap-1.5 rounded-full bg-secondary/80 border border-secondary-foreground/10 px-3 py-1 text-xs text-secondary-foreground"
+              title={
+                a.severity ? `Mức độ: ${SEVERITY_LABELS[a.severity] ?? a.severity}` : undefined
+              }
             >
-              {a.label}
+              <span className="font-medium">{a.label || a.allergenCode}</span>
               {a.severity && (
-                <span className="text-[10px] text-muted-foreground">· {a.severity}</span>
+                <span className="text-[10px] text-muted-foreground bg-background/60 rounded px-1.5 py-0.5">
+                  {SEVERITY_LABELS[a.severity] ?? a.severity}
+                </span>
               )}
               <button
                 type="button"
-                aria-label={`Xóa dị ứng ${a.label}`}
+                aria-label={`Xóa dị ứng ${a.label || a.allergenCode}`}
                 onClick={() => onChange(value.filter((x) => x.allergenCode !== a.allergenCode))}
-                className="text-muted-foreground hover:text-foreground"
+                className="ml-0.5 text-muted-foreground hover:text-destructive transition-colors p-0.5 rounded-full hover:bg-background/80 cursor-pointer"
               >
-                <X className="h-3 w-3" />
+                <X className="h-3.5 w-3.5" />
               </button>
             </li>
           ))}
         </ul>
+      ) : (
+        <p className="text-xs text-muted-foreground italic">
+          Chưa có dị ứng nào. Thêm dị ứng bên dưới nếu bạn có kiêng kỵ dị ứng thực phẩm.
+        </p>
       )}
 
       <div className="grid gap-2 sm:grid-cols-[1fr_1fr_1fr_auto]">

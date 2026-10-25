@@ -1,5 +1,4 @@
 /**
-/**
  * Danh sách tiền tố đường dẫn sẽ ẩn SiteFooter.
  * Bao gồm:
  * - /assistant (canvas AI toàn màn hình)
@@ -7,6 +6,7 @@
  * - /restaurants (bản đồ tìm kiếm quán chay toàn màn hình)
  * - /pantry (quản lý tủ bếp gia đình & quét tủ lạnh)
  * - /receipts/scan (quét và kiểm duyệt hóa đơn OCR)
+ * - /profile (hồ sơ cá nhân và quản lý dữ liệu người dùng)
  */
 export const HIDDEN_FOOTER_PREFIXES: readonly string[] = [
   '/assistant',
@@ -14,6 +14,7 @@ export const HIDDEN_FOOTER_PREFIXES: readonly string[] = [
   '/restaurants',
   '/pantry',
   '/receipts/scan',
+  '/profile',
 ];
 
 /**

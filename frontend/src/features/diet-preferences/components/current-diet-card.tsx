@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Pencil, Settings2 } from 'lucide-react';
+import { Ban, Pencil, Settings2, ShieldAlert } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,6 +11,12 @@ import type { DietPreferenceSummary } from '@/features/profile/types/profile.mod
 import { PracticeSchedule } from '@/common/enums';
 import { getApiErrorCode } from '@/lib/api-error';
 
+const SEVERITY_LABELS: Record<string, string> = {
+  MILD: 'Nhẹ',
+  MODERATE: 'Trung bình',
+  SEVERE: 'Nặng',
+};
+
 function toShortDate(iso: string): string {
   const [, m, day] = iso.split('-');
   return `${day}/${m}`;
@@ -19,7 +25,8 @@ function toShortDate(iso: string): string {
 /**
  * Card tóm tắt chế độ ăn hiện tại. Với lịch chay kỳ, cho phép thêm/bớt ngày
  * ngay tại đây (lưu qua `PUT /users/me/diet-schedule`), không cần chạy lại wizard.
- * Hỗ trợ nút "Thay đổi chế độ ăn" để mở wizard chỉnh sửa khi cần.
+ * Hiển thị trực quan danh sách dị ứng & nguyên liệu kiêng đã lưu.
+ * Hỗ trợ nút "Thay đổi chế độ ăn" để mở wizard chỉnh sửa/xóa/thêm khi cần.
  */
 export function CurrentDietCard({
   summary,
@@ -88,11 +95,70 @@ export function CurrentDietCard({
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-1.5 rounded-full text-xs border-primary/40 text-primary hover:bg-primary/5"
+                className="gap-1.5 rounded-full text-xs border-primary/40 text-primary hover:bg-primary/5 cursor-pointer"
                 onClick={onChangeDiet}
               >
                 <Settings2 className="h-3.5 w-3.5" /> Thay đổi chế độ ăn
               </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Khối Dị ứng & Nguyên liệu kiêng đã lưu */}
+        <div className="grid gap-3 sm:grid-cols-2 pt-1">
+          {/* Dị ứng */}
+          <div className="rounded-xl border border-border/70 bg-muted/20 p-3.5 text-xs sm:text-sm space-y-2">
+            <div className="flex items-center gap-1.5 font-semibold text-foreground">
+              <ShieldAlert className="h-4 w-4 text-amber-500 shrink-0" />
+              <span>Dị ứng ({summary.allergies?.length ?? 0}):</span>
+            </div>
+            {summary.allergies && summary.allergies.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {summary.allergies.map((a) => (
+                  <span
+                    key={a.allergenCode}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-secondary/80 border border-secondary-foreground/10 px-2.5 py-1 text-xs text-secondary-foreground"
+                  >
+                    <span className="font-medium">{a.label || a.allergenCode}</span>
+                    {a.severity && (
+                      <span className="text-[10px] text-muted-foreground bg-background/60 rounded px-1.5 py-0.5">
+                        {SEVERITY_LABELS[a.severity] ?? a.severity}
+                      </span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground italic">Chưa có dị ứng nào được lưu.</p>
+            )}
+          </div>
+
+          {/* Nguyên liệu kiêng */}
+          <div className="rounded-xl border border-border/70 bg-muted/20 p-3.5 text-xs sm:text-sm space-y-2">
+            <div className="flex items-center gap-1.5 font-semibold text-foreground">
+              <Ban className="h-4 w-4 text-destructive shrink-0" />
+              <span>Nguyên liệu kiêng ({summary.ingredientExclusions?.length ?? 0}):</span>
+            </div>
+            {summary.ingredientExclusions && summary.ingredientExclusions.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {summary.ingredientExclusions.map((e) => (
+                  <span
+                    key={e.ingredientName}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-secondary/80 border border-secondary-foreground/10 px-2.5 py-1 text-xs text-secondary-foreground"
+                  >
+                    <span className="font-medium">{e.ingredientName}</span>
+                    {e.reason && (
+                      <span className="text-[10px] text-muted-foreground bg-background/60 rounded px-1.5 py-0.5">
+                        {e.reason}
+                      </span>
+                    )}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground italic">
+                Chưa có nguyên liệu kiêng nào được lưu.
+              </p>
             )}
           </div>
         </div>

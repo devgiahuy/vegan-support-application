@@ -59,17 +59,64 @@ export function DietWizard({
     tradition: initialSelection?.tradition ?? initial?.tradition,
   });
   const [confirmed, setConfirmed] = React.useState<DietRulePreviewRequestDto | null>(null);
-  const [ruleOverrides, setRuleOverrides] = React.useState<Record<string, boolean>>({});
+  const [ruleOverrides, setRuleOverrides] = React.useState<Record<string, boolean>>(() => {
+    if (!initial?.rules) return {};
+    const map: Record<string, boolean> = {};
+    for (const r of initial.rules) {
+      map[r.ruleDefinitionId] = r.enabled;
+    }
+    return map;
+  });
   const [allergies, setAllergies] = React.useState<Allergy[]>(initial?.allergies ?? []);
   const [exclusions, setExclusions] = React.useState<IngredientExclusion[]>(
     initial?.ingredientExclusions ?? []
   );
   // Ngày chay kỳ chọn trong bước review. Backend bắt buộc `scheduleDates` kèm
   // trong preferences khi PERIODIC (đã verify: thiếu -> `DIET_SCHEDULE_REQUIRED`).
-  const [scheduleDates, setScheduleDates] = React.useState<string[]>([]);
+  const [scheduleDates, setScheduleDates] = React.useState<string[]>(
+    initial?.schedule?.dates ??
+      (initial as unknown as { scheduleDates?: string[] })?.scheduleDates ??
+      []
+  );
   const [saved, setSaved] = React.useState<DietPreference | null>(null);
   const [saveError, setSaveError] = React.useState<string | null>(null);
   const [configUnavailable, setConfigUnavailable] = React.useState(false);
+
+  // Đồng bộ lại khi `initial` được truyền vào hoặc nạp xong từ query
+  React.useEffect(() => {
+    if (initial) {
+      if (initial.allergies && initial.allergies.length > 0) {
+        setAllergies(initial.allergies);
+      }
+      if (initial.ingredientExclusions && initial.ingredientExclusions.length > 0) {
+        setExclusions(initial.ingredientExclusions);
+      }
+      const dates =
+        initial.schedule?.dates ??
+        (initial as unknown as { scheduleDates?: string[] })?.scheduleDates ??
+        [];
+      if (dates.length > 0) {
+        setScheduleDates(dates);
+      }
+      if (initial.dietPattern && initial.practiceSchedule && initial.tradition) {
+        setSelection((prev) => ({
+          dietPattern: prev.dietPattern ?? initial.dietPattern,
+          practiceSchedule: prev.practiceSchedule ?? initial.practiceSchedule,
+          tradition: prev.tradition ?? initial.tradition,
+        }));
+      }
+      if (initial.rules && initial.rules.length > 0) {
+        setRuleOverrides((prev) => {
+          if (Object.keys(prev).length > 0) return prev;
+          const map: Record<string, boolean> = {};
+          for (const r of initial.rules) {
+            map[r.ruleDefinitionId] = r.enabled;
+          }
+          return map;
+        });
+      }
+    }
+  }, [initial]);
 
   const previewQuery = useDietPreviewQuery(confirmed);
   const saveMutation = useSaveDietPreferencesMutation();
@@ -86,13 +133,8 @@ export function DietWizard({
     setSaveError(null);
     setConfigUnavailable(false);
     setSaved(null);
-    // Đổi sang bộ ba mới -> reset toggle/editors về mặc định của preview sắp về.
     if (!sameSelection(next, confirmed)) {
       setRuleOverrides({});
-      if (!sameSelection(next, initial)) {
-        setAllergies([]);
-        setExclusions([]);
-      }
     }
     setConfirmed(next);
     setStep('review');
@@ -205,7 +247,11 @@ export function DietWizard({
       {/* Stepper chỉ dẫn các bước rõ ràng */}
       <div className="flex items-center justify-between border-b pb-3 mb-2">
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setStep('select')}
+            className="flex items-center gap-2 cursor-pointer text-left"
+          >
             <span
               className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
                 step === 'select'
@@ -222,11 +268,24 @@ export function DietWizard({
             >
               Chọn bộ ba chế độ ăn
             </span>
-          </div>
+          </button>
 
           <span className="text-muted-foreground/40 text-xs">→</span>
 
-          <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              if (selection.dietPattern && selection.practiceSchedule && selection.tradition) {
+                startPreview();
+              }
+            }}
+            disabled={!selection.dietPattern || !selection.practiceSchedule || !selection.tradition}
+            className={`flex items-center gap-2 text-left ${
+              selection.dietPattern && selection.practiceSchedule && selection.tradition
+                ? 'cursor-pointer'
+                : 'cursor-not-allowed opacity-60'
+            }`}
+          >
             <span
               className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
                 step === 'review'
@@ -245,7 +304,7 @@ export function DietWizard({
             >
               Tùy chỉnh quy tắc &amp; kiêng kỵ
             </span>
-          </div>
+          </button>
         </div>
 
         {onCancel && step !== 'done' && (
