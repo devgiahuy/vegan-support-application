@@ -26,10 +26,15 @@ export function NotificationItem({
     </div>
   );
 
-  if (!item.link) return content;
-
   return (
-    <button type="button" onClick={() => onOpen(item)} className="block w-full">
+    <button
+      type="button"
+      onClick={() => onOpen(item)}
+      className={cn(
+        'block w-full text-left',
+        item.link || !item.read ? 'cursor-pointer' : 'cursor-default'
+      )}
+    >
       {content}
     </button>
   );

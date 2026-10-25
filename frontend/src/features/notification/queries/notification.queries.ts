@@ -8,7 +8,8 @@ import type { AppNotification, UnreadCount } from '../types/notification.model';
 
 export const NOTIFICATION_KEYS = {
   all: ['notifications'] as const,
-  list: (params?: GetNotificationsParams) => [...NOTIFICATION_KEYS.all, 'list', params] as const,
+  lists: () => [...NOTIFICATION_KEYS.all, 'list'] as const,
+  list: (params?: GetNotificationsParams) => [...NOTIFICATION_KEYS.lists(), params] as const,
   unreadCount: () => [...NOTIFICATION_KEYS.all, 'unread-count'] as const,
 };
 
@@ -58,15 +59,15 @@ export function useMarkReadMutation() {
 
       // Lưu trạng thái trước đó
       const previousList = queryClient.getQueriesData<PaginationResult<AppNotification>>({
-        queryKey: NOTIFICATION_KEYS.all,
+        queryKey: NOTIFICATION_KEYS.lists(),
       });
       const previousCount = queryClient.getQueryData<UnreadCount>(NOTIFICATION_KEYS.unreadCount());
 
       // Cập nhật lạc quan danh sách
       queryClient.setQueriesData<PaginationResult<AppNotification>>(
-        { queryKey: NOTIFICATION_KEYS.all },
+        { queryKey: NOTIFICATION_KEYS.lists() },
         (old) => {
-          if (!old) return old;
+          if (!old || !Array.isArray(old.items)) return old;
           return {
             ...old,
             items: old.items.map((item) => (item.id === id ? { ...item, read: true } : item)),
@@ -74,15 +75,22 @@ export function useMarkReadMutation() {
         }
       );
 
-      // Cập nhật lạc quan số đếm
-      queryClient.setQueryData<UnreadCount>(NOTIFICATION_KEYS.unreadCount(), (old) => {
-        if (!old) return old;
-        const newCount = Math.max(0, old.count - 1);
-        return {
-          count: newCount,
-          capped: newCount === 0 ? '' : newCount > 9 ? '9+' : String(newCount),
-        };
-      });
+      // Cập nhật lạc quan số đếm nếu item chưa đọc
+      const foundInCache = previousList
+        .flatMap(([, listData]) => listData?.items ?? [])
+        .find((item) => item.id === id);
+      const isUnread = foundInCache ? !foundInCache.read : true;
+
+      if (isUnread) {
+        queryClient.setQueryData<UnreadCount>(NOTIFICATION_KEYS.unreadCount(), (old) => {
+          if (!old) return old;
+          const newCount = Math.max(0, old.count - 1);
+          return {
+            count: newCount,
+            capped: newCount === 0 ? '' : newCount > 9 ? '9+' : String(newCount),
+          };
+        });
+      }
 
       return { previousList, previousCount };
     },
@@ -112,15 +120,15 @@ export function useMarkAllReadMutation() {
       await queryClient.cancelQueries({ queryKey: NOTIFICATION_KEYS.all });
 
       const previousList = queryClient.getQueriesData<PaginationResult<AppNotification>>({
-        queryKey: NOTIFICATION_KEYS.all,
+        queryKey: NOTIFICATION_KEYS.lists(),
       });
       const previousCount = queryClient.getQueryData<UnreadCount>(NOTIFICATION_KEYS.unreadCount());
 
       // Cập nhật tất cả item sang read: true
       queryClient.setQueriesData<PaginationResult<AppNotification>>(
-        { queryKey: NOTIFICATION_KEYS.all },
+        { queryKey: NOTIFICATION_KEYS.lists() },
         (old) => {
-          if (!old) return old;
+          if (!old || !Array.isArray(old.items)) return old;
           return {
             ...old,
             items: old.items.map((item) => ({ ...item, read: true })),
