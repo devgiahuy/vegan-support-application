@@ -13,6 +13,8 @@ export interface TagInputProps {
   disabled?: boolean;
   className?: string;
   quickSuggestions?: string[];
+  id?: string;
+  'aria-describedby'?: string;
 }
 
 export function TagInput({
@@ -23,6 +25,8 @@ export function TagInput({
   disabled = false,
   className,
   quickSuggestions,
+  id,
+  'aria-describedby': ariaDescribedBy,
 }: TagInputProps) {
   const [inputValue, setInputValue] = React.useState('');
   const inputRef = React.useRef<HTMLInputElement>(null);
@@ -90,6 +94,8 @@ export function TagInput({
         {value.length < maxTags && (
           <input
             ref={inputRef}
+            id={id}
+            aria-describedby={ariaDescribedBy}
             type="text"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}

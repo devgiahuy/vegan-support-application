@@ -77,6 +77,25 @@ export function stepsToBody(
   return body || fallback;
 }
 
+/**
+ * Tách ngược `body` markdown thành danh sách bước (ngược với `stepsToBody`).
+ * Backend không trả steps structured nên form sửa phải dựng lại từ `## Bước N`.
+ * Body không có heading được coi là một bước duy nhất.
+ */
+export function bodyToSteps(
+  body: string | undefined
+): { stepNumber: number; instruction: string }[] {
+  const text = (body || '').trim();
+  if (!text) return [];
+  const parts = text.split(/^##\s*Bước\s*\d+\s*$/m);
+  if (parts.length === 1) return [{ stepNumber: 1, instruction: text }];
+  return parts
+    .slice(1)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((instruction, idx) => ({ stepNumber: idx + 1, instruction }));
+}
+
 export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
   toModel(dto: RecipeDetailDto | null | undefined): Recipe {
     const status = parsePostStatus(safeString(pickField(dto, ['status'], 'DRAFT')));

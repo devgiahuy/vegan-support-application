@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { recipeMapper, stepsToBody } from './recipe.mapper';
+import { bodyToSteps, recipeMapper, stepsToBody } from './recipe.mapper';
 import { PostStatus, RecipeDifficulty } from '@/common/enums';
 import type { RecipeDetailDto } from '../types/recipe.dto';
 
@@ -302,10 +302,10 @@ describe('RecipeMapper', () => {
 
   it('maps isExpertAuthor to true when author role is NUTRITION_EXPERT or EXPERIENCED_COOK', () => {
     const dto = backendRecipeDto();
-    (dto.author as any) = {
+    dto.author = {
       ...dto.author,
       role: 'NUTRITION_EXPERT',
-    };
+    } as unknown as RecipeDetailDto['author'];
     const model = recipeMapper.toModel(dto);
     expect(model.isExpertAuthor).toBe(true);
     expect(model.author.isExpert).toBe(true);
@@ -316,5 +316,23 @@ describe('RecipeMapper', () => {
     const model = recipeMapper.toModel(dto);
     expect(model.isExpertAuthor).toBe(false);
     expect(model.author.isExpert).toBe(false);
+  });
+});
+
+describe('bodyToSteps', () => {
+  it('round-trips the markdown produced by stepsToBody', () => {
+    const steps = [
+      { stepNumber: 1, instruction: 'Cắt đậu và chiên vàng.' },
+      { stepNumber: 2, instruction: 'Rưới sốt cà chua\nđảo đều.' },
+    ];
+    expect(bodyToSteps(stepsToBody(steps, ''))).toEqual(steps);
+  });
+
+  it('treats a body without step headings as one step and empty body as none', () => {
+    expect(bodyToSteps('Trộn tất cả nguyên liệu.')).toEqual([
+      { stepNumber: 1, instruction: 'Trộn tất cả nguyên liệu.' },
+    ]);
+    expect(bodyToSteps('')).toEqual([]);
+    expect(bodyToSteps(undefined)).toEqual([]);
   });
 });

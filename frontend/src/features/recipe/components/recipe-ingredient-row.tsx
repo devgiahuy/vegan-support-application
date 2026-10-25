@@ -1,10 +1,11 @@
 'use client';
 
 import * as React from 'react';
-import { useWatch, type UseFormReturn } from 'react-hook-form';
-import { CheckCircle2, AlertCircle, Trash2 } from 'lucide-react';
+import { useFormState, useWatch, type UseFormReturn } from 'react-hook-form';
+import { CheckCircle2, AlertCircle, Loader2, Trash2, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { FieldError } from '@/components/ui/field';
 import {
   Select,
   SelectContent,
@@ -15,9 +16,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ResolutionMatch } from '@/common/enums';
 import { IngredientSuggestions } from '@/features/ingredient/components/ingredient-suggestions';
+import { useIngredientResolveQuery } from '@/features/ingredient/queries/ingredient.queries';
 import type { Ingredient } from '@/features/ingredient/types/ingredient.model';
 import type { RecipeFormValues } from '../schemas/recipe-form.schema';
+import { fieldDomId } from './recipe-editor-steps';
 
 /** Các đơn vị định lượng phổ biến trong nấu ăn chay */
 export const COMMON_UNITS_CONFIG = [
@@ -81,6 +85,31 @@ export function RecipeIngredientRow({
     name: `ingredients.${index}.ingredientId`,
   });
   const currentUnit = useWatch({ control: form.control, name: `ingredients.${index}.unit` }) || '';
+
+  // Tự liên kết danh mục chuẩn: dò tên khi dòng được nạp (bản nháp AI, trang sửa) và khi
+  // rời ô tên. Chỉ tự chọn khi backend trả EXACT; AMBIGUOUS phải để người dùng chọn.
+  const [resolveTarget, setResolveTarget] = React.useState(() =>
+    ingredientId ? '' : rawName.trim()
+  );
+  const resolveQuery = useIngredientResolveQuery(resolveTarget, !ingredientId);
+  const resolution =
+    !ingredientId && resolveTarget && resolveTarget === rawName.trim() ? resolveQuery : null;
+  const exactMatch =
+    resolution?.data?.match === ResolutionMatch.EXACT && resolution.data.candidates.length === 1
+      ? resolution.data.candidates[0]
+      : undefined;
+
+  React.useEffect(() => {
+    if (!exactMatch) return;
+    form.setValue(`ingredients.${index}.name`, exactMatch.canonicalName, { shouldValidate: true });
+    form.setValue(`ingredients.${index}.ingredientId`, exactMatch.id, { shouldDirty: true });
+  }, [exactMatch, form, index]);
+  const { errors } = useFormState({ control: form.control, name: `ingredients.${index}` });
+  const rowErrors = errors.ingredients?.[index];
+  const errorList = [rowErrors?.name, rowErrors?.amount, rowErrors?.unit];
+  const hasError = errorList.some(Boolean);
+  const errorId = `${fieldDomId(`ingredients.${index}`)}-error`;
+
   // Đóng dropdown khi click ngoài
   React.useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -100,92 +129,136 @@ export function RecipeIngredientRow({
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    form.setValue(`ingredients.${index}.name`, val, { shouldValidate: true });
-    // Nếu sửa text khác với tên chuẩn ban đầu, reset ingredientId
+    form.setValue(`ingredients.${index}.name`, val, {
+      shouldValidate: Boolean(rowErrors?.name),
+      shouldDirty: true,
+    });
+    // Sửa tên khác tên chuẩn → bỏ liên kết cũ (backend trả INGREDIENT_ID_NAME_MISMATCH nếu giữ).
     if (ingredientId) {
-      form.setValue(`ingredients.${index}.ingredientId`, null, { shouldValidate: true });
+      form.setValue(`ingredients.${index}.ingredientId`, null, { shouldDirty: true });
     }
     setIsOpen(true);
   };
 
-  return (
-    <div className="rounded-xl border bg-card p-3 shadow-xs transition-colors hover:border-primary/40 space-y-2">
-      <div className="grid grid-cols-12 gap-2 sm:gap-3 items-center">
-        {/* Tên nguyên liệu + Auto-suggest dropdown */}
-        <div className="col-span-12 sm:col-span-5 relative" ref={dropdownRef}>
-          <div className="relative">
-            <Input
-              value={rawName}
-              onChange={handleNameChange}
-              onFocus={() => {
-                if (rawName.trim().length >= 2) setIsOpen(true);
-              }}
-              placeholder="Tên nguyên liệu (vd: Đậu hũ, Nấm đùi gà...)"
-              className="h-10 rounded-lg text-sm pr-8"
-            />
-          </div>
+  const setUnit = (unit: string) =>
+    form.setValue(`ingredients.${index}.unit`, unit, {
+      shouldValidate: Boolean(rowErrors?.unit),
+      shouldDirty: true,
+    });
 
-          {/* Trạng thái chuẩn hóa */}
-          <div className="mt-1 flex items-center gap-1.5">
+  const amountField = form.register(`ingredients.${index}.amount` as const, {
+    valueAsNumber: true,
+  });
+
+  return (
+    <div
+      data-invalid={hasError || undefined}
+      className="rounded-xl border bg-card p-3 shadow-xs transition-colors hover:border-primary/40 data-[invalid]:border-destructive/60"
+    >
+      <div className="grid grid-cols-12 items-start gap-2 sm:gap-3">
+        <span
+          aria-hidden
+          className="col-span-1 mt-2.5 hidden text-xs font-semibold text-muted-foreground tabular-nums sm:block"
+        >
+          {index + 1}.
+        </span>
+
+        {/* Tên nguyên liệu + gợi ý từ danh mục chuẩn */}
+        <div className="relative col-span-12 sm:col-span-5" ref={dropdownRef}>
+          <Input
+            id={fieldDomId(`ingredients.${index}.name`)}
+            value={rawName}
+            onChange={handleNameChange}
+            onFocus={() => {
+              if (rawName.trim().length >= 2) setIsOpen(true);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setIsOpen(false);
+            }}
+            onBlur={() => {
+              if (!ingredientId) setResolveTarget(rawName.trim());
+            }}
+            placeholder="Tên nguyên liệu, vd: Đậu hũ"
+            aria-label={`Tên nguyên liệu ${index + 1}`}
+            aria-invalid={Boolean(rowErrors?.name)}
+            aria-describedby={hasError ? errorId : undefined}
+            autoComplete="off"
+            className="h-10 rounded-lg text-sm"
+          />
+
+          <div className="mt-1 flex min-h-4 items-center gap-1.5">
             {ingredientId ? (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="h-3 w-3" /> Chuẩn hóa (Khớp cơ sở dữ liệu)
+                <CheckCircle2 aria-hidden className="h-3 w-3" /> Đã liên kết danh mục chuẩn
+              </span>
+            ) : resolution?.isFetching || exactMatch ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                <Loader2 aria-hidden className="h-3 w-3 animate-spin" /> Đang tìm trong danh mục
+                chuẩn…
               </span>
             ) : rawName.trim().length > 0 ? (
-              <span
-                className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400 cursor-help"
-                title="Nguyên liệu tự do có thể bị ẩn đối với các tài khoản có chế độ ăn kiêng nghiêm ngặt cho tới khi được duyệt chuẩn."
-              >
-                <AlertCircle className="h-3 w-3" /> Tự do (Chưa liên kết chuẩn)
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                <AlertCircle aria-hidden className="h-3 w-3" />
+                {resolution?.data?.match === ResolutionMatch.AMBIGUOUS
+                  ? `Có ${resolution.data.candidates.length} nguyên liệu khớp — chọn một từ gợi ý`
+                  : resolution?.data?.match === ResolutionMatch.NONE
+                    ? 'Không có trong danh mục chuẩn — thử tên khác hoặc chọn từ gợi ý'
+                    : 'Chưa liên kết — chọn từ gợi ý để hiển thị cho người ăn kiêng'}
               </span>
             ) : null}
           </div>
 
-          {/* Dropdown gợi ý */}
           {isOpen && rawName.trim().length >= 2 && (
-            <div className="absolute left-0 top-full z-50 mt-1 w-full rounded-xl border bg-popover p-1 shadow-lg">
+            <div className="absolute top-11 left-0 z-50 w-full rounded-xl border bg-popover p-1 shadow-lg">
               <IngredientSuggestions query={rawName} onSelect={handleSelect} />
             </div>
           )}
         </div>
 
-        {/* Số lượng */}
-        <div className="col-span-4 sm:col-span-2">
+        {/* Định lượng */}
+        <div className="col-span-5 sm:col-span-2">
           <Input
+            id={fieldDomId(`ingredients.${index}.amount`)}
             type="number"
             step="any"
-            placeholder="Số lượng (vd: 150)"
+            min={0}
+            inputMode="decimal"
+            placeholder="Số lượng"
+            aria-label={`Định lượng nguyên liệu ${index + 1}`}
+            aria-invalid={Boolean(rowErrors?.amount)}
+            aria-describedby={hasError ? errorId : undefined}
             className="h-10 rounded-lg text-sm"
-            {...form.register(`ingredients.${index}.amount` as const, { valueAsNumber: true })}
+            {...amountField}
           />
         </div>
 
-        {/* Đơn vị (Dropdown chọn nhanh hoặc tự nhập) */}
-        <div className="col-span-4 sm:col-span-2">
+        {/* Đơn vị: chọn nhanh hoặc tự nhập */}
+        <div className="col-span-5 sm:col-span-3">
           {isCustomUnit ? (
             <div className="relative flex items-center">
               <Input
+                id={fieldDomId(`ingredients.${index}.unit`)}
                 value={currentUnit}
-                onChange={(e) =>
-                  form.setValue(`ingredients.${index}.unit`, e.target.value, {
-                    shouldValidate: true,
-                  })
-                }
-                placeholder="Nhập đơn vị..."
-                className="h-10 rounded-lg text-sm pr-7 bg-background"
+                onChange={(e) => setUnit(e.target.value)}
+                placeholder="Nhập đơn vị"
+                aria-label={`Đơn vị nguyên liệu ${index + 1}`}
+                aria-invalid={Boolean(rowErrors?.unit)}
+                className="h-10 rounded-lg bg-background pr-8 text-sm"
                 autoFocus
               />
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="icon"
                 onClick={() => {
                   setIsCustomUnit(false);
-                  form.setValue(`ingredients.${index}.unit`, 'g', { shouldValidate: true });
+                  setUnit('g');
                 }}
-                title="Quay lại danh sách chọn nhanh"
-                className="absolute right-2 text-muted-foreground hover:text-foreground text-xs p-1"
+                aria-label="Quay lại danh sách đơn vị"
+                className="absolute right-0.5 size-8 text-muted-foreground"
               >
-                ✕
-              </button>
+                <X aria-hidden className="size-3.5" />
+              </Button>
             </div>
           ) : (
             <Select
@@ -193,14 +266,18 @@ export function RecipeIngredientRow({
               onValueChange={(val) => {
                 if (val === '__custom__') {
                   setIsCustomUnit(true);
-                  form.setValue(`ingredients.${index}.unit`, '', { shouldValidate: true });
+                  setUnit('');
                 } else {
-                  setIsCustomUnit(false);
-                  form.setValue(`ingredients.${index}.unit`, val, { shouldValidate: true });
+                  setUnit(val);
                 }
               }}
             >
-              <SelectTrigger className="h-10 rounded-lg text-sm w-full bg-background border-input">
+              <SelectTrigger
+                id={fieldDomId(`ingredients.${index}.unit`)}
+                aria-label={`Đơn vị nguyên liệu ${index + 1}`}
+                aria-invalid={Boolean(rowErrors?.unit)}
+                className="h-10 w-full rounded-lg bg-background text-sm"
+              >
                 <SelectValue placeholder="Đơn vị" />
               </SelectTrigger>
               <SelectContent className="max-h-64">
@@ -208,7 +285,7 @@ export function RecipeIngredientRow({
                   <React.Fragment key={group.category}>
                     {groupIdx > 0 && <SelectSeparator className="my-1" />}
                     <SelectGroup>
-                      <SelectLabel className="text-[11px] font-semibold text-muted-foreground uppercase px-2 py-1">
+                      <SelectLabel className="px-2 py-1 text-[11px] font-semibold text-muted-foreground uppercase">
                         {group.category}
                       </SelectLabel>
                       {group.units.map((u) => (
@@ -224,7 +301,7 @@ export function RecipeIngredientRow({
                   <>
                     <SelectSeparator className="my-1" />
                     <SelectGroup>
-                      <SelectLabel className="text-[11px] font-semibold text-muted-foreground uppercase px-2 py-1">
+                      <SelectLabel className="px-2 py-1 text-[11px] font-semibold text-muted-foreground uppercase">
                         Đơn vị hiện tại
                       </SelectLabel>
                       <SelectItem value={currentUnit} className="text-sm">
@@ -235,37 +312,36 @@ export function RecipeIngredientRow({
                 )}
 
                 <SelectSeparator className="my-1" />
-                <SelectItem value="__custom__" className="text-sm text-primary font-medium">
-                  ✏️ Tự nhập đơn vị khác...
+                <SelectItem value="__custom__" className="text-sm font-medium text-primary">
+                  Tự nhập đơn vị khác…
                 </SelectItem>
               </SelectContent>
             </Select>
           )}
         </div>
 
-        {/* Ghi chú */}
-        <div className="col-span-3 sm:col-span-2">
-          <Input
-            placeholder="Ghi chú (sơ chế...)"
-            className="h-10 rounded-lg text-sm"
-            {...form.register(`ingredients.${index}.notes`)}
-          />
-        </div>
-
-        {/* Nút xóa */}
-        <div className="col-span-1 flex justify-end">
+        <div className="col-span-2 flex justify-end sm:col-span-1">
           <Button
             type="button"
             variant="ghost"
             size="icon"
             onClick={onRemove}
             disabled={!canRemove}
-            className="h-9 w-9 text-muted-foreground hover:text-destructive"
+            aria-label={`Xóa nguyên liệu ${index + 1}`}
+            className="size-10 text-muted-foreground hover:text-destructive"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 aria-hidden className="h-4 w-4" />
           </Button>
         </div>
       </div>
+
+      {hasError && (
+        <FieldError
+          id={errorId}
+          className="mt-1 text-xs sm:pl-[8.33%]"
+          errors={errorList.filter(Boolean)}
+        />
+      )}
     </div>
   );
 }
