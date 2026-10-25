@@ -223,7 +223,10 @@ export class DietMapper extends BaseMapper<DietRuleDto, DietRule> {
       rules: input.rules
         .filter((r) => r.ruleDefinitionId.length > 0)
         .map((r) => ({ ruleDefinitionId: r.ruleDefinitionId, enabled: r.enabled })),
-      scheduleDates: (input.scheduleDates ?? []).filter((d) => DATE_RE.test(d)),
+      // Backend chỉ nhận `scheduleDates` khi chay kỳ; caller bỏ trường này cho lịch khác.
+      ...(input.scheduleDates !== undefined
+        ? { scheduleDates: input.scheduleDates.filter((d) => DATE_RE.test(d)) }
+        : {}),
       allergies: (input.allergies ?? [])
         .filter((a) => a.allergenCode.trim().length > 0)
         .map((a) => ({
@@ -239,7 +242,8 @@ export class DietMapper extends BaseMapper<DietRuleDto, DietRule> {
         .map((e) => ({
           ...(e.ingredientId ? { ingredientId: e.ingredientId } : {}),
           ingredientName: e.ingredientName.trim(),
-          reason: e.reason,
+          // Schema strict yêu cầu reason min(1) nếu có — bỏ khi rỗng.
+          ...(e.reason.trim() ? { reason: e.reason.trim() } : {}),
         })),
       ...(input.ingredientAllergies !== undefined
         ? {

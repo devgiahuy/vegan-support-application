@@ -1,5 +1,14 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-26] — Sửa lỗi lưu hồ sơ ăn và thiết kế lại luồng thiết lập chế độ ăn
+
+- **Yêu cầu**: Lưu chế độ ăn trả `VALIDATION_ERROR` vì `ingredientAllergies` mang thêm `ingredientName`/`ingredientActive`; thiết kế lại luồng "Thiết lập chế độ ăn".
+- **Nguyên nhân**: Wizard tự dựng payload từ UI Model thay vì đi qua `dietMapper.toSaveDto`; mapper còn gửi `reason: ""` (schema strict yêu cầu min 1) và luôn gửi `scheduleDates`.
+- **Sửa**: Wizard gửi qua mapper; mapper bỏ reason rỗng, chỉ gửi `scheduleDates` khi chay kỳ; thêm mapper test.
+- **Thiết kế lại**: 4 bước (Chế độ ăn → Quy tắc → Dị ứng & kiêng → Xác nhận) với thanh bước có thể quay lại, cột tóm tắt cập nhật trực tiếp trên desktop và bước xác nhận có nút "Sửa" từng phần. Ngày chay kỳ chọn ngay ở bước 1. Quy tắc chia "Luôn áp dụng"/"Tùy chọn". Dị ứng dùng một ô tìm kiếm cho nhóm dị ứng + nguyên liệu chuẩn, mức độ chỉnh trên từng mục (bỏ ô "mức độ cho lựa chọn tiếp theo"). Kiêng ưu tiên nguyên liệu chuẩn, tên tự nhập là dự phòng, lý do sửa trực tiếp trên từng mục. Không đổi API/contract.
+- **Sửa thêm khi QA**: Thẻ lựa chọn chưa tô viền khi chọn (Radix không dùng input → đổi sang `data-state=checked`); danh sách gợi ý nguyên liệu chung tràn khung (`ScrollArea` + `max-h` không giới hạn viewport → div cuộn thường, cũng áp dụng cho form công thức); nguồn quy tắc hiện mã thô `DIET_PATTERN` → "Kiểu ăn"/"Truyền thống"; thẻ "Chế độ ăn hiện tại" chưa hiện dị ứng theo nguyên liệu.
+- **Kiểm chứng**: TypeScript, ESLint diet-preferences/ingredient (chỉ còn 1 cảnh báo có sẵn ở `ingredient-search.tsx`), 104 test diet-preferences/profile/ingredient/recipe và `next build` pass. Browser (tài khoản member mẫu): đi đủ 4 bước, bật/tắt Chay kỳ hiện bộ chọn ngày, tìm "nấm" ra nguyên liệu chuẩn, đổi mức độ, kiêng "Dứa (thơm)"; PUT `diet-preferences` 200 và thẻ hồ sơ hiện 3 dị ứng + 1 kiêng. Không có tràn ngang ở 375px.
+
 ## [2026-10-26] — Công thức trùng tên và meal-programs thiếu các tuần sau
 
 - **Yêu cầu**: Tạo hai công thức giống nhau bị conflict; người kiểm thử khác báo meal-program chỉ có món tuần đầu, tuần 2–4 sinh lại bị 409. Người dùng không có mã lỗi/môi trường của người kiểm thử.
