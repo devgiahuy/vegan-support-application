@@ -155,38 +155,6 @@ export const mediaAssetDefinitions: readonly SeedMediaAssetItem[] = [
   // 2. HANDBOOK COVERS (Ảnh bìa cẩm nang - Tỉ lệ 16:9)
   // ==========================================
   {
-    publicId: 'seed/handbooks/b12-guide-cover',
-    secureUrl: '/seed/handbooks/b12-guide-cover.jpg',
-    resourceType: MediaResourceType.IMAGE,
-    kind: MediaKind.COVER_IMAGE,
-    ownerEmail: 'org.contributor@example.com',
-    mimeType: 'image/jpeg',
-    extension: '.jpg',
-    bytes: 52229,
-    width: 1200,
-    height: 675,
-    aspectRatio: '16:9',
-    recommendedResolution: '1200 x 675 px',
-    description:
-      'Infographic minh họa khoa học về cấu trúc Vitamin B12, men dinh dưỡng (Nutritional Yeast) và các nguồn thực phẩm tăng cường vi chất.',
-  },
-  {
-    publicId: 'seed/handbooks/protein-pairing-cover',
-    secureUrl: '/seed/handbooks/protein-pairing-cover.webp',
-    resourceType: MediaResourceType.IMAGE,
-    kind: MediaKind.COVER_IMAGE,
-    ownerEmail: 'org.contributor@example.com',
-    mimeType: 'image/webp',
-    extension: '.webp',
-    bytes: 256753,
-    width: 1200,
-    height: 675,
-    aspectRatio: '16:9',
-    recommendedResolution: '1200 x 675 px',
-    description:
-      'Hình chụp nghệ thuật bàn thực phẩm giàu đạm thực vật: các thố đậu gà, đậu lăng, tempeh, đậu hũ, hạt quinoa và yến mạch sắp đặt hài hòa.',
-  },
-  {
     publicId: 'seed/handbooks/meal-prep-cover',
     secureUrl: '/seed/handbooks/meal-prep-cover.jpg',
     resourceType: MediaResourceType.IMAGE,
@@ -202,79 +170,9 @@ export const mediaAssetDefinitions: readonly SeedMediaAssetItem[] = [
     description:
       'Hình chụp góc thẳng từ trên xuống (flat lay) 5 hộp thủy tinh meal prep đựng các món cơm gạo lứt, rau củ nướng và đậu hũ ngăn nắp cho 5 ngày làm việc.',
   },
-  {
-    publicId: 'seed/handbooks/vegan-traditions-cover',
-    secureUrl: '/seed/handbooks/vegan-traditions-cover.jpg',
-    resourceType: MediaResourceType.IMAGE,
-    kind: MediaKind.COVER_IMAGE,
-    ownerEmail: 'invited.contributor@example.com',
-    mimeType: 'image/jpeg',
-    extension: '.jpg',
-    bytes: 48554,
-    width: 1200,
-    height: 675,
-    aspectRatio: '16:9',
-    recommendedResolution: '1200 x 675 px',
-    description:
-      'Hình ảnh thanh tịnh nhẹ nhàng biểu trưng cho ẩm thực chay: đĩa gỏi cuốn xanh tươi, đóa hoa sen trắng và chén trà ấm thảo mộc.',
-  },
 
   // ==========================================
-  // 3. VIDEOS & VIDEO CLIPS (Tỉ lệ 16:9)
-  // ==========================================
-  {
-    publicId: 'seed/videos/video-pho-nuoc-dung',
-    secureUrl: '/seed/videos/video-pho-nuoc-dung.mp4',
-    resourceType: MediaResourceType.VIDEO,
-    kind: MediaKind.VIDEO,
-    ownerEmail: 'platform.contributor@example.com',
-    mimeType: 'video/mp4',
-    extension: '.mp4',
-    bytes: 13462323,
-    width: 1920,
-    height: 1080,
-    durationSeconds: 720,
-    aspectRatio: '16:9',
-    recommendedResolution: '1920 x 1080 px (FHD)',
-    description:
-      'Video hướng dẫn nấu nước dùng phở chay ngọt thanh tự nhiên từ hạt sen, nấm hương và củ cải trắng.',
-  },
-  {
-    publicId: 'seed/videos/video-bua-toi-15-phut',
-    secureUrl: '/seed/videos/video-bua-toi-15-phut.mp4',
-    resourceType: MediaResourceType.VIDEO,
-    kind: MediaKind.VIDEO,
-    ownerEmail: 'platform.contributor@example.com',
-    mimeType: 'video/mp4',
-    extension: '.mp4',
-    bytes: 12083292,
-    width: 1920,
-    height: 1080,
-    durationSeconds: 900,
-    aspectRatio: '16:9',
-    recommendedResolution: '1920 x 1080 px (FHD)',
-    description:
-      'Video hướng dẫn nấu bữa tối chay nhanh gọn trong 15 phút với đậu hũ xào nấm và canh chua thanh mát.',
-  },
-  {
-    publicId: 'seed/videos/video-sua-hat-sen',
-    secureUrl: '/seed/videos/video-sua-hat-sen.mp4',
-    resourceType: MediaResourceType.VIDEO,
-    kind: MediaKind.VIDEO,
-    ownerEmail: 'invited.contributor@example.com',
-    mimeType: 'video/mp4',
-    extension: '.mp4',
-    bytes: 9181510,
-    width: 1920,
-    height: 1080,
-    durationSeconds: 540,
-    aspectRatio: '16:9',
-    recommendedResolution: '1920 x 1080 px (FHD)',
-    description: 'Video làm sữa hạt sen đậu đỏ thơm béo mịn màng bằng máy xay sinh tố tại nhà.',
-  },
-
-  // ==========================================
-  // 4. FRIDGE VISION IMAGES (Ảnh chụp ngăn mát tủ lạnh)
+  // 3. FRIDGE VISION IMAGES (Ảnh chụp ngăn mát tủ lạnh)
   // ==========================================
   {
     id: '21000000-0000-4000-8000-000000000001',
@@ -311,7 +209,7 @@ export const mediaAssetDefinitions: readonly SeedMediaAssetItem[] = [
   },
 
   // ==========================================
-  // 5. RECEIPT IMAGES (Ảnh hóa đơn siêu thị thực tế)
+  // 4. RECEIPT IMAGES (Ảnh hóa đơn siêu thị thực tế)
   // ==========================================
   {
     id: '22000000-0000-4000-8000-000000000001',

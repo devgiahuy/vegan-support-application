@@ -1,6 +1,6 @@
-# Dữ liệu seed: dinh dưỡng và công thức
+# Dữ liệu seed: dinh dưỡng, công thức, cẩm nang và video
 
-**Cập nhật:** 2026-10-26 · **Phạm vi:** `backend/prisma/seed-data/` — `nutrients.data.ts`, `ingredients.data.ts`, `recipes.data.ts`, `custom-meals.data.ts`, `media-assets.data.ts`, `composition.data.ts`, `seeder.ts`. Cẩm nang và video chưa chuẩn hóa (làm sau).
+**Cập nhật:** 2026-10-26 · **Phạm vi:** `backend/prisma/seed-data/` — `nutrients.data.ts`, `ingredients.data.ts`, `recipes.data.ts`, `custom-meals.data.ts`, `media-assets.data.ts`, `composition.data.ts`, `handbooks.data.ts`, `videos.data.ts`, `seeder.ts`.
 
 ## 1. Nguồn dữ liệu
 
@@ -170,7 +170,52 @@ Trường cần cập nhật là `coverMedia` (`secureUrl`, `publicId`, `width`,
 
 Ảnh nguyên liệu: danh mục nguyên liệu hiện không có trường ảnh nên không cần lấy.
 
-## 5. Kiểm tra đã chạy
+## 5. Cẩm nang và video (cập nhật 2026-10-26)
 
-- `npm run seed` chạy 2 lần liên tiếp thành công; lần 2 không tạo revision hay ước tính mới (idempotent).
+### Cẩm nang (5 bài, `handbooks.data.ts`)
+Viết lại nội dung dựa trên nguồn có trích dẫn; mọi con số khớp dữ liệu USDA và DRI NASEM đã seed. Giữ 4 slug cũ (comment/bookmark trong `community.data.ts` vẫn trỏ đúng), thêm 1 bài.
+
+| Slug | Nội dung | Nguồn chính |
+|---|---|---|
+| `cam-nang-bo-sung-vitamin-b12` | Nhu cầu B12, nguồn không đáng tin (pseudo-B12), thực phẩm tăng cường, viên bổ sung | NASEM 1998, NIH ODS, Watanabe 2014 |
+| `toi-uu-nguon-dam-thuc-vat` | RDA protein, bảng đạm thực phẩm chay (USDA), phối hợp đậu – ngũ cốc trong ngày | NASEM 2005, Young & Pellett 1994, Melina 2016 |
+| `bi-quyet-meal-prep-7-ngay` | Nấu sẵn theo thành phần, bảo quản 4°C/-18°C, 3–4 ngày | USDA FSIS, FDA |
+| `phan-biet-cac-truong-phai-an-chay` | Thuần chay, chay trứng sữa, chay Phật giáo (ngũ vị tân), lộ trình chuyển đổi, dị ứng | Melina 2016 |
+| `sat-canxi-kem-omega-3-nguoi-an-chay` (mới) | Nhu cầu và nguồn sắt, canxi, kẽm, ALA; mẹo tăng hấp thu | NASEM 2001/2011, Hallberg 1989, USDA |
+
+### Video (7 video YouTube công khai, `videos.data.ts`)
+Bỏ các `youtubeId` giả và file mp4 local; mỗi video là link YouTube thật đã kiểm tra qua YouTube oEmbed, ảnh bìa là thumbnail của chính YouTube (`i.ytimg.com/vi/<id>/hqdefault.jpg`). Ứng dụng chỉ lưu link và mô tả, không lưu lại video.
+
+| Slug | Video | Kênh | Thời lượng |
+|---|---|---|---|
+| `video-nuoc-dung-pho-chay` | [o0ZzxoezMqI](https://www.youtube.com/watch?v=o0ZzxoezMqI) Phở chay – bí quyết nước dùng | Dzoãn Cẩm Vân | 18:26 |
+| `video-15-phut-bua-toi-chay` | [A3XbRsGffI0](https://www.youtube.com/watch?v=A3XbRsGffI0) Đậu hũ xào sả ớt nấm rơm | TÚ LÊ MIỀN TÂY | 7:09 |
+| `video-sua-hat-sen-dau-do` | [5Yuko8btRrY](https://www.youtube.com/watch?v=5Yuko8btRrY) Sữa hạt sen | TÚ LÊ MIỀN TÂY | 7:37 |
+| `video-bun-hue-chay` (mới) | [3t9-zaDhA1o](https://www.youtube.com/watch?v=3t9-zaDhA1o) Bún Huế chay | Ghiền nấu ăn | 9:34 |
+| `video-ca-ri-chay` (mới) | [LIahLgoRtuo](https://www.youtube.com/watch?v=LIahLgoRtuo) Cà ri chay 30 phút | Ghiền nấu ăn | 7:38 |
+| `video-an-chay-truong-thieu-chat-gi` (mới) | [i7yrc9zT84U](https://www.youtube.com/watch?v=i7yrc9zT84U) Ăn chay trường thiếu chất gì | Video AloBacsi | 17:28 |
+| `video-lieu-vitamin-b12` (mới) | [wY4vEBilWN4](https://www.youtube.com/watch?v=wY4vEBilWN4) The Optimal Vitamin B12 Dosage for Adults | NutritionFacts.org | 5:57 |
+
+Lưu ý: slug `video-15-phut-bua-toi-chay` giữ nguyên để không đổi URL, nhưng nội dung giờ là món đậu hũ xào nhanh.
+
+### Ảnh bìa cẩm nang từ Wikimedia Commons
+
+| Cẩm nang | File Commons | Tác giả | Giấy phép |
+|---|---|---|---|
+| `cam-nang-bo-sung-vitamin-b12` | [Nutritional Yeast in Bag (32664238868).jpg](https://commons.wikimedia.org/wiki/File:Nutritional_Yeast_in_Bag_(32664238868).jpg) | Tony Webster | CC BY 2.0 |
+| `toi-uu-nguon-dam-thuc-vat` | [Liat Portal for Foodie Disorder - Assorted Legumes.jpg](https://commons.wikimedia.org/wiki/File:Liat_Portal_for_Foodie_Disorder_-_Assorted_Legumes.jpg) | Liat Portal (HaJunkiyada) | CC BY-SA 4.0 |
+| `phan-biet-cac-truong-phai-an-chay` | [Saigon Vegetarian food.jpg](https://commons.wikimedia.org/wiki/File:Saigon_Vegetarian_food.jpg) | Takeaway | CC BY-SA 3.0 |
+
+### Cần lấy thủ công (cẩm nang/video)
+
+| Mục | Trường | Tình trạng | Gợi ý từ khóa |
+|---|---|---|---|
+| `sat-canxi-kem-omega-3-nguoi-an-chay` | `coverMedia` trong `handbooks.data.ts` | **Trống** | "iron rich plant foods", "đậu lăng hạt bí cải bó xôi", "chia seeds sesame tofu" |
+| `bi-quyet-meal-prep-7-ngay` | `coverMedia` | Ảnh local cũ, chưa rõ nguồn | "vegan meal prep containers", "hộp cơm chay chuẩn bị trước" |
+
+Video: không có mục cần lấy thủ công. Các file mp4 cũ trong `frontend/public/seed/videos/` không còn được seed tham chiếu (giữ nguyên trên đĩa); có thể xóa nếu không dùng cho mục đích khác.
+
+## 6. Kiểm tra đã chạy
+
+- `npm run seed` chạy 2 lần liên tiếp thành công; lần 2 không tạo revision hay ước tính mới (idempotent) cho công thức, cẩm nang và video.
 - Backend `npm run lint`, `npm run typecheck`, `npm run build`; `git diff --check`.

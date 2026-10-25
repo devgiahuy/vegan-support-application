@@ -20,7 +20,6 @@ import {
   PostRevisionStatus,
   PostStatus,
   PostType,
-  type PostRevision,
   type Prisma,
   RecipeNutritionEstimateStatus,
   type PrismaClient,
@@ -53,13 +52,10 @@ import {
   videoDefinitions,
   voteDefinitions,
 } from './index.js';
+import { youtubeThumbnail } from './videos.data.js';
 
 function postTagRows(tags: readonly string[]) {
   return tags.map((tag) => ({ tag, normalizedTag: normalizeVietnameseText(tag) }));
-}
-
-function hasEncodingDamage(value: string | null): boolean {
-  return value !== null && /\uFFFD|[ÃÄÆ]|[\p{L}]\?+[\p{L}]|â[\u0080-\u00bf]/u.test(value);
 }
 
 const round1 = (value: number) => Math.round(value * 10) / 10;
@@ -140,43 +136,120 @@ function deriveRecipeFacts(
   };
 }
 
-async function repairSeedRevisionText(
+interface SeedContentMedia {
+  kind: MediaKind;
+  provider: MediaProvider;
+  secureUrl: string;
+  publicId: string;
+  width: number | null;
+  height: number | null;
+  bytes: number | null;
+  durationSeconds: number | null;
+  position: number;
+}
+
+/**
+ * Keeps a seeded BLOG/VIDEO post in sync with its fixture. Changed content is published as a new
+ * revision (like an edit in the app), so earlier revisions and their references stay intact.
+ */
+async function syncSeedContentPost(
   prisma: PrismaClient,
-  revision: PostRevision,
-  fixture: Pick<PostRevision, 'title' | 'excerpt' | 'body'> & { tags: readonly string[] },
-): Promise<PostRevision> {
-  const data: Prisma.PostRevisionUpdateInput = {};
-  if (hasEncodingDamage(revision.title) || hasEncodingDamage(revision.normalizedTitle)) {
-    data.title = fixture.title;
-    data.normalizedTitle = normalizeVietnameseText(fixture.title);
-  }
-  if (hasEncodingDamage(revision.excerpt) || hasEncodingDamage(revision.normalizedExcerpt)) {
-    data.excerpt = fixture.excerpt;
-    data.normalizedExcerpt = normalizeVietnameseText(fixture.excerpt ?? '');
-  }
-  if (hasEncodingDamage(revision.body) || hasEncodingDamage(revision.normalizedBody)) {
-    data.body = fixture.body;
-    data.normalizedBody = normalizeVietnameseText(fixture.body);
-  }
-  const tags = await prisma.postTag.findMany({ where: { revisionId: revision.id } });
-  const damagedTagIds = tags.filter((tag) => hasEncodingDamage(tag.tag)).map((tag) => tag.id);
-  if (damagedTagIds.length) {
-    await prisma.$transaction(async (transaction) => {
-      await transaction.postTag.deleteMany({ where: { id: { in: damagedTagIds } } });
-      for (const tag of postTagRows(fixture.tags)) {
-        await transaction.postTag.upsert({
-          where: {
-            revisionId_normalizedTag: { revisionId: revision.id, normalizedTag: tag.normalizedTag },
-          },
-          update: {},
-          create: { revisionId: revision.id, ...tag },
-        });
-      }
+  input: {
+    type: PostType;
+    slug: string;
+    authorId: string;
+    publishedAt: Date;
+    categoryIds: string[];
+    title: string;
+    excerpt: string;
+    body: string;
+    tags: readonly string[];
+    media: SeedContentMedia[];
+  },
+) {
+  const snapshotOf = (value: {
+    title: string;
+    excerpt: string | null;
+    body: string;
+    categoryIds: string[];
+    tags: string[];
+    media: Array<{ kind: MediaKind; secureUrl: string }>;
+  }) =>
+    JSON.stringify({
+      ...value,
+      categoryIds: [...value.categoryIds].sort(),
+      tags: [...value.tags].sort(),
+      media: value.media
+        .map(({ kind, secureUrl }) => ({ kind, secureUrl }))
+        .sort((a, b) => a.kind.localeCompare(b.kind)),
     });
-  }
-  return Object.keys(data).length
-    ? prisma.postRevision.update({ where: { id: revision.id }, data })
-    : revision;
+  let post = await prisma.post.findUnique({ where: { slug: input.slug } });
+  if (!post)
+    post = await prisma.post.create({
+      data: {
+        authorId: input.authorId,
+        type: input.type,
+        slug: input.slug,
+        status: PostStatus.PUBLISHED,
+        version: 1,
+        publishedAt: input.publishedAt,
+      },
+    });
+  const current = post.publishedRevisionId
+    ? await prisma.postRevision.findUnique({
+        where: { id: post.publishedRevisionId },
+        include: { tags: true, categories: true, media: true },
+      })
+    : null;
+  const fixture = snapshotOf({
+    title: input.title,
+    excerpt: input.excerpt,
+    body: input.body,
+    categoryIds: input.categoryIds,
+    tags: input.tags.map(normalizeVietnameseText),
+    media: input.media,
+  });
+  if (
+    current &&
+    snapshotOf({
+      title: current.title,
+      excerpt: current.excerpt,
+      body: current.body,
+      categoryIds: current.categories.map((category) => category.categoryId),
+      tags: current.tags.map((tag) => tag.normalizedTag),
+      media: current.media,
+    }) === fixture
+  )
+    return { post, revisionId: current.id };
+
+  const latest = await prisma.postRevision.findFirst({
+    where: { postId: post.id },
+    orderBy: { version: 'desc' },
+    select: { version: true },
+  });
+  const version = latest ? Math.max(post.version, latest.version) + 1 : 1;
+  const revision = await prisma.postRevision.create({
+    data: {
+      postId: post.id,
+      createdById: input.authorId,
+      version,
+      status: PostRevisionStatus.PUBLISHED,
+      title: input.title,
+      normalizedTitle: normalizeVietnameseText(input.title),
+      excerpt: input.excerpt,
+      normalizedExcerpt: normalizeVietnameseText(input.excerpt),
+      body: input.body,
+      normalizedBody: normalizeVietnameseText(input.body),
+      categories: { create: input.categoryIds.map((categoryId) => ({ categoryId })) },
+      tags: { create: postTagRows(input.tags) },
+      media: { create: input.media },
+    },
+  });
+  post = await prisma.post.update({
+    where: { id: post.id },
+    data: { version, status: PostStatus.PUBLISHED, publishedRevisionId: revision.id },
+  });
+  return { post, revisionId: revision.id };
 }
 
 export async function seedComprehensiveData(
@@ -983,7 +1056,7 @@ export async function seedComprehensiveData(
           type: PostType.RECIPE,
           slug: rDef.slug,
           status: PostStatus.PUBLISHED,
-          version: 0,
+          version: 1,
           publishedAt: new Date('2026-09-20T00:00:00.000Z'),
         },
       });
@@ -1033,7 +1106,7 @@ export async function seedComprehensiveData(
         orderBy: { version: 'desc' },
         select: { version: true },
       });
-      const version = Math.max(post.version, latest?.version ?? 0) + 1;
+      const version = latest ? Math.max(post.version, latest.version) + 1 : 1;
       const revision = await prisma.postRevision.create({
         data: {
           postId: post.id,
@@ -1253,203 +1326,78 @@ export async function seedComprehensiveData(
   for (const hDef of handbookDefinitions) {
     const author = userMap.get(hDef.authorEmail.toLowerCase()) ?? { id: adminId };
     const catId = categoryIdMap.get(`${CategoryType.CONTENT_TOPIC}:${hDef.categorySlug}`);
-
-    let post = await prisma.post.findUnique({ where: { slug: hDef.slug } });
-    if (!post) {
-      post = await prisma.post.create({
-        data: {
-          authorId: author.id,
-          type: PostType.BLOG,
-          slug: hDef.slug,
-          status: PostStatus.PUBLISHED,
-          version: 1,
-          publishedAt: new Date('2026-09-21T00:00:00.000Z'),
-        },
-      });
-    }
-
-    // Repair damaged text only in version 1 of known seed definitions.
-    postMap.set(hDef.slug, post);
-
-    let revision = await prisma.postRevision.findUnique({
-      where: { postId_version: { postId: post.id, version: 1 } },
-    });
-
-    if (!revision) {
-      revision = await prisma.postRevision.create({
-        data: {
-          postId: post.id,
-          createdById: author.id,
-          version: 1,
-          status: PostRevisionStatus.PUBLISHED,
-          title: hDef.title,
-          normalizedTitle: normalizeVietnameseText(hDef.title),
-          excerpt: hDef.excerpt,
-          normalizedExcerpt: normalizeVietnameseText(hDef.excerpt),
-          body: hDef.body,
-          normalizedBody: normalizeVietnameseText(hDef.body),
-          ...(catId ? { categories: { create: [{ categoryId: catId }] } } : {}),
-          tags: { create: postTagRows(hDef.tags) },
-          media: {
-            create: {
+    const { post } = await syncSeedContentPost(prisma, {
+      type: PostType.BLOG,
+      slug: hDef.slug,
+      authorId: author.id,
+      publishedAt: new Date('2026-09-21T00:00:00.000Z'),
+      categoryIds: catId ? [catId] : [],
+      title: hDef.title,
+      excerpt: hDef.excerpt,
+      body: hDef.body,
+      tags: hDef.tags,
+      media: hDef.coverMedia
+        ? [
+            {
               kind: MediaKind.COVER_IMAGE,
               provider: MediaProvider.CLOUDINARY,
               secureUrl: hDef.coverMedia.secureUrl,
               publicId: hDef.coverMedia.publicId,
               width: hDef.coverMedia.width,
               height: hDef.coverMedia.height,
+              bytes: hDef.coverMedia.bytes,
+              durationSeconds: null,
               position: 0,
             },
-          },
-        },
-      });
-    }
-    revision = await repairSeedRevisionText(prisma, revision, hDef);
-
-    if (post.status === PostStatus.PUBLISHED && post.publishedRevisionId !== revision.id) {
-      await prisma.post.update({
-        where: { id: post.id },
-        data: { publishedRevisionId: revision.id },
-      });
-      post.publishedRevisionId = revision.id;
-    }
-
-    await prisma.postMedia.upsert({
-      where: { revisionId_kind: { revisionId: revision.id, kind: MediaKind.COVER_IMAGE } },
-      update: {
-        secureUrl: hDef.coverMedia.secureUrl,
-        publicId: hDef.coverMedia.publicId,
-        width: hDef.coverMedia.width,
-        height: hDef.coverMedia.height,
-        bytes: hDef.coverMedia.bytes,
-      },
-      create: {
-        revisionId: revision.id,
-        kind: MediaKind.COVER_IMAGE,
-        provider: MediaProvider.CLOUDINARY,
-        secureUrl: hDef.coverMedia.secureUrl,
-        publicId: hDef.coverMedia.publicId,
-        width: hDef.coverMedia.width,
-        height: hDef.coverMedia.height,
-        bytes: hDef.coverMedia.bytes,
-        position: 0,
-      },
+          ]
+        : [],
     });
+    postMap.set(hDef.slug, post);
   }
 
   // ==========================================
-  // 8. VIDEOS
+  // 8. VIDEOS (public YouTube videos)
   // ==========================================
   for (const vDef of videoDefinitions) {
     const author = userMap.get(vDef.authorEmail.toLowerCase()) ?? { id: adminId };
     const catId =
       categoryIdMap.get(`${CategoryType.RECIPE_GROUP}:${vDef.categorySlug}`) ??
+      categoryIdMap.get(`${CategoryType.FOOD_TYPE}:${vDef.categorySlug}`) ??
       categoryIdMap.get(`${CategoryType.CONTENT_TOPIC}:${vDef.categorySlug}`);
-
-    let post = await prisma.post.findUnique({ where: { slug: vDef.slug } });
-    if (!post) {
-      post = await prisma.post.create({
-        data: {
-          authorId: author.id,
-          type: PostType.VIDEO,
-          slug: vDef.slug,
-          status: PostStatus.PUBLISHED,
-          version: 1,
-          publishedAt: new Date('2026-09-22T00:00:00.000Z'),
+    const thumbnail = youtubeThumbnail(vDef.youtubeId);
+    const { post } = await syncSeedContentPost(prisma, {
+      type: PostType.VIDEO,
+      slug: vDef.slug,
+      authorId: author.id,
+      publishedAt: new Date('2026-09-22T00:00:00.000Z'),
+      categoryIds: catId ? [catId] : [],
+      title: vDef.title,
+      excerpt: vDef.excerpt,
+      body: vDef.body,
+      tags: vDef.tags,
+      media: [
+        {
+          kind: MediaKind.COVER_IMAGE,
+          provider: MediaProvider.YOUTUBE,
+          ...thumbnail,
+          bytes: null,
+          durationSeconds: null,
+          position: 0,
         },
-      });
-    }
+        {
+          kind: MediaKind.VIDEO,
+          provider: MediaProvider.YOUTUBE,
+          secureUrl: `https://www.youtube.com/watch?v=${vDef.youtubeId}`,
+          publicId: `youtube/${vDef.youtubeId}`,
+          width: 1280,
+          height: 720,
+          bytes: null,
+          durationSeconds: vDef.durationSeconds,
+          position: 1,
+        },
+      ],
+    });
     postMap.set(vDef.slug, post);
-
-    let revision = await prisma.postRevision.findUnique({
-      where: { postId_version: { postId: post.id, version: 1 } },
-    });
-
-    if (!revision) {
-      revision = await prisma.postRevision.create({
-        data: {
-          postId: post.id,
-          createdById: author.id,
-          version: 1,
-          status: PostRevisionStatus.PUBLISHED,
-          title: vDef.title,
-          normalizedTitle: normalizeVietnameseText(vDef.title),
-          excerpt: vDef.excerpt,
-          normalizedExcerpt: normalizeVietnameseText(vDef.excerpt),
-          body: vDef.body,
-          normalizedBody: normalizeVietnameseText(vDef.body),
-          ...(catId ? { categories: { create: [{ categoryId: catId }] } } : {}),
-          tags: { create: postTagRows(vDef.tags) },
-          media: {
-            create: {
-              kind: MediaKind.VIDEO,
-              provider: MediaProvider.YOUTUBE,
-              secureUrl: `https://www.youtube.com/watch?v=${vDef.youtubeId}`,
-              publicId: vDef.coverMedia.publicId,
-              width: vDef.coverMedia.width,
-              height: vDef.coverMedia.height,
-              position: 0,
-            },
-          },
-        },
-      });
-    }
-
-    revision = await repairSeedRevisionText(prisma, revision, vDef);
-
-    if (post.status === PostStatus.PUBLISHED && post.publishedRevisionId !== revision.id) {
-      await prisma.post.update({
-        where: { id: post.id },
-        data: { publishedRevisionId: revision.id },
-      });
-      post.publishedRevisionId = revision.id;
-    }
-
-    await prisma.postMedia.upsert({
-      where: { revisionId_kind: { revisionId: revision.id, kind: MediaKind.COVER_IMAGE } },
-      update: {
-        secureUrl: vDef.coverMedia.secureUrl,
-        publicId: vDef.coverMedia.publicId,
-        width: vDef.coverMedia.width,
-        height: vDef.coverMedia.height,
-        bytes: vDef.coverMedia.bytes,
-      },
-      create: {
-        revisionId: revision.id,
-        kind: MediaKind.COVER_IMAGE,
-        provider: MediaProvider.CLOUDINARY,
-        secureUrl: vDef.coverMedia.secureUrl,
-        publicId: vDef.coverMedia.publicId,
-        width: vDef.coverMedia.width,
-        height: vDef.coverMedia.height,
-        bytes: vDef.coverMedia.bytes,
-        position: 0,
-      },
-    });
-
-    await prisma.postMedia.upsert({
-      where: { revisionId_kind: { revisionId: revision.id, kind: MediaKind.VIDEO } },
-      update: {
-        secureUrl: vDef.videoUrl ?? `https://www.youtube.com/watch?v=${vDef.youtubeId}`,
-        publicId: vDef.slug,
-        width: 1920,
-        height: 1080,
-        bytes: vDef.videoBytes ?? null,
-        durationSeconds: vDef.durationSeconds,
-      },
-      create: {
-        revisionId: revision.id,
-        kind: MediaKind.VIDEO,
-        provider: vDef.videoUrl ? MediaProvider.CLOUDINARY : MediaProvider.YOUTUBE,
-        secureUrl: vDef.videoUrl ?? `https://www.youtube.com/watch?v=${vDef.youtubeId}`,
-        publicId: vDef.slug,
-        width: 1920,
-        height: 1080,
-        bytes: vDef.videoBytes ?? null,
-        durationSeconds: vDef.durationSeconds,
-        position: 1,
-      },
-    });
   }
 
   // ==========================================
