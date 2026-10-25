@@ -5,6 +5,8 @@ import {
   contentReviewHistoryResponseSchema,
   deletePostQuerySchema,
   deletePostResponseSchema,
+  myPostsQuerySchema,
+  myPostListResponseSchema,
   postIdentifierParamsSchema,
   postIdParamsSchema,
   postListQuerySchema,
@@ -83,6 +85,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
   const updateRequest = registry.register('UpdatePostRequest', updatePostRequestSchema);
   const postResponse = registry.register('PostResponse', postResponseSchema);
   const postListResponse = registry.register('PostListResponse', postListResponseSchema);
+  const myPostListResponse = registry.register('MyPostListResponse', myPostListResponseSchema);
   const relatedPostsResponse = registry.register(
     'RelatedPostsResponse',
     relatedPostsResponseSchema,
@@ -93,6 +96,31 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     'ContentReviewHistoryResponse',
     contentReviewHistoryResponseSchema,
   );
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/posts/mine',
+    tags: ['Content'],
+    summary: 'List nội dung do người dùng hiện tại tạo',
+    description:
+      'Chỉ trả nội dung thuộc tài khoản đã xác thực, gồm mọi trạng thái kiểm duyệt và bản revision mới nhất. Nội dung đã xóa không được trả về. Không áp dụng ranking hoặc bộ lọc nội dung công khai.',
+    operationId: 'listMyPosts',
+    security: authenticated,
+    request: { query: myPostsQuerySchema },
+    responses: {
+      200: {
+        description: 'Nội dung cá nhân có phân trang',
+        content: { 'application/json': { schema: myPostListResponse } },
+      },
+      400: errorResponse(errorSchema, 'Query phân trang không hợp lệ', ['VALIDATION_ERROR']),
+      401: errorResponse(errorSchema, 'Vui lòng đăng nhập', [
+        'AUTH_REQUIRED',
+        'INVALID_ACCESS_TOKEN',
+        'TOKEN_EXPIRED',
+      ]),
+      403: errorResponse(errorSchema, 'Tài khoản bị cấm', ['ACCOUNT_BANNED']),
+    },
+  });
 
   registry.registerPath({
     method: 'get',

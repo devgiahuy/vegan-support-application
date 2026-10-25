@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
-  "source": "../backend/openapi.json",
-  "generatedAt": "2026-10-24T06:27:28.618Z",
+  "source": "..\\backend\\openapi.json",
+  "generatedAt": "2026-10-25T04:27:09.901Z",
   "stats": {
-    "operations": 179,
+    "operations": 180,
     "groups": 40,
-    "schemas": 158
+    "schemas": 159
   },
   "operations": [
     {
@@ -827,6 +827,34 @@
         "404": "ErrorResponse",
         "409": "ErrorResponse",
         "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/mine",
+      "group": "Content",
+      "summary": "List nội dung do người dùng hiện tại tạo",
+      "operationId": "listMyPosts",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "MyPostListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
       }
     },
     {
@@ -7670,7 +7698,7 @@
       "method": "GET",
       "path": "/api/v1/restaurants/nearby",
       "group": "Restaurants",
-      "summary": "Nearby approved internal and live provider places; hard diet filtering precedes ranking",
+      "summary": "Nearby approved internal and live provider places; explicit search filters only",
       "operationId": "nearbyRestaurants",
       "params": [
         {

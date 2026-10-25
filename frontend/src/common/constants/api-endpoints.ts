@@ -59,6 +59,7 @@ export const API_ENDPOINTS = {
   },
   POSTS: {
     LIST: '/posts',
+    MINE: '/posts/mine',
     DETAIL: (idOrSlug: string) => `/posts/${idOrSlug}`,
     CREATE: '/posts',
     UPDATE: (id: string) => `/posts/${id}`,
@@ -178,7 +179,7 @@ export const API_ENDPOINTS = {
     READ: (id: string) => `/notifications/${id}/read`,
     READ_ALL: '/notifications/read-all',
   },
-  // TODO(BE-READY): Restaurants/location còn PLANNED — 3 nhánh dưới CHƯA được import ở đâu.
+  // Phase 24: Restaurants/location chỉ áp dụng bộ lọc tìm kiếm được chọn rõ ràng.
   RESTAURANTS: {
     NEARBY: '/restaurants/nearby',
     SEARCH: '/restaurants/search',

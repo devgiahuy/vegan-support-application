@@ -9,6 +9,7 @@
 3. [Câu hỏi và tình huống lỗi](03_HOI_DAP_VA_TINH_HUONG.md): tự trả lời trước khi xem đáp án gợi ý.
 4. [Chiến lược 5 buổi và demo](04_CHIEN_LUOC_BAO_VE.md): luyện nói, chuẩn bị dữ liệu và phương án khi demo gặp lỗi.
 5. [Khoảng trống cần xử lý](05_KHOANG_TRONG_CANH_BAO.md): kiểm tra lại trước buổi chấm, đặc biệt các chức năng AI và thay đổi local.
+6. [Bộ chạy test tay 16 luồng](06_KICH_BAN_TEST_TAY_16_LUONG.md): dữ liệu demo, thao tác, kết quả mong đợi, ca lỗi và mẫu biên bản PASS/FAIL/BLOCKED; đối chiếu source/registry ngày 24/10/2026.
 
 [Bản bổ sung cập nhật 21/10](BO_SUNG_CAP_NHAT_2026-10-21.md) ghi chi tiết các thay đổi meal plan, đa ảnh, payOS và mobile. [Bản review frontend 15/10](../../frontend/docs/FRONTEND_ARCHITECTURE_REVIEW_2026-10-15.md) là snapshot kỹ thuật cũ; không dùng số lint/test/build ở đó như số hiện tại.
 

@@ -16,6 +16,7 @@ import {
   type SearchConstraints,
   type ContentRepository,
   type IngredientMetadataRecord,
+  type OwnedPostRecord,
   type PostIdentityRecord,
   type PublishedPostRecord,
   type RecipeSnapshot,
@@ -27,6 +28,7 @@ import type {
   CreatePostInput,
   DeletePostQuery,
   PostListQuery,
+  MyPostsQuery,
   PostOutput,
   RelatedPostsQuery,
   ReviewHistoryQuery,
@@ -132,6 +134,17 @@ export class ContentService {
         post.publishedRevision ? [this.postOutput(post, post.publishedRevision)] : [],
       ),
       meta: pagination(query.page, query.limit, result.total, searchContext.summary),
+    };
+  }
+
+  async listOwned(actor: ContentActor, query: MyPostsQuery) {
+    const result = await this.repository.findOwnedPosts(actor.userId, query.page, query.limit);
+    return {
+      data: result.records.flatMap((post) => {
+        const revision = post.revisions[0];
+        return revision ? [this.postOutput(post, revision)] : [];
+      }),
+      meta: paginationWithoutConstraints(query.page, query.limit, result.total),
     };
   }
 
@@ -574,7 +587,7 @@ export class ContentService {
   }
 
   private postOutput(
-    post: PostIdentityRecord | PublishedPostRecord,
+    post: PostIdentityRecord | PublishedPostRecord | OwnedPostRecord,
     revision: RevisionRecord,
     statistics?: {
       usageUserCount: number;

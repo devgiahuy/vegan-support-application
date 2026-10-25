@@ -108,7 +108,7 @@ export interface RestaurantDiscoveryMetaDto {
   resultsTruncated?: boolean;
   /** `true` khi không có nguồn provider nào phản hồi thành công. */
   externalDataUnavailable?: boolean;
-  /** Kết quả ngoài bị loại vì chưa được xác minh theo các ràng buộc ăn uống. */
+  /** Kết quả ngoài bị loại khi request chủ động gửi dietPattern; không lấy từ hồ sơ. */
   externalResultsSuppressed?: boolean;
   /** `fake` | `google` | `serpapi`. */
   provider?: string;

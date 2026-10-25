@@ -11,7 +11,8 @@ import type { RestaurantSearchState, SubmitRestaurantInput } from '../types/rest
  * `all` là gốc để `invalidateQueries` xoá được mọi biến thể.
  */
 export const RESTAURANT_KEYS = {
-  all: ['restaurants'] as const,
+  // Drop cached discovery results produced by the former implicit profile filtering.
+  all: ['restaurants', 'v2'] as const,
   nearby: (state: RestaurantSearchState) =>
     [
       ...RESTAURANT_KEYS.all,
@@ -46,6 +47,7 @@ export const RESTAURANT_KEYS = {
       state.radiusM,
       state.dietPattern,
       state.advanced,
+      state.bounds,
       state.lat,
       state.lng,
       state.page,

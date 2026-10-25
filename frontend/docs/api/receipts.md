@@ -216,6 +216,8 @@ Retry failed or partially failed receipt extraction
             "reviewRequired",
             "identityDecisionRequired",
             "receiptReviewDecision",
+            "notices",
+            "excludedItems",
             "progress",
             "receipt",
             "images",
@@ -249,6 +251,14 @@ Retry failed or partially failed receipt extraction
                 "string",
                 "null"
               ],
+              "_truncated": true
+            },
+            "notices": {
+              "type": "array",
+              "_truncated": true
+            },
+            "excludedItems": {
+              "type": "array",
               "_truncated": true
             },
             "progress": {
@@ -302,18 +312,7 @@ Retry failed or partially failed receipt extraction
             }
           }
         },
-        "duplicateCandidates": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "_truncated": true
-          }
-        },
-        "pantryChanges": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "_truncated":
+        "duplicateCandidates":
   …(truncated — xem api-catalog.json)
 ```
 
@@ -340,6 +339,8 @@ Retry failed or partially failed receipt extraction
         "reviewRequired",
         "identityDecisionRequired",
         "receiptReviewDecision",
+        "notices",
+        "excludedItems",
         "progress",
         "receipt",
         "images",
@@ -384,6 +385,20 @@ Retry failed or partially failed receipt extraction
             "SEPARATE_RECEIPTS",
             null
           ]
+        },
+        "notices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "_truncated": true
+          }
+        },
+        "excludedItems": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "_truncated": true
+          }
         },
         "progress": {
           "type": "object",
@@ -440,23 +455,6 @@ Retry failed or partially failed receipt extraction
               ],
               "_truncated": true
             },
-            "confidence": {
-              "type": [
-                "number",
-                "null"
-              ],
-              "_truncated": true
-            }
-          }
-        },
-        "images": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "_truncated": true
-          }
-        },
-        "candidates": {
   …(truncated — xem api-catalog.json)
 ```
 

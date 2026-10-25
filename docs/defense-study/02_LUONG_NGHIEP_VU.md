@@ -23,7 +23,7 @@
 ### L03. Tạo công thức/bài viết/video và duyệt xuất bản — `READY` backend
 
 - **Ai:** Member/Contributor/Admin tạo nội dung; Admin duyệt revision.
-- **Luồng:** tạo `DRAFT` → chỉnh nội dung/ảnh/video → submit đúng revision → backend gắn moderation signals → Admin approve/reject có lý do → revision được duyệt mới public. Sửa bài đã public sinh draft revision mới; bản duyệt trước còn hiển thị đến lúc bản mới được duyệt.
+- **Luồng:** tạo `DRAFT` → chỉnh nội dung/ ảnh/video → submit đúng revision → backend gắn moderation signals → Admin approve/reject có lý do → revision được duyệt mới public. Sửa bài đã public sinh draft revision mới; bản duyệt trước còn hiển thị đến lúc bản mới được duyệt.
 - **Quy tắc:** `ModeratedPublicationPolicy` hiện đưa mọi submit vào `PENDING_REVIEW`, kể cả Contributor. AI flag không tự publish/reject/xóa. Video cần media hợp lệ trước submit.
 - **Khi lỗi:** `CONTENT_STATE_CONFLICT`, `CONTENT_VERSION_CONFLICT`, `INVALID_MEDIA_REFERENCE`, không cho tự duyệt theo quy tắc review.
 - **Mở code:** [publication policy](../../backend/src/modules/content/content-publication.policy.ts), [ContentService](../../backend/src/modules/content/content.service.ts), [ModerationService](../../backend/src/modules/moderation/moderation.service.ts).
@@ -40,7 +40,7 @@
 
 - **Ai:** Member nộp đơn; Admin duyệt/từ chối/thu hồi.
 - **Luồng:** đăng ký có intent hoặc nộp ở hồ sơ → đơn `PENDING` → Admin xem claim/evidence → duyệt với `approvalBasis` hoặc từ chối kèm lý do → role backend đổi thành `CONTRIBUTOR` khi được duyệt.
-- **Quy tắc:** một đơn pending; `ADMIN_INVITED` chỉ qua đường Admin; từ chối có thời gian nộp lại 30 ngày; cấm tự duyệt. `approvalBasis` mô tả căn cứ xét duyệt, không chia cấp quyền.
+- **Quy tắc:** một đơn pending; `ADMIN_INVITED` chỉ qua đường Admin; từ chối có thời gian nộp lại 30 ngày; . `approvalBasis` mô tả căn cứ xét duyệt, không chia cấp quyền.
 - **Khi lỗi:** `CONTRIBUTOR_APPLICATION_PENDING`, `CONTRIBUTOR_REAPPLY_NOT_ALLOWED`, `SELF_APPROVAL_FORBIDDEN`, `CONTRIBUTOR_APPROVAL_BASIS_INVALID`.
 - **Mở code:** [state machine](../../backend/src/modules/contributors/contributor-application.state-machine.ts), [ContributorService](../../backend/src/modules/contributors/contributor.service.ts).
 

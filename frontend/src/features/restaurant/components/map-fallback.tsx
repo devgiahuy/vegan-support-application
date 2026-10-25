@@ -3,6 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import {
+  ArrowUpRight,
   Compass,
   ExternalLink,
   LocateFixed,
@@ -11,11 +12,23 @@ import {
   Navigation,
   Plus,
   Search,
-  Utensils,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { cn } from '@/lib/utils';
 import type { Restaurant, RestaurantBounds } from '../types/restaurant.model';
+import { getRestaurantDirectionsUrl } from '../utils/restaurant-links';
+import { getMapViewportBounds, layoutMapMarkers } from '../utils/restaurant-map-layout';
+
+const MIN_ZOOM_FACTOR = 0.05;
+const MAX_ZOOM_FACTOR = 8;
 
 export interface MapFallbackProps {
   items: Restaurant[];
@@ -24,26 +37,15 @@ export interface MapFallbackProps {
   selectedId?: string | null;
   onSelect?: (id: string) => void;
   onRadiusChange?: (radiusM: number) => void;
-  /**
-   * Báo khung vùng đang xem khi người dùng đổi mức phóng mô phỏng.
-   * Parent lưu vào ref, KHÔNG nối vào `queryKey` (SC-011).
-   */
   onBoundsChange?: (bounds: RestaurantBounds | null) => void;
-  /** Người dùng bấm nút "Tìm trong vùng đang xem". */
   onSearchThisArea?: () => void;
-  /** Đã có khung vùng để tìm hay chưa — dùng để vô hiệu hoá nút. */
   canSearchThisArea?: boolean;
   isSearchingArea?: boolean;
   isLoading?: boolean;
+  emptyTitle?: string;
+  emptyDescription?: string;
 }
 
-/**
- * Bản đồ tương tác trực quan (Interactive Radar Map):
- * - Hoạt động độc lập 100%, không phụ thuộc vào Google Maps API Key bên ngoài.
- * - Mô phỏng hệ tọa độ GPS quanh tâm vị trí người dùng kèm vòng tròn bán kính tìm kiếm.
- * - Đồng bộ 2 chiều với thẻ danh sách (Click Marker <-> Highlight Card).
- * - Cung cấp tùy chọn mở rộng bán kính và liên kết mở Google Maps ngoài.
- */
 export function MapFallback({
   items,
   userLocation,
@@ -53,380 +55,342 @@ export function MapFallback({
   onRadiusChange,
   onBoundsChange,
   onSearchThisArea,
-  canSearchThisArea = true,
+  canSearchThisArea = false,
   isSearchingArea = false,
   isLoading = false,
+  emptyTitle,
+  emptyDescription,
 }: MapFallbackProps) {
   const [zoomFactor, setZoomFactor] = React.useState(1);
-
-  // Tâm bản đồ: Ưu tiên vị trí người dùng, sau đó là quán đầu tiên có tọa độ, hoặc mặc định Bến Thành
-  const center = React.useMemo(() => {
-    if (userLocation?.lat !== undefined && userLocation?.lng !== undefined) return userLocation;
-    const firstWithCoords = items.find((i) => i.hasCoordinates);
-    if (firstWithCoords?.lat !== null && firstWithCoords?.lat !== undefined) {
-      return { lat: firstWithCoords.lat, lng: firstWithCoords.lng ?? 0 };
-    }
-    return { lat: 10.7725, lng: 106.698 }; // Mặc định trung tâm TP.HCM
-  }, [userLocation, items]);
-
-  // Quán đang được chọn
-  const activeRestaurant = React.useMemo(() => {
-    return items.find((item) => item.id === selectedId) ?? null;
-  }, [items, selectedId]);
-
-  // Lấy các quán có tọa độ hợp lệ
-  const validPlaces = React.useMemo(() => {
-    return items.filter((item) => item.hasCoordinates);
-  }, [items]);
-
-  // Chiếu tọa độ địa lý (Lat, Lng) lên hệ quy chiếu phần trăm (%) trên khung bản đồ
-  const plotted = React.useMemo(() => {
-    const scaleRadius = Math.max(radiusM, 2000) * zoomFactor;
-    // 1 độ vĩ độ ≈ 110.574 km, 1 độ kinh độ ≈ 111.320 * cos(lat) km
-    const latMPerDegree = 110574;
-    const lngMPerDegree = 111320 * Math.cos((center.lat * Math.PI) / 180);
-
-    return validPlaces.map((item) => {
-      const dLatM = ((item.lat ?? center.lat) - center.lat) * latMPerDegree;
-      const dLngM = ((item.lng ?? center.lng) - center.lng) * lngMPerDegree;
-
-      // Chiếu tỷ lệ: Tâm (50%, 50%), khoảng quét bán kính chiếm 40% bề rộng
-      const rawX = 50 + (dLngM / scaleRadius) * 40;
-      const rawY = 50 - (dLatM / scaleRadius) * 40;
-
-      // Giới hạn trong vùng hiển thị 10% - 90%
-      const x = Math.max(10, Math.min(90, rawX));
-      const y = Math.max(12, Math.min(88, rawY));
-
-      return {
-        ...item,
-        mapX: x,
-        mapY: y,
-      };
+  const plotRef = React.useRef<HTMLDivElement>(null);
+  const [plotSize, setPlotSize] = React.useState({ width: 600, height: 320 });
+  const [openClusterId, setOpenClusterId] = React.useState<string | null>(null);
+  React.useEffect(() => {
+    const plot = plotRef.current;
+    if (!plot) return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width > 0 && entry.contentRect.height > 0) {
+        setPlotSize({ width: entry.contentRect.width, height: entry.contentRect.height });
+      }
     });
-  }, [validPlaces, center, radiusM, zoomFactor]);
-
-  // Link mở Google Maps ngoài
-  const googleMapsUrl = `https://www.google.com/maps/search/qu%C3%A1n+chay/@${center.lat},${center.lng},14z`;
-
-  // Mô phỏng khung vùng đang xem quanh tâm theo tỉ lệ phóng, đủ bốn mốc cho backend.
-  const simulatedBounds = React.useMemo<RestaurantBounds>(() => {
-    const halfSpanMeters = Math.max(2000, radiusM) * zoomFactor;
-    const latSpan = halfSpanMeters / 2 / 110574;
-    const lngSpan = halfSpanMeters / 2 / (111320 * Math.cos((center.lat * Math.PI) / 180));
-    return {
-      north: center.lat + latSpan,
-      south: center.lat - latSpan,
-      east: center.lng + lngSpan,
-      west: center.lng - lngSpan,
-    };
-  }, [center.lat, center.lng, radiusM, zoomFactor]);
-
-  // Chỉ báo khung vùng khi ngư��i dùng chủ động đổi tỉ lệ phóng — không tự gọi khi vẽ.
-  const reportBounds = React.useCallback(() => {
-    onBoundsChange?.(simulatedBounds);
-  }, [onBoundsChange, simulatedBounds]);
+    observer.observe(plot);
+    return () => observer.disconnect();
+  }, []);
+  const center = React.useMemo(() => {
+    if (userLocation) return userLocation;
+    const first = items.find((item) => item.hasCoordinates);
+    return { lat: first?.lat ?? 10.7725, lng: first?.lng ?? 106.698 };
+  }, [userLocation, items]);
+  const validPlaces = items.filter((item) => item.hasCoordinates);
+  const activeRestaurant = items.find((item) => item.id === selectedId);
+  const viewport = React.useMemo(
+    () => ({ center, radiusM, zoomFactor, ...plotSize }),
+    [center, radiusM, zoomFactor, plotSize]
+  );
+  const plotted = layoutMapMarkers(
+    validPlaces.flatMap((place) =>
+      place.lat !== null && place.lng !== null
+        ? [{ id: place.id, lat: place.lat, lng: place.lng }]
+        : []
+    ),
+    viewport
+  );
+  const visibleCount = plotted.reduce((count, group) => count + group.members.length, 0);
+  const openCluster = plotted.find((group) => group.id === openClusterId);
+  React.useEffect(() => {
+    onBoundsChange?.(getMapViewportBounds(viewport));
+  }, [viewport, onBoundsChange]);
+  const changeZoom = (zoom: number) => {
+    setZoomFactor(zoom);
+    setOpenClusterId(null);
+  };
+  const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${center.lat},${center.lng}`;
 
   return (
     <div
-      className="relative flex size-full min-h-[400px] flex-col overflow-hidden rounded-2xl border bg-gradient-to-b from-card to-muted/40 p-4 shadow-xs"
+      className="relative flex size-full min-h-[440px] flex-col overflow-hidden rounded-2xl border bg-accent"
       role="region"
-      aria-label="Bản đồ quán chay trực quan"
+      aria-label="Sơ đồ vị trí tương đối của quán chay"
     >
-      {/* Lưới tọa độ bản đồ & Hiệu ứng Radar */}
-      <div
-        className="pointer-events-none absolute inset-0 opacity-25 dark:opacity-15"
-        style={{
-          backgroundImage:
-            'radial-gradient(var(--border) 1px, transparent 1px), linear-gradient(to right, var(--border) 1px, transparent 1px), linear-gradient(to bottom, var(--border) 1px, transparent 1px)',
-          backgroundSize: '28px 28px, 112px 112px, 112px 112px',
-        }}
-      />
-
-      {/* Vòng tròn đồng tâm hiển thị bán kính tìm kiếm */}
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        {/* Vòng bán kính 100% */}
-        <div className="size-[80%] rounded-full border border-dashed border-primary/20 bg-primary/5 transition-all" />
-        {/* Vòng bán kính 50% */}
-        <div className="size-[42%] rounded-full border border-primary/15 bg-primary/5" />
-        {/* Vòng sóng xung kích lan tỏa từ tâm */}
-        <div className="size-24 animate-ping rounded-full bg-emerald-500/10 motion-reduce:animate-none" />
-      </div>
-
-      {/* Header điều khiển bản đồ */}
-      <div className="relative z-10 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <span className="flex size-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Compass className="size-4 animate-spin-slow motion-reduce:animate-none" />
-          </span>
-          <div>
-            <h3 className="text-xs font-bold leading-none">Bản đồ vị trí trực quan</h3>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">
-              Bán kính: {radiusM >= 1000 ? `${radiusM / 1000} km` : `${radiusM} m`} •{' '}
-              {isLoading ? (
-                <span className="font-medium text-emerald-600 dark:text-emerald-400">
-                  Đang tìm quán...
-                </span>
-              ) : (
-                `${validPlaces.length} quán`
-              )}
-            </p>
-          </div>
+      <svg
+        className="pointer-events-none absolute inset-0 size-full"
+        viewBox="0 0 600 720"
+        preserveAspectRatio="xMidYMid slice"
+        aria-hidden="true"
+      >
+        <rect width="600" height="720" fill="var(--accent)" />
+        <rect x="55" y="150" width="135" height="180" rx="45" fill="var(--secondary)" />
+        <rect x="370" y="440" width="190" height="160" rx="50" fill="var(--secondary)" />
+        <path
+          d="M-40 510 Q170 380 290 440 T650 240"
+          fill="none"
+          stroke="var(--primary)"
+          strokeOpacity=".08"
+          strokeWidth="65"
+        />
+        <g fill="none" stroke="var(--background)" strokeWidth="18" strokeLinecap="round">
+          <path d="M-30 150 L660 420 M-30 350 L650 90 M80 -40 L410 760 M390 -40 L220 760 M-30 620 L650 560" />
+          <path d="M0 270 L600 290 M0 490 L600 470" strokeWidth="9" />
+        </g>
+        <g fill="none" stroke="var(--border)" strokeWidth="1">
+          <path d="M-30 150 L660 420 M-30 350 L650 90 M80 -40 L410 760 M390 -40 L220 760 M-30 620 L650 560" />
+        </g>
+      </svg>
+      <div className="relative z-10 flex items-start justify-between gap-3 p-4">
+        <div className="rounded-xl border bg-background px-3 py-2">
+          <p className="flex items-center gap-2 text-sm font-semibold">
+            <Compass className="size-4 text-primary" aria-hidden="true" />
+            Quanh vị trí tìm kiếm
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {radiusM >= 1000 ? `${radiusM / 1000} km` : `${radiusM} m`} ·{' '}
+            {isLoading ? 'Đang tìm quán' : `${visibleCount}/${validPlaces.length} quán trong khung`}
+          </p>
+          <p className="mt-1 text-xs tabular-nums text-muted-foreground" aria-live="polite">
+            Mức phóng{' '}
+            {new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(1 / zoomFactor)}×
+          </p>
         </div>
-
-        <div className="flex items-center gap-1.5">
-          {isLoading ? (
-            <Badge
-              variant="outline"
-              className="border-emerald-500/40 bg-emerald-50/80 text-[10px] text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 animate-pulse"
+        <div className="grid shrink-0 grid-cols-2 gap-1 rounded-xl border bg-background p-1">
+          <Button asChild variant="ghost" size="icon" className="size-11 rounded-lg">
+            <a
+              href={googleMapsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Mở khu vực trên Google Maps"
+              title="Mở Google Maps"
             >
-              Đang tìm kiếm
-            </Badge>
-          ) : (
-            <Badge
-              variant="outline"
-              className="border-emerald-500/30 bg-emerald-50 text-[10px] text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
-            >
-              Sẵn sàng
-            </Badge>
-          )}
-          <a
-            href={googleMapsUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex h-7 items-center gap-1 rounded-md border bg-background/80 px-2 text-[11px] font-medium shadow-2xs hover:bg-muted"
-            title="Mở Google Maps trên tab mới"
-          >
-            Google Maps <ExternalLink className="size-3 text-muted-foreground" />
-          </a>
-        </div>
-      </div>
-
-      {/* Nút tìm trong vùng đang xem — người dùng bấm mới phát sinh truy vấn */}
-      {onSearchThisArea && (
-        <div className="relative z-20 mt-2 flex justify-center">
+              <ExternalLink className="size-4" aria-hidden="true" />
+            </a>
+          </Button>
           <Button
-            size="sm"
-            className="h-7 gap-1.5 rounded-full px-3 text-xs shadow-lg"
-            onClick={() => {
-              reportBounds();
-              onSearchThisArea();
-            }}
+            variant="ghost"
+            size="icon"
+            className="size-11 rounded-lg"
+            onClick={() => changeZoom(1)}
+            disabled={zoomFactor === 1}
+            aria-label="Đặt lại mức phóng"
+          >
+            <LocateFixed className="size-4" aria-hidden="true" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-11 rounded-lg"
+            onClick={() => changeZoom(Math.max(MIN_ZOOM_FACTOR, zoomFactor / 1.6))}
+            disabled={zoomFactor <= MIN_ZOOM_FACTOR}
+            aria-label="Phóng to"
+          >
+            <Plus className="size-4" aria-hidden="true" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-11 rounded-lg"
+            onClick={() => changeZoom(Math.min(MAX_ZOOM_FACTOR, zoomFactor * 1.6))}
+            disabled={zoomFactor >= MAX_ZOOM_FACTOR}
+            aria-label="Thu nhỏ"
+          >
+            <Minus className="size-4" aria-hidden="true" />
+          </Button>
+        </div>
+      </div>
+      {onSearchThisArea && (
+        <div className="relative z-10 flex justify-center px-4">
+          <Button
+            className="h-11 rounded-xl shadow-sm"
+            onClick={onSearchThisArea}
             disabled={!canSearchThisArea}
             title={
               canSearchThisArea
-                ? 'Tìm các quán trong vùng bạn đang xem'
-                : 'Hãy đổi tỉ lệ phóng để chọn vùng cần tìm'
+                ? 'Tìm các quán trong vùng đang xem'
+                : 'Phóng to hoặc thu nhỏ để chọn vùng'
             }
             aria-label="Tìm trong vùng đang xem trên bản đồ"
           >
-            <Search className="size-3.5" aria-hidden="true" />
+            <Search className="size-4" aria-hidden="true" />
             {isSearchingArea ? 'Tìm lại vùng này' : 'Tìm trong vùng đang xem'}
           </Button>
         </div>
       )}
-
-      {/* Mặt phẳng hiển thị các Markers */}
-      <div className="relative z-10 flex-1">
-        {/* Tâm vị trí của người dùng */}
+      <div ref={plotRef} className="relative z-10 min-h-[160px] flex-1 overflow-hidden">
         <div
-          className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
-          style={{ zIndex: 15 }}
-          title="Vị trí của bạn"
+          className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center"
+          title="Tâm tìm kiếm"
         >
-          <div className="relative flex flex-col items-center">
-            <span className="flex size-6 items-center justify-center rounded-full bg-emerald-600 text-white shadow-md ring-4 ring-emerald-500/20">
-              <Navigation className="size-3 fill-current" />
-            </span>
-            <span className="mt-1 rounded-full bg-background/90 px-1.5 py-0.5 text-[10px] font-semibold text-foreground shadow-xs">
-              Bạn
-            </span>
-          </div>
+          <span className="flex size-10 items-center justify-center rounded-full border-4 border-background bg-primary text-primary-foreground shadow-sm">
+            <Navigation className="size-4" aria-hidden="true" />
+          </span>
+          <span className="mt-1 rounded-md bg-background px-2 py-1 text-xs font-medium">
+            Tâm tìm kiếm
+          </span>
         </div>
-
-        {/* Các quán ăn xung quanh */}
-        {plotted.map((place) => {
-          const isSelected = place.id === selectedId;
+        {plotted.map((group) => {
+          const place = validPlaces.find((item) => item.id === group.members[0].id)!;
+          const isCluster = group.members.length > 1;
+          const isSelected = group.members.some((member) => member.id === selectedId);
           return (
-            <button
-              key={place.id}
+            <Button
+              key={group.id}
               type="button"
-              onClick={() => onSelect?.(place.id)}
-              className="group absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer transition-all focus:outline-hidden"
+              variant={isSelected ? 'default' : 'outline'}
+              size="icon"
+              onClick={() => (isCluster ? setOpenClusterId(group.id) : onSelect?.(place.id))}
+              className={cn(
+                'absolute size-11 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 shadow-sm focus-visible:ring-offset-2',
+                isSelected
+                  ? 'border-background ring-4 ring-primary/20'
+                  : 'border-primary/20 bg-background text-primary'
+              )}
               style={{
-                left: `${place.mapX}%`,
-                top: `${place.mapY}%`,
-                zIndex: isSelected ? 30 : 20,
+                left: group.x,
+                top: group.y,
+                zIndex: isSelected ? 20 : 10,
               }}
-              title={`${place.name} (${place.distanceLabel || 'Lân cận'})`}
+              aria-label={
+                isCluster
+                  ? `${group.members.length} quán gần nhau. Mở danh sách quán`
+                  : `${place.name}, ${place.distanceLabel || 'lân cận'}`
+              }
+              aria-pressed={isCluster ? undefined : isSelected}
+              aria-haspopup={isCluster ? 'dialog' : undefined}
+              title={
+                isCluster
+                  ? `${group.members.length} quán gần nhau — bấm để chọn`
+                  : `${place.name} · ${place.distanceLabel || 'Lân cận'}`
+              }
             >
-              <div className="relative flex flex-col items-center">
-                {/* Badge tên quán: CHỈ hiển thị khi được chọn hoặc khi rê chuột (chống đè chữ) */}
-                <div
-                  className={`pointer-events-none mb-1 whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] shadow-md transition-all ${
-                    isSelected
-                      ? 'opacity-100 scale-105 bg-primary text-primary-foreground font-bold ring-2 ring-primary/30 z-30'
-                      : 'opacity-0 scale-95 group-hover:opacity-100 group-hover:scale-100 bg-background/95 text-foreground font-medium border border-border/80'
-                  }`}
-                >
-                  {place.name}
-                  {place.distanceLabel && (
-                    <span className="ml-1 opacity-80 font-normal">({place.distanceLabel})</span>
-                  )}
-                </div>
-
-                {/* Marker icon */}
-                <div
-                  className={`flex size-7 items-center justify-center rounded-full border shadow-sm transition-all ${
-                    isSelected
-                      ? 'scale-125 border-primary bg-primary text-primary-foreground ring-4 ring-primary/25 shadow-md'
-                      : 'border-white bg-emerald-600 text-white group-hover:scale-115 group-hover:bg-emerald-700 shadow-xs'
-                  }`}
-                >
-                  <Utensils className="size-3.5" />
-                </div>
-              </div>
-            </button>
+              {isCluster ? (
+                <span className="flex flex-col items-center text-xs leading-tight">
+                  <strong className="text-sm tabular-nums">{group.members.length}</strong>
+                  <span className="text-[10px]">quán</span>
+                </span>
+              ) : (
+                validPlaces.findIndex((item) => item.id === place.id) + 1
+              )}
+            </Button>
           );
         })}
-
-        {/* Trạng thái đang tải dữ liệu trên bản đồ */}
+        {!isLoading && validPlaces.length > 0 && visibleCount === 0 && (
+          <div className="absolute inset-x-8 top-6 rounded-xl border bg-background p-4 text-center text-sm">
+            Không có quán trong khung này. Thu nhỏ hoặc đặt lại mức phóng để xem các quán.
+          </div>
+        )}
         {isLoading && (
-          <div className="absolute inset-x-4 top-1/2 z-20 flex -translate-y-1/2 flex-col items-center justify-center rounded-xl border border-primary/20 bg-background/90 p-5 text-center shadow-md backdrop-blur-xs">
-            <div className="relative mb-2.5 flex size-10 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-              <Compass className="size-5 animate-spin text-emerald-600 dark:text-emerald-400" />
-            </div>
-            <p className="text-xs font-bold text-foreground">
-              Đang tìm kiếm quán chay trong bán kính{' '}
-              {radiusM >= 1000 ? `${radiusM / 1000} km` : `${radiusM} m`}...
-            </p>
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              Đang đồng bộ dữ liệu bản đồ và áp dụng chế độ ăn
+          <div
+            className="absolute inset-x-6 top-1/3 rounded-2xl border bg-background p-5 text-center shadow-sm"
+            role="status"
+          >
+            <p className="text-sm font-semibold">Đang tìm quán chay quanh đây…</p>
+            <Skeleton className="mx-auto mt-3 h-2 w-40 motion-reduce:animate-none" />
+            <p className="mt-3 text-xs text-muted-foreground">
+              Đang tải địa điểm theo vùng và bộ lọc bạn chọn.
             </p>
           </div>
         )}
-
-        {/* Trạng thái không có quán nào trong bán kính hiện tại (chỉ hiện khi đã tải xong) */}
         {!isLoading && validPlaces.length === 0 && (
-          <div className="absolute inset-x-4 top-1/2 z-20 flex -translate-y-1/2 flex-col items-center justify-center rounded-xl border border-dashed bg-background/90 p-4 text-center shadow-xs backdrop-blur-xs">
-            <MapPin className="size-6 text-muted-foreground" />
-            <p className="mt-1.5 text-xs font-semibold">
-              Chưa có quán chay trong bán kính{' '}
-              {radiusM >= 1000 ? `${radiusM / 1000} km` : `${radiusM} m`}
+          <div className="absolute inset-x-6 top-1/4 rounded-2xl border bg-background p-5 text-center">
+            <MapPin className="mx-auto size-7 text-primary" aria-hidden="true" />
+            <p className="mt-3 text-balance text-sm font-semibold">
+              {emptyTitle ?? 'Chưa tìm thấy quán quanh đây'}
             </p>
-            <p className="mt-0.5 text-[11px] text-muted-foreground">
-              Hãy thử mở rộng bán kính tìm kiếm hoặc chọn địa điểm khác.
+            <p className="mt-2 text-pretty text-xs leading-relaxed text-muted-foreground">
+              {emptyDescription ?? 'Thử mở rộng bán kính hoặc tìm ở khu vực khác.'}
             </p>
-            {onRadiusChange && (
-              <div className="mt-2.5 flex items-center gap-1.5">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs"
-                  onClick={() => onRadiusChange(10000)}
-                >
-                  Mở rộng 10 km
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs"
-                  onClick={() => onRadiusChange(20000)}
-                >
-                  Mở rộng 20 km
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs"
-                  onClick={() => onRadiusChange(50000)}
-                >
-                  Mở rộng 50 km
-                </Button>
-              </div>
+            {onRadiusChange && radiusM < 50000 && (
+              <Button
+                variant="outline"
+                className="mt-4 h-11 rounded-xl"
+                onClick={() => onRadiusChange(Math.min(radiusM * 2, 50000))}
+              >
+                Mở rộng bán kính
+              </Button>
             )}
           </div>
         )}
       </div>
-
-      {/* Cụm nút phóng to / thu nhỏ / đặt lại tầm nhìn mô phỏng Google Maps */}
-      <div className="absolute right-3 top-16 z-30 flex flex-col gap-1 rounded-xl border bg-background/90 p-1 shadow-md backdrop-blur-xs">
-        <button
-          type="button"
-          onClick={() => {
-            setZoomFactor((z) => Math.max(0.35, Number((z * 0.75).toFixed(2))));
-            reportBounds();
-          }}
-          className="flex size-7 items-center justify-center rounded-lg hover:bg-muted text-foreground transition-colors"
-          title="Phóng to"
-        >
-          <Plus className="size-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setZoomFactor((z) => Math.min(2.5, Number((z * 1.35).toFixed(2))));
-            reportBounds();
-          }}
-          className="flex size-7 items-center justify-center rounded-lg hover:bg-muted text-foreground transition-colors"
-          title="Thu nhỏ"
-        >
-          <Minus className="size-3.5" />
-        </button>
-        {zoomFactor !== 1 && (
-          <button
-            type="button"
-            onClick={() => {
-              setZoomFactor(1);
-              reportBounds();
-            }}
-            className="flex size-7 items-center justify-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground border-t transition-colors"
-            title="Đặt lại tỉ lệ phóng"
-          >
-            <LocateFixed className="size-3.5" />
-          </button>
-        )}
-      </div>
-
-      {/* Thẻ xem nhanh thông tin quán đang được chọn ở góc dưới bản đồ (Quick Preview Popup) */}
-      {activeRestaurant && (
-        <div className="relative z-20 mt-auto flex items-center justify-between gap-3 rounded-xl border bg-background/95 p-3 text-xs shadow-lg backdrop-blur-xs transition-all animate-in fade-in slide-in-from-bottom-2">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <p className="truncate font-bold text-foreground text-sm">{activeRestaurant.name}</p>
+      <div className="relative z-20 mx-4 mb-3 h-28 shrink-0">
+        {activeRestaurant ? (
+          <div className="flex h-full items-center justify-between gap-3 rounded-xl border bg-background p-3 shadow-sm">
+            <div className="min-w-0">
+              <Link
+                href={`/restaurants/${activeRestaurant.id}`}
+                className="line-clamp-1 text-sm font-semibold hover:text-primary"
+              >
+                {activeRestaurant.name}
+              </Link>
+              <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+                {activeRestaurant.address}
+              </p>
               {activeRestaurant.distanceLabel && (
-                <span className="shrink-0 inline-flex items-center gap-0.5 rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
-                  <Navigation className="size-2.5 fill-current" /> {activeRestaurant.distanceLabel}
-                </span>
+                <p className="mt-1 text-xs font-medium text-primary">
+                  {activeRestaurant.distanceLabel}
+                </p>
               )}
             </div>
-            <p className="truncate text-xs text-muted-foreground mt-0.5">
-              {activeRestaurant.address}
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-1.5">
-            {activeRestaurant.lat && activeRestaurant.lng && (
+            <Button asChild className="h-11 shrink-0 rounded-xl" size="sm">
               <a
-                href={`https://www.google.com/maps/dir/?api=1&destination=${activeRestaurant.lat},${activeRestaurant.lng}`}
+                href={getRestaurantDirectionsUrl(activeRestaurant)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex h-8 items-center gap-1 rounded-lg border bg-background px-2.5 text-xs font-medium text-foreground hover:bg-muted shadow-2xs"
-                title="Chỉ đường trên Google Maps"
               >
-                <Navigation className="size-3 text-emerald-600 fill-emerald-600" />
-                <span className="hidden sm:inline">Chỉ đường</span>
+                Chỉ đường
+                <ArrowUpRight className="size-4" aria-hidden="true" />
               </a>
-            )}
-            <Button
-              asChild
-              size="sm"
-              className="h-8 px-3 text-xs font-semibold rounded-lg shadow-2xs"
-            >
-              <Link href={`/restaurants/${activeRestaurant.id}`}>Chi tiết</Link>
             </Button>
           </div>
-        </div>
-      )}
+        ) : (
+          <p className="flex h-full items-center justify-center text-center text-xs text-muted-foreground">
+            Chọn một ghim hoặc cụm số để xem quán.
+          </p>
+        )}
+      </div>
+      <p className="relative px-4 pb-4 text-center text-xs text-muted-foreground">
+        Sơ đồ vị trí tương đối, không phải bản đồ đường phố.
+      </p>
+      <Dialog
+        open={Boolean(openCluster)}
+        onOpenChange={(open) => {
+          if (!open) setOpenClusterId(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {openCluster ? `${openCluster.members.length} quán gần nhau` : 'Các quán gần nhau'}
+            </DialogTitle>
+            <DialogDescription>
+              Chọn một quán trong cụm để xem vị trí và chỉ đường. Bạn cũng có thể phóng to để tách
+              các ghim.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex max-h-[50dvh] flex-col gap-2 overflow-y-auto">
+            {openCluster?.members.map((member) => {
+              const restaurant = validPlaces.find((item) => item.id === member.id)!;
+              return (
+                <Button
+                  key={member.id}
+                  variant="outline"
+                  className="h-auto min-h-14 justify-start whitespace-normal py-3 text-left"
+                  onClick={() => {
+                    onSelect?.(member.id);
+                    setOpenClusterId(null);
+                  }}
+                >
+                  <span className="flex min-w-0 flex-col gap-1">
+                    <span className="font-medium">{restaurant.name}</span>
+                    <span className="text-xs font-normal text-muted-foreground">
+                      {restaurant.distanceLabel}
+                      {restaurant.distanceLabel && restaurant.address ? ' · ' : ''}
+                      {restaurant.address}
+                    </span>
+                  </span>
+                </Button>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,8 +1,8 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.7
+**Version:** 4.8
 
-**Updated:** 2026-10-24
+**Updated:** 2026-10-25
 
 **Status:** Approved implementation baseline
 
@@ -220,6 +220,7 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
    - preferences and ranking signals.
 4. Hard constraints remove candidates before scoring. Ranking cannot restore them.
 5. MVP supports Buddhist and Christian traditions; the model remains extensible.
+6. Restaurant directory discovery/details follow BL-16's explicit-search exception and do not inherit these personal profile constraints.
 
 ### BL-03 — Practice schedule
 
@@ -348,7 +349,8 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 - Use internal and external-source records through adapters.
 - Deduplicate using provider reference first, then normalized name/location heuristics.
 - Location requires consent or explicit user entry.
-- Dietary compatibility is applied before distance/relevance ranking.
+- Restaurant discovery and details do not automatically apply the personal eating profile, allergies, ingredient exclusions or tradition rules (user-approved 2026-10-25). Location, keyword and explicitly selected search filters determine the results.
+- An explicit `dietPattern` query filters reviewed internal dietary claims before ranking and suppresses unreviewed external places. Without it, signed-in users and guests can retrieve the same public provider results. Provider labels remain advisory and do not establish dietary/allergy compatibility.
 - Respect provider caching, attribution, and retention terms.
 
 ### BL-17 — Notifications
@@ -557,6 +559,8 @@ A phase is complete only when:
 | Phase 2 ideas are forgotten or accidentally claimed READY | Dedicated roadmap plus explicit status taxonomy |
 
 ## 13. Change record
+
+- **4.8 — 2026-10-25:** User explicitly excludes restaurant discovery and place details from automatic eating-profile filtering. Directory lookups use only requested location, keyword and explicit filters. A query `dietPattern` remains a reviewed-claim filter; external source attribution and unverified labels remain required. Recipe recommendations and meal planning retain their hard profile constraints.
 
 - **4.5 — 2026-10-14:** User requests all billing moved to payOS and will configure credentials later. New purchases use hosted payOS QR/bank transfer, signed SDK create/query/webhook, persisted unique provider references, partial-payment handling and 30-second reconciliation. Retired providers are read-only history; their routes/configuration are removed. payOS is real money with no sandbox; app production rollout remains deferred.
 

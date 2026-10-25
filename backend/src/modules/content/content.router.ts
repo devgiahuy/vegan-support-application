@@ -12,6 +12,7 @@ import {
   postIdentifierParamsSchema,
   postIdParamsSchema,
   postListQuerySchema,
+  myPostsQuerySchema,
   relatedPostsQuerySchema,
   reviewHistoryQuerySchema,
   submitPostRequestSchema,
@@ -23,6 +24,12 @@ export function createPostsRouter(
   authentication: AuthenticationMiddleware,
 ): Router {
   const router = Router();
+  router.get(
+    '/mine',
+    authentication.authenticate,
+    validateQuery(myPostsQuerySchema),
+    controller.listMyPosts,
+  );
   router.get(
     '/',
     authentication.optionalAuthenticate,

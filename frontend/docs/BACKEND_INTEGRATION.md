@@ -1,8 +1,8 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.40
+**Version:** 4.49
 
-**Cập nhật:** 24/10/2026
+**Cập nhật:** 25/10/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
@@ -13,6 +13,46 @@
 ---
 
 ## 1. Source of truth và status
+
+### Restaurant schematic clustering — 2026-10-25 (4.49)
+
+Frontend-only map correction; existing restaurant contracts and `READY`/FE-integrated statuses are unchanged. The fallback schematic projects by measured viewport size, clusters overlapping pins with an accessible selection dialog, and exposes zoom levels/limits/reset. The same projection now computes the explicit search-area bounds. Offscreen places are not clamped into overlapping edge pins. Zoom/resize alone do not fetch discovery data; only the existing search-area action does. No Swagger regeneration is needed for this presentation-only change. Typecheck, scoped lint, 677 tests and build pass; browser component QA uses 20 labelled synthetic points because the public-address geocoder was unavailable during this check.
+
+### Restaurant directory interface — 2026-10-25 (4.48)
+
+Frontend redesign only; restaurant endpoints remain `READY` and FE integrated. The directory now uses horizontal cards, direct phone/website/directions actions, a sticky desktop map panel and mobile list/map selection. Dedicated detail buttons are removed; restaurant names still link to details. Provider attribution and unreviewed labels remain visible, with grouped source/partial-data notices. Personal eating profiles remain excluded from discovery under 4.47.
+
+Consumer correction: keyword search includes explicitly selected map bounds and its query key varies by those bounds; it no longer silently searches the original point. Existing request/response schemas, errors, authorization, persistence and endpoint constants are unchanged. Swagger catalog resynchronized before this consumer update. Typecheck, scoped ESLint, 668 tests and production build pass; browser verified real provider cards, selection/preview and responsive list/map controls. Local visual validation uses the labelled schematic fallback because the Google Maps SDK is not configured.
+
+### Restaurant profile-independent discovery — 2026-10-25 (4.47)
+
+User-approved behavior change: restaurant discovery and details ignore personal diet preferences, allergies, ingredient exclusions and tradition rules. Search applies only location/bounds, keyword and filters explicitly supplied with the request. An explicit `dietPattern` still filters reviewed internal claims and suppresses unreviewed external results; `externalResultsSuppressed` now refers only to that query filter. Default discovery calls the provider for guests and signed-in users alike. External labels remain unverified; this does not change recipe or meal-plan filtering.
+
+Migration completed: frontend removes the profile-based label/notice introduced in 4.46, keeps “Tất cả” as the default, and bumps restaurant query keys to discard old profile-filtered caches. Diet/schedule saves no longer invalidate public restaurant searches. Nearby/search/detail moved `READY` → `CHANGING` → `READY` after backend gates, OpenAPI regeneration, consumer synchronization and frontend verification. No request/response shape, database schema, seed or permission changes are required.
+
+Verified: backend lint/typecheck/build pass; frontend typecheck/scoped lint, 657 tests and build (47/47 pages) pass. A live authenticated seed account with a dietary profile retrieved 20 external places, total 108, with `externalResultsSuppressed=false`. Browser address discovery displayed 20 cards, total 92, and “Tất cả”; source counts vary with provider results/deadlines. Live `/api-docs.json` exposes the revised directory policy. Local container uses the compiled restaurant module update against the existing database, without seeding. No backend unit/integration suite was introduced.
+
+### Restaurant discovery filtering — 2026-10-25 (4.46)
+
+Historical frontend explanation of the former behavior; superseded by the user-approved change in 4.47 above.
+
+Frontend-only correction; restaurant endpoints remain `READY` with no contract change. Guest and authenticated discovery can return different results for the same location: backend authorization supplies the user's diet, active allergies, ingredient exclusions and enabled tradition rules. Selecting no additional `dietPattern` does not clear those profile constraints. `meta.externalResultsSuppressed=true` means unverified provider places were excluded; an empty `data` array with that flag is a successful filtered response, not a mapper/proxy failure.
+
+The web filter now labels its default option “Theo hồ sơ ăn uống” for signed-in users and links to `/profile?tab=diet`. List and fallback map share an empty state explaining missing dietary-compatibility information, instead of claiming the area has no restaurants. Saving dietary preferences/schedule already invalidates restaurant discovery queries. No constraints or user profile records were changed.
+
+Verification: live guest request at `lat=10.7735,lng=106.7032,radiusMeters=5000` returned HTTP 200, 20 items and `meta.total=95` through both backend port 4000 and frontend proxy port 3000. Browser guest discovery showed 20 cards and 56 total results at the provider-resolved location; the signed-in session returned no compatible places with `externalResultsSuppressed=true`. Provider counts vary between searches. Frontend typecheck, 651 tests, build and diff checks passed. Scoped lint reports two existing `react-hooks/set-state-in-effect` errors in Google Maps error handlers.
+
+### Meal program list query — 2026-10-25
+
+`GET /api/v1/meal-programs` accepts only `page`, `limit`, and backend `MealProgramStatus` values (`GENERATING`, `DRAFT`, `PARTIAL`, `FAILED`, `CONFIRMED`). The frontend list no longer sends the unsupported `type` query or `COMPLETED` status, both of which trigger strict query validation. The API currently lists programs owned by the authenticated user; template browsing is not available through this endpoint.
+
+`POST /api/v1/meal-programs` performs bounded week/alternative generation before responding. The frontend allows up to 180 seconds for this operation, suppresses duplicate network-error toasts, and keeps the same idempotency key when retrying the identical form data so a lost response does not create another program.
+
+### Author-owned content list — 2026-10-25
+
+The profile's “Bài viết của tôi” tab now uses `GET /api/v1/posts/mine`, which returns the authenticated author's non-deleted posts in every moderation state, including the latest revision and pagination metadata. The route requires authentication and scopes its database query to the authenticated user; clients cannot supply another author ID. The profile consumer uses the post DTO/Mapper/Model/API/query layers and offers retry on errors. The route is `IN_PROGRESS` until backend lint, typecheck, and build gates pass; no schema migration is required.
+
+Errors: `AUTH_REQUIRED` (401) means sign in again; `ACCOUNT_BANNED` (403) means the account cannot access the route. Query validation returns `VALIDATION_ERROR` (400). The endpoint does not include soft-deleted content.
 
 ### Receipt non-food classification — 2026-10-24
 
@@ -97,6 +137,10 @@ Completed migration: recognize payos in mappers, allow new purchases only for pa
 | `BILLING_RECONCILE_COOLDOWN`                                                          | Wait at least 30 seconds                                                                                                                                        |
 | `BILLING_CHECKOUT_EXPIRED`                                                            | Historical retired local-checkout code; not emitted by current billing routes                                                                                   |
 | `ENTITLEMENT_QUOTA_EXCEEDED`, `PANTRY_CAPACITY_EXCEEDED`, `SCAN_RETRY_LIMIT_EXCEEDED` | Existing quota/capacity/retry handling                                                                                                                          |
+
+Changelog 2026-10-25 (4.45): xử lý timeout ở `POST /meal-programs`: frontend chờ tối đa 180 giây cho backend sinh chương trình đồng bộ, giữ idempotency key khi retry cùng payload và hiển thị thông báo tiếng Việt khi chưa nhận được response. Changelog 2026-10-25 (4.44): sửa consumer `GET /meal-programs` để chỉ gửi query `page`/`limit`/`status` được backend strict schema cho phép; bộ lọc dùng enum backend và UI không quảng bá template khi endpoint chỉ trả programs của owner. Changelog 2026-10-25 (4.43): nối các nút “Lưu món”/“Lưu video” trên trang chi tiết và nút bookmark trên thẻ công thức với `PUT/DELETE /posts/{id}/bookmark`; bỏ state-only/toast-only giả lập và gỡ nút API trùng ở phần thảo luận. `USE_FIXTURES=false`; nút thẻ công thức lấy trạng thái từ danh sách bookmark dùng chung. API vẫn `READY`; không đổi contract.
+
+Changelog 2026-10-25 (4.44): sửa consumer `GET /meal-programs` để chỉ gửi query `page`/`limit`/`status` được backend strict schema cho phép; bộ lọc dùng enum backend và UI không quảng bá template khi endpoint chỉ trả programs của owner. Changelog 2026-10-25 (4.43): nối các nút lưu/bỏ lưu bài viết và video cùng nút bookmark trên thẻ công thức với `PUT/DELETE /posts/{id}/bookmark`; bỏ state-only/toast-only giả lập và dùng trạng thái bookmark dùng chung. Changelog 2026-10-25 (4.42): thêm `GET /posts/mine` có xác thực để tab profile liệt kê nội dung của đúng tài khoản hiện tại ở mọi trạng thái kiểm duyệt, phân trang và dùng revision mới nhất. FE consumer được tích hợp qua DTO/Model/Mapper/API/Query, cache theo user ID; endpoint vẫn `IN_PROGRESS` vì backend lint/typecheck/build chưa qua do thiếu dependency đã khai báo `@payos/node` trong môi trường cài đặt.
 
 Changelog 2026-10-24 (4.40): receipt-v3 phân loại mặt hàng; chỉ hàng không phải thực phẩm được loại mặc định và báo qua `notices[]`/`excludedItems[]`, có thể khôi phục bằng PATCH. Thực phẩm ăn liền được giữ. Ảnh hóa đơn tổng hợp và gợi ý công thức text đã qua OpenAI thật; kiểm chứng hóa đơn chụp thực tế và FE migration vẫn còn.
 
@@ -381,6 +425,7 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 | Method | Path                           | Status    | Backend updated | FE integrated    | Ghi chú                                                                                                             |
 | ------ | ------------------------------ | --------- | --------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------- |
 | GET    | `/posts`                       | `READY`   | 2026-09-21      | Yes (2026-09-16) | Public chỉ thấy approved revision; filter/type/pagination; FE: `features/post`, `features/recipe`, `features/video` |
+| GET    | `/posts/mine`                  | `IN_PROGRESS` | 2026-10-25 | Yes (2026-10-25) | Authenticated author list across moderation states, newest revision first, excludes deleted posts; no client-supplied author ID; FE: `features/post`, `/profile?tab=posts`; waiting for backend quality gates |
 | POST   | `/posts`                       | `READY`   | 2026-09-21      | Yes (2026-09-16) | Auth; luôn tạo draft revision, không auto-publish                                                                   |
 | GET    | `/posts/:idOrSlug`             | `READY`   | 2026-09-21      | Yes (2026-09-16) | Public thấy approved revision gần nhất trong lúc edit pending                                                       |
 | PATCH  | `/posts/:id`                   | `READY`   | 2026-09-21      | Yes (2026-09-16) | Author-only; tạo draft revision mới với expectedVersion                                                             |
@@ -477,10 +522,10 @@ review proposal vẫn là `PLANNED` cho tới Phase 07; frontend chưa được 
 
 | Method | Path                             | Status  | Backend updated | FE integrated    | Ghi chú                                                                 |
 | ------ | -------------------------------- | ------- | --------------- | ---------------- | ----------------------------------------------------------------------- |
-| GET    | `/restaurants/nearby`            | `READY` | 2026-10-07      | Yes (2026-10-07) | Explicit coordinates or bounds; optional device consent; diet filtering |
-| GET    | `/restaurants/search`            | `READY` | 2026-10-07      | Yes (2026-10-07) | Required `q`, location, hybrid ranking                                  |
+| GET    | `/restaurants/nearby`            | `READY` | 2026-10-25      | Yes (2026-10-25) | Explicit coordinates/bounds and query filters; personal eating profile ignored |
+| GET    | `/restaurants/search`            | `READY` | 2026-10-25      | Yes (2026-10-25) | Required `q`, location, hybrid ranking; only explicit query filters |
 | GET    | `/restaurants/mine`              | `READY` | 2026-09-27      | Yes              | Authenticated owner submissions/status                                  |
-| GET    | `/restaurants/:id`               | `READY` | 2026-10-07      | Yes (2026-10-07) | Approved internal UUID or live `google:`/`serpapi:`/`fake:` ID          |
+| GET    | `/restaurants/:id`               | `READY` | 2026-10-25      | Yes (2026-10-25) | Approved internal UUID or live provider ID; no implicit profile filtering |
 | POST   | `/restaurants`                   | `READY` | 2026-10-07      | Yes (2026-10-07) | Authenticated Member/Contributor/Admin; pending review                  |
 | GET    | `/location/geocode`              | `READY` | 2026-09-27      | Yes              | Explicit address; live provider, no durable cache                       |
 | GET    | `/admin/restaurants`             | `READY` | 2026-09-27      | Yes              | Admin paginated status queue                                            |
@@ -576,7 +621,8 @@ MVP không có payment/quota purchase, DMCA workflow, audio/frame copyright dete
 | PATCH            | `/meal-plans/:id/items/:itemId/manual-add` | `READY` | 2026-09-28      | Yes (2026-10-03) | Saves hard-compatible choice; refreshed analysis returns advisory `MACRO_TARGET_EXCEEDED` without rollback    |
 | POST             | `/meal-plans/:id/analyze`                  | `READY` | 2026-09-28      | Yes (2026-10-03) | Estimated protein/fiber/fat/carbohydrate focus; no micronutrient-completeness warning; compatibility retained |
 | GET              | `/meal-plans/:id/analysis`                 | `READY` | 2026-09-28      | Yes (2026-10-03) | Current fingerprint-validated four-macro result; old v1 analysis becomes stale                                |
-| GET/POST         | `/meal-programs`                           | `READY` | 2026-09-23      | No               | Owner list/create; 2–12 ordered weeks, bounded alternatives, resumable partial generation                     |
+| GET              | `/meal-programs`                           | `READY` | 2026-09-23      | Yes (2026-10-25)  | Owner paginated list; client sends only `page`, `limit`, and supported `status` values                        |
+| POST             | `/meal-programs`                           | `READY` | 2026-09-23      | Yes (2026-10-25)  | Synchronous generation; FE uses a longer request timeout and idempotent retries                              |
 | GET/PATCH        | `/meal-programs/:id`                       | `READY` | 2026-09-23      | No               | Snapshot detail; versioned metadata/select/regenerate/reanalyze/confirm actions                               |
 
 `tags` của custom meal là text do user tạo; `shopee` không phải service/provider ID. Warning DTO phải có code, severity, source/evidence, affected items, explanation, confidence, và suggested adjustment để FE render tooltip/dialog.
@@ -1321,8 +1367,8 @@ Một frontend/backend capability chỉ được xem là tích hợp xong khi:
 
 | Method | Endpoint                   | Status | FE integrated | FE integrated date | Notes                                                                            |
 | ------ | -------------------------- | ------ | ------------- | ------------------ | -------------------------------------------------------------------------------- |
-| POST   | /api/v1/meal-programs      | READY  | No            | —                  | Create/generate multi-week program (2–12 weeks) with bounded alternatives        |
-| GET    | /api/v1/meal-programs      | READY  | No            | —                  | Owner paginated list of programs                                                 |
+| POST   | /api/v1/meal-programs      | READY  | Yes           | 2026-10-25         | Create/generate multi-week program (2–12 weeks); FE allows synchronous generation time and retries idempotently |
+| GET    | /api/v1/meal-programs      | READY  | Yes           | 2026-10-25         | Owner paginated list; FE sends only `page`, `limit`, and supported `status` values |
 | GET    | /api/v1/meal-programs/{id} | READY  | No            | —                  | Full program detail with weekly snapshots, alternatives, and cross-week analysis |
 | PATCH  | /api/v1/meal-programs/{id} | READY  | No            | —                  | Versioned program update, alternative selection, reanalysis, or confirmation     |
 

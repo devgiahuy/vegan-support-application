@@ -247,6 +247,12 @@ export const postListQuerySchema = z
       .describe('Ngày YYYY-MM-DD để áp lịch tradition PERIODIC; mặc định ngày hiện tại VN'),
   })
   .strict();
+export const myPostsQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
+  })
+  .strict();
 export const postIdentifierParamsSchema = z.object({ idOrSlug: z.string().trim().min(1).max(220) });
 export const postIdParamsSchema = z.object({ id: z.string().uuid() }).strict();
 export const relatedPostsQuerySchema = z
@@ -442,6 +448,20 @@ export const postResponseSchema = z
 export const postListResponseSchema = z
   .object({ success: z.literal(true), data: z.array(postSchema), meta: paginationMetaSchema })
   .strict();
+export const myPostListResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.array(postSchema),
+    meta: z
+      .object({
+        page: z.number().int().positive(),
+        limit: z.number().int().positive(),
+        total: z.number().int().nonnegative(),
+        totalPages: z.number().int().nonnegative(),
+      })
+      .strict(),
+  })
+  .strict();
 export const relatedPostsResponseSchema = z
   .object({
     success: z.literal(true),
@@ -518,6 +538,7 @@ export type UpdatePostInput = z.infer<typeof updatePostRequestSchema>;
 export type SubmitPostInput = z.infer<typeof submitPostRequestSchema>;
 export type ReviewHistoryQuery = z.infer<typeof reviewHistoryQuerySchema>;
 export type PostListQuery = z.infer<typeof postListQuerySchema>;
+export type MyPostsQuery = z.infer<typeof myPostsQuerySchema>;
 export type PostIdentifierParams = z.infer<typeof postIdentifierParamsSchema>;
 export type PostIdParams = z.infer<typeof postIdParamsSchema>;
 export type RelatedPostsQuery = z.infer<typeof relatedPostsQuerySchema>;

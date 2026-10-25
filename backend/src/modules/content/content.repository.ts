@@ -44,6 +44,11 @@ const postIdentityInclude = {
   author: true,
   publishedRevision: { select: { version: true } },
 } satisfies Prisma.PostInclude;
+const ownedPostInclude = {
+  author: true,
+  publishedRevision: { select: { version: true } },
+  revisions: { take: 1, orderBy: { version: 'desc' }, include: revisionInclude },
+} satisfies Prisma.PostInclude;
 const publishedPostInclude = {
   author: true,
   publishedRevision: { include: revisionInclude },
@@ -82,6 +87,7 @@ const ingredientMetadataInclude = {
 
 export type RevisionRecord = Prisma.PostRevisionGetPayload<{ include: typeof revisionInclude }>;
 export type PostIdentityRecord = Prisma.PostGetPayload<{ include: typeof postIdentityInclude }>;
+export type OwnedPostRecord = Prisma.PostGetPayload<{ include: typeof ownedPostInclude }>;
 export type PublishedPostRecord = Prisma.PostGetPayload<{ include: typeof publishedPostInclude }>;
 export type SearchProfileRecord = Prisma.UserGetPayload<{ select: typeof searchProfileSelect }>;
 export type IngredientMetadataRecord = Prisma.IngredientGetPayload<{
@@ -202,6 +208,25 @@ export class ContentRepository {
       count: true,
     });
     return { records: await this.hydratePublished(result.ids), total: result.total };
+  }
+
+  async findOwnedPosts(
+    authorId: string,
+    page: number,
+    limit: number,
+  ): Promise<{ records: OwnedPostRecord[]; total: number }> {
+    const where: Prisma.PostWhereInput = { authorId, deletedAt: null };
+    const [records, total] = await Promise.all([
+      this.prisma.post.findMany({
+        where,
+        include: ownedPostInclude,
+        orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.post.count({ where }),
+    ]);
+    return { records, total };
   }
 
   findSearchProfile(userId: string): Promise<SearchProfileRecord | null> {

@@ -31,30 +31,21 @@ export class RestaurantController {
     response.setHeader('Cache-Control', 'no-store');
     response.json({
       success: true,
-      ...(await this.service.discover(
-        getValidatedQuery<NearbyQuery>(request),
-        request.auth?.userId,
-      )),
+      ...(await this.service.discover(getValidatedQuery<NearbyQuery>(request))),
     });
   };
   search = async (request: Request, response: Response): Promise<void> => {
     response.setHeader('Cache-Control', 'no-store');
     response.json({
       success: true,
-      ...(await this.service.discover(
-        getValidatedQuery<SearchQuery>(request),
-        request.auth?.userId,
-      )),
+      ...(await this.service.discover(getValidatedQuery<SearchQuery>(request))),
     });
   };
   get = async (request: Request, response: Response): Promise<void> => {
     response.setHeader('Cache-Control', 'no-store');
     response.json({
       success: true,
-      data: await this.service.get(
-        getValidatedParams<{ id: string }>(request).id,
-        request.auth?.userId,
-      ),
+      data: await this.service.get(getValidatedParams<{ id: string }>(request).id),
     });
   };
   submit = async (request: Request, response: Response): Promise<void> => {

@@ -1,8 +1,8 @@
 # Software Requirements Specification — Vegan Support Application
 
-**Version:** 1.4
+**Version:** 1.5
 
-**Updated:** 2026-10-24
+**Updated:** 2026-10-25
 
 **Status:** Approved product baseline
 
@@ -79,6 +79,8 @@ Each user profile may define:
 MVP traditions are Buddhist and Christian. Other traditions may be added without redesigning the profile schema or rule engine.
 
 When a user selects a diet pattern or tradition, the backend provides a default rule set. The user confirms it and may enable or disable individual rules. Allergy rules, explicit exclusions, the selected diet pattern, and enabled tradition rules are hard constraints enforced by the backend. Recommendations must never reintroduce an item removed by these constraints.
+
+Restaurant directory discovery and place details are an approved exception (2026-10-25): they do not automatically apply the personal dietary profile. Restaurant search applies only filters explicitly selected for that request; provider labels do not establish dietary or allergy compatibility.
 
 ## 5. Functional requirements
 
@@ -188,6 +190,8 @@ When a user selects a diet pattern or tradition, the backend provides a default 
 ### FR-14 Restaurants and maps
 
 - Find vegetarian shops/restaurants near a user-selected or permitted device location.
+- Discovery and place details do not read or apply personal diet preferences, allergies, ingredient exclusions or tradition rules (user-approved 2026-10-25). Guests and signed-in users use the same public sources for the same search filters.
+- An explicitly selected `dietPattern` filters reviewed internal claims and excludes dietary-unverified provider results. Without that filter, external places remain available with their unverified labels and source attribution.
 - Use a maps provider through an adapter and store only permitted cached data.
 - Support suggestions related to searched foods and disclose distance/provider limitations.
 

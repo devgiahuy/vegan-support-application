@@ -216,7 +216,9 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
     const dietaryReviewed = safeBoolean(pickField(dto, ['dietaryReviewed'], false), false);
     const fetchedAt = toNullableDate(pickField(dto, ['fetchedAt', 'fetched_at'], null));
     const status = safeEnum(
-      dto?.status === 'APPROVED' ? RestaurantStatus.PUBLISHED : pickField(dto, ['status'], RestaurantStatus.PUBLISHED),
+      dto?.status === 'APPROVED'
+        ? RestaurantStatus.PUBLISHED
+        : pickField(dto, ['status'], RestaurantStatus.PUBLISHED),
       RestaurantStatus,
       RestaurantStatus.PUBLISHED
     );
@@ -305,7 +307,8 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
     const page = toNullableNumber(pickField(metaDto, ['page'], null)) ?? base.page;
     const limit = toNullableNumber(pickField(metaDto, ['limit'], null)) ?? base.limit;
     const provider = safeString(pickField(metaDto, ['provider'], ''));
-    const totalPages = totalPagesFromBackend ?? Math.ceil((totalFromBackend ?? fallbackTotal) / Math.max(1, limit));
+    const totalPages =
+      totalPagesFromBackend ?? Math.ceil((totalFromBackend ?? fallbackTotal) / Math.max(1, limit));
 
     return {
       page,
@@ -318,7 +321,10 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
         pickField(metaDto, ['externalDataUnavailable'], false),
         false
       ),
-      externalResultsSuppressed: safeBoolean(pickField(metaDto, ['externalResultsSuppressed'], false), false),
+      externalResultsSuppressed: safeBoolean(
+        pickField(metaDto, ['externalResultsSuppressed'], false),
+        false
+      ),
       resultsTruncated: safeBoolean(pickField(metaDto, ['resultsTruncated'], false), false),
       provider,
       providerLabel: PROVIDER_LABELS[provider.toLowerCase()] ?? provider,
@@ -346,7 +352,8 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
       notices.push({
         kind: 'SUPPRESSED',
         tone: 'info',
-        message: 'Các quán chưa được xác minh đã được loại khỏi kết quả để áp dụng chế độ ăn, dị ứng hoặc thành phần bạn cần tránh.',
+        message:
+          'Bạn đã chọn bộ lọc chế độ ăn. Quán từ nhà cung cấp bản đồ chưa có thông tin xác minh phù hợp nên đã được loại khỏi danh sách.',
       });
     }
 
@@ -413,7 +420,9 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
     const page = toNullableNumber(pickField(meta, ['page'], null)) ?? 1;
     const limit = toNullableNumber(pickField(meta, ['limit'], null)) ?? 20;
     const totalItems = toNullableNumber(pickField(meta, ['total'], null)) ?? fallbackTotal;
-    const totalPages = toNullableNumber(pickField(meta, ['totalPages', 'total_pages'], null)) ?? Math.ceil(totalItems / Math.max(1, limit));
+    const totalPages =
+      toNullableNumber(pickField(meta, ['totalPages', 'total_pages'], null)) ??
+      Math.ceil(totalItems / Math.max(1, limit));
     return {
       page,
       limit,
@@ -515,7 +524,7 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
    * - `radiusMeters` luôn clamp về [100, 50000].
    * - `lat`/`lng` đi cùng nhau; bounds phải đủ bốn mốc và đúng thứ tự.
    * - Lọc nâng cao chỉ có tác dụng ở chế độ tìm theo từ khóa.
-    * - Gửi `page`/`limit` khi chuyển trang; backend mặc định 20 kết quả mỗi trang.
+   * - Gửi `page`/`limit` khi chuyển trang; backend mặc định 20 kết quả mỗi trang.
    */
   toDiscoveryParams(state: RestaurantSearchState): Record<string, string | number> {
     const params: Record<string, string | number> = {
@@ -529,7 +538,7 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
       const keyword = state.query.trim();
       if (keyword.length >= 2) params.q = keyword.slice(0, 160);
     }
-    if (state.mode === 'BOUNDS') {
+    if (state.mode === 'BOUNDS' || (state.mode === 'KEYWORD' && isBoundsUsable(state.bounds))) {
       if (isBoundsUsable(state.bounds)) {
         params.north = state.bounds.north;
         params.south = state.bounds.south;

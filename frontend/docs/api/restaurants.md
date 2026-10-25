@@ -2,7 +2,7 @@
 # Restaurants
 
 ## GET `/api/v1/restaurants/nearby`
-Nearby approved internal and live provider places; hard diet filtering precedes ranking
+Nearby approved internal and live provider places; explicit search filters only
 - operationId: `nearbyRestaurants`
 - Params: `query:lat (number,null)`, `query:lng (number,null)`, `query:north (number,null)`, `query:south (number,null)`, `query:east (number,null)`, `query:west (number,null)`, `query:radiusMeters (integer)`, `query:page (integer)`, `query:limit (integer)`, `query:dietPattern (string)`, `query:locationSource (string)`, `query:locationConsent (string)`
 - Request: —

@@ -53,7 +53,7 @@ export function LocationPrompt({ onLocated, onDenied }: LocationPromptProps) {
   };
 
   return (
-    <Button onClick={request} disabled={pending} className="gap-1.5">
+    <Button onClick={request} disabled={pending} className="h-12 gap-2 rounded-xl">
       <LocateFixed data-icon="inline-start" className="size-4" />
       {pending ? 'Đang lấy vị trí...' : 'Dùng vị trí của tôi'}
     </Button>

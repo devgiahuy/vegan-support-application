@@ -30,6 +30,8 @@ export interface RestaurantMapProps {
   isSearchingArea?: boolean;
   /** Trạng thái đang gọi API lấy dữ liệu. */
   isLoading?: boolean;
+  emptyTitle?: string;
+  emptyDescription?: string;
 }
 
 /**
@@ -49,6 +51,8 @@ export function RestaurantMap({
   canSearchThisArea = true,
   isSearchingArea = false,
   isLoading = false,
+  emptyTitle,
+  emptyDescription,
 }: RestaurantMapProps) {
   const mapRef = React.useRef<HTMLDivElement>(null);
   const { isLoaded, loadError } = useGoogleMaps();
@@ -243,6 +247,8 @@ export function RestaurantMap({
         canSearchThisArea={canSearchThisArea}
         isSearchingArea={isSearchingArea}
         isLoading={isLoading}
+        emptyTitle={emptyTitle}
+        emptyDescription={emptyDescription}
       />
     );
   }

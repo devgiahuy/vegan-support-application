@@ -48,6 +48,7 @@ import { flattenCategories } from '@/features/category/utils/flatten-categories'
 import { ImageUploader } from './image-uploader';
 import type { Post, DietSchool, Article } from '../types/post.model';
 import { useCreateArticleMutation, useUpdateArticleMutation } from '../queries/post.queries';
+import { addTrackedUserPost } from '../utils/user-posts-tracker';
 
 const CATEGORIES = [
   'Sức khỏe & Dinh dưỡng',
@@ -114,6 +115,7 @@ interface PostEditorFormProps {
 
 export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFormProps) {
   const router = useRouter();
+  const user = useAuthStore((s) => s.user);
   const createArticleMutation = useCreateArticleMutation();
   const updateArticleMutation = useUpdateArticleMutation();
 
@@ -278,6 +280,14 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
               ? 'Đã cập nhật và xuất bản bài viết thành công!'
               : 'Đã gửi cập nhật tới Chuyên gia Dinh dưỡng để kiểm duyệt!'
         );
+        if (initialPost?.id && user?.id) {
+          addTrackedUserPost(user.id, {
+            id: initialPost.id,
+            type: 'BLOG',
+            title,
+            createdAt: new Date().toISOString(),
+          });
+        }
         router.push(`/articles/${initialPost.id}`);
       } else {
         const res = await createArticleMutation.mutateAsync({
@@ -300,6 +310,14 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
         );
 
         const targetId = res?.id;
+        if (targetId && user?.id) {
+          addTrackedUserPost(user.id, {
+            id: targetId,
+            type: 'BLOG',
+            title,
+            createdAt: new Date().toISOString(),
+          });
+        }
         if (postStatus === 'PUBLISHED' && targetId) {
           router.push(`/articles/${targetId}`);
         } else {

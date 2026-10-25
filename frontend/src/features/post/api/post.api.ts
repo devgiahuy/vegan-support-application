@@ -8,12 +8,14 @@ import { MOCK_ARTICLE_DTOS } from '../__fixtures__/post-fixtures';
 import type {
   BlogDetailDto,
   PostListResponseDto,
+  MyPostListResponseDto,
   PostDetailResponseDto,
   CreatePostRequestDto,
   UpdatePostRequestDto,
   RelatedPostsResponseDto,
 } from '../types/post.dto';
-import type { Article, RelatedGroup } from '../types/post.model';
+import type { Article, MyPostModel, RelatedGroup } from '../types/post.model';
+import { toMyPostModel } from '../mappers/post.mapper';
 
 export interface ArticleQueryParams {
   page?: number;
@@ -39,6 +41,30 @@ function matchesQuery(dto: BlogDetailDto, q?: string): boolean {
 }
 
 export const postApi = {
+  getMyPosts: async (params?: {
+    page?: number;
+    limit?: number;
+  }): Promise<PaginationResult<MyPostModel>> => {
+    const res = await api.get<MyPostListResponseDto>(API_ENDPOINTS.POSTS.MINE, {
+      params: { page: params?.page ?? 1, limit: params?.limit ?? 100 },
+      silent: true,
+    });
+    if (!res.data?.success || !Array.isArray(res.data.data)) {
+      throw new Error('Phản hồi danh sách bài viết cá nhân không đúng định dạng.');
+    }
+    return {
+      items: res.data.data.map(toMyPostModel),
+      metadata: {
+        page: res.data.meta.page,
+        limit: res.data.meta.limit,
+        totalPages: res.data.meta.totalPages,
+        totalItems: res.data.meta.total,
+        hasNextPage: res.data.meta.page < res.data.meta.totalPages,
+        hasPrevPage: res.data.meta.page > 1,
+      },
+    };
+  },
+
   /**
    * Lấy danh sách bài viết blog kiến thức thuần chay
    */

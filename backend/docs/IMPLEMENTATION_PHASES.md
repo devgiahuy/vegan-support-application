@@ -1,12 +1,14 @@
 # Backend Implementation Phases
 
-**Version:** 3.15
+**Version:** 3.16
 
-**Updated:** 2026-10-24
+**Updated:** 2026-10-25
 
 **Stack:** Node.js · Express · TypeScript · MongoDB replica set · Prisma · Zod · OpenAPI
 
 **Current baseline:** Phases 00–20 and 23–26 completed; Phases 21–22 and 27 are in progress. OpenAI image adapters are implemented for Phase 21/22, but live Vietnamese image and receipt validation remains before production readiness.
+
+**Phase 24 maintenance — 2026-10-25:** User-approved directory exception removes implicit eating-profile filtering from nearby/search/details. Explicit query `dietPattern` remains a reviewed-claim filter. Backend lint/typecheck/build and OpenAPI generation pass; frontend schema sync/typecheck/scoped lint, 657 tests and build pass. An authenticated seed account with an eating profile retrieved 20 live SerpApi places with `externalResultsSuppressed=false`. No schema migration or seed update is required. This does not change recipe or meal-plan constraints.
 
 User-approved 2026-10-24 maintenance extends Phase 22 receipt identity/partial-photo handling and adds a text-only AI recipe draft preview to the existing content flow. Follow-up receipt classification keeps edible and ready-to-eat products, excludes clearly non-food goods with a visible notice and restores them on user correction. A synthetic Vietnamese receipt and recipe prompt passed the configured real OpenAI API; physical receipt accuracy and the remaining phase gate are still open, so Phase 22 remains `IN_PROGRESS`.
 
