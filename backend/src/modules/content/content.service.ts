@@ -31,11 +31,13 @@ import type {
   PostListQuery,
   MyPostsQuery,
   PostOutput,
+  RecipeEligibilityOutput,
   RelatedPostsQuery,
   ReviewHistoryQuery,
   SubmitPostInput,
   UpdatePostInput,
 } from './content.schemas.js';
+import { recipeIneligibilityReasonCodes } from './content.schemas.js';
 import type { MediaService } from './media.service.js';
 import type { ContentPublicationPolicy } from './content-publication.policy.js';
 import {
@@ -67,6 +69,8 @@ function pagination(
     appliedConstraints,
   };
 }
+
+type RecipeIneligibilityReasonCode = (typeof recipeIneligibilityReasonCodes)[number];
 
 function stringList(value: Prisma.JsonValue): string[] {
   return Array.isArray(value)
@@ -136,6 +140,8 @@ export class ContentService {
       .filter((post) => post.type === PostType.RECIPE)
       .map((post) => post.id);
     const recipeUsageCounts = await this.repository.recipeUsageUserCounts(recipeIds);
+    const safetyCatalog =
+      query.eligibility === 'INELIGIBLE' ? await this.repository.safetyCatalog() : null;
     return {
       data: result.records.flatMap((post) => {
         if (!post.publishedRevision) return [];
@@ -143,7 +149,14 @@ export class ContentService {
           post.type === PostType.RECIPE
             ? this.recipeUsageStatistics(recipeUsageCounts.get(post.id) ?? 0)
             : undefined;
-        return [this.postOutput(post, post.publishedRevision, statistics)];
+        const output = this.postOutput(post, post.publishedRevision, statistics);
+        if (!safetyCatalog || output.type !== PostType.RECIPE) return [output];
+        const eligibility = this.recipeEligibility(
+          post.publishedRevision,
+          searchContext.constraints,
+          safetyCatalog,
+        );
+        return [{ ...output, recipe: { ...output.recipe, eligibility } }];
       }),
       meta: pagination(query.page, query.limit, result.total, searchContext.summary),
     };
@@ -446,6 +459,52 @@ export class ContentService {
 
     const profile = await this.repository.findSearchProfile(userId);
     return buildAuthenticatedSearchConstraints(profile, requestedDietPattern, forDate);
+  }
+
+  /** Explains why the profile removes a recipe, grouped by reason with the offending ingredients. */
+  private recipeEligibility(
+    revision: RevisionRecord,
+    constraints: SearchConstraints,
+    catalog: Awaited<ReturnType<ContentRepository['safetyCatalog']>>,
+  ): RecipeEligibilityOutput {
+    const byCode = new Map<RecipeIneligibilityReasonCode, Set<string>>();
+    const add = (code: string, ingredientName?: string) => {
+      if (!(recipeIneligibilityReasonCodes as readonly string[]).includes(code)) return;
+      const names = byCode.get(code as RecipeIneligibilityReasonCode) ?? new Set<string>();
+      if (ingredientName) names.add(ingredientName);
+      byCode.set(code as RecipeIneligibilityReasonCode, names);
+    };
+    if (!revision.ingredients.length) add('UNRESOLVED_INGREDIENT');
+    for (const ingredient of revision.ingredients) {
+      const name = ingredient.ingredient?.canonicalName ?? ingredient.displayName;
+      if (!ingredient.ingredientId || ingredient.resolutionStatus !== 'EXACT')
+        add('UNRESOLVED_INGREDIENT', name);
+      for (const code of catalog.reasons([ingredient.ingredientId], constraints)) {
+        add(code, code === 'ALLERGEN_SELECTION_UNRESOLVED' ? undefined : name);
+      }
+      if (constraints.excludedNormalizedNames.includes(ingredient.normalizedName))
+        add('INGREDIENT_EXCLUSION', name);
+    }
+    const detail = revision.recipeDetail;
+    if (constraints.allergenCodes.some((code) => stringList(detail?.allergenCodes ?? null).includes(code)))
+      add('ALLERGY');
+    if (
+      constraints.dietPattern &&
+      !revision.dietCompatibility.some(
+        (entry) => entry.dietPattern === constraints.dietPattern && entry.compatible,
+      )
+    )
+      add('DIET_PATTERN');
+    if (
+      traditionWarningList(detail?.traditionWarnings ?? null).some((warning) =>
+        constraints.traditions.includes(warning.tradition),
+      )
+    )
+      add('TRADITION_RULE');
+    const reasons = [...byCode.entries()]
+      .map(([code, names]) => ({ code, ingredientNames: [...names] }))
+      .sort((a, b) => a.code.localeCompare(b.code));
+    return { eligible: reasons.length === 0, reasons };
   }
 
   private async buildRecipeSnapshot(

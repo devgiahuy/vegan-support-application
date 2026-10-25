@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.55
+**Version:** 4.56
 
 **Cập nhật:** 26/10/2026
 
@@ -13,6 +13,14 @@
 ---
 
 ## 1. Source of truth và status
+
+### Recipe eligibility view — 2026-10-26 (4.56, READY)
+
+`GET /posts` is `READY`, FE integrated, after additive schema/OpenAPI/generate/lint/typecheck/build gates. New optional query `eligibility=ELIGIBLE|INELIGIBLE` (default `ELIGIBLE`, unchanged behaviour). `INELIGIBLE` returns only published Recipes removed by the caller's effective constraints (same predicates as discovery, inverted after joins and before pagination) and adds `recipe.eligibility = { eligible:false, reasons:[{ code, ingredientNames[] }] }`. Codes: `ALLERGY`, `ALLERGEN_SELECTION_UNRESOLVED`, `DIET_PATTERN`, `INGREDIENT_COMPOSITION_UNCERTAIN`, `INGREDIENT_EXCLUSION`, `TRADITION_RULE`, `UNRESOLVED_INGREDIENT`; `ingredientNames` is empty for recipe-level reasons. Without constraints (guest without `dietPattern`) the view is empty. Recommendations, related content and meal-planner candidates are unaffected (BL-02.7). No new error code or authorization change. Seed: demo composition `composition-demo-2026-10-26` for 24 prepared foods + compound curry powder (see `docs/FOOD_DATA_SOURCES.md`); rerun seed or `npm run db:normalize-allergies`. FE: `/recipes` shows tabs "Phù hợp với bạn (n)" / "Không phù hợp (n)" for signed-in users; ineligible cards list Vietnamese reason labels with ingredient names and still link to detail. Mapper test covers reasons and unknown codes.
+
+Verified: before the seed change a LACTO_OVO profile saw 10/31 recipes (21 hidden by `INGREDIENT_COMPOSITION_UNCERTAIN`); after it LACTO_OVO sees 31 eligible / 0 ineligible and VEGAN 30 / 1 (`DIET_PATTERN: Sữa bò`).
+
+Changelog 2026-10-26 (4.56): `GET /posts?eligibility=INELIGIBLE` with per-recipe reasons; recipe discovery tabs; demo composition for prepared seed ingredients.
 
 ### Canonical profile ingredient restrictions — 2026-10-26 (4.55, READY)
 

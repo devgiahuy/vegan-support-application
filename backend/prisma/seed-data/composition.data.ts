@@ -74,6 +74,38 @@ const SIMPLE_NAMES = new Set([
   'dau oliu',
 ]);
 
+// Prepared foods asserted as single demo formulations. Allergen links stay on the ingredient
+// definition (e.g. tofu → SOY, bread → GLUTEN); the scope states that brands may differ.
+const PREPARED_SIMPLE_SCOPES = new Map([
+  ['dau hu', 'Đậu hũ minh họa: đậu nành, nước, chất đông tụ.'],
+  ['dau hu non', 'Đậu hũ non minh họa: đậu nành, nước, chất đông tụ.'],
+  ['dau hu ky', 'Váng đậu minh họa: chỉ từ sữa đậu nành.'],
+  ['suon non chay', 'Đạm đậu nành khô minh họa: bột đậu nành tách béo, không gia vị.'],
+  ['tempeh', 'Tempeh minh họa: đậu nành lên men, không ngũ cốc trộn.'],
+  ['chao trang', 'Chao minh họa: đậu hũ lên men, muối, rượu nếp.'],
+  ['sua dau nanh', 'Sữa đậu nành minh họa: đậu nành, nước, không đường.'],
+  ['sua bo', 'Sữa bò tươi nguyên chất minh họa, không phụ gia.'],
+  ['men dinh duong', 'Men dinh dưỡng bất hoạt minh họa, không phụ gia.'],
+  ['banh pho', 'Bánh phở minh họa: bột gạo, nước.'],
+  ['bun tuoi', 'Bún minh họa: bột gạo, nước.'],
+  ['mien dong', 'Miến minh họa: tinh bột dong, nước.'],
+  ['banh mi', 'Bánh mì minh họa: bột mì, men, muối, nước; không sữa, không trứng.'],
+  ['banh trang', 'Bánh tráng minh họa: bột gạo, bột năng, muối, nước.'],
+  ['bo dau phong', 'Bơ đậu phộng minh họa: chỉ đậu phộng rang xay.'],
+  ['hoa hoi', 'Hoa hồi khô nguyên cánh.'],
+  ['nuoc tuong tamari', 'Tamari minh họa: đậu nành, muối, nước; công thức không lúa mì.'],
+  ['nuoc tuong', 'Nước tương minh họa: đậu nành, lúa mì, muối, nước.'],
+  ['tuong den', 'Tương hoisin minh họa: đậu nành, lúa mì, đường, tỏi, ớt, giấm.'],
+  ['dau me', 'Dầu mè ép nguyên chất.'],
+  ['dau hat cai', 'Dầu hạt cải tinh luyện nguyên chất.'],
+  ['nuoc cot dua', 'Nước cốt dừa minh họa: cơm dừa, nước.'],
+  ['duong', 'Đường mía tinh luyện.'],
+  ['giam', 'Giấm gạo lên men minh họa: gạo, nước.'],
+]);
+const PREPARED_VERSION = 'composition-demo-2026-10-26';
+// Spice blend expressed through existing reviewed SIMPLE spices so allergens propagate.
+const CURRY_COMPONENTS = ['nghe', 'ot', 'tieu den', 'que', 'gung gia'];
+
 export async function normalizeAllergyCatalog(prisma: PrismaClient, adminId: string) {
   const source = await prisma.foodDataSource.upsert({
     where: { code: 'COMPOSITION_DEMO_V1' },
@@ -102,6 +134,46 @@ export async function normalizeAllergyCatalog(prisma: PrismaClient, adminId: str
     });
   const service = new CompositionService(prisma);
   let reviewed = 0;
+  const assertSimple = async (
+    ingredientId: string,
+    normalizedName: string,
+    canonicalName: string,
+  ) => {
+    const preparedScope = PREPARED_SIMPLE_SCOPES.get(normalizedName);
+    if (!SIMPLE_NAMES.has(normalizedName) && !preparedScope) return false;
+    const sourceVersion = preparedScope ? PREPARED_VERSION : 'composition-demo-2026-10-25';
+    const current = await service.get(ingredientId);
+    if (
+      current.evidence &&
+      typeof current.evidence === 'object' &&
+      !Array.isArray(current.evidence) &&
+      current.evidence.sourceId !== source.id
+    )
+      return false;
+    if (
+      current.complete &&
+      current.evidence &&
+      typeof current.evidence === 'object' &&
+      !Array.isArray(current.evidence) &&
+      current.evidence.sourceVersion === sourceVersion
+    )
+      return false;
+    await service.save(ingredientId, adminId, {
+      expectedVersion: current.version,
+      status: 'COMPLETE',
+      kind: 'SIMPLE',
+      componentIds: [],
+      evidence: {
+        sourceId: source.id,
+        sourceVersion,
+        sourceRecordId: normalizedName,
+        scope: preparedScope
+          ? `${preparedScope} Không đại diện cho thương hiệu cụ thể.`
+          : `Local demonstration: ${canonicalName}; no mixed preparation, packaging or brand claim.`,
+      },
+    });
+    return true;
+  };
   for (const definition of ingredientDefinitions) {
     const ingredient = await prisma.ingredient.findUnique({
       where: { normalizedName: definition.normalizedName },
@@ -129,36 +201,47 @@ export async function normalizeAllergyCatalog(prisma: PrismaClient, adminId: str
         update: {},
         create: { ingredientId: ingredient.id, allergenCode },
       });
-    if (!SIMPLE_NAMES.has(definition.normalizedName)) continue;
-    const current = await service.get(ingredient.id);
+    if (await assertSimple(ingredient.id, definition.normalizedName, definition.canonicalName))
+      reviewed++;
+  }
+  // Prepared foods created outside the curated definitions (e.g. scenario dairy).
+  const definedNames = new Set(ingredientDefinitions.map((item) => item.normalizedName));
+  for (const normalizedName of PREPARED_SIMPLE_SCOPES.keys()) {
+    if (definedNames.has(normalizedName)) continue;
+    const ingredient = await prisma.ingredient.findUnique({ where: { normalizedName } });
+    if (ingredient?.status !== 'ACTIVE') continue;
+    if (await assertSimple(ingredient.id, normalizedName, ingredient.canonicalName)) reviewed++;
+  }
+  const curry = await prisma.ingredient.findUnique({ where: { normalizedName: 'bot ca ri' } });
+  const curryParts = await prisma.ingredient.findMany({
+    where: { normalizedName: { in: CURRY_COMPONENTS }, status: 'ACTIVE' },
+    select: { id: true },
+  });
+  if (curry?.status === 'ACTIVE' && curryParts.length === CURRY_COMPONENTS.length) {
+    const current = await service.get(curry.id);
+    const evidence =
+      current.evidence && typeof current.evidence === 'object' && !Array.isArray(current.evidence)
+        ? current.evidence
+        : null;
     if (
-      current.evidence &&
-      typeof current.evidence === 'object' &&
-      !Array.isArray(current.evidence) &&
-      current.evidence.sourceId !== source.id
-    )
-      continue;
-    if (
-      current.complete &&
-      current.evidence &&
-      typeof current.evidence === 'object' &&
-      !Array.isArray(current.evidence) &&
-      current.evidence.sourceVersion === 'composition-demo-2026-10-25'
-    )
-      continue;
-    await service.save(ingredient.id, adminId, {
-      expectedVersion: current.version,
-      status: 'COMPLETE',
-      kind: 'SIMPLE',
-      componentIds: [],
-      evidence: {
-        sourceId: source.id,
-        sourceVersion: 'composition-demo-2026-10-25',
-        sourceRecordId: definition.normalizedName,
-        scope: `Local demonstration: ${definition.canonicalName}; no mixed preparation, packaging or brand claim.`,
-      },
-    });
-    reviewed++;
+      (!evidence || evidence.sourceId === source.id) &&
+      !(current.complete && evidence?.sourceVersion === PREPARED_VERSION)
+    ) {
+      await service.save(curry.id, adminId, {
+        expectedVersion: current.version,
+        status: 'COMPLETE',
+        kind: 'COMPOUND',
+        componentIds: curryParts.map((item) => item.id),
+        evidence: {
+          sourceId: source.id,
+          sourceVersion: PREPARED_VERSION,
+          sourceRecordId: 'bot ca ri',
+          scope:
+            'Bột cà ri minh họa: nghệ, ớt, tiêu đen, quế, gừng. Không đại diện cho thương hiệu cụ thể.',
+        },
+      });
+      reviewed++;
+    }
   }
   const peanut = await prisma.ingredient.findUnique({ where: { normalizedName: 'dau phong' } });
   if (peanut?.status === 'ACTIVE') {

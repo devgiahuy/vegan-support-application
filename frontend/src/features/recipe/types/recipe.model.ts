@@ -96,6 +96,14 @@ export interface RecipeCategoryObject {
   slug?: string;
 }
 
+export type RecipeEligibilityFilter = 'ELIGIBLE' | 'INELIGIBLE';
+
+export interface RecipeIneligibilityReason {
+  code: string;
+  label: string;
+  ingredientNames: string[];
+}
+
 export interface Recipe {
   id: string;
   title: string;
@@ -169,6 +177,8 @@ export interface Recipe {
   usageCount?: number;
   /** Cờ xác định tác giả là chuyên gia (giúp UI render badge chuyên gia hay người dùng thường). */
   isExpertAuthor?: boolean;
+  /** Lý do hồ sơ ăn uống loại món này; chỉ có ở tab "Không phù hợp". */
+  ineligibilityReasons?: RecipeIneligibilityReason[];
 }
 
 export interface AppliedSearchConstraints {

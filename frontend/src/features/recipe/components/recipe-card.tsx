@@ -1,6 +1,15 @@
 import Link from 'next/link';
 import { SafeImage } from '@/components/shared/safe-image';
-import { ArrowRight, BadgeCheck, Clock, Flame, Star, User, Users } from 'lucide-react';
+import {
+  ArrowRight,
+  BadgeCheck,
+  Clock,
+  Flame,
+  ShieldAlert,
+  Star,
+  User,
+  Users,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
@@ -35,6 +44,7 @@ export function RecipeCard({
   const minutes = recipe.minutes || recipe.totalTimeMinutes;
   const kcal = recipe.kcal ?? recipe.nutrition?.calories;
   const protein = recipe.protein ?? recipe.nutrition?.protein;
+  const ineligibilityReasons = recipe.ineligibilityReasons ?? [];
 
   return (
     <article
@@ -93,6 +103,27 @@ export function RecipeCard({
         <h3 className="mt-2 line-clamp-2 text-base font-semibold leading-snug group-hover:text-primary">
           <Link href={`/recipes/${recipe.id}`}>{recipe.title}</Link>
         </h3>
+
+        {ineligibilityReasons.length > 0 && (
+          <div className="mt-3 rounded-xl border border-amber-500/30 bg-amber-50/70 p-3 text-xs dark:bg-amber-950/30">
+            <p className="flex items-center gap-1.5 font-semibold text-amber-800 dark:text-amber-300">
+              <ShieldAlert aria-hidden className="size-3.5 shrink-0" />
+              Không phù hợp với hồ sơ của bạn
+            </p>
+            <ul className="mt-1.5 flex flex-col gap-1 text-pretty text-amber-900/90 dark:text-amber-200/90">
+              {ineligibilityReasons.map((reason) => (
+                <li key={reason.code}>
+                  • {reason.label}
+                  {reason.ingredientNames.length > 0 && (
+                    <span className="text-muted-foreground">
+                      : {reason.ingredientNames.join(', ')}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
         <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-3">
           <div className="flex items-center gap-2 min-w-0">

@@ -10,12 +10,14 @@ import {
   Sparkles,
   PlusCircle,
   ShieldCheck,
+  ShieldAlert,
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EmptyState } from '@/components/shared/empty-state';
 import { CategoryType } from '@/common/enums';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
@@ -23,6 +25,7 @@ import { CategoryFilterList } from '@/features/category/components/category-filt
 import { findCategoryById } from '@/features/category/utils/flatten-categories';
 import { useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
 import { RecipeCard } from '@/features/recipe/components/recipe-card';
+import type { RecipeEligibilityFilter } from '@/features/recipe/types/recipe.model';
 import { useAuthStore } from '@/store/useAuthStore';
 import { UserRole } from '@/common/enums';
 
@@ -68,16 +71,28 @@ export default function RecipeDiscoveryPage() {
     refetch: refetchCategories,
   } = useCategoryTreeQuery(CategoryType.RECIPE_GROUP);
 
+  const [eligibilityTab, setEligibilityTab] = React.useState<RecipeEligibilityFilter>('ELIGIBLE');
+  const recipeParams = {
+    q: query.trim() || undefined,
+    category: checkedIds[0] || undefined,
+    difficulty: difficulty || undefined,
+  };
+  const eligibleQuery = useRecipesQuery(recipeParams);
+  // Món bị hồ sơ loại chỉ hiện trong tab riêng, kèm lý do; không trộn vào kết quả phù hợp.
+  const ineligibleQuery = useRecipesQuery(
+    { ...recipeParams, eligibility: 'INELIGIBLE' },
+    { enabled: isAuthenticated }
+  );
+  const showEligibilityTabs = isAuthenticated;
+  const showingIneligible = showEligibilityTabs && eligibilityTab === 'INELIGIBLE';
   const {
     data: recipesPagination,
     isLoading: isRecipesLoading,
     isError: isRecipesError,
     refetch: refetchRecipes,
-  } = useRecipesQuery({
-    q: query.trim() || undefined,
-    category: checkedIds[0] || undefined,
-    difficulty: difficulty || undefined,
-  });
+  } = showingIneligible ? ineligibleQuery : eligibleQuery;
+  const eligibleCount = eligibleQuery.data?.metadata.totalItems;
+  const ineligibleCount = ineligibleQuery.data?.metadata.totalItems;
 
   const recipes = recipesPagination?.items || [];
 
@@ -309,9 +324,9 @@ export default function RecipeDiscoveryPage() {
                       )}
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                      Kết quả được lọc theo hồ sơ và cả thành phần lồng nhau. Món có dữ liệu thành
-                      phần chưa đầy đủ sẽ được ẩn khi có ràng buộc ăn uống. Thông tin này không phải
-                      chứng nhận an toàn dị ứng.
+                      Kết quả được lọc theo hồ sơ và cả thành phần lồng nhau. Món không đạt hoặc có
+                      dữ liệu thành phần chưa đầy đủ nằm ở tab “Không phù hợp” kèm lý do. Thông tin
+                      này không phải chứng nhận an toàn dị ứng.
                     </p>
                   </div>
                 </div>
@@ -325,6 +340,37 @@ export default function RecipeDiscoveryPage() {
                 </Button>
               </div>
             </div>
+          )}
+
+          {showEligibilityTabs && (
+            <Tabs
+              value={eligibilityTab}
+              onValueChange={(value) => setEligibilityTab(value as RecipeEligibilityFilter)}
+              className="mt-5"
+            >
+              <TabsList className="h-10 w-full sm:w-fit">
+                <TabsTrigger value="ELIGIBLE" className="gap-1.5 px-3">
+                  <ShieldCheck aria-hidden />
+                  Phù hợp với bạn
+                  {typeof eligibleCount === 'number' && (
+                    <span className="tabular-nums text-muted-foreground">({eligibleCount})</span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger value="INELIGIBLE" className="gap-1.5 px-3">
+                  <ShieldAlert aria-hidden />
+                  Không phù hợp
+                  {typeof ineligibleCount === 'number' && (
+                    <span className="tabular-nums text-muted-foreground">({ineligibleCount})</span>
+                  )}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+          {showingIneligible && recipes.length > 0 && (
+            <p className="mt-3 text-sm text-pretty text-muted-foreground">
+              Các món dưới đây bị loại khỏi gợi ý và thực đơn vì không đạt hồ sơ ăn uống của bạn.
+              Bạn vẫn có thể mở xem chi tiết để tham khảo.
+            </p>
           )}
 
           {/* 4 Trạng thái: Loading, Error, Empty, Success */}
@@ -352,6 +398,15 @@ export default function RecipeDiscoveryPage() {
                   Thử lại
                 </Button>
               </div>
+            ) : recipes.length === 0 && showingIneligible ? (
+              <EmptyState
+                title="Không có món nào bị loại"
+                description={
+                  query.trim()
+                    ? `Không có món không phù hợp nào khớp với từ khóa "${query.trim()}".`
+                    : 'Mọi công thức khớp bộ lọc hiện tại đều phù hợp với hồ sơ ăn uống của bạn.'
+                }
+              />
             ) : recipes.length === 0 ? (
               <div className="space-y-4">
                 <EmptyState
