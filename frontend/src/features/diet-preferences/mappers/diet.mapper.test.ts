@@ -223,4 +223,23 @@ describe('DietMapper.toSaveDto / toScheduleDto', () => {
       { ingredientId: 'ing-2', severity: 'MODERATE' },
     ]);
   });
+
+  it('toSaveDto bỏ reason rỗng, chỉ gửi scheduleDates khi được truyền', () => {
+    const dto = dietMapper.toSaveDto({
+      dietPattern: 'VEGAN',
+      practiceSchedule: 'PERMANENT',
+      tradition: 'NONE',
+      ruleSetVersion: 1,
+      rules: [],
+      ingredientExclusions: [
+        { ingredientId: 'ing-1', ingredientName: ' Dứa ', reason: '' },
+        { ingredientId: null, ingredientName: 'Mắm tôm', reason: ' Không hợp khẩu vị ' },
+      ],
+    });
+    expect(dto.ingredientExclusions).toEqual([
+      { ingredientId: 'ing-1', ingredientName: 'Dứa' },
+      { ingredientName: 'Mắm tôm', reason: 'Không hợp khẩu vị' },
+    ]);
+    expect(dto).not.toHaveProperty('scheduleDates');
+  });
 });

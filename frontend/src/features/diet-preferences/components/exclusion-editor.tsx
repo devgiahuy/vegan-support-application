@@ -1,17 +1,28 @@
 'use client';
 
 import * as React from 'react';
-import { Plus, ShieldAlert, X } from 'lucide-react';
+import { Plus, Search, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Field,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+} from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
 import type { IngredientExclusion } from '../types/diet.model';
 import { IngredientSuggestions } from '@/features/ingredient/components/ingredient-suggestions';
 
+const exclusionKey = (entry: IngredientExclusion) =>
+  entry.ingredientId ?? `name:${entry.ingredientName.trim().toLowerCase()}`;
+
 /**
  * Quản lý nguyên liệu kiêng. Danh sách kiêng luôn là ràng buộc cứng ở backend.
- * Tên chuẩn hóa trim + lowercase để dedupe trùng.
+ * Ưu tiên nguyên liệu chuẩn; tên tự nhập chỉ là phương án dự phòng.
  */
 export function ExclusionEditor({
   value,
@@ -24,118 +35,143 @@ export function ExclusionEditor({
   search: string;
   onSearchChange: (search: string) => void;
 }) {
-  const name = search;
-  const setName = onSearchChange;
-  const [reason, setReason] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
+  const query = search.trim();
 
-  const add = () => {
-    const trimmed = name.trim();
-    if (trimmed.length === 0) {
-      setError('Vui lòng nhập tên nguyên liệu.');
-      return;
-    }
-    if (value.some((e) => e.ingredientName.trim().toLowerCase() === trimmed.toLowerCase())) {
-      setError('Nguyên liệu này đã có trong danh sách.');
+  const isDuplicate = (name: string, id: string | null) =>
+    value.some(
+      (entry) =>
+        (id !== null && entry.ingredientId === id) ||
+        entry.ingredientName.trim().toLowerCase() === name.trim().toLowerCase()
+    );
+
+  const add = (entry: IngredientExclusion) => {
+    if (isDuplicate(entry.ingredientName, entry.ingredientId)) {
+      setError(`“${entry.ingredientName}” đã có trong danh sách kiêng.`);
       return;
     }
     setError(null);
-    onChange([...value, { ingredientId: null, ingredientName: trimmed, reason: reason.trim() }]);
-    setName('');
-    setReason('');
+    onChange([...value, entry]);
+    onSearchChange('');
   };
 
+  const update = (key: string, patch: Partial<IngredientExclusion>) =>
+    onChange(value.map((entry) => (exclusionKey(entry) === key ? { ...entry, ...patch } : entry)));
+
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-1.5">
-        <Label>Nguyên liệu kiêng</Label>
-        <Badge variant="secondary" className="gap-1 rounded-full text-[11px]">
-          <ShieldAlert className="h-3 w-3" /> Luôn là ràng buộc cứng
-        </Badge>
-      </div>
+    <FieldSet>
+      <FieldLegend>Nguyên liệu không ăn</FieldLegend>
+      <FieldDescription>
+        Dù không dị ứng, bạn vẫn có thể loại hẳn nguyên liệu mình không muốn ăn. Món chứa chúng sẽ
+        không bao giờ được gợi ý.
+      </FieldDescription>
 
-      {value.length > 0 ? (
-        <ul className="flex flex-wrap gap-1.5">
-          {value.map((e) => (
-            <li
-              key={e.ingredientName.toLowerCase()}
-              className="inline-flex items-center gap-1.5 rounded-full bg-secondary/80 border border-secondary-foreground/10 px-3 py-1 text-xs text-secondary-foreground"
-            >
-              <span className="font-medium">{e.ingredientName}</span>
-              <Badge variant="outline">
-                {e.ingredientId ? 'Đã liên kết chuẩn' : 'Tên tự nhập'}
-              </Badge>
-              {e.reason && (
-                <span className="text-[10px] text-muted-foreground bg-background/60 rounded px-1.5 py-0.5">
-                  {e.reason}
-                </span>
-              )}
-              <button
+      <Field data-invalid={error ? true : undefined}>
+        <FieldLabel htmlFor="exclusion-search" className="sr-only">
+          Tìm nguyên liệu muốn kiêng
+        </FieldLabel>
+        <InputGroup>
+          <InputGroupAddon>
+            <Search aria-hidden />
+          </InputGroupAddon>
+          <InputGroupInput
+            id="exclusion-search"
+            value={search}
+            maxLength={160}
+            autoComplete="off"
+            aria-invalid={error ? true : undefined}
+            placeholder="Tìm nguyên liệu, vd: dứa, sầu riêng, mắm tôm…"
+            onChange={(event) => {
+              setError(null);
+              onSearchChange(event.target.value);
+            }}
+          />
+          {search && (
+            <InputGroupAddon align="inline-end">
+              <Button
                 type="button"
-                aria-label={`Xóa kiêng ${e.ingredientName}`}
-                onClick={() =>
-                  onChange(
-                    value.filter(
-                      (x) => x.ingredientName.toLowerCase() !== e.ingredientName.toLowerCase()
-                    )
-                  )
-                }
-                className="ml-0.5 text-muted-foreground hover:text-destructive transition-colors p-0.5 rounded-full hover:bg-background/80 cursor-pointer"
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                aria-label="Xóa nội dung tìm kiếm nguyên liệu kiêng"
+                onClick={() => onSearchChange('')}
               >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="text-xs text-muted-foreground italic">
-          Chưa có nguyên liệu kiêng nào. Nhập tên nguyên liệu bạn muốn loại trừ hoàn toàn bên dưới.
-        </p>
+                <X />
+              </Button>
+            </InputGroupAddon>
+          )}
+        </InputGroup>
+        {error && <FieldError>{error}</FieldError>}
+      </Field>
+
+      {query.length >= 2 && (
+        <div className="flex flex-col gap-3 rounded-xl border bg-muted/30 p-4">
+          <p className="text-xs font-medium text-muted-foreground">Nguyên liệu chuẩn</p>
+          <IngredientSuggestions
+            query={search}
+            excludedIds={value.flatMap((entry) => (entry.ingredientId ? [entry.ingredientId] : []))}
+            onSelect={(item) =>
+              add({ ingredientId: item.id, ingredientName: item.canonicalName, reason: '' })
+            }
+          />
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs text-pretty text-muted-foreground">
+              Không có trong danh mục? Tên tự nhập chỉ khớp theo tên nên lọc kém chính xác hơn.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => add({ ingredientId: null, ingredientName: query, reason: '' })}
+            >
+              <Plus data-icon="inline-start" />
+              Thêm “{query}”
+            </Button>
+          </div>
+        </div>
       )}
 
-      <div className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Tên nguyên liệu, vd: mắm tôm"
-          aria-label="Tên nguyên liệu kiêng"
-        />
-        <Input
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          placeholder="Lý do (tùy chọn)"
-          aria-label="Lý do kiêng"
-        />
-        <Button type="button" variant="outline" className="gap-1 rounded-xl" onClick={add}>
-          <Plus className="h-4 w-4" /> Thêm tên tự nhập
-        </Button>
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium">Đang kiêng ({value.length})</p>
+        {value.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Chưa có nguyên liệu kiêng nào.</p>
+        ) : (
+          <ul className="flex flex-col divide-y rounded-xl border" aria-label="Nguyên liệu kiêng">
+            {value.map((entry) => {
+              const key = exclusionKey(entry);
+              return (
+                <li key={key} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center">
+                  <div className="flex min-w-0 items-center gap-2 sm:w-2/5">
+                    <span className="truncate text-sm font-medium">{entry.ingredientName}</span>
+                    <Badge variant={entry.ingredientId ? 'secondary' : 'outline'}>
+                      {entry.ingredientId ? 'Chuẩn' : 'Tự nhập'}
+                    </Badge>
+                  </div>
+                  <div className="flex flex-1 items-center gap-1">
+                    <Input
+                      value={entry.reason}
+                      maxLength={500}
+                      placeholder="Lý do (tùy chọn)"
+                      aria-label={`Lý do kiêng ${entry.ingredientName}`}
+                      className="h-8 text-sm"
+                      onChange={(event) => update(key, { reason: event.target.value })}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`Bỏ kiêng ${entry.ingredientName}`}
+                      onClick={() => onChange(value.filter((item) => exclusionKey(item) !== key))}
+                    >
+                      <X />
+                    </Button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
-      {name.trim().length >= 2 && (
-        <IngredientSuggestions
-          query={name}
-          excludedIds={value.flatMap((entry) => (entry.ingredientId ? [entry.ingredientId] : []))}
-          onSelect={(item) => {
-            if (
-              value.some(
-                (entry) =>
-                  entry.ingredientId === item.id ||
-                  entry.ingredientName.trim().toLowerCase() === item.canonicalName.toLowerCase()
-              )
-            ) {
-              setError('Nguyên liệu này đã có trong danh sách.');
-              return;
-            }
-            setError(null);
-            onChange([
-              ...value,
-              { ingredientId: item.id, ingredientName: item.canonicalName, reason: reason.trim() },
-            ]);
-            setName('');
-            setReason('');
-          }}
-        />
-      )}
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
+    </FieldSet>
   );
 }

@@ -4,7 +4,6 @@ import * as React from 'react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useIngredientsQuery } from '../queries/ingredient.queries';
 import type { Ingredient } from '../types/ingredient.model';
@@ -39,7 +38,7 @@ export function IngredientSuggestions({
   const candidates = result.data?.items.filter((item) => !excludedIds.includes(item.id)) ?? [];
   return (
     <div className="flex flex-col gap-2">
-      <ScrollArea className="max-h-60 rounded-md border">
+      <div className="max-h-72 overflow-y-auto overscroll-contain rounded-md border bg-background">
         <ul aria-label="Gợi ý nguyên liệu chuẩn" className="flex flex-col gap-1 p-2">
           {candidates.map((item) => (
             <li key={item.id}>
@@ -69,7 +68,7 @@ export function IngredientSuggestions({
             </li>
           )}
         </ul>
-      </ScrollArea>
+      </div>
       {(result.data?.metadata.totalPages ?? 0) > 1 && (
         <div className="flex items-center justify-between gap-2">
           <Button
