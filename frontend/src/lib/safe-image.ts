@@ -43,6 +43,16 @@ export const ALLOWED_IMAGE_HOSTNAMES: ReadonlySet<string> = new Set([
   'upload.wikimedia.org',
   'i.ytimg.com',
   'img.youtube.com',
+  'cdn.diag.vn',
+  'weeknightbite.com',
+  'file.hstatic.net',
+  'images2.thanhnien.vn',
+  'cdn.tgdd.vn',
+  'afamilycdn.com',
+  'encrypted-tbn0.gstatic.com',
+  'storage.googleapis.com',
+  'eggyolk.vn',
+  'i.redd.it',
 ]);
 
 /** `true` nếu src dùng được trực tiếp trong `next/image` (local, data:, hoặc host đã khai báo). */

@@ -724,7 +724,14 @@ export const recipeDefinitions: readonly SeedRecipeDefinition[] = [
         affectedIngredientPositions: [0, 1, 6, 8, 9, 10, 11],
       },
     ],
-    coverMedia: null,
+    coverMedia: {
+      publicId: 'seed/recipes/com-chien-trai-dua',
+      secureUrl:
+        'https://file.hstatic.net/1000155899/article/-thai-sieu-doc-la-1359-phunutoday_1b0b5cf3e43e47129a449c1026ae7213_2fa859bbe56f45d4ad8d138b68676bd2.jpg',
+      width: 450,
+      height: 319,
+      bytes: 36437,
+    },
   },
   {
     slug: 'banh-mi-chay-pate-nam',
@@ -1209,7 +1216,14 @@ export const recipeDefinitions: readonly SeedRecipeDefinition[] = [
         affectedIngredientPositions: [3],
       },
     ],
-    coverMedia: null,
+    coverMedia: {
+      publicId: 'seed/recipes/yen-mach-qua-dem-chuoi-chia',
+      secureUrl:
+        'https://images2.thanhnien.vn/528068263637045248/2024/5/29/banana-bread-overnight-oats-4-17169753249281235036506.jpg',
+      width: 700,
+      height: 1050,
+      bytes: 233378,
+    },
   },
   {
     slug: 'chao-quinoa-bi-do-hat-bi',
@@ -1260,7 +1274,13 @@ export const recipeDefinitions: readonly SeedRecipeDefinition[] = [
         affectedIngredientPositions: [2, 3, 5],
       },
     ],
-    coverMedia: null,
+    coverMedia: {
+      publicId: 'seed/recipes/chao-quinoa-bi-do-hat-bi',
+      secureUrl: 'https://cdn.tgdd.vn/News/0/mon-an-dam-tu-hat-quinoa-de-nau-845x564.jpg',
+      width: 845,
+      height: 564,
+      bytes: 81595,
+    },
   },
   {
     slug: 'com-lut-dau-hu-cai-bo-xoi-bua-sang',
@@ -1318,7 +1338,13 @@ export const recipeDefinitions: readonly SeedRecipeDefinition[] = [
         affectedIngredientPositions: [2, 3],
       },
     ],
-    coverMedia: null,
+    coverMedia: {
+      publicId: 'seed/recipes/com-lut-dau-hu-cai-bo-xoi-bua-sang',
+      secureUrl: '/seed/recipes/com-lut-dau-hu-cai-bo-xoi-bua-sang.jpg',
+      width: 1474,
+      height: 1968,
+      bytes: 431826,
+    },
   },
   {
     slug: 'chao-hat-sen-dau-do-yen-mach',
@@ -1363,7 +1389,14 @@ export const recipeDefinitions: readonly SeedRecipeDefinition[] = [
         affectedIngredientPositions: [3],
       },
     ],
-    coverMedia: null,
+    coverMedia: {
+      publicId: 'seed/recipes/chao-hat-sen-dau-do-yen-mach',
+      secureUrl:
+        'https://afamilycdn.com/150157425591193600/2023/11/28/chao-yen-mach-dau-phong-1701160165461359125554.jpeg',
+      width: 640,
+      height: 365,
+      bytes: 33512,
+    },
   },
   {
     slug: 'com-lut-tempeh-bong-cai',
@@ -1438,7 +1471,14 @@ export const recipeDefinitions: readonly SeedRecipeDefinition[] = [
         affectedIngredientPositions: [2, 6],
       },
     ],
-    coverMedia: null,
+    coverMedia: {
+      publicId: 'seed/recipes/com-lut-tempeh-bong-cai',
+      secureUrl:
+        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRsIJnv-1cRQKUZ4fdXix05Mrgzb3wcjwIP96Xlye29g6se_Y-U6wR3BMXv&s=10',
+      width: 507,
+      height: 604,
+      bytes: 63552,
+    },
   },
   {
     slug: 'quinoa-dau-ga-rau-cu-nuong',
@@ -1518,11 +1558,10 @@ export const recipeDefinitions: readonly SeedRecipeDefinition[] = [
     ],
     coverMedia: {
       publicId: 'seed/recipes/quinoa-dau-ga-rau-cu-nuong',
-      secureUrl:
-        'https://images.unsplash.com/photo-1540420773420-3366772f4999?auto=format&fit=crop&w=1200&h=800&q=80',
-      width: 1200,
-      height: 800,
-      bytes: 185000,
+      secureUrl: 'https://i.redd.it/x7p3z627rsv61.jpg',
+      width: 3024,
+      height: 4032,
+      bytes: 1312909,
     },
   },
   {
@@ -1603,10 +1642,10 @@ export const recipeDefinitions: readonly SeedRecipeDefinition[] = [
     coverMedia: {
       publicId: 'seed/recipes/ca-ri-dau-hu-khoai-lang-com',
       secureUrl:
-        'https://images.unsplash.com/photo-1455619452474-d2be8b1e70cd?auto=format&fit=crop&w=1200&h=800&q=80',
-      width: 1200,
-      height: 800,
-      bytes: 185000,
+        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSGp3YQdsO3C-BYSnzJQyMvbuPu9L-dxfWT5em8NXmFV78vq-sz-CkDmTs&s=10',
+      width: 554,
+      height: 554,
+      bytes: 40400,
     },
   },
   {
@@ -1751,7 +1790,14 @@ export const recipeDefinitions: readonly SeedRecipeDefinition[] = [
         affectedIngredientPositions: [0, 1, 4, 6],
       },
     ],
-    coverMedia: null,
+    coverMedia: {
+      publicId: 'seed/recipes/pho-xao-nam-dau-hu-cai-thia',
+      secureUrl:
+        'https://storage.googleapis.com/onelife-public/blog.onelife.vn/2021/10/cach-lam-pho-xao-chay-mon-chay-699699654633.jpg',
+      width: 640,
+      height: 426,
+      bytes: 130032,
+    },
   },
   {
     slug: 'ca-tim-kho-dau-hu-com-lut',
@@ -1889,7 +1935,13 @@ export const recipeDefinitions: readonly SeedRecipeDefinition[] = [
         affectedIngredientPositions: [8, 9],
       },
     ],
-    coverMedia: null,
+    coverMedia: {
+      publicId: 'seed/recipes/ham-dau-den-bi-do-quinoa',
+      secureUrl: 'https://eggyolk.vn/wp-content/uploads/2025/03/Cach-nau-che-dau-den-voi-bi-do.jpg',
+      width: 700,
+      height: 700,
+      bytes: 134801,
+    },
   },
   {
     slug: 'com-tempeh-mang-tay-nam',
@@ -1957,6 +2009,13 @@ export const recipeDefinitions: readonly SeedRecipeDefinition[] = [
         affectedIngredientPositions: [1, 2, 3, 4, 5, 6],
       },
     ],
-    coverMedia: null,
+    coverMedia: {
+      publicId: 'seed/recipes/com-tempeh-mang-tay-nam',
+      secureUrl:
+        'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTSbWllSS-EkZzX4Y9ismMlgwLSjcJp5H98r-_tH1MFACIyieLHzprdMxsm&s=10',
+      width: 480,
+      height: 640,
+      bytes: 43854,
+    },
   },
 ];

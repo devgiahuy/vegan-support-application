@@ -151,11 +151,12 @@ Lưu ý đậu khô và gạo nở ra 2–3 lần khi nấu, nên lượng đạ
     authorEmail: 'platform.contributor@example.com',
     tags: ['meal prep', 'bảo quản', 'an toàn thực phẩm', 'tiết kiệm thời gian'],
     coverMedia: {
-      publicId: 'seed/handbooks/meal-prep-cover',
-      secureUrl: '/seed/handbooks/meal-prep-cover.jpg',
-      width: 1200,
-      height: 675,
-      bytes: 39996,
+      publicId: 'weeknightbite/healthy-meal-prep',
+      secureUrl:
+        'https://weeknightbite.com/wp-content/uploads/2026/01/healthy-meal-prep-episode-2.jpg',
+      width: 1023,
+      height: 1455,
+      bytes: 407755,
     },
   },
   {
@@ -237,6 +238,13 @@ Chế độ ăn chay thường dùng nhiều đậu nành, đậu phộng, hạt
     categorySlug: 'vi-chat-thiet-yeu',
     authorEmail: 'org.contributor@example.com',
     tags: ['sắt', 'canxi', 'kẽm', 'omega-3'],
-    coverMedia: null,
+    coverMedia: {
+      publicId: 'diag/canxi-omega-3',
+      secureUrl:
+        'https://cdn.diag.vn/2026/04/ea21e7bd-uong-canxi-va-omega-3-cung-luc-duoc-khong-2.jpg',
+      width: 800,
+      height: 600,
+      bytes: 36454,
+    },
   },
 ] as const;

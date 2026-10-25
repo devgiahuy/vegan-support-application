@@ -148,15 +148,15 @@ Trường cần cập nhật là `coverMedia` (`secureUrl`, `publicId`, `width`,
 
 | Công thức (slug) | Tình trạng hiện tại | Gợi ý từ khóa tìm ảnh |
 |---|---|---|
-| `com-chien-trai-dua` | **Trống** (ảnh cũ có watermark nhà hàng khác và là dừa, không phải dứa) | "cơm chiên dứa chay", "vegan pineapple fried rice cashew" |
-| `yen-mach-qua-dem-chuoi-chia` | **Trống** (ảnh Unsplash cũ là chồng sách) | "overnight oats banana chia jar", "yến mạch ngâm chuối" |
-| `chao-quinoa-bi-do-hat-bi` | **Trống** (ảnh cũ là salad) | "pumpkin quinoa porridge", "cháo bí đỏ quinoa" |
-| `com-lut-dau-hu-cai-bo-xoi-bua-sang` | **Trống** (ảnh cũ không khớp món) | "brown rice tofu spinach bowl", "cơm lứt đậu hũ" |
-| `chao-hat-sen-dau-do-yen-mach` | **Trống** (ảnh cũ là đĩa trái cây) | "chè đậu đỏ hạt sen", "red bean lotus seed porridge" |
-| `com-lut-tempeh-bong-cai` | **Trống** (ảnh cũ là món đậu gà) | "tempeh broccoli brown rice bowl" |
-| `pho-xao-nam-dau-hu-cai-thia` | **Trống** (ảnh cũ là mì có trứng và tôm) | "phở xào chay", "vegan stir fried rice noodles tofu bok choy" |
-| `ham-dau-den-bi-do-quinoa` | **Trống** (ảnh cũ là salad đậu hũ) | "black bean pumpkin stew quinoa" |
-| `com-tempeh-mang-tay-nam` | **Trống** (ảnh cũ có trứng) | "tempeh asparagus mushroom rice" |
+| `com-chien-trai-dua` | **Đã có** (người dùng cung cấp, 2026-10-26) | "cơm chiên dứa chay", "vegan pineapple fried rice cashew" |
+| `yen-mach-qua-dem-chuoi-chia` | **Đã có** (người dùng cung cấp, 2026-10-26) | "overnight oats banana chia jar", "yến mạch ngâm chuối" |
+| `chao-quinoa-bi-do-hat-bi` | **Đã có** (người dùng cung cấp, 2026-10-26) | "pumpkin quinoa porridge", "cháo bí đỏ quinoa" |
+| `com-lut-dau-hu-cai-bo-xoi-bua-sang` | **Đã có** (người dùng cung cấp, 2026-10-26) | "brown rice tofu spinach bowl", "cơm lứt đậu hũ" |
+| `chao-hat-sen-dau-do-yen-mach` | **Đã có** (người dùng cung cấp, 2026-10-26) | "chè đậu đỏ hạt sen", "red bean lotus seed porridge" |
+| `com-lut-tempeh-bong-cai` | **Đã có** (người dùng cung cấp, 2026-10-26) | "tempeh broccoli brown rice bowl" |
+| `pho-xao-nam-dau-hu-cai-thia` | **Đã có** (người dùng cung cấp, 2026-10-26) | "phở xào chay", "vegan stir fried rice noodles tofu bok choy" |
+| `ham-dau-den-bi-do-quinoa` | **Đã có** (người dùng cung cấp, 2026-10-26) | "black bean pumpkin stew quinoa" |
+| `com-tempeh-mang-tay-nam` | **Đã có** (người dùng cung cấp, 2026-10-26) | "tempeh asparagus mushroom rice" |
 | `bun-bo-hue-chay` | Ảnh local cũ, **chưa rõ nguồn/giấy phép** (giống ảnh chụp màn hình video) | "bún bò Huế chay", "vegetarian bun bo hue" |
 | `ca-ri-chay-khoai-nam` | Ảnh local cũ, chưa rõ nguồn | "cà ri chay nước cốt dừa", "vietnamese vegetarian curry sweet potato" |
 | `nam-dong-co-kho-tieu` | Ảnh local cũ, chưa rõ nguồn | "nấm đông cô kho", "braised shiitake mushrooms vegan" |
@@ -165,8 +165,8 @@ Trường cần cập nhật là `coverMedia` (`secureUrl`, `publicId`, `width`,
 | `chao-yen-mach-nam-huong` | Ảnh local cũ, chưa rõ nguồn | "oat congee shiitake", "cháo yến mạch nấm" |
 | `salad-bo-dau-ga` | Ảnh local cũ, chưa rõ nguồn | "chickpea avocado salad passion fruit" |
 | `sua-hat-sen-dau-do` | Ảnh local cũ, chưa rõ nguồn | "sữa hạt sen đậu đỏ", "lotus seed red bean milk" |
-| `quinoa-dau-ga-rau-cu-nuong` | Ảnh Unsplash cũ (salad rau chung chung, không có quinoa) | "roasted vegetable quinoa chickpea bowl" |
-| `ca-ri-dau-hu-khoai-lang-com` | Ảnh Unsplash cũ (cà ri đỏ chung chung) | "tofu sweet potato curry rice" |
+| `quinoa-dau-ga-rau-cu-nuong` | **Đã có** (người dùng cung cấp, 2026-10-26) | "roasted vegetable quinoa chickpea bowl" |
+| `ca-ri-dau-hu-khoai-lang-com` | **Đã có** (người dùng cung cấp, 2026-10-26) | "tofu sweet potato curry rice" |
 
 Ảnh nguyên liệu: danh mục nguyên liệu hiện không có trường ảnh nên không cần lấy.
 
@@ -210,8 +210,8 @@ Lưu ý: slug `video-15-phut-bua-toi-chay` giữ nguyên để không đổi URL
 
 | Mục | Trường | Tình trạng | Gợi ý từ khóa |
 |---|---|---|---|
-| `sat-canxi-kem-omega-3-nguoi-an-chay` | `coverMedia` trong `handbooks.data.ts` | **Trống** | "iron rich plant foods", "đậu lăng hạt bí cải bó xôi", "chia seeds sesame tofu" |
-| `bi-quyet-meal-prep-7-ngay` | `coverMedia` | Ảnh local cũ, chưa rõ nguồn | "vegan meal prep containers", "hộp cơm chay chuẩn bị trước" |
+| `sat-canxi-kem-omega-3-nguoi-an-chay` | `coverMedia` trong `handbooks.data.ts` | **Đã có** (người dùng cung cấp, `cdn.diag.vn`, 2026-10-26) | "iron rich plant foods", "đậu lăng hạt bí cải bó xôi", "chia seeds sesame tofu" |
+| `bi-quyet-meal-prep-7-ngay` | `coverMedia` | **Đã có** (người dùng cung cấp, `weeknightbite.com`, 2026-10-26) | "vegan meal prep containers", "hộp cơm chay chuẩn bị trước" |
 
 Video: không có mục cần lấy thủ công. Các file mp4 cũ trong `frontend/public/seed/videos/` không còn được seed tham chiếu (giữ nguyên trên đĩa); có thể xóa nếu không dùng cho mục đích khác.
 
