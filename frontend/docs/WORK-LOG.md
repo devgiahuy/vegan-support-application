@@ -1,5 +1,12 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-25] — Bỏ nút gọi quán trên danh sách restaurants
+
+- **Yêu cầu**: Bỏ button gọi quán ăn.
+- **Sửa**: Xóa nút “Gọi quán”, biến `phoneUrl` và imports không còn dùng trong `restaurant-card.tsx`. Không thay dữ liệu/API; website/chỉ đường và thông tin số điện thoại trong trang chi tiết được giữ.
+- **Verify**: Scoped ESLint, TypeScript, 59 files / 677 tests và production build 47/47 trang pass; `git diff --check` pass. Không thêm test mới cho thay đổi xóa nút.
+- **PROGRESS**: UC-12 100% → 100%.
+
 ## [2026-10-24] — Loại bỏ hoàn toàn nút Lưu tri thức AI trên toàn bộ các màn hình kiểm duyệt và thẻ dinh dưỡng
 
 - **Mục tiêu**: Loại bỏ nút "Lưu tri thức AI" trên các màn hình người dùng, bao gồm màn hình kiểm duyệt nhận diện tủ lạnh (`/pantry/scan`) và thẻ phân tích dinh dưỡng công thức (`RecipeNutritionCard`).

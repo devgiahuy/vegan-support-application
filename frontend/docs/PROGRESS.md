@@ -1,5 +1,9 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Restaurant card call button removed — Updated 2026-10-25
+
+Bỏ nút “Gọi quán” trên thẻ kết quả `/restaurants` theo yêu cầu. Website và chỉ đường giữ nguyên; thông tin liên hệ tại trang chi tiết không đổi. UC-12 giữ 100% → 100%. Scoped lint, typecheck, 677 tests và production build pass.
+
 ## Diet Workflow, Avatar Auto-Sync, Custom Meals Polish & AI Quota Highlights — Updated 2026-10-24
 
 Feature `033-diet-preference-workflow` và các cải tiến UI/UX hoàn thành 100%:
