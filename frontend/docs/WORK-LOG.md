@@ -1,5 +1,14 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-26] — Công thức trùng tên và meal-programs thiếu các tuần sau
+
+- **Yêu cầu**: Tạo hai công thức giống nhau bị conflict; người kiểm thử khác báo meal-program chỉ có món tuần đầu, tuần 2–4 sinh lại bị 409. Người dùng không có mã lỗi/môi trường của người kiểm thử.
+- **Tái hiện**: Hai POST recipe cùng tiêu đề không gửi slug trả `CONTENT_SLUG_CONFLICT`. Chương trình 4 tuần × 2 phương án khi không dùng lịch chay kỳ có đủ món; PERIODIC chỉ chọn ngày ở tuần đầu tạo PARTIAL với tuần 2–4 `DIET_SCHEDULE_REQUIRED`. Repo chưa được GitNexus index nên tracing dùng mã nguồn sau query báo repository not found.
+- **Backend**: Slug tự sinh kiểm tra trùng và thêm UUID bounded/transaction-safe, giữ slug khi sửa; explicit-slug conflict vẫn đúng. Preflight health/lịch toàn bộ tuần thiếu trước khi tạo mới hoặc resume, trả missing weekStarts/availableDates. Giữ quy tắc chọn ngày tường minh; không tự áp lịch tôn giáo. Repair/select alternative cập nhật status/failureSummary trong transaction versioned; all-ready trở lại DRAFT. Đồng bộ OpenAPI POST/PATCH errors và behavior; không persistence/seed migration.
+- **Frontend**: Tái dùng ScheduleEditor từ form tạo lộ trình, báo chính xác tuần/ngày thiếu, chặn pending/missing/unsaved lịch; nút lưu lịch dùng type=button để không submit form ngoài. DTO/Model/Mapper giữ PARTIAL/GENERATING và week failure với copy tiếng Việt; partial warning, link bổ sung lịch và regenerate inline errors/180s timeout. Cho retry PARTIAL/FAILED, ẩn regenerate ở CONFIRMED. Chuyển RHF watch sang useWatch và bọc submit handler để qua React Compiler lint; mapper/schedule coverage regression tests.
+- **Kiểm chứng**: Backend lint/typecheck/build/OpenAPI/served contract và existing meal-plan/analysis acceptance; FE Swagger sync/typecheck/scoped lint, 64 files/704 tests và 47-page production build pass. HTTP tạo đồng thời 4 recipe cùng tên mới có slug khác nhau; explicit slug vẫn 409, title dài bounded, edit giữ URL. Missing-week preflight không tạo record. Program PARTIAL cũ sửa 3 tuần thiếu → DRAFT, resume/replay không trùng, stale version vẫn 409, confirm thành công; tổng 4×2×21=168 FILLED. Browser lưu lịch mở nút tạo, tuần 2/3/4 mỗi tuần 21 món, confirmed không còn nút sinh lại. Dữ liệu/tài khoản/session tạm được dọn; ảnh bằng chứng ngoài repo.
+- **Tài liệu/giới hạn**: Plan 4.11, phases 3.20, integration 4.54, PROGRESS và generated catalog cập nhật. Phase 17/19 giữ 100% → 100%, không thay 21/22/27. Chưa kiểm tra môi trường của người test ban đầu hoặc native mobile. Cập nhật PR #49 theo yêu cầu sửa tiếp; không deploy.
+
 ## [2026-10-25] — Chuẩn hóa dị ứng và cấu tạo nguyên liệu nhiều tầng
 
 - **Yêu cầu**: Bỏ nhập mã/tên tự do cho dị ứng; xử lý tên đồng nghĩa, lỗi gõ, nguyên liệu chưa có hoặc nằm trong thành phần khác. Người dùng duyệt triển khai toàn bộ, chuẩn hóa trực tiếp và sửa frontend.

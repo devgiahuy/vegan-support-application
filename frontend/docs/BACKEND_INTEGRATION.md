@@ -1,8 +1,8 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.53
+**Version:** 4.54
 
-**Cập nhật:** 25/10/2026
+**Cập nhật:** 26/10/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
@@ -13,6 +13,19 @@
 ---
 
 ## 1. Source of truth và status
+
+### Duplicate content titles and complete program scheduling — 2026-10-26 (4.54, READY)
+
+`POST /posts`, `PATCH /posts/{id}`, `POST /meal-programs` and `PATCH /meal-programs/{id}` are `READY`, FE integrated. Create-program scheduling briefly transitioned through `CHANGING` for preflight/consumer migration and returned to READY after gates. No route, request, authorization, enum, persistence schema or seed change.
+
+- Content titles/bodies may repeat. When no explicit slug is supplied, create chooses a unique slug (bounded to 220 characters), with a UUID suffix on collision and bounded retry for a concurrent allocation. Existing unique indexes remain authoritative. Explicit client-supplied duplicate slugs still return `CONTENT_SLUG_CONFLICT` (409). Edit requests without slug preserve the current URL, including when changing the title. Frontend recipe requests already omit slug; no consumer migration is needed for this fix.
+- Multi-week creation/resume checks health and every week still needing alternatives before generating any new plan. PERIODIC still requires at least one user-selected day in each requested week; days are never inferred/copied automatically. `DIET_SCHEDULE_REQUIRED` (409) includes `fields.weekStarts` and all `fields.availableDates` for missing weeks. A new invalid request creates no partial program/plans. The form loads the current profile, identifies missing week/date ranges, provides the existing schedule editor, blocks unsaved/missing schedule data, and enables creation after explicit save. Other genuine generation failures may still produce PARTIAL/FAILED for retry.
+- Existing partial/failed programs can regenerate missing weeks after the schedule is corrected. Regeneration and alternative selection recompute generation status/failureSummary inside the versioned mutation transaction; repairing the final failed week promotes the program to DRAFT so it can be confirmed. Replay remains idempotent and stale versions retain `MEAL_PROGRAM_VERSION_CONFLICT` (409). PATCH OpenAPI now lists the existing `HEALTH_PROFILE_INCOMPLETE` and `DIET_SCHEDULE_REQUIRED` generation errors too.
+- Frontend retains `PARTIAL`/`GENERATING` status and maps week `failure.code` to a Vietnamese explanation/action. Missing periodic dates link to `/profile?tab=diet`; retry errors are inline. Regeneration allows the same 180-second timeout as create. Confirmed programs hide regeneration controls, matching existing immutability. Partial creation uses a warning instead of unconditional success.
+
+Verified: reproduced same-title `CONTENT_SLUG_CONFLICT`, then concurrent identical creates, explicit-slug collision and stable edit URLs. Reproduced first-week-only calendar → READY week 1 and `DIET_SCHEDULE_REQUIRED` in weeks 2–4. Verified preflight/no writes, repairing those weeks → DRAFT, create resume/replay without duplication, version conflict protection and confirmation. Four weeks × two alternatives contain 168 FILLED slots. Browser saved dates inline and enabled creation; weeks 2/3/4 each displayed 21 meals, and confirmed programs had no regeneration button. Backend lint/typecheck/build/OpenAPI/served-spec comparison and existing acceptance, frontend typecheck/scoped lint, 704 tests and 47-page build pass. No backend test infrastructure added; temporary fixtures are removed after QA. Native mobile and the other tester's environment were not checked.
+
+Changelog 2026-10-26 (4.54): unique automatic content URLs for duplicate titles; full-horizon periodic preflight, explicit schedule entry and partial-program recovery/status/error presentation. No migration or seed command required.
 
 ### Named allergies and reviewed composition — 2026-10-25 (4.53, READY)
 

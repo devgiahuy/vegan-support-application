@@ -519,6 +519,10 @@ export class ContentRepository {
     });
   }
 
+  async slugExists(slug: string): Promise<boolean> {
+    return (await this.prisma.post.count({ where: { slug } })) > 0;
+  }
+
   async createPost(
     authorId: string,
     type: PostType,

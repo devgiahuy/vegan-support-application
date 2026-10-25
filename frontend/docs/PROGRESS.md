@@ -1,5 +1,9 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Duplicate recipe titles and four-week program recovery — Updated 2026-10-26
+
+Backend cho tạo công thức trùng tiêu đề bằng slug tự sinh duy nhất; sửa không đổi URL nếu không yêu cầu. Meal-programs kiểm lịch chay kỳ toàn bộ các tuần trước khi tạo; form cho bổ sung/lưu ngày tại chỗ, chặn dữ liệu thiếu/chưa lưu. Giữ trạng thái PARTIAL/GENERATING, hiện nguyên nhân ở tuần lỗi và hướng dẫn bổ sung lịch. Khôi phục tuần thiếu cập nhật PARTIAL → DRAFT và xác nhận được; ẩn sinh lại khi đã xác nhận, tăng timeout regeneration. Backend gates/acceptance/OpenAPI và FE typecheck/scoped lint, 64 files/704 tests/build pass. HTTP: 4 tuần × 2 phương án = 168 FILLED; browser tuần 2/3/4 mỗi tuần hiện 21 món, lưu lịch mở nút tạo. Phase 17/19 giữ 100% → 100%; không đổi readiness 21/22/27, không thêm backend test suite hoặc migration.
+
 ## Named allergies and reviewed composition — Updated 2026-10-25
 
 Thay nhập mã/tên dị ứng bằng danh mục tên, tên đồng nghĩa và gợi ý lỗi gõ cần xác nhận; chặn lưu nội dung chưa chọn. Admin có form cấu tạo/thành phần con, nguồn/license/version/phạm vi/lịch sử. Backend chuẩn hóa demo, lọc thành phần lồng nhau/dữ liệu thiếu cho mọi ràng buộc cứng; phân tích và xác nhận lộ trình dùng dữ liệu hiện tại. DTO/Model/Mapper/API/query/constants và mapper/search tests đầy đủ; không tạo trang mồ côi. Swagger sync, backend gates/acceptance, frontend typecheck/scoped lint, 700 tests/build và browser QA pass. Spec 032 hoàn tất; Phase 17/19 giữ 100% → 100%, không nâng readiness 21/22/27. Chưa kiểm thử native mobile hoặc xác minh công thức thương mại.

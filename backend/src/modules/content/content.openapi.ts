@@ -180,7 +180,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     tags: ['Content'],
     summary: 'Tạo Recipe, Blog hoặc Video',
     description:
-      'Không nhận author/status/publishedAt từ client. Mọi content type tạo immutable DRAFT; publication chỉ xảy ra sau explicit submit và Admin approval. Video upload chỉ nhận committed Phase 15 asset thuộc author; YouTube URL được allowlist và không tính quota.',
+      'Không nhận author/status/publishedAt từ client. Tiêu đề/nội dung có thể trùng; khi không gửi slug, backend tự tạo đường dẫn duy nhất, thêm hậu tố nếu cần. Slug client chỉ định vẫn phải duy nhất. Mọi content type tạo immutable DRAFT; publication chỉ xảy ra sau explicit submit và Admin approval. Video upload chỉ nhận committed Phase 15 asset thuộc author; YouTube URL được allowlist và không tính quota.',
     operationId: 'createPost',
     security: authenticated,
     request: {
@@ -237,7 +237,11 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
         'ACCOUNT_BANNED',
         'ACCOUNT_LOCKED',
       ]),
-      409: errorResponse(errorSchema, 'Slug đã được sử dụng', ['CONTENT_SLUG_CONFLICT']),
+      409: errorResponse(
+        errorSchema,
+        'Slug do client chỉ định đã được sử dụng; slug tự sinh được thêm hậu tố khi trùng tiêu đề',
+        ['CONTENT_SLUG_CONFLICT'],
+      ),
     },
   });
 
@@ -269,7 +273,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     tags: ['Content'],
     summary: 'Tạo revision mới cho content thuộc quyền sở hữu',
     description:
-      'Request là full revision snapshot và bắt buộc expectedVersion. Author-only mutation luôn tạo DRAFT. Khi sửa content đã approved, published revision cũ tiếp tục phục vụ public cho tới khi revision mới được submit và Admin approve.',
+      'Request là full revision snapshot và bắt buộc expectedVersion. Nếu không gửi slug, giữ đường dẫn hiện tại kể cả khi đổi tiêu đề. Author-only mutation luôn tạo DRAFT. Khi sửa content đã approved, published revision cũ tiếp tục phục vụ public cho tới khi revision mới được submit và Admin approve.',
     operationId: 'updatePost',
     security: authenticated,
     request: {

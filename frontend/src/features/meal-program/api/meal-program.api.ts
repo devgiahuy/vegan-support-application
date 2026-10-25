@@ -84,7 +84,8 @@ export const mealProgramApi = {
     };
     const res = await api.patch<{ data: MealProgramDto }>(
       API_ENDPOINTS.MEAL_PROGRAMS.UPDATE(id),
-      payload
+      payload,
+      action.action === 'REGENERATE_WEEK' ? { timeout: 180_000, silent: true } : undefined
     );
     return mealProgramMapper.toModel(res.data?.data);
   },

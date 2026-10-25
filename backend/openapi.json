@@ -36075,7 +36075,7 @@
           "Content"
         ],
         "summary": "Tạo Recipe, Blog hoặc Video",
-        "description": "Không nhận author/status/publishedAt từ client. Mọi content type tạo immutable DRAFT; publication chỉ xảy ra sau explicit submit và Admin approval. Video upload chỉ nhận committed Phase 15 asset thuộc author; YouTube URL được allowlist và không tính quota.",
+        "description": "Không nhận author/status/publishedAt từ client. Tiêu đề/nội dung có thể trùng; khi không gửi slug, backend tự tạo đường dẫn duy nhất, thêm hậu tố nếu cần. Slug client chỉ định vẫn phải duy nhất. Mọi content type tạo immutable DRAFT; publication chỉ xảy ra sau explicit submit và Admin approval. Video upload chỉ nhận committed Phase 15 asset thuộc author; YouTube URL được allowlist và không tính quota.",
         "operationId": "createPost",
         "security": [
           {
@@ -36294,7 +36294,7 @@
             }
           },
           "409": {
-            "description": "Slug đã được sử dụng",
+            "description": "Slug do client chỉ định đã được sử dụng; slug tự sinh được thêm hậu tố khi trùng tiêu đề",
             "content": {
               "application/json": {
                 "examples": {
@@ -36303,7 +36303,7 @@
                       "success": false,
                       "error": {
                         "code": "CONTENT_SLUG_CONFLICT",
-                        "message": "Slug đã được sử dụng",
+                        "message": "Slug do client chỉ định đã được sử dụng; slug tự sinh được thêm hậu tố khi trùng tiêu đề",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -36604,7 +36604,7 @@
           "Content"
         ],
         "summary": "Tạo revision mới cho content thuộc quyền sở hữu",
-        "description": "Request là full revision snapshot và bắt buộc expectedVersion. Author-only mutation luôn tạo DRAFT. Khi sửa content đã approved, published revision cũ tiếp tục phục vụ public cho tới khi revision mới được submit và Admin approve.",
+        "description": "Request là full revision snapshot và bắt buộc expectedVersion. Nếu không gửi slug, giữ đường dẫn hiện tại kể cả khi đổi tiêu đề. Author-only mutation luôn tạo DRAFT. Khi sửa content đã approved, published revision cũ tiếp tục phục vụ public cho tới khi revision mới được submit và Admin approve.",
         "operationId": "updatePost",
         "security": [
           {
@@ -46400,7 +46400,7 @@
             }
           },
           "409": {
-            "description": "Profile, schedule, or idempotency conflict",
+            "description": "Profile, schedule, or idempotency conflict. Before creating/resuming generation, validate every missing week. DIET_SCHEDULE_REQUIRED returns fields.weekStarts and fields.availableDates for all unscheduled weeks; a new invalid request creates no program/plans.",
             "content": {
               "application/json": {
                 "examples": {
@@ -46409,7 +46409,7 @@
                       "success": false,
                       "error": {
                         "code": "HEALTH_PROFILE_INCOMPLETE",
-                        "message": "Profile, schedule, or idempotency conflict",
+                        "message": "Profile, schedule, or idempotency conflict. Before creating/resuming generation, validate every missing week. DIET_SCHEDULE_REQUIRED returns fields.weekStarts and fields.availableDates for all unscheduled weeks; a new invalid request creates no program/plans.",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -46419,7 +46419,7 @@
                       "success": false,
                       "error": {
                         "code": "DIET_SCHEDULE_REQUIRED",
-                        "message": "Profile, schedule, or idempotency conflict",
+                        "message": "Profile, schedule, or idempotency conflict. Before creating/resuming generation, validate every missing week. DIET_SCHEDULE_REQUIRED returns fields.weekStarts and fields.availableDates for all unscheduled weeks; a new invalid request creates no program/plans.",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -46429,7 +46429,7 @@
                       "success": false,
                       "error": {
                         "code": "MEAL_PROGRAM_IDEMPOTENCY_CONFLICT",
-                        "message": "Profile, schedule, or idempotency conflict",
+                        "message": "Profile, schedule, or idempotency conflict. Before creating/resuming generation, validate every missing week. DIET_SCHEDULE_REQUIRED returns fields.weekStarts and fields.availableDates for all unscheduled weeks; a new invalid request creates no program/plans.",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -46774,7 +46774,7 @@
           }
         ],
         "summary": "Edit, regenerate, reanalyze, or confirm a program",
-        "description": "Actions are UPDATE_METADATA, SELECT_ALTERNATIVE, REGENERATE_WEEK, REANALYZE, and CONFIRM. Every mutation is idempotent and version checked. Week edits invalidate later projections. Confirmed program content is immutable.",
+        "description": "Actions are UPDATE_METADATA, SELECT_ALTERNATIVE, REGENERATE_WEEK, REANALYZE, and CONFIRM. Every mutation is idempotent and version checked. Week edits invalidate later projections. Regeneration preserves health/schedule requirements and recomputes generation status/failureSummary transactionally: repairing the last missing week promotes PARTIAL/FAILED to DRAFT. Confirmed program content is immutable.",
         "parameters": [
           {
             "schema": {
@@ -46930,6 +46930,26 @@
             "content": {
               "application/json": {
                 "examples": {
+                  "HEALTH_PROFILE_INCOMPLETE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "HEALTH_PROFILE_INCOMPLETE",
+                        "message": "Mutation conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "DIET_SCHEDULE_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DIET_SCHEDULE_REQUIRED",
+                        "message": "Mutation conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
                   "MEAL_PROGRAM_VERSION_CONFLICT": {
                     "value": {
                       "success": false,

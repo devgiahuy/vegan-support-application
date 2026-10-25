@@ -150,7 +150,17 @@ export class MealProgramRepository {
   }
 
   async finalizeGeneration(programId: string): Promise<MealProgramRecord> {
-    const weeks = await this.prisma.mealProgramWeek.findMany({
+    return this.prisma.$transaction(async (transaction) => {
+      await lockDocument(transaction, 'mealProgram', { id: programId });
+      return this.finalizeGenerationInTransaction(transaction, programId);
+    });
+  }
+
+  private async finalizeGenerationInTransaction(
+    transaction: Prisma.TransactionClient,
+    programId: string,
+  ): Promise<MealProgramRecord> {
+    const weeks = await transaction.mealProgramWeek.findMany({
       where: { mealProgramId: programId },
     });
     const ready = weeks.filter((week) => week.status === MealProgramWeekStatus.READY).length;
@@ -163,7 +173,7 @@ export class MealProgramRepository {
     const failures = weeks
       .filter((week) => week.status === MealProgramWeekStatus.FAILED)
       .map((week) => ({ weekIndex: week.weekIndex, failure: week.failure }));
-    return this.prisma.mealProgram.update({
+    return transaction.mealProgram.update({
       where: { id: programId },
       data: { status, failureSummary: failures.length ? failures : null },
       include: programInclude,
@@ -211,6 +221,7 @@ export class MealProgramRepository {
         },
       });
       await this.invalidateFrom(transaction, data.programId, data.weekIndex);
+      await this.finalizeGenerationInTransaction(transaction, data.programId);
     });
   }
 
@@ -251,6 +262,7 @@ export class MealProgramRepository {
         },
       });
       await this.invalidateFrom(transaction, data.programId, data.weekIndex);
+      await this.finalizeGenerationInTransaction(transaction, data.programId);
     });
   }
 

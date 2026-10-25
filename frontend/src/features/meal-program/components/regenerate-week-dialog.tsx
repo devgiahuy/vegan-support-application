@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { toast } from 'sonner';
 import { RefreshCw, AlertTriangle, Loader2 } from 'lucide-react';
 import {
@@ -12,6 +13,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { getApiErrorCode, getApiErrorMessage } from '@/lib/api-error';
 import { useRegenerateProgramWeekMutation } from '../queries/meal-program.queries';
 
 interface RegenerateWeekDialogProps {
@@ -30,10 +33,14 @@ export const RegenerateWeekDialog: React.FC<RegenerateWeekDialogProps> = ({
   onOpenChange,
 }) => {
   const regenerateMutation = useRegenerateProgramWeekMutation(programId);
+  const [errorCode, setErrorCode] = React.useState('');
+  const [errorMessage, setErrorMessage] = React.useState('');
 
   if (weekNumber === null) return null;
 
   const handleRegenerate = async () => {
+    setErrorCode('');
+    setErrorMessage('');
     try {
       await regenerateMutation.mutateAsync({
         weekNumber,
@@ -46,9 +53,15 @@ export const RegenerateWeekDialog: React.FC<RegenerateWeekDialogProps> = ({
       toast.success(`Đã tạo lại thực đơn cho Tuần ${weekNumber} thành công!`);
       onOpenChange(false);
     } catch (err: unknown) {
-      const errorMsg =
-        err instanceof Error ? err.message : 'Có lỗi khi tạo lại tuần ăn. Vui lòng thử lại.';
-      toast.error(errorMsg);
+      const code = getApiErrorCode(err);
+      setErrorCode(code ?? '');
+      setErrorMessage(
+        code === 'DIET_SCHEDULE_REQUIRED'
+          ? `Tuần ${weekNumber} chưa có ngày chay kỳ. Hãy bổ sung và lưu ngày chay trong tuần này, rồi thử tạo lại.`
+          : code === 'MEAL_PROGRAM_VERSION_CONFLICT'
+            ? 'Lộ trình đã thay đổi. Hãy tải lại trang để lấy phiên bản mới rồi thử lại.'
+            : getApiErrorMessage(err, 'Không tạo được thực đơn tuần. Vui lòng thử lại.')
+      );
     }
   };
 
@@ -69,12 +82,23 @@ export const RegenerateWeekDialog: React.FC<RegenerateWeekDialogProps> = ({
         <div className="p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/30 text-amber-900 dark:text-amber-200 text-xs flex gap-2.5">
           <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <p className="leading-relaxed">
-            <strong>Cơ chế Vô hiệu hóa Hạ lưu (BL-11):</strong> Việc thay đổi thực đơn của Tuần{' '}
-            {weekNumber} sẽ làm thay đổi dinh dưỡng tích lũy và danh sách mua sắm của các tuần tiếp
-            sau. Hệ thống sẽ tự động gắn cờ yêu cầu phân tích lại cho các tuần sau.
+            Thay đổi thực đơn Tuần {weekNumber} sẽ cập nhật kết quả dinh dưỡng tích lũy. Các tuần
+            sau cần được phân tích lại theo lựa chọn mới.
           </p>
         </div>
 
+        {errorMessage && (
+          <Alert variant="destructive">
+            <AlertDescription>
+              {errorMessage}
+              {errorCode === 'DIET_SCHEDULE_REQUIRED' && (
+                <Button asChild variant="link">
+                  <Link href="/profile?tab=diet">Bổ sung lịch chay kỳ</Link>
+                </Button>
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
         <DialogFooter className="gap-2 sm:gap-0 pt-2">
           <Button
             type="button"

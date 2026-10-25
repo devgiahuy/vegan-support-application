@@ -68,6 +68,16 @@ export class MealProgramService {
       throw this.idempotencyConflict();
     }
     const startDate = dateFromDateOnly(input.startDate);
+    if (existing?.status !== MealProgramStatus.CONFIRMED) {
+      const missingWeekStarts = existing
+        ? existing.weeks
+            .filter((week) => week.alternatives.length < input.alternativesPerWeek)
+            .map((week) => dateOnly(week.weekStart))
+        : Array.from({ length: input.horizonWeeks }, (_, index) =>
+            dateOnly(addDays(startDate, index * 7)),
+          );
+      await this.mealPlanService.assertGenerationPrerequisites(userId, missingWeekStarts);
+    }
     let program =
       existing ??
       (await this.repository.create({

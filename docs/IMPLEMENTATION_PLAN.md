@@ -1,8 +1,8 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.10
+**Version:** 4.11
 
-**Updated:** 2026-10-25
+**Updated:** 2026-10-26
 
 **Status:** Approved implementation baseline
 
@@ -255,6 +255,8 @@ User-approved 2026-10-25 extension: use a public named allergen catalog for expl
 
 ### BL-06 — Content and video review lifecycle
 
+Maintenance clarification 2026-10-26: titles and bodies need not be unique. Automatically generated URLs are unique and collision-safe; an explicitly requested URL must remain unique. Editing without a requested URL change preserves the current slug.
+
 1. Author creates a draft and submits a specific immutable revision.
 2. Automated moderation may attach signals but cannot publish, reject, or delete.
 3. Admin approves or rejects with reason. Only approved revision becomes public.
@@ -309,6 +311,7 @@ User-approved 2026-10-25 extension: use a public named allergen catalog for expl
 - Repeated-pattern and cumulative nutrient checks span the configured horizon.
 - Editing one week invalidates affected later analyses and shopping projections.
 - Generated programs are drafts until the user confirms them.
+- Before starting/resuming missing weekly alternatives, validate health and periodic calendar coverage for every week to generate. Return all missing week starts/dates before creating new records; users explicitly save days for each week. Successful repair of the last failed week recomputes PARTIAL/FAILED → DRAFT in the same versioned mutation, allowing confirmation. Do not infer religious observance or weaken hard dietary constraints.
 
 ### BL-12 — Pantry, fridge images, and receipts
 
@@ -562,6 +565,8 @@ A phase is complete only when:
 | Phase 2 ideas are forgotten or accidentally claimed READY | Dedicated roadmap plus explicit status taxonomy |
 
 ## 13. Change record
+
+- **4.11 — 2026-10-26:** Clarify duplicate content titles with unique/stable generated URLs; preflight full-horizon periodic schedules and recover partially generated programs to DRAFT after week repairs.
 
 - **4.10 — 2026-10-25:** User approves named allergy selection, direct catalog normalization, reviewed transitive composition, fail-closed uncertain data, and current analysis/confirmation validation. No restaurant-directory or canonical-nutrition changes.
 

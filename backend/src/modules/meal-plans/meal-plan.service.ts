@@ -262,6 +262,38 @@ export class MealPlanService {
     private readonly mealAnalysisService: MealAnalysisService,
   ) {}
 
+  async assertGenerationPrerequisites(userId: string, weekStarts: string[]): Promise<void> {
+    if (!weekStarts.length) return;
+    if (!(await this.repository.findHealthProfile(userId)))
+      throw new AppError({
+        statusCode: 409,
+        code: 'HEALTH_PROFILE_INCOMPLETE',
+        message: 'Bạn cần bổ sung thông tin sức khỏe trước khi tạo thực đơn tuần.',
+      });
+    const profile = await this.contentRepository.findSearchProfile(userId);
+    if (profile?.dietPreference?.practiceSchedule !== PracticeSchedule.PERIODIC) return;
+    const scheduled = new Set(profile.dietScheduleDates.map((entry) => dateOnly(entry.date)));
+    const missing = weekStarts
+      .map((weekStart) => ({
+        weekStart,
+        dates: buildWeeklySlotBlueprint(dateFromDateOnly(weekStart))
+          .filter((slot) => slot.mealType === MealType.BREAKFAST)
+          .map((slot) => dateOnly(slot.date)),
+      }))
+      .filter((week) => !week.dates.some((day) => scheduled.has(day)));
+    if (missing.length)
+      throw new AppError({
+        statusCode: 409,
+        code: 'DIET_SCHEDULE_REQUIRED',
+        message:
+          'Vui lòng chọn và lưu ít nhất một ngày chay kỳ cho mỗi tuần của lộ trình trước khi tạo.',
+        fields: {
+          weekStarts: missing.map((week) => week.weekStart),
+          availableDates: missing.flatMap((week) => week.dates),
+        },
+      });
+  }
+
   async generate(userId: string, input: GenerateMealPlanInput) {
     const payloadHash = sha256({
       weekStart: input.weekStart,

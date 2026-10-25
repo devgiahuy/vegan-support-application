@@ -1,12 +1,14 @@
 # Backend Implementation Phases
 
-**Version:** 3.19
+**Version:** 3.20
 
-**Updated:** 2026-10-25
+**Updated:** 2026-10-26
 
 **Stack:** Node.js · Express · TypeScript · MongoDB replica set · Prisma · Zod · OpenAPI
 
 **Current baseline:** Phases 00–20 and 23–26 completed; Phases 21–22 and 27 are in progress. OpenAI image adapters are implemented for Phase 21/22, but live Vietnamese image and receipt validation remains before production readiness.
+
+**Content/program maintenance — 2026-10-26:** Duplicate content titles now allocate unique automatic slugs; edits preserve existing URLs unless explicitly changed. Full-horizon schedule preflight prevents first-week-only PERIODIC programs from being newly created partially; explicit dates remain required. Regeneration recomputes generation status/failureSummary transactionally, so repaired partial programs reach DRAFT and confirmation. No schema/seed migration. OpenAPI/integration 4.54 synchronized. Backend lint/typecheck/build/OpenAPI/served-spec and existing meal-plan/analysis acceptance pass. Temporary HTTP checks cover concurrent creation/collisions, calendar gaps with no writes, partial recovery/resume/replay/version protection/confirmation and four weeks × two alternatives (168 FILLED slots); browser weeks 2–4 show 21 meals each. Frontend typecheck/scoped lint, 704 tests and build pass. Temporary records removed, no backend test infrastructure; numbered phase readiness unchanged.
 
 **Approved allergy/composition extension — 2026-10-25:** Named allergy catalog/validated labels and admin-only versioned composition review implemented. Mongo schema provisioning adds component/audit/graph-lock collections and UNKNOWN defaults; both seeds/targeted normalization retain provenance. Every hard dietary constraint evaluates descendants and rejects uncertain data. Analysis/confirmation consult current metadata and full FILLED-item coverage after subset analysis. OpenAPI/integration 4.53 synchronized. Backend lint/typecheck/build/OpenAPI, existing meal-plan/analysis acceptance and temporary API checks pass: authorization, invalid selections, nested/uncertain matches, concurrent cycles, recipe/custom manual addition, generation, stale/full analysis and confirmation. Frontend typecheck/scoped lint, 700 tests/build and browser profile/admin-save QA pass; temporary fixtures removed. No backend test infrastructure or new numbered phase; Phases 21/22/27 keep their status.
 
