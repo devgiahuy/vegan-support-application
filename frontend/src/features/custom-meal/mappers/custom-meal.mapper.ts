@@ -7,6 +7,8 @@ import {
   safeString,
 } from '@/lib/mapper';
 import type {
+  CreateCustomMealRequestDto,
+  UpdateCustomMealRequestDto,
   CustomMealIngredientDto,
   CustomMealIngredientNutrientsDto,
   CustomMealInUseErrorDto,
@@ -31,6 +33,22 @@ import type {
 } from '../types/custom-meal.model';
 
 export class CustomMealMapper extends BaseMapper<CustomMealResponseDto, CustomMeal> {
+  public static toUpdateRequest(
+    data: CreateCustomMealRequestDto,
+    initial: CustomMeal
+  ): UpdateCustomMealRequestDto {
+    const result: UpdateCustomMealRequestDto = { ...data };
+    for (const [field, previous] of [
+      ['userCalories', initial.userCalories],
+      ['userProteinGrams', initial.userProtein],
+      ['userCarbsGrams', initial.userCarbs],
+      ['userFatGrams', initial.userFat],
+    ] as const) {
+      if (previous !== null && data[field] === undefined) result[field] = null;
+    }
+    return result;
+  }
+
   public toModel(dto: CustomMealResponseDto | null | undefined): CustomMeal {
     if (!dto) {
       return {
@@ -209,18 +227,28 @@ export class CustomMealMapper extends BaseMapper<CustomMealResponseDto, CustomMe
       null
     );
     const calculatedFat = pickField<number | null>(dto, ['calculatedFat', 'calculated_fat'], null);
+    const isAutomatic = (metric: string) => {
+      const origin = safeString(dto.nutritionMetadata?.metrics?.[metric]?.origin, '');
+      return origin === 'CANONICAL_CALCULATED' || origin === 'AI_ESTIMATED';
+    };
+    const manualValue = (metric: string, value: number | null) =>
+      isAutomatic(metric) || value === null ? null : safeNumber(value, 0);
+    const automaticValue = (metric: string, value: number | null, fallback: number | null) => {
+      const amount = isAutomatic(metric) && value !== null ? value : fallback;
+      return amount === null ? null : safeNumber(amount, 0);
+    };
 
     const nutritionCoverage = pickField<string>(
       dto,
       ['nutritionCoverage', 'nutrition_coverage'],
       ''
     );
-    const isFullyCovered =
-      nutritionCoverage === 'FULL' ||
-      safeBoolean(
-        pickField(dto, ['isFullyCovered', 'is_fully_covered'], unmatchedIngredientCount === 0),
-        unmatchedIngredientCount === 0
-      );
+    const isFullyCovered = nutritionCoverage
+      ? ['FULL', 'COMPLETE'].includes(nutritionCoverage)
+      : safeBoolean(
+          pickField(dto, ['isFullyCovered', 'is_fully_covered'], unmatchedIngredientCount === 0),
+          unmatchedIngredientCount === 0
+        );
 
     return {
       id: safeString(pickField(dto, ['id'], ''), ''),
@@ -233,15 +261,27 @@ export class CustomMealMapper extends BaseMapper<CustomMealResponseDto, CustomMe
       sourceNote: pickField<string | null>(dto, ['sourceNote', 'source_note'], null)
         ? safeString(pickField(dto, ['sourceNote', 'source_note'], null), '')
         : null,
-      userCalories: userCalories !== null ? safeNumber(userCalories, 0) : null,
-      userProtein: userProtein !== null ? safeNumber(userProtein, 0) : null,
-      userCarbs: userCarbs !== null ? safeNumber(userCarbs, 0) : null,
-      userFat: userFat !== null ? safeNumber(userFat, 0) : null,
-      userFiber: userFiber !== null ? safeNumber(userFiber, 0) : null,
-      calculatedCalories: calculatedCalories !== null ? safeNumber(calculatedCalories, 0) : null,
-      calculatedProtein: calculatedProtein !== null ? safeNumber(calculatedProtein, 0) : null,
-      calculatedCarbs: calculatedCarbs !== null ? safeNumber(calculatedCarbs, 0) : null,
-      calculatedFat: calculatedFat !== null ? safeNumber(calculatedFat, 0) : null,
+      userCalories: manualValue('calories', userCalories),
+      userProtein: manualValue('proteinGrams', userProtein),
+      userCarbs: manualValue('carbsGrams', userCarbs),
+      userFat: manualValue('fatGrams', userFat),
+      userFiber: manualValue('fiberGrams', userFiber),
+      calculatedCalories: automaticValue('calories', userCalories, calculatedCalories),
+      calculatedProtein: automaticValue('proteinGrams', userProtein, calculatedProtein),
+      calculatedCarbs: automaticValue('carbsGrams', userCarbs, calculatedCarbs),
+      calculatedFat: automaticValue('fatGrams', userFat, calculatedFat),
+      nutritionNotes: [
+        ...(dto.nutritionMetadata?.ai?.used
+          ? ['Có chỉ số do AI ước tính; chưa được xác minh.']
+          : []),
+        ...(dto.nutritionMetadata?.ai?.providerDown
+          ? ['Dịch vụ ước tính đang không khả dụng; bạn có thể lưu lại để thử tính lại.']
+          : []),
+        ...safeArray<string>(dto.nutritionMetadata?.assumptions),
+        ...[dto.nutritionMetadata?.ai?.uncertaintyNote, dto.nutritionMetadata?.disclaimer].filter(
+          (note): note is string => typeof note === 'string' && note.length > 0
+        ),
+      ],
       coverageRatio,
       isFullyCovered,
       unmatchedIngredientCount,
@@ -267,21 +307,6 @@ export class CustomMealMapper extends BaseMapper<CustomMealResponseDto, CustomMe
       .filter(Boolean);
 
     const userCalories = pickField<number | null>(dto, ['userCalories', 'user_calories'], null);
-    const userProtein = pickField<number | null>(
-      dto,
-      ['userProteinGrams', 'userProtein', 'user_protein_grams', 'user_protein'],
-      null
-    );
-    const userCarbs = pickField<number | null>(
-      dto,
-      ['userCarbsGrams', 'userCarbs', 'user_carbs_grams', 'user_carbs'],
-      null
-    );
-    const userFat = pickField<number | null>(
-      dto,
-      ['userFatGrams', 'userFat', 'user_fat_grams', 'user_fat'],
-      null
-    );
     const userFiber = pickField<number | null>(
       dto,
       ['userFiberGrams', 'userFiber', 'user_fiber_grams', 'user_fiber'],
@@ -313,9 +338,9 @@ export class CustomMealMapper extends BaseMapper<CustomMealResponseDto, CustomMe
       ['nutritionCoverage', 'nutrition_coverage'],
       ''
     );
-    const isFullyCovered =
-      nutritionCoverage === 'FULL' ||
-      safeBoolean(pickField(dto, ['isFullyCovered', 'is_fully_covered'], true), true);
+    const isFullyCovered = nutritionCoverage
+      ? ['FULL', 'COMPLETE'].includes(nutritionCoverage)
+      : safeBoolean(pickField(dto, ['isFullyCovered', 'is_fully_covered'], true), true);
 
     return {
       id: safeString(pickField(dto, ['id'], ''), ''),
@@ -355,7 +380,7 @@ export class CustomMealMapper extends BaseMapper<CustomMealResponseDto, CustomMe
       | null
       | undefined
   ): CustomMealListResult {
-    let rawItems: any[] = [];
+    let rawItems: Array<CustomMealListItemDto | CustomMealResponseDto> = [];
     if (Array.isArray(dto)) {
       rawItems = dto;
     } else if (dto) {

@@ -322,18 +322,36 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
     }
 
     const macronutrients = dto.macronutrients ?? {};
+    const sumDailyMetric = (metric: keyof NonNullable<WeeklyPlanDayDto['estimatedTotals']>) =>
+      safeArray<WeeklyPlanDayDto>(dto.days).reduce(
+        (sum, day) => sum + safeNumber(day.estimatedTotals?.[metric], 0),
+        0
+      );
 
     return {
       capturedAt: safeString(pickField(dto, ['captured_at', 'capturedAt'], ''), ''),
       totalCalories: safeNumber(
-        pickField(dto, ['total_calories', 'totalCalories', 'targetCalories', 'target_calories'], 0),
+        pickField(
+          dto,
+          ['total_calories', 'totalCalories'],
+          days.reduce((sum, day) => sum + day.totalCalories, 0)
+        ),
         0
       ),
       macronutrients: {
-        protein: safeNumber(pickField(macronutrients, ['protein_g', 'protein'], 0), 0),
-        carbs: safeNumber(pickField(macronutrients, ['carbs_g', 'carbs'], 0), 0),
-        fat: safeNumber(pickField(macronutrients, ['fat_g', 'fat'], 0), 0),
-        fiber: safeNumber(pickField(macronutrients, ['fiber_g', 'fiber'], 0), 0),
+        protein: safeNumber(
+          pickField(macronutrients, ['protein_g', 'protein'], sumDailyMetric('proteinGrams')),
+          0
+        ),
+        carbs: safeNumber(
+          pickField(macronutrients, ['carbs_g', 'carbs'], sumDailyMetric('carbohydrateGrams')),
+          0
+        ),
+        fat: safeNumber(pickField(macronutrients, ['fat_g', 'fat'], sumDailyMetric('fatGrams')), 0),
+        fiber: safeNumber(
+          pickField(macronutrients, ['fiber_g', 'fiber'], sumDailyMetric('fiberGrams')),
+          0
+        ),
       },
       days,
     };
@@ -351,9 +369,14 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
       };
     }
 
-    const meals = safeArray<WeeklyPlanMealItemDto, MealItemSummary>(dto.meals, (mealDto) =>
-      this.mapMealItem(mealDto)
-    );
+    const rawMeals = dto.slots
+      ? [dto.slots.breakfast, dto.slots.lunch, dto.slots.dinner].filter(
+          (meal): meal is WeeklyPlanMealItemDto => Boolean(meal) && meal?.status !== 'UNFILLED'
+        )
+      : safeArray<WeeklyPlanMealItemDto>(dto.meals);
+    const meals = rawMeals
+      .filter((meal) => Boolean(meal) && meal?.status !== 'UNFILLED')
+      .map((meal) => this.mapMealItem(meal));
 
     const MEAL_TYPE_ORDER: Record<string, number> = {
       BREAKFAST: 1,
@@ -402,7 +425,10 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
 
     return {
       id: safeString(pickField(dto, ['id'], ''), ''),
-      name: safeString(pickField(dto, ['name'], ''), ''),
+      name: safeString(
+        pickField(dto, ['name'], dto.recipe?.title ?? dto.customMeal?.name ?? ''),
+        ''
+      ),
       mealType,
       mealTypeLabel: this.mapMealTypeLabel(mealType),
       sourceType,
@@ -413,7 +439,7 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
         ? safeString(dto.image_url)
         : dto.imageUrl
           ? safeString(dto.imageUrl)
-          : undefined,
+          : safeString(dto.recipe?.coverImageUrl ?? dto.customMeal?.photoUrl, '') || undefined,
     };
   }
 
@@ -739,6 +765,7 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
     for (const raw of rawSlots) {
       if (!raw || typeof raw !== 'object') continue;
       const slot = raw as Record<string, unknown>;
+      if (slot.status === 'UNFILLED') continue;
       const slotDate = safeString(pickField(slot, ['date', 'mealDate', 'meal_date'], ''), '');
 
       // Tìm ngày tương ứng cho slot này:

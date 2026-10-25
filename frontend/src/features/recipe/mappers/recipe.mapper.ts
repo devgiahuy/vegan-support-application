@@ -9,7 +9,6 @@ import {
 } from '@/lib/mapper';
 import { formatDate } from '@/lib/utils';
 import { RecipeDifficulty } from '@/common/enums';
-import { PaginationResult } from '@/types/api';
 import {
   authorFromDto,
   coverMediaInput,
@@ -270,7 +269,7 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
         page: safeNumber(meta?.page, 1),
         limit: safeNumber(meta?.limit, 20),
         totalItems: safeNumber(meta?.total, items.length),
-        totalPages: safeNumber(meta?.totalPages, 1),
+        totalPages: safeNumber(meta?.totalPages, items.length === 0 ? 0 : 1),
         appliedConstraints: meta?.appliedConstraints
           ? {
               authenticated: safeBoolean(meta.appliedConstraints.authenticated, false),

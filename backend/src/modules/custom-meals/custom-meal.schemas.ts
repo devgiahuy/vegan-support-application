@@ -146,6 +146,8 @@ export const customMealResponseSchema = z.object({
   userFatGrams: z.number().nullable(),
   userFiberGrams: z.number().nullable(),
   nutritionCoverage: z.string(),
+  nutritionMetadata: z.record(z.string(), z.unknown()).nullable(),
+  nutritionAnalyzedAt: z.string().datetime().nullable(),
   deletePolicy: z.nativeEnum(CustomMealDeletePolicy),
   ingredients: z.array(customMealIngredientResponseSchema),
   photos: z.array(customMealPhotoResponseSchema),

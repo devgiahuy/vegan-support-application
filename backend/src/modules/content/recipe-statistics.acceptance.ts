@@ -60,6 +60,8 @@ async function main(): Promise<void> {
               recipeRevisionId: recipe.publishedRevisionId,
               servings: 1,
               targetCalories: 600,
+              calories: 600,
+              tolerancePercent: 0,
             },
           },
         },

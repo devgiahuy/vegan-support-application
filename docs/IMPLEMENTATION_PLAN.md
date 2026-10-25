@@ -1,6 +1,6 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.8
+**Version:** 4.9
 
 **Updated:** 2026-10-25
 
@@ -284,6 +284,7 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 - It may contain name, notes, servings, structured ingredients, nutrition estimate, multiple images, source note, and arbitrary tags.
 - Tags such as `shopee` are normalized user text, not provider identities or API calls.
 - A custom meal can be inserted into a plan and analyzed like a recipe when sufficient ingredient data exists.
+- Create and nutrition-relevant edits recalculate the entire-meal estimate. Approved ingredient aliases resolve to canonical records; unresolved ingredients use the configured AI fallback when available, without replacing canonical food data. A recognizable meal name without ingredients may be estimated with explicit serving/preparation assumptions and low confidence. A missing metric for any ingredient requires a whole-meal fallback for that metric, rather than presenting a partial sum as the total. Preserve manual overrides, expose provenance/uncertainty, and retain nulls when estimation is unavailable. Clarified by user request on 2026-10-25.
 
 ### BL-10 — Meal planning and compatibility
 
@@ -559,6 +560,8 @@ A phase is complete only when:
 | Phase 2 ideas are forgotten or accidentally claimed READY | Dedicated roadmap plus explicit status taxonomy |
 
 ## 13. Change record
+
+- **4.9 — 2026-10-25:** Custom-meal maintenance clarifies recalculation, approved-alias resolution, whole-meal fallback for free text/name-only meals, manual overrides and unknown-value handling. Recipe discovery, recommendations, weekly generation and manual insertion enforce allergies against both revision snapshots and current ingredient metadata. Weekly programs already generate dishes; consumers must read `days[].slots` in generated snapshots.
 
 - **4.8 — 2026-10-25:** User explicitly excludes restaurant discovery and place details from automatic eating-profile filtering. Directory lookups use only requested location, keyword and explicit filters. A query `dietPattern` remains a reviewed-claim filter; external source attribution and unverified labels remain required. Recipe recommendations and meal planning retain their hard profile constraints.
 

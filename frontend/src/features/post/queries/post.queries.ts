@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { toastApiError } from '@/lib/api-error';
 import { postApi, ArticleQueryParams } from '../api/post.api';
 import type { Article, RelatedGroup } from '../types/post.model';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export const POST_QUERY_KEYS = {
   all: ['posts'] as const,
@@ -13,7 +14,8 @@ export const POST_QUERY_KEYS = {
   articles: (params?: ArticleQueryParams) => [...POST_QUERY_KEYS.articlesList(), params] as const,
   articleDetail: (idOrSlug: string) =>
     [...POST_QUERY_KEYS.all, 'articles', 'detail', idOrSlug] as const,
-  related: (id: string) => [...POST_QUERY_KEYS.all, 'related', id] as const,
+  related: (id: string, userId?: string) =>
+    [...POST_QUERY_KEYS.all, 'related', id, userId ?? 'guest'] as const,
 };
 
 export function useMyPostsQuery(
@@ -58,8 +60,9 @@ export function useArticleDetailQuery(idOrSlug: string) {
  * `{ recipes, blogs, videos }` (đúng contract `GET /posts/:id/related`).
  */
 export function useRelatedPostsQuery(id: string) {
+  const userId = useAuthStore((state) => state.user?.id);
   return useQuery<RelatedGroup>({
-    queryKey: POST_QUERY_KEYS.related(id),
+    queryKey: POST_QUERY_KEYS.related(id, userId),
     queryFn: () => postApi.getRelatedPosts(id),
     enabled: Boolean(id),
     staleTime: 60 * 1000,

@@ -15,6 +15,7 @@ import {
 } from '@/features/custom-meal/queries/custom-meal.queries';
 import { CustomMealForm } from '@/features/custom-meal/components/custom-meal-form';
 import type { CreateCustomMealRequestDto } from '@/features/custom-meal/types/custom-meal.dto';
+import { CustomMealMapper } from '@/features/custom-meal/mappers/custom-meal.mapper';
 
 export default function EditCustomMealPage() {
   const params = useParams();
@@ -27,7 +28,8 @@ export default function EditCustomMealPage() {
   const deleteMediaMutation = useDeleteCustomMealMediaMutation(id);
 
   const handleUpdate = async (data: CreateCustomMealRequestDto) => {
-    const updated = await updateMutation.mutateAsync(data);
+    if (!meal) return;
+    const updated = await updateMutation.mutateAsync(CustomMealMapper.toUpdateRequest(data, meal));
     toast.success(`Đã cập nhật món ăn "${updated.name}" thành công!`);
     router.push(`/custom-meals/${updated.id}`);
   };

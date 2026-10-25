@@ -3,11 +3,13 @@ import { toast } from 'sonner';
 import { toastApiError } from '@/lib/api-error';
 import { recipeApi, RecipeQueryParams } from '../api/recipe.api';
 import type { Recipe } from '../types/recipe.model';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export const RECIPE_QUERY_KEYS = {
   all: ['recipes'] as const,
   lists: () => [...RECIPE_QUERY_KEYS.all, 'list'] as const,
-  list: (params?: RecipeQueryParams) => [...RECIPE_QUERY_KEYS.lists(), params] as const,
+  list: (params?: RecipeQueryParams, userId?: string) =>
+    [...RECIPE_QUERY_KEYS.lists(), userId ?? 'guest', params] as const,
   details: () => [...RECIPE_QUERY_KEYS.all, 'detail'] as const,
   detail: (idOrSlug: string) => [...RECIPE_QUERY_KEYS.details(), idOrSlug] as const,
 };
@@ -16,8 +18,9 @@ export const RECIPE_QUERY_KEYS = {
  * Hook truy vấn danh sách công thức nấu ăn
  */
 export function useRecipesQuery(params?: RecipeQueryParams, options?: { enabled?: boolean }) {
+  const userId = useAuthStore((state) => state.user?.id);
   return useQuery({
-    queryKey: RECIPE_QUERY_KEYS.list(params),
+    queryKey: RECIPE_QUERY_KEYS.list(params, userId),
     queryFn: () => recipeApi.getRecipes(params),
     staleTime: 60 * 1000, // 1 phút
     enabled: options?.enabled ?? true,

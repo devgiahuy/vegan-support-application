@@ -1161,9 +1161,21 @@ export class MealPlanService {
       const revision = recipe?.publishedRevision;
       if (!recipe || !revision?.recipeDetail) throw this.notFound();
       const hardReasons: string[] = [];
-      const allergens = new Set(revision.recipeDetail.allergenCodes as string[]);
+      const allergens = new Set([
+        ...stringList(revision.recipeDetail.allergenCodes),
+        ...revision.ingredients.flatMap(
+          (ingredient) => ingredient.ingredient?.allergens.map((entry) => entry.allergenCode) ?? [],
+        ),
+      ]);
       if (constraints.allergenCodes.some((code) => allergens.has(code)))
         hardReasons.push('ALLERGY');
+      if (
+        constraints.requireResolvedIngredients &&
+        revision.ingredients.some(
+          (ingredient) => ingredient.resolutionStatus !== 'EXACT' || !ingredient.ingredient,
+        )
+      )
+        hardReasons.push('UNRESOLVED_INGREDIENT');
       if (
         revision.ingredients.some(
           (ingredient) =>

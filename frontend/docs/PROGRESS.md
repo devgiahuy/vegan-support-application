@@ -1,5 +1,15 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Branch handoff and follow-up verification — Updated 2026-10-25
+
+Phase 17/19 giữ 100% → 100%. Kiểm tra lại 3 luồng trên nhánh `codex/fix-allergy-custom-meals-weekly-plan`: 12 runtime/API checks pass; payload thực map đủ 42 món. Bổ sung lưu macro bằng 0, hiển thị macro nhập tay, xóa ghi đè để tính lại và tổng macro tuần từ `estimatedTotals`. Browser xác nhận tạo/sửa custom meal; không có ảnh gốc hoặc kiểm thử native mobile. Kết quả gates cuối được ghi trong WORK-LOG.
+
+## Allergy discovery, custom-meal nutrition and generated program meals — Updated 2026-10-25
+
+Sửa bộ lọc dị ứng theo cả snapshot công thức và metadata nguyên liệu hiện tại; cache recipe/related/recommendation tách theo user và được invalidation sau lưu diet/schedule; danh sách recipe READY không trả fixture khi lỗi. Custom meal tính lại số tự động khi sửa, giữ ghi đè người dùng, dùng canonical/AI cho nguyên liệu tự do và trả provenance; frontend phân biệt số tính toán với số nhập tay, hiện ghi chú AI/không chắc chắn và cho phép thời gian fallback. Lộ trình đọc đúng `days[].slots`, tên/ảnh món lồng nhau và tổng calories thực tế; UNFILLED vẫn rỗng. Phase 17/19 giữ 100% → 100% (bảo trì).
+
+Verify: backend lint/typecheck/build/OpenAPI và existing acceptance pass; FE typecheck/scoped lint, 60 files / 682 tests, build 47/47 trang pass. HTTP/Mongo: dinh dưỡng nguyên liệu tự do qua OpenAI có kết quả, cập nhật giữ số nhập tay; chương trình 2 tuần tạo và mapper đọc đủ 42 món. Dữ liệu kiểm tra tạm đã dọn; không có ảnh gốc để đối chiếu UI báo lỗi.
+
 ## Receipt purchase identity and review — Updated 2026-10-25
 
 Đồng bộ FE với contract receipt Phase 22: mua lại các món giống nhau vào ngày khác được giải thích là lần mua mới và cộng dồn; các trường hợp hóa đơn trùng/ảnh một phần dùng lựa chọn cùng hóa đơn hoặc hóa đơn khác; dòng phi thực phẩm bị loại có lý do và có thể khôi phục trước khi xác nhận. Receipt consumer mapping/review hoàn tất cho development flow; Phase 22 production vẫn `IN_PROGRESS` vì còn kiểm tra hóa đơn thật và release gates của BE. Phase 22 FE scaffold giữ 100% → 100%; không nâng readiness production.
@@ -305,9 +315,11 @@ Roadmap Phase 2 features are tracked only in `/docs/ROADMAP_PHASE_2.md`; they mu
 ## Lịch sử cập nhật (mỗi dòng = 1 lần agent sửa %)
 
 | Ngày (UTC) | Task | % cũ → % mới | Lý do |
+| 2026-10-25 | Kiểm chứng và bàn giao nhánh sửa 3 luồng | Phase 17/19 100% → 100% | 12 runtime/API checks, 42 món qua mapper; sửa zero/clear/manual macro UI và tổng macro tuần; browser QA custom meal. |
 | 2026-10-25 | Sửa popup kết quả nhập receipt trên `/receipts/scan` | Phase 22 FE scaffold 100% → 100% | Giới hạn chiều cao modal theo viewport, cuộn danh sách bên trong; thẻ thống kê xếp dọc ở viewport hẹp và dùng cột co giãn trên desktop để không tràn ngang. |
 | 2026-10-25 | Receipt purchase identity and review | Phase 22 FE scaffold 100% → 100% | Đồng bộ consumer dev với contract receipt mới; mua cùng món vào ngày khác được giữ là lần mua riêng, lựa chọn xử lý ảnh trùng/ảnh một phần, và UI xử lý dòng phi thực phẩm bị loại. Production vẫn chờ BE READY và kiểm tra hóa đơn thực. |
 | 2026-10-25 | Bỏ lọc quán tự động theo hồ sơ ăn uống | UC-12 100% → 100% | User-approved exception; nearby/search/details chỉ áp dụng query filters. Tài khoản có hồ sơ nhận dữ liệu SerpApi; đồng bộ SRS/plan/OpenAPI/FE và kiểm tra gates. |
+| 2026-10-25 | Dị ứng, custom-meal nutrition và món tự sinh trong lộ trình | Phase 17/19 100% → 100% | Sửa backend filtering/recalculation và mapper/cache; 682 tests, build và HTTP/Mongo kiểm tra 42 món pass. |
 | 2026-10-25 | Restaurant discovery filtered empty state | UC-12 100% → 100% | Tái hiện guest có dữ liệu nhưng tài khoản bị lọc theo hồ sơ; sửa nhãn bộ lọc, giải thích `externalResultsSuppressed` và đồng bộ empty state danh sách/bản đồ. |
 | 2026-10-25 | Meal Programs create timeout | 100% → 100% | Chờ lâu hơn cho generation đồng bộ, bảo toàn idempotency key khi retry cùng payload và thay thông báo Axios kỹ thuật bằng thông báo rõ ràng. |
 | 2026-10-25 | Profile saved content list cards | UC-03 95% → 95% | Hiển thị danh sách bookmark thành card ngang có thumbnail, loại nội dung, nhãn đã xuất bản và tiêu đề; giữ nguyên API/query/filter và chờ test tay CM-1..CM-4. |
