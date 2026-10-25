@@ -1,5 +1,15 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-25] — Đồng bộ số người dùng công thức với meal plan
+
+- **Yêu cầu**: Sửa số đếm người dùng công thức không tăng sau khi thêm công thức vào kế hoạch bữa ăn.
+- **Nguyên nhân**: Backend chỉ trả thống kê ở detail (`recipe.statistics.usageUserCount`), không có ở list/related; frontend mapper lại tìm `recipe.usageCount`/`usageCount` ngoài cùng và default thành 0. Meal-plan mutations cũng không invalidate recipe cache.
+- **Đã sửa**: Backend tính batch số user duy nhất theo recipe cho public list/related, giữ chung quy tắc bỏ meal plan đã xóa; OpenAPI mô tả contract. FE DTO/Mapper đọc đúng `statistics.usageUserCount`; create/swap/manual-add/delete meal plan invalidate recipe queries để refetch.
+- **Files sửa**: backend `content.repository.ts`, `content.service.ts`, `content.openapi.ts`, `openapi.json`; frontend `recipe.dto.ts`, `recipe.mapper.ts`, mapper test, `meal-plan.queries.ts`, `BACKEND_INTEGRATION.md`, `PROGRESS.md`.
+- **Verify**: OpenAPI generate + `npm run sync:swagger -- ../backend/openapi.json` pass; backend lint, typecheck, build pass; frontend `tsc --noEmit` và production build pass; `git diff --check` pass. Mapper test được cập nhật nhưng không chạy test suite.
+- **PROGRESS**: UC-02 giữ 95% → 95%; ghi nhận sửa contract usage statistics, còn kiểm thử tay end-to-end.
+- **Còn lại**: Chưa xác minh với DB/runtime người dùng thật; số sẽ cập nhật khi recipe queries refetch sau mutation hoặc khi tải lại danh sách.
+
 ## [2026-10-25] — Bỏ nút gọi quán trên danh sách restaurants
 
 - **Yêu cầu**: Bỏ button gọi quán ăn.

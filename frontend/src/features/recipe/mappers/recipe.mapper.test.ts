@@ -259,6 +259,21 @@ describe('RecipeMapper', () => {
     expect(model.usageCount).toBe(42);
   });
 
+  it('maps the backend statistics.usageUserCount field', () => {
+    const dto = backendRecipeDto();
+    dto.recipe = {
+      ...dto.recipe,
+      statistics: {
+        usageUserCount: 42,
+        usageTracking: 'MEAL_PLAN_ADDITION',
+        cookedUserCount: null,
+        limitation: 'Số người đã thêm công thức vào thực đơn.',
+      },
+    };
+    const model = recipeMapper.toModel(dto);
+    expect(model.usageCount).toBe(42);
+  });
+
   it('maps isExpertAuthor to true when author role is NUTRITION_EXPERT or EXPERIENCED_COOK', () => {
     const dto = backendRecipeDto();
     (dto.author as any) = {

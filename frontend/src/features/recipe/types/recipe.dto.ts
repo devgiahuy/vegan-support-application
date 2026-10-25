@@ -34,6 +34,13 @@ export interface NutritionFactDto {
   vitaminB12Mcg?: number | string | null;
 }
 
+export interface RecipeUsageStatisticsDto {
+  usageUserCount?: number | string | null;
+  usageTracking?: string;
+  cookedUserCount?: null;
+  limitation?: string;
+}
+
 export interface RecipeDetailDto extends BasePostDto {
   recipe?: {
     servings?: number;
@@ -46,7 +53,8 @@ export interface RecipeDetailDto extends BasePostDto {
     traditionWarnings?: TraditionWarningDto[];
     dietCompatibilities?: DietCompatibilityDto[];
     ingredients?: RecipeIngredientDto[];
-    /** Số người đang sử dụng công thức (nếu backend trả về). */
+    statistics?: RecipeUsageStatisticsDto | null;
+    /** Legacy field retained for older backend responses. */
     usageCount?: number;
   } | null;
 }

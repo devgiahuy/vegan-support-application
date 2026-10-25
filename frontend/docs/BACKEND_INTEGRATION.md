@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.49
+**Version:** 4.50
 
 **Cập nhật:** 25/10/2026
 
@@ -13,6 +13,10 @@
 ---
 
 ## 1. Source of truth và status
+
+### Recipe usage statistics — 2026-10-25 (4.50)
+
+`GET /posts`, `/posts/:id/related` và `/posts/:idOrSlug` trả `recipe.statistics.usageUserCount` cho Recipe. Đây là số tài khoản riêng biệt đã có recipe trong ít nhất một meal plan chưa xóa; đây không phải lượt xem, bookmark hoặc số người đã nấu. Frontend đọc đúng field và làm mới recipe query sau khi tạo, đổi, thêm món vào hoặc xóa meal plan.
 
 ### Restaurant schematic clustering — 2026-10-25 (4.49)
 
@@ -137,6 +141,8 @@ Completed migration: recognize payos in mappers, allow new purchases only for pa
 | `BILLING_RECONCILE_COOLDOWN`                                                          | Wait at least 30 seconds                                                                                                                                        |
 | `BILLING_CHECKOUT_EXPIRED`                                                            | Historical retired local-checkout code; not emitted by current billing routes                                                                                   |
 | `ENTITLEMENT_QUOTA_EXCEEDED`, `PANTRY_CAPACITY_EXCEEDED`, `SCAN_RETRY_LIMIT_EXCEEDED` | Existing quota/capacity/retry handling                                                                                                                          |
+
+Changelog 2026-10-25 (4.50): đồng bộ thống kê sử dụng công thức. `GET /posts` và `/posts/:id/related` trả `recipe.statistics.usageUserCount` như detail, đếm user duy nhất có công thức trong meal plan chưa xóa; FE mapper đọc đúng field và meal-plan mutations làm mới cache Recipe.
 
 Changelog 2026-10-25 (4.45): xử lý timeout ở `POST /meal-programs`: frontend chờ tối đa 180 giây cho backend sinh chương trình đồng bộ, giữ idempotency key khi retry cùng payload và hiển thị thông báo tiếng Việt khi chưa nhận được response. Changelog 2026-10-25 (4.44): sửa consumer `GET /meal-programs` để chỉ gửi query `page`/`limit`/`status` được backend strict schema cho phép; bộ lọc dùng enum backend và UI không quảng bá template khi endpoint chỉ trả programs của owner. Changelog 2026-10-25 (4.43): nối các nút “Lưu món”/“Lưu video” trên trang chi tiết và nút bookmark trên thẻ công thức với `PUT/DELETE /posts/{id}/bookmark`; bỏ state-only/toast-only giả lập và gỡ nút API trùng ở phần thảo luận. `USE_FIXTURES=false`; nút thẻ công thức lấy trạng thái từ danh sách bookmark dùng chung. API vẫn `READY`; không đổi contract.
 
@@ -424,7 +430,7 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 
 | Method | Path                           | Status    | Backend updated | FE integrated    | Ghi chú                                                                                                             |
 | ------ | ------------------------------ | --------- | --------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------- |
-| GET    | `/posts`                       | `READY`   | 2026-09-21      | Yes (2026-09-16) | Public chỉ thấy approved revision; filter/type/pagination; FE: `features/post`, `features/recipe`, `features/video` |
+| GET    | `/posts`                       | `READY`   | 2026-10-25      | Yes (2026-10-25) | Public chỉ thấy approved revision; filter/type/pagination; Recipe có `statistics.usageUserCount` đếm user duy nhất trong meal plan chưa xóa; FE: `features/post`, `features/recipe`, `features/video` |
 | GET    | `/posts/mine`                  | `IN_PROGRESS` | 2026-10-25 | Yes (2026-10-25) | Authenticated author list across moderation states, newest revision first, excludes deleted posts; no client-supplied author ID; FE: `features/post`, `/profile?tab=posts`; waiting for backend quality gates |
 | POST   | `/posts`                       | `READY`   | 2026-09-21      | Yes (2026-09-16) | Auth; luôn tạo draft revision, không auto-publish                                                                   |
 | GET    | `/posts/:idOrSlug`             | `READY`   | 2026-09-21      | Yes (2026-09-16) | Public thấy approved revision gần nhất trong lúc edit pending                                                       |
@@ -432,7 +438,7 @@ Feature không import trực tiếp lẫn nhau. Shared enum hoặc presentation 
 | DELETE | `/posts/:id`                   | `READY`   | 2026-09-21      | Yes (2026-09-16) | Author-only soft-delete; giữ review/audit evidence                                                                  |
 | POST   | `/posts/:id/submit`            | `READY`   | 2026-09-21      | Yes (2026-09-23) | Author-only; latest draft + expectedVersion; video asset phải committed/owned; FE: `features/review`                |
 | GET    | `/posts/:id/review-history`    | `READY`   | 2026-09-21      | Yes (2026-09-23) | Author/Admin; revisions, media source, signals, reviewer/reason, pagination; FE: `features/review`                  |
-| GET    | `/posts/:id/related`           | `READY`   | 2026-09-15      | Yes (2026-09-16) | Trả recipes/blogs/videos riêng                                                                                      |
+| GET    | `/posts/:id/related`           | `READY`   | 2026-10-25      | Yes (2026-10-25) | Trả recipes/blogs/videos riêng; Recipe kèm `statistics.usageUserCount` đếm user duy nhất trong meal plan chưa xóa |
 | POST   | `/uploads/signature`           | `REMOVED` | 2026-09-19      | No               | Replaced by reservation flow (Phase 15); use `POST /uploads/reservations` instead                                   |
 | GET    | `/posts/:id/comments`          | `READY`   | 2026-09-15      | Yes (2026-09-17) | Reply tối đa một tầng; FE: `features/community` live (`USE_FIXTURES = false`)                                       |
 | POST   | `/posts/:id/comments`          | `READY`   | 2026-09-15      | Yes (2026-09-17) | Member+; tạo comment hoặc reply                                                                                     |

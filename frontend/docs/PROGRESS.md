@@ -1,5 +1,9 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Recipe meal-plan usage count — Updated 2026-10-25
+
+Đồng bộ thống kê số tài khoản riêng biệt đã thêm công thức vào kế hoạch còn hoạt động: API danh sách/related/detail trả cùng `recipe.statistics.usageUserCount`, mapper đọc đúng contract, meal-plan mutations làm mới cache công thức. UC-02 giữ 95% → 95%; không đổi phạm vi feature, còn kiểm thử tay end-to-end.
+
 ## Restaurant card call button removed — Updated 2026-10-25
 
 Bỏ nút “Gọi quán” trên thẻ kết quả `/restaurants` theo yêu cầu. Website và chỉ đường giữ nguyên; thông tin liên hệ tại trang chi tiết không đổi. UC-12 giữ 100% → 100%. Scoped lint, typecheck, 677 tests và production build pass.
@@ -297,6 +301,7 @@ Roadmap Phase 2 features are tracked only in `/docs/ROADMAP_PHASE_2.md`; they mu
 ## Lịch sử cập nhật (mỗi dòng = 1 lần agent sửa %)
 
 | Ngày (UTC) | Task | % cũ → % mới | Lý do |
+| 2026-10-25 | Recipe meal-plan usage count | UC-02 95% → 95% | Sửa thống kê số user riêng biệt đã thêm recipe vào meal plan ở list/related/detail; mapper đọc `statistics.usageUserCount`, query cache được làm mới sau mutation. |
 | 2026-10-25 | Bỏ lọc quán tự động theo hồ sơ ăn uống | UC-12 100% → 100% | User-approved exception; nearby/search/details chỉ áp dụng query filters. Tài khoản có hồ sơ nhận dữ liệu SerpApi; đồng bộ SRS/plan/OpenAPI/FE và kiểm tra gates. |
 | 2026-10-25 | Restaurant discovery filtered empty state | UC-12 100% → 100% | Tái hiện guest có dữ liệu nhưng tài khoản bị lọc theo hồ sơ; sửa nhãn bộ lọc, giải thích `externalResultsSuppressed` và đồng bộ empty state danh sách/bản đồ. |
 | 2026-10-25 | Meal Programs create timeout | 100% → 100% | Chờ lâu hơn cho generation đồng bộ, bảo toàn idempotency key khi retry cùng payload và thay thông báo Axios kỹ thuật bằng thông báo rõ ràng. |

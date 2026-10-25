@@ -22,6 +22,7 @@ import type {
   RecipeDetailDto,
   RecipeIngredientDto,
   NutritionFactDto,
+  RecipeUsageStatisticsDto,
   TraditionWarningDto,
   DietCompatibilityDto,
   CreateRecipeRequestDto,
@@ -133,9 +134,11 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       authorVerified ||
       expertVerified;
 
+    const statistics = pickField<RecipeUsageStatisticsDto | null>(detail, ['statistics'], null);
     const rawUsageCount =
-      pickField<number | null>(detail, ['usageCount'], null) ??
-      pickField<number | null>(dto, ['usageCount'], null);
+      pickField<number | string | null>(statistics, ['usageUserCount'], null) ??
+      pickField<number | string | null>(detail, ['usageCount'], null) ??
+      pickField<number | string | null>(dto, ['usageCount'], null);
     const usageCount = safeNumber(rawUsageCount, 0);
 
     const traditionWarnings: TraditionWarning[] = safeArray<TraditionWarningDto>(

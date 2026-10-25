@@ -198,6 +198,57 @@ export class ContentRepository {
     return typeof count === 'number' ? count : 0;
   }
 
+  async recipeUsageUserCounts(postIds: string[]): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+    if (!postIds.length) return counts;
+
+    const result: unknown = await this.prisma.mealPlanItem.aggregateRaw({
+      pipeline: [
+        {
+          $match: {
+            recipe_id: { $in: postIds },
+            source_type: 'RECIPE',
+            status: 'FILLED',
+          },
+        },
+        {
+          $lookup: {
+            from: 'meal_plans',
+            localField: 'meal_plan_id',
+            foreignField: '_id',
+            as: 'meal_plan',
+          },
+        },
+        { $unwind: '$meal_plan' },
+        { $match: { 'meal_plan.deleted_at': null } },
+        {
+          $group: {
+            _id: { recipeId: '$recipe_id', userId: '$meal_plan.user_id' },
+          },
+        },
+        {
+          $group: {
+            _id: '$_id.recipeId',
+            count: { $sum: 1 },
+          },
+        },
+      ],
+    });
+
+    if (!Array.isArray(result)) return counts;
+    const rows: unknown[] = result;
+    for (const item of rows) {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+      const row = item as Record<string, unknown>;
+      const recipeId = row['_id'];
+      const count = row['count'];
+      if (typeof recipeId === 'string' && typeof count === 'number') {
+        counts.set(recipeId, count);
+      }
+    }
+    return counts;
+  }
+
   async searchPublished(
     criteria: ContentSearchCriteria,
     constraints: SearchConstraints,

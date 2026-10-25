@@ -6,6 +6,7 @@ import { mealPlanApi } from '../api/meal-plan.api';
 import type { GenerateMealPlanInput, MealPlanListQueryParams } from '../types/meal-plan.model';
 import type { ManualAddMealPlanItemRequestDto } from '../types/meal-plan.dto';
 import { MEAL_ANALYSIS_KEYS } from '@/features/meal-analysis/queries/meal-analysis.queries';
+import { RECIPE_QUERY_KEYS } from '@/features/recipe/queries/recipe.queries';
 
 export const MEAL_PLAN_QUERY_KEYS = {
   all: ['meal-plans'] as const,
@@ -42,6 +43,7 @@ export function useGenerateMealPlanMutation() {
     mutationFn: (input: GenerateMealPlanInput) => mealPlanApi.generate(input),
     onSuccess: (plan) => {
       queryClient.invalidateQueries({ queryKey: MEAL_PLAN_QUERY_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: RECIPE_QUERY_KEYS.all });
       toast.success('Đã tạo thực đơn tuần!', {
         description: `Tuần ${plan.formattedWeekRange} — ${plan.filledSlots}/${plan.totalSlots} bữa đã lấp.`,
       });
@@ -80,6 +82,7 @@ export function useSwapMealItemMutation() {
     onSuccess: (plan, vars) => {
       queryClient.invalidateQueries({ queryKey: MEAL_PLAN_QUERY_KEYS.all });
       queryClient.invalidateQueries({ queryKey: MEAL_ANALYSIS_KEYS.detail(vars.planId) });
+      queryClient.invalidateQueries({ queryKey: RECIPE_QUERY_KEYS.all });
       toast.success('Đã đổi món!', {
         description: `Thực đơn đã lên phiên bản ${plan.version}.`,
       });
@@ -107,6 +110,7 @@ export function useManualAddMealItemMutation() {
     onSuccess: (plan, vars) => {
       queryClient.invalidateQueries({ queryKey: MEAL_PLAN_QUERY_KEYS.all });
       queryClient.invalidateQueries({ queryKey: MEAL_ANALYSIS_KEYS.detail(vars.planId) });
+      queryClient.invalidateQueries({ queryKey: RECIPE_QUERY_KEYS.all });
       toast.success('Đã cập nhật món vào thực đơn!', {
         description: `Thực đơn đã cập nhật lên phiên bản ${plan.version}.`,
       });
@@ -147,6 +151,7 @@ export function useDeleteMealPlanMutation() {
     onSuccess: (_data, vars) => {
       queryClient.invalidateQueries({ queryKey: MEAL_PLAN_QUERY_KEYS.all });
       queryClient.invalidateQueries({ queryKey: MEAL_ANALYSIS_KEYS.detail(vars.id) });
+      queryClient.invalidateQueries({ queryKey: RECIPE_QUERY_KEYS.all });
       toast.success('Đã xóa thực đơn.');
       router.push('/meal-plans/saved');
     },

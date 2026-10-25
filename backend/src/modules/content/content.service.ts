@@ -129,10 +129,19 @@ export class ContentService {
       { ...filters, ...(normalizedQuery ? { normalizedQuery } : {}) },
       searchContext.constraints,
     );
+    const recipeIds = result.records
+      .filter((post) => post.type === PostType.RECIPE)
+      .map((post) => post.id);
+    const recipeUsageCounts = await this.repository.recipeUsageUserCounts(recipeIds);
     return {
-      data: result.records.flatMap((post) =>
-        post.publishedRevision ? [this.postOutput(post, post.publishedRevision)] : [],
-      ),
+      data: result.records.flatMap((post) => {
+        if (!post.publishedRevision) return [];
+        const statistics =
+          post.type === PostType.RECIPE
+            ? this.recipeUsageStatistics(recipeUsageCounts.get(post.id) ?? 0)
+            : undefined;
+        return [this.postOutput(post, post.publishedRevision, statistics)];
+      }),
       meta: pagination(query.page, query.limit, result.total, searchContext.summary),
     };
   }
@@ -157,7 +166,15 @@ export class ContentService {
       query.limitPerType,
       searchContext.constraints,
     );
-    const recipes = groups.RECIPE.map((post) => this.publishedPostOutput(post)).filter(
+    const recipeUsageCounts = await this.repository.recipeUsageUserCounts(
+      groups.RECIPE.map((post) => post.id),
+    );
+    const recipes = groups.RECIPE.map((post) =>
+      this.publishedPostOutput(
+        post,
+        this.recipeUsageStatistics(recipeUsageCounts.get(post.id) ?? 0),
+      ),
+    ).filter(
       (post): post is Extract<PostOutput, { type: 'RECIPE' }> => post.type === 'RECIPE',
     );
     const blogs = groups.BLOG.map((post) => this.publishedPostOutput(post)).filter(
@@ -202,15 +219,7 @@ export class ContentService {
     return this.postOutput(
       post,
       revision,
-      usageUserCount === null
-        ? undefined
-        : {
-            usageUserCount,
-            usageTracking: 'MEAL_PLAN_ADDITION',
-            cookedUserCount: null,
-            limitation:
-              'Hệ thống chỉ đo số người dùng riêng biệt đã thêm công thức vào kế hoạch bữa ăn; chưa theo dõi việc đã nấu hoặc hoàn thành món.',
-          },
+      usageUserCount === null ? undefined : this.recipeUsageStatistics(usageUserCount),
     );
   }
 
@@ -680,7 +689,25 @@ export class ContentService {
     return { ...common, type: PostType.VIDEO, recipe: null };
   }
 
-  private publishedPostOutput(post: PublishedPostRecord): PostOutput {
+  private recipeUsageStatistics(usageUserCount: number) {
+    return {
+      usageUserCount,
+      usageTracking: 'MEAL_PLAN_ADDITION' as const,
+      cookedUserCount: null,
+      limitation:
+        'Hệ thống chỉ đo số người dùng riêng biệt đã thêm công thức vào kế hoạch bữa ăn; chưa theo dõi việc đã nấu hoặc hoàn thành món.',
+    };
+  }
+
+  private publishedPostOutput(
+    post: PublishedPostRecord,
+    statistics?: {
+      usageUserCount: number;
+      usageTracking: 'MEAL_PLAN_ADDITION';
+      cookedUserCount: null;
+      limitation: string;
+    },
+  ): PostOutput {
     if (!post.publishedRevision) {
       throw new AppError({
         statusCode: 500,
@@ -689,7 +716,7 @@ export class ContentService {
         expose: false,
       });
     }
-    return this.postOutput(post, post.publishedRevision);
+    return this.postOutput(post, post.publishedRevision, statistics);
   }
 
   private revisionOutput(revision: RevisionRecord) {

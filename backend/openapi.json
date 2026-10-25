@@ -35081,7 +35081,7 @@
           "Content"
         ],
         "summary": "List nội dung published",
-        "description": "Tìm kiếm không dấu và filter published content. Ranking v1: title > canonical ingredient > category/tag > body, sau đó publishedAt và UUID. Với access token hợp lệ, backend tự áp dụng allergy, ingredient exclusion, diet pattern và enabled tradition rules trước ranking; dietPattern từ query không thể nới profile đã lưu. ingredientIds yêu cầu Recipe chứa đủ toàn bộ ID.",
+        "description": "Tìm kiếm không dấu và filter published content. Recipe list/related/detail trả statistics.usageUserCount là số user riêng biệt đã thêm công thức vào meal plan chưa xóa; usageTracking=MEAL_PLAN_ADDITION và cookedUserCount=null vì backend chưa theo dõi sự kiện đã nấu hoặc hoàn thành món. Ranking v1: title > canonical ingredient > category/tag > body, sau đó publishedAt và UUID. Với access token hợp lệ, backend tự áp dụng allergy, ingredient exclusion, diet pattern và enabled tradition rules trước ranking; dietPattern từ query không thể nới profile đã lưu. ingredientIds yêu cầu Recipe chứa đủ toàn bộ ID.",
         "operationId": "listPublishedPosts",
         "security": [
           {},
@@ -35593,7 +35593,7 @@
           "Content"
         ],
         "summary": "Lấy related Recipe, Blog và Video",
-        "description": "Chỉ dùng active published revisions, loại current post và dedupe theo post ID. Mỗi type trả tối đa limitPerType; category/canonical ingredient/normalized tag overlap có trọng số 5/4/3, sau đó publishedAt và UUID. Hard constraints từ profile authenticated luôn chạy trước related score.",
+        "description": "Chỉ dùng active published revisions, loại current post và dedupe theo post ID. Mỗi type trả tối đa limitPerType; Recipe kèm statistics.usageUserCount là số user riêng biệt đã thêm công thức vào meal plan chưa xóa, không phải số người đã nấu hoặc hoàn thành món. Category/canonical ingredient/normalized tag overlap có trọng số 5/4/3, sau đó publishedAt và UUID. Hard constraints từ profile authenticated luôn chạy trước related score.",
         "operationId": "getRelatedPosts",
         "security": [
           {},
