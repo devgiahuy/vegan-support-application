@@ -4,6 +4,83 @@
 
 Bỏ nút “Gọi quán” trên thẻ kết quả `/restaurants` theo yêu cầu. Website và chỉ đường giữ nguyên; thông tin liên hệ tại trang chi tiết không đổi. UC-12 giữ 100% → 100%. Scoped lint, typecheck, 677 tests và production build pass.
 
+## Restaurant schematic marker overlap and zoom — Updated 2026-10-25
+
+Sửa ghim đè lên nhau trên sơ đồ dự phòng: chiếu tọa độ theo kích thước khung thực, gom các ghim sát nhau thành cụm có số lượng và danh sách chọn quán. Zoom 0,125×–20× có trạng thái/giới hạn rõ ràng; bounds dùng chung phép chiếu, không dồn điểm ngoài khung về mép. Toolbar/preview không che vùng ghim và chọn quán không làm đổi kích thước vùng vẽ. UC-12 giữ 100% → 100%. Typecheck, scoped lint, 59 files / 677 tests và build pass; browser với 20 tọa độ mô phỏng xác nhận gom/tách, chọn quán, resize mobile.
+
+## Restaurant directory interface redesign — Updated 2026-10-25
+
+Làm lại `/restaurants` theo hướng danh bạ quán chay: bước chọn khu vực rõ ràng, bộ lọc và gợi ý món gọn hơn, thẻ ngang có ảnh thật/ảnh thay thế, rating/khoảng cách/địa chỉ, thao tác gọi quán và chỉ đường. Desktop có sơ đồ sticky; mobile chuyển Danh sách/Bản đồ. Bỏ nút “Xem chi tiết” khỏi thẻ và sơ đồ; tên quán vẫn dẫn tới trang thông tin. Giữ nguồn dữ liệu, nhãn chưa kiểm duyệt, loading/error/empty và không tự lọc theo hồ sơ. Sửa keyword search để giữ bounds được chọn và đưa bounds vào query key; không thay contract BE. UC-12 giữ 100% → 100%. Swagger sync, typecheck, scoped lint, 58 files / 668 tests và build 47/47 trang pass; kiểm tra giao diện thật trên desktop và mobile 390px.
+
+## Restaurant directory ignores personal eating profile — Updated 2026-10-25
+
+Theo yêu cầu mới, nearby/search/details không lấy chế độ ăn, dị ứng, nguyên liệu kiêng hoặc quy tắc truyền thống từ hồ sơ. Giữ bộ lọc được chọn trực tiếp trên màn hình; `dietPattern` query vẫn lọc quán nội bộ có nhãn đã duyệt. Khôi phục nhãn “Tất cả”, cập nhật notice và version query key để bỏ cache rỗng của cơ chế cũ; lưu hồ sơ không gọi lại tìm quán. Backend lint/typecheck/build, OpenAPI generation/sync, FE typecheck/scoped lint, 657 tests và build (47/47 trang) pass. HTTP đã xác thực bằng tài khoản mẫu có hồ sơ trả 20 quán provider / tổng 108, không suppression; browser có 20 cards / tổng 92. UC-12 giữ 100% → 100%.
+
+## Meal Programs Repeated Pattern Warnings Pagination — Updated 2026-10-25
+
+Bổ sung phân trang cho mục "Cảnh báo tần suất lặp lại món ăn" tại trang lộ trình dinh dưỡng `/meal-programs/` (`RepeatedPatternWarnings` trong tab Phân tích tích lũy):
+- Chia trang danh sách cảnh báo lặp món với kích thước mặc định 5 món/trang.
+- Cho phép người dùng chuyển trang với `Pagination` (`@/components/shared/pagination`) và chọn số lượng 5 / 10 / 20 món/trang với `Select`.
+- Hiển thị vị trí trang hiện tại ("Trang X / Y") trên Header và thanh tóm tắt số lượng ("Hiển thị X - Y trên tổng số Z món").
+- Bổ sung phân trang cho danh sách lộ trình `ProgramList` tại `/meal-programs`.
+- Thêm unit tests tiện ích `repeated-pattern-warnings.utils.test.ts` (6 tests pass 100%).
+- Verification: `npx tsc --noEmit` pass, `npm test` 57 suites pass, `npm run build` pass (47/47 routes). Hoàn thành 100%.
+
+## Restaurant discovery empty results — Updated 2026-10-25
+
+Ghi nhận cơ chế cũ trong lần điều tra đầu; đã được thay thế bởi yêu cầu directory độc lập hồ sơ ở mục mới bên trên.
+
+Xác nhận API/proxy có dữ liệu ở phiên khách; tài khoản có ràng buộc ăn uống có thể nhận `data: []` và `externalResultsSuppressed=true`. Sửa nhãn “Tất cả” thành “Theo hồ sơ ăn uống” cho phiên đăng nhập, thêm liên kết xem hồ sơ và đồng bộ thông báo thiếu dữ liệu phù hợp giữa danh sách/bản đồ dự phòng. Không thay đổi ràng buộc hoặc dữ liệu hồ sơ. UC-12 giữ 100% → 100%. Swagger sync, typecheck, 651 tests, build (47/47 trang) và diff check pass; lint còn hai lỗi có sẵn tại Google Maps effect error handlers.
+
+## Meal Programs create timeout — Updated 2026-10-25
+
+Ảnh DevTools xác nhận request `POST /api/v1/meal-programs` bị Axios ngắt sau timeout mặc định 15 giây; backend sinh đồng bộ từng tuần và phương án trước khi trả response. Frontend tăng timeout riêng lên 180 giây, tái sử dụng idempotency key nếu gửi lại cùng dữ liệu và hiển thị hướng dẫn tiếng Việt khi chưa nhận phản hồi. Scaffold Phase 19 giữ nguyên 100%.
+
+## Saved Content cards in Profile — Updated 2026-10-25
+
+Đổi danh sách “Nội dung đã lưu” sang card ngang một cột theo thiết kế tham chiếu: ảnh thu nhỏ bên trái, nhãn trạng thái và loại nội dung, tiêu đề/trích đoạn bên phải; có ảnh thay thế khi thiếu hoặc ảnh lỗi. Giữ bộ lọc và liên kết tới nội dung; UC-03 giữ 95% (chờ kiểm thử tay CM-1..CM-4).
+
+## Meal Programs list request — Updated 2026-10-25
+
+Khắc phục lỗi 400 ở `/meal-programs`: frontend bỏ query `type` mà strict backend schema không nhận, dùng các giá trị status hợp lệ, và bỏ tab chương trình mẫu do endpoint `GET /meal-programs` hiện chỉ trả chương trình của owner. Tiến độ scaffold Phase 19 giữ nguyên 100%; phần sửa này hoàn tất độ khớp contract của list consumer.
+
+## User Posts Display in Profile Tab (/profile?tab=posts) — Updated 2026-10-25
+
+Follow-up: chuyển nguồn chính sang `GET /api/v1/posts/mine`, vì danh sách public `/posts` không thể tìm bài cũ, bài được tạo trên thiết bị khác hoặc bài chưa xuất bản nếu ID chưa được lưu trong localStorage. Endpoint xác thực người dùng, chỉ trả nội dung của chính tài khoản ở mọi trạng thái (trừ nội dung đã xóa), phân trang và trả revision mới nhất. Frontend dùng đủ DTO → Model → Mapper → API → Query; create/update/delete invalidate hoặc refetch danh sách. Loading/error/empty/success được xử lý.
+
+- Frontend `npx tsc --noEmit`: pass; `npm test`: 55 files, 643 tests pass; post mapper: 12 tests pass.
+- Frontend `npm run build`: pass, 47/47 routes generated.
+- Backend content ESLint: pass; OpenAPI generation và `git diff --check`: pass.
+- Backend full lint/typecheck/build: chưa qua do dependency khai báo `@payos/node` không có trong `backend/node_modules`; lỗi hiện tại thuộc các module billing. Endpoint giữ trạng thái `IN_PROGRESS` đến khi backend gates qua.
+- Tiến độ task: 85% → 95%; phần còn lại là chạy lại backend gates sau khi cài dependency workspace bị thiếu và xác nhận endpoint.
+
+
+## Admin Review Error Localization (Vietnamese) — Updated 2026-10-25
+
+Việt hóa toàn diện thông báo lỗi kiểm duyệt từ Backend (`PATCH /api/v1/admin/content-review/:id`):
+- Khi backend trả về lỗi Zod validation tiếng Anh (`Too small: expected string to have >=10 characters`), FE tự động dịch sang tiếng Việt:
+  - Dưới ô Textarea: `Lý do duyệt phải có ít nhất 10 ký tự.` (hoặc `Lý do từ chối phải có ít nhất 10 ký tự.`).
+  - Trong Toast góc màn hình: Mô tả tiếng Việt rõ ràng, loại bỏ hoàn toàn các chuỗi kỹ thuật tiếng Anh.
+- Bộ unit test `review-error.test.ts` gồm 7 tests pass 100%.
+
+
+## Admin Review Dialog Validation & Error Handling — Updated 2026-10-25
+
+Cập nhật trải nghiệm kiểm duyệt bài viết tại Bảng điều khiển Quản trị (`/admin/dashboard?tab=queue`):
+- **Không chặn độ dài lý do ở Client khi duyệt**:
+  - `reviewDecisionSchema`: Bỏ ràng buộc `.min(10)`, chỉ giữ `.max(1000)`.
+  - Hộp thoại `ReviewDecisionDialog`: Nút `Xác nhận duyệt` không còn bị `disabled` khi `reasonLength < 10`.
+  - Nhãn hiển thị là `Lý do duyệt` (không có dấu `*` bắt buộc), bộ đếm ký tự chỉ hiện `reasonLength/1000`.
+- **Hiển thị lỗi từ Backend linh hoạt**:
+  - Khi submit lý do xuống API, nếu Backend trả về lỗi (lỗi trường `fields.reason` hoặc thông điệp chung), lỗi được gán trực tiếp vào form và hiển thị đỏ ngay dưới ô `Textarea` hoặc banner thông báo.
+  - Dialog không đóng khi có lỗi để người dùng dễ dàng xem và chỉnh sửa.
+  - Tự động xóa lỗi khi người dùng bắt đầu gõ lại nội dung.
+- **Xác minh chất lượng**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 52 test suites, 627 tests pass 100%.
+  - `npm run build`: Turbopack build thành công (47/47 routes).
+
+
 ## Diet Workflow, Avatar Auto-Sync, Custom Meals Polish & AI Quota Highlights — Updated 2026-10-24
 
 Feature `033-diet-preference-workflow` và các cải tiến UI/UX hoàn thành 100%:
@@ -177,7 +254,7 @@ Mỗi feature MVP = 100%, chia theo 7 bước scaffold (`ARCHITECTURE.md` mục 
 | 0   | Nền tảng: shell, providers, axios/auth-token/server-fetch, mapper core, api-endpoints, logo, hero animation | —           | 70%  | Đang làm   | Đã tích hợp Remotion 2D Food Animation 9 phase với ảnh thực tế tối ưu WebP cho Hero Section; logo & favicon; còn thiếu Cloudinary + search MongoDB                                                                                                                                                                                                                  |
 | 1   | Auth UC-01 (login/register/Google, onboarding `dietSchool`)                                                 | UC-01       | 95%  | Đang làm   | API thật đã tích hợp (register/login/refresh/logout+`/users/me`, DTO/Model/Mapper/Query+test, form+RBAC); còn test tay VS-1..VS-8 (chờ BE local) + OTP/OAuth (Phase 2/P3)                                                                                                                                                                                            |
 | 2   | Blog/Post UC-02 & Công thức món chay + ảnh Cloudinary                                                       | UC-02       | 95%  | Đang làm   | API thật đã tích hợp và READY (Phase 04); DTO/Model/Mapper + 10 post tests + 8 recipe tests; API client + TanStack Query/Mutations; Zod schemas; UI routes; ImageUploader/VideoUploader; DeletePostDialog (expectedVersion); đã verify live BE `:4000`; còn test tay end-to-end                                                                                      |
-| 3   | Comment/Vote UC-03                                                                                          | UC-03       | 95%  | Đang làm   | API thật 11 endpoint đã tích hợp và READY (Phase 06); `features/community` chạy chế độ live (`USE_FIXTURES = false`); DTO đủ 11 ops/Model/Mapper + 13 tests, Query 8 hooks, zod, 7 components; comment-section + vote + rating + bookmark + bookmarks list; còn test tay CM-1..CM-4                                                                                  |
+| 3   | Comment/Vote UC-03                                                                                          | UC-03       | 95%  | Đang làm   | API thật 11 endpoint đã tích hợp và READY (Phase 06); `features/community` chạy chế độ live (`USE_FIXTURES = false`); DTO đủ 11 ops/Model/Mapper + 13 tests, Query 8 hooks, zod, 7 components; comment/vote/rating/bookmark dùng live API (đã nối CTA Lưu trên trang chi tiết và thẻ công thức); profile hiển thị bookmark dạng list card có thumbnail; còn test tay CM-1..CM-4 |
 | 4   | Tìm kiếm UC-04 (MongoDB, phân trang) + Catalog (danh mục/nguyên liệu)                                      | UC-04       | 75%  | Đang làm   | Catalog API đã tích hợp (`features/category`, `features/ingredient`, `features/admin-catalog`, `/categories`, admin tabs); filter `/recipes` (RECIPE_GROUP) + `/articles` (CONTENT_TOPIC) đã dùng cây thật (best-effort theo tên tới khi API recipe/post READY); còn test tay VC-1..VC-6; search MongoDB bài viết vẫn thiếu                                         |
 | 5   | Upload video UC-05 (Cloudinary ≤100MB, YouTube embed)                                                       | UC-05       | 95%  | Đang làm   | API thật đã tích hợp và READY (Phase 04); DTO/Model/Mapper + 5 tests; API client + TanStack Query; VideoPlayer đa năng (YouTube + HTML5); VideoUploader (Cloudinary signature); UI routes (`/videos`, `/videos/[id]`, `/videos/new`); còn test tay end-to-end                                                                                                        |
 | 6   | Menu rule-based UC-06 (nhập tay)                                                                            | UC-06       | 95%  | Đang làm   | API thật 5 endpoint meal-plans đã tích hợp (`features/meal-plan`, DTO/Model/Mapper + 14 tests, API, Query, zod Thứ Hai + goal, dialogs swap/delete, `/meal-plans` + `/meal-plans/saved` viết lại + `/meal-plans/[id]` mới); verify live BE `:4000` (generate 21/21, swap `lockVersion`, delete `{deleted:true}`); còn test tay trình duyệt MP-1..MP-6                |
@@ -220,6 +297,12 @@ Roadmap Phase 2 features are tracked only in `/docs/ROADMAP_PHASE_2.md`; they mu
 ## Lịch sử cập nhật (mỗi dòng = 1 lần agent sửa %)
 
 | Ngày (UTC) | Task | % cũ → % mới | Lý do |
+| 2026-10-25 | Bỏ lọc quán tự động theo hồ sơ ăn uống | UC-12 100% → 100% | User-approved exception; nearby/search/details chỉ áp dụng query filters. Tài khoản có hồ sơ nhận dữ liệu SerpApi; đồng bộ SRS/plan/OpenAPI/FE và kiểm tra gates. |
+| 2026-10-25 | Restaurant discovery filtered empty state | UC-12 100% → 100% | Tái hiện guest có dữ liệu nhưng tài khoản bị lọc theo hồ sơ; sửa nhãn bộ lọc, giải thích `externalResultsSuppressed` và đồng bộ empty state danh sách/bản đồ. |
+| 2026-10-25 | Meal Programs create timeout | 100% → 100% | Chờ lâu hơn cho generation đồng bộ, bảo toàn idempotency key khi retry cùng payload và thay thông báo Axios kỹ thuật bằng thông báo rõ ràng. |
+| 2026-10-25 | Profile saved content list cards | UC-03 95% → 95% | Hiển thị danh sách bookmark thành card ngang có thumbnail, loại nội dung, nhãn đã xuất bản và tiêu đề; giữ nguyên API/query/filter và chờ test tay CM-1..CM-4. |
+| 2026-10-25 | Meal Programs list query validation | 100% → 100% | Loại bỏ query `type` và `COMPLETED` không hợp lệ để tránh 400 từ strict query schema; đồng bộ status filter và ghi nhận giới hạn endpoint owner-only. |
+| 2026-10-25 | Author-owned posts list for `/profile?tab=posts` | 85% → 95% | Replaced localStorage ID discovery with authenticated `GET /posts/mine`, returning each author's non-deleted posts across moderation states and fixing invisibility of older/cross-device posts. Frontend typecheck, 643 tests and content lint pass; endpoint readiness waits for global backend checks blocked by missing installed `@payos/node`. |
 | 2026-10-15 | Review cấu trúc, setup và luồng frontend | Giữ nguyên % đã ghi của các feature | Đánh giá source/config, auth/cache/API/Mapper/Query và public rendering; lưu báo cáo v1.0. Typecheck, 602 tests/50 files, build pass; full lint 89 errors/347 warnings. Ghi rõ các ca browser cần kiểm chứng, không nâng readiness. |
 | 2026-10-14 | payOS provider conversion (spec 031) | New client migration: 0% → 100% code; external acceptance pending | Replace active VNPAY/local checkout with payOS, preserve historical labels, fail closed without keys, strict hosted URL validation; web/mobile gates and browser states pass. No real payment/native-device acceptance claimed. |
 | 2026-10-06 | Khu vực Quản lý nội dung admin recipes/articles/video (spec `029-admin-content-crud`, T001–T081, trừ V-checks tay và Phase 9) | Task #16: 0% → 85% | 7 tầng scaffold `features/admin-content`: types (DTO + `AdminContentRow`/`source`), options bộ lọc 8 trạng thái (cố ý không có `ARCHIVED`), zod schema dùng thật, `AdminContentMapper` + 47 unit tests (isEditable theo tác giả, chặn `ARCHIVED`, ánh xạ 18 mã lỗi), API/Query 8 hooks dùng `POSTS.*` + `CONTENT_REVIEW.*` READY (không fixture fallback, không thêm URL trong feature), tab `content` + mục NAV_MAIN, 4 trạng thái, bộ lọc đang hoạt động (loại/chuyên mục/từ khoá không dấu), hộp thoại tạo/sửa (tái dùng `RecipeEditorForm`, schema gốc blog/video, chống điều hướng khỏi tab), xoá mềm có xác nhận, gửi duyệt + chặn tự duyệt, lịch sử duyệt, quota widget. npx tsc 0 lỗi, 47/47 mapper tests pass, next build pass, lint file mới 0 lỗi/0 cảnh báo. **Ghi nhận 2 khoảng trống hợp đồng qua nghiên cứu mã nguồn BE**: CG-01 (`GET /posts` là `listPublished`, cấm bộ lọc author/status theo thiết kế — danh sách dùng 3 truy vấn theo loại với nhãn trung thực) và CG-02 (không có endpoint ẩn/khôi phục cho tác giả — không viết mutation giả, nút Ẩn/Khôi phục không hiển thị). Còn kiểm thử tay V-01..V-15 (cần backend có phiên admin). |

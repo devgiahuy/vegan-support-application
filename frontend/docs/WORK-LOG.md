@@ -7,6 +7,399 @@
 - **Verify**: Scoped ESLint, TypeScript, 59 files / 677 tests và production build 47/47 trang pass; `git diff --check` pass. Không thêm test mới cho thay đổi xóa nút.
 - **PROGRESS**: UC-12 100% → 100%.
 
+## [2026-10-25] — Sửa chồng ghim và zoom sơ đồ quán ăn
+
+- **Yêu cầu**: Các vị trí đè lên nhau và zoom không giúp chọn được quán.
+- **Nguyên nhân**: Fallback vẽ riêng từng điểm, không gom cụm; clamp tọa độ ngoài khung vào mép tạo thêm chồng lấn; zoom bị giới hạn 0,4×–2,86× và phép tính bounds khác tỷ lệ hiển thị. Preview chiếm chiều cao động làm vị trí thay đổi khi chọn quán.
+- **Sửa**: Tách `restaurant-map-layout.ts` để chiếu tọa độ theo pixel/kích thước ResizeObserver, dùng cùng phép tính cho bounds; loại điểm ngoài khung khỏi vùng vẽ, hiển thị số quán đang thấy/tổng. Gom cụm theo khoảng cách màn hình với kiểm tra lại centroid, nút cụm mở Dialog chọn từng quán (kể cả trùng hẳn tọa độ). Mở phạm vi zoom 0,125×–20×, thể hiện mức zoom, disable tại giới hạn và có reset. Giữ vùng preview cố định; chuyển toolbar khỏi vùng ghim. Zoom/resize chỉ báo bounds, không gọi API tìm quán.
+- **Files**: `src/features/restaurant/components/map-fallback.tsx`, `src/features/restaurant/utils/restaurant-map-layout.ts`, test tương ứng; progress/work log/integration. Không sửa backend, API consumer, DTO, contract hoặc dữ liệu thật; Google SDK branch không thuộc lỗi trong ảnh.
+- **Verify**: TypeScript, scoped ESLint, 59 files / 677 tests và production build 47/47 trang pass; 9 regression tests cho trùng tọa độ, tách/gom khi zoom, pixel movement, offscreen, khoảng cách cụm trên mobile, thứ tự input, aspect ratio/bounds, radius nhỏ và tọa độ không hợp lệ/zero. Browser component thật với 20 tọa độ mô phỏng: 2 cụm tại 1× → 6 cụm tại 1,6× → 20 ghim tại 2,6×; mở cụm/chọn quán hiển thị đúng directions; mobile 390px cũng gom/tách đúng. Toolbar và preview không che ghim. Bộ QA và screenshots ở thư mục artifact ngoài repo, không thêm test route/mock vào sản phẩm, không thêm dependencies.
+- **Giới hạn kiểm tra**: Lượt tìm địa chỉ công khai ở app trả không tìm thấy từ provider, nên kiểm tra tương tác dày đặc bằng dữ liệu mô phỏng được ghi rõ trong ảnh; không dùng/gọi lại GPS người dùng. Chưa xác minh Google Maps SDK. Không thay số lượng/thứ tự kết quả BE.
+- **PROGRESS**: UC-12 100% → 100%.
+
+## [2026-10-25] — Thiết kế lại giao diện danh bạ quán chay
+
+- **Yêu cầu**: Lên ý tưởng và làm lại `/restaurants`, bỏ nút “Xem chi tiết”.
+- **Thiết kế**: Dùng phong cách danh bạ địa điểm với màu xanh và font hiện tại. Trước khi tìm có khối chọn vị trí/nhập địa chỉ. Sau khi tìm, ưu tiên bộ lọc gọn và kết quả; desktop danh sách trái + sơ đồ sticky phải, mobile chuyển hai chế độ. Thẻ ngang hiển thị ảnh provider (fallback khi thiếu/lỗi), khoảng cách, rating, địa chỉ, nguồn và cảnh báo chưa kiểm duyệt; gọi điện/website/chỉ đường dùng liên kết được kiểm tra. Bỏ nút chi tiết ở thẻ và sơ đồ; giữ liên kết trên tên quán để route chi tiết có lối vào tự nhiên.
+- **Tương tác**: Chọn ghim làm nổi bật thẻ/sơ đồ; zoom cập nhật đúng bounds mới nhưng chỉ gọi tìm vùng khi nhấn nút. Keyword search giữ bounds thay vì quay về tọa độ cũ; query key chứa bounds. Phân trang cuộn về đầu kết quả; giữ bộ lọc phiên nhưng không lưu tọa độ/địa chỉ/consent. Không thay API/backend hoặc cơ chế bỏ lọc hồ sơ đã được duyệt.
+- **Files**: Restaurants page; restaurant-card/list/filters, map-fallback, result-notice, location-prompt/address-form; mapper + query; tiện ích `restaurant-links` và tests. Thêm shadcn Collapsible/ToggleGroup/InputGroup/Field bằng CLI, không ghi đè primitive hiện hữu. Thêm `PRODUCT.md` tổng hợp ngữ cảnh thương hiệu/sản phẩm đã có để design tools sử dụng; sync generated API catalog và cập nhật integration 4.48.
+- **Skills**: Áp dụng shadcn, ui-ux-pro-max, baseline-ui, design-taste-frontend, impeccable, next-best-practices, full-output-enforcement và computer-use. Script tìm kiếm UI-UX không chạy được vì thư mục scripts/data là symlink text và target không tồn tại trong checkout; dùng hướng dẫn trực tiếp cùng context canonical, không thêm thư viện thiết kế khác.
+- **Verify**: Swagger sync từ `backend/openapi.json` thành công; TypeScript 0 lỗi; scoped ESLint các files thay đổi pass; 58 test files / 668 tests pass (9 cases URL/phone/directions và 2 cases keyword+bounds mới); production build pass 47/47 trang. Các warnings middleware/Vite hiện hữu không chặn build. Kiểm tra browser với địa chỉ công khai: 20 thẻ / total 92 từ provider, chọn ghim và preview chỉ đường, mobile 390px chuyển Danh sách/Bản đồ và zoom bật tìm vùng. Ảnh desktop/mobile lưu ngoài repo. Không sử dụng GPS cá nhân hay gửi đề xuất quán thử.
+- **PROGRESS**: UC-12 100% → 100%; loading/error/empty/success, attribution, unreviewed labels và route navigation được giữ.
+- **Giới hạn**: Chưa cấu hình Google Maps SDK trong phiên local nên xác minh tương tác bằng sơ đồ dự phòng có nhãn “không phải bản đồ đường phố”; số kết quả/partial-data notice phụ thuộc provider. Trong lượt refetch cuối provider không trả kết quả, màn hình vẫn hiển thị 2 quán nội bộ seed và cảnh báo thiếu dữ liệu; lượt trước có 20 quán provider. Kiểm tra thêm ghim trên thẻ mobile tự chuyển sang chế độ bản đồ. Không thực hiện kiểm định accessibility chính thức.
+
+## [2026-10-25] — Bỏ lọc quán ăn theo hồ sơ và đối chiếu nguồn SerpApi
+
+- **Mục tiêu/yêu cầu mới**: Quán ăn không tự lọc theo hồ sơ ăn uống; kiểm tra BE gọi bên thứ ba rồi lọc kết quả thế nào.
+- **Luồng xác nhận**: `SerpApiMapsProvider` gọi `https://serpapi.com/search.json`, engine `google_maps`, nearby gửi song song ba cụm `chay restaurant`, `vegan restaurant`, `vegetarian restaurant`; keyword gửi `vegetarian <q>`. Tọa độ/zoom, phân trang và bộ lọc giá/rating/giờ được chuyển cho provider. Adapter loại record thiếu id/tên/địa chỉ/tọa độ, lọc radius; service lọc bounds/radius, gộp quán nội bộ APPROVED, dedupe provider ID hoặc tên chuẩn hóa + khoảng cách <80m, xếp rating → keyword-name match → distance → ID, rồi phân trang tối đa 20. Quán chay từ provider dựa vào truy vấn tìm kiếm, không có bước kiểm chứng thực đơn hoặc danh sách loại quán chay đáng tin cậy.
+- **Nguyên nhân cũ**: Khi có bất kỳ ràng buộc hồ sơ nào, service không gọi provider. Chi tiết provider cũng bị chặn 404. Sửa UI giải thích ở entry trước chưa thay đổi cơ chế đó.
+- **Đã sửa**: Bỏ query hồ sơ và profile gate cho discovery/details; chỉ `dietPattern` do request gửi rõ ràng mới lọc dietary claims và suppress provider. Giữ pending privacy, role/ownership của submissions/admin, nguồn và nhãn unverified. FE bỏ nhãn/notice theo hồ sơ, dùng default “Tất cả”, version query keys và ngừng invalidate quán khi lưu diet/schedule. Cập nhật SRS 1.5, implementation plan 4.8, root AGENTS exception, phase record 3.16, OpenAPI và integration registry 4.47; endpoint chuyển CHANGING trong migration rồi về READY khi gates qua.
+- **File sửa**: `backend/src/modules/restaurants/restaurant.{service,controller,openapi}.ts`, `backend/openapi.json`; frontend restaurants page, filters, queries, DTO/Model/Mapper, search utility/test, diet queries, endpoint comment, generated catalogs; các tài liệu chuẩn và progress/work log.
+- **Verify**:
+  - Backend `npm ci`, Prisma generate, lint, typecheck, build: pass. OpenAPI generation gặp lỗi mở file trên Windows ở lần đầu; generation qua file tạm rồi thay thế thành công. Live `/api-docs.json` đã có policy mới.
+  - Kiểm tra một lần ngoài repo bằng fixture không truy cập profile: provider default/keyword, radius/dedupe, explicit diet, public details và pending privacy pass. Không thêm test infrastructure/suite backend.
+  - FE sync Swagger từ schema mới, typecheck, scoped ESLint cho files đổi ở follow-up này, 57 suites / 657 tests và build 47/47 trang pass. Hai lint errors Google Maps effect của entry cũ không thuộc phần thay đổi logic mới.
+  - HTTP login tài khoản Member mẫu có dietary profile, không đổi hồ sơ: nearby trả 200, 20/20 item từ provider, total 108, `externalResultsSuppressed=false`. Browser address search hiện 20 cards / total 92, default “Tất cả”. Không ghi token hoặc chi tiết hồ sơ.
+  - Local runtime được cập nhật bằng image chứa module restaurants đã compile; dùng schema hiện có, không seed. Docker override/fixture kiểm tra nằm ngoài repo trong thư mục artifact của task. Default backend image tag cũng được cập nhật.
+- **PROGRESS**: UC-12 100% → 100%; entry point Header/Footer vào `/restaurants` không đổi.
+- **Giới hạn**: Nếu người dùng chủ động chọn `dietPattern`, kết quả provider chưa xác minh vẫn bị loại. Chế độ ăn/dị ứng của recipes và meal plans giữ nguyên. Provider có timeout/cap và partial results nên số lượng có thể khác giữa các lượt gọi; nhãn quán chay từ tìm kiếm không chứng minh phù hợp dị ứng.
+
+## [2026-10-25] — Kiểm tra dữ liệu và sửa trạng thái rỗng của `/restaurants`
+
+- **Mục tiêu**: Điều tra FE không hiện quán trong khi BE xác nhận có dữ liệu.
+- **Nguyên nhân xác nhận**: Endpoint khám phá áp dụng hồ sơ của tài khoản đang đăng nhập (chế độ ăn, dị ứng, nguyên liệu kiêng và quy tắc đang bật). Phiên đang kiểm tra không có quán nội bộ đáp ứng đủ điều kiện; kết quả provider chưa xác minh bị loại với `externalResultsSuppressed=true`. FE ghi “Tất cả” và “Chưa tìm thấy quán quanh đây”, gây hiểu nhầm rằng proxy/API không tải dữ liệu.
+- **Đã làm**:
+  - Đối chiếu request trực tiếp BE và qua proxy FE tại tọa độ công khai của seed: cả hai HTTP 200, 20 items trang đầu và total 95, khoảng 5,1 giây.
+  - Kiểm tra trên trình duyệt: phiên khách có 20 cards, 56 tổng kết quả tại tọa độ do provider phân giải; phiên đăng nhập trả rỗng và flag suppression. Không ghi chi tiết sức khỏe hoặc thay đổi hồ sơ người dùng.
+  - Thay default label cho tài khoản thành “Theo hồ sơ ăn uống”, giải thích bộ lọc hồ sơ luôn áp dụng và thêm link `/profile?tab=diet`.
+  - Dùng chung nội dung empty state theo flag backend cho danh sách và bản đồ dự phòng; giữ nguyên kết quả và thứ tự từ backend, không tạo dữ liệu fallback.
+  - Bổ sung 5 regression cases cho suppression ở ba mode tìm và mapper (rỗng do constraints/giữ quán nội bộ phù hợp). Kiểm tra mutation lưu diet/schedule đã invalidate discovery.
+  - Sửa chú thích endpoint cũ còn ghi `PLANNED`; đồng bộ Swagger từ API đang chạy trước khi chỉnh consumer, cập nhật integration registry 4.46.
+- **File sửa**: restaurants page; `restaurant-filters.tsx`, `restaurant-map.tsx`, `map-fallback.tsx`; restaurant mapper, search utility và hai file test tương ứng; endpoint constants; generated API catalogs và ba tài liệu integration/progress/work log.
+- **Verify**: `node node_modules/typescript/bin/tsc --noEmit` pass; `npm test` 56 files / 651 tests pass; `npm run build` pass (47/47 trang); `git diff --check` pass. Scoped ESLint còn hai lỗi có sẵn `react-hooks/set-state-in-effect` tại hai catch handlers của `restaurant-map.tsx`. Không đổi backend source nên không chạy backend lint/typecheck/build hay thêm backend test infrastructure.
+- **PROGRESS**: UC-12 giữ 100% → 100%; sửa giải thích trạng thái tích hợp hiện tại.
+- **Entry point**: Header “Bản đồ” / footer “Nhà hàng chay” vào `/restaurants`; link xem hồ sơ ăn uống dẫn tới `/profile?tab=diet`.
+- **Giới hạn**: Để tài khoản có kết quả phù hợp cần quán nội bộ đã duyệt có đủ thông tin chế độ ăn/dị ứng/nguyên liệu kiêng tương ứng. Số lượng quán và tọa độ geocode phụ thuộc provider; lần kiểm tra có partial-source metadata. Không nới ràng buộc cứng hoặc tự xác nhận thông tin ăn uống của quán.
+
+## [2026-10-25] — Phân trang mục Cảnh báo tần suất lặp lại món ăn (/meal-programs/)
+
+- **Mục tiêu**: Bổ sung phân trang cho mục "Cảnh báo tần suất lặp lại món ăn" tại trang chi tiết lộ trình `/meal-programs/[id]` (Tab Phân tích tích lũy) và tích hợp phân trang cho danh sách lộ trình tại `/meal-programs`.
+- **Đã làm**:
+  - Tạo tiện ích `paginateWarnings` và `formatPaginationSummary` trong `src/features/meal-program/utils/repeated-pattern-warnings.utils.ts` với đầy đủ clamping an toàn, tính toán slice và tóm tắt tiếng Việt.
+  - Cập nhật component `RepeatedPatternWarnings` (`repeated-pattern-warnings.tsx`):
+    - Tích hợp component chuẩn `Pagination` từ `@/components/shared/pagination`.
+    - Thêm chỉ số trang ở CardHeader (`Trang X / Y`) khi danh sách có nhiều trang.
+    - Hiển thị tóm tắt phạm vi hiển thị (`Hiển thị X - Y trên tổng số Z món`).
+    - Hỗ trợ tùy chọn số lượng hiển thị mỗi trang (5, 10, 20 món/trang) bằng shadcn `Select`.
+    - Bảo toàn trạng thái rỗng "Độ đa dạng thực phẩm đạt chuẩn" khi không có cảnh báo.
+  - Cập nhật phân trang cho danh sách lộ trình tại `ProgramList` (`program-list.tsx`): gắn state `page`, reset trang khi đổi bộ lọc trạng thái và hiển thị `<Pagination />` khi `totalPages > 1`.
+  - Viết bộ unit test `repeated-pattern-warnings.utils.test.ts` (6 tests bao phủ toàn diện các trường hợp rỗng, 1 trang, nhiều trang, clamp vượt biên, đổi page size).
+- **File tạo/sửa**:
+  - `frontend/src/features/meal-program/components/repeated-pattern-warnings.tsx`
+  - `frontend/src/features/meal-program/components/program-list.tsx`
+  - `frontend/src/features/meal-program/utils/repeated-pattern-warnings.utils.ts`
+  - `frontend/src/features/meal-program/utils/repeated-pattern-warnings.utils.test.ts`
+  - `frontend/src/features/meal-program/index.ts`
+  - `frontend/docs/PROGRESS.md`
+  - `frontend/docs/WORK-LOG.md`
+- **Verify**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 57 test files, 657 tests pass 100%.
+  - `npm run build`: pass, 47/47 routes static/dynamic generated thành công.
+  - `git diff --check`: pass (không có lỗi cú pháp hay khoảng trắng thừa).
+- **Tiến độ**: Hoàn thành 100% yêu cầu.
+
+## [2026-10-25] — Khắc phục timeout khi tạo Meal Program
+
+- **Mục tiêu**: Kiểm tra lỗi ở bước tạo lộ trình tại `/meal-programs/new` theo ảnh DevTools.
+- **Nguyên nhân xác nhận**: request POST không nhận response trước Axios timeout `15000ms`. Backend `MealProgramService.create()` sinh tuần và phương án tuần tự trong cùng request rồi mới trả kết quả; một lộ trình nhiều tuần có thể vượt 15 giây.
+- **Đã làm**:
+  - Tăng timeout riêng của POST tạo lộ trình lên 180 giây, không thay timeout mặc định của các API khác.
+  - Giữ cùng idempotency key khi người dùng gửi lại form với đúng dữ liệu; thay đổi dữ liệu sẽ sinh key mới.
+  - Tắt toast network trùng cho request này và hiện thông báo tiếng Việt, không lộ `timeout of 15000ms exceeded`.
+  - Ghi nhận hành vi đồng bộ và retry trong Backend Integration Guide; không đổi backend contract.
+- **File tạo/sửa**: `frontend/src/features/meal-program/api/meal-program.api.ts`, `frontend/src/features/meal-program/components/program-create-form.tsx`, `frontend/docs/BACKEND_INTEGRATION.md`, `frontend/docs/PROGRESS.md`, `frontend/docs/WORK-LOG.md`.
+- **Verify**:
+  - `node node_modules/typescript/bin/tsc --noEmit`: pass.
+  - `npm test`: 56 test files, 646 tests pass.
+  - `npm run build`: pass, 47/47 routes generated.
+  - `git diff --check`: pass; Git chỉ đưa cảnh báo chuẩn hóa LF/CRLF cho các file đang thay đổi.
+- **Tiến độ**: scaffold Phase 19 giữ nguyên 100%; cập nhật độ bền của luồng create.
+
+## [2026-10-25] — Hiển thị nội dung đã lưu dạng danh sách card có ảnh
+
+- **Mục tiêu**: Cải thiện khu vực “Nội dung đã lưu” trên profile theo ảnh tham chiếu: danh sách một cột, thumbnail nhỏ bên trái, thông tin ở bên phải.
+- **Đã làm**:
+  - Đổi bookmarks từ lưới 2 cột thành list card ngang responsive.
+  - Hiển thị ảnh bìa (fallback khi URL trống hoặc tải lỗi), nhãn “Đã xuất bản”, loại nội dung, tiêu đề và trích đoạn.
+  - Giữ bộ lọc Công thức/Video, trạng thái loading/error/empty và điều hướng tới chi tiết.
+- **File tạo/sửa**: `frontend/src/features/community/components/bookmarks-list.tsx`, `frontend/docs/PROGRESS.md`, `frontend/docs/WORK-LOG.md`.
+- **Verify**: `node node_modules/typescript/bin/tsc --noEmit`: pass; `npm test`: 56 files, 646 tests pass; ESLint file component: 0 errors/warnings; `npm run build`: pass, 47/47 routes generated; `git diff --check`: pass (chỉ có cảnh báo chuẩn hóa LF/CRLF trên workspace).
+- **Tiến độ**: UC-03 giữ 95%; còn test tay CM-1..CM-4.
+
+## [2026-10-25] — Nối các nút “Lưu món” với API bookmark
+
+- **Nguyên nhân xác nhận**: nút “Lưu món” trên trang chi tiết Recipe và nút “Lưu video” chỉ đổi React state rồi hiện toast; nút bookmark trên RecipeCard nằm trong Link và không có handler. Nút API thật lại nằm riêng ở khu vực thảo luận nên người dùng bấm CTA chính không gửi request.
+- **Đã làm**:
+  - Dùng `BookmarkButton`/mutation thật cho CTA ở trang chi tiết Recipe/Video, xóa state-only/toast-only handlers và bỏ nút bookmark trùng bên dưới.
+  - Nối bookmark trên RecipeCard với mutation thật; đọc trạng thái qua một query danh sách bookmark dùng chung thay vì gửi summary request riêng cho từng thẻ. Tách nút ra ngoài Link để click không điều hướng thay cho lưu.
+  - Chuẩn hóa PUT bookmark không gửi body, theo contract `Request: —`; giữ `USE_FIXTURES=false`.
+  - Thêm API tests xác nhận PUT và DELETE gọi đúng endpoint, cập nhật changelog/integration progress.
+- **File tạo/sửa**: `frontend/src/features/community/api/community.api.ts`, `api/community.api.test.ts`, `components/bookmark-button.tsx`, `queries/community.queries.ts`, `frontend/src/features/recipe/components/recipe-card-bookmark.tsx`, `recipe-card.tsx`, `recipe-detail-view.tsx`, `frontend/src/features/video/components/video-detail-view.tsx`, `frontend/docs/BACKEND_INTEGRATION.md`, `PROGRESS.md`, `WORK-LOG.md`.
+- **Verify**:
+  - Swagger sync: pass; TypeScript: pass.
+  - `npm test`: 56 files, 646 tests pass; bookmark API test: 2/2 pass.
+  - Scoped ESLint: 0 errors, 17 existing warnings in recipe/video detail files.
+  - `npm run build` reaches TypeScript but fails in the unrelated, already modified `src/features/meal-program/components/program-list.tsx:15`: `string | undefined` is not assignable to the `MealProgramStatus` union. I left that file untouched.
+- **Còn lại**: test tay CM-1..CM-4; sửa lỗi type của meal-program ở task tương ứng rồi chạy lại build toàn ứng dụng.
+
+## [2026-10-25] — Khắc phục lỗi 400 khi tải danh sách Meal Programs
+
+- **Mục tiêu**: Sửa lỗi 400 ở trang `/meal-programs` khi gọi `GET /api/v1/meal-programs`.
+- **Nguyên nhân xác nhận**: `ProgramList` gửi `type=MY_PROGRAMS` hoặc `type=TEMPLATES`; backend `mealProgramListQuerySchema` bật `.strict()` và chỉ chấp nhận `page`, `limit`, `status`. Khi chọn `COMPLETED`, frontend cũng gửi giá trị không có trong enum backend (`GENERATING`, `DRAFT`, `PARTIAL`, `FAILED`, `CONFIRMED`).
+- **Đã làm**:
+  - Bỏ `type` khỏi query params và giới hạn status của API client theo enum backend.
+  - Cập nhật bộ lọc UI theo các trạng thái hợp lệ; bỏ tab “Chương trình mẫu” do endpoint hiện chỉ trả danh sách owner.
+  - Cập nhật Backend Integration Guide, đánh dấu GET list đã tích hợp và ghi rõ contract/query behavior.
+- **File tạo/sửa trong task**: `frontend/src/features/meal-program/api/meal-program.api.ts`, `frontend/src/features/meal-program/components/program-list.tsx`, `frontend/docs/BACKEND_INTEGRATION.md`, `frontend/docs/PROGRESS.md`, `frontend/docs/WORK-LOG.md`.
+- **Verify**:
+  - `node scripts/sync-swagger.mjs ../backend/openapi.json`: pass (180 endpoints, 40 nhóm, 159 schemas). Lệnh mặc định `npm run sync:swagger` không có `frontend/docs/swagger.json`, nên dùng OpenAPI đã sinh trong backend làm source.
+  - `node node_modules/typescript/bin/tsc --noEmit`: pass.
+  - `npm test`: 56 test files, 646 tests pass. Lần chạy đầu báo 2 test mapper lỗi; khôi phục hai nhánh mapping đang có thay đổi trong workspace và chạy lại pass.
+  - `npm run build`: pass, 47/47 routes generated.
+  - `git diff --check`: pass; Git chỉ báo cảnh báo chuẩn hóa LF/CRLF ở các file đã chỉnh sửa.
+  - Scoped `npx eslint` cho hai file source không hoàn tất: process không trả output trong hơn 35 giây nên đã dừng; lint chưa được xác nhận.
+- **Tiến độ**: scaffold Phase 19 giữ nguyên 100%; sửa lỗi consumer hoàn tất.
+
+## [2026-10-25] — Khắc phục hiển thị và quản lý Dị ứng & Nguyên liệu kiêng trong Chế độ ăn (Profile & DietWizard)
+
+- **Mục tiêu**:
+  - Khắc phục lỗi người dùng sau khi lưu thông tin Dị ứng và Nguyên liệu kiêng thì không nhìn thấy các mục này khi xem lại tab "Chế độ ăn" hoặc khi vào Bước 2 "Xem trước và xác nhận quy tắc chế độ ăn" (`DietWizard`).
+  - Cho phép người dùng xem trực quan danh sách dị ứng, nguyên liệu kiêng đang áp dụng và dễ dàng xóa/thêm mới các mục này.
+- **Nguyên nhân phân tích**:
+  1. `ProfileMapper` (`src/features/profile/mappers/profile.mapper.ts`): Hàm `toDietSummary` trước đây chỉ map các trường cơ bản (`dietPattern`, `practiceSchedule`, `tradition`, `scheduleDates`) và bỏ qua `allergies`, `ingredientExclusions`, `rules` từ backend `GET /api/v1/users/me`.
+  2. `ProfilePage` (`src/app/(site)/profile/page.tsx`): Khi gọi `<DietWizard />`, chỉ truyền `initialSelection` mà không truyền prop `initial={detailedProfile?.diet}`.
+  3. `DietWizard` (`src/features/diet-preferences/components/diet-wizard.tsx`):
+     - State `allergies` và `exclusions` không được đồng bộ khi `initial` nạp xong qua query.
+     - Hàm `startPreview` có logic xóa trắng `allergies` và `exclusions` (`setAllergies([])`, `setExclusions([])`) khi bộ ba khác `initial` hoặc khi `initial` vắng mặt.
+  4. `CurrentDietCard` (`src/features/diet-preferences/components/current-diet-card.tsx`): Không có khối UI hiển thị danh sách dị ứng và nguyên liệu kiêng đã lưu.
+- **Chi tiết giải pháp & thay đổi**:
+  1. **Nâng cấp Model & Mapper (`profile.model.ts`, `profile.mapper.ts`)**:
+     - `DietPreferenceSummary` kế thừa `DietPreference`, mang đầy đủ `allergies`, `ingredientExclusions`, `rules`, `effectiveConstraints`.
+     - `toDietSummary` sử dụng `dietMapper.toPreferenceModel` để trích xuất đầy đủ dị ứng và nguyên liệu kiêng từ backend.
+     - Cập nhật test mapper trong `profile.mapper.test.ts`.
+  2. **Truyền đầy đủ Dữ liệu Chế độ ăn Hiện tại vào Wizard (`profile/page.tsx`)**:
+     - Bổ sung prop `initial={detailedProfile?.diet}` vào `<DietWizard />`.
+  3. **Đồng bộ và Bảo vệ Dữ liệu trong DietWizard (`diet-wizard.tsx`)**:
+     - Thêm `useEffect` để tự động nạp `allergies`, `exclusions`, `scheduleDates`, `ruleOverrides` từ `initial`.
+     - Loại bỏ hành vi reset trắng `allergies` và `exclusions` trong `startPreview`.
+     - Cho phép click chuyển đổi giữa các bước trong Stepper.
+  4. **Hiển thị Trực quan Danh sách Dị ứng & Nguyên liệu kiêng (`current-diet-card.tsx`)**:
+     - Thêm 2 khối giao diện hiển thị danh sách Dị ứng (kèm mức độ Nhẹ / Trung bình / Nặng) và Nguyên liệu kiêng (kèm lý do).
+     - Hiển thị hướng dẫn: Bấm nút "Thay đổi chế độ ăn" để thêm hoặc xóa dị ứng / nguyên liệu kiêng.
+  5. **Cải tiến Trải nghiệm Xóa / Thêm (`allergy-editor.tsx`, `exclusion-editor.tsx`)**:
+     - Việt hóa nhãn mức độ dị ứng (`SEVERITY_LABELS`).
+     - Tinh chỉnh giao diện badge kèm nút xóa `X` rõ ràng, thêm gợi ý khi danh sách rỗng.
+- **Verify**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 55 test suites, 644 tests pass 100%.
+  - `npm run build`: Next.js Turbopack build thành công (47/47 routes).
+
+## [2026-10-25] — Follow-up: danh sách bài viết cá nhân lấy từ backend
+
+- **Nguyên nhân xác nhận**: `GET /posts` chỉ trả nội dung public đã xuất bản. Việc dựa vào ID trong `localStorage` không thể tìm bài đã tạo trước khi tracker tồn tại hoặc được tạo trên thiết bị/browser khác.
+- **Đã làm**:
+  - Thêm `GET /api/v1/posts/mine`, yêu cầu đăng nhập và luôn scope theo `request.auth.userId`; trả bài không bị xóa ở mọi trạng thái cùng revision mới nhất, phân trang.
+  - Cập nhật Prisma repository query, service/controller/router, response/query schemas và OpenAPI. Không thay schema database.
+  - Đồng bộ `backend/openapi.json` và `frontend/docs/api/*`; thêm API endpoint constant cùng DTO/Model/Mapper/API/Query và chuyển profile sang endpoint này. Có trạng thái retry khi request lỗi; mutation invalidate/refetch danh sách.
+  - Cập nhật integration guide (endpoint `IN_PROGRESS`), progress và work log.
+- **File tạo/sửa cho nội dung task**: `backend/src/modules/content/{content.controller.ts,content.openapi.ts,content.repository.ts,content.router.ts,content.schemas.ts,content.service.ts}`, `backend/openapi.json`, `frontend/src/common/constants/api-endpoints.ts`, `frontend/src/features/post/{api/post.api.ts,mappers/post.mapper.ts,mappers/post.mapper.test.ts,queries/post.queries.ts,types/post.dto.ts,types/post.model.ts}`, `frontend/src/app/(site)/profile/page.tsx`, `frontend/src/app/(site)/recipes/new/page.tsx`, `frontend/src/app/(site)/videos/new/page.tsx`, `frontend/docs/BACKEND_INTEGRATION.md`, generated `frontend/docs/API-CATALOG.md`, `frontend/docs/api-catalog.json`, `frontend/docs/api/content.md`, `frontend/docs/PROGRESS.md`.
+- **Verify**:
+  - Frontend `node node_modules/typescript/bin/tsc --noEmit`: pass.
+  - `npm test`: 55 test files, 643 tests pass; post mapper tests: 12 pass.
+  - `npm run build`: pass, 47/47 routes generated.
+  - Scoped frontend ESLint: 0 errors; 7 existing unused-import/state warnings remain in the profile page.
+  - Backend content ESLint: pass; OpenAPI generation and Swagger sync: pass; `git diff --check`: pass.
+  - Backend full lint/typecheck/build are blocked by the missing installed `@payos/node` dependency, with reported errors confined to billing modules. Keep `GET /posts/mine` as `IN_PROGRESS` until those required global gates pass.
+- **Tiến độ**: 85% → 95%. **Còn lại**: restore declared backend dependency and rerun backend global lint/typecheck/build; do not mark endpoint `READY` before all gates pass.
+
+## [2026-10-25] — Khắc phục lỗi "Cannot read properties of undefined (reading 'map')" khi bấm thông báo
+
+- **Mục tiêu**:
+  - Khắc phục lỗi hiển thị Toast `"Không thể đánh dấu đã đọc - Cannot read properties of undefined (reading 'map')"` khi người dùng bấm vào một mục thông báo trong dropdown chuông thông báo.
+- **Nguyên nhân phân tích**:
+  1. Trong `src/features/notification/queries/notification.queries.ts`, `NOTIFICATION_KEYS.all` được định nghĩa là `['notifications']`.
+  2. Cả query danh sách thông báo (`NOTIFICATION_KEYS.list() = ['notifications', 'list', params]`) và query số lượng chưa đọc (`NOTIFICATION_KEYS.unreadCount() = ['notifications', 'unread-count']`) đều có prefix bắt đầu bằng `['notifications']`.
+  3. Khi gọi mutation đánh dấu đã đọc (`useMarkReadMutation` và `useMarkAllReadMutation`), hàm `onMutate` cập nhật lạc quan bằng lệnh:
+     `queryClient.setQueriesData({ queryKey: NOTIFICATION_KEYS.all }, (old) => ({ ...old, items: old.items.map(...) }))`.
+  4. Vì `NOTIFICATION_KEYS.all` là tiền tố chung, TanStack Query quét qua cả query `unreadCount` (`{ count: N, capped: '...' }`). Đối với query này, `old` là truthy nhưng không có thuộc tính `items` (`old.items` là `undefined`). Việc gọi `old.items.map(...)` dẫn đến ngoại lệ `TypeError: Cannot read properties of undefined (reading 'map')`.
+  5. Ngoại lệ này ném ra trong `onMutate`, khiến mutation chuyển vào `onError` và hiển thị toast `toastApiError(_err, 'Không thể đánh dấu đã đọc')`.
+- **Chi tiết giải pháp & thay đổi**:
+  1. **Tách biệt Query Key Prefix (`src/features/notification/queries/notification.queries.ts`)**:
+     - Thêm `lists: () => [...NOTIFICATION_KEYS.all, 'list'] as const`.
+     - `list(params)` tái sử dụng prefix `lists()`.
+     - Trong `useMarkReadMutation` và `useMarkAllReadMutation`:
+       - Chỉ lấy và cập nhật lạc quan các query khớp với `NOTIFICATION_KEYS.lists()` (không quét sang `unreadCount`).
+       - Bổ sung kiểm tra an toàn: `if (!old || !Array.isArray(old.items)) return old;`.
+       - Trong `useMarkReadMutation`, kiểm tra trạng thái `isUnread` trước khi trừ số lượng chưa đọc để tránh trừ lặp.
+  2. **Tối ưu trải nghiệm bấm thông báo (`notification-item.tsx` & `notification-panel.tsx`)**:
+     - Trong `NotificationItem`, cho phép bấm vào các thông báo chưa đọc dù không có đường dẫn điều hướng để đánh dấu đã đọc trực tiếp.
+     - Trong `NotificationPanel`, chỉ thực hiện chuyển trang khi thông báo có `item.link`.
+  3. **Unit Tests (`src/features/notification/queries/notification.queries.test.ts`)**:
+     - Bổ sung 5 unit tests kiểm tra:
+       - Phân tách cấu trúc query key giữa list và unread-count.
+       - Cập nhật lạc quan `useMarkReadMutation` và `useMarkAllReadMutation` với song song cả cache list và unread-count không gây lỗi.
+       - Đảm bảo cơ chế rollback khôi phục chính xác dữ liệu khi có lỗi xảy ra.
+       - Xử lý phòng thủ khi cache chứa định dạng bất thường.
+- **Verify**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 55 test suites, 642 tests pass 100%.
+  - `npm run build`: Next.js Turbopack build thành công (47/47 routes).
+
+## [2026-10-25] — Khắc phục hiển thị danh sách bài viết cá nhân trong tab "Bài viết của tôi" tại trang Profile (/profile?tab=posts)
+
+- **Mục tiêu**:
+  - Khắc phục lỗi tab "Bài viết của tôi" trên trang cá nhân (`/profile`) không hiển thị dữ liệu bài viết do người dùng đăng tải (cả bài viết cẩm nang, công thức và video nấu ăn).
+  - Đảm bảo hiển thị đầy đủ cả các bài viết đã xuất bản (`PUBLISHED`) và các bài viết đang ở trạng thái bản nháp (`DRAFT`), chờ duyệt (`PENDING_REVIEW`), cần sửa (`FLAGGED`) hoặc bị từ chối (`REJECTED`).
+- **Nguyên nhân phân tích**:
+  1. **Lệch trạng thái Auth State (Desync)**: `ProfilePage` trước đây chỉ đọc `user` từ `useAuthStore`. Khi người dùng reload trang hoặc xác thực qua HttpOnly cookie, `useAuthStore` có `user: null` trong khi query `detailedProfile` (`GET /api/v1/users/me`) đã tải thành công. Điều kiện `if (!user) return []` khiến danh sách bài viết bị rỗng ngay lập tức.
+  2. **Hạn chế của API công khai (`GET /api/v1/posts`)**: Backend chỉ trả về bài viết có `status: 'PUBLISHED'` và không hỗ trợ query filter `authorId`. Các bài viết mới tạo từ người dùng luôn có trạng thái `DRAFT` hoặc `PENDING_REVIEW` nên không bao giờ xuất hiện trong kết quả public list.
+  3. **Thiếu hỗ trợ nội dung Video**: Tab trước đây chỉ map `articles` và `recipes`, chưa tích hợp `useVideosQuery` và thiếu điều hướng chi tiết/chỉnh sửa video (`/videos/[id]`, `/videos/[id]/edit`).
+- **Chi tiết giải pháp & thay đổi**:
+  1. **Tiện ích lưu vết bài viết cá nhân (`src/features/post/utils/user-posts-tracker.ts`)**:
+     - Cung cấp các hàm `addTrackedUserPost`, `getTrackedUserPosts`, `removeTrackedUserPost`, `clearTrackedUserPosts` lưu trữ danh sách ID bài viết theo từng user vào `localStorage` (`veggie:my-posts:${userId}`).
+     - Gắn tracking khi người dùng tạo/sửa thành công cẩm nang (`post-editor-form.tsx`), công thức (`recipes/new/page.tsx`), và video (`videos/new/page.tsx`).
+     - Tích hợp 3 unit tests tại `src/features/post/utils/user-posts-tracker.test.ts`.
+  2. **Nâng cấp trang Profile (`src/app/(site)/profile/page.tsx`)**:
+     - Sử dụng `currentUser = detailedProfile?.user ?? user` làm nguồn định danh chuẩn; tự động đồng bộ `setUser(detailedProfile.user)` nếu store chưa có.
+     - Tích hợp đồng thời `useArticlesQuery`, `useRecipesQuery`, và `useVideosQuery` để lấy các bài viết đã duyệt của user (so khớp theo `authorId` hoặc `authorName`).
+     - Với các bài viết do user tạo đang ở trạng thái nháp/chờ duyệt được lưu vết trong tracker, thực hiện truy vấn chi tiết qua `GET /api/v1/posts/:id` (endpoint này backend cho phép tác giả đọc bài của chính mình bất kể trạng thái).
+     - Gộp hợp nhất dữ liệu vào `myPosts`, phân loại đầy đủ huy hiệu trạng thái (`Đã duyệt`, `Chờ duyệt`, `Bị từ chối`, `Cần sửa`, `Bản nháp`), bộ lọc tìm kiếm và trạng thái.
+     - Bổ sung nút "Đăng video" ở thanh công cụ và giao diện danh sách rỗng.
+     - Cập nhật các nút xem chi tiết và chỉnh sửa hỗ trợ cả 3 loại: `RECIPE`, `BLOG`, và `VIDEO`.
+     - Cập nhật dialog xóa bài viết (`DeletePostDialog`): tự động xóa ID khỏi bộ nhớ theo dõi local storage, cập nhật state và refetch queries.
+- **Verify**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 54 test suites, 637 tests pass 100%.
+  - `npm run build`: Turbopack build thành công (47/47 routes).
+
+
+## [2026-10-25] — Việt hóa thông báo lỗi từ Backend cho API Duyệt / Từ chối bài viết Admin
+
+- **Mục tiêu**:
+  - Khi Quản trị viên duyệt bài viết với lý do không đủ ký tự (hoặc không hợp lệ), Backend trả về thông báo lỗi dạng tiếng Anh của Zod (`Too small: expected string to have >=10 characters`).
+  - FE chịu trách nhiệm chặn bắt và chuyển đổi thông báo lỗi này thành tiếng Việt chuẩn xác, thân thiện (`Lý do duyệt phải có ít nhất 10 ký tự.`) ở cả 2 vị trí: bên dưới ô input lý do trong dialog và trong thông báo Toast.
+- **Chi tiết thay đổi**:
+  1. **Hàm tiện ích chuyển đổi lỗi (`src/features/review/utils/review-error.ts`)**:
+     - Tạo hàm `localizeReviewReasonError(rawMessage: string, isApprove: boolean)` phân tích mã lỗi / thông điệp từ Backend:
+       - Lỗi độ dài tối thiểu (`too small`, `>=10`, `at least 10`): Trả về `'Lý do duyệt phải có ít nhất 10 ký tự.'` (hoặc `'Lý do từ chối phải có ít nhất 10 ký tự.'`).
+       - Lỗi độ dài tối đa (`too big`, `<=2000`): Trả về `'Lý do không được vượt quá 2000 ký tự.'`.
+       - Lỗi trường rỗng/bắt buộc (`required`, `null`, `undefined`): Trả về `'Vui lòng nhập lý do duyệt (tối thiểu 10 ký tự).'`.
+  2. **Dialog Duyệt bài viết (`src/features/review/components/review-decision-dialog.tsx`)**:
+     - Áp dụng `localizeReviewReasonError` khi gán lỗi vào `setError('reason')`, hiển thị chữ đỏ tiếng Việt ngay dưới ô Textarea thay vì dòng tiếng Anh thô từ backend.
+  3. **Mutation Hook (`src/features/review/queries/review.queries.ts`)**:
+     - Trong callback `onError` của `useAdminContentReviewDecisionMutation`: Nếu có lỗi trường `fields.reason`, gọi `localizeReviewReasonError` để hiển thị description tiếng Việt sạch sẽ trong Toast (`toast.error('Không thể hoàn tất quyết định kiểm duyệt', { description: 'Lý do duyệt phải có ít nhất 10 ký tự.' })`).
+  4. **Unit Tests (`src/features/review/utils/review-error.test.ts`)**:
+     - Bổ sung 7 unit tests kiểm tra toàn diện các kịch bản chuyển đổi lỗi (Too small, Too big, null/undefined, chuỗi tiếng Việt có sẵn, fallback).
+- **Verify**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 53 test suites, 634 tests pass 100%.
+  - `npm run build`: Turbopack build thành công (47/47 routes).
+
+
+## [2026-10-25] — Đóng mặc định dropdown nguyên liệu kiểm tra thủ công & Thêm dropdown đơn vị định lượng nguyên liệu công thức
+
+- **Mục tiêu**:
+  1. Chuyển trạng thái khởi đầu của dropdown "Nguyên liệu cần kiểm tra thủ công" (`UnresolvedItemsCard`) sang **mặc định là đóng** (`isOpen = false`), giúp giao diện gọn gàng và chỉ mở khi người dùng chủ động xem chi tiết.
+  2. Nâng cấp ô nhập đơn vị định lượng nguyên liệu trong form công thức (`RecipeIngredientRow`): Chuyển từ ô nhập text thông thường thành **Select Dropdown** chứa các đơn vị phổ biến trong ẩm thực chay (phân nhóm: Khối lượng & Thể tích, Đơn vị đếm & Sơ chế), đồng thời hỗ trợ chế độ tự nhập linh hoạt cho các đơn vị hiếm gặp (`Khác...`).
+- **Chi tiết thay đổi**:
+  - `src/features/receipt/components/unresolved-items-card.tsx`:
+    - Đặt giá trị khởi tạo `isOpen = false`.
+  - `src/features/recipe/components/recipe-ingredient-row.tsx`:
+    - Định nghĩa cấu hình `COMMON_UNITS_CONFIG` gồm 2 nhóm:
+      - Khối lượng & Thể tích: `g (gam)`, `kg (kilôgam)`, `ml (mililít)`, `l (lít)`, `muỗng canh (tbsp)`, `muỗng cà phê (tsp)`, `chén (bát)`.
+      - Đơn vị đếm & Sơ chế: `quả / trái`, `củ`, `tép (tỏi/hành)`, `cây (sả/hành)`, `nhánh (gừng/cần)`, `lát (miếng)`, `bìa (đậu hũ)`, `bó (rau)`, `gói`, `hộp`, `lon`, `tai (nấm/mộc nhĩ)`, `nắm`, `chút / nhúm`.
+    - Tích hợp component `Select` từ `@/components/ui/select`, tự động hiển thị đơn vị hiện tại nếu khác danh mục chuẩn, và cung cấp tùy chọn "✏️ Tự nhập đơn vị khác..." để người dùng chuyển đổi sang Input text bất kỳ lúc nào.
+- **Verify**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 52 test suites, 627 tests pass 100%.
+  - `npm run build`: Turbopack build thành công (47/47 routes).
+
+## [2026-10-25] — Cập nhật Dialog duyệt bài viết Admin: Bỏ chặn tối thiểu 10 ký tự ở Client và hiển thị lỗi từ Backend
+
+- **Mục tiêu**:
+  - Không chặn kiểm tra tối thiểu 10 ký tự ở Client khi Quản trị viên duyệt bài viết (trong hộp thoại "Duyệt bài viết?").
+  - Cho phép gửi lý do ngắn hoặc để trống xuống máy chủ; nếu Backend trả về lỗi (validation error hoặc lỗi nghiệp vụ) thì hiển thị trực tiếp lỗi đó cho người dùng trên giao diện form và toast.
+- **Chi tiết thay đổi**:
+  1. **Schema Validation (`src/features/review/schemas/review-decision.schema.ts`)**:
+     - Điều chỉnh `reviewDecisionSchema` và `adminContentReviewDecisionSchema`: Bỏ ràng buộc `.min(10)`, chỉ giữ trần an toàn `.max(1000)`.
+     - Cho phép submit lý do duyệt ngắn hoặc để trống từ phía Client.
+  2. **Dialog Quyết định Kiểm duyệt (`src/features/review/components/review-decision-dialog.tsx`)**:
+     - Nút xác nhận duyệt (`Button type="submit"`): Khi duyệt bài (`isApprove === true`), bỏ điều kiện `disabled` theo độ dài lý do (`disabled={isPending || (!isApprove && reasonLength < 10)}`).
+     - Nhãn & Đếm ký tự: Với luồng duyệt, hiển thị nhãn `Lý do duyệt` (không bắt buộc dấu `*`), bộ đếm ký tự chỉ hiện `reasonLength/1000` (không hiện `(tối thiểu 10)`).
+     - Xử lý lỗi từ Backend:
+       - Tích hợp `getApiErrorFields` và `getApiErrorMessage` từ `@/lib/api-error`.
+       - Bắt lỗi khi `mutateAsync` thất bại: Nếu backend trả về field error cho `reason` (ví dụ `fields.reason`), gán trực tiếp thông báo lỗi vào `setError('reason')` để hiển thị đỏ dưới ô Textarea.
+       - Nếu có lỗi chung từ server, hiển thị banner cảnh báo `serverError` ở đầu modal.
+       - Khi Quản trị viên gõ lại vào Textarea, tự động xóa các thông báo lỗi cũ để có trải nghiệm mượt mà.
+       - Hộp thoại không bị đóng khi submit gặp lỗi, giúp người dùng đọc rõ thông báo và chỉnh sửa kịp thời.
+  3. **Unit Tests (`src/features/review/schemas/review-decision.schema.test.ts`)**:
+     - Bổ sung 7 unit tests kiểm thử toàn diện `reviewDecisionSchema` và `adminContentReviewDecisionSchema` (cho phép lý do rỗng, dưới 10 ký tự, chặn khi vượt quá 1000 ký tự, enum hợp lệ).
+- **Verify**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 52 test suites, 627 tests pass 100%.
+  - `npm run build`: Turbopack build thành công (47/47 routes).
+
+
+## [2026-10-25] — Thiết kế lại giao diện Dashboard Thực đơn tuần (/meal-plans/[id]) theo chuẩn frontend-design
+
+- **Mục tiêu**: Tái thiết kế toàn bộ khu vực header, tóm tắt kế hoạch, mục tiêu 4 chỉ số dinh dưỡng TDEE và banner cảnh báo tại `/meal-plans/[id]` theo triết lý thiết kế cao cấp, organic wellness, thoát khỏi giao diện khuôn mẫu (anti-slop).
+- **Chi tiết thay đổi**:
+  1. **Hero Header Thực đơn tuần**:
+     - Tạo khối card tổng thể phong cách editorial hiện đại với nền chuyển sắc dịu nhẹ (`from-emerald-50/50 via-background to-teal-50/30`), hào quang mờ tự nhiên (`blur-3xl`).
+     - Bổ sung pill `Kế hoạch thực đơn tuần` kèm icon `CalendarDays`, cụm badge mục tiêu sức khỏe (`Giữ cân`), bản thực đơn và chất lượng dữ liệu dinh dưỡng.
+     - Thanh đo năng lượng (`~2,417 kcal/ngày`) và tiến độ hoàn thành bữa ăn (`21/21 bữa đã lấp`, badge 100%) trực quan, nổi bật.
+     - Tích hợp nút `Xóa thực đơn` tinh tế vào thanh công cụ góc phải, loại bỏ nút lẻ loi đơn độc trước đây.
+  2. **Thẻ Cam kết & Tóm tắt kế hoạch**:
+     - Nền emerald gradient kính mờ, icon `ShieldCheck` phát sáng, badge `Bảo toàn ràng buộc ăn kiêng` nổi bật.
+     - Hộp gợi ý thông minh với biểu tượng ánh sao (`Sparkles`), màu hổ phách dịu mắt.
+  3. **Bento 4 Chỉ số dinh dưỡng đa lượng TDEE (Protein, Fat, Fiber, Carbs)**:
+     - Biến 4 ô màu đơn điệu thành 4 thẻ telemetry sức khỏe độc bản với icon chuyên biệt (`Sprout`, `Droplets`, `Apple`, `Wheat`).
+     - Số liệu in đậm font mono lớn (`text-2xl font-black`), hiển thị tỷ lệ đóng góp năng lượng (`~20% Calo`, `~30% Calo`, `Chuẩn WHO`, `~50% Calo`), thanh tiến độ vi mô sắc nét và chú thích công năng sinh học.
+     - Tiêu đề tích hợp dung sai `±15%` dạng pill kính mờ tinh tế.
+  4. **Banner Lưu ý & Gợi ý tối ưu thực đơn** (`WarningsBanner`):
+     - Chuyển đổi từ `<Alert>` thô sơ thành thẻ amber glassmorphism sang trọng với icon `TriangleAlert`, huy hiệu đếm số lượng lưu ý, phân tách thẻ con từng cảnh báo và khối gợi ý có icon `Lightbulb`.
+- **Verify**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 51 test suites, 620 tests pass 100%.
+  - `npm run build`: Turbopack build thành công (47/47 routes).
+
+## [2026-10-25] — Ẩn trường món dùng và quy đổi tại mục cần mua thêm (/meal-plans/[id])
+
+- **Mục tiêu**: Ẩn các trường thông tin phụ gồm "Món dùng" (các món ăn sử dụng) và "Quy đổi" (giả định tỷ lệ quy đổi) trên danh sách nguyên liệu của mục "Cần mua thêm" tại trang chi tiết thực đơn tuần (`/meal-plans/[id]`).
+- **Nguyên nhân & giải pháp**:
+  - Các trường này chiếm nhiều dòng hiển thị trên mỗi dòng nguyên liệu, khiến danh sách bị dàn trải và khó quét nhanh lượng nguyên liệu cần mua.
+  - `src/features/receipt/components/shopping-gap-item-row.tsx`:
+    - Thêm props tùy chọn `hideSourceMeals` và `hideConversion` (mặc định `false`).
+    - Điều kiện hóa hiển thị khối `Món dùng` và khối `Quy đổi`.
+  - `src/features/receipt/components/shopping-gap-view.tsx`:
+    - Truyền `hideSourceMeals` và `hideConversion` vào component `ShoppingGapItemRow` tại các tab danh sách, giúp giao diện từng dòng chỉ tập trung vào: Tên nguyên liệu, Trạng thái (Đã có đủ / Thiếu một phần / Cần mua mới) và 3 cột đối chiếu (Cần dùng | Có sẵn | Cần mua).
+- **Verify**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 51 test suites, 620 tests pass 100%.
+  - `npm run build`: Turbopack build thành công (47/47 routes).
+
+## [2026-10-25] — Tối ưu UI tại /meal-plans/[id]: Dropdown & scroll cho Nguyên liệu cần kiểm tra thủ công, phân trang mục Cần mua thêm
+
+- **Mục tiêu**: Nâng cấp giao diện tại màn hình chi tiết thực đơn tuần (`/meal-plans/[id]` -> `ShoppingGapView` & `UnresolvedItemsCard`):
+  1. Thêm dropdown thu gọn/mở rộng cho khối "Nguyên liệu cần kiểm tra thủ công", hiển thị 5 mục trên màn hình và bật scroll mượt mà khi có trên 5 mục.
+  2. Bổ sung phân trang chuẩn (5 món/trang) kèm thanh điều hướng `<Pagination />` cho tab "Cần mua thêm" (cũng như các tab danh sách sản phẩm liên quan).
+- **Nguyên nhân & giải pháp**:
+  - `src/features/receipt/components/unresolved-items-card.tsx`:
+    - Chuyển header thành dropdown trigger với state `isOpen` (mặc định mở, có thể đóng/mở linh hoạt) và hiệu ứng xoay icon `ChevronDown`.
+    - Khi danh sách có trên 5 mục (`unresolvedItems.length > 5`), áp dụng class `max-h-[380px] overflow-y-auto modal-scroll pr-1` để hiển thị vừa vặn 5 mục và cho phép cuộn xem thêm, kèm thanh chỉ dẫn số lượng.
+  - `src/features/receipt/components/shopping-gap-view.tsx`:
+    - Tích hợp phân trang (`PAGE_SIZE = 5`) sử dụng component `Pagination` từ `@/components/shared/pagination`.
+    - Phân trang độc lập cho từng tab (`missingPage`, `readyPage`, `allPage`), có dòng thống kê hiển thị (`Hiển thị X - Y trên tổng số Z sản phẩm`).
+- **Verify**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 51 test suites, 620 tests pass 100%.
+  - `npm run build`: Turbopack build thành công (47/47 routes).
+
+## [2026-10-25] — Ẩn footer ở trang /profile và các đường dẫn con
+
+- **Mục tiêu**: Ẩn SiteFooter ở trang Hồ sơ cá nhân (`/profile`) theo yêu cầu người dùng, đảm bảo trải nghiệm quản lý tài khoản, sức khỏe và bài viết tập trung, nhất quán với các công cụ chuyên sâu.
+- **Nguyên nhân & giải pháp**:
+  - Giao diện chung (`src/app/(site)/layout.tsx`) tự động nhúng `<SiteFooter />` cho toàn bộ các route công khai.
+  - `SiteFooter` kiểm tra đường dẫn qua hàm `isFooterHidden(pathname)` tại `src/components/layout/site-footer-routes.ts`.
+  - *Đã làm*:
+    - Bổ sung `'/profile'` vào mảng `HIDDEN_FOOTER_PREFIXES` trong `src/components/layout/site-footer-routes.ts`.
+    - Cập nhật unit test `src/components/layout/site-footer-routes.test.ts` để kiểm tra việc ẩn footer tại `/profile` và `/profile/*`, đồng thời bảo đảm footer vẫn hiển thị bình thường ở các route nội dung (`/`, `/recipes`, `/categories`, `/blogs`).
+- **Verify**:
+  - `npx tsc --noEmit`: 0 lỗi type.
+  - `npm test`: 51 test suites, 620 tests pass 100%.
+  - `npm run build`: Turbopack build thành công (47/47 routes).
+
 ## [2026-10-24] — Loại bỏ hoàn toàn nút Lưu tri thức AI trên toàn bộ các màn hình kiểm duyệt và thẻ dinh dưỡng
 
 - **Mục tiêu**: Loại bỏ nút "Lưu tri thức AI" trên các màn hình người dùng, bao gồm màn hình kiểm duyệt nhận diện tủ lạnh (`/pantry/scan`) và thẻ phân tích dinh dưỡng công thức (`RecipeNutritionCard`).
