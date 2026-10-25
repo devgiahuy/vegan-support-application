@@ -10,7 +10,11 @@ import type {
   CreateRecipeRequestDto,
   UpdateRecipeRequestDto,
 } from '../types/recipe.dto';
-import type { Recipe, RecipePaginationResult } from '../types/recipe.model';
+import type {
+  Recipe,
+  RecipeEligibilityFilter,
+  RecipePaginationResult,
+} from '../types/recipe.model';
 
 export interface RecipeQueryParams {
   page?: number;
@@ -19,6 +23,8 @@ export interface RecipeQueryParams {
   category?: string;
   difficulty?: string;
   q?: string;
+  /** `INELIGIBLE` trả các món bị hồ sơ loại kèm lý do; mặc định backend là `ELIGIBLE`. */
+  eligibility?: RecipeEligibilityFilter;
 }
 
 export const recipeApi = {

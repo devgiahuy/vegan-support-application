@@ -5133,6 +5133,52 @@
                           "limitation"
                         ],
                         "additionalProperties": false
+                      },
+                      "eligibility": {
+                        "type": "object",
+                        "properties": {
+                          "eligible": {
+                            "type": "boolean"
+                          },
+                          "reasons": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "enum": [
+                                    "ALLERGY",
+                                    "ALLERGEN_SELECTION_UNRESOLVED",
+                                    "DIET_PATTERN",
+                                    "INGREDIENT_COMPOSITION_UNCERTAIN",
+                                    "INGREDIENT_EXCLUSION",
+                                    "TRADITION_RULE",
+                                    "UNRESOLVED_INGREDIENT"
+                                  ]
+                                },
+                                "ingredientNames": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "description": "Tên hiển thị nguyên liệu gây ra lý do; rỗng nếu lý do ở cấp món"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "ingredientNames"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "eligible",
+                          "reasons"
+                        ],
+                        "additionalProperties": false,
+                        "description": "Chỉ có khi list với eligibility=INELIGIBLE"
                       }
                     },
                     "required": [
@@ -6368,6 +6414,52 @@
                             "limitation"
                           ],
                           "additionalProperties": false
+                        },
+                        "eligibility": {
+                          "type": "object",
+                          "properties": {
+                            "eligible": {
+                              "type": "boolean"
+                            },
+                            "reasons": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "code": {
+                                    "type": "string",
+                                    "enum": [
+                                      "ALLERGY",
+                                      "ALLERGEN_SELECTION_UNRESOLVED",
+                                      "DIET_PATTERN",
+                                      "INGREDIENT_COMPOSITION_UNCERTAIN",
+                                      "INGREDIENT_EXCLUSION",
+                                      "TRADITION_RULE",
+                                      "UNRESOLVED_INGREDIENT"
+                                    ]
+                                  },
+                                  "ingredientNames": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "description": "Tên hiển thị nguyên liệu gây ra lý do; rỗng nếu lý do ở cấp món"
+                                  }
+                                },
+                                "required": [
+                                  "code",
+                                  "ingredientNames"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "eligible",
+                            "reasons"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Chỉ có khi list với eligibility=INELIGIBLE"
                         }
                       },
                       "required": [
@@ -7688,6 +7780,52 @@
                             "limitation"
                           ],
                           "additionalProperties": false
+                        },
+                        "eligibility": {
+                          "type": "object",
+                          "properties": {
+                            "eligible": {
+                              "type": "boolean"
+                            },
+                            "reasons": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "code": {
+                                    "type": "string",
+                                    "enum": [
+                                      "ALLERGY",
+                                      "ALLERGEN_SELECTION_UNRESOLVED",
+                                      "DIET_PATTERN",
+                                      "INGREDIENT_COMPOSITION_UNCERTAIN",
+                                      "INGREDIENT_EXCLUSION",
+                                      "TRADITION_RULE",
+                                      "UNRESOLVED_INGREDIENT"
+                                    ]
+                                  },
+                                  "ingredientNames": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "description": "Tên hiển thị nguyên liệu gây ra lý do; rỗng nếu lý do ở cấp món"
+                                  }
+                                },
+                                "required": [
+                                  "code",
+                                  "ingredientNames"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "eligible",
+                            "reasons"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Chỉ có khi list với eligibility=INELIGIBLE"
                         }
                       },
                       "required": [
@@ -8950,6 +9088,52 @@
                             "limitation"
                           ],
                           "additionalProperties": false
+                        },
+                        "eligibility": {
+                          "type": "object",
+                          "properties": {
+                            "eligible": {
+                              "type": "boolean"
+                            },
+                            "reasons": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "code": {
+                                    "type": "string",
+                                    "enum": [
+                                      "ALLERGY",
+                                      "ALLERGEN_SELECTION_UNRESOLVED",
+                                      "DIET_PATTERN",
+                                      "INGREDIENT_COMPOSITION_UNCERTAIN",
+                                      "INGREDIENT_EXCLUSION",
+                                      "TRADITION_RULE",
+                                      "UNRESOLVED_INGREDIENT"
+                                    ]
+                                  },
+                                  "ingredientNames": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "description": "Tên hiển thị nguyên liệu gây ra lý do; rỗng nếu lý do ở cấp món"
+                                  }
+                                },
+                                "required": [
+                                  "code",
+                                  "ingredientNames"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "eligible",
+                            "reasons"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Chỉ có khi list với eligibility=INELIGIBLE"
                         }
                       },
                       "required": [
@@ -36072,6 +36256,21 @@
             "required": false,
             "description": "Ngày YYYY-MM-DD để áp lịch tradition PERIODIC; mặc định ngày hiện tại VN",
             "name": "forDate",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ELIGIBLE",
+                "INELIGIBLE"
+              ],
+              "default": "ELIGIBLE",
+              "description": "ELIGIBLE: chỉ món qua ràng buộc hồ sơ. INELIGIBLE: chỉ Recipe bị ràng buộc loại, kèm recipe.eligibility.reasons"
+            },
+            "required": false,
+            "description": "ELIGIBLE: chỉ món qua ràng buộc hồ sơ. INELIGIBLE: chỉ Recipe bị ràng buộc loại, kèm recipe.eligibility.reasons",
+            "name": "eligibility",
             "in": "query"
           }
         ],

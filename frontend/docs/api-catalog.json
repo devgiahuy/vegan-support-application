@@ -1,7 +1,7 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
-  "source": "../backend/openapi.json",
-  "generatedAt": "2026-10-25T17:52:39.219Z",
+  "source": "http://localhost:4000/api-docs.json",
+  "generatedAt": "2026-10-25T20:21:24.092Z",
   "stats": {
     "operations": 184,
     "groups": 41,
@@ -1067,6 +1067,12 @@
         {
           "in": "query",
           "name": "forDate",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "eligibility",
           "required": false,
           "type": "string"
         }

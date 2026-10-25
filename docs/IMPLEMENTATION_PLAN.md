@@ -1,6 +1,6 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.11
+**Version:** 4.12
 
 **Updated:** 2026-10-26
 
@@ -221,6 +221,7 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 4. Hard constraints remove candidates before scoring. Ranking cannot restore them.
 5. MVP supports Buddhist and Christian traditions; the model remains extensible.
 6. Restaurant directory discovery/details follow BL-16's explicit-search exception and do not inherit these personal profile constraints.
+7. Recipe discovery may show profile-removed recipes only in an explicit, separately labelled "not suitable" view (`GET /posts?eligibility=INELIGIBLE`, user-approved 2026-10-26). Each item carries its reason codes and offending ingredients; the view never feeds ranking, recommendations or meal planning, and detail pages stay viewable as before.
 
 ### BL-03 — Practice schedule
 
@@ -565,6 +566,8 @@ A phase is complete only when:
 | Phase 2 ideas are forgotten or accidentally claimed READY | Dedicated roadmap plus explicit status taxonomy |
 
 ## 13. Change record
+
+- **4.12 — 2026-10-26:** User approves an explicit "not suitable" recipe-discovery view with per-recipe reasons (BL-02.7). Demo composition assertions extend to prepared foods used by seeded recipes.
 
 - **4.11 — 2026-10-26:** Clarify duplicate content titles with unique/stable generated URLs; preflight full-horizon periodic schedules and recover partially generated programs to DRAFT after week repairs.
 

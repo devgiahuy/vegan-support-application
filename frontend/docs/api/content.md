@@ -11,7 +11,7 @@ List nội dung do người dùng hiện tại tạo
 ## GET `/api/v1/posts`
 List nội dung published
 - operationId: `listPublishedPosts`
-- Params: `query:page (integer)`, `query:limit (integer)`, `query:type (string)`, `query:q (string)`, `query:category (string)`, `query:maxCookTimeMinutes (integer,null)`, `query:difficulty (string)`, `query:dietPattern (string)`, `query:ingredientIds (array<string>)`, `query:forDate (string)`
+- Params: `query:page (integer)`, `query:limit (integer)`, `query:type (string)`, `query:q (string)`, `query:category (string)`, `query:maxCookTimeMinutes (integer,null)`, `query:difficulty (string)`, `query:dietPattern (string)`, `query:ingredientIds (array<string>)`, `query:forDate (string)`, `query:eligibility (string)`
 - Request: —
 - Responses: `200` → PostListResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse
 

@@ -89,6 +89,24 @@ export const DIET_REASON_NAMES: Record<string, string> = {
 };
 
 /**
+ * Lý do hồ sơ ăn uống loại một công thức (`recipe.eligibility.reasons[].code`).
+ */
+export const RECIPE_INELIGIBILITY_REASON_NAMES: Record<string, string> = {
+  ALLERGY: 'Chứa thành phần bạn dị ứng',
+  ALLERGEN_SELECTION_UNRESOLVED: 'Nhóm dị ứng trong hồ sơ không còn trong danh mục',
+  DIET_PATTERN: 'Không hợp kiểu ăn của bạn',
+  INGREDIENT_COMPOSITION_UNCERTAIN: 'Chưa xác minh đủ thành phần nguyên liệu',
+  INGREDIENT_EXCLUSION: 'Có nguyên liệu bạn không ăn',
+  TRADITION_RULE: 'Vi phạm quy tắc truyền thống bạn bật',
+  UNRESOLVED_INGREDIENT: 'Có nguyên liệu chưa khớp danh mục chuẩn',
+};
+
+export function getRecipeIneligibilityReasonLabel(code?: string | null): string {
+  if (!code) return 'Không đạt ràng buộc hồ sơ';
+  return RECIPE_INELIGIBILITY_REASON_NAMES[code] ?? 'Không đạt ràng buộc hồ sơ';
+}
+
+/**
  * Lấy mô tả tiếng Việt thân thiện của mã lý do không tương thích.
  */
 export function getDietReasonLabel(reasonCode?: string | null): string {
