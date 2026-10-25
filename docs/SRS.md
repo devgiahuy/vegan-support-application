@@ -1,6 +1,6 @@
 # Software Requirements Specification — Vegan Support Application
 
-**Version:** 1.5
+**Version:** 1.6
 
 **Updated:** 2026-10-25
 
@@ -81,6 +81,8 @@ MVP traditions are Buddhist and Christian. Other traditions may be added without
 When a user selects a diet pattern or tradition, the backend provides a default rule set. The user confirms it and may enable or disable individual rules. Allergy rules, explicit exclusions, the selected diet pattern, and enabled tradition rules are hard constraints enforced by the backend. Recommendations must never reintroduce an item removed by these constraints.
 
 Restaurant directory discovery and place details are an approved exception (2026-10-25): they do not automatically apply the personal dietary profile. Restaurant search applies only filters explicitly selected for that request; provider labels do not establish dietary or allergy compatibility.
+
+User-approved 2026-10-25 allergy/composition extension: members select allergies by catalog names and approved synonyms, without entering internal codes. Backend validates active definitions and checks reviewed ingredient components transitively. Unknown, partial, inactive or cyclic composition cannot pass any active diet, allergy, explicit ingredient exclusion or tradition constraint. Exact packaged-product/formulation scope, source/license/version and review audit are required for completeness; AI cannot promote composition. Existing demo data is normalized directly, without a legacy manual-code UI. Stored-plan analysis and program confirmation recheck current dietary constraints.
 
 ## 5. Functional requirements
 

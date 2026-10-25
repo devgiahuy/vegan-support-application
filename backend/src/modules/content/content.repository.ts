@@ -27,6 +27,7 @@ import type { SubmissionDecision } from './content-publication.policy.js';
 import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 import { MODERATION_RULE_VERSION } from '../moderation/rule-moderation.service.js';
 import { aiCorrelationId } from '../ai-governance/ai-governance.context.js';
+import { loadIngredientSafetyCatalog } from '../catalog/ingredient-safety.js';
 
 const revisionInclude = {
   recipeDetail: true,
@@ -285,6 +286,10 @@ export class ContentRepository {
 
   findSearchProfile(userId: string): Promise<SearchProfileRecord | null> {
     return this.prisma.user.findUnique({ where: { id: userId }, select: searchProfileSelect });
+  }
+
+  safetyCatalog() {
+    return loadIngredientSafetyCatalog(this.prisma);
   }
 
   findPublishedPost(id: string): Promise<PublishedPostRecord | null> {

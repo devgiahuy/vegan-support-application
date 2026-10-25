@@ -140,6 +140,7 @@ export function registerMealProgramOpenApi(registry: OpenAPIRegistry, errorSchem
         'MEAL_PROGRAM_IDEMPOTENCY_CONFLICT',
         'MEAL_PROGRAM_CONFIRMED_IMMUTABLE',
         'MEAL_PROGRAM_NOT_CONFIRMABLE',
+        'MEAL_PROGRAM_HARD_CONSTRAINT_VIOLATION',
         'MEAL_PROGRAM_REGENERATION_LIMIT',
       ]),
     },

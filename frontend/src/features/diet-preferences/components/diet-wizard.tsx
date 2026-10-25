@@ -10,6 +10,7 @@ import { ErrorState } from '@/components/shared/error-state';
 import { DietSelector, type DietSelection } from './diet-selector';
 import { DietRuleList } from './diet-rule-list';
 import { AllergyEditor } from './allergy-editor';
+import { useAllergenCatalogQuery } from '../queries/allergen.queries';
 import { ExclusionEditor } from './exclusion-editor';
 import { ScheduleDatePicker } from './schedule-date-picker';
 import { useDietPreviewQuery, useSaveDietPreferencesMutation } from '../queries/diet.queries';
@@ -68,6 +69,15 @@ export function DietWizard({
     return map;
   });
   const [allergies, setAllergies] = React.useState<Allergy[]>(initial?.allergies ?? []);
+  const [allergySearch, setAllergySearch] = React.useState('');
+  const allergenCatalog = useAllergenCatalogQuery();
+  const allergySelectionBlocked =
+    allergenCatalog.isPending ||
+    allergenCatalog.isError ||
+    allergySearch.trim().length > 0 ||
+    allergies.some(
+      (entry) => !allergenCatalog.data?.some((option) => option.code === entry.allergenCode)
+    );
   const [exclusions, setExclusions] = React.useState<IngredientExclusion[]>(
     initial?.ingredientExclusions ?? []
   );
@@ -81,42 +91,6 @@ export function DietWizard({
   const [saved, setSaved] = React.useState<DietPreference | null>(null);
   const [saveError, setSaveError] = React.useState<string | null>(null);
   const [configUnavailable, setConfigUnavailable] = React.useState(false);
-
-  // Đồng bộ lại khi `initial` được truyền vào hoặc nạp xong từ query
-  React.useEffect(() => {
-    if (initial) {
-      if (initial.allergies && initial.allergies.length > 0) {
-        setAllergies(initial.allergies);
-      }
-      if (initial.ingredientExclusions && initial.ingredientExclusions.length > 0) {
-        setExclusions(initial.ingredientExclusions);
-      }
-      const dates =
-        initial.schedule?.dates ??
-        (initial as unknown as { scheduleDates?: string[] })?.scheduleDates ??
-        [];
-      if (dates.length > 0) {
-        setScheduleDates(dates);
-      }
-      if (initial.dietPattern && initial.practiceSchedule && initial.tradition) {
-        setSelection((prev) => ({
-          dietPattern: prev.dietPattern ?? initial.dietPattern,
-          practiceSchedule: prev.practiceSchedule ?? initial.practiceSchedule,
-          tradition: prev.tradition ?? initial.tradition,
-        }));
-      }
-      if (initial.rules && initial.rules.length > 0) {
-        setRuleOverrides((prev) => {
-          if (Object.keys(prev).length > 0) return prev;
-          const map: Record<string, boolean> = {};
-          for (const r of initial.rules) {
-            map[r.ruleDefinitionId] = r.enabled;
-          }
-          return map;
-        });
-      }
-    }
-  }, [initial]);
 
   const previewQuery = useDietPreviewQuery(confirmed);
   const saveMutation = useSaveDietPreferencesMutation();
@@ -153,6 +127,12 @@ export function DietWizard({
 
   const handleSave = async () => {
     if (!confirmed || !preview) return;
+    if (allergySelectionBlocked) {
+      setSaveError(
+        'Hãy tải danh mục, chọn dị ứng hợp lệ và chọn hoặc xóa nội dung tìm kiếm trước khi lưu.'
+      );
+      return;
+    }
     // Backend bắt buộc `scheduleDates` kèm preferences khi PERIODIC.
     if (isPeriodic && scheduleDates.length === 0) {
       setSaveError(
@@ -212,6 +192,11 @@ export function DietWizard({
       }
     } catch (error) {
       const code = getApiErrorCode(error);
+      if (code === 'INVALID_ALLERGEN_SELECTION') {
+        setSaveError('Danh mục dị ứng đã thay đổi. Vui lòng chọn lại thực phẩm từ danh sách.');
+        void allergenCatalog.refetch();
+        return;
+      }
       if (code === 'DIET_RULE_RECONFIRMATION_REQUIRED') {
         setSaveError('Bộ quy tắc đã thay đổi. Vui lòng xem lại trước khi xác nhận.');
         setStep('review');
@@ -389,7 +374,16 @@ export function DietWizard({
             {preview && (
               <>
                 <DietRuleList rules={mergedRules} onToggle={toggleRule} />
-                <AllergyEditor value={allergies} onChange={setAllergies} />
+                <AllergyEditor
+                  value={allergies}
+                  onChange={setAllergies}
+                  search={allergySearch}
+                  onSearchChange={setAllergySearch}
+                  catalog={allergenCatalog.data ?? []}
+                  loading={allergenCatalog.isPending}
+                  failed={allergenCatalog.isError}
+                  onRetry={() => void allergenCatalog.refetch()}
+                />
                 <ExclusionEditor value={exclusions} onChange={setExclusions} />
                 {isPeriodic && (
                   <div className="space-y-3 rounded-2xl border-2 border-emerald-500/30 bg-emerald-50/20 dark:bg-emerald-950/20 p-4">
@@ -448,7 +442,12 @@ export function DietWizard({
 
                 <Button
                   className="gap-2 rounded-xl px-6 bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
-                  disabled={!preview || configUnavailable || saveMutation.isPending}
+                  disabled={
+                    !preview ||
+                    configUnavailable ||
+                    saveMutation.isPending ||
+                    allergySelectionBlocked
+                  }
                   onClick={() => void handleSave()}
                 >
                   {saveMutation.isPending ? 'Đang lưu chế độ ăn...' : 'Xác nhận & Lưu chế độ ăn'}

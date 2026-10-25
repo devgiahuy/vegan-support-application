@@ -222,6 +222,8 @@ export function registerCatalogOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     path: '/api/v1/ingredients',
     tags: ['Ingredients'],
     summary: 'List canonical ingredient active',
+    description:
+      'Tra cứu tên chuẩn và alias đã APPROVED; response chỉ trả alias đã duyệt. Cấu tạo UNKNOWN/PARTIAL không xác lập tương thích dị ứng.',
     operationId: 'listPublicIngredients',
     request: { query: publicIngredientQuerySchema },
     responses: {
@@ -238,7 +240,7 @@ export function registerCatalogOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     tags: ['Ingredients'],
     summary: 'Resolve tên/alias ingredient không phân biệt dấu',
     description:
-      'Trả NONE, EXACT hoặc AMBIGUOUS. Khi ambiguous, client phải cho người dùng chọn candidate; backend không tự chọn.',
+      'Chỉ đối chiếu tên chuẩn và alias APPROVED. Trả NONE, EXACT hoặc AMBIGUOUS. Khi ambiguous, client phải cho người dùng chọn candidate; backend không tự chọn. Resolve danh tính không đồng nghĩa cấu tạo đã được rà soát.',
     operationId: 'resolveIngredient',
     request: { query: resolveIngredientQuerySchema },
     responses: {

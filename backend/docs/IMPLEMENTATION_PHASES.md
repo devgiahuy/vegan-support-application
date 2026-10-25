@@ -1,12 +1,14 @@
 # Backend Implementation Phases
 
-**Version:** 3.18
+**Version:** 3.19
 
 **Updated:** 2026-10-25
 
 **Stack:** Node.js · Express · TypeScript · MongoDB replica set · Prisma · Zod · OpenAPI
 
 **Current baseline:** Phases 00–20 and 23–26 completed; Phases 21–22 and 27 are in progress. OpenAI image adapters are implemented for Phase 21/22, but live Vietnamese image and receipt validation remains before production readiness.
+
+**Approved allergy/composition extension — 2026-10-25:** Named allergy catalog/validated labels and admin-only versioned composition review implemented. Mongo schema provisioning adds component/audit/graph-lock collections and UNKNOWN defaults; both seeds/targeted normalization retain provenance. Every hard dietary constraint evaluates descendants and rejects uncertain data. Analysis/confirmation consult current metadata and full FILLED-item coverage after subset analysis. OpenAPI/integration 4.53 synchronized. Backend lint/typecheck/build/OpenAPI, existing meal-plan/analysis acceptance and temporary API checks pass: authorization, invalid selections, nested/uncertain matches, concurrent cycles, recipe/custom manual addition, generation, stale/full analysis and confirmation. Frontend typecheck/scoped lint, 700 tests/build and browser profile/admin-save QA pass; temporary fixtures removed. No backend test infrastructure or new numbered phase; Phases 21/22/27 keep their status.
 
 **Cross-phase maintenance — 2026-10-25:** Recipe filtering and manual insertion now consult current ingredient allergens in addition to revision snapshots; constrained manual additions reject unresolved ingredients. Custom-meal creation/editing recalculates canonical/AI entire-meal estimates, resolves approved aliases, preserves manual overrides and zero values, exposes existing nutrition provenance fields, and fences stale inference writes. No schema migration or seed update is required. Backend lint/typecheck/build/OpenAPI and existing meal-plan/analysis acceptance checks pass. Live Mongo/API verification covers stale-allergen exclusion, blocked manual addition, configured OpenAI free-text nutrition, recalculation, provider-down nulls, canonical quantity scaling, alias resolution and stale-write fencing. A temporary two-week program generated 42 filled slots and its actual HTTP payload mapped to 42 named frontend meals; temporary records were deleted. Frontend typecheck/scoped lint, 60 files / 682 tests and 47-page production build pass. Phases 21/22/27 retain their existing status; this maintenance is not a new numbered phase.
 

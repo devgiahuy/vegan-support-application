@@ -1,5 +1,9 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Named allergies and reviewed composition — Updated 2026-10-25
+
+Thay nhập mã/tên dị ứng bằng danh mục tên, tên đồng nghĩa và gợi ý lỗi gõ cần xác nhận; chặn lưu nội dung chưa chọn. Admin có form cấu tạo/thành phần con, nguồn/license/version/phạm vi/lịch sử. Backend chuẩn hóa demo, lọc thành phần lồng nhau/dữ liệu thiếu cho mọi ràng buộc cứng; phân tích và xác nhận lộ trình dùng dữ liệu hiện tại. DTO/Model/Mapper/API/query/constants và mapper/search tests đầy đủ; không tạo trang mồ côi. Swagger sync, backend gates/acceptance, frontend typecheck/scoped lint, 700 tests/build và browser QA pass. Spec 032 hoàn tất; Phase 17/19 giữ 100% → 100%, không nâng readiness 21/22/27. Chưa kiểm thử native mobile hoặc xác minh công thức thương mại.
+
 ## Branch handoff and follow-up verification — Updated 2026-10-25
 
 Phase 17/19 giữ 100% → 100%. Kiểm tra lại 3 luồng trên nhánh `codex/fix-allergy-custom-meals-weekly-plan`: 12 runtime/API checks pass; payload thực map đủ 42 món. Bổ sung lưu macro bằng 0, hiển thị macro nhập tay, xóa ghi đè để tính lại và tổng macro tuần từ `estimatedTotals`. Browser xác nhận tạo/sửa custom meal; không có ảnh gốc hoặc kiểm thử native mobile. Kết quả gates cuối được ghi trong WORK-LOG.

@@ -18,6 +18,8 @@ import {
 } from '../../common/nutrition/meal-macros.js';
 import type { AppConfig } from '../../config/env.js';
 import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
+import { buildAuthenticatedSearchConstraints } from '../content/search-constraints.js';
+import { describeIngredientSafetyReasons } from '../catalog/ingredient-safety.js';
 import {
   type AnalysisPlanRecord,
   type AnalysisProfileRecord,
@@ -64,6 +66,7 @@ interface AnalysisContext {
   profileSnapshot: Prisma.InputJsonObject;
   ruleVersions: string[];
   fingerprint: string;
+  hardViolations: Array<{ itemId: string; name: string; reasons: string[] }>;
 }
 
 function sha256(value: unknown): string {
@@ -193,10 +196,17 @@ export class MealAnalysisService {
         ? 'Các lưu ý dưới đây dựa trên số liệu ước tính. Bạn vẫn có thể dùng thực đơn và điều chỉnh khẩu phần hoặc món ăn nếu thấy phù hợp.'
         : 'Các món đã chọn không có cảnh báo nghiêm trọng theo thông tin hiện có. Dị ứng và các yêu cầu ăn uống bắt buộc vẫn được kiểm tra riêng.',
       advisoryCount,
-      hardConstraintViolationCount: 0,
-      hardConstraintsPreserved: true,
+      hardConstraintViolationCount: context.hardViolations.length,
+      hardConstraintsPreserved: context.hardViolations.length === 0,
       estimatedNutrition,
     };
+    if (context.hardViolations.length) {
+      summary.userStatus = 'HARD_CONSTRAINT_VIOLATION';
+      summary.title = 'Có món chưa đáp ứng yêu cầu ăn uống bắt buộc';
+      summary.detail = context.hardViolations
+        .map((entry) => `${entry.name}: ${describeIngredientSafetyReasons(entry.reasons)}`)
+        .join('; ');
+    }
     const saved = await this.repository.save({
       mealPlanId,
       algorithmVersion: MEAL_ANALYSIS_ALGORITHM_VERSION,
@@ -264,9 +274,10 @@ export class MealAnalysisService {
     mealPlanId: string,
     input: MealAnalysisInput,
   ): Promise<AnalysisContext> {
-    const [plan, profile] = await Promise.all([
+    const [plan, profile, safetyCatalog] = await Promise.all([
       this.repository.findOwnedPlan(userId, mealPlanId),
       this.repository.findProfile(userId),
+      this.repository.safetyCatalog(),
     ]);
     if (!plan) throw this.notFound('Không tìm thấy thực đơn');
     if (!profile) throw this.notFound('Không tìm thấy hồ sơ của bạn');
@@ -331,6 +342,62 @@ export class MealAnalysisService {
     const selected = selectedRows.map(({ item, servings }) =>
       this.selectedItem(item, servings, conversions, incomplete),
     );
+    const hardViolations = selectedRows.flatMap(({ item }) => {
+      const constraints = buildAuthenticatedSearchConstraints(
+        profile,
+        undefined,
+        dateOnly(item.date),
+      ).constraints;
+      const ingredients =
+        item.sourceType === 'CUSTOM_MEAL'
+          ? (item.customMeal?.ingredients ?? [])
+          : (item.recipeRevision?.ingredients ?? []);
+      const snapshot = item.recipeRevision?.recipeDetail?.allergenCodes;
+      const reasons = safetyCatalog.reasons(
+        ingredients.map((entry) => entry.ingredientId),
+        constraints,
+        {
+          unresolved: ingredients.some((entry) => entry.resolutionStatus !== 'EXACT'),
+          snapshotAllergens: Array.isArray(snapshot)
+            ? snapshot.filter((code): code is string => typeof code === 'string')
+            : [],
+        },
+      );
+      if (
+        ingredients.some((entry) =>
+          constraints.excludedNormalizedNames.includes(entry.normalizedName),
+        )
+      )
+        reasons.push('INGREDIENT_EXCLUSION');
+      if (item.sourceType === 'RECIPE') {
+        if (!item.recipeRevision?.recipeDetail) reasons.push('SOURCE_UNAVAILABLE');
+        if (
+          constraints.dietPattern &&
+          !item.recipeRevision?.dietCompatibility.some(
+            (entry) => entry.dietPattern === constraints.dietPattern && entry.compatible,
+          )
+        )
+          reasons.push('DIET_PATTERN');
+        const warnings = item.recipeRevision?.recipeDetail?.traditionWarnings;
+        if (
+          Array.isArray(warnings) &&
+          warnings.some(
+            (warning) =>
+              warning &&
+              typeof warning === 'object' &&
+              !Array.isArray(warning) &&
+              constraints.traditions.some((tradition) => tradition === warning.tradition),
+          )
+        )
+          reasons.push('TRADITION_RULE');
+      }
+      if (item.sourceType === 'CUSTOM_MEAL' && (!item.customMeal || item.customMeal.deletedAt))
+        reasons.push('SOURCE_UNAVAILABLE');
+      if (!reasons.length) return [];
+      const name = item.customMeal?.name ?? item.recipeRevision?.title ?? 'Món ăn';
+      incomplete.push(`${name}: ${describeIngredientSafetyReasons(reasons)}.`);
+      return [{ itemId: item.id, name, reasons }];
+    });
     const requestSnapshot = {
       expectedPlanVersion: plan.lockVersion,
       items: selected.map((entry) => ({ itemId: entry.item.id, servings: entry.servings })),
@@ -366,6 +433,8 @@ export class MealAnalysisService {
       requestSnapshot,
       profileSnapshot,
       ruleVersions,
+      safetyGraphFingerprint: safetyCatalog.fingerprint,
+      hardViolations,
       items: selected.map((entry) => ({
         id: entry.item.id,
         updatedAt: entry.item.updatedAt.toISOString(),
@@ -389,6 +458,7 @@ export class MealAnalysisService {
       profileSnapshot,
       ruleVersions,
       fingerprint,
+      hardViolations,
     };
   }
 
@@ -968,7 +1038,8 @@ export class MealAnalysisService {
             affectedMealCount: incompleteMealCount,
             title: 'Một số món chưa có đủ dữ liệu dinh dưỡng',
             detail: `${incompleteMealCount}/${itemValues.length} món chưa thể ước tính đầy đủ chất đạm, chất xơ, chất béo và tinh bột. Các chỉ số hiện tại chỉ mang tính tham khảo.`,
-            suggestion: 'Bạn có thể xem danh sách các món cần kiểm tra hoặc chọn món khác có dữ liệu đầy đủ hơn.',
+            suggestion:
+              'Bạn có thể xem danh sách các món cần kiểm tra hoặc chọn món khác có dữ liệu đầy đủ hơn.',
           }
         : { affectedMealCount: 0, title: null, detail: null, suggestion: null },
       estimatedNutrition: summary.estimatedNutrition,

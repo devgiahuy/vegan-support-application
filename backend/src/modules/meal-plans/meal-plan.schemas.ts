@@ -49,7 +49,7 @@ const mealPlanUserSummarySchema = z
     title: z.string(),
     detail: z.string(),
     suggestion: z.string().nullable(),
-    hardConstraintsPreserved: z.literal(true),
+    hardConstraintsPreserved: z.boolean(),
   })
   .strict();
 

@@ -209,6 +209,25 @@ export class ProfileService {
     userId: string,
     input: SaveDietPreferencesInput,
   ): Promise<DietPreferenceOutput> {
+    const allergens = await this.repository.findActiveAllergens(
+      input.allergies.map((entry) => entry.allergenCode),
+    );
+    const labels = new Map(allergens.map((entry) => [entry.code, entry.label]));
+    const invalid = input.allergies.filter((entry) => !labels.has(entry.allergenCode));
+    if (invalid.length)
+      throw new AppError({
+        statusCode: 400,
+        code: 'INVALID_ALLERGEN_SELECTION',
+        message: 'Vui lòng chọn dị ứng từ danh mục thực phẩm được hỗ trợ.',
+        fields: { invalidAllergenCodes: invalid.map((entry) => entry.allergenCode) },
+      });
+    input = {
+      ...input,
+      allergies: input.allergies.map((entry) => ({
+        ...entry,
+        label: labels.get(entry.allergenCode)!,
+      })),
+    };
     if (input.practiceSchedule === PracticeSchedule.PERIODIC && !input.scheduleDates?.length) {
       throw new AppError({
         statusCode: 409,

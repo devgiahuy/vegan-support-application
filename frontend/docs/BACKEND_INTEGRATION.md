@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.52
+**Version:** 4.53
 
 **Cập nhật:** 25/10/2026
 
@@ -13,6 +13,30 @@
 ---
 
 ## 1. Source of truth và status
+
+### Named allergies and reviewed composition — 2026-10-25 (4.53, READY)
+
+User-approved direct normalization is implemented across backend/frontend. Existing preference save, ingredient lookup, constrained recipe discovery/related/recommendations, planning/manual insertion, analysis and confirmation transitioned `READY` → `CHANGING` → `READY` after schema, OpenAPI and consumer updates. Global backend status remains `IN_PROGRESS` for unrelated release gates.
+
+| Endpoint | Authorization | Status | FE integrated | Contract |
+|---|---|---|---|---|
+| `GET /allergens` | Public | READY | Yes | Active `{code,label,description,searchTerms}`; approved canonical aliases. |
+| `GET /admin/ingredient-composition-sources` | ADMIN | READY | Yes | Active source IDs/names, license/attribution. |
+| `GET /admin/ingredients/{id}/composition` | ADMIN | READY | Yes | Status/kind/version, named components, evidence, transitive completeness, inferred allergens, latest 20 audits. |
+| `PUT /admin/ingredients/{id}/composition` | ADMIN | READY | Yes | `expectedVersion`, status/kind/component IDs; PARTIAL/COMPLETE require source/version/record/exact scope. Reviewer/time/license are server-set. |
+
+- Preference requests send `allergenCode` from an explicitly selected result; backend rejects unknown/inactive codes and stores the canonical label. Member/admin forms use names. Typo suggestions never auto-select, and pending text blocks save. Public ingredient lookup/resolution uses approved aliases only.
+- Ingredients add `compositionStatus=UNKNOWN|PARTIAL|COMPLETE`, `compositionKind=UNSPECIFIED|SIMPLE|COMPOUND`, `compositionVersion` and `componentIds`. Effective completeness requires every descendant and evidence source to be current/active. SIMPLE has no children; COMPLETE COMPOUND has at least one. Serialized writes reject self/cross/concurrent cycles and depth above 32; review evidence is versioned/audited. Metadata edits invalidate the assessment. Composition does not calculate nutrition.
+- Every active diet, allergy, exclusion or tradition constraint checks all descendants. Unknown/partial/missing/inactive/cyclic/unresolved/empty ingredient data cannot pass, including explicit guest diet filters. Filtering occurs before ranking/count/pagination; recipe snapshot allergens remain an additional conservative signal. Generic processed ingredients stay UNKNOWN without exact formulation evidence. Restaurant directory behavior is unchanged.
+- Analysis fingerprints include semantic composition/source/profile data. Plan GET refreshes stale analysis and requires all FILLED items even after subset analysis. `userSummary.hardConstraintsPreserved` is now a **boolean**, potentially false with `HARD_CONSTRAINT_BLOCKED`; frontend displays violations. Program CONFIRM refreshes/rechecks each selected week and rejects current violations. Stored unsafe items remain visible for correction.
+
+Error catalog: `INVALID_ALLERGEN_SELECTION` (400, `fields.invalidAllergenCodes`, reload/select catalog); `INVALID_INGREDIENT_COMPONENT`, `INGREDIENT_COMPOSITION_CYCLE`, `INGREDIENT_COMPOSITION_DEPTH`, `INVALID_COMPOSITION_SOURCE` (400); `INGREDIENT_COMPOSITION_CONFLICT` (409, reload version); `MEAL_PROGRAM_HARD_CONSTRAINT_VIOLATION` (409, `fields.weekIndexes`, replace meals). Existing `MEAL_PLAN_HARD_CONSTRAINT_VIOLATION` reasons include `ALLERGY`, `INGREDIENT_EXCLUSION`, `DIET_PATTERN`, `TRADITION_RULE`, `UNRESOLVED_INGREDIENT`, `INGREDIENT_COMPOSITION_UNCERTAIN`, `ALLERGEN_SELECTION_UNRESOLVED`. `MEAL_ANALYSIS_STALE` remains 409 after edits. Standard validation/auth/not-found errors are in OpenAPI.
+
+Migration: backend `npm run prisma:generate`, `npm run prisma:push` (repository Mongo validator/default/index provisioning), `npm run db:normalize-allergies`; inspect `db:normalize-allergies:status` and repeat normalization for idempotency. Both seed entry points include it. New literal defaults are backfilled by the provisioner; no PostgreSQL migration applies. Deploy backend/schema before frontend, then `SWAGGER_URL=http://localhost:4000/api-docs.json npm run sync:swagger`. No legacy manual-code UI is required. Demo provenance is explicit; generic processed ingredients are not automatically reviewed.
+
+Verified: backend lint/typecheck/build/OpenAPI and existing meal-plan/analysis acceptance; frontend typecheck/scoped lint, 700 tests/build. Real API scenarios cover authorization, invalid selections, nested/uncertain matching, source/version/duplicate/concurrent-cycle rejection, related/recommendations, constrained generation (21/21 meals), recipe/custom manual-add, stale analysis and confirmation after subset analysis, including recipe-level diet/tradition signals. Browser covers error/retry, alias/typo/pending selection, profile save and admin composition save. Temporary fixtures are removed after QA. Native mobile and branded-product validation were not run.
+
+Changelog 2026-10-25 (4.53): named allergy selection, reviewed transitive composition, direct normalization and current stored-plan safety; synchronized consumers/provenance. No backend test infrastructure added.
 
 ### Follow-up verification and nutrition display corrections — 2026-10-25 (4.52)
 

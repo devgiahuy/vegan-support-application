@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
   "source": "../backend/openapi.json",
-  "generatedAt": "2026-10-25T12:05:59.624Z",
+  "generatedAt": "2026-10-25T16:49:09.598Z",
   "stats": {
-    "operations": 180,
-    "groups": 40,
-    "schemas": 159
+    "operations": 184,
+    "groups": 41,
+    "schemas": 162
   },
   "operations": [
     {
@@ -821,6 +821,149 @@
       "request": null,
       "responses": {
         "204": "Alias đã xóa",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/allergens",
+      "group": "Allergens",
+      "summary": "Danh mục dị ứng theo tên và tên đồng nghĩa",
+      "operationId": "listAllergens",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "AllergenCatalogResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ingredient-composition-sources",
+      "group": "Catalog Admin",
+      "summary": "Nguồn dữ liệu dùng để rà soát thành phần",
+      "operationId": "listCompositionSources",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "CompositionSourcesResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ingredients/{id}/composition",
+      "group": "Catalog Admin",
+      "summary": "Đọc thành phần, mức đầy đủ và lịch sử rà soát",
+      "operationId": "getIngredientComposition",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "IngredientCompositionResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/ingredients/{id}/composition",
+      "group": "Catalog Admin",
+      "summary": "Admin rà soát cấu tạo nguyên liệu",
+      "operationId": "saveIngredientComposition",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "expectedVersion",
+            "status",
+            "kind",
+            "componentIds"
+          ],
+          "properties": {
+            "expectedVersion": {
+              "type": "integer"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "UNKNOWN",
+                "PARTIAL",
+                "COMPLETE"
+              ]
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "UNSPECIFIED",
+                "SIMPLE",
+                "COMPOUND"
+              ]
+            },
+            "componentIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "evidence": {
+              "type": "object",
+              "required": [
+                "sourceId",
+                "sourceVersion",
+                "sourceRecordId",
+                "scope"
+              ],
+              "properties": {
+                "sourceId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "sourceVersion": {
+                  "type": "string"
+                },
+                "sourceRecordId": {
+                  "type": "string"
+                },
+                "scope": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "IngredientCompositionResponse",
         "400": "ErrorResponse",
         "401": "ErrorResponse",
         "403": "ErrorResponse",

@@ -1160,7 +1160,15 @@ export class MealPlanService {
       const recipe = await this.contentRepository.findPublishedPost(input.recipeId!);
       const revision = recipe?.publishedRevision;
       if (!recipe || !revision?.recipeDetail) throw this.notFound();
-      const hardReasons: string[] = [];
+      const safetyCatalog = await this.contentRepository.safetyCatalog();
+      const hardReasons: string[] = safetyCatalog.reasons(
+        revision.ingredients.map((entry) => entry.ingredientId),
+        constraints,
+        {
+          unresolved: revision.ingredients.some((entry) => entry.resolutionStatus !== 'EXACT'),
+          snapshotAllergens: stringList(revision.recipeDetail.allergenCodes),
+        },
+      );
       const allergens = new Set([
         ...stringList(revision.recipeDetail.allergenCodes),
         ...revision.ingredients.flatMap(
@@ -1187,8 +1195,8 @@ export class MealPlanService {
         hardReasons.push('INGREDIENT_EXCLUSION');
       if (
         constraints.dietPattern &&
-        revision.dietCompatibility.some(
-          (entry) => entry.dietPattern === constraints.dietPattern && !entry.compatible,
+        !revision.dietCompatibility.some(
+          (entry) => entry.dietPattern === constraints.dietPattern && entry.compatible,
         )
       )
         hardReasons.push('DIET_PATTERN');
@@ -1241,7 +1249,12 @@ export class MealPlanService {
     } else {
       const custom = await this.repository.findOwnedCustomMeal(userId, input.customMealId!);
       if (!custom) throw this.notFound();
-      const hardReasons: string[] = [];
+      const safetyCatalog = await this.contentRepository.safetyCatalog();
+      const hardReasons: string[] = safetyCatalog.reasons(
+        custom.ingredients.map((entry) => entry.ingredientId),
+        constraints,
+        { unresolved: custom.ingredients.some((entry) => entry.resolutionStatus !== 'EXACT') },
+      );
       for (const ingredient of custom.ingredients) {
         if (!ingredient.ingredient) {
           hardReasons.push('UNRESOLVED_INGREDIENT');
@@ -1408,7 +1421,7 @@ export class MealPlanService {
   }
 
   private async outputWithAnalysis(userId: string, plan: MealPlanRecord) {
-    let analysis;
+    let analysis: Awaited<ReturnType<MealAnalysisService['getCurrent']>>;
     try {
       analysis = await this.mealAnalysisService.getCurrent(userId, plan.id);
     } catch (error) {
@@ -1419,7 +1432,28 @@ export class MealPlanService {
         throw error;
       analysis = await this.mealAnalysisService.analyzeDefault(userId, plan.id, plan.lockVersion);
     }
-    return { ...this.output(plan), analysis };
+    const filledIds = plan.items.filter((item) => item.status === 'FILLED').map((item) => item.id);
+    if (
+      filledIds.length !== analysis.analyzedItemIds.length ||
+      filledIds.some((id) => !analysis.analyzedItemIds.includes(id))
+    ) {
+      analysis = await this.mealAnalysisService.analyzeDefault(userId, plan.id, plan.lockVersion);
+    }
+    const output = this.output(plan);
+    return {
+      ...output,
+      analysis,
+      userSummary: analysis.summary.hardConstraintsPreserved
+        ? output.userSummary
+        : {
+            status: 'HARD_CONSTRAINT_BLOCKED' as const,
+            title: analysis.summary.title,
+            detail: analysis.summary.detail,
+            suggestion:
+              'Vui lòng thay món không phù hợp hoặc bổ sung dữ liệu thành phần đã rà soát.',
+            hardConstraintsPreserved: false,
+          },
+    };
   }
 
   private notFound() {

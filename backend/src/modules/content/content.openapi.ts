@@ -128,7 +128,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     tags: ['Content'],
     summary: 'List nội dung published',
     description:
-      'Tìm kiếm không dấu và filter published content. Recipe list/related/detail trả statistics.usageUserCount là số user riêng biệt đã thêm công thức vào meal plan chưa xóa; usageTracking=MEAL_PLAN_ADDITION và cookedUserCount=null vì backend chưa theo dõi sự kiện đã nấu hoặc hoàn thành món. Ranking v1: title > canonical ingredient > category/tag > body, sau đó publishedAt và UUID. Với access token hợp lệ, backend tự áp dụng allergy, ingredient exclusion, diet pattern và enabled tradition rules trước ranking; dietPattern từ query không thể nới profile đã lưu. Dị ứng kiểm tra cả snapshot công thức và metadata nguyên liệu hiện tại. ingredientIds yêu cầu Recipe chứa đủ toàn bộ ID.',
+      'Tìm kiếm không dấu và filter published content. Recipe list/related/detail trả statistics.usageUserCount là số user riêng biệt đã thêm công thức vào meal plan chưa xóa; usageTracking=MEAL_PLAN_ADDITION và cookedUserCount=null vì backend chưa theo dõi sự kiện đã nấu hoặc hoàn thành món. Ranking v1: title > canonical ingredient > category/tag > body, sau đó publishedAt và UUID. Với access token hợp lệ, backend tự áp dụng allergy, ingredient exclusion, diet pattern và enabled tradition rules trước ranking; dietPattern từ query không thể nới profile đã lưu. Dị ứng kiểm tra snapshot và toàn bộ thành phần lồng nhau hiện tại. Mọi ràng buộc ăn uống bắt buộc loại nguyên liệu có cấu tạo UNKNOWN/PARTIAL, nguồn ngừng dùng, thiếu thành phần hoặc vòng lặp trước ranking/phân trang. ingredientIds yêu cầu Recipe chứa đủ toàn bộ ID.',
     operationId: 'listPublishedPosts',
     security: optionalAuthenticated,
     request: { query: postListQuerySchema },
@@ -322,7 +322,10 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
       body: { required: true, content: { 'application/json': { schema: submitRequest } } },
     },
     responses: {
-      200: { description: 'Revision submitted as PENDING_REVIEW', content: { 'application/json': { schema: postResponse } } },
+      200: {
+        description: 'Revision submitted as PENDING_REVIEW',
+        content: { 'application/json': { schema: postResponse } },
+      },
       400: errorResponse(errorSchema, 'Invalid or uncommitted video media', [
         'VALIDATION_ERROR',
         'INVALID_MEDIA_REFERENCE',
@@ -354,7 +357,10 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     security: authenticated,
     request: { params: postIdParamsSchema, query: reviewHistoryQuerySchema },
     responses: {
-      200: { description: 'Paginated review history', content: { 'application/json': { schema: reviewHistoryResponse } } },
+      200: {
+        description: 'Paginated review history',
+        content: { 'application/json': { schema: reviewHistoryResponse } },
+      },
       400: errorResponse(errorSchema, 'Invalid pagination', ['VALIDATION_ERROR']),
       401: errorResponse(errorSchema, 'Authentication required', [
         'AUTH_REQUIRED',
@@ -387,5 +393,4 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
       409: errorResponse(errorSchema, 'Optimistic version conflict', ['CONTENT_VERSION_CONFLICT']),
     },
   });
-
 }

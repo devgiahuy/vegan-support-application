@@ -43,6 +43,9 @@ export const useSaveDietPreferencesMutation = () => {
       queryClient.invalidateQueries({ queryKey: RECIPE_QUERY_KEYS.lists() });
       queryClient.invalidateQueries({ queryKey: RECOMMENDATION_KEYS.all });
       queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.all });
+      for (const key of ['meal-plans', 'meal-programs', 'meal-analysis']) {
+        queryClient.invalidateQueries({ queryKey: [key] });
+      }
       toast.success('Đã lưu lựa chọn chế độ ăn.');
     },
   });
@@ -60,6 +63,9 @@ export const useSaveDietScheduleMutation = () => {
       queryClient.invalidateQueries({ queryKey: RECIPE_QUERY_KEYS.lists() });
       queryClient.invalidateQueries({ queryKey: RECOMMENDATION_KEYS.all });
       queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.all });
+      for (const key of ['meal-plans', 'meal-programs', 'meal-analysis']) {
+        queryClient.invalidateQueries({ queryKey: [key] });
+      }
       toast.success('Đã lưu lịch chay kỳ.');
     },
   });

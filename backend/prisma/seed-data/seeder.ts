@@ -1,3 +1,4 @@
+import { normalizeAllergyCatalog } from './composition.data.js';
 import {
   CatalogStatus,
   CategoryType,
@@ -1557,6 +1558,7 @@ export async function seedComprehensiveData(
     });
   }
 
+  await normalizeAllergyCatalog(prisma, adminId);
   console.info(
     'Successfully seeded comprehensive VeggieConnect sample dataset with 60+ ingredients, 25 recipes, 4 handbooks, 3 videos, community, pantry, and media assets.',
   );
