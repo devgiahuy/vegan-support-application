@@ -200,8 +200,21 @@ export async function searchMongoPublished(
         },
       ],
     });
+  const [hasRecipeDetail, ...safetyChecks] = recipeChecks;
   pipeline.push({
-    $match: { $expr: { $or: [{ $ne: ['$type', 'RECIPE'] }, { $and: recipeChecks }] } },
+    $match: {
+      $expr:
+        filters.eligibility === 'INELIGIBLE'
+          ? // Explicit opt-in view of recipes the profile removed; never mixed into ranked results.
+            {
+              $and: [
+                { $eq: ['$type', 'RECIPE'] },
+                hasRecipeDetail!,
+                safetyChecks.length ? { $not: [{ $and: safetyChecks }] } : { $literal: false },
+              ],
+            }
+          : { $or: [{ $ne: ['$type', 'RECIPE'] }, { $and: recipeChecks }] },
+    },
   });
   if (filters.category)
     pipeline.push({

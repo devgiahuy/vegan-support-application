@@ -243,6 +243,32 @@ describe('RecipeMapper', () => {
     expect(pagination.metadata.appliedConstraints?.traditions).toEqual(['BUDDHIST']);
   });
 
+  it('maps eligibility reasons only when backend returns them', () => {
+    expect(recipeMapper.toModel(backendRecipeDto()).ineligibilityReasons).toBeUndefined();
+
+    const dto = backendRecipeDto();
+    dto.recipe = {
+      ...dto.recipe,
+      eligibility: {
+        eligible: false,
+        reasons: [
+          { code: 'INGREDIENT_COMPOSITION_UNCERTAIN', ingredientNames: ['Đậu hũ', ''] },
+          { code: 'DIET_PATTERN', ingredientNames: [] },
+          { code: 'NEW_BACKEND_CODE' },
+        ],
+      },
+    };
+    expect(recipeMapper.toModel(dto).ineligibilityReasons).toEqual([
+      {
+        code: 'INGREDIENT_COMPOSITION_UNCERTAIN',
+        label: 'Chưa xác minh đủ thành phần nguyên liệu',
+        ingredientNames: ['Đậu hũ'],
+      },
+      { code: 'DIET_PATTERN', label: 'Không hợp kiểu ăn của bạn', ingredientNames: [] },
+      { code: 'NEW_BACKEND_CODE', label: 'Không đạt ràng buộc hồ sơ', ingredientNames: [] },
+    ]);
+  });
+
   it('maps usageCount defaulting to 0 when missing or null in DTO', () => {
     const dto = backendRecipeDto();
     const model = recipeMapper.toModel(dto);

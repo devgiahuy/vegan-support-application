@@ -27,12 +27,14 @@ import type {
   CreateRecipeRequestDto,
   UpdateRecipeRequestDto,
   AppliedConstraintsDto,
+  RecipeEligibilityDto,
 } from '../types/recipe.dto';
 import type { PostMediaDto, PostRevisionDto } from '@/features/post/types/post.dto';
 import {
   getAllergenName,
   getDietPatternName,
   getDietReasonLabel,
+  getRecipeIneligibilityReasonLabel,
   getTraditionName,
 } from '@/common/constants/diet-labels';
 import type {
@@ -188,6 +190,20 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       };
     });
 
+    const eligibility = pickField<RecipeEligibilityDto | null>(detail, ['eligibility'], null);
+    const ineligibilityReasons = eligibility
+      ? safeArray<NonNullable<RecipeEligibilityDto['reasons']>[number]>(eligibility.reasons).map(
+          (reason) => {
+            const code = safeString(reason?.code);
+            return {
+              code,
+              label: getRecipeIneligibilityReasonLabel(code),
+              ingredientNames: safeArray<string>(reason?.ingredientNames).filter(Boolean),
+            };
+          }
+        )
+      : undefined;
+
     const allergenCodes = safeArray<string>(detail?.allergenCodes);
     const allergens: RecipeAllergen[] = allergenCodes.map((code) => ({
       code,
@@ -268,6 +284,7 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       dietCompatibilities,
       usageCount,
       isExpertAuthor,
+      ineligibilityReasons,
     };
   }
 
