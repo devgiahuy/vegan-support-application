@@ -1,14 +1,23 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
-## [2026-10-25] — Đồng bộ số người dùng công thức với meal plan
+## [2026-10-25] — Sửa popup kết quả nhập receipt trên `/receipts/scan`
 
-- **Yêu cầu**: Sửa số đếm người dùng công thức không tăng sau khi thêm công thức vào kế hoạch bữa ăn.
-- **Nguyên nhân**: Backend chỉ trả thống kê ở detail (`recipe.statistics.usageUserCount`), không có ở list/related; frontend mapper lại tìm `recipe.usageCount`/`usageCount` ngoài cùng và default thành 0. Meal-plan mutations cũng không invalidate recipe cache.
-- **Đã sửa**: Backend tính batch số user duy nhất theo recipe cho public list/related, giữ chung quy tắc bỏ meal plan đã xóa; OpenAPI mô tả contract. FE DTO/Mapper đọc đúng `statistics.usageUserCount`; create/swap/manual-add/delete meal plan invalidate recipe queries để refetch.
-- **Files sửa**: backend `content.repository.ts`, `content.service.ts`, `content.openapi.ts`, `openapi.json`; frontend `recipe.dto.ts`, `recipe.mapper.ts`, mapper test, `meal-plan.queries.ts`, `BACKEND_INTEGRATION.md`, `PROGRESS.md`.
-- **Verify**: OpenAPI generate + `npm run sync:swagger -- ../backend/openapi.json` pass; backend lint, typecheck, build pass; frontend `tsc --noEmit` và production build pass; `git diff --check` pass. Mapper test được cập nhật nhưng không chạy test suite.
-- **PROGRESS**: UC-02 giữ 95% → 95%; ghi nhận sửa contract usage statistics, còn kiểm thử tay end-to-end.
-- **Còn lại**: Chưa xác minh với DB/runtime người dùng thật; số sẽ cập nhật khi recipe queries refetch sau mutation hoặc khi tải lại danh sách.
+- **Yêu cầu**: Popup thành công bị tràn ngang, phần thống kê/list và các nút cuối popup không vừa khung.
+- **Nguyên nhân**: Dialog dùng bố cục grid với các con có kích thước tối thiểu theo nội dung; hàng nút dùng layout ngang ở breakpoint `sm`, dù popup vẫn chỉ rộng tối đa `lg`.
+- **Đã sửa**: Chuyển nội dung popup sang cột flex có giới hạn chiều cao theo viewport; danh sách chi tiết tự cuộn trong phần còn lại; thẻ thống kê xếp dọc khi viewport hẹp, dùng hai cột `minmax(0,1fr)` ở desktop; giới hạn chiều rộng nội dung và tách hành động phụ khỏi nút chính.
+- **Files sửa**: `src/features/receipt/components/receipt-confirmation-summary.tsx`, `docs/PROGRESS.md`, `docs/WORK-LOG.md`.
+- **Verify**: TypeScript `tsc --noEmit`, ESLint scoped cho component và `git diff --check` pass. Không chạy test suite hoặc production build cho thay đổi layout này.
+- **PROGRESS**: Phase 22 FE scaffold 100% → 100%.
+
+## [2026-10-25] — Đồng bộ FE với luồng receipt mới của BE
+
+- **Yêu cầu**: Kiểm tra BE xử lý hai hóa đơn có ba món giống nhau nhưng ngày mua khác, sau đó cập nhật FE theo luồng receipt mới.
+- **BE đã kiểm tra**: `compareReceiptImages` trả `DISTINCT` khi khác ngày mua hoặc cửa hàng, nên ba món mua lại vào ngày khác được giữ là lần mua mới và BE cộng số lượng vào kho khi xác nhận. Ảnh trùng cùng receipt và dòng đã xác nhận không được cộng lần hai. Trường hợp partial overlap chưa đủ metadata đặt `identityDecisionRequired`; confirm cần `SAME_RECEIPT` hoặc `SEPARATE_RECEIPTS`.
+- **Đã sửa**: Đồng bộ catalog bằng `npm run sync:swagger -- ../backend/openapi.json`; mở rộng Receipt DTO/Model/Mapper cho metadata ảnh, trạng thái review, lựa chọn danh tính, phân loại, notice, excluded items và duplicate candidates. Màn review giải thích ngày mua khác được tính là lần mua mới, bắt buộc chọn khi BE yêu cầu, hiển thị các dòng bị loại và cho khôi phục bằng `KEEP`; lỗi `RECEIPT_REVIEW_DECISION_REQUIRED` bật lựa chọn inline. Dialog kết quả báo số dòng trùng đã được BE bỏ qua. Cập nhật integration registry và progress; giữ status endpoint `IN_PROGRESS`.
+- **Files sửa**: `docs/API-CATALOG.md`, `docs/api-catalog.json`, `docs/BACKEND_INTEGRATION.md`, `docs/PROGRESS.md`; `src/features/receipt/types/receipt.dto.ts`, `types/receipt.model.ts`, `mappers/receipt.mapper.ts`, mapper tests, `queries/receipt.queries.ts`, `components/receipt-inspection-view.tsx`, `components/receipt-confirmation-summary.tsx`; hai receipt client view bỏ prop `onScanAnother` không được InspectionView sử dụng.
+- **Verify**: Swagger sync 180 endpoints / 40 groups; `node node_modules/typescript/bin/tsc --noEmit` pass; scoped ESLint pass không warning; `npm test` 59 files / 678 tests pass; `npm run build` pass, 47/47 routes; `git diff --check` pass. Build có cảnh báo sẵn có về middleware convention; Vitest in warning về `configLoader: native` và `vite-tsconfig-paths`.
+- **PROGRESS**: Phase 22 FE scaffold 100% → 100%; development review contract đã migration, production status chưa nâng do BE còn `IN_PROGRESS`.
+- **Còn lại**: Chưa chạy test tay với ảnh hóa đơn thực/provider; release gates Phase 22 của BE vẫn đang mở.
 
 ## [2026-10-25] — Bỏ nút gọi quán trên danh sách restaurants
 
@@ -273,7 +282,6 @@
   - `npm test`: 54 test suites, 637 tests pass 100%.
   - `npm run build`: Turbopack build thành công (47/47 routes).
 
-
 ## [2026-10-25] — Việt hóa thông báo lỗi từ Backend cho API Duyệt / Từ chối bài viết Admin
 
 - **Mục tiêu**:
@@ -295,7 +303,6 @@
   - `npx tsc --noEmit`: 0 lỗi type.
   - `npm test`: 53 test suites, 634 tests pass 100%.
   - `npm run build`: Turbopack build thành công (47/47 routes).
-
 
 ## [2026-10-25] — Đóng mặc định dropdown nguyên liệu kiểm tra thủ công & Thêm dropdown đơn vị định lượng nguyên liệu công thức
 
@@ -339,7 +346,6 @@
   - `npx tsc --noEmit`: 0 lỗi type.
   - `npm test`: 52 test suites, 627 tests pass 100%.
   - `npm run build`: Turbopack build thành công (47/47 routes).
-
 
 ## [2026-10-25] — Thiết kế lại giao diện Dashboard Thực đơn tuần (/meal-plans/[id]) theo chuẩn frontend-design
 
@@ -402,7 +408,7 @@
 - **Nguyên nhân & giải pháp**:
   - Giao diện chung (`src/app/(site)/layout.tsx`) tự động nhúng `<SiteFooter />` cho toàn bộ các route công khai.
   - `SiteFooter` kiểm tra đường dẫn qua hàm `isFooterHidden(pathname)` tại `src/components/layout/site-footer-routes.ts`.
-  - *Đã làm*:
+  - _Đã làm_:
     - Bổ sung `'/profile'` vào mảng `HIDDEN_FOOTER_PREFIXES` trong `src/components/layout/site-footer-routes.ts`.
     - Cập nhật unit test `src/components/layout/site-footer-routes.test.ts` để kiểm tra việc ẩn footer tại `/profile` và `/profile/*`, đồng thời bảo đảm footer vẫn hiển thị bình thường ở các route nội dung (`/`, `/recipes`, `/categories`, `/blogs`).
 - **Verify**:
@@ -415,7 +421,7 @@
 - **Mục tiêu**: Loại bỏ nút "Lưu tri thức AI" trên các màn hình người dùng, bao gồm màn hình kiểm duyệt nhận diện tủ lạnh (`/pantry/scan`) và thẻ phân tích dinh dưỡng công thức (`RecipeNutritionCard`).
 - **Nguyên nhân & giải pháp**:
   - Tính năng Tri thức AI (AI Artifacts - Phase 23) đã được ẩn ở trang public. Việc hiển thị nút "Lưu tri thức AI" trên các thanh công cụ kiểm duyệt hàng ngày làm rối luồng giao diện người dùng.
-  - *Đã làm*:
+  - _Đã làm_:
     - Gỡ bỏ component `SaveArtifactButton` và import không dùng (`AiArtifactType`) khỏi thanh công cụ kiểm duyệt `CandidateReviewScreen` (`src/features/ingredient-vision/components/candidate-review-screen.tsx`).
     - Gỡ bỏ component `SaveArtifactButton` khỏi thanh công cụ phân tích dinh dưỡng `RecipeNutritionCard` (`src/features/recipe-nutrition/components/recipe-nutrition-card.tsx`).
 - **Verify**:
@@ -429,7 +435,7 @@
 - **Nguyên nhân cốt lõi phát hiện & giải pháp**:
   - Trong `CandidateReviewScreen` (`src/features/ingredient-vision/components/candidate-review-screen.tsx`), class `lg:sticky lg:top-24` trước đây bị đặt nhầm vào thẻ card con (`rounded-2xl`) thay vì cột grid cha (`lg:col-span-5`).
   - Do grid container cha có class `items-start` (`align-items: flex-start`), thẻ cột `lg:col-span-5` có chiều cao co lại vừa khít với nội dung card (~500px). Vì khối cha không có không gian cuộn dôi dư, thẻ card con không thể trượt sticky được và bị cuốn trôi ngay khi người dùng cuộn qua.
-  - *Giải pháp*:
+  - _Giải pháp_:
     - Di chuyển định nghĩa sticky sang cột grid cha: `<div className="lg:col-span-5 space-y-4 lg:sticky lg:top-20">`.
     - Khi đặt `lg:sticky lg:top-20` trực tiếp lên grid item của container 12 cột, containing block của nó chính là toàn bộ grid container (cao 1500px+ theo danh sách nguyên liệu bên phải).
     - Khối ảnh chụp tủ lạnh, các góc ảnh thumbnails và hộp hướng dẫn sẽ ghim mượt mà cách đỉnh màn hình 80px (ngay dưới header thanh điều hướng) trong suốt quá trình người dùng cuộn duyệt danh sách nguyên liệu.
@@ -446,7 +452,7 @@
 - **Nguyên nhân cốt lõi phát hiện & giải pháp**:
   - **Nút Lưu tri thức AI**: Nút `SaveArtifactButton` hiển thị trên thanh công cụ kiểm tra hóa đơn `ReceiptInspectionView` không cần thiết trong luồng người dùng quét hóa đơn nhập kho thông thường. Đã loại bỏ component này và các import thừa (`AiArtifactType`, `SaveArtifactButton`).
   - **Hộp thoại browser `window.confirm`**: Phương thức `window.confirm('Bạn có chắc chắn muốn hủy tác vụ bóc tách hóa đơn này không?')` chặn luồng chính (blocking UI thread), giao diện không đồng bộ với thiết kế của ứng dụng.
-  - *Giải pháp*:
+  - _Giải pháp_:
     - Tích hợp component `ConfirmDialog` từ `@/components/shared/confirm-dialog`.
     - Quản lý trạng thái `isCancelConfirmOpen` trong `ReceiptInspectionView`.
     - Kết nối hành vi hủy từ cả 3 vị trí kích hoạt:
@@ -478,8 +484,6 @@
   - `npm test`: 51 test suites, 619 tests pass 100%.
   - `npm run build`: Next.js Turbopack build thành công toàn bộ 47/47 routes.
 
-
-
 ## [2026-10-24] — Tối ưu luồng Chế độ ăn, đồng bộ Avatar, tinh chỉnh Custom Meals, ẩn Footer & Quota AI trực quan
 
 - **Mục tiêu**: Xử lý 7 vấn đề theo yêu cầu người dùng:
@@ -494,10 +498,10 @@
   - **Lỗi tạo chế độ ăn**:
     - Backend `ingredientExclusionInputSchema` ràng buộc `reason: z.string().trim().min(1).max(500).optional()` với `.strict()`. Khi gửi `reason: ""` (chuỗi rỗng), backend ném lỗi 400 Bad Request. Tương tự với `label: ""` trong allergies.
     - Wizard 1 bước cồng kềnh, không phân cấp giữa 3 trụ cột (Tradition/Diet/Goal) và các quy tắc tuân thủ/kiêng kỵ.
-    - *Giải pháp*: Tạo spec `specs/033-diet-preference-workflow/spec.md`. Nâng cấp `DietWizard` thành Stepper 2 bước trực quan (Bước 1: Chọn bộ ba thiết lập -> Bước 2: Tùy chỉnh quy tắc & kiêng kỵ). Khử trùng payload tự động xóa bỏ `reason` và `label` nếu rỗng. Bổ sung cảnh báo chọn ngày nếu chọn `PERIODIC`. Thêm nút "Thay đổi chế độ ăn" và chế độ chỉnh sửa/xem tại `CurrentDietCard` và `/profile?tab=diet`.
+    - _Giải pháp_: Tạo spec `specs/033-diet-preference-workflow/spec.md`. Nâng cấp `DietWizard` thành Stepper 2 bước trực quan (Bước 1: Chọn bộ ba thiết lập -> Bước 2: Tùy chỉnh quy tắc & kiêng kỵ). Khử trùng payload tự động xóa bỏ `reason` và `label` nếu rỗng. Bổ sung cảnh báo chọn ngày nếu chọn `PERIODIC`. Thêm nút "Thay đổi chế độ ăn" và chế độ chỉnh sửa/xem tại `CurrentDietCard` và `/profile?tab=diet`.
   - **Avatar không hiển thị ngay**:
     - `AvatarUploader` chỉ tải ảnh lên Cloudinary và cập nhật state nội bộ form; nếu người dùng không bấm nút "Lưu thay đổi", ảnh không được persist xuống DB và không đồng bộ vào `useAuthStore` hoặc `detailedProfile`.
-    - *Giải pháp*: Bổ sung callback `onAutoSave` vào `AvatarUploader`. Trong `BasicProfileForm`, ngay khi Cloudinary upload hoàn tất, hàm `handleAutoSaveAvatar` gọi ngay `patchBasicProfile({ avatarUrl })`, tự động cập nhật auth store, cache profile và cập nhật ngay lập tức avatar trên Navbar và Profile Header Banner. Gắn shortcut bấm vào icon camera ở header avatar để nhảy đến form.
+    - _Giải pháp_: Bổ sung callback `onAutoSave` vào `AvatarUploader`. Trong `BasicProfileForm`, ngay khi Cloudinary upload hoàn tất, hàm `handleAutoSaveAvatar` gọi ngay `patchBasicProfile({ avatarUrl })`, tự động cập nhật auth store, cache profile và cập nhật ngay lập tức avatar trên Navbar và Profile Header Banner. Gắn shortcut bấm vào icon camera ở header avatar để nhảy đến form.
   - **Nút "Bài viết của tôi"**:
     - Nút dẫn sai tới `/profile?tab=posts` (tab không tồn tại). Đã ẩn nút trên `ArticlesHeroBanner` và `VideosHeroBanner`.
   - **Lỗi giao diện `/custom-meals/new` & route `/custom-meals/:id`**:
@@ -555,7 +559,7 @@
     - Bổ sung cấu hình request riêng `{ timeout: 60000, silent: true }` cho lời gọi `api.post` gợi ý công thức AI. Cho phép client kiên nhẫn chờ quá trình sinh công thức phức tạp trong tối đa 60 giây.
     - Kích hoạt `silent: true` để ngăn chặn interceptor toàn cục của Axios bắn toast lỗi thừa, trao toàn quyền kiểm soát UX thông báo cho mutation hook.
   - **Frontend Query Hook (`useGenerateRecipeDraftMutation`)**:
-    - Bổ sung nhánh xử lý lỗi chuyên biệt khi xảy ra `ECONNABORTED` (`isAxiosError(err) && err.code === 'ECONNABORTED'`), hiển thị thông điệp thân thiện: *"Quá thời gian phản hồi: Quá trình tạo gợi ý mất nhiều thời gian hơn dự kiến do có nhiều nguyên liệu. Vui lòng thử lại hoặc giảm bớt số lượng nguyên liệu."*
+    - Bổ sung nhánh xử lý lỗi chuyên biệt khi xảy ra `ECONNABORTED` (`isAxiosError(err) && err.code === 'ECONNABORTED'`), hiển thị thông điệp thân thiện: _"Quá thời gian phản hồi: Quá trình tạo gợi ý mất nhiều thời gian hơn dự kiến do có nhiều nguyên liệu. Vui lòng thử lại hoặc giảm bớt số lượng nguyên liệu."_
   - **Backend Service (`RecipeDraftService`)**:
     - Chuẩn hóa phòng vệ dữ liệu (defensive normalization): tự động cắt lát hoặc bổ sung đệm an toàn nếu độ dài mảng nguyên liệu sai khác với input; lọc và khử trùng `affectedIngredientPositions` trong phạm vi hợp lệ `[0, ingredientNames.length - 1]`, loại bỏ hoàn toàn nguy cơ ném ngoại lệ làm hỏng cả request.
     - Cập nhật biến môi trường `AI_TIMEOUT_MS=60000` trong `backend/.env`, `docker-compose.yml` và `backend/src/config/env.ts`.
@@ -565,7 +569,6 @@
   - `npm test`: 51 test suites, 618 tests pass 100%.
   - `npm run build`: Turbopack build thành công 47/47 routes.
   - Test trực tiếp `RecipeDraftService` trong backend container với 6 nguyên liệu: thành công 100% trong 19.4s, dữ liệu nguyên liệu & bước nấu trả về đầy đủ.
-
 
 ## [2026-10-24] — Tích hợp Trợ lý AI khởi tạo công thức & tối ưu hóa luồng tạo công thức mới (032-ai-recipe-draft)
 
@@ -733,7 +736,6 @@
   - `npm test`: 49 test files, 592/592 tests pass (100%).
   - `npm run build`: Turbopack compile thành công 46/46 static & dynamic routes.
 
-
 ## [2026-10-12] — Ẩn huy hiệu nguồn kiểm định (SourceProvenanceBadge) trong modal Dinh dưỡng tại /categories#tra-cuu
 
 - Mục tiêu:
@@ -789,7 +791,6 @@
   - `npm run build`: Turbopack compile thành công 46/46 static & dynamic routes.
 - PROGRESS: Hoàn thiện trải nghiệm UX mượt mà, loại bỏ triệt để hiện tượng thiếu loading và treo API trên trang `/restaurants`.
 
-
 - Mục tiêu:
   - Tái thiết kế toàn diện khu vực Header/Hero Banner trên trang `/videos` (Kho video nấu chay trực quan) theo các nguyên tắc của skill `/frontend-design` và `/design-taste-frontend`.
   - Thay thế khung nền phẳng đơn điệu bằng bố cục studio nấu ăn chuyên nghiệp có chiều sâu điện ảnh, tôn vinh tính năng AI Video Summarization (UC-10) và khơi gợi cảm hứng nấu ăn.
@@ -837,7 +838,6 @@
   - `npm test`: 47 test files, 577/577 tests pass (100%).
   - `npm run build`: Turbopack compile thành công 46/46 static & dynamic routes.
 - PROGRESS: Giao diện khu vực Cẩm nang bài viết `/articles` sang trọng, sống động, đậm nét văn hóa thực dưỡng VeggieConnect.
-
 
 - Mục tiêu: Docker chạy seed hiện tại tự động và push thay đổi lên `dev` theo yêu cầu người dùng.
 - Đã làm: mặc định `RUN_SEED=true` ở Compose, image startup và `.env.example`; bật lại trong `.env` local. Entry script chạy schema → compiled seed → API, log rõ từng bước, dừng khi schema/seed lỗi và chuyển tín hiệu shutdown qua `exec`. Bổ sung invited Contributor email vào Compose.
@@ -1015,6 +1015,7 @@
 - Verify: `npx tsc --noEmit` pass; `npm test` 42 files / 408 tests pass; `npm run build` pass. Dependencies local được cài lại bằng `npm ci` để khôi phục package Maps đã có trong lockfile; không đổi source UI.
 - PROGRESS: task tài liệu 100%; phần trăm feature giữ nguyên vì không thêm consumer hoặc UI.
 - Còn lại / rủi ro: giới hạn production AI image và kiểm tra tải được giữ nguyên; xem `backend/docs/MONGODB_MIGRATION.md`.
+
 ## [2026-10-03] — Cập nhật màu sắc trực quan cho các ô thông tin dinh dưỡng tại trang chi tiết thực đơn (/meal-plans/[id])
 
 - Mục tiêu:
@@ -1044,15 +1045,15 @@
   - Đóng 3 khoảng trống còn lại sau 2 lượt hội tụ trước (T071–T073).
 - Đã làm:
   - **T071 — xử lý mâu thuẫn giữa `US3/AC4` và mục `## Phạm vi`**:
-    - **Vấn đề**: `US3/AC4` yêu cầu *"đề xuất bị từ chối → lý do từ chối hiển thị rõ ràng bằng tiếng Việt"*, nhưng `## Phạm vi` loại danh sách "quán của tôi" (`GET /restaurants/mine`) khỏi đợt này. Từ chối xảy ra **bất đồng bộ** bởi quản trị viên nên không có bề mặt nào trong phạm vi để hiện lý do từ chối. Đây là hệ quả của `/speckit-clarify` Q1 (chọn phạm vi hẹp): khi bỏ User Story 4 và thu gọn User Story 3, AC4 cũ của US3 bị sót lại.
+    - **Vấn đề**: `US3/AC4` yêu cầu _"đề xuất bị từ chối → lý do từ chối hiển thị rõ ràng bằng tiếng Việt"_, nhưng `## Phạm vi` loại danh sách "quán của tôi" (`GET /restaurants/mine`) khỏi đợt này. Từ chối xảy ra **bất đồng bộ** bởi quản trị viên nên không có bề mặt nào trong phạm vi để hiện lý do từ chối. Đây là hệ quả của `/speckit-clarify` Q1 (chọn phạm vi hẹp): khi bỏ User Story 4 và thu gọn User Story 3, AC4 cũ của US3 bị sót lại.
     - **Quyết định**: giữ nguyên phạm vi (không thêm `mine`), làm phần trong phạm vi và **nói rõ với người dùng** kết quả sẽ được thông báo sau:
-      - `restaurant.queries.ts` — toast thành công nay ghi rõ *"Kết quả duyệt — kể cả lý do nếu bị từ chối — sẽ được thông báo cho bạn sau"*, tăng `duration` lên 6000ms để người dùng đọc kịp.
+      - `restaurant.queries.ts` — toast thành công nay ghi rõ _"Kết quả duyệt — kể cả lý do nếu bị từ chối — sẽ được thông báo cho bạn sau"_, tăng `duration` lên 6000ms để người dùng đọc kịp.
       - `submit-form.tsx` — ghi chú trong hộp thoại cũng nêu rõ điều tương tự, để thông tin xuất hiện **trước khi** gửi chứ không chỉ sau khi gửi.
     - **Kênh thông báo thực tế**: backend đã phát notification cho quyết định duyệt đề xuất quán của thành viên (Phase 25, `BACKEND_INTEGRATION.md`). Vì vậy lý do từ chối **sẽ** tới người dùng qua kênh notification, không phải qua trang khám phá.
     - **Việc còn lại**: hiển thị lý do từ chối ngay trong trang khám phá cần `GET /restaurants/mine` → tách sang đợt sau cùng "quán của tôi". `US3/AC4` giữ nguyên trong spec làm acceptance scenario cho đợt đó.
   - **T072 — đưa `providerLabel` và `locationStored` tới giao diện**:
     - `locationStored` và `providerLabel` trước đó được `toDiscoveryMeta` map ra và có test nhưng **không `.tsx` nào dùng**, trái với ý định ghi ở `data-model.md` §2.2.
-    - Thêm `DiscoveryNoticeKind` `'PRIVACY'`; `buildNotices` sinh cam kết *"Vị trí bạn dùng để tìm kiếm chỉ dùng cho lần tìm này và không được lưu giữ"* khi `meta.locationStored === false` — đây là bằng chứng hiển thị cho `SC-007`.
+    - Thêm `DiscoveryNoticeKind` `'PRIVACY'`; `buildNotices` sinh cam kết _"Vị trí bạn dùng để tìm kiếm chỉ dùng cho lần tìm này và không được lưu giữ"_ khi `meta.locationStored === false` — đây là bằng chứng hiển thị cho `SC-007`.
     - Thông báo `ATTRIBUTION` nay **nêu đích danh nhà cung cấp** (`Google Maps` / `SerpApi` / `dữ liệu minh hoạ`) thay vì nói chung "nhà cung cấp bên ngoài".
     - `result-notice.tsx` render `PRIVACY` với kiểu nhạt (chữ 11px, không nền cảnh báo) vì đây là thông tin điều kiện chứ không phải cảnh báo — tránh gây nhiễu.
     - Bổ sung 2 test; **cập nhật 2 test cũ** vì backend luôn trả `locationStored: false` nên `PRIVACY` luôn xuất hiện (trước đó 2 test giả định không có notice nào).
@@ -1535,8 +1536,6 @@
   - `npm run build`: 39/39 static & dynamic routes compiled và build thành công không lỗi.
 - PROGRESS: Phase 24 Restaurants & Google Maps Integration hoàn thành 100% (FE Integrated).
 
-
-
 - Mục tiêu:
   - Khắc phục triệt để lỗi giao diện khi vào trang Trợ lý AI (`/assistant`), `SiteFooter` hiển thị đè lên khung soạn thảo tin nhắn (composer) và thanh cuộn hội thoại.
   - Đảm bảo trang `/assistant` có không gian làm việc hội thoại dạng canvas toàn màn hình chuẩn xác, trong khi các trang phụ như `/assistant/public` vẫn hiển thị Footer bình thường.
@@ -1690,15 +1689,15 @@
   5. Thêm liên kết neo trỏ nhanh từ `MealAnalysisSummaryBar` xuống `#canh-bao-chi-tiet`.
 - Đã làm:
   - Cập nhật `src/features/meal-analysis/mappers/meal-analysis.mapper.ts`:
-    - Ánh xạ tiêu đề thông minh theo mã `code` của backend: *Vượt ngưỡng khuyến nghị trong ngày*, *Vượt khuyến nghị tiêu thụ nguyên liệu*, *Tương tác thành phần thực phẩm*, *Khẩu phần món ăn vượt mức thông thường*.
+    - Ánh xạ tiêu đề thông minh theo mã `code` của backend: _Vượt ngưỡng khuyến nghị trong ngày_, _Vượt khuyến nghị tiêu thụ nguyên liệu_, _Tương tác thành phần thực phẩm_, _Khẩu phần món ăn vượt mức thông thường_.
   - Cập nhật `src/features/meal-analysis/components/incomplete-data-banner.tsx`:
-    - Gom chuỗi danh sách Recipe item UUID thành thông điệp thân thiện: *"Thực đơn có X món ăn chưa có dữ liệu kiểm định vi chất hoặc phân tích nấu nướng chi tiết (cooking-aware)..."*.
-    - Bổ sung nút bấm thu gọn / mở rộng *"Chi tiết kỹ thuật (X món)"* với danh sách cuộn gọn gàng `max-h-36`.
+    - Gom chuỗi danh sách Recipe item UUID thành thông điệp thân thiện: _"Thực đơn có X món ăn chưa có dữ liệu kiểm định vi chất hoặc phân tích nấu nướng chi tiết (cooking-aware)..."_.
+    - Bổ sung nút bấm thu gọn / mở rộng _"Chi tiết kỹ thuật (X món)"_ với danh sách cuộn gọn gàng `max-h-36`.
   - Cập nhật `src/features/meal-analysis/components/meal-analysis-alerts.tsx`:
-    - Thêm cơ chế giới hạn hiển thị ban đầu 3 cảnh báo + nút *"Xem thêm X cảnh báo khác"* / *"Thu gọn bớt cảnh báo"*.
+    - Thêm cơ chế giới hạn hiển thị ban đầu 3 cảnh báo + nút _"Xem thêm X cảnh báo khác"_ / _"Thu gọn bớt cảnh báo"_.
     - Gắn `id="canh-bao-chi-tiet"` hỗ trợ cuộn mượt mà từ thanh tóm tắt.
   - Cập nhật `src/features/meal-analysis/components/meal-analysis-summary-bar.tsx`:
-    - Thêm liên kết *"Xem danh sách chi tiết ↓"* điều hướng ngay đến khối cảnh báo.
+    - Thêm liên kết _"Xem danh sách chi tiết ↓"_ điều hướng ngay đến khối cảnh báo.
   - Cập nhật `src/app/(site)/meal-plans/[id]/page.tsx`:
     - Đổi vị trí: Đưa `DayGrid` lên ngay sau `IncompleteDataBanner` và trước `MealAnalysisAlerts`.
 - File tạo/sửa:
@@ -3077,7 +3076,6 @@
 - PROGRESS: Module Công thức & Bộ lọc cá nhân hóa đạt 100% về độ minh bạch UX và tương thích dữ liệu chuẩn với Backend.
 - Còn lại / rủi ro: Không có.
 
-
 ## [2026-09-15] — Khởi tạo PROGRESS + WORK-LOG + rule ARCHITECTURE
 
 - Mục tiêu: có 2 file theo dõi + rule bắt agent cập nhật sau mỗi task.
@@ -4248,6 +4246,7 @@
 - File tạo/sửa:
   - Tạo: `specs/005-frontend-backend-gap-analysis/{spec.md,checklists/requirements.md}`
   - Sửa: `src/common/constants/api-endpoints.ts`, `docs/BACKEND_INTEGRATION.md`, `docs/PROGRESS.md`, `docs/API-CATALOG.md`, `docs/api-catalog.json`, `docs/api/*.md`, `docs/WORK-LOG.md`
+
 ## [2026-09-16] — Scaffold Community live-shape + fixture (spec 010-community-integration, T001–T029)
 
 - Mục tiêu: đủ 7 tầng community theo đúng contract dù BE còn `PLANNED`; API đọc fixture, 0 request live; ngày nối live chỉ sửa 1 file api.
@@ -4509,6 +4508,7 @@
 - Verify: `npx tsc --noEmit`, `npm test` 42 files / 412 tests, `npm run build`; Swagger sync 168 operations. HTTP/business audit và browser evidence ghi tại `backend/docs/ENDPOINT_BUSINESS_AUDIT.md`.
 - PROGRESS: Restaurant integration 100% → 100% (sửa lỗi); các phần trăm feature khác không đổi.
 - Giới hạn: nguồn bản đồ vẫn có thể thiếu dữ liệu và có cap; hard diet/allergy constraints được giữ. Không suy luận an toàn ăn uống từ nhãn provider.
+
 ## [2026-10-06] — Khu vực Quản lý nội dung admin recipes/articles/video (spec 029-admin-content-crud)
 
 - Mục tiêu:

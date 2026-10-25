@@ -3,7 +3,7 @@
 import { AllowanceNotice } from '@/features/billing/components/allowance-notice';
 
 import React, { useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ChevronLeft,
@@ -22,7 +22,6 @@ import { useReceiptJobQuery } from '@/features/receipt/queries/receipt.queries';
 import type { ReceiptConfirmationDiff, ReceiptJob } from '@/features/receipt/types/receipt.model';
 
 export function ReceiptScanClientView() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const urlJobId = searchParams.get('jobId');
 
@@ -148,7 +147,6 @@ export function ReceiptScanClientView() {
           job={job}
           onConfirmationSuccess={(diff) => setConfirmationDiff(diff)}
           onCancel={handleCancelJob}
-          onScanAnother={handleScanAnother}
         />
       )}
 

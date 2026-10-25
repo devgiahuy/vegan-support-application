@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { BILLING_QUERY_KEYS } from '@/features/billing/queries/billing.queries';
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { getApiErrorCode } from '@/lib/api-error';
 import { receiptApi } from '../api/receipt.api';
 import type {
   ConfirmReceiptJobInput,
@@ -109,7 +110,9 @@ export function useConfirmReceiptJobMutation(jobId: string) {
       toast.success(`Đã thêm ${diff.pantryChanges.length} mặt hàng vào Tủ bếp thành công!`);
     },
     onError: (error: unknown) => {
-      toast.error(billingErrorMessage(error));
+      if (getApiErrorCode(error) !== 'RECEIPT_REVIEW_DECISION_REQUIRED') {
+        toast.error(billingErrorMessage(error));
+      }
     },
   });
 }

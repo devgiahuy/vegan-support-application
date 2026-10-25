@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft, Receipt, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
+import { ChevronLeft, Loader2, AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useReceiptJobQuery } from '@/features/receipt/queries/receipt.queries';
 import { ReceiptInspectionView } from '@/features/receipt/components/receipt-inspection-view';
@@ -92,7 +92,6 @@ export function ReceiptJobClientView({ jobId }: ReceiptJobClientViewProps) {
       <ReceiptInspectionView
         job={job}
         onConfirmationSuccess={(diff) => setConfirmationDiff(diff)}
-        onScanAnother={() => router.push('/receipts/scan')}
       />
 
       {/* Modal tổng kết kết quả nhập kho */}
