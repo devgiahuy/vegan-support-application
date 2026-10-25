@@ -1,12 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { getApiErrorCode, toastApiError } from '@/lib/api-error';
+import { getApiErrorCode, getApiErrorFields, toastApiError } from '@/lib/api-error';
 import { reviewApi } from '../api/review.api';
-import type {
-  ReviewQueueQueryParams,
-  SubmitPostInput,
-} from '../types/content-review.model';
+import type { ReviewQueueQueryParams, SubmitPostInput } from '../types/content-review.model';
 import { ReviewDecisionEnum } from '../types/content-review.model';
+import { localizeReviewReasonError } from '../utils/review-error';
 
 // ==========================================
 // TanStack Query Key Factory
@@ -16,8 +14,7 @@ export const CONTENT_REVIEW_KEYS = {
   all: ['content-review'] as const,
   queue: (params?: ReviewQueueQueryParams) =>
     [...CONTENT_REVIEW_KEYS.all, 'queue', params] as const,
-  detail: (revisionId: string) =>
-    [...CONTENT_REVIEW_KEYS.all, 'detail', revisionId] as const,
+  detail: (revisionId: string) => [...CONTENT_REVIEW_KEYS.all, 'detail', revisionId] as const,
   history: (postId: string, params?: { page?: number; limit?: number }) =>
     [...CONTENT_REVIEW_KEYS.all, 'history', postId, params] as const,
 };
@@ -69,8 +66,7 @@ export function useSubmitPostMutation(postId: string) {
       }
       if (code === 'VERSION_CONFLICT') {
         toast.error('Xung đột phiên bản', {
-          description:
-            'Dữ liệu bài viết đã có thay đổi mới từ nơi khác. Vui lòng tải lại trang.',
+          description: 'Dữ liệu bài viết đã có thay đổi mới từ nơi khác. Vui lòng tải lại trang.',
         });
         return;
       }
@@ -116,10 +112,7 @@ export function useAdminContentReviewQueueQuery(params?: ReviewQueueQueryParams)
  * Hook xem chi tiết bản nháp nộp duyệt Admin
  * GET /api/v1/admin/content-review/:id
  */
-export function useAdminContentReviewDetailQuery(
-  revisionId: string,
-  enabled = true
-) {
+export function useAdminContentReviewDetailQuery(revisionId: string, enabled = true) {
   return useQuery({
     queryKey: CONTENT_REVIEW_KEYS.detail(revisionId),
     queryFn: () => reviewApi.getAdminDetail(revisionId),
@@ -163,7 +156,8 @@ export function useAdminContentReviewDecisionMutation() {
         });
       }
     },
-    onError: (err: unknown) => {
+    onError: (err: unknown, variables) => {
+      const isApprove = variables?.decision === ReviewDecisionEnum.APPROVE;
       const code = getApiErrorCode(err);
       if (code === 'SELF_APPROVAL_FORBIDDEN') {
         toast.error('Không thể tự duyệt', {
@@ -180,6 +174,27 @@ export function useAdminContentReviewDecisionMutation() {
         queryClient.invalidateQueries({ queryKey: CONTENT_REVIEW_KEYS.all });
         return;
       }
+
+      // Kiểm tra lỗi trường lý do để hiển thị tiếng Việt rõ ràng cho người dùng
+      const fields = getApiErrorFields(err);
+      if (fields?.reason) {
+        const rawMsg = Array.isArray(fields.reason)
+          ? fields.reason.map((m) => String(m)).join(', ')
+          : String(fields.reason);
+        const translatedReason = localizeReviewReasonError(rawMsg, isApprove);
+        toast.error('Không thể hoàn tất quyết định kiểm duyệt', {
+          description: translatedReason,
+        });
+        return;
+      }
+
+      if (fields?.decision) {
+        toast.error('Không thể hoàn tất quyết định kiểm duyệt', {
+          description: 'Quyết định kiểm duyệt không hợp lệ.',
+        });
+        return;
+      }
+
       toastApiError(err, 'Không thể hoàn tất quyết định kiểm duyệt');
     },
   });
