@@ -1,8 +1,8 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.52
+**Version:** 4.54
 
-**Cập nhật:** 25/10/2026
+**Cập nhật:** 26/10/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
@@ -13,6 +13,43 @@
 ---
 
 ## 1. Source of truth và status
+
+### Duplicate content titles and complete program scheduling — 2026-10-26 (4.54, READY)
+
+`POST /posts`, `PATCH /posts/{id}`, `POST /meal-programs` and `PATCH /meal-programs/{id}` are `READY`, FE integrated. Create-program scheduling briefly transitioned through `CHANGING` for preflight/consumer migration and returned to READY after gates. No route, request, authorization, enum, persistence schema or seed change.
+
+- Content titles/bodies may repeat. When no explicit slug is supplied, create chooses a unique slug (bounded to 220 characters), with a UUID suffix on collision and bounded retry for a concurrent allocation. Existing unique indexes remain authoritative. Explicit client-supplied duplicate slugs still return `CONTENT_SLUG_CONFLICT` (409). Edit requests without slug preserve the current URL, including when changing the title. Frontend recipe requests already omit slug; no consumer migration is needed for this fix.
+- Multi-week creation/resume checks health and every week still needing alternatives before generating any new plan. PERIODIC still requires at least one user-selected day in each requested week; days are never inferred/copied automatically. `DIET_SCHEDULE_REQUIRED` (409) includes `fields.weekStarts` and all `fields.availableDates` for missing weeks. A new invalid request creates no partial program/plans. The form loads the current profile, identifies missing week/date ranges, provides the existing schedule editor, blocks unsaved/missing schedule data, and enables creation after explicit save. Other genuine generation failures may still produce PARTIAL/FAILED for retry.
+- Existing partial/failed programs can regenerate missing weeks after the schedule is corrected. Regeneration and alternative selection recompute generation status/failureSummary inside the versioned mutation transaction; repairing the final failed week promotes the program to DRAFT so it can be confirmed. Replay remains idempotent and stale versions retain `MEAL_PROGRAM_VERSION_CONFLICT` (409). PATCH OpenAPI now lists the existing `HEALTH_PROFILE_INCOMPLETE` and `DIET_SCHEDULE_REQUIRED` generation errors too.
+- Frontend retains `PARTIAL`/`GENERATING` status and maps week `failure.code` to a Vietnamese explanation/action. Missing periodic dates link to `/profile?tab=diet`; retry errors are inline. Regeneration allows the same 180-second timeout as create. Confirmed programs hide regeneration controls, matching existing immutability. Partial creation uses a warning instead of unconditional success.
+
+Verified: reproduced same-title `CONTENT_SLUG_CONFLICT`, then concurrent identical creates, explicit-slug collision and stable edit URLs. Reproduced first-week-only calendar → READY week 1 and `DIET_SCHEDULE_REQUIRED` in weeks 2–4. Verified preflight/no writes, repairing those weeks → DRAFT, create resume/replay without duplication, version conflict protection and confirmation. Four weeks × two alternatives contain 168 FILLED slots. Browser saved dates inline and enabled creation; weeks 2/3/4 each displayed 21 meals, and confirmed programs had no regeneration button. Backend lint/typecheck/build/OpenAPI/served-spec comparison and existing acceptance, frontend typecheck/scoped lint, 704 tests and 47-page build pass. No backend test infrastructure added; temporary fixtures are removed after QA. Native mobile and the other tester's environment were not checked.
+
+Changelog 2026-10-26 (4.54): unique automatic content URLs for duplicate titles; full-horizon periodic preflight, explicit schedule entry and partial-program recovery/status/error presentation. No migration or seed command required.
+
+### Named allergies and reviewed composition — 2026-10-25 (4.53, READY)
+
+User-approved direct normalization is implemented across backend/frontend. Existing preference save, ingredient lookup, constrained recipe discovery/related/recommendations, planning/manual insertion, analysis and confirmation transitioned `READY` → `CHANGING` → `READY` after schema, OpenAPI and consumer updates. Global backend status remains `IN_PROGRESS` for unrelated release gates.
+
+| Endpoint | Authorization | Status | FE integrated | Contract |
+|---|---|---|---|---|
+| `GET /allergens` | Public | READY | Yes | Active `{code,label,description,searchTerms}`; approved canonical aliases. |
+| `GET /admin/ingredient-composition-sources` | ADMIN | READY | Yes | Active source IDs/names, license/attribution. |
+| `GET /admin/ingredients/{id}/composition` | ADMIN | READY | Yes | Status/kind/version, named components, evidence, transitive completeness, inferred allergens, latest 20 audits. |
+| `PUT /admin/ingredients/{id}/composition` | ADMIN | READY | Yes | `expectedVersion`, status/kind/component IDs; PARTIAL/COMPLETE require source/version/record/exact scope. Reviewer/time/license are server-set. |
+
+- Preference requests send `allergenCode` from an explicitly selected result; backend rejects unknown/inactive codes and stores the canonical label. Member/admin forms use names. Typo suggestions never auto-select, and pending text blocks save. Public ingredient lookup/resolution uses approved aliases only.
+- Ingredients add `compositionStatus=UNKNOWN|PARTIAL|COMPLETE`, `compositionKind=UNSPECIFIED|SIMPLE|COMPOUND`, `compositionVersion` and `componentIds`. Effective completeness requires every descendant and evidence source to be current/active. SIMPLE has no children; COMPLETE COMPOUND has at least one. Serialized writes reject self/cross/concurrent cycles and depth above 32; review evidence is versioned/audited. Metadata edits invalidate the assessment. Composition does not calculate nutrition.
+- Every active diet, allergy, exclusion or tradition constraint checks all descendants. Unknown/partial/missing/inactive/cyclic/unresolved/empty ingredient data cannot pass, including explicit guest diet filters. Filtering occurs before ranking/count/pagination; recipe snapshot allergens remain an additional conservative signal. Generic processed ingredients stay UNKNOWN without exact formulation evidence. Restaurant directory behavior is unchanged.
+- Analysis fingerprints include semantic composition/source/profile data. Plan GET refreshes stale analysis and requires all FILLED items even after subset analysis. `userSummary.hardConstraintsPreserved` is now a **boolean**, potentially false with `HARD_CONSTRAINT_BLOCKED`; frontend displays violations. Program CONFIRM refreshes/rechecks each selected week and rejects current violations. Stored unsafe items remain visible for correction.
+
+Error catalog: `INVALID_ALLERGEN_SELECTION` (400, `fields.invalidAllergenCodes`, reload/select catalog); `INVALID_INGREDIENT_COMPONENT`, `INGREDIENT_COMPOSITION_CYCLE`, `INGREDIENT_COMPOSITION_DEPTH`, `INVALID_COMPOSITION_SOURCE` (400); `INGREDIENT_COMPOSITION_CONFLICT` (409, reload version); `MEAL_PROGRAM_HARD_CONSTRAINT_VIOLATION` (409, `fields.weekIndexes`, replace meals). Existing `MEAL_PLAN_HARD_CONSTRAINT_VIOLATION` reasons include `ALLERGY`, `INGREDIENT_EXCLUSION`, `DIET_PATTERN`, `TRADITION_RULE`, `UNRESOLVED_INGREDIENT`, `INGREDIENT_COMPOSITION_UNCERTAIN`, `ALLERGEN_SELECTION_UNRESOLVED`. `MEAL_ANALYSIS_STALE` remains 409 after edits. Standard validation/auth/not-found errors are in OpenAPI.
+
+Migration: backend `npm run prisma:generate`, `npm run prisma:push` (repository Mongo validator/default/index provisioning), `npm run db:normalize-allergies`; inspect `db:normalize-allergies:status` and repeat normalization for idempotency. Both seed entry points include it. New literal defaults are backfilled by the provisioner; no PostgreSQL migration applies. Deploy backend/schema before frontend, then `SWAGGER_URL=http://localhost:4000/api-docs.json npm run sync:swagger`. No legacy manual-code UI is required. Demo provenance is explicit; generic processed ingredients are not automatically reviewed.
+
+Verified: backend lint/typecheck/build/OpenAPI and existing meal-plan/analysis acceptance; frontend typecheck/scoped lint, 700 tests/build. Real API scenarios cover authorization, invalid selections, nested/uncertain matching, source/version/duplicate/concurrent-cycle rejection, related/recommendations, constrained generation (21/21 meals), recipe/custom manual-add, stale analysis and confirmation after subset analysis, including recipe-level diet/tradition signals. Browser covers error/retry, alias/typo/pending selection, profile save and admin composition save. Temporary fixtures are removed after QA. Native mobile and branded-product validation were not run.
+
+Changelog 2026-10-25 (4.53): named allergy selection, reviewed transitive composition, direct normalization and current stored-plan safety; synchronized consumers/provenance. No backend test infrastructure added.
 
 ### Follow-up verification and nutrition display corrections — 2026-10-25 (4.52)
 

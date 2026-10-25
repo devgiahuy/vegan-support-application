@@ -97,7 +97,7 @@ export default function MealProgramDetailPage({ params }: MealProgramDetailPageP
 
   const selectedWeek =
     program.weeks.find((w) => w.weekNumber === selectedWeekNumber) || program.weeks[0];
-  const isDraft = program.status === 'DRAFT';
+  const isDraft = ['DRAFT', 'PARTIAL', 'FAILED'].includes(program.status);
   const hasInvalidatedWeeks = program.weeks.some((w) => w.isDownstreamInvalidated);
 
   return (
@@ -157,16 +157,18 @@ export default function MealProgramDetailPage({ params }: MealProgramDetailPageP
               ))}
             </div>
 
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setRegenerateWeekNumber(selectedWeekNumber)}
-                className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-muted"
-              >
-                <RefreshCw className="w-3.5 h-3.5 text-primary" />
-                <span>Sinh lại tuần {selectedWeekNumber}</span>
-              </button>
-            </div>
+            {isDraft && (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setRegenerateWeekNumber(selectedWeekNumber)}
+                  className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded-md hover:bg-muted"
+                >
+                  <RefreshCw className="w-3.5 h-3.5 text-primary" />
+                  <span>Sinh lại tuần {selectedWeekNumber}</span>
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Chi tiết thực đơn tuần đã chọn */}

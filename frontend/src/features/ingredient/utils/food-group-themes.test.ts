@@ -9,6 +9,8 @@ import type { Ingredient } from '../types/ingredient.model';
 
 function createMockIngredient(id: string, canonicalName: string, foodGroup: FoodGroup): Ingredient {
   return {
+    compositionStatus: 'UNKNOWN',
+    compositionStatusLabel: 'Cấu tạo chưa rõ',
     id,
     canonicalName,
     normalizedName: canonicalName.toLowerCase(),
@@ -53,7 +55,7 @@ describe('food-group-themes', () => {
   });
 
   it('falls back to OTHER theme when given an unknown or undefined food group', () => {
-    const fallbackTheme = getFoodGroupTheme(undefined as any);
+    const fallbackTheme = getFoodGroupTheme(undefined);
     expect(fallbackTheme.group).toBe(FoodGroup.OTHER);
     expect(fallbackTheme.label).toBe('Khác');
   });

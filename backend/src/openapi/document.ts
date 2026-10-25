@@ -8,6 +8,7 @@ import {
 import { registerAuthOpenApi } from '../modules/auth/auth.openapi.js';
 import { registerProfileOpenApi } from '../modules/profile/profile.openapi.js';
 import { registerCatalogOpenApi } from '../modules/catalog/catalog.openapi.js';
+import { registerCompositionOpenApi } from '../modules/catalog/composition.openapi.js';
 import { registerContentOpenApi } from '../modules/content/content.openapi.js';
 import { registerRecipeDraftOpenApi } from '../modules/content/recipe-draft.openapi.js';
 import { registerCommunityOpenApi } from '../modules/community/community.openapi.js';
@@ -60,6 +61,7 @@ registry.registerPath({
 registerAuthOpenApi(registry, registeredErrorResponse);
 registerProfileOpenApi(registry, registeredErrorResponse);
 registerCatalogOpenApi(registry, registeredErrorResponse);
+registerCompositionOpenApi(registry, registeredErrorResponse);
 registerContentOpenApi(registry, registeredErrorResponse);
 registerRecipeDraftOpenApi(registry, registeredErrorResponse);
 registerCommunityOpenApi(registry, registeredErrorResponse);

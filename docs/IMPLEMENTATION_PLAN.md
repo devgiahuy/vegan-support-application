@@ -1,8 +1,8 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.9
+**Version:** 4.11
 
-**Updated:** 2026-10-25
+**Updated:** 2026-10-26
 
 **Status:** Approved implementation baseline
 
@@ -231,6 +231,8 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 
 ### BL-04 — Canonical ingredients and compatibility
 
+User-approved 2026-10-25 extension: use a public named allergen catalog for explicit selection and reject unknown/inactive preference codes. Ingredient composition has UNKNOWN/PARTIAL/COMPLETE status, SIMPLE/COMPOUND/UNSPECIFIED kind, canonical component edges, reviewed source/version/record/license and exact formulation scope. Admin-only, versioned, audited transactions reject cycles and excessive depth, including concurrent cross-parent cycles. Evaluate all descendants for allergies/exclusions/diet/tradition rules; every active hard dietary constraint rejects incomplete data. AI remains suggestion-only. Direct ingredient metadata edits invalidate the composition assessment. Current-plan fingerprints include composition semantics and profile constraints; confirmation rechecks current selected plans. Normalize demo catalog/aliases/profiles directly under the user's instruction, reporting unresolved selections for explicit correction; known positive constraints are never silently discarded.
+
 1. Recipe ingredients map to canonical records; aliases are locale-aware.
 2. Quantities normalize to mass where a reviewed conversion exists.
 3. Nutrients use a known basis, normally per 100 g edible portion.
@@ -252,6 +254,8 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 8. Recalculate when ingredient quantities, serving count, cooking steps, or source/factor versions change.
 
 ### BL-06 — Content and video review lifecycle
+
+Maintenance clarification 2026-10-26: titles and bodies need not be unique. Automatically generated URLs are unique and collision-safe; an explicitly requested URL must remain unique. Editing without a requested URL change preserves the current slug.
 
 1. Author creates a draft and submits a specific immutable revision.
 2. Automated moderation may attach signals but cannot publish, reject, or delete.
@@ -307,6 +311,7 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 - Repeated-pattern and cumulative nutrient checks span the configured horizon.
 - Editing one week invalidates affected later analyses and shopping projections.
 - Generated programs are drafts until the user confirms them.
+- Before starting/resuming missing weekly alternatives, validate health and periodic calendar coverage for every week to generate. Return all missing week starts/dates before creating new records; users explicitly save days for each week. Successful repair of the last failed week recomputes PARTIAL/FAILED → DRAFT in the same versioned mutation, allowing confirmation. Do not infer religious observance or weaken hard dietary constraints.
 
 ### BL-12 — Pantry, fridge images, and receipts
 
@@ -560,6 +565,10 @@ A phase is complete only when:
 | Phase 2 ideas are forgotten or accidentally claimed READY | Dedicated roadmap plus explicit status taxonomy |
 
 ## 13. Change record
+
+- **4.11 — 2026-10-26:** Clarify duplicate content titles with unique/stable generated URLs; preflight full-horizon periodic schedules and recover partially generated programs to DRAFT after week repairs.
+
+- **4.10 — 2026-10-25:** User approves named allergy selection, direct catalog normalization, reviewed transitive composition, fail-closed uncertain data, and current analysis/confirmation validation. No restaurant-directory or canonical-nutrition changes.
 
 - **4.9 — 2026-10-25:** Custom-meal maintenance clarifies recalculation, approved-alias resolution, whole-meal fallback for free text/name-only meals, manual overrides and unknown-value handling. Recipe discovery, recommendations, weekly generation and manual insertion enforce allergies against both revision snapshots and current ingredient metadata. Weekly programs already generate dishes; consumers must read `days[].slots` in generated snapshots.
 

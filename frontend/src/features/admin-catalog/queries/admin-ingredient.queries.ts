@@ -17,6 +17,18 @@ function invalidateIngredients(queryClient: QueryClient) {
   queryClient.invalidateQueries({ queryKey: ADMIN_INGREDIENT_QUERY_KEYS.all });
   // Alias/metadata ảnh hưởng tra cứu public → refresh luôn.
   queryClient.invalidateQueries({ queryKey: INGREDIENT_QUERY_KEYS.all });
+  for (const key of [
+    'allergen-catalog',
+    'ingredient-compositions',
+    'recipes',
+    'posts',
+    'recommendations',
+    'meal-plans',
+    'meal-programs',
+    'meal-analysis',
+  ]) {
+    queryClient.invalidateQueries({ queryKey: [key] });
+  }
 }
 
 export const useAdminIngredientsQuery = (params?: AdminIngredientListParams) => {

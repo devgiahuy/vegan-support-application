@@ -42,6 +42,10 @@ function ingredientOutput(ingredient: IngredientRecord): IngredientOutput {
     id: ingredient.id,
     canonicalName: ingredient.canonicalName,
     normalizedName: ingredient.normalizedName,
+    compositionStatus: ingredient.compositionStatus,
+    compositionKind: ingredient.compositionKind,
+    compositionVersion: ingredient.compositionVersion,
+    componentIds: ingredient.components.map((entry) => entry.componentId),
     foodGroup: ingredient.foodGroup,
     status: ingredient.status,
     aliases: ingredient.aliases.map((alias) => ({

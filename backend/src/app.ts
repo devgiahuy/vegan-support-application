@@ -1,4 +1,5 @@
 import cors from 'cors';
+import { createCompositionRouter } from './modules/catalog/composition.router.js';
 import { BillingService } from './modules/billing/billing.service.js';
 import { createBillingRouter } from './modules/billing/billing.router.js';
 import { EntitlementService } from './modules/entitlements/entitlement.service.js';
@@ -342,6 +343,7 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/diet-rules', createDietRouter(dietController, authentication));
   app.use('/api/v1/categories', createCategoryRouter(catalogController));
   app.use('/api/v1/ingredients', createIngredientRouter(catalogController));
+  app.use('/api/v1', createCompositionRouter(database.client, authentication));
   app.use('/api/v1/food-data', createFoodDataRouter(foodDataController));
   app.use('/api/v1/admin', createCatalogAdminRouter(catalogController, authentication));
   app.use('/api/v1/admin', createFoodDataAdminRouter(foodDataController, authentication));

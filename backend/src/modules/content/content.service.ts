@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {
   DietPattern,
   IngredientResolutionStatus,
@@ -103,7 +104,9 @@ function paginationWithoutConstraints(page: number, limit: number, total: number
 
 function stepPositions(value: Prisma.JsonValue): number[] {
   return Array.isArray(value)
-    ? value.filter((item): item is number => typeof item === 'number' && Number.isInteger(item) && item >= 0)
+    ? value.filter(
+        (item): item is number => typeof item === 'number' && Number.isInteger(item) && item >= 0,
+      )
     : [];
 }
 
@@ -174,9 +177,7 @@ export class ContentService {
         post,
         this.recipeUsageStatistics(recipeUsageCounts.get(post.id) ?? 0),
       ),
-    ).filter(
-      (post): post is Extract<PostOutput, { type: 'RECIPE' }> => post.type === 'RECIPE',
-    );
+    ).filter((post): post is Extract<PostOutput, { type: 'RECIPE' }> => post.type === 'RECIPE');
     const blogs = groups.BLOG.map((post) => this.publishedPostOutput(post)).filter(
       (post): post is Extract<PostOutput, { type: 'BLOG' }> => post.type === 'BLOG',
     );
@@ -224,21 +225,37 @@ export class ContentService {
   }
 
   async createPost(actor: ContentActor, input: CreatePostInput): Promise<PostOutput> {
-    const slug = input.slug ?? catalogSlug(input.title);
-    if (!slug) throw this.invalidContentError('Tiêu đề không tạo được slug hợp lệ');
+    const baseSlug = input.slug ?? catalogSlug(input.title);
+    if (!baseSlug) throw this.invalidContentError('Tiêu đề không tạo được slug hợp lệ');
     const snapshot = await this.buildSnapshot(actor.userId, input);
-    try {
-      const created = await this.repository.createPost(
-        actor.userId,
-        input.type,
-        slug,
-        snapshot,
-        this.publicationPolicy.draft(),
-      );
-      return this.postOutput(created.post, created.revision);
-    } catch (error) {
-      throw this.mapPersistenceError(error);
+    const occupied = !input.slug && (await this.repository.slugExists(baseSlug));
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const slug =
+        input.slug || (attempt === 0 && !occupied)
+          ? baseSlug
+          : `${baseSlug.slice(0, 183).replace(/-+$/, '')}-${randomUUID()}`;
+      try {
+        const created = await this.repository.createPost(
+          actor.userId,
+          input.type,
+          slug,
+          snapshot,
+          this.publicationPolicy.draft(),
+        );
+        return this.postOutput(created.post, created.revision);
+      } catch (error) {
+        if (
+          !input.slug &&
+          attempt < 3 &&
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002' &&
+          (await this.repository.slugExists(slug))
+        )
+          continue;
+        throw this.mapPersistenceError(error);
+      }
     }
+    throw this.invalidContentError('Không tạo được đường dẫn duy nhất cho nội dung');
   }
 
   async updatePost(actor: ContentActor, id: string, input: UpdatePostInput): Promise<PostOutput> {
@@ -268,7 +285,7 @@ export class ContentService {
         message: 'Revision mới nhất đang chờ Admin review và chưa thể chỉnh sửa',
       });
     }
-    const slug = input.slug ?? catalogSlug(input.title);
+    const slug = input.slug ?? post.slug;
     if (!slug) throw this.invalidContentError('Tiêu đề không tạo được slug hợp lệ');
     const snapshot = await this.buildSnapshot(actor.userId, input);
     try {
@@ -297,11 +314,7 @@ export class ContentService {
     return { id: post.id, status: PostStatus.DELETED };
   }
 
-  async submitPost(
-    actor: ContentActor,
-    id: string,
-    input: SubmitPostInput,
-  ): Promise<PostOutput> {
+  async submitPost(actor: ContentActor, id: string, input: SubmitPostInput): Promise<PostOutput> {
     const post = await this.requireOwnedPost(actor, id);
     if (post.status === PostStatus.DELETED) throw this.deletedError();
     if (post.status === PostStatus.HIDDEN) {
@@ -330,7 +343,8 @@ export class ContentService {
       throw new AppError({
         statusCode: 400,
         code: 'INVALID_MEDIA_REFERENCE',
-        message: 'Video upload phải là asset đã commit thuộc author; external URL phải thuộc allowlist',
+        message:
+          'Video upload phải là asset đã commit thuộc author; external URL phải thuộc allowlist',
       });
     }
     const decision = this.publicationPolicy.decideSubmission(actor, {

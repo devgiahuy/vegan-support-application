@@ -296,6 +296,15 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
       statusLabel: this.mapWeekStatusLabel(status),
       complianceRate: safeNumber(pickField(dto, ['compliance_rate', 'complianceRate'], 0), 0),
       isDownstreamInvalidated,
+      failureCode: safeString(pickField(dto.failure, ['code'], '')),
+      failureMessage:
+        dto.failure?.code === 'DIET_SCHEDULE_REQUIRED'
+          ? 'Tuần này chưa có ngày chay kỳ. Hãy bổ sung và lưu lịch chay, sau đó tạo lại thực đơn tuần.'
+          : dto.failure?.code === 'HEALTH_PROFILE_INCOMPLETE'
+            ? 'Hãy bổ sung hồ sơ sức khỏe trước khi tạo thực đơn.'
+            : dto.failure
+              ? 'Không tạo được thực đơn tuần. Vui lòng kiểm tra hồ sơ và thử lại.'
+              : '',
       snapshot: this.mapSnapshot(rawSnapshot, effectiveStartDate),
     };
   }
@@ -544,6 +553,10 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
         return 'ARCHIVED';
       case 'FAILED':
         return 'FAILED';
+      case 'PARTIAL':
+        return 'PARTIAL';
+      case 'GENERATING':
+        return 'GENERATING';
       case 'DRAFT':
       default:
         return 'DRAFT';
@@ -552,6 +565,10 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
 
   private mapStatusLabel(status: MealProgramStatus): string {
     switch (status) {
+      case 'PARTIAL':
+        return 'Chưa đủ thực đơn các tuần';
+      case 'GENERATING':
+        return 'Đang tạo thực đơn';
       case 'CONFIRMED':
         return 'Đang tham gia';
       case 'COMPLETED':

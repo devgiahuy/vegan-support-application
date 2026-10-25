@@ -7,6 +7,8 @@
     "node": ">=22.0.0"
   },
   "scripts": {
+    "db:normalize-allergies": "tsx prisma/normalize-allergy-catalog.ts",
+    "db:normalize-allergies:status": "tsx prisma/normalize-allergy-catalog.ts --status",
     "billing:demo": "tsx src/modules/billing/billing.demo.ts",
     "billing:acceptance": "tsx src/modules/billing/billing.acceptance.ts",
     "billing:cleanup": "tsx src/modules/billing/billing-maintenance.ts cleanup",

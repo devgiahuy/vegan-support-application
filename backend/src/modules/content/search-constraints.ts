@@ -32,7 +32,7 @@ export function buildGuestSearchConstraints(
       excludedIngredientIds: [],
       excludedNormalizedNames: [],
       traditions: [],
-      requireResolvedIngredients: false,
+      requireResolvedIngredients: Boolean(requestedDietPattern),
     },
     summary: {
       authenticated: false,

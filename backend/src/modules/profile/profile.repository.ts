@@ -65,6 +65,13 @@ function dateFromDateOnly(value: string): Date {
 export class ProfileRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  findActiveAllergens(codes: string[]) {
+    return this.prisma.allergenDefinition.findMany({
+      where: { code: { in: codes }, active: true },
+      select: { code: true, label: true },
+    });
+  }
+
   findProfile(userId: string): Promise<ProfileRecord | null> {
     return this.prisma.user.findUnique({ where: { id: userId }, include: profileInclude });
   }

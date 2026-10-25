@@ -1,4 +1,9 @@
 export const API_ENDPOINTS = {
+  ALLERGENS: { LIST: '/allergens' },
+  INGREDIENT_COMPOSITION: {
+    DETAIL: (id: string) => `/admin/ingredients/${id}/composition`,
+    SOURCES: '/admin/ingredient-composition-sources',
+  },
   BILLING: {
     PRODUCTS: '/billing/products',
     ORDERS: '/billing/orders',

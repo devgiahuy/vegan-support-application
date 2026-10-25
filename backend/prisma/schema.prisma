@@ -962,7 +962,26 @@ model CategoryProposal {
   @@map("category_proposals")
 }
 
+enum IngredientCompositionStatus {
+  UNKNOWN
+  PARTIAL
+  COMPLETE
+}
+
+enum IngredientCompositionKind {
+  UNSPECIFIED
+  SIMPLE
+  COMPOUND
+}
+
 model Ingredient {
+  compositionStatus     IngredientCompositionStatus @default(UNKNOWN) @map("composition_status")
+  compositionKind       IngredientCompositionKind @default(UNSPECIFIED) @map("composition_kind")
+  compositionEvidence   Json? @map("composition_evidence")
+  compositionVersion    Int @default(0) @map("composition_version")
+  components            IngredientComponent[] @relation("CompositionParent")
+  componentOf           IngredientComponent[] @relation("CompositionChild")
+  compositionAudits     IngredientCompositionAudit[]
   referenceVersion      Int                           @default(0) @map("reference_version")
   id                    String                        @id @default(uuid()) @map("_id")
   canonicalName         String                        @map("canonical_name")
@@ -991,6 +1010,38 @@ model Ingredient {
 
   @@index([status, foodGroup, canonicalName])
   @@map("ingredients")
+}
+
+model IngredientComponent {
+  referenceVersion Int @default(0) @map("reference_version")
+  id String @id @default(uuid()) @map("_id")
+  ingredientId String @map("ingredient_id")
+  componentId String @map("component_id")
+  ingredient Ingredient @relation("CompositionParent", fields: [ingredientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  component Ingredient @relation("CompositionChild", fields: [componentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  @@unique([ingredientId, componentId])
+  @@index([componentId])
+  @@map("ingredient_components")
+}
+
+model IngredientCompositionAudit {
+  referenceVersion Int @default(0) @map("reference_version")
+  id String @id @default(uuid()) @map("_id")
+  ingredientId String @map("ingredient_id")
+  version Int
+  actorId String @map("actor_id")
+  snapshot Json
+  createdAt DateTime @default(now()) @map("created_at")
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  @@unique([ingredientId, version])
+  @@map("ingredient_composition_audits")
+}
+
+model CatalogGraphState {
+  referenceVersion Int @default(0) @map("reference_version")
+  id String @id @map("_id")
+  version Int @default(0)
+  @@map("catalog_graph_states")
 }
 
 model PantryItem {

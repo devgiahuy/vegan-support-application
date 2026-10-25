@@ -5,6 +5,31 @@ import type { MealProgramDto, MealProgramListItemDto } from '../types/meal-progr
 describe('MealProgramMapper', () => {
   const mapper = new MealProgramMapper();
 
+  it('preserves a partial program and explains a week blocked by its periodic schedule', () => {
+    const model = mapper.toModel({
+      id: 'program',
+      title: 'Lộ trình thử',
+      goal: 'MAINTAIN',
+      timezone: 'Asia/Ho_Chi_Minh',
+      version: 1,
+      status: 'PARTIAL',
+      weeks: [
+        {
+          id: 'week-2',
+          status: 'FAILED',
+          weekIndex: 1,
+          failure: { code: 'DIET_SCHEDULE_REQUIRED', message: 'Internal message' },
+        },
+      ],
+    });
+    expect(model.status).toBe('PARTIAL');
+    expect(model.statusLabel).toContain('Chưa đủ');
+    expect(model.weeks[0].weekNumber).toBe(2);
+    expect(model.weeks[0].failureCode).toBe('DIET_SCHEDULE_REQUIRED');
+    expect(model.weeks[0].failureMessage).toContain('ngày chay kỳ');
+    expect(model.weeks[0].failureMessage).not.toContain('Internal');
+  });
+
   it('aggregates the current backend daily nutrition totals without replacing explicit legacy totals', () => {
     const days = [
       {

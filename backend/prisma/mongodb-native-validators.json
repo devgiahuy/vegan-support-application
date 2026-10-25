@@ -1,4 +1,20 @@
 {
+  "ingredient_components": [{ "$ne": ["$ingredient_id", "$component_id"] }],
+  "ingredient_composition_audits": [{ "$gt": ["$version", 0] }],
+  "ingredients": [
+    { "$gte": [{ "$ifNull": ["$composition_version", 0] }, 0] },
+    {
+      "$or": [
+        { "$ne": [{ "$ifNull": ["$composition_status", "UNKNOWN"] }, "COMPLETE"] },
+        {
+          "$and": [
+            { "$in": ["$composition_kind", ["SIMPLE", "COMPOUND"]] },
+            { "$eq": [{ "$type": "$composition_evidence" }, "object"] }
+          ]
+        }
+      ]
+    }
+  ],
   "billing_products": [
     { "$gt": ["$price_vnd", 0] },
     { "$gte": ["$chat_credits", 0] },
@@ -9,11 +25,18 @@
   "payment_orders": [
     { "$gt": ["$price_vnd", 0] },
     { "$in": ["$provider", ["payos", "sandbox", "vnpay"]] },
-    { "$cond": [
-      { "$eq": ["$provider", "payos"] },
-      { "$regexMatch": { "input": { "$ifNull": ["$provider_order_code", ""] }, "regex": "^[1-9][0-9]{0,14}$" } },
-      true
-    ] },
+    {
+      "$cond": [
+        { "$eq": ["$provider", "payos"] },
+        {
+          "$regexMatch": {
+            "input": { "$ifNull": ["$provider_order_code", ""] },
+            "regex": "^[1-9][0-9]{0,14}$"
+          }
+        },
+        true
+      ]
+    },
     { "$gte": ["$chat_credits", 0] },
     { "$gte": ["$fridge_credits", 0] },
     { "$gte": ["$receipt_credits", 0] },

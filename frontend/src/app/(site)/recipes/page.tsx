@@ -309,8 +309,9 @@ export default function RecipeDiscoveryPage() {
                       )}
                     </div>
                     <p className="mt-1 text-xs text-muted-foreground leading-relaxed">
-                      Hệ thống tự động bảo vệ bạn: Chỉ hiển thị các món ăn có nguyên liệu chuẩn hóa
-                      an toàn và phù hợp với hồ sơ ăn kiêng của bạn.
+                      Kết quả được lọc theo hồ sơ và cả thành phần lồng nhau. Món có dữ liệu thành
+                      phần chưa đầy đủ sẽ được ẩn khi có ràng buộc ăn uống. Thông tin này không phải
+                      chứng nhận an toàn dị ứng.
                     </p>
                   </div>
                 </div>
@@ -363,7 +364,7 @@ export default function RecipeDiscoveryPage() {
                     query.trim()
                       ? `Không tìm thấy công thức phù hợp với từ khóa "${query.trim()}". Hãy thử từ khóa khác.`
                       : recipesPagination?.metadata?.appliedConstraints?.authenticated
-                        ? `Hiện tại không có món nào vừa vặn với cài đặt chế độ ăn (${recipesPagination.metadata.appliedConstraints.dietPattern ? getDietPatternLabel(recipesPagination.metadata.appliedConstraints.dietPattern) : 'của bạn'}${recipesPagination.metadata.appliedConstraints.allergyCount > 0 ? `, tránh ${recipesPagination.metadata.appliedConstraints.allergyCount} dị ứng` : ''}). Các món có nguyên liệu tự do chưa chuẩn hóa hoặc chứa thành phần kiêng kỵ sẽ được ẩn.`
+                        ? `Hiện tại không có món phù hợp với cài đặt chế độ ăn (${recipesPagination.metadata.appliedConstraints.dietPattern ? getDietPatternLabel(recipesPagination.metadata.appliedConstraints.dietPattern) : 'của bạn'}${recipesPagination.metadata.appliedConstraints.allergyCount > 0 ? `, tránh ${recipesPagination.metadata.appliedConstraints.allergyCount} dị ứng` : ''}). Món chứa thành phần cần tránh, thành phần lồng nhau không phù hợp hoặc dữ liệu cấu tạo chưa được rà soát đầy đủ sẽ được ẩn.`
                         : 'Kho công thức hiện chưa có bài viết xuất bản nào phù hợp với bộ lọc hiện tại.'
                   }
                   action={

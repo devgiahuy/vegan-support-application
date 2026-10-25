@@ -85,6 +85,10 @@ Resolve tên/alias ingredient không phân biệt dấu
           "id",
           "canonicalName",
           "normalizedName",
+          "compositionStatus",
+          "compositionKind",
+          "compositionVersion",
+          "componentIds",
           "foodGroup",
           "status",
           "aliases",
@@ -105,6 +109,22 @@ Resolve tên/alias ingredient không phân biệt dấu
           },
           "normalizedName": {
             "type": "string",
+            "_truncated": true
+          },
+          "compositionStatus": {
+            "type": "string",
+            "_truncated": true
+          },
+          "compositionKind": {
+            "type": "string",
+            "_truncated": true
+          },
+          "compositionVersion": {
+            "type": "integer",
+            "_truncated": true
+          },
+          "componentIds": {
+            "type": "array",
             "_truncated": true
           },
           "foodGroup": {
