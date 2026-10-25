@@ -238,7 +238,7 @@ export default function BlogListingPage() {
       )}
 
       {/* Expert Verification Notice Callout */}
-      <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/5 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      {/* <div className="rounded-3xl border border-emerald-500/20 bg-emerald-500/5 p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3.5">
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-500 text-white shadow-md">
             <BadgeCheck className="h-6 w-6" />
@@ -262,7 +262,7 @@ export default function BlogListingPage() {
         >
           <Link href="/articles/new">Tham gia đóng góp bài viết</Link>
         </Button>
-      </div>
+      </div> */}
     </div>
   );
 }
