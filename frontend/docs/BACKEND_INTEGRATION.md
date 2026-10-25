@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.54
+**Version:** 4.55
 
 **Cập nhật:** 26/10/2026
 
@@ -13,6 +13,10 @@
 ---
 
 ## 1. Source of truth và status
+
+### Canonical profile ingredient restrictions — 2026-10-26 (4.55, READY)
+
+Existing GET `/users/me` and PUT `/users/me/diet-preferences` remain READY, FE integrated, after additive schema/authorization/error/OpenAPI/generate/lint/typecheck/build gates. New optional `ingredientAllergies:[{ingredientId,severity?}]` accepts max100 unique active canonical IDs; omission preserves existing selections, [] clears them. Response supplies canonical ingredientName, severity and ingredientActive. Existing allergen groups remain separate; unknown/inactive IDs return `INVALID_INGREDIENT_ALLERGIES` (400). Explicit ingredient allergies contribute to allergyCount and hard ALLERGY filtering across descendants and stored-plan analysis. Shared `/ingredients` lookup supports approved aliases and pagination in recipe/profile editors. Deploy Mongo schema before backend; new `user_ingredient_allergies` is additive with seed support, no destructive backfill. FE: diet wizard allergy step searches allergen groups and canonical ingredients from the same query; exclusion editor links canonical IDs and keeps free-text fallback; recipe row reuses the shared `IngredientSuggestions` lookup (20/page). Mapper tests cover the new field. Manual browser QA against a live Mongo instance not yet recorded.
 
 ### Duplicate content titles and complete program scheduling — 2026-10-26 (4.54, READY)
 

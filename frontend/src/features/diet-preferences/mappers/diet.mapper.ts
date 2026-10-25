@@ -23,6 +23,7 @@ import type {
   DietRule,
   DietSchedule,
   IngredientExclusion,
+  IngredientAllergy,
 } from '../types/diet.model';
 import { DietPattern, PracticeSchedule, Tradition } from '@/common/enums';
 
@@ -161,6 +162,15 @@ export class DietMapper extends BaseMapper<DietRuleDto, DietRule> {
       allergies: safeArray<unknown, Allergy>(pickField(data, ['allergies'], null), (a) =>
         toAllergy(a)
       ),
+      ingredientAllergies: safeArray<unknown, IngredientAllergy>(
+        pickField(data, ['ingredientAllergies'], []),
+        (raw) => ({
+          ingredientId: safeString(pickField(raw, ['ingredientId'], '')),
+          ingredientName: safeString(pickField(raw, ['ingredientName'], '')),
+          severity: safeString(pickField(raw, ['severity'], 'MODERATE')),
+          ingredientActive: safeBoolean(pickField(raw, ['ingredientActive'], false)),
+        })
+      ).filter((entry) => entry.ingredientId.length > 0),
       ingredientExclusions: safeArray<unknown, IngredientExclusion>(
         pickField(data, ['ingredientExclusions', 'ingredient_exclusions'], null),
         (e) => toExclusion(e)
@@ -202,6 +212,7 @@ export class DietMapper extends BaseMapper<DietRuleDto, DietRule> {
     rules: DietRule[];
     scheduleDates?: string[];
     allergies?: Allergy[];
+    ingredientAllergies?: IngredientAllergy[];
     ingredientExclusions?: IngredientExclusion[];
   }): SaveDietPreferencesRequestDto {
     return {
@@ -230,6 +241,16 @@ export class DietMapper extends BaseMapper<DietRuleDto, DietRule> {
           ingredientName: e.ingredientName.trim(),
           reason: e.reason,
         })),
+      ...(input.ingredientAllergies !== undefined
+        ? {
+            ingredientAllergies: input.ingredientAllergies.map((entry) => ({
+              ingredientId: entry.ingredientId,
+              severity: ['MILD', 'MODERATE', 'SEVERE'].includes(entry.severity)
+                ? entry.severity
+                : 'MODERATE',
+            })),
+          }
+        : {}),
     };
   }
 

@@ -6,83 +6,107 @@ export interface SeedVideoDefinition {
   categorySlug: string;
   authorEmail: string;
   tags: string[];
+  /** Public YouTube video, verified through YouTube oEmbed on 2026-10-26. */
   youtubeId: string;
+  channelName: string;
   durationSeconds: number;
-  videoUrl?: string;
-  videoBytes?: number;
-  coverMedia: {
-    publicId: string;
-    secureUrl: string;
-    width: number;
-    height: number;
-    bytes: number;
+}
+
+/** YouTube's own thumbnail for the video (480×360 `hqdefault`). */
+export function youtubeThumbnail(youtubeId: string) {
+  return {
+    publicId: `youtube/${youtubeId}`,
+    secureUrl: `https://i.ytimg.com/vi/${youtubeId}/hqdefault.jpg`,
+    width: 480,
+    height: 360,
   };
 }
 
+// Real public videos embedded from YouTube; the platform only stores the link and description.
+// Each body names the channel and points to the matching seeded recipe or handbook.
 export const videoDefinitions: readonly SeedVideoDefinition[] = [
-  // 1. Video Bí quyết nước dùng Phở Chay
   {
     slug: 'video-nuoc-dung-pho-chay',
-    title: 'Video Hướng Dẫn: Bí Quyết Nấu Nước Dùng Phở Chay Ngọt Thanh Tự Nhiên Không Mì Chính',
-    excerpt: 'Từng bước nướng thơm gia vị, ninh củ quả và hầm nấm sen tạo vị ngọt thanh sâu lắng.',
-    body: 'Trong video dài 12 phút này, Bếp Trưởng Minh Tâm sẽ chia sẻ kỹ thuật hãm lửa và chọn nguyên liệu củ quả theo tỷ lệ vàng để nước phở trong veo, ngọt thanh tự nhiên mà không cần bất kỳ hạt nêm công nghiệp nào.',
+    title: 'Phở Chay Việt Nam: Bí Quyết Nấu Nước Dùng Ngọt Tự Nhiên',
+    excerpt: 'Cách nấu nước dùng phở chay ngọt từ rau củ, gừng và hoa hồi, quế nướng.',
+    body: 'Video của kênh Dzoãn Cẩm Vân (series Vân Du Chay) hướng dẫn nấu nước dùng phở chay từ rau củ và gia vị nướng, không dùng xương. Xem công thức chi tiết trong món "Phở Chay Nấm Hương Đậu Hũ".',
     categorySlug: 'van-hoa-am-thuc-chay',
     authorEmail: 'platform.contributor@example.com',
-    tags: ['phở chay', 'video nấu ăn', 'nước dùng', 'bếp chay'],
-    youtubeId: 'phoChayTutorial01',
-    durationSeconds: 720,
-    videoUrl: '/seed/videos/video-pho-nuoc-dung.mp4',
-    videoBytes: 13462323,
-    coverMedia: {
-      publicId: 'seed/recipes/pho-chay-ha-noi',
-      secureUrl: '/seed/recipes/pho-chay-ha-noi.png',
-      width: 1200,
-      height: 800,
-      bytes: 655114,
-    },
+    tags: ['phở chay', 'video nấu ăn', 'nước dùng'],
+    youtubeId: 'o0ZzxoezMqI',
+    channelName: 'Dzoãn Cẩm Vân',
+    durationSeconds: 1106,
   },
-
-  // 2. Video 15 Phút Meal Prep
   {
     slug: 'video-15-phut-bua-toi-chay',
-    title: 'Video Hướng Dẫn: 15 Phút Nấu Bữa Tối Chay Nhanh Gọn Cho Người Bận Rộn',
-    excerpt: 'Cách sắp xếp gian bếp và chuẩn bị 2 món xào - canh nóng hổi chỉ trong 15 phút.',
-    body: 'Video hướng dẫn thao tác song song giữa bếp xào đậu hũ bông cải và nồi canh chua thanh mát. Phù hợp cho các bạn trẻ văn phòng sau giờ làm tan ca.',
+    title: 'Đậu Hũ Xào Sả Ớt Với Nấm Rơm – Món Chay Nhanh Cho Bữa Tối',
+    excerpt: 'Món xào nhanh với đậu hũ, sả, ớt và nấm rơm, làm xong trong khoảng 20 phút.',
+    body: 'Video của kênh Tú Lê Miền Tây hướng dẫn chiên đậu hũ, phi sả ớt và xào cùng nấm rơm. Món hợp bữa tối ngày bận; có thể ăn kèm cơm gạo lứt như trong các thực đơn mẫu của ứng dụng.',
     categorySlug: 'nhanh-duoi-30-phut',
     authorEmail: 'platform.contributor@example.com',
-    tags: ['meal prep', '15 phút', 'bữa tối', 'nhanh'],
-    youtubeId: 'quickDinner15m',
-    durationSeconds: 900,
-    videoUrl: '/seed/videos/video-bua-toi-15-phut.mp4',
-    videoBytes: 12083292,
-    coverMedia: {
-      publicId: 'seed/recipes/canh-chua-chay-nam-bo',
-      secureUrl: '/seed/recipes/canh-chua-chay-nam-bo.jpg',
-      width: 1200,
-      height: 800,
-      bytes: 78366,
-    },
+    tags: ['đậu hũ', 'món xào', 'bữa tối', 'nhanh'],
+    youtubeId: 'A3XbRsGffI0',
+    channelName: 'TÚ LÊ MIỀN TÂY',
+    durationSeconds: 429,
   },
-
-  // 3. Video Làm Sữa Hạt Sen Đậu Đỏ
   {
     slug: 'video-sua-hat-sen-dau-do',
-    title: 'Video Hướng Dẫn: Nấu Sữa Hạt Sen Đậu Đỏ Thơm Béo Mịn Bằng Máy Xay Sinh Tố',
-    excerpt: 'Cách làm sữa hạt sánh dẻo tại nhà không tách nước, không cần lọc bỏ bã.',
-    body: 'Video chia sẻ mẹo nấu chín hạt sen và đậu đỏ trước khi xay cùng yến mạch để ly sữa hạt mịn màng, giàu chất xơ hòa tan và giữ trọn hương thơm tự nhiên.',
+    title: 'Cách Nấu Sữa Hạt Sen Sánh Mịn Không Tách Nước',
+    excerpt: 'Nấu chín hạt sen rồi xay và lọc để có sữa hạt sánh, không bị tách lớp.',
+    body: 'Video của kênh Tú Lê Miền Tây hướng dẫn nấu sữa hạt sen tại nhà. Có thể kết hợp với đậu đỏ như công thức "Sữa Hạt Sen Đậu Đỏ" trong ứng dụng.',
     categorySlug: 'sua-hat',
     authorEmail: 'invited.contributor@example.com',
-    tags: ['sữa hạt', 'hạt sen', 'thức uống dưỡng nhan', 'máy xay sinh tố'],
-    youtubeId: 'nutMilkTutorial',
-    durationSeconds: 540,
-    videoUrl: '/seed/videos/video-sua-hat-sen.mp4',
-    videoBytes: 9181510,
-    coverMedia: {
-      publicId: 'seed/recipes/sua-hat-sen-dau-do',
-      secureUrl: '/seed/recipes/sua-hat-sen-dau-do.jpg',
-      width: 1200,
-      height: 800,
-      bytes: 44635,
-    },
+    tags: ['sữa hạt', 'hạt sen', 'đồ uống'],
+    youtubeId: '5Yuko8btRrY',
+    channelName: 'TÚ LÊ MIỀN TÂY',
+    durationSeconds: 457,
+  },
+  {
+    slug: 'video-bun-hue-chay',
+    title: 'Cách Nấu Bún Huế Chay Đúng Vị',
+    excerpt: 'Nước dùng sả, sa tế và các loại nấm, chả chay cho tô bún Huế chay đậm đà.',
+    body: 'Video của kênh Ghiền nấu ăn (Duyen\'s Kitchen) hướng dẫn nấu bún Huế chay: nấu nước dùng ngọt từ rau củ, phi sa tế sả ớt và chuẩn bị phần topping chay. Tham khảo thêm công thức "Bún Bò Huế Chay".',
+    categorySlug: 'bun-pho-va-mi',
+    authorEmail: 'invited.contributor@example.com',
+    tags: ['bún huế chay', 'món nước', 'video nấu ăn'],
+    youtubeId: '3t9-zaDhA1o',
+    channelName: 'Ghiền nấu ăn',
+    durationSeconds: 574,
+  },
+  {
+    slug: 'video-ca-ri-chay',
+    title: 'Cách Nấu Cà Ri Chay Không Ngấy Trong 30 Phút',
+    excerpt: 'Cà ri chay với khoai, nấm và nước cốt dừa, nêm vừa để không bị ngấy.',
+    body: 'Video của kênh Ghiền nấu ăn (Duyen\'s Kitchen) hướng dẫn nấu cà ri chay khoảng 30 phút. Tham khảo công thức "Cà Ri Chay Khoai Lang Nấm Nước Cốt Dừa" để xem định lượng và giá trị dinh dưỡng.',
+    categorySlug: 'mon-ham-va-ca-ri',
+    authorEmail: 'platform.contributor@example.com',
+    tags: ['cà ri chay', 'nước cốt dừa', 'video nấu ăn'],
+    youtubeId: 'LIahLgoRtuo',
+    channelName: 'Ghiền nấu ăn',
+    durationSeconds: 458,
+  },
+  {
+    slug: 'video-an-chay-truong-thieu-chat-gi',
+    title: 'Ăn Chay Trường Thiếu Chất Gì, Bổ Sung Ở Đâu?',
+    excerpt: 'Bác sĩ chuyên khoa dinh dưỡng giải thích các vi chất người ăn chay trường dễ thiếu.',
+    body: 'Video của kênh AloBacsi với BS.CK1 Đinh Trần Ngọc Mai về những chất người ăn chay trường cần chú ý như vitamin B12, sắt, canxi, kẽm và đạm. Đọc thêm các cẩm nang về B12 và sắt, canxi, kẽm, omega-3 trong ứng dụng.',
+    categorySlug: 'vi-chat-thiet-yeu',
+    authorEmail: 'org.contributor@example.com',
+    tags: ['dinh dưỡng', 'vi chất', 'ăn chay trường', 'bác sĩ'],
+    youtubeId: 'i7yrc9zT84U',
+    channelName: 'Video AloBacsi',
+    durationSeconds: 1048,
+  },
+  {
+    slug: 'video-lieu-vitamin-b12',
+    title: 'Liều Vitamin B12 Tối Ưu Cho Người Trưởng Thành (tiếng Anh)',
+    excerpt: 'NutritionFacts.org tóm tắt các nghiên cứu về liều và tần suất bổ sung B12.',
+    body: 'Video tiếng Anh của NutritionFacts.org ("The Optimal Vitamin B12 Dosage for Adults") tổng hợp nghiên cứu về liều bổ sung B12 hằng ngày và hằng tuần. Đây là thông tin tham khảo; hãy hỏi bác sĩ trước khi chọn liều. Xem thêm cẩm nang "Vitamin B12 Cho Người Ăn Thuần Chay".',
+    categorySlug: 'vi-chat-thiet-yeu',
+    authorEmail: 'org.contributor@example.com',
+    tags: ['vitamin b12', 'thuần chay', 'tiếng anh'],
+    youtubeId: 'wY4vEBilWN4',
+    channelName: 'NutritionFacts.org',
+    durationSeconds: 357,
   },
 ] as const;

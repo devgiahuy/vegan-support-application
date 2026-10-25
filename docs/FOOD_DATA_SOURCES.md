@@ -1,16 +1,20 @@
 # Food, Nutrition, and Cooking Data Source Assessment
 
-**Version:** 1.1
+**Version:** 1.2
 
-**Updated:** 2026-10-25
+**Updated:** 2026-10-26
 
 **Status:** Architecture research for Backend Phase 12; provider/legal validation still required before bulk import
+
+## Seed nutrition dataset — 2026-10-26
+
+Seed ingredients now take per-100 g nutrient values verbatim from USDA FoodData Central SR Legacy (April 2018, public domain/CC0) under source `USDA_FDC`, version `SR Legacy 2018-04`, one profile per ingredient keyed by FDC ID, linked to import batch `seed-sr-legacy-2018-04`. Closest-record approximations are marked `PROXY` with ESTIMATED quality; ingredients with no public-domain record have no profile. Reference intakes use NASEM DRIs for adults 19–50 (source `NASEM_DRI`). Previous project-authored `PROJECT_DEMO_V1` v1.0 profiles, reference intakes and interaction rules are marked SUPERSEDED, not deleted. Details and the manual image list: `docs/SEED_NUTRITION_RECIPE_DATA.md`.
 
 ## Reviewed ingredient composition — 2026-10-25
 
 Composition is separate from nutrient quantities. Canonical component edges support transitive allergy/exclusion/diet/tradition checks without inventing nutrient proportions. PARTIAL/COMPLETE reviews retain active source ID, version, record reference, exact ingredient/product/formulation scope, license/attribution and authenticated admin reviewer/time, with versioned audit entries. A COMPLETE parent is uncertain if any child/source is incomplete/inactive. AI cannot promote a review.
 
-Targeted `db:normalize-allergies` adds project-authored `COMPOSITION_DEMO_V1`, version `composition-demo-2026-10-25`, CC0-1.0. An explicit whitelist covers 44 simple demo ingredients; two labelled synthetic compounds demonstrate nested peanut matching. These are educational fixtures, not branded-product evidence or food-safety certification. Generic processed items (including unspecified oils/sauces) remain UNKNOWN. Existing non-demo reviews/provenance and positive allergen links are preserved; unresolved saved selections are reported. Repeated normalization is idempotent.
+Targeted `db:normalize-allergies` adds project-authored `COMPOSITION_DEMO_V1`, version `composition-demo-2026-10-25`, CC0-1.0. An explicit whitelist covers 66 simple demo ingredients (22 added 2026-10-26, including extra-virgin olive oil and table salt); two labelled synthetic compounds demonstrate nested peanut matching. These are educational fixtures, not branded-product evidence or food-safety certification. Generic processed items (including unspecified oils/sauces) remain UNKNOWN. Existing non-demo reviews/provenance and positive allergen links are preserved; unresolved saved selections are reported. Repeated normalization is idempotent.
 
 Production reviews require evidence and usage rights for the exact formulation/label. A name, absent allergen links or nutrient-provider coverage cannot establish completeness. Every active hard dietary constraint excludes uncertain data. Source/graph/profile edits invalidate analysis, and confirmation rechecks current plans. Change record: v1.1 adds composition provenance/demo normalization; external provider/license validation below remains applicable.
 

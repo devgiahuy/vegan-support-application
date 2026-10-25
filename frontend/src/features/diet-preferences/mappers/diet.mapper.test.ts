@@ -99,6 +99,15 @@ describe('DietMapper.toPreferenceModel', () => {
           { ingredientId: null, ingredientName: 'Mắm tôm', reason: '' },
           { ingredientName: '' },
         ],
+        ingredientAllergies: [
+          {
+            ingredientId: 'ing-1',
+            ingredientName: 'Nấm hương',
+            severity: 'SEVERE',
+            ingredientActive: true,
+          },
+          { ingredientName: 'Thiếu ID' },
+        ],
         effectiveConstraints: { always: ['no-meat', ''], scheduledTradition: null },
       },
       meta: null,
@@ -108,6 +117,14 @@ describe('DietMapper.toPreferenceModel', () => {
     expect(pref.schedule?.dates).toEqual(['2026-09-15']);
     expect(pref.allergies).toHaveLength(1);
     expect(pref.ingredientExclusions).toHaveLength(1);
+    expect(pref.ingredientAllergies).toEqual([
+      {
+        ingredientId: 'ing-1',
+        ingredientName: 'Nấm hương',
+        severity: 'SEVERE',
+        ingredientActive: true,
+      },
+    ]);
     expect(pref.effectiveConstraints.always).toEqual(['no-meat']);
     expect(pref.effectiveConstraints.scheduledTradition).toBeNull();
   });
@@ -181,6 +198,29 @@ describe('DietMapper.toSaveDto / toScheduleDto', () => {
     expect(dto.allergies).toEqual([
       { allergenCode: 'PEANUT', label: 'Đậu phộng', severity: 'SEVERE' },
       { allergenCode: 'MILK', label: 'Sữa', severity: 'MODERATE' },
+    ]);
+  });
+
+  it('toSaveDto chỉ gửi ID nguyên liệu dị ứng chuẩn và severity hợp lệ', () => {
+    const dto = dietMapper.toSaveDto({
+      dietPattern: 'VEGAN',
+      practiceSchedule: 'PERMANENT',
+      tradition: 'NONE',
+      ruleSetVersion: 1,
+      rules: [],
+      ingredientAllergies: [
+        {
+          ingredientId: 'ing-1',
+          ingredientName: 'Nấm hương',
+          severity: 'SEVERE',
+          ingredientActive: true,
+        },
+        { ingredientId: 'ing-2', ingredientName: 'Mè', severity: 'HIGH', ingredientActive: true },
+      ],
+    });
+    expect(dto.ingredientAllergies).toEqual([
+      { ingredientId: 'ing-1', severity: 'SEVERE' },
+      { ingredientId: 'ing-2', severity: 'MODERATE' },
     ]);
   });
 });

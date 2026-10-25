@@ -36,6 +36,13 @@ export interface IngredientExclusion {
   reason: string;
 }
 
+export interface IngredientAllergy {
+  ingredientId: string;
+  ingredientName: string;
+  severity: string;
+  ingredientActive: boolean;
+}
+
 export interface EffectiveConstraints {
   always: string[];
   scheduledTradition: string | null;
@@ -54,6 +61,7 @@ export interface DietPreference {
   rules: DietRule[];
   schedule: { timezone: string; dates: string[] } | null;
   allergies: Allergy[];
+  ingredientAllergies: IngredientAllergy[];
   ingredientExclusions: IngredientExclusion[];
   effectiveConstraints: EffectiveConstraints;
 }
