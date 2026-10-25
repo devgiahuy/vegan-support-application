@@ -15,7 +15,10 @@ import { OverwriteConfirmDialog } from '@/features/recipe/components/overwrite-c
 import { recipeDraftMapper } from '@/features/recipe/mappers/recipe-draft.mapper';
 import type { RecipeDraftSuggestion } from '@/features/recipe/types/recipe-draft.model';
 import { AuthGuard } from '@/components/shared/auth-guard';
-import { useCreateRecipeMutation } from '@/features/recipe/queries/recipe.queries';
+import {
+  RecipeSubmitForReviewError,
+  useCreateAndSubmitRecipeMutation,
+} from '@/features/recipe/queries/recipe.queries';
 import { POST_QUERY_KEYS } from '@/features/post/queries/post.queries';
 import { addTrackedUserPost } from '@/features/post/utils/user-posts-tracker';
 import type { RecipeFormValues } from '@/features/recipe/schemas/recipe-form.schema';
@@ -38,7 +41,7 @@ export default function CreateRecipePage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
-  const createRecipeMutation = useCreateRecipeMutation();
+  const createRecipeMutation = useCreateAndSubmitRecipeMutation();
   const [createdRecipe, setCreatedRecipe] = React.useState<Recipe | null>(null);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = React.useState(false);
 
@@ -72,25 +75,34 @@ export default function CreateRecipePage() {
     }
   };
 
-  const handleSubmit = async (values: RecipeFormValues) => {
-    // Lỗi được ném tiếp để form đưa người dùng về bước cần sửa; toast do mutation hiển thị.
-    const created = await createRecipeMutation.mutateAsync(recipeFormToRecipe(values));
+  const trackCreated = (created: Recipe, fallbackTitle: string) => {
     void queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.mineRoot() });
-    if (created?.id && user?.id) {
+    if (created.id && user?.id) {
       addTrackedUserPost(user.id, {
         id: created.id,
         type: 'RECIPE',
-        title: created.title || values.title,
+        title: created.title || fallbackTitle,
         createdAt: new Date().toISOString(),
       });
     }
-    if (created?.status === 'PENDING_REVIEW') {
+  };
+
+  const handleSubmit = async (values: RecipeFormValues) => {
+    // Tạo + gửi kiểm duyệt trong một thao tác; toast do mutation hiển thị.
+    try {
+      const created = await createRecipeMutation.mutateAsync(recipeFormToRecipe(values));
+      trackCreated(created, values.title);
       setCreatedRecipe(created);
       setIsSuccessModalOpen(true);
-    } else if (created?.id) {
-      router.push(`/recipes/${created.id}`);
-    } else {
-      router.push('/recipes');
+    } catch (error) {
+      if (error instanceof RecipeSubmitForReviewError && error.recipe.id) {
+        // Đã lưu nháp: chuyển sang trang sửa, nơi có nút "Gửi kiểm duyệt" để thử lại.
+        trackCreated(error.recipe, values.title);
+        router.push(`/recipes/${error.recipe.id}/edit`);
+        return;
+      }
+      // Ném tiếp để form đưa người dùng về bước cần sửa.
+      throw error;
     }
   };
 

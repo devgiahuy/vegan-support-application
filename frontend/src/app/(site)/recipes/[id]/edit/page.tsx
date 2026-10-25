@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Home, ChevronRight, Pencil, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -9,7 +9,8 @@ import { AuthGuard } from '@/components/shared/auth-guard';
 import { RecipeEditorForm } from '@/features/recipe/components/recipe-editor-form';
 import {
   useRecipeDetailQuery,
-  useUpdateRecipeMutation,
+  useUpdateAndSubmitRecipeMutation,
+  RecipeSubmitForReviewError,
 } from '@/features/recipe/queries/recipe.queries';
 import { ReviewStatusBanner } from '@/features/review/components/review-status-banner';
 import { ReviewHistoryDialog } from '@/features/review/components/review-history-dialog';
@@ -21,6 +22,7 @@ import { getApiErrorCode } from '@/lib/api-error';
 export default function EditRecipePage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? '';
+  const router = useRouter();
   const [historyDialogOpen, setHistoryDialogOpen] = React.useState(false);
   const currentUser = useAuthStore((s) => s.user);
 
@@ -31,7 +33,7 @@ export default function EditRecipePage() {
     refetch: refetchRecipe,
   } = useRecipeDetailQuery(id);
 
-  const updateMutation = useUpdateRecipeMutation();
+  const updateMutation = useUpdateAndSubmitRecipeMutation();
 
   const isAuthor = Boolean(
     !currentUser || !recipe?.author?.id || currentUser.id === recipe.author.id
@@ -49,10 +51,16 @@ export default function EditRecipePage() {
         id,
         recipe: { ...recipeFormToRecipe(values), version: recipe.version },
       });
-      await refetchRecipe();
+      router.push(`/recipes/${id}`);
     } catch (error) {
-      // Xung đột phiên bản: tải bản mới nhất để lần gửi sau mang đúng `expectedVersion`.
-      if (getApiErrorCode(error) === 'CONTENT_VERSION_CONFLICT') void refetchRecipe();
+      // Xung đột phiên bản hoặc đã lưu nháp mà chưa gửi được: tải bản mới nhất để
+      // banner trạng thái và lần gửi sau mang đúng `expectedVersion`.
+      if (
+        error instanceof RecipeSubmitForReviewError ||
+        getApiErrorCode(error) === 'CONTENT_VERSION_CONFLICT'
+      ) {
+        void refetchRecipe();
+      }
       throw error;
     }
   };
@@ -118,7 +126,7 @@ export default function EditRecipePage() {
                 <Pencil className="h-7 w-7 text-primary" /> Chỉnh Sửa Công Thức
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                Sửa theo từng bước, xem lại rồi lưu thay đổi.
+                Sửa theo từng bước, xem lại rồi lưu. Bản sửa được gửi kiểm duyệt ngay khi lưu.
               </p>
             </div>
             <Button asChild variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
@@ -156,7 +164,7 @@ export default function EditRecipePage() {
             onSubmit={handleSubmit}
             isSubmitting={updateMutation.isPending}
             formTitle="Cập nhật công thức món chay"
-            submitLabel="Lưu thay đổi"
+            submitLabel="Lưu & gửi kiểm duyệt"
           />
         </div>
       )}

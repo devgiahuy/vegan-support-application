@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { useFormState, useWatch, type UseFormReturn } from 'react-hook-form';
-import { CheckCircle2, AlertCircle, Trash2, X } from 'lucide-react';
+import { CheckCircle2, AlertCircle, Loader2, Trash2, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { FieldError } from '@/components/ui/field';
@@ -16,7 +16,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ResolutionMatch } from '@/common/enums';
 import { IngredientSuggestions } from '@/features/ingredient/components/ingredient-suggestions';
+import { useIngredientResolveQuery } from '@/features/ingredient/queries/ingredient.queries';
 import type { Ingredient } from '@/features/ingredient/types/ingredient.model';
 import type { RecipeFormValues } from '../schemas/recipe-form.schema';
 import { fieldDomId } from './recipe-editor-steps';
@@ -83,6 +85,25 @@ export function RecipeIngredientRow({
     name: `ingredients.${index}.ingredientId`,
   });
   const currentUnit = useWatch({ control: form.control, name: `ingredients.${index}.unit` }) || '';
+
+  // Tự liên kết danh mục chuẩn: dò tên khi dòng được nạp (bản nháp AI, trang sửa) và khi
+  // rời ô tên. Chỉ tự chọn khi backend trả EXACT; AMBIGUOUS phải để người dùng chọn.
+  const [resolveTarget, setResolveTarget] = React.useState(() =>
+    ingredientId ? '' : rawName.trim()
+  );
+  const resolveQuery = useIngredientResolveQuery(resolveTarget, !ingredientId);
+  const resolution =
+    !ingredientId && resolveTarget && resolveTarget === rawName.trim() ? resolveQuery : null;
+  const exactMatch =
+    resolution?.data?.match === ResolutionMatch.EXACT && resolution.data.candidates.length === 1
+      ? resolution.data.candidates[0]
+      : undefined;
+
+  React.useEffect(() => {
+    if (!exactMatch) return;
+    form.setValue(`ingredients.${index}.name`, exactMatch.canonicalName, { shouldValidate: true });
+    form.setValue(`ingredients.${index}.ingredientId`, exactMatch.id, { shouldDirty: true });
+  }, [exactMatch, form, index]);
   const { errors } = useFormState({ control: form.control, name: `ingredients.${index}` });
   const rowErrors = errors.ingredients?.[index];
   const errorList = [rowErrors?.name, rowErrors?.amount, rowErrors?.unit];
@@ -154,6 +175,9 @@ export function RecipeIngredientRow({
             onKeyDown={(e) => {
               if (e.key === 'Escape') setIsOpen(false);
             }}
+            onBlur={() => {
+              if (!ingredientId) setResolveTarget(rawName.trim());
+            }}
             placeholder="Tên nguyên liệu, vd: Đậu hũ"
             aria-label={`Tên nguyên liệu ${index + 1}`}
             aria-invalid={Boolean(rowErrors?.name)}
@@ -167,10 +191,19 @@ export function RecipeIngredientRow({
               <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
                 <CheckCircle2 aria-hidden className="h-3 w-3" /> Đã liên kết danh mục chuẩn
               </span>
+            ) : resolution?.isFetching || exactMatch ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                <Loader2 aria-hidden className="h-3 w-3 animate-spin" /> Đang tìm trong danh mục
+                chuẩn…
+              </span>
             ) : rawName.trim().length > 0 ? (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                <AlertCircle aria-hidden className="h-3 w-3" /> Chưa liên kết — chọn từ gợi ý để
-                hiển thị cho người ăn kiêng
+                <AlertCircle aria-hidden className="h-3 w-3" />
+                {resolution?.data?.match === ResolutionMatch.AMBIGUOUS
+                  ? `Có ${resolution.data.candidates.length} nguyên liệu khớp — chọn một từ gợi ý`
+                  : resolution?.data?.match === ResolutionMatch.NONE
+                    ? 'Không có trong danh mục chuẩn — thử tên khác hoặc chọn từ gợi ý'
+                    : 'Chưa liên kết — chọn từ gợi ý để hiển thị cho người ăn kiêng'}
               </span>
             ) : null}
           </div>
