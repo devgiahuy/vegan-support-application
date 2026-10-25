@@ -103,6 +103,7 @@ export async function searchMongoPublished(
   join('recipe_details', 'published_revision_id', '_id', 'details');
   join('recipe_ingredients', 'published_revision_id', 'revision_id', 'ingredients');
   join('ingredients', 'ingredients.ingredient_id', '_id', 'canonicalIngredients');
+  join('ingredient_allergens', 'ingredients.ingredient_id', 'ingredient_id', 'ingredientAllergens');
   join('ingredient_aliases', 'ingredients.ingredient_id', 'ingredient_id', 'aliases');
   join('post_categories', 'published_revision_id', 'revision_id', 'categoryRefs');
   join('categories', 'categoryRefs.category_id', '_id', 'categories');
@@ -127,8 +128,12 @@ export async function searchMongoPublished(
         },
       ],
     });
-  if (constraints.allergenCodes.length)
+  if (constraints.allergenCodes.length) {
     recipeChecks.push({ $not: [overlap('$detail.allergen_codes', constraints.allergenCodes)] });
+    recipeChecks.push({
+      $not: [overlap('$ingredientAllergens.allergen_code', constraints.allergenCodes)],
+    });
+  }
   if (constraints.excludedIngredientIds.length)
     recipeChecks.push({
       $not: [overlap('$ingredients.ingredient_id', constraints.excludedIngredientIds)],

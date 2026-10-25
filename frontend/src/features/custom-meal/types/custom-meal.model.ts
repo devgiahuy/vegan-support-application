@@ -51,6 +51,7 @@ export interface CustomMeal {
   calculatedProtein: number | null;
   calculatedCarbs: number | null;
   calculatedFat: number | null;
+  nutritionNotes?: string[];
 
   // Tỷ lệ bao phủ dinh dưỡng
   coverageRatio: number;

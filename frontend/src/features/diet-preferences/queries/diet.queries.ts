@@ -7,6 +7,9 @@ import type {
 } from '../types/diet.dto';
 import { PROFILE_QUERY_KEYS } from '@/features/profile/queries/profile.queries';
 import { toast } from 'sonner';
+import { RECIPE_QUERY_KEYS } from '@/features/recipe/queries/recipe.queries';
+import { RECOMMENDATION_KEYS } from '@/features/recommendation/queries/recommendation.queries';
+import { POST_QUERY_KEYS } from '@/features/post/queries/post.queries';
 
 export const DIET_QUERY_KEYS = {
   all: ['diet'] as const,
@@ -37,6 +40,9 @@ export const useSaveDietPreferencesMutation = () => {
       queryClient.setQueryData(DIET_QUERY_KEYS.preference(), preference);
       queryClient.invalidateQueries({ queryKey: DIET_QUERY_KEYS.all });
       queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEYS.detail() });
+      queryClient.invalidateQueries({ queryKey: RECIPE_QUERY_KEYS.lists() });
+      queryClient.invalidateQueries({ queryKey: RECOMMENDATION_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.all });
       toast.success('Đã lưu lựa chọn chế độ ăn.');
     },
   });
@@ -51,6 +57,9 @@ export const useSaveDietScheduleMutation = () => {
       queryClient.setQueryData(DIET_QUERY_KEYS.schedule(), schedule);
       queryClient.invalidateQueries({ queryKey: DIET_QUERY_KEYS.all });
       queryClient.invalidateQueries({ queryKey: PROFILE_QUERY_KEYS.detail() });
+      queryClient.invalidateQueries({ queryKey: RECIPE_QUERY_KEYS.lists() });
+      queryClient.invalidateQueries({ queryKey: RECOMMENDATION_KEYS.all });
+      queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.all });
       toast.success('Đã lưu lịch chay kỳ.');
     },
   });

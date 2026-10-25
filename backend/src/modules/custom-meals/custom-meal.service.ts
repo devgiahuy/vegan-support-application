@@ -58,6 +58,8 @@ export function formatCustomMeal(meal: CustomMealRecord) {
     userFatGrams: formatDecimal(meal.userFatGrams),
     userFiberGrams: formatDecimal(meal.userFiberGrams),
     nutritionCoverage: meal.nutritionCoverage,
+    nutritionMetadata: meal.nutritionMetadata ?? null,
+    nutritionAnalyzedAt: meal.nutritionAnalyzedAt?.toISOString() ?? null,
     deletePolicy: meal.deletePolicy,
     ingredients: meal.ingredients.map((ing) => ({
       id: ing.id,
@@ -200,6 +202,14 @@ export class CustomMealService {
         message: 'Không tìm thấy bữa ăn tùy chỉnh',
       });
     }
+    if (meal.nutritionAnalyzedAt === null) {
+      try {
+        const analyzed = await this.analyzeNutrition(ownerId, meal);
+        return formatCustomMeal(analyzed ?? (await this.repository.findOwned(ownerId, id)) ?? meal);
+      } catch {
+        // Keep the saved meal available when canonical data or the AI provider is unavailable.
+      }
+    }
     return formatCustomMeal(meal);
   }
 
@@ -301,6 +311,7 @@ export class CustomMealService {
     }
 
     const totals = new Map<NutritionMetric, number>();
+    const metricIngredientCounts = new Map<NutritionMetric, number>();
     const sources: Array<Record<string, string>> = [];
     const uncovered: Array<{ position: number; displayName: string; reason: string }> = [];
     for (const ingredient of meal.ingredients) {
@@ -343,12 +354,15 @@ export class CustomMealService {
           METRIC_BY_NUTRIENT[nutrient.nutrient.code as keyof typeof METRIC_BY_NUTRIENT];
         if (!metric) continue;
         totals.set(metric, (totals.get(metric) ?? 0) + (nutrient.valuePer100g * edibleGrams) / 100);
+        metricIngredientCounts.set(metric, (metricIngredientCounts.get(metric) ?? 0) + 1);
       }
       sources.push({
         ingredientId: profile.ingredientId,
         sourceCode: profile.source.code,
         sourceVersion: profile.sourceVersion,
         sourceRecordId: profile.sourceRecordId,
+        licenseName: profile.source.licenseName,
+        attribution: profile.source.attribution,
       });
     }
 
@@ -368,7 +382,10 @@ export class CustomMealService {
           confidence: 1,
           uncertainty: null,
         };
-      } else if (totals.has(metric)) {
+      } else if (
+        meal.ingredients.length > 0 &&
+        metricIngredientCounts.get(metric) === meal.ingredients.length
+      ) {
         const amount = rounded(totals.get(metric)!);
         values[metric] = amount;
         metricMetadata[metric] = {
@@ -383,7 +400,7 @@ export class CustomMealService {
       (metric) => values[metric] === undefined,
     );
     let aiMetadata: Prisma.InputJsonObject = { used: false, providerDown: false };
-    if (missingMetrics.length > 0 && meal.ingredients.length > 0) {
+    if (missingMetrics.length > 0) {
       try {
         const suggestion = await this.aiProvider.suggestCustomMealNutritionFallback({
           mealName: meal.name,
@@ -395,7 +412,7 @@ export class CustomMealService {
             unit: ingredient.unit,
           })),
           missingMetrics,
-          signal: AbortSignal.timeout(10_000),
+          signal: AbortSignal.timeout(30_000),
         });
         let aiUsed = false;
         for (const metric of missingMetrics) {
@@ -432,10 +449,12 @@ export class CustomMealService {
     const coverage =
       availableCount === 0
         ? NutritionCoverage.UNAVAILABLE
-        : availableCount === Object.keys(METRIC_BY_NUTRIENT).length && uncovered.length === 0
+        : availableCount === Object.keys(METRIC_BY_NUTRIENT).length &&
+            uncovered.length === 0 &&
+            aiMetadata.used !== true
           ? NutritionCoverage.COMPLETE
           : NutritionCoverage.PARTIAL;
-    return this.repository.saveNutritionAnalysis(ownerId, meal.id, {
+    return this.repository.saveNutritionAnalysis(ownerId, meal.id, meal.updatedAt, {
       ...(values.calories !== undefined ? { calories: values.calories } : {}),
       ...(values.proteinGrams !== undefined ? { proteinGrams: values.proteinGrams } : {}),
       ...(values.carbsGrams !== undefined ? { carbsGrams: values.carbsGrams } : {}),
@@ -443,7 +462,18 @@ export class CustomMealService {
       ...(values.fiberGrams !== undefined ? { fiberGrams: values.fiberGrams } : {}),
       coverage,
       metadata: {
-        calculationVersion: 'custom-meal-nutrition-v1',
+        calculationVersion: 'custom-meal-nutrition-v2',
+        basis: 'ENTIRE_MEAL',
+        servings: meal.servings,
+        assumptions: [
+          'Các chỉ số là tổng cho toàn bộ món; chia cho số khẩu phần để lấy giá trị mỗi khẩu phần.',
+          'Giá trị chuẩn tính theo khối lượng phần ăn được; chưa áp dụng hao hụt khi nấu.',
+          ...(meal.ingredients.length === 0
+            ? [
+                'Chỉ có tên món: AI có thể ước tính theo cách chế biến và khẩu phần thông dụng, với độ không chắc chắn cao.',
+              ]
+            : []),
+        ],
         metrics: metricMetadata,
         sources,
         uncoveredIngredients: uncovered,

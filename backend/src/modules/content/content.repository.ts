@@ -30,7 +30,10 @@ import { aiCorrelationId } from '../ai-governance/ai-governance.context.js';
 
 const revisionInclude = {
   recipeDetail: true,
-  ingredients: { include: { ingredient: true }, orderBy: { position: 'asc' } },
+  ingredients: {
+    include: { ingredient: { include: { allergens: true } } },
+    orderBy: { position: 'asc' },
+  },
   recipeSteps: { include: { cookingMethod: true }, orderBy: { position: 'asc' } },
   dietCompatibility: { orderBy: { dietPattern: 'asc' } },
   categories: { include: { category: true }, orderBy: { category: { name: 'asc' } } },

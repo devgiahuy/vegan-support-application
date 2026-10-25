@@ -47,7 +47,8 @@ export const customMealApi = {
   createCustomMeal: async (data: CreateCustomMealRequestDto): Promise<CustomMeal> => {
     const res = await api.post<{ data: CustomMealResponseDto }>(
       API_ENDPOINTS.CUSTOM_MEALS.CREATE,
-      data
+      data,
+      { timeout: 45_000 }
     );
     const dataObj = res.data?.data ?? res.data;
     return CustomMealMapper.toCustomMealModel(dataObj as CustomMealResponseDto);
@@ -59,7 +60,8 @@ export const customMealApi = {
   updateCustomMeal: async (id: string, data: UpdateCustomMealRequestDto): Promise<CustomMeal> => {
     const res = await api.patch<{ data: CustomMealResponseDto }>(
       API_ENDPOINTS.CUSTOM_MEALS.UPDATE(id),
-      data
+      data,
+      { timeout: 45_000 }
     );
     const dataObj = res.data?.data ?? res.data;
     return CustomMealMapper.toCustomMealModel(dataObj as CustomMealResponseDto);

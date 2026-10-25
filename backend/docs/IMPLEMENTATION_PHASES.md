@@ -1,12 +1,16 @@
 # Backend Implementation Phases
 
-**Version:** 3.16
+**Version:** 3.18
 
 **Updated:** 2026-10-25
 
 **Stack:** Node.js · Express · TypeScript · MongoDB replica set · Prisma · Zod · OpenAPI
 
 **Current baseline:** Phases 00–20 and 23–26 completed; Phases 21–22 and 27 are in progress. OpenAI image adapters are implemented for Phase 21/22, but live Vietnamese image and receipt validation remains before production readiness.
+
+**Cross-phase maintenance — 2026-10-25:** Recipe filtering and manual insertion now consult current ingredient allergens in addition to revision snapshots; constrained manual additions reject unresolved ingredients. Custom-meal creation/editing recalculates canonical/AI entire-meal estimates, resolves approved aliases, preserves manual overrides and zero values, exposes existing nutrition provenance fields, and fences stale inference writes. No schema migration or seed update is required. Backend lint/typecheck/build/OpenAPI and existing meal-plan/analysis acceptance checks pass. Live Mongo/API verification covers stale-allergen exclusion, blocked manual addition, configured OpenAI free-text nutrition, recalculation, provider-down nulls, canonical quantity scaling, alias resolution and stale-write fencing. A temporary two-week program generated 42 filled slots and its actual HTTP payload mapped to 42 named frontend meals; temporary records were deleted. Frontend typecheck/scoped lint, 60 files / 682 tests and 47-page production build pass. Phases 21/22/27 retain their existing status; this maintenance is not a new numbered phase.
+
+**Maintenance re-verification — 2026-10-25:** All backend gates and the served OpenAPI comparison pass again. Twelve runtime/API checks verify current SESAME filtering, related/recommendation constraints, aliases and quantity scaling, manual zero/null behavior, live configured AI fallback, provider failure, stale-write fencing, 42 filled program slots, blocked manual insertion and authentication. Frontend follow-up completes manual override UI and daily-to-weekly macro mapping; 686 tests after rebasing onto the latest recipe-usage/receipt commits and browser create/edit QA pass. The inherited statistics acceptance fixture now supplies calories/tolerance required by the existing FILLED-slot validator and passes. No backend domain/schema or phase-status changes in this follow-up.
 
 **Phase 24 maintenance — 2026-10-25:** User-approved directory exception removes implicit eating-profile filtering from nearby/search/details. Explicit query `dietPattern` remains a reviewed-claim filter. Backend lint/typecheck/build and OpenAPI generation pass; frontend schema sync/typecheck/scoped lint, 657 tests and build pass. An authenticated seed account with an eating profile retrieved 20 live SerpApi places with `externalResultsSuppressed=false`. No schema migration or seed update is required. This does not change recipe or meal-plan constraints.
 

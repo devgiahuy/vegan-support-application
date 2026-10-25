@@ -6,15 +6,17 @@ import { recommendationApi } from '../api/recommendation.api';
 
 export const RECOMMENDATION_KEYS = {
   all: ['recommendations'] as const,
-  home: () => [...RECOMMENDATION_KEYS.all, 'home'] as const,
+  home: (userId?: string) =>
+    [...RECOMMENDATION_KEYS.all, 'home', ...(userId ? [userId] : [])] as const,
   consent: () => [...RECOMMENDATION_KEYS.all, 'consent'] as const,
 };
 
 /** Khối gợi ý trang chủ — chỉ member (guest không bắn request vô ích). */
 export function useHomeRecommendationsQuery() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const userId = useAuthStore((state) => state.user?.id);
   return useQuery({
-    queryKey: RECOMMENDATION_KEYS.home(),
+    queryKey: RECOMMENDATION_KEYS.home(userId),
     queryFn: () => recommendationApi.getHome({ limit: 8 }),
     staleTime: 2 * 60 * 1000,
     enabled: isAuthenticated,

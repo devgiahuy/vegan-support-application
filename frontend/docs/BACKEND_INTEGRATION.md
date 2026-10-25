@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.50
+**Version:** 4.52
 
 **Cập nhật:** 25/10/2026
 
@@ -13,6 +13,26 @@
 ---
 
 ## 1. Source of truth và status
+
+### Follow-up verification and nutrition display corrections — 2026-10-25 (4.52)
+
+Frontend correction on the same READY contracts: custom-meal forms send explicit zero macro overrides; the detail/form summary displays manual protein/carbs/fat, and clearing an existing manual value sends `null` to release it for recalculation. Automatic fiber is no longer mapped to a manual override. Ingredient-link coverage is labelled separately from nutrition availability. Meal-program weekly macro totals fall back to the backend's `days[].estimatedTotals` rather than showing zero when the legacy `macronutrients` object is absent; explicit legacy values, including zero, remain authoritative.
+
+Re-verification: 12 runtime/API checks pass against the current MongoDB and configured real AI provider, including stale SESAME metadata, related/recommendation filtering, canonical aliases/scaling, manual zero/null handling, provider failure, stale-write fencing, 42 generated meals, blocked manual insertion and authentication. The actual generated HTTP payload maps to 42 named frontend meals with nonzero weekly nutrition. Browser QA confirms custom-meal creation with zero macros and clearing overrides to recalculate canonical nutrition. Temporary accounts/records were removed. No new route, request, database schema, authorization or readiness changes; no original screenshots or native mobile QA were available.
+
+Changelog 2026-10-25 (4.52): complete custom-meal manual override UI and generated weekly macro mapping; backend gates, frontend typecheck/scoped lint, 686 tests and production build pass after incorporating the current recipe-usage/receipt commits.
+
+### Recipe allergy filtering, custom-meal nutrition and generated program meals — 2026-10-25 (4.51)
+
+- Recipe discovery (`GET /posts`, related content, recommendations and weekly planner candidates) rejects allergens from either the revision snapshot or current `ingredient_allergens`, before ranking/pagination. Recipe manual-add uses the same conservative union. This fixes stale recipe allergen snapshots; restaurant directory behavior is unchanged. Existing `MEAL_PLAN_HARD_CONSTRAINT_VIOLATION` (409, `fields.reasons` includes `ALLERGY`) handling still applies to blocked manual insertion; no new error code.
+- `POST /custom-meals` and nutrition-relevant `PATCH /custom-meals/:id` calculate entire-meal calories/protein/carbs/fat/fiber from approved canonical profiles and approved aliases. If any ingredient lacks data for a metric, AI estimates that metric for the entire meal, not just the unresolved ingredients. Recognizable name-only meals may be estimated with serving/preparation assumptions. Inference is best-effort: provider failure saves the private meal and leaves unavailable values null. Manual overrides, including zero, are preserved; `user*=null` releases an override. Editing inputs clears automatic values before recalculation; outdated inference cannot overwrite a concurrent edit.
+- Additive custom-meal response fields: `nutritionMetadata` and `nutritionAnalyzedAt`. Metadata v2 exposes `basis=ENTIRE_MEAL`, servings, per-metric `origin/confidence/uncertainty`, canonical `sources` with source/version/record/license/attribution, assumptions, uncovered ingredients, AI provider/model/failure state and disclaimer. Existing `user*` response fields retain current numeric values for compatibility; use metadata to distinguish `USER_PROVIDED`, `CANONICAL_CALCULATED` and `AI_ESTIMATED`. AI estimates have `PARTIAL` coverage and never update canonical data. Historical records may have null metadata. No persistence migration or seed change is needed: both fields already exist.
+- FE: Swagger synchronized; custom-meal DTO/Model/Mapper moves automatic values into calculated display fields, so edit forms do not resubmit them as manual overrides; notes disclose AI assumptions/failure, and create/update allow 45 seconds for the bounded 30-second fallback. Recipe list, related content and recommendation caches vary by authenticated user and invalidate after diet/schedule saves; READY recipe list errors propagate to the error state instead of returning unfiltered fixtures.
+- Meal programs continue to generate private weekly plans automatically and remain drafts until confirmation. The consumer now maps `weeks[].alternatives[].snapshot.days[].slots.{breakfast,lunch,dinner}`, nested recipe/custom-meal names/images and actual calorie totals. Explicit `UNFILLED` slots stay empty, including legacy `items` snapshots. Generated meals are visible without an extra manual-add request. Endpoint paths, authorization, confirmation and request schemas are unchanged.
+
+Affected existing endpoints remain `READY`; frontend migration is additive. Verification evidence is recorded in `backend/docs/IMPLEMENTATION_PHASES.md` and `frontend/docs/WORK-LOG.md`.
+
+Changelog 2026-10-25 (4.51): fix stale allergen snapshots and frontend discovery caches/fixture fallback; recalculate custom meals with canonical/AI provenance and manual override preservation; display generated program meals from `days[].slots`. No route, request or authorization change.
 
 ### Receipt purchase identity and review — 2026-10-25 (4.50)
 
@@ -623,8 +643,8 @@ MVP không có payment/quota purchase, DMCA workflow, audio/frame copyright dete
 
 | Method           | Path                                       | Status  | Backend updated | FE integrated    | Ghi chú                                                                                                       |
 | ---------------- | ------------------------------------------ | ------- | --------------- | ---------------- | ------------------------------------------------------------------------------------------------------------- |
-| GET/POST         | `/custom-meals`                            | `READY` | 2026-09-28      | Yes (2026-10-03) | Additive `userFiberGrams`; safe unit labels normalize to `g`/`kg`/`cái`; existing fields retained             |
-| GET/PATCH/DELETE | `/custom-meals/:id`                        | `READY` | 2026-09-28      | Yes (2026-10-03) | Owner-only; safe behavior when used by plan (BLOCK vs RETAIN_SNAPSHOT); FE: `features/custom-meal`            |
+| GET/POST | `/custom-meals` | `READY` | 2026-10-25 | Yes (2026-10-25) | Entire-meal canonical/AI nutrition; additive provenance and bounded fallback; see 4.51 |
+| GET/PATCH/DELETE | `/custom-meals/:id` | `READY` | 2026-10-25 | Yes (2026-10-25) | Owner-only; recalculate changed inputs, preserve manual overrides and reject stale inference; delete policy unchanged |
 | POST             | `/custom-meals/:id/photos`                 | `READY` | 2026-09-21      | Yes (2026-10-03) | Quota-aware photo attach (`assetId`); FE: `features/custom-meal`                                              |
 | DELETE           | `/custom-meals/:id/photos/:assetId`        | `READY` | 2026-09-21      | Yes (2026-10-03) | Gỡ ảnh khỏi bữa ăn tùy chỉnh; FE: `features/custom-meal`                                                      |
 | PUT              | `/custom-meals/:id/photos/order`           | `READY` | 2026-09-21      | Yes (2026-10-03) | Reorder thứ tự ảnh (`orderedAssetIds`); FE: `features/custom-meal`                                            |
@@ -1317,9 +1337,9 @@ Một frontend/backend capability chỉ được xem là tích hợp xong khi:
 | Method | Endpoint                                   | Status | FE integrated | FE integrated date | Notes                                                                                            |
 | ------ | ------------------------------------------ | ------ | ------------- | ------------------ | ------------------------------------------------------------------------------------------------ |
 | GET    | /api/v1/custom-meals                       | READY  | Yes           | 2026-10-03         | Owner-scoped paginated list; optional ?tag= filter; FE: `features/custom-meal`                   |
-| POST   | /api/v1/custom-meals                       | READY  | Yes           | 2026-10-03         | Create private custom meal with ingredients, userFiberGrams, tags; FE: `features/custom-meal`    |
+| POST   | /api/v1/custom-meals                       | READY  | Yes           | 2026-10-03         | Create private meal; canonical/AI totals and provenance (4.51); FE integrated 2026-10-25    |
 | GET    | /api/v1/custom-meals/{id}                  | READY  | Yes           | 2026-10-03         | Detail with ingredients, photos, tags, userFiberGrams; FE: `features/custom-meal`                |
-| PATCH  | /api/v1/custom-meals/{id}                  | READY  | Yes           | 2026-10-03         | Partial update; replaces entire ingredients/tags lists if provided; FE: `features/custom-meal`   |
+| PATCH  | /api/v1/custom-meals/{id}                  | READY  | Yes           | 2026-10-03         | Replace provided ingredients/tags; recalculate nutrition with manual overrides (4.51)   |
 | DELETE | /api/v1/custom-meals/{id}                  | READY  | Yes           | 2026-10-03         | Soft-delete; 409 CUSTOM_MEAL_IN_USE if BLOCK policy and plan references exist; FE: `custom-meal` |
 | POST   | /api/v1/custom-meals/{id}/photos           | READY  | Yes           | 2026-10-03         | Attach existing MediaAsset (COVER_IMAGE); max 10 per meal; FE: `features/custom-meal`            |
 | DELETE | /api/v1/custom-meals/{id}/photos/{assetId} | READY  | Yes           | 2026-10-03         | Detach photo; asset deletion handled via storage module; FE: `features/custom-meal`              |
@@ -1378,9 +1398,9 @@ Một frontend/backend capability chỉ được xem là tích hợp xong khi:
 | Method | Endpoint                   | Status | FE integrated | FE integrated date | Notes                                                                                                           |
 | ------ | -------------------------- | ------ | ------------- | ------------------ | --------------------------------------------------------------------------------------------------------------- |
 | POST   | /api/v1/meal-programs      | READY  | Yes           | 2026-10-25         | Create/generate multi-week program (2–12 weeks); FE allows synchronous generation time and retries idempotently |
-| GET    | /api/v1/meal-programs      | READY  | Yes           | 2026-10-25         | Owner paginated list; FE sends only `page`, `limit`, and supported `status` values                              |
-| GET    | /api/v1/meal-programs/{id} | READY  | No            | —                  | Full program detail with weekly snapshots, alternatives, and cross-week analysis                                |
-| PATCH  | /api/v1/meal-programs/{id} | READY  | No            | —                  | Versioned program update, alternative selection, reanalysis, or confirmation                                    |
+| GET    | /api/v1/meal-programs      | READY  | Yes           | 2026-10-25         | Owner paginated list; FE sends only `page`, `limit`, and supported `status` values |
+| GET | /api/v1/meal-programs/{id} | READY | Yes | 2026-10-25 | Full program detail; generated `days[].slots` mapped to named meals (4.51) |
+| PATCH  | /api/v1/meal-programs/{id} | READY  | No            | —                  | Versioned program update, alternative selection, reanalysis, or confirmation     |
 
 **Business rules (backend-enforced):**
 

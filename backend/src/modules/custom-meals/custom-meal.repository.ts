@@ -115,9 +115,7 @@ export class CustomMealRepository {
   }
 
   async create(data: CreateCustomMealData): Promise<CustomMealRecord> {
-    const { resolvedIngredients, nutritionCoverage } = await this.resolveIngredients(
-      data.ingredients,
-    );
+    const { resolvedIngredients } = await this.resolveIngredients(data.ingredients);
     const normalizedTags = this.normalizeTags(data.tags);
     return this.prisma.customMeal.create({
       data: {
@@ -131,7 +129,7 @@ export class CustomMealRepository {
         userCarbsGrams: data.userCarbsGrams ?? null,
         userFatGrams: data.userFatGrams ?? null,
         userFiberGrams: data.userFiberGrams ?? null,
-        nutritionCoverage,
+        nutritionCoverage: NutritionCoverage.UNAVAILABLE,
         deletePolicy: data.deletePolicy ?? CustomMealDeletePolicy.BLOCK,
         ingredients: { create: resolvedIngredients },
         tags: { create: normalizedTags },
@@ -152,7 +150,7 @@ export class CustomMealRepository {
         source: { active: true },
       },
       include: {
-        source: { select: { code: true } },
+        source: { select: { code: true, licenseName: true, attribution: true } },
         householdConversions: {
           where: { reviewStatus: FoodDataReviewStatus.APPROVED },
         },
@@ -173,6 +171,7 @@ export class CustomMealRepository {
   async saveNutritionAnalysis(
     ownerId: string,
     id: string,
+    expectedUpdatedAt: Date,
     values: {
       calories?: number;
       proteinGrams?: number;
@@ -183,32 +182,20 @@ export class CustomMealRepository {
       coverage: NutritionCoverage;
     },
   ): Promise<CustomMealRecord | null> {
-    const current = await this.findOwned(ownerId, id);
-    if (!current) return null;
-    return this.prisma.customMeal.update({
-      where: { id },
+    const result = await this.prisma.customMeal.updateMany({
+      where: { id, ownerId, deletedAt: null, updatedAt: expectedUpdatedAt },
       data: {
-        ...(current.userCalories === null && values.calories !== undefined
-          ? { userCalories: Math.round(values.calories) }
-          : {}),
-        ...(current.userProteinGrams === null && values.proteinGrams !== undefined
-          ? { userProteinGrams: values.proteinGrams }
-          : {}),
-        ...(current.userCarbsGrams === null && values.carbsGrams !== undefined
-          ? { userCarbsGrams: values.carbsGrams }
-          : {}),
-        ...(current.userFatGrams === null && values.fatGrams !== undefined
-          ? { userFatGrams: values.fatGrams }
-          : {}),
-        ...(current.userFiberGrams === null && values.fiberGrams !== undefined
-          ? { userFiberGrams: values.fiberGrams }
-          : {}),
+        ...(values.calories !== undefined ? { userCalories: Math.round(values.calories) } : {}),
+        ...(values.proteinGrams !== undefined ? { userProteinGrams: values.proteinGrams } : {}),
+        ...(values.carbsGrams !== undefined ? { userCarbsGrams: values.carbsGrams } : {}),
+        ...(values.fatGrams !== undefined ? { userFatGrams: values.fatGrams } : {}),
+        ...(values.fiberGrams !== undefined ? { userFiberGrams: values.fiberGrams } : {}),
         nutritionMetadata: values.metadata,
         nutritionAnalyzedAt: new Date(),
         nutritionCoverage: values.coverage,
       },
-      include: customMealInclude,
     });
+    return result.count === 1 ? this.findOwned(ownerId, id) : null;
   }
 
   async update(
@@ -219,14 +206,53 @@ export class CustomMealRepository {
     const existing = await this.findOwned(ownerId, id);
     if (!existing) return null;
 
+    const nutritionChanged = [
+      'name',
+      'servings',
+      'ingredients',
+      'userCalories',
+      'userProteinGrams',
+      'userCarbsGrams',
+      'userFatGrams',
+      'userFiberGrams',
+    ].some((key) => data[key as keyof UpdateCustomMealData] !== undefined);
+    const resetNutrition: Prisma.CustomMealUpdateInput = {};
+    if (nutritionChanged) {
+      const metadata = existing.nutritionMetadata;
+      const metrics =
+        metadata && typeof metadata === 'object' && !Array.isArray(metadata)
+          ? metadata.metrics
+          : null;
+      for (const [metric, field] of [
+        ['calories', 'userCalories'],
+        ['proteinGrams', 'userProteinGrams'],
+        ['carbsGrams', 'userCarbsGrams'],
+        ['fatGrams', 'userFatGrams'],
+        ['fiberGrams', 'userFiberGrams'],
+      ] as const) {
+        const entry =
+          metrics && typeof metrics === 'object' && !Array.isArray(metrics)
+            ? metrics[metric]
+            : null;
+        if (
+          entry &&
+          typeof entry === 'object' &&
+          !Array.isArray(entry) &&
+          entry.origin !== 'USER_PROVIDED'
+        )
+          resetNutrition[field] = null;
+      }
+      resetNutrition.nutritionMetadata = null;
+      resetNutrition.nutritionAnalyzedAt = null;
+      resetNutrition.nutritionCoverage = NutritionCoverage.UNAVAILABLE;
+    }
+
     let resolvedIngredients:
       Awaited<ReturnType<typeof this.resolveIngredients>>['resolvedIngredients'] | undefined;
-    let nutritionCoverage: NutritionCoverage | undefined;
 
     if (data.ingredients !== undefined) {
       const resolved = await this.resolveIngredients(data.ingredients);
       resolvedIngredients = resolved.resolvedIngredients;
-      nutritionCoverage = resolved.nutritionCoverage;
     }
 
     return this.prisma.$transaction(async (tx) => {
@@ -239,6 +265,7 @@ export class CustomMealRepository {
       return tx.customMeal.update({
         where: { id },
         data: {
+          ...resetNutrition,
           ...(data.name !== undefined ? { name: data.name.trim() } : {}),
           ...(data.notes !== undefined ? { notes: data.notes?.trim() ?? null } : {}),
           ...(data.servings !== undefined ? { servings: data.servings } : {}),
@@ -250,7 +277,6 @@ export class CustomMealRepository {
           ...(data.userCarbsGrams !== undefined ? { userCarbsGrams: data.userCarbsGrams } : {}),
           ...(data.userFatGrams !== undefined ? { userFatGrams: data.userFatGrams } : {}),
           ...(data.userFiberGrams !== undefined ? { userFiberGrams: data.userFiberGrams } : {}),
-          ...(nutritionCoverage !== undefined ? { nutritionCoverage } : {}),
           ...(data.deletePolicy !== undefined ? { deletePolicy: data.deletePolicy } : {}),
           ...(resolvedIngredients !== undefined
             ? { ingredients: { create: resolvedIngredients } }
@@ -376,15 +402,32 @@ export class CustomMealRepository {
         }
 
         if (!ingredientId) {
-          const found = await this.prisma.ingredient.findFirst({
-            where: { normalizedName, status: CatalogStatus.ACTIVE },
+          const found = await this.prisma.ingredient.findMany({
+            where: {
+              status: CatalogStatus.ACTIVE,
+              OR: [
+                { normalizedName },
+                {
+                  aliases: {
+                    some: {
+                      normalizedAlias: normalizedName,
+                      reviewStatus: FoodDataReviewStatus.APPROVED,
+                    },
+                  },
+                },
+              ],
+            },
             select: { id: true },
+            take: 2,
           });
-          if (found) {
-            ingredientId = found.id;
+          if (found.length === 1) {
+            ingredientId = found[0]!.id;
             resolutionStatus = IngredientResolutionStatus.EXACT;
           } else {
-            resolutionStatus = IngredientResolutionStatus.UNKNOWN;
+            resolutionStatus =
+              found.length > 1
+                ? IngredientResolutionStatus.AMBIGUOUS
+                : IngredientResolutionStatus.UNKNOWN;
           }
         }
 
@@ -400,22 +443,7 @@ export class CustomMealRepository {
       }),
     );
 
-    const allResolved = resolvedIngredients.every(
-      (ing) => ing.resolutionStatus === IngredientResolutionStatus.EXACT,
-    );
-    const noneResolved = resolvedIngredients.every(
-      (ing) => ing.resolutionStatus === IngredientResolutionStatus.UNKNOWN,
-    );
-    const nutritionCoverage: NutritionCoverage =
-      ingredients.length === 0
-        ? NutritionCoverage.UNAVAILABLE
-        : allResolved
-          ? NutritionCoverage.COMPLETE
-          : noneResolved
-            ? NutritionCoverage.UNAVAILABLE
-            : NutritionCoverage.PARTIAL;
-
-    return { resolvedIngredients, nutritionCoverage };
+    return { resolvedIngredients };
   }
 
   private normalizeTags(tags: string[]): Array<{ tag: string; normalizedTag: string }> {

@@ -32,7 +32,7 @@ export interface CustomMealIngredientDto {
   displayName?: string;
   amount?: number;
   unit?: string;
-  resolutionStatus?: 'RESOLVED' | 'UNRESOLVED';
+  resolutionStatus?: 'EXACT' | 'AMBIGUOUS' | 'UNKNOWN' | 'RESOLVED' | 'UNRESOLVED';
   ingredientId?: string | null;
   ingredient?: {
     id: string;
@@ -48,6 +48,13 @@ export interface CustomMealIngredientDto {
 export interface CustomMealTagDto {
   tag?: string;
   normalizedTag?: string;
+}
+
+export interface CustomMealNutritionMetadataDto {
+  metrics?: Record<string, { origin?: string; confidence?: number; uncertainty?: unknown }>;
+  assumptions?: string[];
+  ai?: { used?: boolean; providerDown?: boolean; uncertaintyNote?: string };
+  disclaimer?: string;
 }
 
 export interface CustomMealResponseDto {
@@ -72,6 +79,8 @@ export interface CustomMealResponseDto {
   calculatedCarbs?: number | null;
   calculatedFat?: number | null;
   nutritionCoverage?: string;
+  nutritionMetadata?: CustomMealNutritionMetadataDto | null;
+  nutritionAnalyzedAt?: string | null;
   coverageRatio?: number;
   isFullyCovered?: boolean;
   unmatchedIngredientCount?: number;

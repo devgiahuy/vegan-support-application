@@ -128,7 +128,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     tags: ['Content'],
     summary: 'List nội dung published',
     description:
-      'Tìm kiếm không dấu và filter published content. Recipe list/related/detail trả statistics.usageUserCount là số user riêng biệt đã thêm công thức vào meal plan chưa xóa; usageTracking=MEAL_PLAN_ADDITION và cookedUserCount=null vì backend chưa theo dõi sự kiện đã nấu hoặc hoàn thành món. Ranking v1: title > canonical ingredient > category/tag > body, sau đó publishedAt và UUID. Với access token hợp lệ, backend tự áp dụng allergy, ingredient exclusion, diet pattern và enabled tradition rules trước ranking; dietPattern từ query không thể nới profile đã lưu. ingredientIds yêu cầu Recipe chứa đủ toàn bộ ID.',
+      'Tìm kiếm không dấu và filter published content. Recipe list/related/detail trả statistics.usageUserCount là số user riêng biệt đã thêm công thức vào meal plan chưa xóa; usageTracking=MEAL_PLAN_ADDITION và cookedUserCount=null vì backend chưa theo dõi sự kiện đã nấu hoặc hoàn thành món. Ranking v1: title > canonical ingredient > category/tag > body, sau đó publishedAt và UUID. Với access token hợp lệ, backend tự áp dụng allergy, ingredient exclusion, diet pattern và enabled tradition rules trước ranking; dietPattern từ query không thể nới profile đã lưu. Dị ứng kiểm tra cả snapshot công thức và metadata nguyên liệu hiện tại. ingredientIds yêu cầu Recipe chứa đủ toàn bộ ID.',
     operationId: 'listPublishedPosts',
     security: optionalAuthenticated,
     request: { query: postListQuerySchema },

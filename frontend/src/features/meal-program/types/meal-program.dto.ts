@@ -14,16 +14,32 @@ export interface WeeklyPlanMealItemDto {
   calories?: number;
   image_url?: string | null;
   imageUrl?: string | null;
+  status?: 'FILLED' | 'UNFILLED';
+  recipe?: { title?: string; coverImageUrl?: string | null } | null;
+  customMeal?: { name?: string; photoUrl?: string | null } | null;
 }
 
 export interface WeeklyPlanDayDto {
   date?: string;
   day_of_week?: number;
-  dayOfWeek?: number;
+  dayOfWeek?: number | string;
   meals?: WeeklyPlanMealItemDto[];
+  slots?: {
+    breakfast?: WeeklyPlanMealItemDto | null;
+    lunch?: WeeklyPlanMealItemDto | null;
+    dinner?: WeeklyPlanMealItemDto | null;
+  };
+  estimatedTotals?: {
+    proteinGrams?: number | null;
+    fiberGrams?: number | null;
+    fatGrams?: number | null;
+    carbohydrateGrams?: number | null;
+  };
 }
 
 export interface WeeklyPlanSnapshotDto {
+  targetCalories?: number;
+  weekStart?: string;
   captured_at?: string;
   capturedAt?: string;
   total_calories?: number;

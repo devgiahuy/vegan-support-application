@@ -5,6 +5,87 @@ import type { MealProgramDto, MealProgramListItemDto } from '../types/meal-progr
 describe('MealProgramMapper', () => {
   const mapper = new MealProgramMapper();
 
+  it('aggregates the current backend daily nutrition totals without replacing explicit legacy totals', () => {
+    const days = [
+      {
+        date: '2026-10-26',
+        estimatedTotals: {
+          proteinGrams: 25,
+          carbohydrateGrams: 80,
+          fatGrams: 15,
+          fiberGrams: 8.75,
+        },
+      },
+      {
+        date: '2026-10-27',
+        estimatedTotals: {
+          proteinGrams: 30,
+          carbohydrateGrams: 60,
+          fatGrams: 10,
+          fiberGrams: null,
+        },
+      },
+    ];
+    expect(mapper.mapSnapshot({ days })?.macronutrients).toEqual({
+      protein: 55,
+      carbs: 140,
+      fat: 25,
+      fiber: 8.75,
+    });
+    expect(
+      mapper.mapSnapshot({ days, macronutrients: { protein: 0 } })?.macronutrients.protein
+    ).toBe(0);
+  });
+
+  it('renders generated day slots instead of discarding meals when days and items coexist', () => {
+    const slot = (id: string, mealType: 'BREAKFAST' | 'LUNCH' | 'DINNER') => ({
+      id,
+      mealType,
+      status: 'FILLED' as const,
+      servings: 1,
+      calories: 300,
+      recipe: { title: `Món ${id}`, coverImageUrl: 'https://example.com/meal.jpg' },
+    });
+    const days = Array.from({ length: 7 }, (_, index) => ({
+      date: new Date(Date.UTC(2026, 9, 26 + index)).toISOString().slice(0, 10),
+      dayOfWeek: 'MONDAY',
+      slots: {
+        breakfast: slot(`${index}-b`, 'BREAKFAST'),
+        lunch: slot(`${index}-l`, 'LUNCH'),
+        dinner: slot(`${index}-d`, 'DINNER'),
+      },
+    }));
+    const result = mapper.mapSnapshot({ days, items: [], targetCalories: 2000 });
+    expect(result?.days.flatMap((day) => day.meals)).toHaveLength(21);
+    expect(result?.days[0].meals[0].name).toBe('Món 0-b');
+    expect(result?.days[0].meals[0].imageUrl).toBe('https://example.com/meal.jpg');
+    expect(result?.days[0].totalCalories).toBe(900);
+    expect(result?.totalCalories).toBe(6300);
+  });
+
+  it('keeps unresolved slots empty in both current days and legacy items snapshots', () => {
+    expect(
+      mapper.mapSnapshot({
+        days: [
+          {
+            date: '2026-10-26',
+            slots: {
+              breakfast: { id: 'empty', status: 'UNFILLED', mealType: 'BREAKFAST' },
+            },
+          },
+        ],
+      })?.days[0].meals
+    ).toEqual([]);
+    expect(
+      mapper
+        .mapSnapshot(
+          { items: [{ id: 'empty', date: '2026-10-26', status: 'UNFILLED' }] },
+          '2026-10-26'
+        )
+        ?.days.flatMap((day) => day.meals)
+    ).toEqual([]);
+  });
+
   it('1. should handle null and undefined DTO gracefully with safe defaults', () => {
     const resultNull = mapper.toModel(null);
     expect(resultNull.id).toBe('');
@@ -324,7 +405,6 @@ describe('MealProgramMapper', () => {
       '2026-10-04', // Sunday
     ];
 
-    const mealTypes: Array<'BREAKFAST' | 'LUNCH' | 'DINNER'> = ['BREAKFAST', 'LUNCH', 'DINNER'];
     const items: unknown[] = [];
 
     // Create 21 items, intentionally shuffle mealType order in input
