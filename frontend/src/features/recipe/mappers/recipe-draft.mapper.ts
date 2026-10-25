@@ -121,12 +121,10 @@ export class RecipeDraftMapper extends BaseMapper<
         ingredientId: null,
         amount: ing.amount,
         unit: ing.unit,
-        notes: ing.optional ? 'Tùy chọn' : '',
       })),
       steps: model.steps.map((st) => ({
         stepNumber: st.stepNumber,
         instruction: st.instruction,
-        tip: st.durationMinutes ? `Thời gian nấu khoảng ${st.durationMinutes} phút` : '',
       })),
     };
   }

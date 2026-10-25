@@ -1,16 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import {
-  Home,
-  ChevronRight,
-  Pencil,
-  ArrowLeft,
-  AlertCircle,
-  Loader2,
-} from 'lucide-react';
+import { Home, ChevronRight, Pencil, ArrowLeft, AlertCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { AuthGuard } from '@/components/shared/auth-guard';
 import { RecipeEditorForm } from '@/features/recipe/components/recipe-editor-form';
@@ -22,13 +15,12 @@ import { ReviewStatusBanner } from '@/features/review/components/review-status-b
 import { ReviewHistoryDialog } from '@/features/review/components/review-history-dialog';
 import { useAuthStore } from '@/store/useAuthStore';
 import type { RecipeFormValues } from '@/features/recipe/schemas/recipe-form.schema';
-import type { Recipe } from '@/features/recipe/types/recipe.model';
-import { RecipeDifficulty } from '@/common/enums';
+import { recipeFormToRecipe, recipeToFormValues } from '@/features/recipe/utils/recipe-form-values';
+import { getApiErrorCode } from '@/lib/api-error';
 
 export default function EditRecipePage() {
   const params = useParams<{ id: string }>();
   const id = params?.id ?? '';
-  const router = useRouter();
   const [historyDialogOpen, setHistoryDialogOpen] = React.useState(false);
   const currentUser = useAuthStore((s) => s.user);
 
@@ -45,111 +37,23 @@ export default function EditRecipePage() {
     !currentUser || !recipe?.author?.id || currentUser.id === recipe.author.id
   );
 
-  const initialFormValues = React.useMemo<Partial<RecipeFormValues> | undefined>(() => {
-    if (!recipe) return undefined;
-
-    const categoryId =
-      typeof recipe.category === 'string'
-        ? recipe.category
-        : recipe.category?.id || '';
-
-    const diff = Object.values(RecipeDifficulty).includes(
-      recipe.difficulty as RecipeDifficulty
-    )
-      ? (recipe.difficulty as RecipeDifficulty)
-      : RecipeDifficulty.MEDIUM;
-
-    return {
-      title: recipe.title,
-      categoryId,
-      coverImageUrl: recipe.coverImageUrl || '',
-      coverMedia:
-        recipe.coverMedia?.publicId && recipe.coverMedia?.mimeType && typeof recipe.coverMedia?.bytes === 'number'
-          ? {
-              publicId: recipe.coverMedia.publicId,
-              mimeType: recipe.coverMedia.mimeType,
-              bytes: recipe.coverMedia.bytes,
-            }
-          : null,
-      difficulty: diff,
-      servings: recipe.servings || 2,
-      prepTimeMinutes: recipe.prepTimeMinutes ?? 15,
-      cookTimeMinutes: recipe.cookTimeMinutes ?? 20,
-      description: recipe.body || '',
-      ingredients: (recipe.ingredients || []).map((ing) => ({
-        ingredientId: ing.ingredientId ?? null,
-        name: ing.name,
-        amount: typeof ing.amount === 'number' ? ing.amount : Number(ing.amount) || 1,
-        unit: ing.unit || 'phần',
-        notes: ing.notes || '',
-      })),
-      steps: (recipe.steps || []).map((st) => {
-        const text =
-          ('instruction' in st && st.instruction ? st.instruction : '') ||
-          ('desc' in st && st.desc ? st.desc : '') ||
-          '';
-        return {
-          stepNumber: st.stepNumber,
-          instruction: text,
-          imageUrl: st.imageUrl || null,
-        };
-      }),
-      nutrition: recipe.nutrition
-        ? {
-            calories: recipe.nutrition.calories,
-            protein: recipe.nutrition.protein,
-            carbs: recipe.nutrition.carbs,
-            fat: recipe.nutrition.fat,
-            fiber: recipe.nutrition.fiber,
-            vitaminB12: recipe.nutrition.vitaminB12,
-          }
-        : undefined,
-    };
-  }, [recipe]);
+  const initialFormValues = React.useMemo<Partial<RecipeFormValues> | undefined>(
+    () => (recipe ? recipeToFormValues(recipe) : undefined),
+    [recipe]
+  );
 
   const handleSubmit = async (values: RecipeFormValues) => {
     if (!recipe) return;
-
-    const payload: Partial<Recipe> = {
-      title: values.title,
-      category: values.categoryId,
-      coverImageUrl: values.coverImageUrl || '',
-      coverMedia: values.coverMedia ?? null,
-      difficulty: values.difficulty,
-      servings: values.servings,
-      prepTimeMinutes: values.prepTimeMinutes,
-      cookTimeMinutes: values.cookTimeMinutes,
-      body: values.description || '',
-      ingredients: values.ingredients.map((ing) => ({
-        ingredientId: ing.ingredientId ?? null,
-        name: ing.name,
-        amount: ing.amount,
-        unit: ing.unit,
-        notes: ing.notes || '',
-      })),
-      steps: values.steps.map((st) => ({
-        stepNumber: st.stepNumber,
-        instruction: st.instruction,
-        imageUrl: st.imageUrl || null,
-      })),
-      nutrition: values.nutrition
-        ? {
-            calories: values.nutrition.calories,
-            protein: values.nutrition.protein,
-            carbs: values.nutrition.carbs,
-            fat: values.nutrition.fat,
-            fiber: values.nutrition.fiber,
-            vitaminB12: values.nutrition.vitaminB12,
-          }
-        : undefined,
-      version: recipe.version,
-    };
-
     try {
-      await updateMutation.mutateAsync({ id, recipe: payload });
+      await updateMutation.mutateAsync({
+        id,
+        recipe: { ...recipeFormToRecipe(values), version: recipe.version },
+      });
       await refetchRecipe();
-    } catch {
-      // Handled in mutation onError
+    } catch (error) {
+      // Xung đột phiên bản: tải bản mới nhất để lần gửi sau mang đúng `expectedVersion`.
+      if (getApiErrorCode(error) === 'CONTENT_VERSION_CONFLICT') void refetchRecipe();
+      throw error;
     }
   };
 
@@ -177,11 +81,7 @@ export default function EditRecipePage() {
                 <ArrowLeft className="h-4 w-4" /> Quay lại Kho công thức
               </Link>
             </Button>
-            <Button
-              variant="outline"
-              className="rounded-full"
-              onClick={() => void refetchRecipe()}
-            >
+            <Button variant="outline" className="rounded-full" onClick={() => void refetchRecipe()}>
               Thử lại
             </Button>
           </div>
@@ -218,7 +118,7 @@ export default function EditRecipePage() {
                 <Pencil className="h-7 w-7 text-primary" /> Chỉnh Sửa Công Thức
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                Cập nhật nguyên liệu, các bước thực hiện và thông tin dinh dưỡng.
+                Sửa theo từng bước, xem lại rồi lưu thay đổi.
               </p>
             </div>
             <Button asChild variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
@@ -256,6 +156,7 @@ export default function EditRecipePage() {
             onSubmit={handleSubmit}
             isSubmitting={updateMutation.isPending}
             formTitle="Cập nhật công thức món chay"
+            submitLabel="Lưu thay đổi"
           />
         </div>
       )}

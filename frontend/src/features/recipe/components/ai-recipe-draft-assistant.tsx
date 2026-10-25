@@ -1,12 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { Sparkles, Loader2, Wand2, ArrowDown, HelpCircle, AlertCircle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { ChevronDown, Loader2, Sparkles, Wand2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Label } from '@/components/ui/label';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
 import { TagInput } from './tag-input';
 import { RecipeDraftPreviewDialog } from './recipe-draft-preview-dialog';
 import { useGenerateRecipeDraftMutation } from '../queries/recipe-draft.queries';
@@ -25,20 +25,33 @@ const POPULAR_VEGAN_INGREDIENTS = [
   'Rau mùi',
 ];
 
-export interface AiRecipeDraftAssistantProps {
-  onApplyDraft: (suggestion: RecipeDraftSuggestion) => void;
-  onScrollToManualForm?: () => void;
+export interface AiRecipeDraftSeed {
+  /** Tên món và mô tả lấy thẳng từ bước "Thông tin cơ bản" — không hỏi lại. */
+  title: string;
+  description: string;
+  /** Tên nguyên liệu đã nhập trong form, dùng làm danh sách khởi đầu. */
+  ingredientNames: string[];
 }
 
-export function AiRecipeDraftAssistant({
-  onApplyDraft,
-  onScrollToManualForm,
-}: AiRecipeDraftAssistantProps) {
-  const [title, setTitle] = React.useState('');
-  const [description, setDescription] = React.useState('');
-  const [ingredientNames, setIngredientNames] = React.useState<string[]>([]);
-  const [validationError, setValidationError] = React.useState<string | null>(null);
+export interface AiRecipeDraftAssistantProps {
+  seed: AiRecipeDraftSeed;
+  onApplyDraft: (suggestion: RecipeDraftSuggestion) => void;
+  /** Quay về bước thông tin cơ bản khi thiếu tên món hoặc mô tả. */
+  onEditBasics?: () => void;
+}
 
+/**
+ * Trợ lý AI gợi ý định lượng và bước nấu. Nằm trong bước "Nguyên liệu" của form
+ * nên dùng `div` thay vì `<form>` lồng nhau, và tái dùng tên món/mô tả đã nhập.
+ */
+export function AiRecipeDraftAssistant({
+  seed,
+  onApplyDraft,
+  onEditBasics,
+}: AiRecipeDraftAssistantProps) {
+  const [open, setOpen] = React.useState(false);
+  const [ingredientNames, setIngredientNames] = React.useState<string[]>(seed.ingredientNames);
+  const [validationError, setValidationError] = React.useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = React.useState(false);
   const [suggestion, setSuggestion] = React.useState<RecipeDraftSuggestion | null>(null);
 
@@ -50,27 +63,26 @@ export function AiRecipeDraftAssistant({
     },
   });
 
-  const handleGenerate = (e: React.FormEvent) => {
-    e.preventDefault();
+  const cleanTitle = seed.title.trim();
+  const cleanDesc = seed.description.trim();
+  const missingBasics = cleanTitle.length < 3 || !cleanDesc;
+
+  const handleOpenChange = (next: boolean) => {
+    // Mỗi lần mở lại, lấy danh sách nguyên liệu mới nhất từ form làm điểm khởi đầu.
+    if (next && seed.ingredientNames.length > 0) setIngredientNames(seed.ingredientNames);
+    setOpen(next);
+  };
+
+  const handleGenerate = () => {
     setValidationError(null);
-
-    const cleanTitle = title.trim();
-    if (!cleanTitle || cleanTitle.length < 3) {
-      setValidationError('Vui lòng nhập tên món ăn (tối thiểu 3 ký tự).');
+    if (missingBasics) {
+      setValidationError('Cần tên món (tối thiểu 3 ký tự) và mô tả ngắn ở bước 1 để AI gợi ý.');
       return;
     }
-
-    const cleanDesc = description.trim();
-    if (!cleanDesc) {
-      setValidationError('Vui lòng nhập mô tả ngắn hoặc cảm hứng ẩm thực.');
-      return;
-    }
-
     if (ingredientNames.length === 0) {
-      setValidationError('Vui lòng nhập ít nhất 1 nguyên liệu chính để AI định lượng.');
+      setValidationError('Thêm ít nhất 1 nguyên liệu chính để AI định lượng.');
       return;
     }
-
     generateDraftMutation.mutate({
       title: cleanTitle,
       description: cleanDesc,
@@ -82,123 +94,106 @@ export function AiRecipeDraftAssistant({
     if (!suggestion) return;
     onApplyDraft(suggestion);
     setPreviewOpen(false);
+    setOpen(false);
   };
 
   return (
-    <Card className="rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/[0.04] via-background to-primary/[0.02] shadow-sm mb-8 overflow-hidden">
-      <CardHeader className="border-b border-border/60 bg-muted/20 pb-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="space-y-1">
-            <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
-              <Sparkles className="h-3.5 w-3.5" /> Trợ lý AI Khởi tạo Nhanh
-            </div>
-            <CardTitle className="text-lg sm:text-xl font-black text-foreground pt-1">
-              Nhập ý tưởng món — AI tự sinh định lượng &amp; bước nấu
-            </CardTitle>
-            <CardDescription className="text-xs text-muted-foreground leading-relaxed">
-              Tiết kiệm thời gian tính toán gam, muỗng hay gõ từng bước. Bạn chỉ cần nhập món bạn
-              muốn làm và nguyên liệu có sẵn.
-            </CardDescription>
-          </div>
+    <Collapsible
+      open={open}
+      onOpenChange={handleOpenChange}
+      className="rounded-xl border border-primary/25 bg-primary/[0.03]"
+    >
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className="flex w-full items-center gap-3 rounded-xl p-4 text-left transition-colors hover:bg-primary/5"
+        >
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <Sparkles aria-hidden className="size-4" />
+          </span>
+          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <span className="text-sm font-semibold">Để AI gợi ý định lượng và các bước nấu</span>
+            <span className="text-xs text-pretty text-muted-foreground">
+              Tùy chọn. AI điền sẵn nguyên liệu, bước nấu, khẩu phần và thời gian; bạn vẫn sửa được
+              mọi thứ trước khi gửi.
+            </span>
+          </span>
+          <ChevronDown
+            aria-hidden
+            className={cn(
+              'size-4 shrink-0 text-muted-foreground transition-transform duration-200',
+              open && 'rotate-180'
+            )}
+          />
+        </button>
+      </CollapsibleTrigger>
 
-          {onScrollToManualForm && (
+      <CollapsibleContent className="flex flex-col gap-4 border-t border-primary/15 p-4">
+        <div className="flex flex-wrap items-baseline justify-between gap-2 text-sm">
+          <p className="min-w-0 text-pretty">
+            <span className="text-muted-foreground">Món: </span>
+            {cleanTitle ? (
+              <span className="font-medium">{cleanTitle}</span>
+            ) : (
+              <span className="text-muted-foreground italic">chưa có tên món</span>
+            )}
+          </p>
+          {onEditBasics && (
             <Button
               type="button"
-              variant="ghost"
+              variant="link"
               size="sm"
-              onClick={onScrollToManualForm}
-              className="text-xs text-muted-foreground hover:text-foreground rounded-full gap-1 self-start sm:self-center"
+              className="h-auto p-0 text-xs"
+              onClick={onEditBasics}
             >
-              <span>Nhập biểu mẫu thủ công</span>
-              <ArrowDown className="h-3.5 w-3.5" />
+              Sửa tên & mô tả
             </Button>
           )}
         </div>
-      </CardHeader>
 
-      <CardContent className="p-6 space-y-5">
-        <form onSubmit={handleGenerate} className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="ai-title" className="text-xs font-semibold text-foreground">
-                Tên món ăn bạn muốn nấu <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="ai-title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Ví dụ: Cà ri chay nấm đông cô, Canh chua đậu hũ..."
-                disabled={generateDraftMutation.isPending}
-                className="h-11 rounded-xl bg-background"
-              />
-            </div>
+        <Field>
+          <FieldLabel htmlFor="ai-ingredient-names">Nguyên liệu chính bạn có</FieldLabel>
+          <TagInput
+            id="ai-ingredient-names"
+            aria-describedby="ai-ingredient-names-help"
+            value={ingredientNames}
+            onChange={setIngredientNames}
+            placeholder="Gõ tên nguyên liệu rồi nhấn Enter, vd: Đậu hũ"
+            disabled={generateDraftMutation.isPending}
+            quickSuggestions={POPULAR_VEGAN_INGREDIENTS}
+          />
+          <FieldDescription id="ai-ingredient-names-help" className="text-xs">
+            Đã thêm {ingredientNames.length} nguyên liệu. AI chỉ nhận chữ, không nhận ảnh.
+          </FieldDescription>
+        </Field>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="ai-desc" className="text-xs font-semibold text-foreground">
-                Mô tả ngắn cảm hứng / phong cách <span className="text-destructive">*</span>
-              </Label>
-              <Input
-                id="ai-desc"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Ví dụ: Vị ngọt thanh cốt dừa, ăn kèm bún tươi ngày mưa..."
-                disabled={generateDraftMutation.isPending}
-                className="h-11 rounded-xl bg-background"
-              />
-            </div>
-          </div>
+        {validationError && (
+          <Alert variant="destructive">
+            <AlertDescription>{validationError}</AlertDescription>
+          </Alert>
+        )}
 
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between">
-              <Label className="text-xs font-semibold text-foreground">
-                Các nguyên liệu chính bạn có sẵn (nhập tên rồi gõ Enter){' '}
-                <span className="text-destructive">*</span>
-              </Label>
-              <span className="text-[11px] text-muted-foreground">
-                Đã thêm {ingredientNames.length} nguyên liệu
-              </span>
-            </div>
-            <TagInput
-              value={ingredientNames}
-              onChange={setIngredientNames}
-              placeholder="Gõ tên nguyên liệu (vd: Đậu hũ, Nấm rơm, Khoai lang) rồi nhấn Enter..."
-              disabled={generateDraftMutation.isPending}
-              quickSuggestions={POPULAR_VEGAN_INGREDIENTS}
-            />
-          </div>
-
-          {validationError && (
-            <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs text-destructive flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{validationError}</span>
-            </div>
-          )}
-
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-            <p className="text-[11px] text-muted-foreground">
-              💡 Gợi ý AI là bản nháp giúp bạn điền nhanh form. Bạn giữ toàn quyền tùy chỉnh sau khi
-              áp dụng.
-            </p>
-            <Button
-              type="submit"
-              disabled={generateDraftMutation.isPending}
-              className="w-full sm:w-auto rounded-full gap-2 px-6 shadow-sm"
-            >
-              {generateDraftMutation.isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>AI đang tính toán định lượng...</span>
-                </>
-              ) : (
-                <>
-                  <Wand2 className="h-4 w-4" />
-                  <span>Gợi ý định lượng &amp; bước nấu bằng AI</span>
-                </>
-              )}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            onClick={handleGenerate}
+            disabled={generateDraftMutation.isPending}
+            className="w-full sm:w-auto"
+          >
+            {generateDraftMutation.isPending ? (
+              <>
+                <Loader2 data-icon="inline-start" className="animate-spin" />
+                AI đang gợi ý…
+              </>
+            ) : (
+              <>
+                <Wand2 data-icon="inline-start" />
+                Tạo gợi ý
+              </>
+            )}
+          </Button>
+        </div>
+      </CollapsibleContent>
 
       <RecipeDraftPreviewDialog
         open={previewOpen}
@@ -206,6 +201,6 @@ export function AiRecipeDraftAssistant({
         suggestion={suggestion}
         onApply={handleApply}
       />
-    </Card>
+    </Collapsible>
   );
 }

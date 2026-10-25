@@ -183,15 +183,12 @@ describe('RecipeDraftMapper', () => {
         ingredientId: null,
         amount: 200,
         unit: 'g',
-        notes: '',
       });
-      expect(formValues.ingredients?.[2].notes).toBe('Tùy chọn');
 
       expect(formValues.steps).toHaveLength(2);
       expect(formValues.steps?.[0]).toEqual({
         stepNumber: 1,
         instruction: 'Sơ chế và rửa sạch nấm đông cô, cắt miếng vừa ăn.',
-        tip: 'Thời gian nấu khoảng 5 phút',
       });
     });
   });

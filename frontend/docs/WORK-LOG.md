@@ -1,5 +1,12 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-26] — Thiết kế lại luồng tạo/sửa công thức (đang làm, chưa xong)
+
+- **Yêu cầu**: Form công thức lặp thông tin, thứ tự bước chưa rõ, submit thiếu field không có thông báo.
+- **Chỗ lặp tìm thấy**: Trợ lý AI hỏi lại tên món + mô tả đã có trong form; trang mới có 3 tầng tiêu đề; banner mẹo nguyên liệu trùng trạng thái từng dòng; ô ghi chú nguyên liệu, mẹo từng bước và `dietTag` không được gửi lên API (dữ liệu mất im lặng); trang sửa nạp `body` (chứa "## Bước N") vào ô Mô tả và để trống các bước, còn khi lưu thì mất `excerpt`.
+- **Sửa**: Wizard 5 bước (Thông tin cơ bản & ảnh bìa → Nguyên liệu → Các bước nấu → Phân loại → Xem lại & gửi), thanh bước bấm được, cột tiến độ, bước xem lại có nút "Sửa" và danh sách mục còn thiếu. Trợ lý AI nằm gọn ở bước Nguyên liệu, dùng lại tên/mô tả/nguyên liệu đã nhập. Bước nấu có đổi thứ tự. Submit thiếu → toast tiếng Việt, nhảy tới bước + focus field lỗi đầu tiên, `aria-invalid` + `FieldError`; lỗi nghiệp vụ (`INGREDIENT_ID_NAME_MISMATCH`, `INVALID_INGREDIENT_REFERENCE`, `CONTENT_VERSION_CONFLICT`) đưa về đúng bước. Thêm `bodyToSteps` và helper `recipeFormToRecipe`/`recipeToFormValues` dùng chung cho trang tạo/sửa. Request DTO và `recipeMapper.toCreateDto` không đổi.
+- **Kiểm chứng đến hiện tại**: `tsc` pass, ESLint các file đã sửa sạch, `vitest` 66 file pass. Browser: submit trống hiện toast, focus `recipe-title`, 4 field `aria-invalid`. **Chưa làm**: tạo một công thức hợp lệ trên browser, `next build`, push và PR.
+
 ## [2026-10-26] — Sửa lỗi lưu hồ sơ ăn và thiết kế lại luồng thiết lập chế độ ăn
 
 - **Yêu cầu**: Lưu chế độ ăn trả `VALIDATION_ERROR` vì `ingredientAllergies` mang thêm `ingredientName`/`ingredientActive`; thiết kế lại luồng "Thiết lập chế độ ăn".
