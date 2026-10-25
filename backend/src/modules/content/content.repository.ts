@@ -76,6 +76,7 @@ const searchProfileSelect = {
     where: { active: true },
     select: { allergenCode: true },
   },
+  ingredientAllergies: { where: { active: true }, select: { ingredientId: true } },
   ingredientExclusions: {
     where: { active: true },
     select: { ingredientId: true, normalizedName: true },
@@ -154,6 +155,7 @@ export interface ContentSearchCriteria extends Omit<PostListQuery, 'q'> {
 export interface SearchConstraints {
   dietPattern?: DietPattern;
   allergenCodes: string[];
+  allergicIngredientIds?: string[];
   excludedIngredientIds: string[];
   excludedNormalizedNames: string[];
   traditions: Tradition[];

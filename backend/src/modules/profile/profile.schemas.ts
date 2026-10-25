@@ -156,6 +156,21 @@ export const saveDietPreferencesRequestSchema = dietRuleSelectionSchema
         'Allergen code không được trùng lặp',
       ),
     ingredientExclusions: z.array(ingredientExclusionInputSchema).max(100).default([]),
+    ingredientAllergies: z
+      .array(
+        z
+          .object({
+            ingredientId: z.string().uuid(),
+            severity: z.enum(AllergySeverity).default('MODERATE'),
+          })
+          .strict(),
+      )
+      .max(100)
+      .refine(
+        (items) => new Set(items.map((item) => item.ingredientId)).size === items.length,
+        'Nguyên liệu dị ứng không được trùng lặp',
+      )
+      .optional(),
   })
   .strict();
 
@@ -211,6 +226,16 @@ export const dietPreferenceSchema = dietRuleSelectionSchema
     rules: z.array(savedDietRuleSchema),
     schedule: z.object({ timezone: z.literal(TIMEZONE), dates: z.array(dateOnlySchema) }).strict(),
     allergies: z.array(allergySchema),
+    ingredientAllergies: z.array(
+      z
+        .object({
+          ingredientId: z.string().uuid(),
+          ingredientName: z.string(),
+          severity: z.enum(AllergySeverity),
+          ingredientActive: z.boolean(),
+        })
+        .strict(),
+    ),
     ingredientExclusions: z.array(ingredientExclusionSchema),
     effectiveConstraints: z
       .object({

@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { IngredientExclusion } from '../types/diet.model';
+import { IngredientSuggestions } from '@/features/ingredient/components/ingredient-suggestions';
 
 /**
  * Quản lý nguyên liệu kiêng. Danh sách kiêng luôn là ràng buộc cứng ở backend.
@@ -15,11 +16,16 @@ import type { IngredientExclusion } from '../types/diet.model';
 export function ExclusionEditor({
   value,
   onChange,
+  search,
+  onSearchChange,
 }: {
   value: IngredientExclusion[];
   onChange: (v: IngredientExclusion[]) => void;
+  search: string;
+  onSearchChange: (search: string) => void;
 }) {
-  const [name, setName] = React.useState('');
+  const name = search;
+  const setName = onSearchChange;
   const [reason, setReason] = React.useState('');
   const [error, setError] = React.useState<string | null>(null);
 
@@ -56,6 +62,9 @@ export function ExclusionEditor({
               className="inline-flex items-center gap-1.5 rounded-full bg-secondary/80 border border-secondary-foreground/10 px-3 py-1 text-xs text-secondary-foreground"
             >
               <span className="font-medium">{e.ingredientName}</span>
+              <Badge variant="outline">
+                {e.ingredientId ? 'Đã liên kết chuẩn' : 'Tên tự nhập'}
+              </Badge>
               {e.reason && (
                 <span className="text-[10px] text-muted-foreground bg-background/60 rounded px-1.5 py-0.5">
                   {e.reason}
@@ -98,9 +107,34 @@ export function ExclusionEditor({
           aria-label="Lý do kiêng"
         />
         <Button type="button" variant="outline" className="gap-1 rounded-xl" onClick={add}>
-          <Plus className="h-4 w-4" /> Thêm
+          <Plus className="h-4 w-4" /> Thêm tên tự nhập
         </Button>
       </div>
+      {name.trim().length >= 2 && (
+        <IngredientSuggestions
+          query={name}
+          excludedIds={value.flatMap((entry) => (entry.ingredientId ? [entry.ingredientId] : []))}
+          onSelect={(item) => {
+            if (
+              value.some(
+                (entry) =>
+                  entry.ingredientId === item.id ||
+                  entry.ingredientName.trim().toLowerCase() === item.canonicalName.toLowerCase()
+              )
+            ) {
+              setError('Nguyên liệu này đã có trong danh sách.');
+              return;
+            }
+            setError(null);
+            onChange([
+              ...value,
+              { ingredientId: item.id, ingredientName: item.canonicalName, reason: reason.trim() },
+            ]);
+            setName('');
+            setReason('');
+          }}
+        />
+      )}
       {error && <p className="text-xs text-destructive">{error}</p>}
     </div>
   );

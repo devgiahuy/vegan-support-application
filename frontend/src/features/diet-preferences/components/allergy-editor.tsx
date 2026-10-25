@@ -17,7 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Allergy } from '../types/diet.model';
+import type { Allergy, IngredientAllergy } from '../types/diet.model';
+import { IngredientSuggestions } from '@/features/ingredient/components/ingredient-suggestions';
 import type { AllergenOption } from '../types/allergen.model';
 import { searchAllergens } from '../utils/allergen-search';
 
@@ -36,6 +37,8 @@ export function AllergyEditor({
   loading,
   failed,
   onRetry,
+  ingredientValue,
+  onIngredientChange,
 }: {
   value: Allergy[];
   onChange: (value: Allergy[]) => void;
@@ -45,6 +48,8 @@ export function AllergyEditor({
   loading: boolean;
   failed: boolean;
   onRetry: () => void;
+  ingredientValue: IngredientAllergy[];
+  onIngredientChange: (value: IngredientAllergy[]) => void;
 }) {
   const [severity, setSeverity] = React.useState('MODERATE');
   const available = catalog.filter(
@@ -100,11 +105,40 @@ export function AllergyEditor({
           id="allergy-search"
           value={search}
           maxLength={160}
-          disabled={loading || failed}
           placeholder="Tìm thực phẩm, ví dụ: lạc, đậu phộng, vừng…"
           onChange={(event) => onSearchChange(event.target.value)}
           aria-describedby="allergy-selection-note"
         />
+        {ingredientValue.length > 0 && (
+          <ul className="flex flex-wrap gap-2" aria-label="Nguyên liệu dị ứng đã chọn">
+            {ingredientValue.map((entry) => (
+              <li
+                key={entry.ingredientId}
+                className="flex items-center gap-1 rounded-md border px-2 py-1 text-sm"
+              >
+                <span>{entry.ingredientName}</span>
+                <Badge variant="secondary">
+                  Nguyên liệu ·{' '}
+                  {SEVERITIES.find((item) => item.value === entry.severity)?.label ?? 'Trung bình'}
+                </Badge>
+                {!entry.ingredientActive && <span>Không còn hoạt động — hãy chọn lại</span>}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Bỏ dị ứng ${entry.ingredientName}`}
+                  onClick={() =>
+                    onIngredientChange(
+                      ingredientValue.filter((item) => item.ingredientId !== entry.ingredientId)
+                    )
+                  }
+                >
+                  <X />
+                </Button>
+              </li>
+            ))}
+          </ul>
+        )}
       </Field>
       <Field>
         <FieldLabel htmlFor="allergy-severity">Mức độ cho lựa chọn tiếp theo</FieldLabel>
@@ -136,6 +170,7 @@ export function AllergyEditor({
       )}
       {!loading && !failed && (
         <>
+          <p className="text-sm font-medium">Nhóm dị ứng</p>
           {results.suggested && results.items.length > 0 && (
             <p className="text-sm text-muted-foreground">
               Có phải bạn muốn tìm một trong các thực phẩm này? Hãy chọn để xác nhận.
@@ -168,7 +203,7 @@ export function AllergyEditor({
             <Alert>
               <AlertDescription>
                 {search.trim()
-                  ? 'Chưa tìm thấy thực phẩm này trong danh mục. Chưa có dị ứng mới nào được thêm. Bạn có thể khai báo nguyên liệu cụ thể ở phần nguyên liệu cần tránh bên dưới.'
+                  ? 'Không có nhóm dị ứng trùng tên. Bạn có thể chọn nguyên liệu cụ thể bên dưới.'
                   : 'Bạn đã chọn tất cả mục trong danh mục hoặc danh mục đang trống.'}
               </AlertDescription>
             </Alert>
@@ -180,6 +215,35 @@ export function AllergyEditor({
           </p>
         </>
       )}
+      <Field>
+        <FieldLabel>Nguyên liệu cụ thể</FieldLabel>
+        <FieldDescription>
+          Tìm trong cùng danh mục chuẩn như khi nhập công thức. Chọn nguyên liệu chỉ loại nguyên
+          liệu đó và món có chứa nó; chọn nhóm dị ứng để áp dụng cả nhóm.
+        </FieldDescription>
+        {search.trim().length >= 2 ? (
+          <IngredientSuggestions
+            query={search}
+            excludedIds={ingredientValue.map((entry) => entry.ingredientId)}
+            onSelect={(item) => {
+              onIngredientChange([
+                ...ingredientValue,
+                {
+                  ingredientId: item.id,
+                  ingredientName: item.canonicalName,
+                  severity,
+                  ingredientActive: true,
+                },
+              ]);
+              onSearchChange('');
+            }}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Nhập ít nhất 2 ký tự để tìm nguyên liệu chuẩn.
+          </p>
+        )}
+      </Field>
     </FieldGroup>
   );
 }

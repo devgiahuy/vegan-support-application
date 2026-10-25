@@ -118,8 +118,21 @@ function dietPreferenceOutput(
       reason: exclusion.reason,
       active: exclusion.active,
     })),
+    ingredientAllergies: profile.ingredientAllergies.map((entry) => ({
+      ingredientId: entry.ingredientId,
+      ingredientName: entry.ingredient.canonicalName,
+      severity: entry.severity,
+      ingredientActive: entry.ingredient.status === 'ACTIVE',
+    })),
     effectiveConstraints: {
       always: [
+        ...profile.ingredientAllergies.map((entry) => ({
+          priority: 1,
+          source: 'ALLERGY' as const,
+          code: entry.ingredientId,
+          label: entry.ingredient.canonicalName,
+          hardConstraint: true as const,
+        })),
         ...profile.allergies.map((allergy) => ({
           priority: 1,
           source: 'ALLERGY' as const,
@@ -209,6 +222,17 @@ export class ProfileService {
     userId: string,
     input: SaveDietPreferencesInput,
   ): Promise<DietPreferenceOutput> {
+    const ingredientIds = input.ingredientAllergies?.map((entry) => entry.ingredientId) ?? [];
+    const activeIngredients = await this.repository.findActiveIngredients(ingredientIds);
+    const validIds = new Set(activeIngredients.map((entry) => entry.id));
+    const invalidIngredientIds = ingredientIds.filter((id) => !validIds.has(id));
+    if (invalidIngredientIds.length)
+      throw new AppError({
+        statusCode: 400,
+        code: 'INVALID_INGREDIENT_ALLERGIES',
+        message: 'Vui lòng chọn nguyên liệu dị ứng đang hoạt động từ danh mục chuẩn.',
+        fields: { ingredientIds: invalidIngredientIds },
+      });
     const allergens = await this.repository.findActiveAllergens(
       input.allergies.map((entry) => entry.allergenCode),
     );

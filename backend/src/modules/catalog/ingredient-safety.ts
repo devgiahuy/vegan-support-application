@@ -127,6 +127,7 @@ export class IngredientSafetyCatalog {
       constraints.dietPattern ||
       constraints.traditions.length ||
       constraints.allergenCodes.length ||
+      constraints.allergicIngredientIds?.length ||
       constraints.excludedIngredientIds.length ||
       constraints.excludedNormalizedNames.length,
     );
@@ -147,6 +148,7 @@ export class IngredientSafetyCatalog {
       if (!closure.nodes.length || closure.nodes.some((item) => item.status !== 'ACTIVE'))
         reasons.add('UNRESOLVED_INGREDIENT');
       for (const item of closure.nodes) {
+        if (constraints.allergicIngredientIds?.includes(item.id)) reasons.add('ALLERGY');
         if (item.allergens.some((entry) => constraints.allergenCodes.includes(entry.allergenCode)))
           reasons.add('ALLERGY');
         const names = [item.normalizedName, ...item.aliases.map((alias) => alias.normalizedAlias)];

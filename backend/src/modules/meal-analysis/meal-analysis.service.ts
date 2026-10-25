@@ -408,6 +408,7 @@ export class MealAnalysisService {
       dietPattern: profile.dietPreference?.dietPattern ?? null,
       tradition: profile.dietPreference?.tradition ?? null,
       allergyCodes: profile.allergies.map((entry) => entry.allergenCode).sort(),
+      ingredientAllergyIds: profile.ingredientAllergies.map((entry) => entry.ingredientId).sort(),
       exclusionIds: profile.ingredientExclusions
         .flatMap((entry) => (entry.ingredientId ? [entry.ingredientId] : []))
         .sort(),

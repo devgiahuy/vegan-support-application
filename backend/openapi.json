@@ -1050,6 +1050,39 @@
                       "additionalProperties": false
                     }
                   },
+                  "ingredientAllergies": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "ingredientId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "ingredientName": {
+                          "type": "string"
+                        },
+                        "severity": {
+                          "type": "string",
+                          "enum": [
+                            "MILD",
+                            "MODERATE",
+                            "SEVERE"
+                          ]
+                        },
+                        "ingredientActive": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "ingredientId",
+                        "ingredientName",
+                        "severity",
+                        "ingredientActive"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
                   "ingredientExclusions": {
                     "type": "array",
                     "items": {
@@ -1240,6 +1273,7 @@
                   "rules",
                   "schedule",
                   "allergies",
+                  "ingredientAllergies",
                   "ingredientExclusions",
                   "effectiveConstraints"
                 ],
@@ -1676,6 +1710,32 @@
             },
             "maxItems": 100,
             "default": []
+          },
+          "ingredientAllergies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ingredientId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "severity": {
+                  "type": "string",
+                  "enum": [
+                    "MILD",
+                    "MODERATE",
+                    "SEVERE"
+                  ],
+                  "default": "MODERATE"
+                }
+              },
+              "required": [
+                "ingredientId"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 100
           }
         },
         "required": [
@@ -1848,6 +1908,39 @@
                     "label",
                     "severity",
                     "active"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "ingredientAllergies": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "ingredientId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "ingredientName": {
+                      "type": "string"
+                    },
+                    "severity": {
+                      "type": "string",
+                      "enum": [
+                        "MILD",
+                        "MODERATE",
+                        "SEVERE"
+                      ]
+                    },
+                    "ingredientActive": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ingredientId",
+                    "ingredientName",
+                    "severity",
+                    "ingredientActive"
                   ],
                   "additionalProperties": false
                 }
@@ -2042,6 +2135,7 @@
               "rules",
               "schedule",
               "allergies",
+              "ingredientAllergies",
               "ingredientExclusions",
               "effectiveConstraints"
             ],
@@ -31774,6 +31868,16 @@
                       "success": false,
                       "error": {
                         "code": "INVALID_ALLERGEN_SELECTION",
+                        "message": "Rule hoặc preference không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_INGREDIENT_ALLERGIES": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_INGREDIENT_ALLERGIES",
                         "message": "Rule hoặc preference không hợp lệ",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }

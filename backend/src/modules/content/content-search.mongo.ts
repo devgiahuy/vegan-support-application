@@ -117,6 +117,7 @@ export async function searchMongoPublished(
     constraints.dietPattern ||
     constraints.traditions.length ||
     constraints.allergenCodes.length ||
+    constraints.allergicIngredientIds?.length ||
     constraints.excludedIngredientIds.length ||
     constraints.excludedNormalizedNames.length
   ) {

@@ -592,6 +592,20 @@ export async function seedComprehensiveData(
       }
     }
 
+    if (uDef.ingredientAllergies) {
+      for (const entry of uDef.ingredientAllergies) {
+        const ingredient = ingredientMap.get(entry.ingredientNormalizedName);
+        if (!ingredient)
+          throw new Error(
+            `Missing canonical allergy ingredient: ${entry.ingredientNormalizedName}`,
+          );
+        await prisma.userIngredientAllergy.upsert({
+          where: { userId_ingredientId: { userId: user.id, ingredientId: ingredient.id } },
+          update: { severity: entry.severity, active: true },
+          create: { userId: user.id, ingredientId: ingredient.id, severity: entry.severity },
+        });
+      }
+    }
     // Exclusions
     if (uDef.exclusions) {
       await prisma.userIngredientExclusion.deleteMany({ where: { userId: user.id } });

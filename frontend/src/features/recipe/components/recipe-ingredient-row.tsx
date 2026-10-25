@@ -1,11 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { UseFormReturn } from 'react-hook-form';
-import { CheckCircle2, AlertCircle, Trash2, Loader2, Sparkles } from 'lucide-react';
+import { useWatch, type UseFormReturn } from 'react-hook-form';
+import { CheckCircle2, AlertCircle, Trash2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -16,8 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useDebounce } from '@/hooks/useDebounce';
-import { useIngredientsQuery } from '@/features/ingredient/queries/ingredient.queries';
+import { IngredientSuggestions } from '@/features/ingredient/components/ingredient-suggestions';
 import type { Ingredient } from '@/features/ingredient/types/ingredient.model';
 import type { RecipeFormValues } from '../schemas/recipe-form.schema';
 
@@ -77,19 +75,12 @@ export function RecipeIngredientRow({
   const [isCustomUnit, setIsCustomUnit] = React.useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
-  const rawName = form.watch(`ingredients.${index}.name`) || '';
-  const ingredientId = form.watch(`ingredients.${index}.ingredientId`);
-  const currentUnit = form.watch(`ingredients.${index}.unit`) || '';
-  const debouncedSearch = useDebounce(rawName.trim(), 300);
-
-  // Chỉ query khi có từ khóa >= 2 ký tự và dropdown đang mở
-  const { data: ingredientResult, isLoading } = useIngredientsQuery({
-    q: debouncedSearch,
-    limit: 6,
+  const rawName = useWatch({ control: form.control, name: `ingredients.${index}.name` }) || '';
+  const ingredientId = useWatch({
+    control: form.control,
+    name: `ingredients.${index}.ingredientId`,
   });
-
-  const candidates = ingredientResult?.items || [];
-
+  const currentUnit = useWatch({ control: form.control, name: `ingredients.${index}.unit` }) || '';
   // Đóng dropdown khi click ngoài
   React.useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -132,9 +123,6 @@ export function RecipeIngredientRow({
               placeholder="Tên nguyên liệu (vd: Đậu hũ, Nấm đùi gà...)"
               className="h-10 rounded-lg text-sm pr-8"
             />
-            {isLoading && (
-              <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground pointer-events-none" />
-            )}
           </div>
 
           {/* Trạng thái chuẩn hóa */}
@@ -154,40 +142,9 @@ export function RecipeIngredientRow({
           </div>
 
           {/* Dropdown gợi ý */}
-          {isOpen && candidates.length > 0 && (
-            <div className="absolute left-0 top-full z-50 mt-1 w-full rounded-xl border bg-popover p-1 text-popover-foreground shadow-lg animate-in fade-in-0 zoom-in-95">
-              <div className="px-2 py-1 text-[11px] font-semibold text-muted-foreground flex items-center justify-between border-b pb-1">
-                <span>Gợi ý nguyên liệu chuẩn</span>
-                <Sparkles className="h-3 w-3 text-primary" />
-              </div>
-              <ul className="max-h-48 overflow-y-auto py-1 space-y-0.5">
-                {candidates.map((cand) => (
-                  <li key={cand.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleSelect(cand)}
-                      className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-                    >
-                      <div>
-                        <span className="font-medium">{cand.canonicalName}</span>
-                        {cand.aliases && cand.aliases.length > 0 && (
-                          <span className="ml-1.5 text-xs text-muted-foreground">
-                            (
-                            {cand.aliases
-                              .map((a) => a.alias)
-                              .slice(0, 2)
-                              .join(', ')}
-                            )
-                          </span>
-                        )}
-                      </div>
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 rounded">
-                        {cand.foodGroupLabel || 'Chuẩn'}
-                      </Badge>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+          {isOpen && rawName.trim().length >= 2 && (
+            <div className="absolute left-0 top-full z-50 mt-1 w-full rounded-xl border bg-popover p-1 shadow-lg">
+              <IngredientSuggestions query={rawName} onSelect={handleSelect} />
             </div>
           )}
         </div>

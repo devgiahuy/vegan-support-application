@@ -15,7 +15,13 @@ import { ExclusionEditor } from './exclusion-editor';
 import { ScheduleDatePicker } from './schedule-date-picker';
 import { useDietPreviewQuery, useSaveDietPreferencesMutation } from '../queries/diet.queries';
 import type { DietRulePreviewRequestDto } from '../types/diet.dto';
-import type { Allergy, DietPreference, DietRule, IngredientExclusion } from '../types/diet.model';
+import type {
+  Allergy,
+  DietPreference,
+  DietRule,
+  IngredientAllergy,
+  IngredientExclusion,
+} from '../types/diet.model';
 import { PracticeSchedule } from '@/common/enums';
 import { getApiErrorCode } from '@/lib/api-error';
 
@@ -78,9 +84,13 @@ export function DietWizard({
     allergies.some(
       (entry) => !allergenCatalog.data?.some((option) => option.code === entry.allergenCode)
     );
+  const [ingredientAllergies, setIngredientAllergies] = React.useState<IngredientAllergy[]>(
+    initial?.ingredientAllergies ?? []
+  );
   const [exclusions, setExclusions] = React.useState<IngredientExclusion[]>(
     initial?.ingredientExclusions ?? []
   );
+  const [exclusionSearch, setExclusionSearch] = React.useState('');
   // Ngày chay kỳ chọn trong bước review. Backend bắt buộc `scheduleDates` kèm
   // trong preferences khi PERIODIC (đã verify: thiếu -> `DIET_SCHEDULE_REQUIRED`).
   const [scheduleDates, setScheduleDates] = React.useState<string[]>(
@@ -178,6 +188,7 @@ export function DietWizard({
         })),
         ...(isPeriodic ? { scheduleDates } : {}),
         allergies: cleanAllergies,
+        ingredientAllergies,
         ingredientExclusions: cleanExclusions,
       });
 
@@ -195,6 +206,12 @@ export function DietWizard({
       if (code === 'INVALID_ALLERGEN_SELECTION') {
         setSaveError('Danh mục dị ứng đã thay đổi. Vui lòng chọn lại thực phẩm từ danh sách.');
         void allergenCatalog.refetch();
+        return;
+      }
+      if (code === 'INVALID_INGREDIENT_ALLERGIES') {
+        setSaveError(
+          'Một số nguyên liệu dị ứng không còn hoạt động. Vui lòng bỏ chúng và chọn lại từ danh mục chuẩn.'
+        );
         return;
       }
       if (code === 'DIET_RULE_RECONFIRMATION_REQUIRED') {
@@ -383,8 +400,15 @@ export function DietWizard({
                   loading={allergenCatalog.isPending}
                   failed={allergenCatalog.isError}
                   onRetry={() => void allergenCatalog.refetch()}
+                  ingredientValue={ingredientAllergies}
+                  onIngredientChange={setIngredientAllergies}
                 />
-                <ExclusionEditor value={exclusions} onChange={setExclusions} />
+                <ExclusionEditor
+                  value={exclusions}
+                  onChange={setExclusions}
+                  search={exclusionSearch}
+                  onSearchChange={setExclusionSearch}
+                />
                 {isPeriodic && (
                   <div className="space-y-3 rounded-2xl border-2 border-emerald-500/30 bg-emerald-50/20 dark:bg-emerald-950/20 p-4">
                     <div className="flex items-center justify-between">
