@@ -6,10 +6,59 @@ import { CheckCircle2, AlertCircle, Trash2, Loader2, Sparkles } from 'lucide-rea
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useDebounce } from '@/hooks/useDebounce';
 import { useIngredientsQuery } from '@/features/ingredient/queries/ingredient.queries';
 import type { Ingredient } from '@/features/ingredient/types/ingredient.model';
 import type { RecipeFormValues } from '../schemas/recipe-form.schema';
+
+/** Các đơn vị định lượng phổ biến trong nấu ăn chay */
+export const COMMON_UNITS_CONFIG = [
+  {
+    category: 'Khối lượng & Thể tích',
+    units: [
+      { value: 'g', label: 'g (gam)' },
+      { value: 'kg', label: 'kg (kilôgam)' },
+      { value: 'ml', label: 'ml (mililít)' },
+      { value: 'l', label: 'l (lít)' },
+      { value: 'muỗng canh', label: 'muỗng canh (tbsp)' },
+      { value: 'muỗng cà phê', label: 'muỗng cà phê (tsp)' },
+      { value: 'chén', label: 'chén (bát)' },
+    ],
+  },
+  {
+    category: 'Đơn vị đếm & Sơ chế',
+    units: [
+      { value: 'quả', label: 'quả / trái' },
+      { value: 'củ', label: 'củ' },
+      { value: 'tép', label: 'tép (tỏi/hành)' },
+      { value: 'cây', label: 'cây (sả/hành)' },
+      { value: 'nhánh', label: 'nhánh (gừng/cần)' },
+      { value: 'lát', label: 'lát (miếng)' },
+      { value: 'bìa', label: 'bìa (đậu hũ)' },
+      { value: 'bó', label: 'bó (rau)' },
+      { value: 'gói', label: 'gói' },
+      { value: 'hộp', label: 'hộp' },
+      { value: 'lon', label: 'lon' },
+      { value: 'tai', label: 'tai (nấm/mộc nhĩ)' },
+      { value: 'nắm', label: 'nắm' },
+      { value: 'chút', label: 'chút / nhúm' },
+    ],
+  },
+] as const;
+
+export const ALL_COMMON_UNIT_VALUES: readonly string[] = COMMON_UNITS_CONFIG.flatMap((cat) =>
+  cat.units.map((u) => u.value)
+);
 
 interface RecipeIngredientRowProps {
   index: number;
@@ -25,10 +74,12 @@ export function RecipeIngredientRow({
   canRemove,
 }: RecipeIngredientRowProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [isCustomUnit, setIsCustomUnit] = React.useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
   const rawName = form.watch(`ingredients.${index}.name`) || '';
   const ingredientId = form.watch(`ingredients.${index}.ingredientId`);
+  const currentUnit = form.watch(`ingredients.${index}.unit`) || '';
   const debouncedSearch = useDebounce(rawName.trim(), 300);
 
   // Chỉ query khi có từ khóa >= 2 ký tự và dropdown đang mở
@@ -152,13 +203,87 @@ export function RecipeIngredientRow({
           />
         </div>
 
-        {/* Đơn vị */}
+        {/* Đơn vị (Dropdown chọn nhanh hoặc tự nhập) */}
         <div className="col-span-4 sm:col-span-2">
-          <Input
-            placeholder="Đơn vị (g, ml, lát...)"
-            className="h-10 rounded-lg text-sm"
-            {...form.register(`ingredients.${index}.unit`)}
-          />
+          {isCustomUnit ? (
+            <div className="relative flex items-center">
+              <Input
+                value={currentUnit}
+                onChange={(e) =>
+                  form.setValue(`ingredients.${index}.unit`, e.target.value, {
+                    shouldValidate: true,
+                  })
+                }
+                placeholder="Nhập đơn vị..."
+                className="h-10 rounded-lg text-sm pr-7 bg-background"
+                autoFocus
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  setIsCustomUnit(false);
+                  form.setValue(`ingredients.${index}.unit`, 'g', { shouldValidate: true });
+                }}
+                title="Quay lại danh sách chọn nhanh"
+                className="absolute right-2 text-muted-foreground hover:text-foreground text-xs p-1"
+              >
+                ✕
+              </button>
+            </div>
+          ) : (
+            <Select
+              value={currentUnit}
+              onValueChange={(val) => {
+                if (val === '__custom__') {
+                  setIsCustomUnit(true);
+                  form.setValue(`ingredients.${index}.unit`, '', { shouldValidate: true });
+                } else {
+                  setIsCustomUnit(false);
+                  form.setValue(`ingredients.${index}.unit`, val, { shouldValidate: true });
+                }
+              }}
+            >
+              <SelectTrigger className="h-10 rounded-lg text-sm w-full bg-background border-input">
+                <SelectValue placeholder="Đơn vị" />
+              </SelectTrigger>
+              <SelectContent className="max-h-64">
+                {COMMON_UNITS_CONFIG.map((group, groupIdx) => (
+                  <React.Fragment key={group.category}>
+                    {groupIdx > 0 && <SelectSeparator className="my-1" />}
+                    <SelectGroup>
+                      <SelectLabel className="text-[11px] font-semibold text-muted-foreground uppercase px-2 py-1">
+                        {group.category}
+                      </SelectLabel>
+                      {group.units.map((u) => (
+                        <SelectItem key={u.value} value={u.value} className="text-sm">
+                          {u.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </React.Fragment>
+                ))}
+
+                {currentUnit && !ALL_COMMON_UNIT_VALUES.includes(currentUnit) && (
+                  <>
+                    <SelectSeparator className="my-1" />
+                    <SelectGroup>
+                      <SelectLabel className="text-[11px] font-semibold text-muted-foreground uppercase px-2 py-1">
+                        Đơn vị hiện tại
+                      </SelectLabel>
+                      <SelectItem value={currentUnit} className="text-sm">
+                        {currentUnit}
+                      </SelectItem>
+                    </SelectGroup>
+                  </>
+                )}
+
+                <SelectSeparator className="my-1" />
+                <SelectItem value="__custom__" className="text-sm text-primary font-medium">
+                  ✏️ Tự nhập đơn vị khác...
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         {/* Ghi chú */}

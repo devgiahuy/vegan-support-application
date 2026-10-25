@@ -118,6 +118,7 @@ describe('PantryMapper Unit Tests', () => {
 
     it('calculates expiry status correctly for items expiring soon (<= 3 days)', () => {
       const today = new Date();
+      today.setHours(12, 0, 0, 0);
       const in2Days = new Date(today);
       in2Days.setDate(today.getDate() + 2);
       const expiresAt = in2Days.toISOString().split('T')[0];
@@ -153,6 +154,7 @@ describe('PantryMapper Unit Tests', () => {
 
     it('calculates expiry status correctly for safe items (> 3 days)', () => {
       const today = new Date();
+      today.setHours(12, 0, 0, 0);
       const in10Days = new Date(today);
       in10Days.setDate(today.getDate() + 10);
       const expiresAt = in10Days.toISOString().split('T')[0];

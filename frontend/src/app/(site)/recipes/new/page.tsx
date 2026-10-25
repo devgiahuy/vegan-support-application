@@ -3,6 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import { Home, ChevronRight, Sparkles, Hourglass, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import {
@@ -15,6 +16,8 @@ import { recipeDraftMapper } from '@/features/recipe/mappers/recipe-draft.mapper
 import type { RecipeDraftSuggestion } from '@/features/recipe/types/recipe-draft.model';
 import { AuthGuard } from '@/components/shared/auth-guard';
 import { useCreateRecipeMutation } from '@/features/recipe/queries/recipe.queries';
+import { POST_QUERY_KEYS } from '@/features/post/queries/post.queries';
+import { addTrackedUserPost } from '@/features/post/utils/user-posts-tracker';
 import type { RecipeFormValues } from '@/features/recipe/schemas/recipe-form.schema';
 import type { Recipe } from '@/features/recipe/types/recipe.model';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -32,6 +35,7 @@ import { Badge } from '@/components/ui/badge';
 
 export default function CreateRecipePage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
   const createRecipeMutation = useCreateRecipeMutation();
   const [createdRecipe, setCreatedRecipe] = React.useState<Recipe | null>(null);
@@ -112,6 +116,15 @@ export default function CreateRecipePage() {
 
     try {
       const created = await createRecipeMutation.mutateAsync(payload);
+      void queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.mineRoot() });
+      if (created?.id && user?.id) {
+        addTrackedUserPost(user.id, {
+          id: created.id,
+          type: 'RECIPE',
+          title: created.title || values.title,
+          createdAt: new Date().toISOString(),
+        });
+      }
       if (created?.status === 'PENDING_REVIEW') {
         setCreatedRecipe(created);
         setIsSuccessModalOpen(true);

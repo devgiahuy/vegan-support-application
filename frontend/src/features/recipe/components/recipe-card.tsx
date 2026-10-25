@@ -1,10 +1,11 @@
 import Link from 'next/link';
 import { SafeImage } from '@/components/shared/safe-image';
-import { ArrowRight, BadgeCheck, Bookmark, Clock, Flame, Star, User, Users } from 'lucide-react';
+import { ArrowRight, BadgeCheck, Clock, Flame, Star, User, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import type { Recipe } from '../types/recipe.model';
+import { RecipeCardBookmark } from './recipe-card-bookmark';
 
 export function RecipeCard({
   recipe,
@@ -42,33 +43,31 @@ export function RecipeCard({
         className
       )}
     >
-      <Link href={`/recipes/${recipe.id}`} className="relative block aspect-[4/3] overflow-hidden">
-        <SafeImage
-          src={imageUrl}
-          fallbackSrc={RECIPE_FALLBACK_COVER}
-          alt={recipe.title}
-          fill
-          priority={priority}
-          sizes="(max-width: 768px) 100vw, 320px"
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
-        />
-        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/45 to-transparent" />
-        <Badge className="absolute left-3 top-3 gap-1 rounded-full bg-background/90 text-foreground backdrop-blur">
-          <Clock className="h-3 w-3" /> {minutes} phút
-        </Badge>
-        {recipe.dietTag && (
-          <Badge className="absolute bottom-3 left-3 rounded-full bg-primary text-primary-foreground">
-            {recipe.dietTag}
+      <div className="relative block aspect-[4/3] overflow-hidden">
+        <Link href={`/recipes/${recipe.id}`} className="absolute inset-0">
+          <SafeImage
+            src={imageUrl}
+            fallbackSrc={RECIPE_FALLBACK_COVER}
+            alt={recipe.title}
+            fill
+            priority={priority}
+            sizes="(max-width: 768px) 100vw, 320px"
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/45 to-transparent" />
+          <Badge className="absolute left-3 top-3 gap-1 rounded-full bg-background/90 text-foreground backdrop-blur">
+            <Clock className="h-3 w-3" /> {minutes} phút
           </Badge>
-        )}
-        <button
-          type="button"
-          aria-label="Lưu công thức"
-          className="absolute right-3 top-3 rounded-full bg-background/90 p-2 text-foreground transition-colors hover:text-cta"
-        >
-          <Bookmark className={cn('h-4 w-4', recipe.saved && 'fill-current text-cta')} />
-        </button>
-      </Link>
+          {recipe.dietTag && (
+            <Badge className="absolute bottom-3 left-3 rounded-full bg-primary text-primary-foreground">
+              {recipe.dietTag}
+            </Badge>
+          )}
+        </Link>
+        <div className="absolute right-3 top-3 z-10">
+          <RecipeCardBookmark postId={recipe.id} />
+        </div>
+      </div>
 
       <div className="flex flex-1 flex-col p-4">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">

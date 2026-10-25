@@ -5,7 +5,6 @@ import Link from 'next/link';
 import {
   Clock,
   Eye,
-  Bookmark,
   BadgeCheck,
   Home,
   ChevronRight,
@@ -18,7 +17,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
 import { VideoPlayer } from './video-player';
 import { SafeImage } from '@/components/shared/safe-image';
 import { VIDEO_FALLBACK_COVER, resolveVideoCover } from '@/lib/safe-image';
@@ -45,13 +43,6 @@ export function VideoDetailView({ video, relatedVideos }: VideoDetailViewProps) 
   const user = useAuthStore((s) => s.user);
   const [historyDialogOpen, setHistoryDialogOpen] = React.useState(false);
   const isAuthor = Boolean(user && video.author?.id && user.id === video.author.id);
-  const [isSaved, setIsSaved] = React.useState<boolean>(false);
-
-  const handleSave = () => {
-    setIsSaved(!isSaved);
-    toast.success(!isSaved ? 'Đã lưu video vào danh sách xem sau!' : 'Đã bỏ lưu video.');
-  };
-
   const handleShare = () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(window.location.href);
@@ -169,18 +160,7 @@ export function VideoDetailView({ video, relatedVideos }: VideoDetailViewProps) 
                   itemTitle={video.title}
                 />
 
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSave}
-                  className={cn(
-                    'gap-1.5',
-                    isSaved && 'text-red-500 border-red-200 bg-red-50 dark:bg-red-950/30'
-                  )}
-                >
-                  <Bookmark className={cn('h-4 w-4', isSaved && 'fill-current')} />
-                  <span>{isSaved ? 'Đã lưu' : 'Lưu video'}</span>
-                </Button>
+                <BookmarkButton postId={video.id} saveLabel="Lưu video" />
 
                 <Button variant="outline" size="sm" onClick={handleShare} className="gap-1.5">
                   <Share2 className="h-4 w-4" />
@@ -258,7 +238,6 @@ export function VideoDetailView({ video, relatedVideos }: VideoDetailViewProps) 
             <div className="flex flex-wrap items-center gap-2">
               <CommunitySummary postId={video.id} />
               <VoteButton postId={video.id} />
-              <BookmarkButton postId={video.id} />
               <ReportButton targetKind={ReportTargetKind.POST} targetId={video.id} />
             </div>
             <CommentSection postId={video.id} itemType="video" />

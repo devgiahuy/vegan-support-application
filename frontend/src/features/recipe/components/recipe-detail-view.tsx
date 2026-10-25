@@ -9,7 +9,6 @@ import {
   Flame,
   Dumbbell,
   Star,
-  Bookmark,
   Share2,
   CalendarPlus,
   BadgeCheck,
@@ -76,7 +75,6 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
   const { data: summary } = useCommunitySummaryQuery(recipe.id);
   const canModerate = user?.role === UserRole.ADMIN || user?.role === UserRole.CONTRIBUTOR;
   const [servings, setServings] = React.useState<number>(recipe.servings || 2);
-  const [isSaved, setIsSaved] = React.useState<boolean>(recipe.saved ?? false);
   const [checkedIngredients, setCheckedIngredients] = React.useState<string[]>([]);
   const [viewingNutritionIngredient, setViewingNutritionIngredient] = React.useState<{
     id?: string;
@@ -90,15 +88,6 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
   const toggleIngredient = (name: string) => {
     setCheckedIngredients((prev) =>
       prev.includes(name) ? prev.filter((i) => i !== name) : [...prev, name]
-    );
-  };
-
-  const handleSaveToggle = () => {
-    setIsSaved(!isSaved);
-    toast.success(
-      !isSaved
-        ? 'Đã lưu công thức vào mục Yêu thích của bạn!'
-        : 'Đã bỏ lưu công thức khỏi danh sách yêu thích.'
     );
   };
 
@@ -258,18 +247,7 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
                   size="sm"
                   itemTitle={recipe.title}
                 />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSaveToggle}
-                  className={cn(
-                    'gap-1.5 transition-colors',
-                    isSaved && 'text-red-500 border-red-200 bg-red-50 dark:bg-red-950/30'
-                  )}
-                >
-                  <Bookmark className={cn('h-4 w-4', isSaved && 'fill-current')} />
-                  <span>{isSaved ? 'Đã lưu' : 'Lưu món'}</span>
-                </Button>
+                <BookmarkButton postId={recipe.id} saveLabel="Lưu món" />
                 <Button variant="outline" size="sm" onClick={handleShare} className="gap-1.5">
                   <Share2 className="h-4 w-4" />
                   <span className="hidden sm:inline">Chia sẻ</span>
@@ -701,7 +679,6 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
             <div className="flex flex-wrap items-center gap-2">
               <CommunitySummary postId={recipe.id} />
               <VoteButton postId={recipe.id} />
-              <BookmarkButton postId={recipe.id} />
               <ReportButton
                 targetKind={ReportTargetKind.POST}
                 targetId={recipe.id}
