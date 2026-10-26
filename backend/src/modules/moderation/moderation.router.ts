@@ -39,7 +39,7 @@ export function createReviewQueueRouter(
   const router = Router();
   router.use(
     authentication.authenticate,
-    requireRole(Role.ADMIN),
+    requireRole(Role.ADMIN, Role.CONTRIBUTOR),
   );
   router.get('/posts', validateQuery(reviewQueueQuerySchema), controller.listReviewQueue);
   router.patch(
@@ -62,36 +62,45 @@ export function createModerationAdminRouter(
   authentication: AuthenticationMiddleware,
 ): Router {
   const router = Router();
-  router.use(authentication.authenticate, requireRole(Role.ADMIN));
-  router.get('/content-review', validateQuery(reviewQueueQuerySchema), controller.listReviewQueue);
+  router.use(authentication.authenticate);
+
+  const requireReviewer = requireRole(Role.ADMIN, Role.CONTRIBUTOR);
+  const requireAdmin = requireRole(Role.ADMIN);
+
+  router.get('/content-review', requireReviewer, validateQuery(reviewQueueQuerySchema), controller.listReviewQueue);
   router.get(
     '/content-review/:id',
+    requireReviewer,
     validateParams(moderationIdParamsSchema),
     controller.getContentReviewDetail,
   );
   router.patch(
     '/content-review/:id',
+    requireReviewer,
     validateParams(moderationIdParamsSchema),
     validateBody(adminContentReviewDecisionRequestSchema),
     controller.reviewContent,
   );
-  router.get('/reports', validateQuery(adminReportsQuerySchema), controller.listReports);
+  router.get('/reports', requireAdmin, validateQuery(adminReportsQuerySchema), controller.listReports);
   router.patch(
     '/reports/:id/resolve',
+    requireAdmin,
     validateParams(moderationIdParamsSchema),
     validateBody(resolveReportRequestSchema),
     controller.resolveReport,
   );
-  router.get('/users', validateQuery(adminUsersQuerySchema), controller.listUsers);
+  router.get('/users', requireAdmin, validateQuery(adminUsersQuerySchema), controller.listUsers);
   router.patch(
     '/users/:id/status',
+    requireAdmin,
     validateParams(moderationIdParamsSchema),
     validateBody(updateUserStatusRequestSchema),
     controller.updateUserStatus,
   );
-  router.get('/comments', validateQuery(adminCommentsQuerySchema), controller.listComments);
+  router.get('/comments', requireAdmin, validateQuery(adminCommentsQuerySchema), controller.listComments);
   router.patch(
     '/comments/:id/status',
+    requireAdmin,
     validateParams(moderationIdParamsSchema),
     validateBody(updateCommentStatusRequestSchema),
     controller.updateCommentStatus,

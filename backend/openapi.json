@@ -42057,8 +42057,8 @@
         "tags": [
           "Content Review Admin"
         ],
-        "summary": "Admin list submitted content revisions",
-        "description": "Admin-only paginated queue. Supports type=VIDEO and status/priority filters. Moderation signals affect priority only and never make a publication decision.",
+        "summary": "Admin and Contributor list submitted content revisions",
+        "description": "Paginated queue for Admin and Contributor. Contributors review member submitted content without open flags/quarantines. Supports type=VIDEO and status/priority filters. Moderation signals affect priority only and never make a publication decision.",
         "operationId": "listContentReviewAdmin",
         "security": [
           {
@@ -42215,7 +42215,7 @@
             }
           },
           "403": {
-            "description": "Admin only",
+            "description": "Reviewer permission required",
             "content": {
               "application/json": {
                 "examples": {
@@ -42224,7 +42224,7 @@
                       "success": false,
                       "error": {
                         "code": "FORBIDDEN",
-                        "message": "Admin only",
+                        "message": "Reviewer permission required",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -42234,7 +42234,7 @@
                       "success": false,
                       "error": {
                         "code": "ACCOUNT_BANNED",
-                        "message": "Admin only",
+                        "message": "Reviewer permission required",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -42254,7 +42254,7 @@
         "tags": [
           "Content Review Admin"
         ],
-        "summary": "Admin inspect one immutable revision and its evidence",
+        "summary": "Admin and Contributor inspect one immutable revision and its evidence",
         "description": "Returns full text, media source/reference, moderation signals, author, submission state, and any existing decision. Hidden/deleted evidence is retained and remains inspectable.",
         "operationId": "getContentReviewAdmin",
         "security": [
@@ -42399,7 +42399,7 @@
         "tags": [
           "Content Review Admin"
         ],
-        "summary": "Admin approve or reject a submitted revision",
+        "summary": "Admin or Contributor approve or reject a submitted revision",
         "description": "Reason is mandatory. The exact latest revision is locked transactionally. Approve replaces the public pointer; reject keeps any prior approved revision public. Signals are recorded evidence only.",
         "operationId": "reviewContentAdmin",
         "security": [
@@ -42517,7 +42517,7 @@
             }
           },
           "403": {
-            "description": "Admin only or self-review forbidden",
+            "description": "Reviewer role, Admin review requirement or self-review forbidden",
             "content": {
               "application/json": {
                 "examples": {
@@ -42526,7 +42526,7 @@
                       "success": false,
                       "error": {
                         "code": "FORBIDDEN",
-                        "message": "Admin only or self-review forbidden",
+                        "message": "Reviewer role, Admin review requirement or self-review forbidden",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -42536,7 +42536,17 @@
                       "success": false,
                       "error": {
                         "code": "SELF_APPROVAL_FORBIDDEN",
-                        "message": "Admin only or self-review forbidden",
+                        "message": "Reviewer role, Admin review requirement or self-review forbidden",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ADMIN_REVIEW_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ADMIN_REVIEW_REQUIRED",
+                        "message": "Reviewer role, Admin review requirement or self-review forbidden",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -42546,7 +42556,7 @@
                       "success": false,
                       "error": {
                         "code": "ACCOUNT_BANNED",
-                        "message": "Admin only or self-review forbidden",
+                        "message": "Reviewer role, Admin review requirement or self-review forbidden",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }

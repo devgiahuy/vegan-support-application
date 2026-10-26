@@ -35,7 +35,11 @@ export function createContributorAdminRouter(
   authentication: AuthenticationMiddleware,
 ): Router {
   const router = Router();
-  router.use(authentication.authenticate, requireRole(Role.ADMIN));
+  router.use(
+    ['/contributor-applications', '/contributor-invitations', '/contributors'],
+    authentication.authenticate,
+    requireRole(Role.ADMIN),
+  );
   router.get(
     '/contributor-applications',
     validateQuery(adminContributorApplicationsQuerySchema),

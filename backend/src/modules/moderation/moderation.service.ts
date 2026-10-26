@@ -105,7 +105,7 @@ export class ModerationService {
         throw new AppError({
           statusCode: 409,
           code: 'REVIEW_CONFLICT',
-          message: 'Revision đã được Admin khác xử lý',
+          message: 'Revision đã được reviewer khác xử lý',
         });
       }
       throw error;
@@ -194,8 +194,9 @@ export class ModerationService {
       record.status === PostRevisionStatus.REJECTED
         ? false
         : actor.role === Role.ADMIN ||
-          (record.post.author.role === Role.MEMBER &&
+          (record.post.author.role !== Role.ADMIN &&
             record.createdById !== actor.userId &&
+            record.post.authorId !== actor.userId &&
             !record.aiFlags.some((flag) => flag.status === 'OPEN') &&
             activeReporterCount < 5 &&
             record.status === PostRevisionStatus.PENDING_REVIEW);

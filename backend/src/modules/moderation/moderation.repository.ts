@@ -74,7 +74,7 @@ function pagination(page: number, limit: number, total: number) {
 export class ModerationRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
-  async listReviewQueue(actor: ModerationActor, query: ReviewQueueQuery) {
+  async listReviewQueue(_actor: ModerationActor, query: ReviewQueueQuery) {
     const highReports = await this.prisma.report.findMany({
       where: {
         targetType: ReportTargetType.POST,
@@ -91,28 +91,17 @@ export class ModerationRepository {
       ],
     };
     const where: Prisma.PostRevisionWhereInput = {
-      status:
-        actor.role !== Role.ADMIN
-          ? PostRevisionStatus.PENDING_REVIEW
-          : (query.status ?? {
-              in: [
-                PostRevisionStatus.PENDING_REVIEW,
-                PostRevisionStatus.FLAGGED,
-                PostRevisionStatus.QUARANTINED,
-              ],
-            }),
+      status: query.status ?? {
+        in: [
+          PostRevisionStatus.PENDING_REVIEW,
+          PostRevisionStatus.FLAGGED,
+          PostRevisionStatus.QUARANTINED,
+        ],
+      },
       post: {
         status: { notIn: [PostStatus.HIDDEN, PostStatus.DELETED] },
         ...(query.type ? { type: query.type } : {}),
-        ...(actor.role !== Role.ADMIN ? { author: { role: Role.MEMBER } } : {}),
       },
-      ...(actor.role !== Role.ADMIN
-        ? {
-            createdById: { not: actor.userId },
-            aiFlags: { none: { status: AiFlagStatus.OPEN } },
-            postId: { notIn: highIds },
-          }
-        : {}),
       ...(query.priority === ModerationPriority.HIGH
         ? highWhere
         : query.priority === ModerationPriority.NORMAL
@@ -208,7 +197,7 @@ export class ModerationRepository {
       }
       if (
         actor.role !== Role.ADMIN &&
-        (revision.post.author.role !== Role.MEMBER ||
+        (revision.post.author.role === Role.ADMIN ||
           revision.post.status === PostStatus.HIDDEN ||
           revision.status !== PostRevisionStatus.PENDING_REVIEW ||
           openFlags.length > 0 ||
@@ -218,7 +207,7 @@ export class ModerationRepository {
           statusCode: 403,
           code: 'ADMIN_REVIEW_REQUIRED',
           message:
-            'Flagged/quarantined/high-priority hoặc non-Member content bắt buộc Admin review',
+            'Flagged/quarantined/high-priority hoặc Admin content bắt buộc Admin review',
         });
       }
       const now = new Date();
@@ -318,11 +307,35 @@ export class ModerationRepository {
         where: { id: revisionId },
         include: reviewRevisionInclude,
       });
-      if (actor.role !== Role.ADMIN) {
+      if (actor.role !== Role.ADMIN && actor.role !== Role.CONTRIBUTOR) {
         throw new AppError({
           statusCode: 403,
           code: 'FORBIDDEN',
-          message: 'Chỉ Admin được đưa ra quyết định publication cuối cùng',
+          message: 'Bạn không có quyền thực hiện thao tác này',
+        });
+      }
+      const openFlags = revision.aiFlags.filter((flag) => flag.status === AiFlagStatus.OPEN);
+      const hasHighReports =
+        (await transaction.report.count({
+          where: {
+            targetType: ReportTargetType.POST,
+            targetId: candidate.postId,
+            status: ReportStatus.OPEN,
+          },
+        })) >= 5;
+      if (
+        actor.role !== Role.ADMIN &&
+        (revision.post.author.role === Role.ADMIN ||
+          revision.post.status === PostStatus.HIDDEN ||
+          revision.status !== PostRevisionStatus.PENDING_REVIEW ||
+          openFlags.length > 0 ||
+          hasHighReports)
+      ) {
+        throw new AppError({
+          statusCode: 403,
+          code: 'ADMIN_REVIEW_REQUIRED',
+          message:
+            'Flagged/quarantined/high-priority hoặc Admin content bắt buộc Admin review',
         });
       }
       const reviewableStatuses: PostRevisionStatus[] = [
@@ -337,7 +350,7 @@ export class ModerationRepository {
         throw new AppError({
           statusCode: 403,
           code: 'SELF_APPROVAL_FORBIDDEN',
-          message: 'Admin không được review nội dung do chính mình tạo',
+          message: 'Không được review nội dung do chính mình tạo',
         });
       }
       const inactiveAuthorStatuses: UserStatus[] = [UserStatus.BANNED, UserStatus.DELETED];
@@ -371,7 +384,7 @@ export class ModerationRepository {
         },
       });
       if (updated.count !== 1) {
-        throw this.conflict('REVIEW_CONFLICT', 'Revision đã được Admin khác xử lý');
+        throw this.conflict('REVIEW_CONFLICT', 'Revision đã được reviewer khác xử lý');
       }
       if (decision === ModerationDecision.APPROVE) {
         await transaction.post.update({
@@ -391,7 +404,6 @@ export class ModerationRepository {
           data: { status: PostStatus.REJECTED },
         });
       }
-      const openFlags = revision.aiFlags.filter((flag) => flag.status === AiFlagStatus.OPEN);
       if (openFlags.length) {
         await transaction.aiFlag.updateMany({
           where: { id: { in: openFlags.map((flag) => flag.id) }, status: AiFlagStatus.OPEN },

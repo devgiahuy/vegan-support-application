@@ -142,9 +142,9 @@ export function registerModerationOpenApi(registry: OpenAPIRegistry, errorSchema
     method: 'get',
     path: '/api/v1/admin/content-review',
     tags: ['Content Review Admin'],
-    summary: 'Admin list submitted content revisions',
+    summary: 'Admin and Contributor list submitted content revisions',
     description:
-      'Admin-only paginated queue. Supports type=VIDEO and status/priority filters. Moderation signals affect priority only and never make a publication decision.',
+      'Paginated queue for Admin and Contributor. Contributors review member submitted content without open flags/quarantines. Supports type=VIDEO and status/priority filters. Moderation signals affect priority only and never make a publication decision.',
     operationId: 'listContentReviewAdmin',
     security: authenticated,
     request: { query: reviewQueueQuerySchema },
@@ -152,7 +152,7 @@ export function registerModerationOpenApi(registry: OpenAPIRegistry, errorSchema
       200: { description: 'Paginated content review queue', content: { 'application/json': { schema: reviewList } } },
       400: errors(errorSchema, 'Invalid review filters', ['VALIDATION_ERROR']),
       401: errors(errorSchema, 'Authentication required', authErrors),
-      403: errors(errorSchema, 'Admin only', ['FORBIDDEN', 'ACCOUNT_BANNED']),
+      403: errors(errorSchema, 'Reviewer permission required', ['FORBIDDEN', 'ACCOUNT_BANNED']),
     },
   });
 
@@ -160,7 +160,7 @@ export function registerModerationOpenApi(registry: OpenAPIRegistry, errorSchema
     method: 'get',
     path: '/api/v1/admin/content-review/{id}',
     tags: ['Content Review Admin'],
-    summary: 'Admin inspect one immutable revision and its evidence',
+    summary: 'Admin and Contributor inspect one immutable revision and its evidence',
     description:
       'Returns full text, media source/reference, moderation signals, author, submission state, and any existing decision. Hidden/deleted evidence is retained and remains inspectable.',
     operationId: 'getContentReviewAdmin',
@@ -178,7 +178,7 @@ export function registerModerationOpenApi(registry: OpenAPIRegistry, errorSchema
     method: 'patch',
     path: '/api/v1/admin/content-review/{id}',
     tags: ['Content Review Admin'],
-    summary: 'Admin approve or reject a submitted revision',
+    summary: 'Admin or Contributor approve or reject a submitted revision',
     description:
       'Reason is mandatory. The exact latest revision is locked transactionally. Approve replaces the public pointer; reject keeps any prior approved revision public. Signals are recorded evidence only.',
     operationId: 'reviewContentAdmin',
@@ -188,9 +188,10 @@ export function registerModerationOpenApi(registry: OpenAPIRegistry, errorSchema
       200: { description: 'Decision and audit recorded', content: { 'application/json': { schema: contentReviewDetail } } },
       400: errors(errorSchema, 'Invalid decision/reason', ['VALIDATION_ERROR']),
       401: errors(errorSchema, 'Authentication required', authErrors),
-      403: errors(errorSchema, 'Admin only or self-review forbidden', [
+      403: errors(errorSchema, 'Reviewer role, Admin review requirement or self-review forbidden', [
         'FORBIDDEN',
         'SELF_APPROVAL_FORBIDDEN',
+        'ADMIN_REVIEW_REQUIRED',
         'ACCOUNT_BANNED',
       ]),
       404: errors(errorSchema, 'Revision not found', ['NOT_FOUND']),

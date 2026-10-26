@@ -46,6 +46,7 @@ The MVP is delivered through backend Phases 00–27. Phases 00–11 are the exis
 - Has all Member capabilities.
 - Share AI-generated drafts for community use after required review.
 - Verify eligible AI nutrition or content suggestions with an evidence note.
+- Review and decide publication for submitted Member recipes, handbooks, and videos that have no open AI moderation flags or high-priority reports (anti-self-approval strictly enforced; flagged/quarantined or non-Member content escalates to Administrator).
 - All Contributors have the same permissions. There are no nutrition-expert and experienced-practitioner permission tiers.
 
 Contributor approval is manual and performed by an Administrator. The system stores one approval basis for audit and presentation only:

@@ -345,10 +345,10 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/ingredients', createIngredientRouter(catalogController));
   app.use('/api/v1', createCompositionRouter(database.client, authentication));
   app.use('/api/v1/food-data', createFoodDataRouter(foodDataController));
+  app.use('/api/v1/admin', createModerationAdminRouter(moderationController, authentication));
   app.use('/api/v1/admin', createCatalogAdminRouter(catalogController, authentication));
   app.use('/api/v1/admin', createFoodDataAdminRouter(foodDataController, authentication));
   app.use('/api/v1/admin', createContributorAdminRouter(contributorController, authentication));
-  app.use('/api/v1/admin', createModerationAdminRouter(moderationController, authentication));
   app.use('/api/v1/admin', createStorageAdminRouter(storageController, authentication));
   app.use('/api/v1/admin', createAiReviewAdminRouter(aiReviewController, authentication));
   app.use(

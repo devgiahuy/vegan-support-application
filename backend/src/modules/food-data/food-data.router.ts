@@ -57,7 +57,7 @@ export function createFoodDataAdminRouter(
   authentication: AuthenticationMiddleware,
 ): Router {
   const router = Router();
-  router.use(authentication.authenticate, requireRole(Role.ADMIN));
+  router.use('/food-data', authentication.authenticate, requireRole(Role.ADMIN));
   router.get(
     '/food-data/records',
     validateQuery(adminFoodDataRecordQuerySchema),

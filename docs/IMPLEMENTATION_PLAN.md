@@ -272,7 +272,7 @@ Maintenance clarification 2026-10-26: titles and bodies need not be unique. Auto
 - Vote uniqueness and mutation idempotency are backend enforced.
 - Reports and AI flags create moderation signals.
 - Removal requires an Admin decision and reason; no signal performs hard deletion automatically.
-- Contributor role does not grant final moderation or publication authority.
+- Contributor role can review and decide publication for submitted Member community content (recipes, articles, videos) that have no open AI flags or high-priority reports. Flagged/quarantined items, reports, comments, users, and content by non-Members remain Admin-exclusive. Anti-self-approval is strictly enforced.
 
 ### BL-08 — Storage quota
 
@@ -566,6 +566,8 @@ A phase is complete only when:
 | Phase 2 ideas are forgotten or accidentally claimed READY | Dedicated roadmap plus explicit status taxonomy |
 
 ## 13. Change record
+
+- **4.13 — 2026-10-26:** User clarifies that approved Contributors have review/moderation permissions for submitted community content (recipes, articles, videos) created by Members (excluding self-created content and items flagged with open AI flags or high report counts requiring Admin review). Content review endpoints (`/api/v1/admin/content-review*`) allow both Admin and Contributor roles.
 
 - **4.12 — 2026-10-26:** User approves an explicit "not suitable" recipe-discovery view with per-recipe reasons (BL-02.7). Demo composition assertions extend to prepared foods used by seeded recipes.
 
