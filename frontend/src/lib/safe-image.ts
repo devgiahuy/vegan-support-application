@@ -53,6 +53,9 @@ export const ALLOWED_IMAGE_HOSTNAMES: ReadonlySet<string> = new Set([
   'storage.googleapis.com',
   'eggyolk.vn',
   'i.redd.it',
+  'cdn.24h.com.vn',
+  'bizweb.dktcdn.net',
+  'noomfood.com',
 ]);
 
 /** `true` nếu src dùng được trực tiếp trong `next/image` (local, data:, hoặc host đã khai báo). */
