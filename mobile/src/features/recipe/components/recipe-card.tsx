@@ -8,6 +8,7 @@ import { UserAvatar } from '@/components/ui/user-avatar';
 import { FALLBACK_RECIPE_COVER_URL } from '@/lib/env';
 import { useIconColors } from '@/lib/theme-colors';
 import type { Recipe } from '../types/recipe.model';
+import { formatIneligibilityReason } from '../utils/recipe-eligibility';
 
 /**
  * Card công thức cho danh sách (Trang chủ, Khám phá món), đồng bộ bố cục với
@@ -58,6 +59,21 @@ export function RecipeCard({ recipe, className }: { recipe: Recipe; className?: 
           <Text numberOfLines={2} className="text-sm font-semibold leading-snug text-foreground">
             {recipe.title}
           </Text>
+
+          {recipe.eligibility && !recipe.eligibility.eligible ? (
+            <View className="gap-1 rounded-lg bg-destructive/5 p-2">
+              {recipe.eligibility.reasons.slice(0, 2).map((reason) => (
+                <Text key={reason.code} numberOfLines={2} className="text-[11px] leading-snug text-destructive">
+                  {formatIneligibilityReason(reason)}
+                </Text>
+              ))}
+              {recipe.eligibility.reasons.length > 2 ? (
+                <Text className="text-[11px] text-muted-foreground">
+                  +{recipe.eligibility.reasons.length - 2} lý do khác
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
 
           <View className="mt-1 flex-row items-center gap-2 border-t border-border pt-2.5">
             <UserAvatar name={recipe.author.name} uri={recipe.author.avatarUrl} size={28} />

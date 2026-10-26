@@ -22,6 +22,12 @@ export const scanningApi = {
     const res = await api.patch<APIResponse<ScanJobDto>>(API_ENDPOINTS.SCANNING[kind].CANDIDATE(id, candidateId), scanningMappers[kind].toEditDto(input), { silent: true });
     return scanningMappers[kind].toModel(res.data.data);
   },
+  /** Chỉ hóa đơn: đưa dòng bị loại về danh sách để người dùng xem xét; vẫn phải xác nhận mới nhập Tủ bếp. */
+  async restoreExcluded(id: string, itemId: string, version: number) {
+    requireDevScans();
+    const res = await api.patch<APIResponse<ScanJobDto>>(API_ENDPOINTS.SCANNING.receipt.CANDIDATE(id, itemId), scanningMappers.receipt.toRestoreDto(version), { silent: true });
+    return scanningMappers.receipt.toModel(res.data.data);
+  },
   async confirm(kind: ScanKind, id: string, input: ScanConfirm) {
     requireDevScans();
     const res = await api.post<APIResponse<ScanConfirmationDto>>(API_ENDPOINTS.SCANNING[kind].CONFIRM(id), scanningMappers[kind].toConfirmDto(input), { silent: true });

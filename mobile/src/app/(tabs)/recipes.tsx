@@ -18,6 +18,8 @@ import { DropdownField } from '@/components/ui/dropdown-field';
 import { buildCategoryOptions } from '@/features/category/utils/category-options';
 import { useDebouncedValue } from '@/hooks/use-debounced-value';
 import { useIconColors } from '@/lib/theme-colors';
+import { cn } from '@/lib/utils';
+import { useAuthStore } from '@/store/useAuthStore';
 
 const DIFFICULTIES = [
   { label: 'Tất cả độ khó', value: '' },
@@ -68,6 +70,10 @@ export default function RecipesScreen() {
   const [maxCookTime, setMaxCookTime] = React.useState<number | null>(null);
   const [ingredients, setIngredients] = React.useState<IngredientFilterItem[]>([]);
   const [categoryId, setCategoryId] = React.useState<string | null>(params.category ?? null);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  // Tab "Không phù hợp" chỉ có nghĩa khi có hồ sơ ăn uống; khách chưa đăng nhập không có ràng buộc cá nhân.
+  const [eligibilityView, setEligibilityView] = React.useState<'ELIGIBLE' | 'INELIGIBLE'>('ELIGIBLE');
+  const viewIneligible = isAuthenticated && eligibilityView === 'INELIGIBLE';
 
   const {
     data: categoryTree = [],
@@ -90,6 +96,7 @@ export default function RecipesScreen() {
     difficulty: difficulty || undefined,
     maxCookTimeMinutes: maxCookTime ?? undefined,
     ingredientIds: ingredients.length > 0 ? ingredients.map((item) => item.id) : undefined,
+    eligibility: viewIneligible ? 'INELIGIBLE' : undefined,
   });
 
   const recipesPagination = recipePages?.pages[0];
@@ -125,6 +132,35 @@ export default function RecipesScreen() {
             </Pressable>
           </Link>
         </View>
+
+        {isAuthenticated ? (
+          <View className="mt-4 flex-row gap-2">
+            {(
+              [
+                { value: 'ELIGIBLE', label: 'Phù hợp với bạn' },
+                { value: 'INELIGIBLE', label: 'Không phù hợp' },
+              ] as const
+            ).map((tab) => (
+              <Pressable
+                key={tab.value}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: eligibilityView === tab.value }}
+                onPress={() => setEligibilityView(tab.value)}
+                className={cn(
+                  'flex-1 items-center rounded-xl border px-3 py-2.5',
+                  eligibilityView === tab.value ? 'border-primary bg-primary/10' : 'border-input bg-background'
+                )}>
+                <Text
+                  className={cn(
+                    'text-sm',
+                    eligibilityView === tab.value ? 'font-semibold text-primary' : 'text-foreground'
+                  )}>
+                  {tab.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        ) : null}
 
         {/* Search */}
         <View className="mt-4 flex-row items-center gap-2 rounded-2xl border border-input bg-background px-3.5">
@@ -180,7 +216,15 @@ export default function RecipesScreen() {
         ) : null}
 
         {/* Bộ lọc an toàn cá nhân hoá theo hồ sơ (backend áp dụng, mobile chỉ hiển thị) */}
-        {constraints?.authenticated ? (
+        {viewIneligible ? (
+          <View className="mt-5 rounded-2xl border border-border bg-muted/40 p-4">
+            <Text className="text-sm font-semibold text-foreground">Các món bị loại theo hồ sơ của bạn</Text>
+            <Text className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Những món này không được gợi ý hay thêm vào thực đơn vì vi phạm ràng buộc ăn uống bạn đã khai báo. Mỗi
+              món kèm lý do để bạn tham khảo; hệ thống không tự bỏ qua ràng buộc.
+            </Text>
+          </View>
+        ) : constraints?.authenticated ? (
           <View className="mt-5 rounded-2xl border border-primary/25 bg-primary/5 p-4">
             <View className="flex-row items-center gap-2">
               <ShieldCheck size={16} color={colors.primary} />
@@ -240,7 +284,9 @@ export default function RecipesScreen() {
               <Text className="mt-1 text-center text-sm text-muted-foreground">
                 {query.trim()
                   ? `Không tìm thấy công thức phù hợp với từ khóa "${query.trim()}".`
-                  : 'Kho công thức hiện chưa có bài viết phù hợp với bộ lọc hiện tại.'}
+                  : viewIneligible
+                    ? 'Không có món nào bị loại theo hồ sơ của bạn với bộ lọc hiện tại.'
+                    : 'Kho công thức hiện chưa có bài viết phù hợp với bộ lọc hiện tại.'}
               </Text>
               {hasFilters ? (
                 <View className="mt-4">

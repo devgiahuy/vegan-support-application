@@ -15,6 +15,7 @@ const suffixMessages: Record<string, string> = {
     'Dịch vụ nhận diện hiện không khả dụng. Nếu vừa đổi provider, hãy tạo tác vụ mới.',
   JOB_NOT_FOUND: 'Không tìm thấy tác vụ hoặc bạn không có quyền xem.',
   VERSION_CONFLICT: 'Kết quả đã thay đổi. Mở lại mục để sửa theo phiên bản mới.',
+  REVIEW_DECISION_REQUIRED: 'Hóa đơn này trùng một phần với hóa đơn khác của bạn. Hãy chọn "Cùng một hóa đơn" hoặc "Hóa đơn riêng" rồi xác nhận lại.',
   STATE_CONFLICT: 'Tác vụ đã đổi trạng thái. Tải lại kết quả trước khi thao tác.',
 };
 

@@ -24,6 +24,12 @@ export interface DraftAllergy {
   severity: 'MILD' | 'MODERATE' | 'SEVERE';
 }
 
+export interface DraftIngredientAllergy {
+  ingredientId: string;
+  ingredientName: string;
+  severity: 'MILD' | 'MODERATE' | 'SEVERE';
+}
+
 export interface DraftIngredientExclusion {
   ingredientName: string;
   /** Id nguyên liệu chuẩn khi người dùng chọn từ gợi ý; undefined khi là tên tự nhập. */

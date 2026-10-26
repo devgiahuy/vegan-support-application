@@ -10,6 +10,9 @@ import { IngredientPicker, type IngredientPickerValue } from '@/features/ingredi
 import { ImagePickerField } from '@/features/storage/components/image-picker-field';
 import type { PickedImage } from '@/features/storage/types/storage.model';
 import type { CreateRecipeIngredientInput, CreateRecipeInput } from '../api/recipe.api';
+import { resolveExactIngredientId } from '@/features/ingredient/utils/ingredient-link';
+import type { RecipeDraftSuggestion } from '../types/recipe-draft.model';
+import { AiRecipeDraftPanel } from './ai-recipe-draft-panel';
 import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
 
@@ -106,6 +109,8 @@ export function RecipeForm({
   onSubmit: (values: CreateRecipeInput) => void;
 }) {
   const colors = useIconColors();
+  const keySeq = React.useRef(0);
+  const nextKey = (prefix: string) => `${prefix}-new-${++keySeq.current}`;
 
   const [title, setTitle] = React.useState(initial?.title ?? '');
   const [excerpt, setExcerpt] = React.useState(initial?.excerpt ?? '');
@@ -148,13 +153,60 @@ export function RecipeForm({
       Alert.alert('Thiếu thông tin', 'Vui lòng nhập đủ tên, số lượng (>0) và đơn vị nguyên liệu.');
       return;
     }
+    const key = nextKey('ing');
     setIngredients((prev) => [
       ...prev,
-      { key: `${Date.now()}`, displayName: name, amount: amountNum, unit, ingredientId: ingredient.ingredientId },
+      { key, displayName: name, amount: amountNum, unit, ingredientId: ingredient.ingredientId },
     ]);
+    if (!ingredient.ingredientId) void autoLinkIngredient(key, name);
     setIngredient({ displayName: '', ingredientId: null });
     setIngAmount('');
     setIngUnit('');
+  };
+
+  /** Tên tự nhập khớp đúng một nguyên liệu chuẩn thì tự gắn `ingredientId` để BE tính dinh dưỡng/kiểm tra dị ứng. */
+  const autoLinkIngredient = async (key: string, name: string) => {
+    const ingredientId = await resolveExactIngredientId(name);
+    if (!ingredientId) return;
+    setIngredients((prev) =>
+      prev.map((item) => (item.key === key && !item.ingredientId && item.displayName === name ? { ...item, ingredientId } : item))
+    );
+  };
+
+  const applyDraft = (draft: RecipeDraftSuggestion) => {
+    const stamp = nextKey('ai');
+    const drafted = draft.ingredients.map((item, index) => ({
+      key: `ai-${stamp}-${index}`,
+      displayName: item.name,
+      amount: item.amount,
+      unit: item.unit,
+      ...(item.optional ? { optional: true } : {}),
+      ingredientId: null,
+      // Vị trí AI dùng để tham chiếu nguyên liệu trong bước nấu, giữ nguyên khi người dùng chưa đổi thứ tự.
+      originalPosition: index,
+    }));
+    const run = () => {
+      setServings(String(draft.servings));
+      setPrepTime(String(draft.prepTimeMinutes));
+      setCookTime(String(draft.cookTimeMinutes));
+      setDifficulty(draft.difficulty);
+      setIngredients(drafted);
+      setSteps(
+        draft.steps.map((step, index) => ({
+          key: `ai-step-${stamp}-${index}`,
+          instruction: step.instruction,
+          duration: step.durationMinutes ? String(step.durationMinutes) : '',
+          affectedIngredientPositions: step.affectedIngredientPositions.filter((position) => position < drafted.length),
+        }))
+      );
+      drafted.forEach((item) => void autoLinkIngredient(item.key, item.displayName));
+    };
+    const hasContent = ingredients.length > 0 || steps.some((step) => step.instruction.trim().length > 0);
+    if (!hasContent) return run();
+    Alert.alert('Thay nội dung hiện có?', 'Nguyên liệu, các bước, khẩu phần và thời gian hiện tại sẽ được thay bằng bản nháp AI.', [
+      { text: 'Giữ nguyên', style: 'cancel' },
+      { text: 'Thay bằng bản nháp', style: 'destructive', onPress: run },
+    ]);
   };
 
   const removeIngredient = (key: string) => {
@@ -355,6 +407,13 @@ export function RecipeForm({
             />
           </View>
         </View>
+
+        <AiRecipeDraftPanel
+          title={title}
+          excerpt={excerpt}
+          existingIngredientNames={ingredients.map((item) => item.displayName)}
+          onApply={applyDraft}
+        />
 
         <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
           <Text className="text-xs font-bold uppercase text-muted-foreground">Nguyên liệu</Text>

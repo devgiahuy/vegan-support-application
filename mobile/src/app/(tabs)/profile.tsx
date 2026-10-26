@@ -480,12 +480,22 @@ export default function ProfileScreen() {
                 Thực phẩm dị ứng
               </Text>
               <View className="mt-2 flex-row flex-wrap gap-2">
-                {diet.allergies.length ? (
-                  diet.allergies.map((allergy) => (
-                    <View key={allergy.allergenCode} className="rounded-full bg-destructive/10 px-3 py-1.5">
-                      <Text className="text-xs font-semibold text-destructive">{allergy.label}</Text>
-                    </View>
-                  ))
+                {diet.allergies.length || diet.ingredientAllergies.length ? (
+                  <>
+                    {diet.allergies.map((allergy) => (
+                      <View key={allergy.allergenCode} className="rounded-full bg-destructive/10 px-3 py-1.5">
+                        <Text className="text-xs font-semibold text-destructive">{allergy.label}</Text>
+                      </View>
+                    ))}
+                    {diet.ingredientAllergies.map((allergy) => (
+                      <View key={allergy.ingredientId} className="rounded-full bg-destructive/10 px-3 py-1.5">
+                        <Text className="text-xs font-semibold text-destructive">
+                          {allergy.ingredientName}
+                          {allergy.ingredientActive ? '' : ' (đã gỡ khỏi danh mục)'}
+                        </Text>
+                      </View>
+                    ))}
+                  </>
                 ) : (
                   <Text className="text-sm text-muted-foreground">Chưa khai báo dị ứng.</Text>
                 )}

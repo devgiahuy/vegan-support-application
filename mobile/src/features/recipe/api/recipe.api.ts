@@ -17,6 +17,8 @@ export interface RecipeQueryParams {
   q?: string;
   /** Chỉ lấy công thức chứa đủ mọi nguyên liệu chuẩn này (backend `ingredientIds`, tối đa 20). */
   ingredientIds?: string[];
+  /** `ELIGIBLE` (mặc định của BE): món qua ràng buộc hồ sơ. `INELIGIBLE`: món bị loại kèm lý do. */
+  eligibility?: 'ELIGIBLE' | 'INELIGIBLE';
 }
 
 export interface CreateRecipeIngredientInput {

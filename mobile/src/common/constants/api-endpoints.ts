@@ -48,6 +48,9 @@ export const API_ENDPOINTS = {
     DIET_PREFERENCES: '/users/me/diet-preferences',
     DIET_SCHEDULE: '/users/me/diet-schedule',
   },
+  ALLERGENS: {
+    LIST: '/allergens',
+  },
   DIET_RULES: {
     PREVIEW: '/diet-rules/preview',
   },
@@ -56,6 +59,7 @@ export const API_ENDPOINTS = {
   },
   POSTS: {
     LIST: '/posts',
+    MINE: '/posts/mine',
     DETAIL: (idOrSlug: string) => `/posts/${idOrSlug}`,
     RELATED: (id: string) => `/posts/${id}/related`,
     SUBMIT: (id: string) => `/posts/${id}/submit`,
@@ -121,6 +125,9 @@ export const API_ENDPOINTS = {
   INGREDIENTS: {
     LIST: '/ingredients',
     RESOLVE: '/ingredients/resolve',
+  },
+  RECIPE_DRAFTS: {
+    GENERATE: '/recipe-drafts/generate',
   },
   RECIPE_NUTRITION: {
     PREVIEW: (id: string) => `/posts/${id}/nutrition/preview`,

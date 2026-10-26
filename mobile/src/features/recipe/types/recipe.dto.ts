@@ -59,6 +59,10 @@ export interface RecipeDetailDto extends BasePostDto {
     dietCompatibilities?: DietCompatibilityDto[];
     ingredients?: RecipeIngredientDto[];
     steps?: (RecipeStepDto | null)[];
+    eligibility?: {
+      eligible?: boolean;
+      reasons?: ({ code?: string; ingredientNames?: (string | null)[] | null } | null)[] | null;
+    } | null;
   } | null;
 }
 

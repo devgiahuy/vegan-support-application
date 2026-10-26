@@ -1,5 +1,5 @@
 import { BaseMapper } from '@/lib/mapper';
-import type { CandidateEditDto, ScanConfirmationDto, ScanConfirmDto, ScanCreateDto, ScanJobDto, ScanRetryDto } from '../types/scanning.dto';
+import type { CandidateEditDto, ReceiptRestoreDto, ScanConfirmationDto, ScanConfirmDto, ScanCreateDto, ScanJobDto, ScanRetryDto } from '../types/scanning.dto';
 import type { CandidateEdit, ScanConfirmation, ScanConfirm, ScanCreate, ScanJob, ScanKind } from '../types/scanning.model';
 
 export class ScanningMapper extends BaseMapper<ScanJobDto, ScanJob> {
@@ -13,6 +13,10 @@ export class ScanningMapper extends BaseMapper<ScanJobDto, ScanJob> {
       images: dto.images.map(image => ({ ...image })).sort((a, b) => a.position - b.position),
       issue: dto.issue ? { ...dto.issue } : null,
       disclaimer: dto.freshnessDisclaimer ?? null,
+      identityDecisionRequired: dto.identityDecisionRequired === true,
+      reviewDecision: dto.receiptReviewDecision ?? null,
+      notices: (dto.notices ?? []).map(notice => notice.message).filter(message => message.length > 0),
+      excludedItems: (dto.excludedItems ?? []).map(item => ({ id: item.id, name: item.name, lineText: item.lineText, reason: item.reason, confidence: item.confidence, version: item.version })),
       receipt: dto.receipt ? { merchant: dto.receipt.merchantName, purchasedAt: dto.receipt.purchasedAt, currency: dto.receipt.currency, total: dto.receipt.totalAmount } : null,
       candidates: dto.candidates.map(candidate => ({
         id: candidate.id, name: candidate.name,
@@ -22,6 +26,8 @@ export class ScanningMapper extends BaseMapper<ScanJobDto, ScanJob> {
         freshness: candidate.freshnessObservation ?? null, status: candidate.status, version: candidate.version,
         lineText: candidate.lineText ?? null, unitPrice: candidate.pricing?.unitPrice ?? null,
         lineTotal: candidate.pricing?.lineTotal ?? null, currency: candidate.pricing?.currency ?? null,
+        classification: candidate.aiClassification ?? null, classificationReason: candidate.classificationReason ?? null,
+        duplicateOfJobId: candidate.duplicateOfJobId ?? null,
         imageIds: candidate.imageId ? [candidate.imageId] : [...new Set(candidate.evidence?.map(item => item.imageId) ?? [])],
       })),
     };
@@ -45,7 +51,15 @@ export class ScanningMapper extends BaseMapper<ScanJobDto, ScanJob> {
   }
 
   toConfirmDto(input: ScanConfirm): ScanConfirmDto {
-    return { candidates: input.candidates.map(candidate => ({ id: candidate.id, expectedVersion: candidate.version })), idempotencyKey: input.operationKey };
+    return {
+      candidates: input.candidates.map(candidate => ({ id: candidate.id, expectedVersion: candidate.version })), idempotencyKey: input.operationKey,
+      ...(this.kind === 'receipt' && input.receiptReviewDecision ? { receiptReviewDecision: input.receiptReviewDecision } : {}),
+    };
+  }
+
+  /** Khôi phục dòng hóa đơn bị loại: PATCH chỉ cần phiên bản + `decision: KEEP`, chưa đổi Tủ bếp. */
+  toRestoreDto(version: number): ReceiptRestoreDto {
+    return { expectedVersion: version, decision: 'KEEP' };
   }
 
   toRetryDto(operationKey: string): ScanRetryDto {
@@ -58,7 +72,7 @@ export class ScanningMapper extends BaseMapper<ScanJobDto, ScanJob> {
       candidateId: change.candidateId, action: change.action, itemId: change.pantryItem.id,
       name: change.pantryItem.ingredient?.name ?? change.pantryItem.unmatchedText ?? '',
       quantity: change.pantryItem.quantity, unit: change.pantryItem.unit,
-    })) };
+    })), duplicateCount: dto.duplicateCandidates?.length ?? 0 };
   }
 }
 

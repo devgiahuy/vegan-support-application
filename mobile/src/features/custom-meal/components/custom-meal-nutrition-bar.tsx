@@ -1,13 +1,29 @@
 import { Text, View } from 'react-native';
 import { AlertTriangle, CheckCircle2, Flame } from 'lucide-react-native';
 import { useIconColors } from '@/lib/theme-colors';
-import type { CustomMeal } from '../types/custom-meal.model';
+import type { CustomMeal, NutritionOrigin } from '../types/custom-meal.model';
+
+const ORIGIN_LABELS: Record<NutritionOrigin, string> = {
+  USER_PROVIDED: 'Bạn nhập',
+  CANONICAL_CALCULATED: 'Tính từ dữ liệu chuẩn',
+  AI_ESTIMATED: 'AI ước tính',
+};
 
 /**
  * Ô một chỉ số. Có dữ liệu: khung liền, số đậm. Chưa có dữ liệu: khung nét đứt, chữ mờ nghiêng — nhìn là phân biệt được
  * ngay với ô đã nhập (và nhắc rằng "trống" không có nghĩa là 0).
  */
-function Tile({ label, value, unit }: { label: string; value: number | null; unit: string }) {
+function Tile({
+  label,
+  value,
+  unit,
+  origin,
+}: {
+  label: string;
+  value: number | null;
+  unit: string;
+  origin?: NutritionOrigin;
+}) {
   const missing = value === null;
   return (
     <View
@@ -24,14 +40,19 @@ function Tile({ label, value, unit }: { label: string; value: number | null; uni
           {value} {unit}
         </Text>
       )}
+      {!missing && origin ? (
+        <Text className={origin === 'AI_ESTIMATED' ? 'mt-0.5 text-[10px] font-medium text-cta' : 'mt-0.5 text-[10px] text-muted-foreground'}>
+          {ORIGIN_LABELS[origin]}
+        </Text>
+      ) : null}
     </View>
   );
 }
 
 /**
- * Tổng hợp dinh dưỡng của món riêng — tương ứng `custom-meal-nutrition-bar` của web.
- * Backend chỉ trả số người dùng tự nhập (không có số tính từ nguyên liệu), nên chỉ hiển thị số đó và độ phủ
- * nguyên liệu đã liên kết danh mục chuẩn; chỉ số để trống nghĩa là chưa có dữ liệu, không phải 0.
+ * Tổng hợp dinh dưỡng của cả món — tương ứng `custom-meal-nutrition-bar` của web.
+ * Mỗi chỉ số kèm nguồn (bạn nhập / tính từ dữ liệu chuẩn / AI ước tính). Số AI ước tính chưa được xác minh và
+ * không thay thế dữ liệu chuẩn; chỉ số để trống nghĩa là chưa có dữ liệu, không phải 0.
  */
 export function CustomMealNutritionBar({ meal }: { meal: CustomMeal }) {
   const colors = useIconColors();
@@ -45,7 +66,7 @@ export function CustomMealNutritionBar({ meal }: { meal: CustomMeal }) {
       <View className="flex-row items-center justify-between gap-2">
         <View className="flex-1 flex-row items-center gap-2">
           <Flame size={18} color={colors.cta} />
-          <Text className="flex-1 font-bold text-foreground">Dinh dưỡng bạn nhập (mỗi bữa)</Text>
+          <Text className="flex-1 font-bold text-foreground">Dinh dưỡng của món</Text>
         </View>
         {fullyLinked ? (
           <View className="flex-row items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1">
@@ -56,12 +77,22 @@ export function CustomMealNutritionBar({ meal }: { meal: CustomMeal }) {
       </View>
 
       <View className="flex-row flex-wrap gap-2">
-        <Tile label="Năng lượng" value={meal.calories} unit="kcal" />
-        <Tile label="Đạm" value={meal.proteinGrams} unit="g" />
-        <Tile label="Carb" value={meal.carbsGrams} unit="g" />
-        <Tile label="Béo" value={meal.fatGrams} unit="g" />
-        <Tile label="Xơ" value={meal.fiberGrams} unit="g" />
+        <Tile label="Năng lượng" value={meal.calories} unit="kcal" origin={meal.nutritionOrigins.calories} />
+        <Tile label="Đạm" value={meal.proteinGrams} unit="g" origin={meal.nutritionOrigins.proteinGrams} />
+        <Tile label="Carb" value={meal.carbsGrams} unit="g" origin={meal.nutritionOrigins.carbsGrams} />
+        <Tile label="Béo" value={meal.fatGrams} unit="g" origin={meal.nutritionOrigins.fatGrams} />
+        <Tile label="Xơ" value={meal.fiberGrams} unit="g" origin={meal.nutritionOrigins.fiberGrams} />
       </View>
+
+      {meal.nutritionNotes.length > 0 ? (
+        <View className="gap-1 rounded-xl bg-muted p-3">
+          {meal.nutritionNotes.map((note) => (
+            <Text key={note} className="text-[11px] leading-relaxed text-muted-foreground">
+              • {note}
+            </Text>
+          ))}
+        </View>
+      ) : null}
 
       {total > 0 ? (
         <View className="gap-1.5">

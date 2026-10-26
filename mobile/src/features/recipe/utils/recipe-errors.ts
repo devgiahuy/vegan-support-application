@@ -7,6 +7,10 @@ export function getContentErrorMessage(error: unknown, fallback = 'Vui lòng ki�
       return 'Tên một nguyên liệu không khớp với nguyên liệu chuẩn đã chọn. Hãy xóa dòng đó và chọn lại từ gợi ý, hoặc nhập tên tự do.';
     case 'CONTENT_VERSION_CONFLICT':
       return 'Nội dung đã được cập nhật ở nơi khác. Hãy mở lại bài để lấy bản mới nhất rồi chỉnh sửa lại.';
+    case 'RECIPE_DRAFT_UNAVAILABLE':
+      return 'Trợ lý AI soạn công thức đang tạm tắt hoặc chưa sẵn sàng. Bạn vẫn có thể nhập công thức thủ công.';
+    case 'RECIPE_DRAFT_GENERATION_FAILED':
+      return 'AI chưa soạn được bản nháp lúc này. Hãy thử lại sau ít phút hoặc nhập thủ công.';
     case 'INVALID_CONTENT':
       return 'Nội dung chưa đạt yêu cầu. Vui lòng kiểm tra lại các trường bắt buộc.';
     default:

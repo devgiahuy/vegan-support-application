@@ -8,7 +8,12 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { useIconColors } from '@/lib/theme-colors';
 import { cn } from '@/lib/utils';
 import { SCAN_COMMON_UNITS, isScanDraftDirty, mergeScanDrafts, toScanDraft, type ScanDraft } from '../lib/scan-draft';
-import { canEditScan, type ScanCandidate, type ScanJob } from '../types/scanning.model';
+import { canEditScan, type ReceiptExcludedItem, type ReceiptReviewDecision, type ScanCandidate, type ScanJob } from '../types/scanning.model';
+
+const REVIEW_OPTIONS: { value: ReceiptReviewDecision; title: string; note: string }[] = [
+  { value: 'SAME_RECEIPT', title: 'Cùng một hóa đơn', note: 'Đây là ảnh khác của hóa đơn đã quét — bỏ qua các mặt hàng đã có để không cộng đôi vào Tủ bếp.' },
+  { value: 'SEPARATE_RECEIPTS', title: 'Hóa đơn riêng', note: 'Đây là một lần mua khác — các mặt hàng cùng tên sẽ được cộng thêm vào Tủ bếp.' },
+];
 
 type Filter = 'all' | 'active' | 'rejected';
 
@@ -48,8 +53,12 @@ function Badge({ children }: { children: React.ReactNode }) {
 }
 
 /** Màn kiểm tra & nhập thông tin sau khi quét tủ lạnh / hóa đơn (đồng bộ bố cục web `CandidateReviewScreen` và `ReceiptInspectionView`). */
-export function ScanReview({ job, busy, error, onSave, onEdit, onRetry, onCancel }: {
+export function ScanReview({ job, busy, error, reviewDecision, onReviewDecision, onRestore, onSave, onEdit, onRetry, onCancel }: {
   job: ScanJob; busy: boolean; error: string;
+  /** Lựa chọn danh tính hóa đơn (chỉ hóa đơn); null = chưa chọn. */
+  reviewDecision: ReceiptReviewDecision | null;
+  onReviewDecision: (decision: ReceiptReviewDecision) => void;
+  onRestore: (item: ReceiptExcludedItem) => void;
   onSave: (drafts: ScanDraft[]) => void;
   onEdit: (candidate: ScanCandidate) => void;
   onRetry: () => void; onCancel: () => void;
@@ -99,6 +108,26 @@ export function ScanReview({ job, busy, error, onSave, onEdit, onRetry, onCancel
         {job.status === 'FAILED' || job.status === 'PARTIAL_FAILED' ? <PrimaryButton label="Thử lại" variant="outline" disabled={busy} icon={<RotateCcw size={16} color={colors.primary} />} onPress={onRetry} /> : null}
         {processing ? <PrimaryButton label="Hủy tác vụ" variant="outline" disabled={busy} onPress={onCancel} /> : null}
       </View>
+
+      {!fridge && job.notices.length > 0 ? (
+        <View className="gap-1 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4">
+          {job.notices.map(notice => <Text key={notice} className="text-xs leading-5 text-amber-700 dark:text-amber-400">{notice}</Text>)}
+        </View>
+      ) : null}
+
+      {!fridge && editable && (job.identityDecisionRequired || job.reviewDecision !== null) ? (
+        <View className="gap-2 rounded-2xl border border-primary/30 bg-primary/5 p-4">
+          <Text className="text-sm font-bold text-foreground">Hóa đơn này có trùng hóa đơn đã quét không?</Text>
+          <Text className="text-xs leading-5 text-muted-foreground">Một số mặt hàng trùng với hóa đơn khác của bạn nhưng chưa đủ thông tin để hệ thống tự kết luận. Hãy chọn để tránh cộng đôi hoặc bỏ sót.</Text>
+          {REVIEW_OPTIONS.map(option => (
+            <Pressable key={option.value} accessibilityRole="radio" accessibilityState={{ selected: reviewDecision === option.value }} disabled={busy} onPress={() => onReviewDecision(option.value)}
+              className={cn('rounded-xl border p-3', reviewDecision === option.value ? 'border-primary bg-primary/10' : 'border-input bg-background')}>
+              <Text className={cn('text-sm', reviewDecision === option.value ? 'font-semibold text-primary' : 'text-foreground')}>{option.title}</Text>
+              <Text className="mt-0.5 text-xs leading-4 text-muted-foreground">{option.note}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
 
       <View className="gap-3 rounded-2xl border border-border bg-card p-4">
         <View className="flex-row items-center justify-between gap-2 border-b border-border pb-2">
@@ -197,6 +226,9 @@ export function ScanReview({ job, busy, error, onSave, onEdit, onRetry, onCancel
                   {candidate.ingredient && !draft.rejected ? (
                     <View className="flex-row items-center gap-1 rounded-full border border-emerald-200/60 bg-emerald-50 px-2 py-0.5 dark:border-emerald-800/60 dark:bg-emerald-950/40"><Check size={12} color={colors.primary} /><Text className="text-[11px] text-emerald-700 dark:text-emerald-300">Khớp: {candidate.ingredient.name}</Text></View>
                   ) : null}
+                  {!fridge && candidate.duplicateOfJobId ? <View className="rounded-md bg-amber-500/10 px-1.5 py-0.5"><Text className="text-[11px] text-amber-700 dark:text-amber-400">Đã có trong hóa đơn khác</Text></View> : null}
+                  {!fridge && candidate.classification === 'READY_TO_EAT' ? <View className="rounded-md bg-muted px-1.5 py-0.5"><Text className="text-[11px] text-muted-foreground">Đồ ăn sẵn</Text></View> : null}
+                  {!fridge && candidate.classification === 'UNCERTAIN' ? <View className="rounded-md bg-amber-500/10 px-1.5 py-0.5"><Text className="text-[11px] text-amber-700 dark:text-amber-400">Chưa chắc là thực phẩm{candidate.classificationReason ? ` — ${candidate.classificationReason}` : ''}</Text></View> : null}
                   {fridge && !candidate.ingredient ? <Text className="text-[11px] text-muted-foreground">Độ tin cậy: {Math.round(candidate.confidence * 100)}%</Text> : null}
                   {fridge && candidate.freshness ? <Text className="text-[11px] text-warning">· {candidate.freshness}</Text> : null}
                   {candidate.uncertainty && !draft.rejected ? <View className="flex-row items-center gap-1"><CircleAlert size={12} color={colors.cta} /><Text className="text-[11px] text-warning">{candidate.uncertainty}</Text></View> : null}
@@ -238,6 +270,22 @@ export function ScanReview({ job, busy, error, onSave, onEdit, onRetry, onCancel
             </View>
           );
         })}
+
+        {!fridge && job.excludedItems.length > 0 ? (
+          <View className="gap-2 rounded-xl border border-dashed border-border p-3">
+            <Text className="text-sm font-semibold text-foreground">Đã loại vì không phải thực phẩm ({job.excludedItems.length})</Text>
+            <Text className="text-[11px] leading-4 text-muted-foreground">Nếu AI nhận nhầm, bấm “Khôi phục” để đưa dòng đó về danh sách phía trên. Tủ bếp chỉ thay đổi sau khi bạn bấm Lưu.</Text>
+            {job.excludedItems.map(item => (
+              <View key={item.id} className="flex-row items-center gap-2 rounded-lg bg-muted/50 px-3 py-2">
+                <View className="flex-1">
+                  <Text numberOfLines={1} className="text-sm text-foreground">{item.name}</Text>
+                  <Text numberOfLines={2} className="text-[11px] text-muted-foreground">{item.reason}</Text>
+                </View>
+                {editable ? <Pressable accessibilityRole="button" accessibilityLabel={`Khôi phục ${item.name}`} disabled={busy} onPress={() => onRestore(item)} className="h-9 flex-row items-center gap-1 rounded-lg border border-border px-2.5"><RotateCcw size={14} color={colors.primary} /><Text className="text-xs text-emerald-600 dark:text-emerald-400">Khôi phục</Text></Pressable> : null}
+              </View>
+            ))}
+          </View>
+        ) : null}
 
         {editable ? (
           <View className="gap-3 border-t border-border pt-4">

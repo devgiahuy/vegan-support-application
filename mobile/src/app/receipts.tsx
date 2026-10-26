@@ -49,21 +49,21 @@ export default function ReceiptsScreen() {
               Chuyển hóa đơn mua hàng giấy thành dữ liệu số trong nháy mắt. AI tự động bóc tách từng dòng sản phẩm, khớp
               với nguyên liệu chuẩn và cập nhật trực tiếp vào kho Tủ bếp gia đình.
             </Text>
-            <View className="flex-row flex-wrap gap-3 pt-1">
+            <View className="flex-row gap-2.5 pt-1">
               <Link href={'/receipt-scan' as Href} asChild>
                 <Pressable
                   accessibilityRole="button"
-                  className="h-12 flex-row items-center gap-2 rounded-xl bg-white px-5 active:opacity-90">
+                  className="min-h-12 flex-1 flex-row items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-2 active:opacity-90">
                   <UploadCloud size={16} color="#047857" />
-                  <Text className="text-sm font-semibold text-emerald-900">Quét hóa đơn ngay</Text>
+                  <Text className="shrink text-center text-[13px] font-semibold text-emerald-900">Quét hóa đơn ngay</Text>
                 </Pressable>
               </Link>
               <Link href={'/pantry' as Href} asChild>
                 <Pressable
                   accessibilityRole="button"
-                  className="h-12 flex-row items-center gap-2 rounded-xl border border-white/30 px-5 active:bg-white/10">
+                  className="min-h-12 flex-1 flex-row items-center justify-center gap-1.5 rounded-xl border border-white/30 px-3 py-2 active:bg-white/10">
                   <Layers size={16} color="#ffffff" />
-                  <Text className="text-sm font-semibold text-white">Xem Tủ bếp của tôi</Text>
+                  <Text className="shrink text-center text-[13px] font-semibold text-white">Xem Tủ bếp của tôi</Text>
                 </Pressable>
               </Link>
             </View>

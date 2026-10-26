@@ -34,3 +34,19 @@ export interface Article {
     comments: number;
   };
 }
+
+export type MyPostType = 'RECIPE' | 'BLOG' | 'VIDEO';
+
+/** Một mục trong "Bài viết của tôi" (`GET /posts/mine`), mọi trạng thái kiểm duyệt. */
+export interface MyPost {
+  id: string;
+  type: MyPostType;
+  title: string;
+  excerpt: string;
+  categoryName: string;
+  coverImageUrl: string;
+  status: PostStatus;
+  statusLabel: string;
+  version: number;
+  formattedPublishedAt: string;
+}
