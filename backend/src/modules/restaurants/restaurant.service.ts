@@ -2,12 +2,10 @@ import {
   DietPattern,
   RestaurantSource,
   RestaurantStatus,
-  PracticeSchedule,
   type PrismaClient,
   type Restaurant,
 } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
-import { dateOnlyInSearchTimezone } from '../content/search-constraints.js';
 import {
   distanceMeters,
   type ExternalPlace,
@@ -141,63 +139,12 @@ export class RestaurantService {
     private readonly provider: MapsProvider,
   ) {}
 
-  private async constraints(userId: string | undefined, requested?: DietPattern) {
-    const user = userId
-      ? await this.prisma.user.findUnique({
-          where: { id: userId },
-          include: {
-            dietPreference: true,
-            dietScheduleDates: { where: { enabled: true } },
-            dietPreferenceRules: { where: { enabled: true }, include: { ruleDefinition: true } },
-            allergies: { where: { active: true } },
-            ingredientExclusions: { where: { active: true } },
-          },
-        })
-      : null;
-    const pattern = user?.dietPreference?.dietPattern;
-    const effectivePattern =
-      requested === DietPattern.VEGAN || pattern === DietPattern.VEGAN
-        ? DietPattern.VEGAN
-        : (requested ?? pattern);
-    const scheduleApplies =
-      user?.dietPreference?.practiceSchedule === PracticeSchedule.PERMANENT ||
-      (user?.dietPreference?.practiceSchedule === PracticeSchedule.PERIODIC &&
-        user.dietScheduleDates.some(
-          (date) => date.date.toISOString().slice(0, 10) === dateOnlyInSearchTimezone(new Date()),
-        ));
-    const traditions =
-      (scheduleApplies ? user?.dietPreferenceRules : [])
-        ?.filter(
-          (r) =>
-            r.ruleDefinition.source === 'TRADITION' &&
-            r.ruleDefinition.active &&
-            r.ruleDefinition.hardConstraint &&
-            r.ruleDefinition.tradition,
-        )
-        .map((r) => r.ruleDefinition.tradition as string) ?? [];
-    return {
-      pattern: effectivePattern,
-      traditions,
-      allergens: user?.allergies.map((a) => a.allergenCode) ?? [],
-      exclusions: user?.ingredientExclusions.map((i) => i.normalizedName) ?? [],
-    };
-  }
-
-  private compatible(
-    place: Restaurant,
-    constraints: Awaited<ReturnType<RestaurantService['constraints']>>,
-  ): boolean {
-    if (
-      constraints.pattern &&
-      !place.dietTags.includes(constraints.pattern) &&
-      !(constraints.pattern === DietPattern.LACTO_OVO && place.dietTags.includes('VEGAN'))
-    )
-      return false;
-    if (constraints.traditions.some((tag) => !place.dietTags.includes(tag))) return false;
-    if (constraints.allergens.some((code) => !place.allergenFreeCodes.includes(code))) return false;
-    if (constraints.exclusions.some((name) => !place.excludedIngredients.includes(name)))
-      return false;
-    return true;
+  private compatible(place: Restaurant, requested?: DietPattern): boolean {
+    return (
+      !requested ||
+      place.dietTags.includes(requested) ||
+      (requested === DietPattern.LACTO_OVO && place.dietTags.includes('VEGAN'))
+    );
   }
 
   private assertLocation(query: NearbyQuery | SearchQuery): void {
@@ -217,7 +164,7 @@ export class RestaurantService {
     }
   }
 
-  async discover(query: NearbyQuery | SearchQuery, userId?: string) {
+  async discover(query: NearbyQuery | SearchQuery) {
     this.assertLocation(query);
     const lat = query.lat ?? (query.north! + query.south!) / 2;
     const lng = query.lng ?? (query.east! + query.west!) / 2;
@@ -232,7 +179,6 @@ export class RestaurantService {
         message: 'Location bounds are too large',
       });
     const text = 'q' in query ? query.q : undefined;
-    const constraints = await this.constraints(userId, query.dietPattern);
     const latDelta = radiusMeters / 111_000;
     const lngDelta = radiusMeters / Math.max(20_000, 111_000 * Math.cos((lat * Math.PI) / 180));
     const internal = await this.prisma.restaurant.findMany({
@@ -253,7 +199,8 @@ export class RestaurantService {
     const selected = internal
       .slice(0, 1000)
       .filter(
-        (p) => inArea(Number(p.latitude), Number(p.longitude)) && this.compatible(p, constraints),
+        (p) =>
+          inArea(Number(p.latitude), Number(p.longitude)) && this.compatible(p, query.dietPattern),
       )
       .filter(
         (p) =>
@@ -292,14 +239,10 @@ export class RestaurantService {
             }).filter(([, value]) => value !== undefined),
           )
         : {};
-    // Provider text/type labels are not evidence of allergy or diet compatibility.
-    const hardConstraints = Boolean(
-      constraints.pattern ||
-      constraints.traditions.length ||
-      constraints.allergens.length ||
-      constraints.exclusions.length,
-    );
-    if (!hardConstraints) {
+    // Only an explicitly selected diet filter requires reviewed dietary claims.
+    // Restaurant directory searches never inherit the caller's eating profile.
+    const externalResultsSuppressed = Boolean(query.dietPattern);
+    if (!externalResultsSuppressed) {
       const providerQueries = text
         ? [`vegetarian ${text}`]
         : ['chay restaurant', 'vegan restaurant', 'vegetarian restaurant'];
@@ -365,7 +308,7 @@ export class RestaurantService {
         limit: query.limit,
         total: result.length,
         resultsTruncated: resultsTruncated || providerTruncated,
-        externalResultsSuppressed: hardConstraints,
+        externalResultsSuppressed,
         externalDataUnavailable,
         provider: this.provider.name,
         providerResultLimit,
@@ -374,7 +317,7 @@ export class RestaurantService {
     };
   }
 
-  async get(id: string, userId?: string) {
+  async get(id: string) {
     if (id.startsWith('google:') || id.startsWith('serpapi:') || id.startsWith('fake:')) {
       const prefix = `${this.provider.name.toLowerCase()}:`;
       if (!id.startsWith(prefix))
@@ -391,30 +334,13 @@ export class RestaurantService {
       }
       if (!place)
         throw new AppError({ statusCode: 404, code: 'NOT_FOUND', message: 'Place not found' });
-      const constraints = await this.constraints(userId);
-      if (
-        constraints.pattern ||
-        constraints.traditions.length ||
-        constraints.allergens.length ||
-        constraints.exclusions.length
-      ) {
-        throw new AppError({
-          statusCode: 404,
-          code: 'NOT_FOUND',
-          message: 'Place not verified for dietary constraints',
-        });
-      }
       return fromExternal(place, this.provider.name, place.latitude, place.longitude);
     }
     const place = await this.prisma.restaurant.findUnique({
       where: { id },
       include: { externalRefs: true },
     });
-    if (
-      !place ||
-      place.status !== RestaurantStatus.APPROVED ||
-      !this.compatible(place, await this.constraints(userId))
-    )
+    if (!place || place.status !== RestaurantStatus.APPROVED)
       throw new AppError({ statusCode: 404, code: 'NOT_FOUND', message: 'Place not found' });
     return fromInternal(place);
   }

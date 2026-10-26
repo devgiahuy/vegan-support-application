@@ -26,6 +26,13 @@ export interface MealSlot {
   calories: number;
   formattedCalories: string;
   targetCalories: number;
+  /** Đạm/bột/béo/xơ của bữa (gram); 0 khi backend chưa trả hoặc ô trống. */
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber: number;
+  /** Mã lý do ô trống (ví dụ `NO_HARD_COMPATIBLE_CANDIDATE`); null khi ô đã có món. */
+  unresolvedCode: string | null;
   warningCodes: string[];
 }
 
@@ -60,6 +67,8 @@ export interface PlanUserSummary {
   title: string;
   detail: string;
   suggestion: string | null;
+  /** Backend xác nhận các ràng buộc ăn kiêng bắt buộc vẫn được giữ nguyên. */
+  hardConstraintsPreserved: boolean;
 }
 
 /** Ước tính 4 chất sinh năng lượng/xơ; mỗi chỉ số `null` = chưa đủ dữ liệu (không phải 0). */
@@ -68,6 +77,12 @@ export interface EstimatedMacros {
   fiberGrams: number | null;
   fatGrams: number | null;
   carbohydrateGrams: number | null;
+}
+
+/** Mục tiêu dinh dưỡng mỗi ngày kèm dung sai và diễn giải nguồn ước tính. */
+export interface EstimatedTargets extends EstimatedMacros {
+  tolerancePercent: number;
+  sourceDetail: string;
 }
 
 export interface MealPlanDay {
@@ -94,7 +109,7 @@ export interface MealPlan {
   userSummary: PlanUserSummary | null;
   days: MealPlanDay[];
   /** Mục tiêu ước tính mỗi ngày theo hồ sơ sức khỏe; null khi backend chưa trả. */
-  estimatedTargets: EstimatedMacros | null;
+  estimatedTargets: EstimatedTargets | null;
   nutritionDataQuality: NutritionDataQuality;
   nutritionDataQualityLabel: string;
   vitaminB12Mcg: number | null;

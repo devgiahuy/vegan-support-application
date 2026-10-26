@@ -9,24 +9,44 @@ import { useBookmarkMutation, useCommunitySummaryQuery } from '../queries/commun
  * Nút lưu/gỡ lưu (recipe/video only — caller đảm bảo đúng loại).
  * Trạng thái từ summary query, toggle idempotent.
  */
-export function BookmarkButton({ postId }: { postId: string }) {
-  const { data: summary } = useCommunitySummaryQuery(postId);
+interface BookmarkButtonProps {
+  postId: string;
+  saveLabel?: string;
+  savedLabel?: string;
+  bookmarked?: boolean;
+  disabled?: boolean;
+  iconOnly?: boolean;
+  className?: string;
+}
+
+export function BookmarkButton({
+  postId,
+  saveLabel = 'Lưu',
+  savedLabel = 'Đã lưu',
+  bookmarked: bookmarkedOverride,
+  disabled = false,
+  iconOnly = false,
+  className,
+}: BookmarkButtonProps) {
+  const { data: summary } = useCommunitySummaryQuery(postId, {
+    enabled: bookmarkedOverride === undefined,
+  });
   const bookmarkMutation = useBookmarkMutation();
 
-  const bookmarked = summary?.viewerBookmarked ?? false;
+  const bookmarked = bookmarkedOverride ?? summary?.viewerBookmarked ?? false;
 
   return (
     <Button
       variant={bookmarked ? 'default' : 'outline'}
-      size="sm"
-      disabled={bookmarkMutation.isPending}
+      size={iconOnly ? 'icon' : 'sm'}
+      disabled={disabled || bookmarkMutation.isPending}
       onClick={() => bookmarkMutation.mutate({ postId, bookmarked: !bookmarked })}
       aria-pressed={bookmarked}
-      aria-label={bookmarked ? 'Gỡ lưu' : 'Lưu để xem sau'}
-      className="gap-1.5"
+      aria-label={bookmarked ? 'Gỡ lưu' : saveLabel}
+      className={cn('gap-1.5', className)}
     >
-      <Bookmark data-icon="inline-start" className={cn(bookmarked && 'fill-current')} />
-      {bookmarked ? 'Đã lưu' : 'Lưu'}
+      <Bookmark className={cn(bookmarked && 'fill-current')} />
+      {!iconOnly && <span>{bookmarked ? savedLabel : saveLabel}</span>}
     </Button>
   );
 }

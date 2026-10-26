@@ -2,12 +2,10 @@ import * as React from 'react';
 import { ActivityIndicator, Alert, Platform, Pressable, Text, View } from 'react-native';
 import { Link, type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import {
-  ArrowLeft,
   BarChart3,
+  Flame,
   Info,
-  RefreshCw,
   ShieldCheck,
-  ShoppingCart,
   Trash2,
   TriangleAlert,
 } from 'lucide-react-native';
@@ -15,6 +13,7 @@ import {
 import { MealType } from '@/common/enums';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
+import { IncompleteDataNotice } from '@/features/meal-analysis/components/incomplete-data-notice';
 import { AnalysisWarningModal } from '@/features/meal-analysis/components/analysis-warning-modal';
 import {
   useAnalyzeMealPlanMutation,
@@ -23,6 +22,9 @@ import {
 import type { MealAnalysis, MealAnalysisWarning } from '@/features/meal-analysis/types/meal-analysis.model';
 import { MealItemSelector, type SelectedMealItem } from '@/features/meal-plan/components/meal-item-selector';
 import { MealSlotCard } from '@/features/meal-plan/components/meal-slot-card';
+import { PlanDayCard } from '@/features/meal-plan/components/plan-day-card';
+import { PlanShoppingList } from '@/features/meal-plan/components/plan-shopping-list';
+import { PlanNutritionTargets } from '@/features/meal-plan/components/plan-nutrition-targets';
 import {
   useDeleteMealPlanMutation,
   useManualAddMealMutation,
@@ -31,6 +33,7 @@ import {
 } from '@/features/meal-plan/queries/meal-plan.queries';
 import type { EstimatedMacros, MealPlan, MealSlot } from '@/features/meal-plan/types/meal-plan.model';
 import { createIdempotencyKey } from '@/features/meal-plan/utils/idempotency';
+import { mealsFromPlan } from '@/features/shopping/utils/plan-meals';
 import {
   getMealAnalysisErrorMessage,
   getMealPlanErrorMessage,
@@ -67,77 +70,77 @@ function toShortDate(date: string): string {
   return match ? `${match[2]}/${match[1]}` : date;
 }
 
-function formatMacros(macros: EstimatedMacros): string {
-  const part = (label: string, value: number | null) => `${label} ${value === null ? '—' : `${Math.round(value)}g`}`;
-  return [
-    part('Đạm', macros.proteinGrams),
-    part('Xơ', macros.fiberGrams),
-    part('Béo', macros.fatGrams),
-    part('Tinh bột', macros.carbohydrateGrams),
-  ].join(' · ');
-}
+/** Mã cảnh báo kỹ thuật không cần hiện cho người dùng (đồng bộ `WarningsBanner` của web). */
+const HIDDEN_WARNING_CODES = new Set(['UNFILLED_SLOT', 'MICRONUTRIENT_DATA_PARTIAL']);
 
+/** Banner tóm tắt kế hoạch do backend tính (mức nghiêm trọng, ràng buộc ăn kiêng được bảo toàn). */
 function PlanSummary({ plan }: { plan: MealPlan }) {
   const colors = useIconColors();
   const summary = plan.userSummary;
   if (!summary || (!summary.title && !summary.detail)) return null;
 
   const isBlocked = summary.status === 'HARD_CONSTRAINT_BLOCKED';
-  const isAdvisory = summary.status === 'ADVISORY_ADJUSTMENTS';
 
   return (
     <View
       className={cn(
-        'mt-4 rounded-2xl border p-4',
-        isBlocked
-          ? 'border-destructive/30 bg-destructive/5'
-          : isAdvisory
-            ? 'border-amber-300 bg-amber-50'
-            : 'border-primary/20 bg-primary/5'
+        'gap-1.5 rounded-xl border p-4',
+        isBlocked ? 'border-destructive/30 bg-destructive/5' : 'border-primary/20 bg-primary/5'
       )}>
-      <View className="flex-row items-center gap-2">
-        {isBlocked || isAdvisory ? (
-          <TriangleAlert size={16} color={isBlocked ? colors.destructive : '#b45309'} />
-        ) : (
-          <ShieldCheck size={16} color={colors.primary} />
-        )}
-        <Text
-          className={cn(
-            'flex-1 font-semibold',
-            isBlocked ? 'text-destructive' : isAdvisory ? 'text-amber-800' : 'text-primary'
-          )}>
-          {summary.title}
-        </Text>
+      <View className="flex-row flex-wrap items-center justify-between gap-2">
+        <View className="flex-row items-center gap-2">
+          {isBlocked ? (
+            <TriangleAlert size={15} color={colors.destructive} />
+          ) : (
+            <ShieldCheck size={15} color={colors.primary} />
+          )}
+          <Text className={cn('text-sm font-semibold', isBlocked ? 'text-destructive' : 'text-foreground')}>
+            {summary.title || 'Tóm tắt kế hoạch thực đơn'}
+          </Text>
+        </View>
+        {summary.hardConstraintsPreserved ? (
+          <View className="rounded-full border border-emerald-500/30 px-2 py-0.5">
+            <Text className="text-[11px] text-emerald-600 dark:text-emerald-400">✓ Bảo toàn ràng buộc ăn kiêng</Text>
+          </View>
+        ) : null}
       </View>
-      {summary.detail ? <Text className="mt-1.5 text-sm leading-relaxed text-foreground">{summary.detail}</Text> : null}
+      {summary.detail ? <Text className="text-xs leading-5 text-muted-foreground">{summary.detail}</Text> : null}
       {summary.suggestion ? (
-        <Text className="mt-1.5 text-xs leading-relaxed text-muted-foreground">{summary.suggestion}</Text>
+        <Text className="text-xs italic leading-5 text-muted-foreground">💡 {summary.suggestion}</Text>
       ) : null}
     </View>
   );
 }
 
+/** Cảnh báo phát sinh khi tạo thực đơn (món lặp, dữ liệu vi chất...) — nền trung tính, chỉ icon mang màu cảnh báo. */
 function PlanWarnings({ plan }: { plan: MealPlan }) {
-  if (plan.warnings.length === 0) return null;
+  const colors = useIconColors();
+  const warnings = plan.warnings.filter((warning) => !HIDDEN_WARNING_CODES.has(warning.code));
+  if (warnings.length === 0) return null;
 
   return (
-    <View className="mt-4 rounded-2xl border border-amber-300 bg-amber-50 p-4">
+    <View className="gap-2 rounded-xl border border-border bg-card p-4">
       <View className="flex-row items-center gap-2">
-        <TriangleAlert size={16} color="#b45309" />
-        <Text className="font-semibold text-amber-800">Lưu ý về thực đơn này</Text>
+        <TriangleAlert size={16} color={colors.warning} />
+        <Text className="text-sm font-semibold text-foreground">Lưu ý về thực đơn tuần này</Text>
       </View>
-      <View className="mt-2 gap-2.5">
-        {plan.warnings.map((warning) => (
-          <View key={warning.code}>
-            <Text className="text-sm font-medium leading-relaxed text-amber-900">{warning.message}</Text>
+      <View className="gap-3">
+        {warnings.map((warning) => (
+          <View key={warning.code} className="gap-0.5">
+            <View className="flex-row flex-wrap items-center gap-2">
+              <Text className="text-xs font-semibold text-foreground">{warning.message}</Text>
+              <View className="rounded-full border border-border px-1.5 py-0.5">
+                <Text className="text-[10px] text-foreground">{warning.severityLabel}</Text>
+              </View>
+            </View>
             {warning.detail ? (
-              <Text className="mt-0.5 text-xs leading-relaxed text-amber-800">{warning.detail}</Text>
+              <Text className="text-xs leading-5 text-muted-foreground">{warning.detail}</Text>
             ) : null}
             {warning.suggestion ? (
-              <Text className="mt-0.5 text-xs leading-relaxed text-amber-800">Gợi ý: {warning.suggestion}</Text>
+              <Text className="text-xs italic leading-5 text-muted-foreground">💡 {warning.suggestion}</Text>
             ) : null}
             {warning.affectedSlots.length > 0 ? (
-              <Text className="mt-0.5 text-[11px] text-amber-700">
+              <Text className="text-[11px] text-muted-foreground">
                 Ảnh hưởng:{' '}
                 {warning.affectedSlots.map((slot) => `${slot.mealTypeLabel} ${toShortDate(slot.date)}`).join(', ')}
               </Text>
@@ -170,7 +173,7 @@ function AnalysisPanel({
   const attentionCount = analysis ? analysis.summary.highCount + analysis.summary.cautionCount : 0;
 
   return (
-    <View className="mt-6 rounded-2xl border border-border bg-card p-4">
+    <View className="rounded-2xl border border-border bg-card p-4">
       <View className="flex-row items-center gap-2">
         <BarChart3 size={16} color={colors.primary} />
         <Text className="text-base font-bold text-foreground">Phân tích thực đơn</Text>
@@ -219,7 +222,7 @@ function AnalysisPanel({
             </View>
             <View className="flex-1 rounded-xl bg-muted/50 p-3">
               <Text className="text-xs text-muted-foreground">Nên chú ý</Text>
-              <Text className="mt-1 text-lg font-bold text-amber-700">{attentionCount}</Text>
+              <Text className="mt-1 text-lg font-bold text-amber-700 dark:text-amber-400">{attentionCount}</Text>
             </View>
             <View className="flex-1 rounded-xl bg-muted/50 p-3">
               <Text className="text-xs text-muted-foreground">Độ tin cậy</Text>
@@ -233,10 +236,7 @@ function AnalysisPanel({
           </Text>
 
           {analysis.incompleteData.length > 0 ? (
-            <View className="rounded-xl border border-amber-300 bg-amber-50 p-3">
-              <Text className="text-sm font-semibold text-amber-800">Dữ liệu chưa đầy đủ</Text>
-              <Text className="mt-1 text-xs leading-relaxed text-amber-800">{analysis.incompleteData.join(', ')}</Text>
-            </View>
+            <IncompleteDataNotice notes={analysis.incompleteData} />
           ) : null}
 
           {analysis.warnings.length === 0 ? (
@@ -251,14 +251,14 @@ function AnalysisPanel({
                 onPress={() => onOpenWarning(warning)}
                 className={cn(
                   'rounded-xl border p-3 active:opacity-80',
-                  warning.severity === 'INFO' ? 'border-primary/20 bg-primary/5' : 'border-amber-300 bg-amber-50'
+                  warning.severity === 'INFO' ? 'border-primary/20 bg-primary/5' : 'border-amber-500/30 bg-amber-500/10'
                 )}>
                 <View className="flex-row items-start justify-between gap-3">
                   <View className="flex-1">
                     <Text
                       className={cn(
                         'text-sm font-bold',
-                        warning.severity === 'INFO' ? 'text-primary' : 'text-amber-800'
+                        warning.severity === 'INFO' ? 'text-primary' : 'text-amber-800 dark:text-amber-300'
                       )}>
                       {warning.title}
                     </Text>
@@ -293,7 +293,7 @@ export default function MealPlanDetailScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const id = typeof params.id === 'string' ? params.id : '';
 
-  const { data: plan, error, isLoading, isError, refetch, isRefetching } = useMealPlanDetailQuery(id, isAuthenticated);
+  const { data: plan, error, isLoading, isError, refetch } = useMealPlanDetailQuery(id, isAuthenticated);
   const {
     data: analysis,
     error: analysisError,
@@ -354,17 +354,6 @@ export default function MealPlanDetailScreen() {
     }
   };
 
-  const refreshPlan = async () => {
-    try {
-      const result = await refetch();
-      if (result.error) {
-        Alert.alert('Không tải lại được thực đơn', getMealPlanErrorMessage(result.error));
-      }
-    } catch (refreshError) {
-      Alert.alert('Không tải lại được thực đơn', getMealPlanErrorMessage(refreshError));
-    }
-  };
-
   const deletePlan = async () => {
     if (!plan) return;
     try {
@@ -410,13 +399,7 @@ export default function MealPlanDetailScreen() {
     return (
       <SiteScreen>
         <View className="px-5 pt-6">
-          <Link href={'/meal-plans' as Href} asChild>
-            <Pressable className="flex-row items-center gap-2">
-              <ArrowLeft size={16} color={colors.foreground} />
-              <Text className="text-sm font-semibold text-foreground">Quay lại danh sách</Text>
-            </Pressable>
-          </Link>
-          <View className="mt-6 items-center rounded-2xl border border-dashed border-border p-7">
+          <View className="items-center rounded-2xl border border-dashed border-border p-7">
             <Text className="font-semibold text-foreground">Cần đăng nhập</Text>
             <Text className="mt-1 text-center text-sm text-muted-foreground">
               Bạn cần đăng nhập để xem chi tiết thực đơn đã lưu.
@@ -447,13 +430,7 @@ export default function MealPlanDetailScreen() {
     return (
       <SiteScreen>
         <View className="px-5 pt-6">
-          <Link href={'/meal-plans' as Href} asChild>
-            <Pressable className="flex-row items-center gap-2">
-              <ArrowLeft size={16} color={colors.foreground} />
-              <Text className="text-sm font-semibold text-foreground">Quay lại danh sách</Text>
-            </Pressable>
-          </Link>
-          <View className="mt-6 items-center rounded-2xl border border-destructive/30 bg-destructive/5 p-6">
+          <View className="items-center rounded-2xl border border-destructive/30 bg-destructive/5 p-6">
             <Text className="text-center font-semibold text-destructive">Không tải được thực đơn.</Text>
             <Text className="mt-2 text-center text-sm text-muted-foreground">{getMealPlanErrorMessage(error)}</Text>
             <View className="mt-4">
@@ -466,70 +443,54 @@ export default function MealPlanDetailScreen() {
   }
 
   const days = groupDays(plan);
+  const planMeals = mealsFromPlan(plan.items);
   const busy =
     swapMutation.isPending || deleteMutation.isPending || analyzeMutation.isPending || manualAddMutation.isPending;
   const targets = plan.estimatedTargets;
 
   return (
-    <SiteScreen>
-      <View className="px-5 pt-4">
-        <View className="flex-row items-center justify-between">
-          <Link href={'/meal-plans/saved' as Href} asChild>
-            <Pressable className="flex-row items-center gap-1.5">
-              <ArrowLeft size={15} color={colors.foreground} />
-              <Text className="text-xs font-semibold text-foreground">Lịch sử thực đơn</Text>
-            </Pressable>
-          </Link>
-          <View className="flex-row gap-2">
-            <Pressable
-              disabled={busy || isRefetching}
-              onPress={() => void refreshPlan()}
-              className={cn(
-                'h-10 w-10 items-center justify-center rounded-full bg-muted',
-                busy || isRefetching ? 'opacity-60' : ''
-              )}>
-              {isRefetching ? (
-                <ActivityIndicator size="small" color={colors.foreground} />
-              ) : (
-                <RefreshCw size={16} color={colors.foreground} />
-              )}
-            </Pressable>
+    <SiteScreen onRefresh={() => refetch()}>
+      <View className="gap-4 px-5 pb-4 pt-4">
+        <View className="gap-2">
+          <View className="flex-row items-start justify-between gap-3">
+            <Text className="flex-1 text-2xl font-bold tracking-tight text-foreground">
+              Thực đơn tuần {plan.formattedWeekRange}
+            </Text>
             <Pressable
               disabled={busy}
               onPress={confirmDelete}
-              className="h-10 w-10 items-center justify-center rounded-full bg-destructive/10">
-              <Trash2 size={16} color={colors.destructive} />
+              accessibilityRole="button"
+              accessibilityLabel="Xóa thực đơn"
+              className={cn(
+                'h-10 w-10 items-center justify-center rounded-full border border-destructive/30 bg-destructive/10',
+                busy ? 'opacity-60' : ''
+              )}>
+              <Trash2 size={17} color={colors.destructive} />
             </Pressable>
           </View>
-        </View>
-
-        <Text className="mt-4 text-2xl font-bold text-foreground">Thực đơn tuần {plan.formattedWeekRange}</Text>
-        <Text className="mt-1 text-sm text-muted-foreground">
-          {plan.goalLabel} · {plan.filledSlots}/{plan.totalSlots} bữa · Dinh dưỡng: {plan.nutritionDataQualityLabel} · bản{' '}
-          {plan.version}
-        </Text>
-
-        <View className="mt-4 flex-row gap-2">
-          <View className="flex-1 rounded-xl border border-border bg-card p-3">
-            <Text className="text-xs text-muted-foreground">Mục tiêu/ngày</Text>
-            <Text className="mt-1 text-lg font-bold text-primary">{plan.targetCalories} kcal</Text>
-          </View>
-          <View className="flex-1 rounded-xl border border-border bg-card p-3">
-            <Text className="text-xs text-muted-foreground">Vitamin B12 ước tính</Text>
-            <Text className="mt-1 text-lg font-bold text-primary">
-              {plan.vitaminB12Mcg === null ? 'Chưa có' : `${plan.vitaminB12Mcg} mcg`}
+          <View className="flex-row items-center gap-1.5">
+            <Flame size={15} color={colors.mutedForeground} />
+            <Text className="flex-1 text-sm text-muted-foreground">
+              Mục tiêu ~{plan.targetCalories} kcal/ngày — {plan.filledSlots}/{plan.totalSlots} bữa đã lấp
             </Text>
           </View>
+          <View className="flex-row flex-wrap items-center gap-2 pt-1">
+            <View className="rounded-full bg-secondary px-2.5 py-1">
+              <Text className="text-xs font-medium text-secondary-foreground">{plan.goalLabel}</Text>
+            </View>
+            <View className="rounded-full border border-border px-2.5 py-1">
+              <Text className="text-xs font-medium text-foreground">Bản {plan.version}</Text>
+            </View>
+            <View className="rounded-full border border-border px-2.5 py-1">
+              <Text className="text-xs font-medium text-foreground">
+                Dinh dưỡng: {plan.nutritionDataQualityLabel.toLowerCase()}
+              </Text>
+            </View>
+          </View>
         </View>
 
-        {targets ? (
-          <View className="mt-2 rounded-xl border border-border bg-card p-3">
-            <Text className="text-xs text-muted-foreground">Mục tiêu tham khảo mỗi ngày (ước tính)</Text>
-            <Text className="mt-1 text-sm font-semibold text-foreground">{formatMacros(targets)}</Text>
-          </View>
-        ) : null}
-
         <PlanSummary plan={plan} />
+        {targets ? <PlanNutritionTargets targets={targets} /> : null}
         <PlanWarnings plan={plan} />
 
         <AnalysisPanel
@@ -542,60 +503,34 @@ export default function MealPlanDetailScreen() {
           onOpenWarning={setOpenWarning}
         />
 
-        <View className="mt-6 gap-4">
-          {days.map((day) => (
-            <View key={day.date} className="rounded-2xl border border-border bg-card p-4">
-              <Text className="text-base font-bold text-foreground">{day.label}</Text>
-              <View className="mt-3 gap-2.5">
-                {day.slots.map((slot) => {
-                  const slotWarnings = warningsBySlotId.get(slot.id) ?? [];
-                  return (
-                    <MealSlotCard
-                      key={slot.id}
-                      slot={slot}
-                      disabled={busy}
-                      warningCount={slotWarnings.length}
-                      onWarningPress={() => setOpenWarning(slotWarnings[0] ?? null)}
-                      onSwap={(item) => void swapSlot(item)}
-                      onPick={setPickSlot}
-                    />
-                  );
-                })}
-              </View>
-              {day.estimatedTotals ? (
-                <Text className="mt-3 border-t border-border pt-2 text-[11px] text-muted-foreground">
-                  Ước tính cả ngày: {formatMacros(day.estimatedTotals)}
-                </Text>
-              ) : null}
-            </View>
-          ))}
-        </View>
+        {days.map((day) => (
+          <PlanDayCard
+            key={day.date}
+            label={day.label}
+            slots={day.slots}
+            estimatedTotals={day.estimatedTotals}
+            targetCalories={plan.targetCalories}
+            targets={targets}>
+            {day.slots.map((slot) => {
+              const slotWarnings = warningsBySlotId.get(slot.id) ?? [];
+              return (
+                <MealSlotCard
+                  key={slot.id}
+                  slot={slot}
+                  disabled={busy}
+                  warningCount={slotWarnings.length}
+                  onWarningPress={() => setOpenWarning(slotWarnings[0] ?? null)}
+                  onSwap={(item) => void swapSlot(item)}
+                  onPick={setPickSlot}
+                />
+              );
+            })}
+          </PlanDayCard>
+        ))}
 
-        <View className="mt-6 rounded-2xl border border-border bg-card p-4">
-          <View className="flex-row items-center gap-2">
-            <ShoppingCart size={16} color={colors.primary} />
-            <Text className="text-base font-bold text-foreground">Danh sách đi chợ</Text>
-            <Text className="text-xs text-muted-foreground">({plan.shoppingList.length} nguyên liệu)</Text>
-          </View>
-          <View className="mt-3 gap-2">
-            {plan.shoppingList.length === 0 ? (
-              <Text className="text-sm text-muted-foreground">Chưa có nguyên liệu cần mua.</Text>
-            ) : (
-              plan.shoppingList.map((item, index) => (
-                <View
-                  key={`${item.ingredientId ?? item.name}-${index}`}
-                  className="flex-row items-center justify-between gap-2 rounded-xl bg-muted/50 px-3 py-2">
-                  <Text className="flex-1 text-sm font-medium text-foreground">{item.name}</Text>
-                  <Text className="text-xs font-semibold text-primary">
-                    {item.quantity} {item.unit}
-                  </Text>
-                </View>
-              ))
-            )}
-          </View>
-        </View>
+        <PlanShoppingList items={plan.shoppingList} meals={planMeals} />
 
-        <Text className="mt-4 text-xs text-muted-foreground">
+        <Text className="text-xs text-muted-foreground">
           {plan.vitaminB12Mcg !== null
             ? `Tổng vitamin B12 ước tính: ${plan.vitaminB12Mcg} mcg (chỉ tính từ món có dữ liệu).`
             : 'Chưa có dữ liệu vitamin B12 cho thực đơn này.'}

@@ -1,10 +1,9 @@
 import * as React from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { Compass, MapPin } from 'lucide-react-native';
 
 import { cn } from '@/lib/utils';
-import { useIconColors } from '@/lib/theme-colors';
-import type { Restaurant } from '../types/restaurant.model';
+import { MapFrame, useSearchHere } from './map-frame';
+import type { RestaurantMapProps } from './restaurant-map-types';
 
 /** Hệ số quy đổi độ → mét (xấp xỉ), dùng để chiếu tọa độ quanh tâm lên khung bản đồ. */
 const LAT_METERS_PER_DEGREE = 110574;
@@ -19,17 +18,15 @@ export function RadarMap({
   items,
   center,
   radiusM,
+  hasLocation,
+  isEmpty,
   selectedId,
   onSelect,
-}: {
-  items: Restaurant[];
-  center: { lat: number; lng: number };
-  radiusM: number;
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-}) {
-  const colors = useIconColors();
-
+  onRadiusChange,
+  onSearchHere,
+  onUseMyLocation,
+  locating,
+}: RestaurantMapProps) {
   const plotted = React.useMemo(() => {
     const scaleRadius = Math.max(radiusM, 2000);
     const lngMetersPerDegree = LNG_METERS_PER_DEGREE_AT_EQUATOR * Math.cos((center.lat * Math.PI) / 180);
@@ -45,25 +42,26 @@ export function RadarMap({
       });
   }, [items, center, radiusM]);
 
-  const radiusLabel = radiusM >= 1000 ? `${radiusM / 1000} km` : `${radiusM} m`;
+  const selectedRestaurant = React.useMemo(
+    () => items.find((item) => item.id === selectedId) ?? null,
+    [items, selectedId]
+  );
+  const searchHere = useSearchHere(center, onSearchHere);
 
   return (
-    <View className="overflow-hidden rounded-2xl border border-border bg-muted/40">
-      <View className="flex-row items-center justify-between px-3 pt-3">
-        <View className="flex-row items-center gap-2">
-          <View className="h-7 w-7 items-center justify-center rounded-lg bg-primary/10">
-            <Compass size={15} color={colors.primary} />
-          </View>
-          <View>
-            <Text className="text-xs font-bold text-foreground">Bản đồ vị trí trực quan</Text>
-            <Text className="text-[11px] text-muted-foreground">
-              Bán kính {radiusLabel} • {plotted.length} quán
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      <View className="h-64 items-center justify-center">
+    <MapFrame
+      radiusM={radiusM}
+      pinCount={plotted.length}
+      hiddenCount={0}
+      hasLocation={hasLocation}
+      isEmpty={isEmpty}
+      selectedRestaurant={selectedRestaurant}
+      searchHere={searchHere}
+      showZoom={false}
+      onLocate={onUseMyLocation}
+      locating={locating}
+      onRadiusChange={onRadiusChange}>
+      <View className="flex-1 items-center justify-center">
         {/* Các vòng bán kính đồng tâm */}
         <View className="absolute h-[80%] w-[80%] rounded-full border border-dashed border-primary/25 bg-primary/5" />
         <View className="absolute h-[42%] w-[42%] rounded-full border border-primary/20 bg-primary/5" />
@@ -93,14 +91,7 @@ export function RadarMap({
             </Pressable>
           );
         })}
-
-        {plotted.length === 0 ? (
-          <View className="absolute bottom-3 flex-row items-center gap-1.5 rounded-full bg-background/90 px-3 py-1">
-            <MapPin size={12} color={colors.mutedForeground} />
-            <Text className="text-[11px] text-muted-foreground">Chưa có quán nào trong khu vực này</Text>
-          </View>
-        ) : null}
       </View>
-    </View>
+    </MapFrame>
   );
 }

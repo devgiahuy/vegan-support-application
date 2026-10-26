@@ -77,6 +77,21 @@ export interface Article {
   };
 }
 
+export interface MyPostModel {
+  id: string;
+  type: 'BLOG' | 'RECIPE' | 'VIDEO';
+  title: string;
+  excerpt: string;
+  coverImageUrl: string;
+  status: CommonPostStatus;
+  statusLabel: string;
+  categoryName: string;
+  formattedPublishedAt: string;
+  authorId: string;
+  authorName: string;
+  version: number;
+}
+
 // -----------------------------------------------------------------------------
 // Legacy Compatibility Types (giữ để PostCard/PostDetailView tương thích dần
 // sang Article chuẩn; không còn store mock nào dùng các type này)

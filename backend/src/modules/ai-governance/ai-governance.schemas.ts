@@ -1,6 +1,6 @@
 import { z } from '../../common/validation/zod.js';
 
-export const capabilitySchema = z.enum(['CHAT', 'MODERATION', 'NUTRITION', 'VISION', 'RECEIPT', 'VERIFICATION']);
+export const capabilitySchema = z.enum(['CHAT', 'MODERATION', 'NUTRITION', 'VISION', 'RECEIPT', 'RECIPE_DRAFT', 'VERIFICATION']);
 export const governanceListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).max(10000).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),

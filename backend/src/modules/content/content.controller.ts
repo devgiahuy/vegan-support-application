@@ -7,6 +7,7 @@ import {
 } from '../../common/validation/validate-request.js';
 import {
   deletePostResponseSchema,
+  myPostListResponseSchema,
   contentReviewHistoryResponseSchema,
   postListResponseSchema,
   postResponseSchema,
@@ -18,6 +19,7 @@ import {
   type PostIdentifierParams,
   type PostIdParams,
   type PostListQuery,
+  type MyPostsQuery,
   type RelatedPostsQuery,
   type UpdatePostInput,
 } from './content.schemas.js';
@@ -56,6 +58,16 @@ export class ContentController {
         data: result.data,
         meta: result.meta,
       }),
+    );
+  };
+
+  listMyPosts = async (request: Request, response: Response): Promise<void> => {
+    const result = await this.contentService.listOwned(
+      actorFromRequest(request),
+      getValidatedQuery<MyPostsQuery>(request),
+    );
+    response.status(200).json(
+      myPostListResponseSchema.parse({ success: true, data: result.data, meta: result.meta }),
     );
   };
 

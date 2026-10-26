@@ -1,3 +1,4 @@
+import { registerBillingOpenApi } from '../modules/billing/billing.openapi.js';
 import { OpenAPIRegistry, OpenApiGeneratorV31 } from '@asteasolutions/zod-to-openapi';
 import { errorResponseSchema } from '../common/schemas/api-envelope.schemas.js';
 import {
@@ -7,7 +8,9 @@ import {
 import { registerAuthOpenApi } from '../modules/auth/auth.openapi.js';
 import { registerProfileOpenApi } from '../modules/profile/profile.openapi.js';
 import { registerCatalogOpenApi } from '../modules/catalog/catalog.openapi.js';
+import { registerCompositionOpenApi } from '../modules/catalog/composition.openapi.js';
 import { registerContentOpenApi } from '../modules/content/content.openapi.js';
+import { registerRecipeDraftOpenApi } from '../modules/content/recipe-draft.openapi.js';
 import { registerCommunityOpenApi } from '../modules/community/community.openapi.js';
 import { registerContributorOpenApi } from '../modules/contributors/contributor.openapi.js';
 import { registerModerationOpenApi } from '../modules/moderation/moderation.openapi.js';
@@ -58,7 +61,9 @@ registry.registerPath({
 registerAuthOpenApi(registry, registeredErrorResponse);
 registerProfileOpenApi(registry, registeredErrorResponse);
 registerCatalogOpenApi(registry, registeredErrorResponse);
+registerCompositionOpenApi(registry, registeredErrorResponse);
 registerContentOpenApi(registry, registeredErrorResponse);
+registerRecipeDraftOpenApi(registry, registeredErrorResponse);
 registerCommunityOpenApi(registry, registeredErrorResponse);
 registerContributorOpenApi(registry, registeredErrorResponse);
 registerModerationOpenApi(registry, registeredErrorResponse);
@@ -67,6 +72,7 @@ registerMealPlanOpenApi(registry, registeredErrorResponse);
 registerMealAnalysisOpenApi(registry, registeredErrorResponse);
 registerMealProgramOpenApi(registry, registeredErrorResponse);
 registerChatOpenApi(registry, registeredErrorResponse);
+registerBillingOpenApi(registry, registeredErrorResponse);
 registerFoodDataOpenApi(registry, registeredErrorResponse);
 registerRecipeNutritionOpenApi(registry, registeredErrorResponse);
 registerStorageOpenApi(registry, registeredErrorResponse);
@@ -91,6 +97,7 @@ const generatedDocument = generator.generateDocument({
   },
   servers: [{ url: 'http://localhost:4000', description: 'Local development' }],
   tags: [
+    { name: 'Billing', description: 'Sandbox package purchases and allowances' },
     { name: 'Foundation', description: 'Service health and foundation contract' },
     { name: 'Auth', description: 'Authentication and refresh-session lifecycle' },
     { name: 'Users', description: 'Authenticated user contract' },

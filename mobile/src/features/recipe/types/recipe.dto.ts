@@ -19,7 +19,10 @@ export interface RecipeStepDto {
   instruction?: string;
   durationMinutes?: number | null;
   temperatureCelsius?: number | null;
-  cookingMethod?: { id?: string; name?: string } | null;
+  cookingMethodId?: string | null;
+  cookingMethodCode?: string | null;
+  cookingMethodName?: string | null;
+  affectedIngredientPositions?: number[];
 }
 
 export interface TraditionWarningDto {
@@ -56,6 +59,10 @@ export interface RecipeDetailDto extends BasePostDto {
     dietCompatibilities?: DietCompatibilityDto[];
     ingredients?: RecipeIngredientDto[];
     steps?: (RecipeStepDto | null)[];
+    eligibility?: {
+      eligible?: boolean;
+      reasons?: ({ code?: string; ingredientNames?: (string | null)[] | null } | null)[] | null;
+    } | null;
   } | null;
 }
 

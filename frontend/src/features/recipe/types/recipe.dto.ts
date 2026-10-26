@@ -34,6 +34,23 @@ export interface NutritionFactDto {
   vitaminB12Mcg?: number | string | null;
 }
 
+export interface RecipeUsageStatisticsDto {
+  usageUserCount?: number | string | null;
+  usageTracking?: string;
+  cookedUserCount?: null;
+  limitation?: string;
+}
+
+export interface RecipeEligibilityReasonDto {
+  code?: string;
+  ingredientNames?: string[];
+}
+
+export interface RecipeEligibilityDto {
+  eligible?: boolean;
+  reasons?: RecipeEligibilityReasonDto[];
+}
+
 export interface RecipeDetailDto extends BasePostDto {
   recipe?: {
     servings?: number;
@@ -46,6 +63,11 @@ export interface RecipeDetailDto extends BasePostDto {
     traditionWarnings?: TraditionWarningDto[];
     dietCompatibilities?: DietCompatibilityDto[];
     ingredients?: RecipeIngredientDto[];
+    statistics?: RecipeUsageStatisticsDto | null;
+    /** Chỉ có khi list với `eligibility=INELIGIBLE`. */
+    eligibility?: RecipeEligibilityDto | null;
+    /** Legacy field retained for older backend responses. */
+    usageCount?: number;
   } | null;
 }
 

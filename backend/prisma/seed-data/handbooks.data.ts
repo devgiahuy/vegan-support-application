@@ -1,3 +1,5 @@
+import type { SeedImageCredit } from './recipes.data.js';
+
 export interface SeedHandbookDefinition {
   slug: string;
   title: string;
@@ -6,137 +8,243 @@ export interface SeedHandbookDefinition {
   categorySlug: string;
   authorEmail: string;
   tags: string[];
+  /** `null` when no suitably licensed cover exists yet (see docs/SEED_NUTRITION_RECIPE_DATA.md). */
   coverMedia: {
     publicId: string;
     secureUrl: string;
     width: number;
     height: number;
     bytes: number;
-  };
+    credit?: SeedImageCredit;
+  } | null;
 }
 
+// Numbers quoted in the articles match the NASEM DRI values seeded in nutrients.data.ts and the
+// USDA FoodData Central SR Legacy values seeded in ingredients.data.ts.
 export const handbookDefinitions: readonly SeedHandbookDefinition[] = [
-  // 1. Cẩm nang Bổ sung Vitamin B12
   {
     slug: 'cam-nang-bo-sung-vitamin-b12',
-    title: 'Cẩm Nang Bổ Sung Vitamin B12 Toàn Diện Cho Người Ăn Thuần Chay',
-    excerpt: 'Hiểu đúng về nguồn gốc, nhu cầu sinh lý và giải pháp bổ sung Vitamin B12 an toàn, bền vững.',
-    body: `Vitamin B12 (Cobalamin) là vi chất thiết yếu đóng vai trò sống còn trong việc duy trì chức năng hệ thần kinh, tổng hợp DNA và sản sinh hồng cầu khỏe mạnh. Khác với thực vật có thể quang hợp tự dưỡng, Vitamin B12 được tổng hợp tự nhiên duy nhất bởi các vi sinh vật (vi khuẩn) sống trong đất và ruột động vật.
+    title: 'Vitamin B12 Cho Người Ăn Thuần Chay: Nhu Cầu, Nguồn Và Cách Bổ Sung',
+    excerpt:
+      'Vì sao người ăn thuần chay cần chủ động bổ sung B12, nhu cầu mỗi ngày là bao nhiêu và chọn nguồn nào cho đáng tin.',
+    body: `Vitamin B12 (cobalamin) cần cho quá trình tạo hồng cầu, tổng hợp DNA và duy trì hệ thần kinh. B12 do vi khuẩn tổng hợp; thực phẩm thực vật chưa bổ sung gần như không chứa B12 có hoạt tính. Trong bảng USDA FoodData Central, đậu hũ, gạo lứt, rau xanh và các loại đậu đều ghi B12 bằng 0.
 
-### 1. Hiểu đúng về Vitamin B12 trong thực phẩm thực vật
-Nhiều quan niệm sai lầm cho rằng tảo xoắn Spirulina, rong biển nori hoặc các sản phẩm đậu nành lên men truyền thống chứa đủ B12 hoạt tính. Thực tế khoa học chứng minh:
-- Phần lớn B12 trong tảo là dạng "đồng phân giả" (pseudo-B12), không có hoạt tính sinh học ở người và có thể cạnh tranh hấp thu với B12 thật.
-- Men dinh dưỡng (Nutritional Yeast) chỉ chứa B12 khi được nhà sản xuất chủ động bổ sung (fortified).
+### 1. Nhu cầu khuyến nghị
+- Người trưởng thành 19–50 tuổi: 2,4 mcg/ngày (RDA của Viện Hàn lâm Khoa học Hoa Kỳ – NASEM).
+- Phụ nữ mang thai: 2,6 mcg/ngày; cho con bú: 2,8 mcg/ngày.
+- Cơ thể dự trữ B12 ở gan nên triệu chứng thiếu có thể xuất hiện sau vài năm; thiếu kéo dài gây thiếu máu hồng cầu to và tổn thương thần kinh khó hồi phục.
 
-### 2. Nhu cầu khuyến nghị hằng ngày (RDA)
-- Người trưởng thành: 2.4 mcg/ngày.
-- Phụ nữ mang thai và cho con bú: 2.6 - 2.8 mcg/ngày.
+### 2. Những nguồn không đáng tin
+- Tảo spirulina, rong biển nori và nhiều thực phẩm lên men chủ yếu chứa các dạng tương tự B12 (pseudo-B12) không có hoạt tính ở người.
+- Rau chưa rửa kỹ hay nước giếng không phải nguồn ổn định và không an toàn.
 
-### 3. Chiến lược bổ sung thông minh
-1. Sử dụng thực phẩm tăng cường: Uống sữa thực vật, ngũ cốc dinh dưỡng hoặc men dinh dưỡng có nhãn ghi rõ "Fortified with Vitamin B12".
-2. Sử dụng viên uống bổ sung định kỳ: Uống viên ngậm Cyanocobalamin hoặc Methylcobalamin liều 50-100 mcg mỗi ngày hoặc 2000 mcg mỗi tuần theo hướng dẫn chuyên gia.
-3. Xét nghiệm định kỳ: Kiểm tra nồng độ B12 huyết thanh kết hợp chỉ số Methylmalonic Acid (MMA) mỗi năm một lần.`,
+### 3. Nguồn nên dùng
+1. **Thực phẩm tăng cường:** sữa thực vật, ngũ cốc ăn sáng hoặc men dinh dưỡng có ghi "bổ sung vitamin B12" trên nhãn. Hàm lượng khác nhau theo từng hãng, cần đọc bảng thành phần.
+2. **Viên bổ sung:** dạng cyanocobalamin là dạng được nghiên cứu nhiều và bền nhất. Vì khả năng hấp thu giảm khi liều lớn, các khuyến nghị cho người thuần chay thường dùng một liều nhỏ hằng ngày hoặc một liều lớn hơn vài lần mỗi tuần; hãy hỏi bác sĩ hoặc chuyên gia dinh dưỡng để chọn liều phù hợp.
+3. **Theo dõi:** người ăn thuần chay lâu năm, người trên 50 tuổi hoặc dùng metformin, thuốc giảm tiết axit dạ dày nên kiểm tra B12 định kỳ theo chỉ định của bác sĩ.
+
+### Nguồn tham khảo
+- NASEM (1998). Dietary Reference Intakes for Thiamin, Riboflavin, Niacin, Vitamin B6, Folate, Vitamin B12, Pantothenic Acid, Biotin, and Choline.
+- NIH Office of Dietary Supplements. Vitamin B12 – Fact Sheet for Health Professionals.
+- Watanabe F. et al. (2014). Vitamin B12-containing plant food sources for vegetarians. Nutrients 6(5):1861–1873.`,
     categorySlug: 'vi-chat-thiet-yeu',
     authorEmail: 'org.contributor@example.com',
-    tags: ['vitamin b12', 'vi chất', 'dinh dưỡng khoa học', 'người mới'],
+    tags: ['vitamin b12', 'vi chất', 'thuần chay', 'người mới'],
     coverMedia: {
-      publicId: 'seed/handbooks/b12-guide-cover',
-      secureUrl: '/seed/handbooks/b12-guide-cover.jpg',
-      width: 1200,
-      height: 675,
-      bytes: 52229,
+      publicId: 'commons/nutritional-yeast-in-bag',
+      secureUrl:
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Nutritional_Yeast_in_Bag_%2832664238868%29.jpg/1280px-Nutritional_Yeast_in_Bag_%2832664238868%29.jpg',
+      width: 1280,
+      height: 854,
+      bytes: 204770,
+      credit: {
+        title: 'File:Nutritional Yeast in Bag (32664238868).jpg',
+        author: 'Tony Webster',
+        license: 'CC BY 2.0',
+        licenseUrl: 'https://creativecommons.org/licenses/by/2.0/',
+        sourceUrl:
+          'https://commons.wikimedia.org/wiki/File:Nutritional_Yeast_in_Bag_(32664238868).jpg',
+      },
     },
   },
-
-  // 2. Tối Ưu Hóa Nguồn Đạm Thực Vật
   {
     slug: 'toi-uu-nguon-dam-thuc-vat',
-    title: 'Tối Ưu Hóa Nguồn Đạm Thực Vật: Cách Phối Hợp Các Loại Đậu & Ngũ Cốc',
-    excerpt: 'Nguyên tắc vàng tạo chuỗi axit amin hoàn chỉnh và tối đa hóa hiệu suất xây dựng cơ bắp.',
-    body: `Một trong những băn khoăn lớn nhất của người mới chuyển sang chế độ ăn thực vật là: "Làm sao để nạp đủ protein mà không cần thịt cá?". Sự thật là vương quốc thực vật cung cấp nguồn đạm vô cùng phong phú và an toàn cho tim mạch.
+    title: 'Đạm Thực Vật: Ăn Bao Nhiêu Và Phối Hợp Đậu, Ngũ Cốc Thế Nào',
+    excerpt:
+      'Nhu cầu protein của người trưởng thành, lượng đạm trong các thực phẩm chay quen thuộc và cách phối hợp trong ngày.',
+    body: `Người ăn chay hoàn toàn có thể đủ protein nếu ăn đủ năng lượng và đa dạng nhóm đậu, ngũ cốc, hạt.
 
-### 1. Axit amin thiết yếu và nguyên tắc bù trừ
-Cơ thể cần 9 loại axit amin thiết yếu mà không thể tự tổng hợp được:
-- Nhóm Đậu (Legumes): Rất giàu axit amin Lysine nhưng tương đối nghèo Methionine.
-- Nhóm Ngũ cốc (Grains): Rất giàu Methionine nhưng lại hạn chế về Lysine.
-=> Khi kết hợp Đậu và Ngũ cốc (như Cơm gạo lứt ăn cùng Đậu hũ, Bánh mì nguyên cám ăn cùng Bơ đậu phộng, hoặc Đậu gà hầm ăn cùng Quinoa), bạn tạo nên nguồn Protein hoàn chỉnh (Complete Protein) có giá trị sinh học không thua kém ức gà hay thịt bò.
+### 1. Cần bao nhiêu protein?
+- RDA của NASEM: 0,8 g protein cho mỗi kg cân nặng mỗi ngày, tương đương khoảng 56 g với nam và 46 g với nữ có cân nặng tham chiếu.
+- Một số chuyên gia gợi ý người ăn thuần chay nhắm cao hơn một chút (khoảng 0,9–1,0 g/kg) vì độ tiêu hóa của đạm thực vật thấp hơn đạm động vật đôi chút.
 
-### 2. Không nhất thiết phải ăn cùng một đĩa thức ăn
-Khoa học dinh dưỡng hiện đại đã chứng minh: Cơ thể duy trì một "bể dự trữ axit amin" (amino acid pool) trong gan và huyết tương trong suốt 24 giờ. Miễn là trong ngày bạn nạp đa dạng các nhóm hạt, đậu và ngũ cốc, cơ thể sẽ tự động tổng hợp đạm tối ưu.
+### 2. Lượng đạm trong thực phẩm chay quen thuộc (USDA, 100 g phần ăn được)
+| Thực phẩm | Protein |
+|---|---|
+| Đậu hũ (đậu phụ thường) | 8,1 g |
+| Tempeh | 20,3 g |
+| Đậu lăng đỏ khô | 23,9 g |
+| Đậu gà khô | 20,5 g |
+| Đậu phộng | 25,8 g |
+| Hạt bí | 30,2 g |
+| Yến mạch cán | 13,2 g |
+| Gạo lứt (sống) | 7,5 g |
 
-### 3. Bảng phân bố protein tiêu biểu
-- 100g Tempeh: ~20g Protein
-- 100g Đậu hũ trắng: ~8-10g Protein
-- 1 chén Đậu lăng nấu chín: ~18g Protein
-- 1 chén Đậu gà luộc: ~15g Protein
-- 2 muỗng canh Men dinh dưỡng: ~8g Protein`,
+Lưu ý đậu khô và gạo nở ra 2–3 lần khi nấu, nên lượng đạm trong 100 g đồ đã nấu thấp hơn.
+
+### 3. Phối hợp đậu và ngũ cốc
+Đậu đỗ giàu lysine nhưng ít methionine, ngũ cốc thì ngược lại. Không cần ăn chung trong một bữa: chỉ cần trong ngày có cả hai nhóm, cơ thể sẽ dùng nguồn axit amin từ các bữa khác nhau. Gợi ý: cơm gạo lứt với đậu hũ kho, cháo yến mạch rắc hạt bí, bánh mì kẹp pate đậu gà.
+
+### Nguồn tham khảo
+- NASEM (2005). Dietary Reference Intakes for Energy, Carbohydrate, Fiber, Fat, Fatty Acids, Cholesterol, Protein, and Amino Acids.
+- Young VR, Pellett PL (1994). Plant proteins in relation to human protein and amino acid nutrition. Am J Clin Nutr 59(5 Suppl):1203S–1212S.
+- Melina V, Craig W, Levin S (2016). Position of the Academy of Nutrition and Dietetics: Vegetarian Diets. J Acad Nutr Diet 116(12):1970–1980.
+- USDA FoodData Central, SR Legacy (2018).`,
     categorySlug: 'kien-thuc-protein',
     authorEmail: 'org.contributor@example.com',
-    tags: ['protein thực vật', 'tập gym', 'xây dựng cơ bắp', 'kết hợp đậu'],
+    tags: ['protein', 'đạm thực vật', 'đậu đỗ', 'ngũ cốc'],
     coverMedia: {
-      publicId: 'seed/handbooks/protein-pairing-cover',
-      secureUrl: '/seed/handbooks/protein-pairing-cover.webp',
-      width: 1200,
-      height: 675,
-      bytes: 256753,
+      publicId: 'commons/assorted-legumes-liat-portal',
+      secureUrl:
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/3/3f/Liat_Portal_for_Foodie_Disorder_-_Assorted_Legumes.jpg/1280px-Liat_Portal_for_Foodie_Disorder_-_Assorted_Legumes.jpg',
+      width: 1280,
+      height: 1707,
+      bytes: 361971,
+      credit: {
+        title: 'File:Liat Portal for Foodie Disorder - Assorted Legumes.jpg',
+        author: 'Liat Portal (HaJunkiyada)',
+        license: 'CC BY-SA 4.0',
+        licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0/',
+        sourceUrl:
+          'https://commons.wikimedia.org/wiki/File:Liat_Portal_for_Foodie_Disorder_-_Assorted_Legumes.jpg',
+      },
     },
   },
-
-  // 3. Bí Quyết Meal Prep 7 Ngày
   {
     slug: 'bi-quyet-meal-prep-7-ngay',
-    title: '7 Nguyên Tắc Vàng Meal Prep Chay: Tiết Kiệm Thời Gian & Luôn Đủ Chất Cả Tuần',
-    excerpt: 'Phương pháp chuẩn bị hộp cơm mang đi làm gọn gàng, rau củ luôn tươi giòn không chảy nước.',
-    body: `Meal Prep (chuẩn bị trước bữa ăn) là chìa khóa vàng giúp bạn duy trì lối sống lành mạnh ngay cả trong những tuần lễ bận rộn nhất.
+    title: 'Chuẩn Bị Bữa Chay Cho Cả Tuần (Meal Prep): Cách Làm Và Bảo Quản',
+    excerpt:
+      'Nấu sẵn nền tinh bột, đậu và nước sốt vào cuối tuần, chia hộp và bảo quản đúng nhiệt độ để ăn ngon cả tuần.',
+    body: `Meal prep giúp tiết kiệm thời gian nhưng chỉ hiệu quả khi chọn món hợp để để lâu và bảo quản đúng cách.
 
-### 1. Quy tắc phân chia nhóm nguyên liệu
-Thay vì nấu từng món ăn hoàn chỉnh rồi để tủ lạnh nhiều ngày khiến hương vị suy giảm, hãy áp dụng phương pháp "Component Cooking" (chuẩn bị theo từng khối nguyên liệu):
-- Khối 1: Tinh bột nền (Nấu sẵn 1 nồi cơm gạo lứt, quinoa hoặc yến mạch chia hộp kín).
-- Khối 2: Đạm thực vật (Luộc sẵn 1 hộp đậu gà, rán áp chảo đậu hũ hoặc nướng tempeh giòn).
-- Khối 3: Rau củ nướng hoặc xào sơ (Cà rốt, bí đỏ nướng nồi chiên không dầu giữ được 4-5 ngày).
-- Khối 4: Rau sống và sốt chấm (Bảo quản riêng biệt, chỉ rưới sốt trước khi ăn 5 phút).
+### 1. Nấu sẵn theo thành phần, không nấu sẵn cả món
+- **Tinh bột:** gạo lứt, quinoa nấu một mẻ lớn; để nguội nhanh rồi cho vào tủ lạnh.
+- **Đạm:** đậu gà, đậu đen, đậu lăng luộc chín tới; đậu hũ, tempeh áp chảo hoặc nướng.
+- **Rau củ:** bí đỏ, cà rốt, khoai lang, ớt chuông nướng giữ được 3–4 ngày; rau lá non nên để sống, trộn khi ăn.
+- **Sốt:** sốt mè, sốt chanh dây dầu ô liu, sốt tương đậu phộng đựng riêng để rau không bị úng.
 
-### 2. Kỹ thuật sơ chế giữ rau tươi giòn
-- Rửa rau bằng nước muối loãng, dùng rổ quay ly tâm để rau thật ráo nước trước khi cho vào hộp thủy tinh lót một lớp khăn giấy thực phẩm.
-- Không cắt thái trước các loại quả mọng nước như dưa leo, cà chua bi nếu chưa dùng ngay.`,
+### 2. Bảo quản an toàn
+- Làm nguội đồ ăn nấu chín và cho vào tủ lạnh trong vòng 2 giờ; ngăn mát giữ ở 4°C hoặc thấp hơn.
+- Đồ đã nấu nên dùng trong 3–4 ngày. Phần cho cuối tuần nên cấp đông (-18°C) và rã đông trong ngăn mát.
+- Cơm để nguội lâu ở nhiệt độ phòng có nguy cơ nhiễm vi khuẩn *Bacillus cereus*; hâm nóng thật kỹ trước khi ăn và không hâm lại nhiều lần.
+- Dùng hộp kín, dán nhãn ngày nấu.
+
+### 3. Một thực đơn mẫu
+- Chủ nhật nấu: gạo lứt, quinoa, đậu gà, đậu hũ áp chảo, rau củ nướng, sốt chanh dây.
+- Bữa trưa: quinoa đậu gà rau củ nướng; cơm lứt tempeh bông cải.
+- Bữa tối giữa tuần (nấu nhanh): phở xào nấm đậu hũ, cà tím kho đậu hũ.
+
+### Nguồn tham khảo
+- USDA Food Safety and Inspection Service. Leftovers and Food Safety.
+- FDA. Refrigerator & Freezer Storage Chart.`,
     categorySlug: 'bi-quyet-bao-quan-meal-prep',
     authorEmail: 'platform.contributor@example.com',
-    tags: ['meal prep', 'cơm văn phòng', 'tiết kiệm thời gian', 'bảo quản'],
+    tags: ['meal prep', 'bảo quản', 'an toàn thực phẩm', 'tiết kiệm thời gian'],
     coverMedia: {
-      publicId: 'seed/handbooks/meal-prep-cover',
-      secureUrl: '/seed/handbooks/meal-prep-cover.jpg',
-      width: 1200,
-      height: 675,
-      bytes: 39996,
+      publicId: 'weeknightbite/healthy-meal-prep',
+      secureUrl:
+        'https://weeknightbite.com/wp-content/uploads/2026/01/healthy-meal-prep-episode-2.jpg',
+      width: 1023,
+      height: 1455,
+      bytes: 407755,
     },
   },
-
-  // 4. Phân Biệt Các Trường Phái Ăn Chay
   {
     slug: 'phan-biet-cac-truong-phai-an-chay',
-    title: 'Phân Biệt Các Trường Phái Ăn Chay & Lộ Trình Chuyển Đổi Không Mệt Mỏi',
-    excerpt: 'Từ Chay Kỳ, Lacto-Ovo đến Thuần Chay Vegan: Đâu là lựa chọn phù hợp nhất với thể trạng của bạn?',
-    body: `Ẩm thực chay không có một khuôn mẫu cứng nhắc duy nhất, mà là một phổ thực hành phong phú tôn trọng sự lựa chọn và thể trạng của mỗi cá nhân.
+    title: 'Các Kiểu Ăn Chay Và Cách Chuyển Đổi Từ Từ',
+    excerpt:
+      'Phân biệt thuần chay, chay trứng sữa, ăn chay theo Phật giáo và ăn chay kỳ; gợi ý lộ trình chuyển đổi nhẹ nhàng.',
+    body: `"Ăn chay" có nhiều cách hiểu. Biết rõ mình theo kiểu nào giúp chọn món và kiểm tra nguyên liệu dễ hơn.
 
-### 1. Các trường phái phổ biến
-1. Thuần chay (Vegan): Loại bỏ 100% sản phẩm từ động vật, bao gồm cả sữa bò, trứng gia cầm, mật ong và gelatin. Thường đi kèm triết lý bảo vệ động vật và môi trường.
-2. Chay có sữa và trứng (Lacto-Ovo Vegetarian): Không ăn thịt, cá nhưng có sử dụng sữa chua, phô mai và trứng gia cầm. Đây là bước đệm tuyệt vời cho người mới bắt đầu.
-3. Chay kỳ (Periodic Fasting): Ăn chay vào các ngày cố định trong tháng (Rằm, Mùng Một, hoặc 10 ngày chay) theo truyền thống Phật giáo, thường kết hợp kiêng Ngũ vị tân (hành, tỏi, hẹ, kiệu).
-4. Chay linh hoạt (Flexitarian): Chế độ ăn lấy thực vật làm trung tâm (80%), chỉ dùng một lượng nhỏ thịt cá trong các dịp đặc biệt.
+### 1. Các kiểu ăn chay phổ biến
+- **Thuần chay (vegan):** không dùng thịt, cá, hải sản, trứng, sữa, mật ong và các thành phần từ động vật.
+- **Chay trứng sữa (lacto-ovo):** không ăn thịt cá nhưng dùng trứng và sữa.
+- **Chay theo Phật giáo:** ngoài việc không ăn thịt cá, nhiều người còn kiêng ngũ vị tân – hành, tỏi, hẹ, kiệu và hành boaro (tỏi tây). Ứng dụng đánh dấu các nguyên liệu này để bạn lọc món.
+- **Ăn chay kỳ:** ăn chay vào ngày rằm, mùng một hoặc vài ngày cố định trong tháng.
 
-### 2. Lời khuyên cho lộ trình chuyển đổi nhẹ nhàng
-- Bắt đầu với "Thứ Hai Không Thịt" (Meatless Monday).
-- Học cách nấu ngon 3 món chay bạn yêu thích nhất trước khi cắt giảm hoàn toàn đạm động vật.
-- Luôn lắng nghe cơ thể và nạp đủ năng lượng từ tinh bột phức và chất béo tốt.`,
+### 2. Lộ trình chuyển đổi gợi ý
+1. Bắt đầu với 1–2 bữa chay mỗi tuần bằng những món quen: canh chua chay, đậu hũ kho, phở chay.
+2. Thay dần thịt bằng đậu hũ, tempeh, nấm và các loại đậu để giữ đủ đạm.
+3. Học đọc nhãn: nước mắm, bột nêm, bánh kẹo có thể chứa thành phần động vật; nước tương và tương đen thường chứa đậu nành và lúa mì.
+4. Với thuần chay, bổ sung vitamin B12 ngay từ đầu (xem cẩm nang về B12).
+5. Lắng nghe cơ thể: tăng chất xơ từ từ và uống đủ nước để tránh đầy bụng.
+
+### 3. Lưu ý về dị ứng
+Chế độ ăn chay thường dùng nhiều đậu nành, đậu phộng, hạt, mè và gluten – đều là nhóm gây dị ứng phổ biến. Hãy khai báo dị ứng trong hồ sơ để ứng dụng loại các món có nguyên liệu tương ứng.
+
+### Nguồn tham khảo
+- Melina V, Craig W, Levin S (2016). Position of the Academy of Nutrition and Dietetics: Vegetarian Diets. J Acad Nutr Diet 116(12):1970–1980.`,
     categorySlug: 'van-hoa-am-thuc-chay',
     authorEmail: 'invited.contributor@example.com',
-    tags: ['trường phái ăn chay', 'thuần chay', 'người mới', 'lối sống'],
+    tags: ['người mới', 'thuần chay', 'chay phật giáo', 'ngũ vị tân'],
     coverMedia: {
-      publicId: 'seed/handbooks/vegan-traditions-cover',
-      secureUrl: '/seed/handbooks/vegan-traditions-cover.jpg',
-      width: 1200,
-      height: 675,
-      bytes: 48554,
+      publicId: 'commons/saigon-vegetarian-food',
+      secureUrl:
+        'https://upload.wikimedia.org/wikipedia/commons/thumb/8/8b/Saigon_Vegetarian_food.jpg/1280px-Saigon_Vegetarian_food.jpg',
+      width: 1280,
+      height: 848,
+      bytes: 172417,
+      credit: {
+        title: 'File:Saigon Vegetarian food.jpg',
+        author: 'Takeaway',
+        license: 'CC BY-SA 3.0',
+        licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
+        sourceUrl: 'https://commons.wikimedia.org/wiki/File:Saigon_Vegetarian_food.jpg',
+      },
+    },
+  },
+  {
+    slug: 'sat-canxi-kem-omega-3-nguoi-an-chay',
+    title: 'Sắt, Canxi, Kẽm Và Omega-3 Trong Bữa Ăn Chay',
+    excerpt:
+      'Bốn vi chất người ăn chay cần để ý: nhu cầu, thực phẩm chay giàu chất đó và mẹo tăng hấp thu.',
+    body: `Ngoài B12, người ăn chay nên để ý thêm sắt, canxi, kẽm và omega-3 (ALA). Số liệu dưới đây lấy từ USDA FoodData Central (tính trên 100 g) và nhu cầu khuyến nghị của NASEM cho người 19–50 tuổi.
+
+### 1. Sắt
+- Nhu cầu: nam 8 mg/ngày, nữ 18 mg/ngày. Sắt trong thực vật là sắt non-heme, hấp thu kém hơn; NASEM lưu ý người ăn chay có thể cần gấp khoảng 1,8 lần.
+- Nguồn: đậu lăng đỏ khô (7,4 mg), đậu hũ (5,4 mg), hạt bí (8,8 mg), hạt chia (7,7 mg), cải bó xôi (2,7 mg).
+- Mẹo: ăn kèm rau quả giàu vitamin C (ớt chuông, bông cải xanh, cà chua, cam) trong cùng bữa; uống trà, cà phê cách xa bữa ăn.
+
+### 2. Canxi
+- Nhu cầu: 1.000 mg/ngày.
+- Nguồn: đậu hũ làm bằng canxi sulfat (350 mg), hạt chia (631 mg), mè (975 mg), cải thìa (105 mg), sữa thực vật có bổ sung canxi.
+- Cải bó xôi nhiều canxi nhưng chứa oxalat nên hấp thu kém; cải thìa và các loại cải ít oxalat hấp thu tốt hơn.
+
+### 3. Kẽm
+- Nhu cầu: nam 11 mg, nữ 8 mg/ngày.
+- Nguồn: hạt bí (7,8 mg), hạt điều (5,8 mg), đậu gà khô (2,8 mg), yến mạch (3,6 mg).
+- Ngâm, ủ nảy mầm hoặc lên men (tempeh) giúp giảm phytate, tăng hấp thu kẽm và sắt.
+
+### 4. Omega-3 (ALA)
+- Nhu cầu đủ (AI): nam 1,6 g, nữ 1,1 g/ngày.
+- Nguồn: hạt chia (17,8 g/100 g – một muỗng canh khoảng 12 g đã đủ nhu cầu), hạt óc chó, hạt lanh, dầu hạt cải.
+- Cơ thể chuyển ALA thành EPA/DHA với tỉ lệ thấp; người cần nhiều DHA (mang thai, cho con bú) có thể hỏi bác sĩ về dầu tảo.
+
+### Nguồn tham khảo
+- NASEM (2001). Dietary Reference Intakes for Vitamin A, Vitamin K, Arsenic, Boron, Chromium, Copper, Iodine, Iron, Manganese, Molybdenum, Nickel, Silicon, Vanadium, and Zinc.
+- NASEM (2011). Dietary Reference Intakes for Calcium and Vitamin D.
+- Hallberg L, Brune M, Rossander L (1989). Iron absorption in man: ascorbic acid and dose-dependent inhibition by phytate. Am J Clin Nutr 49(1):140–144.
+- USDA FoodData Central, SR Legacy (2018).`,
+    categorySlug: 'vi-chat-thiet-yeu',
+    authorEmail: 'org.contributor@example.com',
+    tags: ['sắt', 'canxi', 'kẽm', 'omega-3'],
+    coverMedia: {
+      publicId: 'diag/canxi-omega-3',
+      secureUrl:
+        'https://cdn.diag.vn/2026/04/ea21e7bd-uong-canxi-va-omega-3-cung-luc-duoc-khong-2.jpg',
+      width: 800,
+      height: 600,
+      bytes: 36454,
     },
   },
 ] as const;

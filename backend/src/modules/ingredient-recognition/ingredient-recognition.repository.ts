@@ -1,4 +1,7 @@
+import { AppError } from '../../common/errors/app-error.js';
+import type { EntitlementService } from '../entitlements/entitlement.service.js';
 import { lockDocument } from '../../database/locking.js';
+import { planAppendedCandidates } from './ingredient-recognition.merge.js';
 import type { Prisma } from '@prisma/client';
 import {
   MediaAssetStatus,
@@ -15,7 +18,7 @@ import {
 
 const jobInclude = {
   inputs: {
-    include: { asset: { select: { id: true, secureUrl: true } } },
+    include: { asset: { select: { id: true, secureUrl: true, providerEtag: true } } },
     orderBy: { position: 'asc' as const },
   },
   candidates: {
@@ -48,7 +51,10 @@ export class RecognitionVersionConflictError extends Error {}
 export class RecognitionIncompleteError extends Error {}
 
 export class IngredientRecognitionRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly entitlements?: EntitlementService,
+  ) {}
 
   findOwnedAssets(ownerId: string, assetIds: string[]) {
     return this.prisma.mediaAsset.findMany({
@@ -71,6 +77,7 @@ export class IngredientRecognitionRepository {
     requestHash: string;
   }): Promise<{ job: RecognitionJobRecord; created: boolean }> {
     return this.prisma.$transaction(async (transaction) => {
+      await lockDocument(transaction, 'user', { id: data.ownerId });
       const existing = await transaction.recognitionJob.findUnique({
         where: {
           ownerId_idempotencyKey: {
@@ -95,27 +102,24 @@ export class IngredientRecognitionRepository {
         },
         include: jobInclude,
       });
+      await this.entitlements?.reserve(transaction, data.ownerId, 'FRIDGE', 'FRIDGE:' + job.id);
       return { job, created: true };
     });
   }
 
-  findOwnedJob(ownerId: string, id: string) {
+  async findOwnedJob(ownerId: string, id: string) {
+    await this.entitlements?.recover(new Date(), ownerId);
     return this.prisma.recognitionJob.findFirst({ where: { id, ownerId }, include: jobInclude });
   }
 
   async startProcessing(ownerId: string, id: string): Promise<RecognitionJobRecord | null> {
     return this.prisma.$transaction(async (transaction) => {
+      await lockDocument(transaction, 'user', { id: ownerId });
       const updated = await transaction.recognitionJob.updateMany({
         where: {
           id,
           ownerId,
-          status: {
-            in: [
-              RecognitionJobStatus.QUEUED,
-              RecognitionJobStatus.FAILED,
-              RecognitionJobStatus.PARTIAL_FAILED,
-            ],
-          },
+          status: RecognitionJobStatus.QUEUED,
         },
         data: {
           status: RecognitionJobStatus.PROCESSING,
@@ -127,12 +131,69 @@ export class IngredientRecognitionRepository {
         },
       });
       if (!updated.count) return null;
-      await transaction.recognitionCandidate.deleteMany({ where: { jobId: id } });
-      await transaction.recognitionInput.updateMany({
-        where: { jobId: id },
-        data: { status: RecognitionInputStatus.PENDING, errorCode: null, errorMessage: null },
+      const pending = await transaction.recognitionInput.count({
+        where: { jobId: id, status: RecognitionInputStatus.PENDING },
       });
+      // Stored candidates (and the user's edits to them) are never discarded. A job with images
+      // waiting for analysis (newly added, or interrupted) only analyses those. Otherwise this is
+      // a retry, which re-runs just the images that failed.
+      if (!pending)
+        await transaction.recognitionInput.updateMany({
+          where: { jobId: id, status: RecognitionInputStatus.FAILED },
+          data: { status: RecognitionInputStatus.PENDING, errorCode: null, errorMessage: null },
+        });
       return transaction.recognitionJob.findUniqueOrThrow({ where: { id }, include: jobInclude });
+    });
+  }
+
+  /**
+   * Attaches additional images to a reviewable job and queues them for analysis. Existing
+   * candidates are kept; the new readings are merged in when processing completes. The usage
+   * reservation is keyed by job, so an already-spent job does not consume another credit.
+   */
+  async appendInputs(
+    ownerId: string,
+    id: string,
+    assetIds: string[],
+  ): Promise<{ job: RecognitionJobRecord; queued: boolean } | null> {
+    return this.prisma.$transaction(async (transaction) => {
+      await lockDocument(transaction, 'user', { id: ownerId });
+      const job = await transaction.recognitionJob.findFirst({
+        where: { id, ownerId },
+        include: jobInclude,
+      });
+      if (!job) return null;
+      if (
+        job.status !== RecognitionJobStatus.READY &&
+        job.status !== RecognitionJobStatus.PARTIAL_FAILED &&
+        job.status !== RecognitionJobStatus.FAILED
+      )
+        throw new RecognitionConflictError();
+      const attached = new Set(job.inputs.map((input) => input.assetId));
+      const fresh = assetIds.filter((assetId) => !attached.has(assetId));
+      if (!fresh.length) return { job, queued: false };
+      const firstPosition = Math.max(-1, ...job.inputs.map((input) => input.position)) + 1;
+      await this.entitlements?.reserve(transaction, ownerId, 'FRIDGE', 'FRIDGE:' + id);
+      for (const [offset, assetId] of fresh.entries())
+        await transaction.recognitionInput.create({
+          data: { jobId: id, assetId, position: firstPosition + offset },
+        });
+      await transaction.recognitionJob.update({
+        where: { id },
+        data: {
+          status: RecognitionJobStatus.QUEUED,
+          queuedAt: new Date(),
+          errorCode: null,
+          errorMessage: null,
+        },
+      });
+      return {
+        job: await transaction.recognitionJob.findUniqueOrThrow({
+          where: { id },
+          include: jobInclude,
+        }),
+        queued: true,
+      };
     });
   }
 
@@ -140,10 +201,14 @@ export class IngredientRecognitionRepository {
     jobId: string,
     inputResults: Array<{ inputId: string; error: { code: string; message: string } | null }>,
     candidates: DeduplicatedCandidateData[],
+    expectedAttempt?: number,
   ): Promise<RecognitionJobRecord> {
     return this.prisma.$transaction(async (transaction) => {
       const current = await transaction.recognitionJob.findUniqueOrThrow({ where: { id: jobId } });
-      if (current.status !== RecognitionJobStatus.PROCESSING) {
+      if (
+        current.status !== RecognitionJobStatus.PROCESSING ||
+        (expectedAttempt !== undefined && current.attemptCount !== expectedAttempt)
+      ) {
         return transaction.recognitionJob.findUniqueOrThrow({
           where: { id: jobId },
           include: jobInclude,
@@ -161,7 +226,36 @@ export class IngredientRecognitionRepository {
             : { status: RecognitionInputStatus.PROCESSED, errorCode: null, errorMessage: null },
         });
       }
-      for (const candidate of candidates) {
+      const stored = await transaction.recognitionCandidate.findMany({
+        where: { jobId },
+        include: { evidence: { select: { inputId: true } } },
+      });
+      const plan = planAppendedCandidates(
+        stored.map((candidate) => ({
+          id: candidate.id,
+          ingredientId: candidate.ingredientId,
+          normalizedName: candidate.normalizedName,
+          quantity: candidate.quantity,
+          unit: candidate.unit,
+          confidence: candidate.confidence,
+          status: candidate.status,
+          editedByUser: candidate.editedByUser,
+          evidenceInputIds: candidate.evidence.map((item) => item.inputId),
+        })),
+        candidates,
+      );
+      for (const update of plan.updates) {
+        if (update.data)
+          await transaction.recognitionCandidate.update({
+            where: { id: update.id },
+            data: { ...update.data, version: { increment: 1 } },
+          });
+        if (update.evidence.length)
+          await transaction.recognitionCandidateEvidence.createMany({
+            data: update.evidence.map((item) => ({ candidateId: update.id, ...item })),
+          });
+      }
+      for (const candidate of plan.creates) {
         await transaction.recognitionCandidate.create({
           data: {
             jobId,
@@ -178,9 +272,21 @@ export class IngredientRecognitionRepository {
           },
         });
       }
-      const failedCount = inputResults.filter((result) => result.error).length;
+      // Status reflects every image on the job, not only the ones analysed in this pass.
+      const allInputs = await transaction.recognitionInput.findMany({
+        where: { jobId },
+        select: { status: true },
+      });
+      const failedCount = allInputs.filter(
+        (input) => input.status === RecognitionInputStatus.FAILED,
+      ).length;
+      await this.entitlements?.settle(
+        transaction,
+        'FRIDGE:' + jobId,
+        inputResults.some((result) => !result.error),
+      );
       const status =
-        failedCount === inputResults.length
+        failedCount === allInputs.length
           ? RecognitionJobStatus.FAILED
           : failedCount > 0
             ? RecognitionJobStatus.PARTIAL_FAILED
@@ -193,7 +299,7 @@ export class IngredientRecognitionRepository {
           errorCode: failedCount > 0 ? 'PARTIAL_PROVIDER_FAILURE' : null,
           errorMessage:
             failedCount > 0
-              ? `${String(failedCount)} image(s) could not be analyzed; available results are retained.`
+              ? `Không thể phân tích ${String(failedCount)} ảnh; kết quả hợp lệ từ các ảnh khác vẫn được giữ lại.`
               : null,
         },
       });
@@ -204,15 +310,31 @@ export class IngredientRecognitionRepository {
     });
   }
 
-  async markFailed(jobId: string, code: string, message: string): Promise<void> {
-    await this.prisma.recognitionJob.updateMany({
-      where: { id: jobId, status: RecognitionJobStatus.PROCESSING },
-      data: {
-        status: RecognitionJobStatus.FAILED,
-        errorCode: code,
-        errorMessage: message,
-        processingCompletedAt: new Date(),
-      },
+  async markFailed(
+    jobId: string,
+    code: string,
+    message: string,
+    expectedAttempt?: number,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (transaction) => {
+      const job = await transaction.recognitionJob.findUnique({ where: { id: jobId } });
+      if (
+        !job ||
+        job.status !== RecognitionJobStatus.PROCESSING ||
+        (expectedAttempt !== undefined && job.attemptCount !== expectedAttempt)
+      )
+        return;
+      await lockDocument(transaction, 'user', { id: job.ownerId });
+      await transaction.recognitionJob.update({
+        where: { id: jobId },
+        data: {
+          status: RecognitionJobStatus.FAILED,
+          errorCode: code,
+          errorMessage: message,
+          processingCompletedAt: new Date(),
+        },
+      });
+      await this.entitlements?.settle(transaction, 'FRIDGE:' + jobId, false);
     });
   }
 
@@ -231,6 +353,34 @@ export class IngredientRecognitionRepository {
       select: { ingredient: { select: { id: true, canonicalName: true } } },
     });
     return alias?.ingredient ?? null;
+  }
+
+  async resolveIngredients(normalizedNames: string[]) {
+    const uniqueNames = [...new Set(normalizedNames)];
+    if (uniqueNames.length === 0)
+      return new Map<string, { id: string; canonicalName: string }>();
+    const [direct, aliases] = await Promise.all([
+      this.prisma.ingredient.findMany({
+        where: { normalizedName: { in: uniqueNames }, status: 'ACTIVE' },
+        select: { id: true, canonicalName: true, normalizedName: true },
+      }),
+      this.prisma.ingredientAlias.findMany({
+        where: {
+          normalizedAlias: { in: uniqueNames },
+          reviewStatus: 'APPROVED',
+          ingredient: { status: 'ACTIVE' },
+        },
+        select: {
+          normalizedAlias: true,
+          ingredient: { select: { id: true, canonicalName: true } },
+        },
+      }),
+    ]);
+    const resolved = new Map<string, { id: string; canonicalName: string }>();
+    for (const ingredient of direct) resolved.set(ingredient.normalizedName, ingredient);
+    for (const alias of aliases)
+      if (!resolved.has(alias.normalizedAlias)) resolved.set(alias.normalizedAlias, alias.ingredient);
+    return resolved;
   }
 
   resolveIngredientById(id: string) {
@@ -270,12 +420,14 @@ export class IngredientRecognitionRepository {
 
   async cancel(ownerId: string, id: string): Promise<RecognitionJobRecord | null> {
     return this.prisma.$transaction(async (transaction) => {
+      await lockDocument(transaction, 'user', { id: ownerId });
       const job = await transaction.recognitionJob.findFirst({ where: { id, ownerId } });
       if (!job) return null;
       if (job.status === RecognitionJobStatus.CANCELLED) {
         return transaction.recognitionJob.findUniqueOrThrow({ where: { id }, include: jobInclude });
       }
       if (job.status === RecognitionJobStatus.CONFIRMED) throw new RecognitionConflictError();
+      await this.entitlements?.settle(transaction, 'FRIDGE:' + id, false);
       await transaction.recognitionJob.update({
         where: { id },
         data: { status: RecognitionJobStatus.CANCELLED, cancelledAt: new Date() },
@@ -291,6 +443,7 @@ export class IngredientRecognitionRepository {
     requestHash: string,
   ): Promise<{ job: RecognitionJobRecord; replay: boolean } | null> {
     return this.prisma.$transaction(async (transaction) => {
+      await lockDocument(transaction, 'user', { id: ownerId });
       const job = await transaction.recognitionJob.findFirst({ where: { id, ownerId } });
       if (!job) return null;
       if (job.lastRetryKey === idempotencyKey) {
@@ -309,11 +462,22 @@ export class IngredientRecognitionRepository {
       ) {
         throw new RecognitionConflictError();
       }
+      if (
+        this.entitlements?.config.billing.enabled &&
+        job.attemptCount >= this.entitlements.config.billing.scanMaxAttempts
+      )
+        throw new AppError({
+          statusCode: 409,
+          code: 'SCAN_RETRY_LIMIT_EXCEEDED',
+          message: 'Đã hết số lần thử lại cho tác vụ này. Tạo tác vụ mới để tiếp tục.',
+        });
+      await this.entitlements?.reserve(transaction, ownerId, 'FRIDGE', 'FRIDGE:' + id);
       await transaction.recognitionJob.update({
         where: { id },
         data: {
           status: RecognitionJobStatus.QUEUED,
           lastRetryKey: idempotencyKey,
+          queuedAt: new Date(),
           lastRetryHash: requestHash,
         },
       });
@@ -440,6 +604,7 @@ export class IngredientRecognitionRepository {
           pantryItemId = existing.id;
           changes.push({ candidateId: candidate.id, action: 'UPDATED' });
         } else {
+          await this.entitlements?.assertPantryCapacity(transaction, data.ownerId);
           const created = await transaction.pantryItem.create({
             data: {
               ownerId: data.ownerId,

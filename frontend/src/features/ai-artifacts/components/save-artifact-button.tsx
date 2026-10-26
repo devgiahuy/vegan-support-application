@@ -2,14 +2,13 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
-import { Bookmark, Sparkles } from 'lucide-react';
+import { Bookmark } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button, type ButtonProps } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AiArtifactType } from '@/common/enums';
 import { useAuthStore } from '@/store/useAuthStore';
 import { SaveArtifactDialog } from './save-artifact-dialog';
-import { ShareArtifactDialog } from './share-artifact-dialog';
 import type { AiArtifact } from '../types/ai-artifact.model';
 
 export function SaveArtifactButton({
@@ -34,21 +33,18 @@ export function SaveArtifactButton({
   const router = useRouter();
   const { isAuthenticated } = useAuthStore();
   const [saveOpen, setSaveOpen] = React.useState(false);
-  const [shareOpen, setShareOpen] = React.useState(false);
-  const [savedArtifact, setSavedArtifact] = React.useState<AiArtifact | null>(null);
 
   const handleClick = () => {
     if (!isAuthenticated) {
-      toast.info('Vui lòng đăng nhập để lưu và chia sẻ tri thức AI.');
+      toast.info('Vui lòng đăng nhập để lưu tri thức AI.');
       router.push('/login');
       return;
     }
     setSaveOpen(true);
   };
 
-  const handleSaved = (artifact: AiArtifact) => {
-    setSavedArtifact(artifact);
-    setShareOpen(true);
+  const handleSaved = (_artifact: AiArtifact) => {
+    toast.success('Đã lưu tri thức AI vào kho cá nhân thành công.');
   };
 
   return (
@@ -69,7 +65,7 @@ export function SaveArtifactButton({
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p className="text-xs">Lưu bản chụp bất biến để xem lại hoặc chia sẻ cho cộng đồng</p>
+            <p className="text-xs">Lưu bản chụp bất biến để xem lại trong kho dữ liệu cá nhân</p>
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>
@@ -83,14 +79,6 @@ export function SaveArtifactButton({
         defaultSummary={defaultSummary}
         onSuccessSaved={handleSaved}
       />
-
-      {savedArtifact && (
-        <ShareArtifactDialog
-          open={shareOpen}
-          onOpenChange={setShareOpen}
-          artifact={savedArtifact}
-        />
-      )}
     </>
   );
 }

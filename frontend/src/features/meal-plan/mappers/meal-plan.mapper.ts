@@ -260,6 +260,17 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
           : safeString(pickField(recipe, ['id'], ''))
         : '',
       recipeTitle: filled ? dishTitle : '',
+      coverImageUrl: filled
+        ? isCustomMeal
+          ? safeString(pickField(customMeal, ['coverPhotoUrl', 'cover_photo_url'], '')) || null
+          : safeString(
+              pickField(
+                recipe,
+                ['coverImageUrl', 'cover_image_url'],
+                pickField(dto, ['coverImageUrl', 'cover_image_url'], '')
+              )
+            ) || null
+        : null,
       sourceType,
       isCustomMeal,
       customMealId: isCustomMeal ? safeString(pickField(customMeal, ['id'], '')) || null : null,

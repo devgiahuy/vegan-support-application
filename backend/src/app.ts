@@ -1,4 +1,8 @@
 import cors from 'cors';
+import { createCompositionRouter } from './modules/catalog/composition.router.js';
+import { BillingService } from './modules/billing/billing.service.js';
+import { createBillingRouter } from './modules/billing/billing.router.js';
+import { EntitlementService } from './modules/entitlements/entitlement.service.js';
 import cookieParser from 'cookie-parser';
 import express, { type Express, type Request, type Response } from 'express';
 import helmet from 'helmet';
@@ -46,6 +50,10 @@ import { ModeratedPublicationPolicy } from './modules/content/content-publicatio
 import { ContentRepository } from './modules/content/content.repository.js';
 import { createPostsRouter } from './modules/content/content.router.js';
 import { ContentService } from './modules/content/content.service.js';
+import { RecipeDraftController } from './modules/content/recipe-draft.controller.js';
+import { createRecipeDraftProvider } from './modules/content/recipe-draft.provider.js';
+import { createRecipeDraftRouter } from './modules/content/recipe-draft.router.js';
+import { RecipeDraftService } from './modules/content/recipe-draft.service.js';
 import { MediaService } from './modules/content/media.service.js';
 import { ModerationController } from './modules/moderation/moderation.controller.js';
 import { ModerationRepository } from './modules/moderation/moderation.repository.js';
@@ -219,11 +227,21 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   const mealProgramController = new MealProgramController(
     new MealProgramService(new MealProgramRepository(database.client), mealPlanService, config),
   );
+  const entitlements = new EntitlementService(database.client, config);
+  const billing = new BillingService(database.client, entitlements, config);
   const baseAiProvider = createAiProvider(config);
   const aiGovernance = new AiGovernanceService(database.client, config, baseAiProvider.chatModel);
+  const recipeDraftController = new RecipeDraftController(
+    new RecipeDraftService(createRecipeDraftProvider(config), aiGovernance, config),
+  );
   const aiProvider = governAiProvider(baseAiProvider, aiGovernance, config);
   const chatController = new ChatController(
-    new ChatService(new ChatRepository(database.client), aiProvider, recommendationService, config),
+    new ChatService(
+      new ChatRepository(database.client, entitlements),
+      aiProvider,
+      recommendationService,
+      config,
+    ),
     new ChatIdentityService(config),
   );
   const foodDataController = new FoodDataController(
@@ -236,18 +254,18 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
     new CustomMealService(new CustomMealRepository(database.client), storageRepository, aiProvider),
   );
   const pantryController = new PantryController(
-    new PantryService(new PantryRepository(database.client)),
+    new PantryService(new PantryRepository(database.client, entitlements)),
   );
   const ingredientRecognitionController = new IngredientRecognitionController(
     new IngredientRecognitionService(
-      new IngredientRecognitionRepository(database.client),
+      new IngredientRecognitionRepository(database.client, entitlements),
       governVisionProvider(createIngredientVisionProvider(config), aiGovernance),
       config,
     ),
   );
   const receiptController = new ReceiptController(
     new ReceiptService(
-      new ReceiptRepository(database.client),
+      new ReceiptRepository(database.client, entitlements),
       governReceiptProvider(createReceiptExtractionProvider(config), aiGovernance),
       config,
     ),
@@ -281,10 +299,20 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
     pinoHttp<Request, Response>({
       logger,
       genReqId: (request) => request.requestId,
+      serializers: {
+        req: (request: { id?: unknown; method?: unknown; url?: unknown }) => ({
+          id: request.id,
+          method: request.method,
+          url: typeof request.url === 'string' ? request.url.split('?')[0] : undefined,
+        }),
+        res: (response: { statusCode?: unknown }) => ({ statusCode: response.statusCode }),
+      },
       autoLogging: {
         ignore: (request) =>
           request.url?.startsWith('/api/v1/restaurants') ||
           request.url?.startsWith('/api/v1/location') ||
+          request.url?.startsWith('/api/v1/billing/sandbox') ||
+          request.url?.startsWith('/api/v1/billing/vnpay') ||
           false,
       },
     }),
@@ -301,6 +329,7 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   );
   app.use('/api/v1/health', createHealthRouter(config, database));
   app.use('/api/v1/auth', createAuthRouter(authController));
+  app.use('/api/v1', createBillingRouter(billing, authentication));
   app.use(
     '/api/v1/contributor-applications',
     createContributorApplicationsRouter(contributorController, authentication),
@@ -314,11 +343,12 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/diet-rules', createDietRouter(dietController, authentication));
   app.use('/api/v1/categories', createCategoryRouter(catalogController));
   app.use('/api/v1/ingredients', createIngredientRouter(catalogController));
+  app.use('/api/v1', createCompositionRouter(database.client, authentication));
   app.use('/api/v1/food-data', createFoodDataRouter(foodDataController));
+  app.use('/api/v1/admin', createModerationAdminRouter(moderationController, authentication));
   app.use('/api/v1/admin', createCatalogAdminRouter(catalogController, authentication));
   app.use('/api/v1/admin', createFoodDataAdminRouter(foodDataController, authentication));
   app.use('/api/v1/admin', createContributorAdminRouter(contributorController, authentication));
-  app.use('/api/v1/admin', createModerationAdminRouter(moderationController, authentication));
   app.use('/api/v1/admin', createStorageAdminRouter(storageController, authentication));
   app.use('/api/v1/admin', createAiReviewAdminRouter(aiReviewController, authentication));
   app.use(
@@ -342,6 +372,7 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/chat', createChatRouter(chatController, authentication));
   app.use('/api/v1/posts', createRecipeNutritionRouter(recipeNutritionController, authentication));
   app.use('/api/v1/posts', createPostsRouter(contentController, authentication));
+  app.use('/api/v1/recipe-drafts', createRecipeDraftRouter(recipeDraftController, authentication));
   app.use('/api/v1/posts', createCommunityPostsRouter(communityController, authentication));
   app.use('/api/v1/comments', createCommentsRouter(communityController, authentication));
   app.use('/api/v1/storage', createStorageRouter(storageController, authentication));

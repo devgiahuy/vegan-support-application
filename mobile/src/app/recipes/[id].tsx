@@ -4,7 +4,6 @@ import { Image } from 'expo-image';
 import { Link, type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import {
   AlertTriangle,
-  ArrowLeft,
   CalendarPlus,
   Clock,
   Dumbbell,
@@ -24,6 +23,7 @@ import {
 
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
+import { RecipeAllergenHighlight } from '@/features/recipe/components/recipe-allergen-highlight';
 import { RecipeCard } from '@/features/recipe/components/recipe-card';
 import { useRecipeDetailQuery, useRelatedRecipesQuery } from '@/features/recipe/queries/recipe.queries';
 import { RecipeNutritionCard } from '@/features/recipe-nutrition/components/recipe-nutrition-card';
@@ -38,6 +38,12 @@ import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
 import { useTrackBehaviorEvent } from '@/hooks/use-track-behavior-event';
 import { useAuthStore } from '@/store/useAuthStore';
+
+/** Nhân lượng nguyên liệu theo số khẩu phần đang chọn; làm tròn 2 chữ số, bỏ số 0 thừa. */
+function formatScaledAmount(amount: number, ratio: number): string {
+  const scaled = Math.round(amount * ratio * 100) / 100;
+  return String(scaled);
+}
 
 /** Chỉ số thiếu dữ liệu hiển thị "Chưa có", không bịa số hay đổi thành 0. */
 function formatNutrient(value: number | null, unit: string): string {
@@ -127,14 +133,7 @@ export default function RecipeDetailScreen() {
           <Text className="mt-2 text-center text-sm text-muted-foreground">
             Công thức bạn đang tìm kiếm có thể đã bị xóa hoặc không tồn tại.
           </Text>
-          <View className="mt-6 flex-row gap-3">
-            <Link href={'/recipes' as Href} asChild>
-              <PrimaryButton
-                label="Quay lại danh sách"
-                variant="outline"
-                icon={<ArrowLeft size={16} color={colors.foreground} />}
-              />
-            </Link>
+          <View className="mt-6">
             <PrimaryButton label="Thử lại" onPress={() => void refetch()} />
           </View>
         </View>
@@ -143,9 +142,10 @@ export default function RecipeDetailScreen() {
   }
 
   const incompatibilities = recipe.dietCompatibilities.filter((c) => !c.compatible);
+  const baseServings = recipe.servings || 2;
   const servingCount = (servings ?? recipe.servings) || 2;
-  const hasCompatibilityInfo =
-    recipe.allergenCodes.length > 0 || recipe.traditionWarnings.length > 0 || incompatibilities.length > 0;
+  const servingRatio = servingCount / baseServings;
+  const hasCompatibilityInfo = recipe.traditionWarnings.length > 0 || incompatibilities.length > 0;
 
   return (
     <SiteScreen>
@@ -268,6 +268,9 @@ export default function RecipeDetailScreen() {
           </View>
         </View>
 
+        {/* Cảnh báo dị ứng nổi bật, đặt trước nguyên liệu như web */}
+        <RecipeAllergenHighlight allergenCodes={recipe.allergenCodes} />
+
         {/* Ingredients */}
         <View className="overflow-hidden rounded-2xl border border-border">
           <View className="flex-row items-center justify-between border-b border-border bg-muted/40 p-4">
@@ -314,7 +317,7 @@ export default function RecipeDetailScreen() {
                     </Text>
                     <View className="rounded-full bg-primary/10 px-2 py-0.5">
                       <Text className="text-xs font-semibold text-primary">
-                        {ing.amount} {ing.unit}
+                        {formatScaledAmount(ing.amount, servingRatio)} {ing.unit}
                       </Text>
                     </View>
                   </Pressable>
@@ -378,20 +381,8 @@ export default function RecipeDetailScreen() {
           <View className="gap-3 rounded-2xl border border-border p-4">
             <View className="flex-row items-center gap-1.5">
               <ShieldCheck size={15} color={colors.primary} />
-              <Text className="text-sm font-bold text-foreground">Tương thích & dị ứng</Text>
+              <Text className="text-sm font-bold text-foreground">Tương thích chế độ ăn</Text>
             </View>
-            {recipe.allergenCodes.length > 0 ? (
-              <View>
-                <Text className="text-xs font-semibold text-muted-foreground">Có thể chứa dị ứng:</Text>
-                <View className="mt-1.5 flex-row flex-wrap gap-1.5">
-                  {recipe.allergenCodes.map((code) => (
-                    <View key={code} className="rounded-full border border-amber-500/40 bg-amber-500/10 px-2.5 py-1">
-                      <Text className="text-xs text-amber-700">{code}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            ) : null}
             {recipe.traditionWarnings.map((w) => (
               <Text key={`${w.tradition}-${w.warningCode}`} className="text-xs leading-relaxed text-muted-foreground">
                 <Text className="font-semibold text-foreground">{w.tradition}: </Text>

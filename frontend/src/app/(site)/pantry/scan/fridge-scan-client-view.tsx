@@ -1,5 +1,7 @@
 'use client';
 
+import { AllowanceNotice } from '@/features/billing/components/allowance-notice';
+
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { ArrowLeft, Sparkles } from 'lucide-react';
@@ -35,8 +37,17 @@ export function FridgeScanClientView() {
   const cancelMutation = useCancelRecognitionJobMutation();
   const retryMutation = useRetryRecognitionJobMutation();
 
+  React.useEffect(() => {
+    if (activeJobId && typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [activeJobId]);
+
   const handleJobCreated = (newJob: RecognitionJob) => {
     setActiveJobId(newJob.id);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
   };
 
   const handleConfirm = async () => {
@@ -91,6 +102,7 @@ export function FridgeScanClientView() {
         job?.isReadyForReview ? 'max-w-7xl' : 'max-w-5xl'
       }`}
     >
+      <AllowanceNotice feature="FRIDGE" />
       {/* Header thanh điều hướng */}
       <div className="flex items-center justify-between gap-4">
         <Button

@@ -74,7 +74,7 @@ export function AddressForm({ onResolved, onDenied }: AddressFormProps) {
           <Input
             id="restaurant-address"
             placeholder="VD: Hồ Gươm, Hà Nội"
-            className="pl-9"
+            className="h-12 rounded-xl pl-9"
             {...form.register('addressText')}
           />
         </div>
@@ -83,7 +83,11 @@ export function AddressForm({ onResolved, onDenied }: AddressFormProps) {
         )}
       </div>
 
-      <Button type="submit" disabled={geocodeMutation.isPending} className="shrink-0">
+      <Button
+        type="submit"
+        disabled={geocodeMutation.isPending}
+        className="h-12 shrink-0 rounded-xl"
+      >
         {geocodeMutation.isPending ? 'Đang tìm...' : 'Tìm quán'}
       </Button>
     </form>

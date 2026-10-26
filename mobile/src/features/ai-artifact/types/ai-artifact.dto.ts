@@ -70,6 +70,14 @@ export interface AiArtifactResponseDto {
   data?: AiArtifactDto;
 }
 
+export interface AiVerificationResponseDto {
+  success?: boolean;
+  data?: {
+    artifact?: AiArtifactDto;
+    verification?: AiVerificationDto;
+  };
+}
+
 export interface PublicAiArtifactListResponseDto {
   success?: boolean;
   data?: AiArtifactDto[];
@@ -91,4 +99,12 @@ export interface UpdateAiArtifactVisibilityRequestDto {
 
 export interface SubmitAiArtifactRequestDto {
   expectedLifecycleVersion: number;
+}
+
+export interface CreateAiVerificationRequestDto {
+  expectedArtifactVersion: number;
+  conclusion: 'VERIFIED' | 'CORRECTION_NEEDED' | 'REJECTED';
+  scope: string;
+  evidenceNote: string;
+  correction?: string | null;
 }

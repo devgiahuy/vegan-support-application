@@ -136,6 +136,7 @@ Override or revoke an active verification with an audit reason
             "author",
             "lifecycle",
             "activeVerification",
+            "statistics",
             "verificationHistory",
             "createdAt"
           ],
@@ -177,6 +178,10 @@ Override or revoke an active verification with an audit reason
                 "object",
                 "null"
               ],
+              "_truncated": true
+            },
+            "statistics": {
+              "type": "object",
               "_truncated": true
             },
             "verificationHistory": {
@@ -225,12 +230,6 @@ Override or revoke an active verification with an audit reason
               "type": "string",
               "_truncated": true
             },
-            "correction": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "_truncate
   …(truncated — xem api-catalog.json)
 ```
 

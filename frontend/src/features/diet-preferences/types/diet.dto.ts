@@ -76,6 +76,13 @@ export interface IngredientExclusionDto {
   reason?: string;
 }
 
+export interface IngredientAllergyDto {
+  ingredientId?: string;
+  ingredientName?: string;
+  severity?: string;
+  ingredientActive?: boolean;
+}
+
 /** `PUT /users/me/diet-preferences`. */
 export interface SaveDietPreferencesRequestDto {
   dietPattern: string;
@@ -85,6 +92,7 @@ export interface SaveDietPreferencesRequestDto {
   rules: Array<{ ruleDefinitionId: string; enabled: boolean }>;
   scheduleDates?: string[];
   allergies?: Array<{ allergenCode: string; label?: string; severity?: string }>;
+  ingredientAllergies?: Array<{ ingredientId: string; severity?: string }>;
   ingredientExclusions?: Array<{ ingredientId?: string; ingredientName: string; reason?: string }>;
 }
 

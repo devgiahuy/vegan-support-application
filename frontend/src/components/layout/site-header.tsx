@@ -18,6 +18,8 @@ import {
   Target,
   Leaf,
   Receipt,
+  Trophy,
+  Coins,
 } from 'lucide-react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { cn } from '@/lib/utils';
@@ -207,34 +209,33 @@ export function SiteHeader() {
                     <Utensils className="h-4 w-4" /> Món ăn của tôi
                   </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem asChild>
+                {/* <DropdownMenuItem asChild>
                   <Link href="/categories#tra-cuu">
                     <Leaf className="h-4 w-4" /> Tra cứu dinh dưỡng 100g
                   </Link>
-                </DropdownMenuItem>
+                </DropdownMenuItem> */}
                 <DropdownMenuItem asChild>
                   <Link href="/meal-programs">
                     <Target className="h-4 w-4" /> Lộ trình nhiều tuần
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/pantry">
-                    <Utensils className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Tủ bếp
-                    gia đình
+                  <Link href="/billing">
+                    <Coins className="h-4 w-4" />
+                    Gói tiện ích
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
+                  <Link href="/pantry">
+                    <Utensils className="h-4 w-4" /> Tủ bếp gia đình
+                  </Link>
+                </DropdownMenuItem>
+                {/* <DropdownMenuItem asChild>
                   <Link href="/receipts">
                     <Receipt className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Hóa đơn
                     mua sắm
                   </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/assistant/public">
-                    <Sparkles className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Khám phá
-                    Tri thức AI
-                  </Link>
-                </DropdownMenuItem>
+                </DropdownMenuItem> */}
                 {user.role === UserRole.ADMIN && (
                   <>
                     <DropdownMenuItem asChild>

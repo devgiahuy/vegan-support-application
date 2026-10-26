@@ -9,6 +9,65 @@ import type {
 import { CustomMealMapper } from './custom-meal.mapper';
 
 describe('CustomMealMapper', () => {
+  it('releases cleared manual overrides while preserving explicit zero and automatic fields', () => {
+    const initial = CustomMealMapper.toCustomMealModel({
+      id: 'meal',
+      ownerId: 'owner',
+      name: 'Món ăn',
+      createdAt: '',
+      updatedAt: '',
+      userCalories: 350,
+      userProteinGrams: 20,
+      userCarbsGrams: 45,
+      userFatGrams: 10,
+      nutritionMetadata: { metrics: { carbsGrams: { origin: 'AI_ESTIMATED' } } },
+    });
+    const result = CustomMealMapper.toUpdateRequest(
+      {
+        name: 'Món ăn mới',
+        ingredients: [],
+        userFatGrams: 0,
+      },
+      initial
+    );
+    expect(result.userCalories).toBeNull();
+    expect(result.userProteinGrams).toBeNull();
+    expect(result).not.toHaveProperty('userCarbsGrams');
+    expect(result.userFatGrams).toBe(0);
+  });
+
+  it('maps automatic nutrition to calculated fields without promoting it to user overrides', () => {
+    const result = CustomMealMapper.toCustomMealModel({
+      id: 'meal',
+      ownerId: 'owner',
+      name: 'Món tự nhập',
+      createdAt: '',
+      updatedAt: '',
+      userCalories: 420,
+      userProteinGrams: 18,
+      userCarbsGrams: 50,
+      userFatGrams: 0,
+      nutritionCoverage: 'PARTIAL',
+      nutritionMetadata: {
+        metrics: {
+          calories: { origin: 'AI_ESTIMATED', confidence: 0.5 },
+          proteinGrams: { origin: 'USER_PROVIDED', confidence: 1 },
+          carbsGrams: { origin: 'CANONICAL_CALCULATED', confidence: 0.95 },
+          fatGrams: { origin: 'AI_ESTIMATED', confidence: 0.5 },
+        },
+        ai: { used: true, uncertaintyNote: 'Khẩu phần ước tính.' },
+        assumptions: ['Tổng cho toàn bộ món.'],
+      },
+    });
+    expect(result.userCalories).toBeNull();
+    expect(result.calculatedCalories).toBe(420);
+    expect(result.userProtein).toBe(18);
+    expect(result.calculatedCarbs).toBe(50);
+    expect(result.calculatedFat).toBe(0);
+    expect(result.userFat).toBeNull();
+    expect(result.isFullyCovered).toBe(false);
+    expect(result.nutritionNotes).toContain('Khẩu phần ước tính.');
+  });
   describe('toPhotoModel', () => {
     it('chuyển đổi hợp lệ DTO ảnh sang UI Model', () => {
       const dto: CustomMealPhotoDto = {

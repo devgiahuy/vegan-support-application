@@ -277,7 +277,7 @@ export const communityApi = {
     if (!USE_FIXTURES) {
       const res = await api.put<CommunityBookmarkResponseDto>(
         API_ENDPOINTS.COMMUNITY.BOOKMARK(postId),
-        {},
+        undefined,
         { showErrorToast: true }
       );
       return communityMapper.toBookmarkModel(res.data);

@@ -1,9 +1,17 @@
 export const API_ENDPOINTS = {
+  BILLING: {
+    PRODUCTS: '/billing/products',
+    ORDERS: '/billing/orders',
+    ORDER: (id: string) => '/billing/orders/' + id,
+    RECONCILE: (id: string) => '/billing/orders/' + id + '/reconcile',
+    ENTITLEMENTS: '/entitlements/me',
+  },
   SCANNING: {
     fridge: {
       JOBS: '/ingredient-recognition/jobs',
       JOB: (id: string) => `/ingredient-recognition/jobs/${id}`,
-      CANDIDATE: (id: string, candidateId: string) => `/ingredient-recognition/jobs/${id}/candidates/${candidateId}`,
+      CANDIDATE: (id: string, candidateId: string) =>
+        `/ingredient-recognition/jobs/${id}/candidates/${candidateId}`,
       CONFIRM: (id: string) => `/ingredient-recognition/jobs/${id}/confirm`,
       CANCEL: (id: string) => `/ingredient-recognition/jobs/${id}/cancel`,
       RETRY: (id: string) => `/ingredient-recognition/jobs/${id}/retry`,
@@ -11,7 +19,8 @@ export const API_ENDPOINTS = {
     receipt: {
       JOBS: '/receipt-jobs',
       JOB: (id: string) => `/receipt-jobs/${id}`,
-      CANDIDATE: (id: string, candidateId: string) => `/receipt-jobs/${id}/candidates/${candidateId}`,
+      CANDIDATE: (id: string, candidateId: string) =>
+        `/receipt-jobs/${id}/candidates/${candidateId}`,
       CONFIRM: (id: string) => `/receipt-jobs/${id}/confirm`,
       CANCEL: (id: string) => `/receipt-jobs/${id}/cancel`,
       RETRY: (id: string) => `/receipt-jobs/${id}/retry`,
@@ -39,6 +48,9 @@ export const API_ENDPOINTS = {
     DIET_PREFERENCES: '/users/me/diet-preferences',
     DIET_SCHEDULE: '/users/me/diet-schedule',
   },
+  ALLERGENS: {
+    LIST: '/allergens',
+  },
   DIET_RULES: {
     PREVIEW: '/diet-rules/preview',
   },
@@ -47,6 +59,7 @@ export const API_ENDPOINTS = {
   },
   POSTS: {
     LIST: '/posts',
+    MINE: '/posts/mine',
     DETAIL: (idOrSlug: string) => `/posts/${idOrSlug}`,
     RELATED: (id: string) => `/posts/${id}/related`,
     SUBMIT: (id: string) => `/posts/${id}/submit`,
@@ -66,7 +79,8 @@ export const API_ENDPOINTS = {
     LIST: '/meal-plans',
     DETAIL: (id: string) => `/meal-plans/${id}`,
     SWAP: (planId: string, itemId: string) => `/meal-plans/${planId}/items/${itemId}/swap`,
-    MANUAL_ADD: (planId: string, itemId: string) => `/meal-plans/${planId}/items/${itemId}/manual-add`,
+    MANUAL_ADD: (planId: string, itemId: string) =>
+      `/meal-plans/${planId}/items/${itemId}/manual-add`,
     DELETE: (id: string) => `/meal-plans/${id}`,
     ANALYZE: (id: string) => `/meal-plans/${id}/analyze`,
     ANALYSIS: (id: string) => `/meal-plans/${id}/analysis`,
@@ -102,6 +116,7 @@ export const API_ENDPOINTS = {
     PUBLIC: '/ai-artifacts/public',
     VISIBILITY: (id: string) => `/ai-artifacts/${id}/visibility`,
     SUBMIT: (id: string) => `/ai-artifacts/${id}/submit`,
+    VERIFICATIONS: (id: string) => `/ai-artifacts/${id}/verifications`,
   },
   CONTRIBUTOR: {
     APPLICATIONS: '/contributor-applications',
@@ -110,6 +125,9 @@ export const API_ENDPOINTS = {
   INGREDIENTS: {
     LIST: '/ingredients',
     RESOLVE: '/ingredients/resolve',
+  },
+  RECIPE_DRAFTS: {
+    GENERATE: '/recipe-drafts/generate',
   },
   RECIPE_NUTRITION: {
     PREVIEW: (id: string) => `/posts/${id}/nutrition/preview`,

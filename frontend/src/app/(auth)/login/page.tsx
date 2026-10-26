@@ -123,7 +123,7 @@ export default function LoginPage() {
                 <span className="h-px flex-1 bg-border/70" />
               </div>
 
-              <div className="flex justify-center">
+              {/* <div className="flex justify-center">
                 <motion.div
                   className="w-full"
                   whileTap={shouldReduceMotion ? undefined : { scale: 0.99 }}
@@ -136,7 +136,7 @@ export default function LoginPage() {
                     Google ID
                   </Button>
                 </motion.div>
-              </div>
+              </div> */}
 
               <p className="mt-6 text-center text-xs text-[#718078] dark:text-neutral-400">
                 Bạn mới biết đến VeggieConnect?{' '}

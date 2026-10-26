@@ -44,7 +44,8 @@ export function useCreateMealProgramMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: CreateMealProgramInput) => mealProgramApi.create(input),
-    onSuccess: () => {
+    // Cả khi hết thời gian chờ: backend vẫn có thể đã tạo xong lộ trình nên cần tải lại danh sách.
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: MEAL_PROGRAM_QUERY_KEYS.all });
     },
   });

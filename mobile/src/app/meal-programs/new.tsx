@@ -4,6 +4,7 @@ import { Link, type Href, useRouter } from 'expo-router';
 import { Check, Dumbbell, Flame, Scale, Sparkles } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
+import { DateField } from '@/components/ui/date-field';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { useCreateMealProgramMutation } from '@/features/meal-program/queries/meal-program.queries';
 import type { MealProgramGoalDto } from '@/features/meal-program/types/meal-program.dto';
@@ -14,6 +15,7 @@ import {
   isValidDateOnly,
   snapToNextMonday,
 } from '@/features/meal-program/utils/meal-program-dates';
+import { idempotencyKey } from '@/features/meal-program/mappers/meal-program.mapper';
 import { getMealProgramErrorMessage } from '@/features/meal-program/utils/meal-program-errors';
 import { getApiErrorCode } from '@/lib/api-error';
 import { useIconColors } from '@/lib/theme-colors';
@@ -66,6 +68,7 @@ export default function NewMealProgramScreen() {
   const [dateNotice, setDateNotice] = React.useState<string | null>(null);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [needsProfile, setNeedsProfile] = React.useState(false);
+  const attemptRef = React.useRef<{ signature: string; key: string } | null>(null);
 
   const changeDate = (value: string) => {
     setDateNotice(null);
@@ -87,8 +90,21 @@ export default function NewMealProgramScreen() {
       return;
     }
     date = date.trim();
+    // Cùng nội dung thì dùng lại một khóa: bấm thử lại sau khi hết thời gian chờ sẽ nối tiếp lộ trình đã tạo, không tạo trùng.
+    const signature = JSON.stringify({ title: title.trim(), goal, date, horizonWeeks });
+    if (attemptRef.current?.signature !== signature) {
+      attemptRef.current = { signature, key: idempotencyKey('meal-program') };
+    }
     try {
-      const created = await mutation.mutateAsync({ title, goal, startDate: date, horizonWeeks, alternativesPerWeek: 2 });
+      const created = await mutation.mutateAsync({
+        title,
+        goal,
+        startDate: date,
+        horizonWeeks,
+        alternativesPerWeek: 2,
+        idempotencyKey: attemptRef.current.key,
+      });
+      attemptRef.current = null;
       router.replace(`/meal-programs/${created.id}` as Href);
     } catch (error) {
       const code = getApiErrorCode(error);
@@ -118,7 +134,7 @@ export default function NewMealProgramScreen() {
     <SiteScreen>
       <View className="gap-5 px-5 pt-4">
         <View>
-          <Text className="text-2xl font-extrabold text-foreground">Tạo lộ trình nhiều tuần</Text>
+          <Text className="text-2xl font-extrabold text-foreground">Tạo lộ trình dinh dưỡng cá nhân mới</Text>
           <Text className="mt-1 text-sm text-muted-foreground">
             Hệ thống tạo thực đơn cho từng tuần theo hồ sơ sức khỏe, dị ứng và chế độ ăn của bạn.
           </Text>
@@ -199,14 +215,7 @@ export default function NewMealProgramScreen() {
               );
             })}
           </View>
-          <TextInput
-            value={startDate}
-            onChangeText={changeDate}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor={colors.mutedForeground}
-            autoCapitalize="none"
-            className="h-12 rounded-2xl border border-input bg-card px-3.5 text-sm text-foreground"
-          />
+          <DateField label="Hoặc chọn ngày khác" value={startDate} onChange={changeDate} />
           {dateNotice ? <Text className="text-xs text-amber-700">{dateNotice}</Text> : null}
         </View>
 

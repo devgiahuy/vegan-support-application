@@ -4,17 +4,7 @@ import React, { useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import {
-  ArrowLeft,
-  CalendarPlus,
-  Edit,
-  Flame,
-  Info,
-  Tag as TagIcon,
-  Trash2,
-  Users,
-  Utensils,
-} from 'lucide-react';
+import { ArrowLeft, CalendarPlus, Edit, Info, Trash2, Users, Utensils } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -36,7 +26,13 @@ export default function CustomMealDetailPage() {
   const router = useRouter();
   const id = typeof params.id === 'string' ? params.id : '';
 
-  const { data: meal, isLoading, isError, refetch } = useCustomMealDetailQuery(id);
+  React.useEffect(() => {
+    if (id === 'new') {
+      router.replace('/custom-meals/new');
+    }
+  }, [id, router]);
+
+  const { data: meal, isLoading, isError } = useCustomMealDetailQuery(id, id !== 'new');
   const deleteMutation = useDeleteCustomMealMutation();
   const attachMediaMutation = useAttachCustomMealMediaMutation(id);
   const deleteMediaMutation = useDeleteCustomMealMediaMutation(id);
@@ -270,9 +266,11 @@ export default function CustomMealDetailPage() {
           <CustomMealNutritionBar
             coverageRatio={meal.coverageRatio}
             calculatedCalories={meal.calculatedCalories}
-            calculatedProtein={meal.calculatedProtein}
-            calculatedCarbs={meal.calculatedCarbs}
-            calculatedFat={meal.calculatedFat}
+            calculatedProtein={meal.userProtein ?? meal.calculatedProtein}
+            calculatedCarbs={meal.userCarbs ?? meal.calculatedCarbs}
+            calculatedFat={meal.userFat ?? meal.calculatedFat}
+            isFullyCovered={meal.isFullyCovered}
+            nutritionNotes={meal.nutritionNotes}
             userCalories={meal.userCalories}
             unmatchedCount={meal.unmatchedIngredientCount}
             totalIngredientCount={meal.ingredients.length}

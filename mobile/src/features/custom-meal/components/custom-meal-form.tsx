@@ -33,7 +33,7 @@ function emptyIngredient(id: string): CustomMealIngredient {
 }
 
 /**
- * Form tạo/sửa bữa ăn tự tạo. Mỗi nguyên liệu có thể liên kết với nguyên liệu chuẩn bằng gợi ý tìm kiếm
+ * Form tạo/sửa món ăn cá nhân (Món ăn của tôi). Mỗi nguyên liệu có thể liên kết với nguyên liệu chuẩn bằng gợi ý tìm kiếm
  * (gửi kèm `ingredientId`); nếu sửa tên sau khi chọn thì liên kết bị bỏ để tránh lỗi lệch tên-id.
  * Chỉ số dinh dưỡng là số người dùng tự nhập, để trống = chưa có dữ liệu.
  */
@@ -53,11 +53,11 @@ export function CustomMealForm({
   const [notes, setNotes] = React.useState(initial?.notes ?? '');
   const [servings, setServings] = React.useState(String(initial?.servings ?? 1));
   const [sourceNote, setSourceNote] = React.useState(initial?.sourceNote ?? '');
-  const [calories, setCalories] = React.useState(numberToText(initial?.calories));
-  const [protein, setProtein] = React.useState(numberToText(initial?.proteinGrams));
-  const [carbs, setCarbs] = React.useState(numberToText(initial?.carbsGrams));
-  const [fat, setFat] = React.useState(numberToText(initial?.fatGrams));
-  const [fiber, setFiber] = React.useState(numberToText(initial?.fiberGrams));
+  const [calories, setCalories] = React.useState(numberToText(initial?.manual.calories));
+  const [protein, setProtein] = React.useState(numberToText(initial?.manual.proteinGrams));
+  const [carbs, setCarbs] = React.useState(numberToText(initial?.manual.carbsGrams));
+  const [fat, setFat] = React.useState(numberToText(initial?.manual.fatGrams));
+  const [fiber, setFiber] = React.useState(numberToText(initial?.manual.fiberGrams));
   const [tags, setTags] = React.useState<string[]>(initial?.tags ?? []);
   const [ingredients, setIngredients] = React.useState<CustomMealIngredient[]>(
     initial?.ingredients.length ? initial.ingredients : [emptyIngredient('local-1')]
@@ -75,7 +75,7 @@ export function CustomMealForm({
     const cleanName = name.trim();
     const parsedServings = Math.trunc(Number(servings));
     if (cleanName.length < 1) {
-      Alert.alert('Thiếu tên bữa ăn', 'Vui lòng nhập tên bữa ăn.');
+      Alert.alert('Thiếu tên món ăn', 'Vui lòng nhập tên món ăn.');
       return;
     }
     if (!Number.isInteger(parsedServings) || parsedServings < 1 || parsedServings > 99) {
@@ -106,7 +106,7 @@ export function CustomMealForm({
 
   return (
     <View className="gap-4">
-      <TextField label="Tên bữa ăn" value={name} onChangeText={setName} placeholder="VD: Cơm đậu hũ sốt nấm" />
+      <TextField label="Tên món ăn" value={name} onChangeText={setName} placeholder="VD: Cơm đậu hũ sốt nấm" />
       <TextField label="Ghi chú" value={notes} onChangeText={setNotes} placeholder="Cách nấu, cảm hứng..." multiline className="min-h-20 pt-3" />
       <View className="flex-row gap-3">
         <View className="flex-1">
@@ -203,4 +203,8 @@ export function CustomMealForm({
 
 export function toCustomMealCreateDto(values: CustomMealFormValues) {
   return customMealMapper.toCreateDto(values);
+}
+
+export function toCustomMealUpdateDto(values: CustomMealFormValues, initial: CustomMeal) {
+  return customMealMapper.toUpdateDto(values, initial);
 }

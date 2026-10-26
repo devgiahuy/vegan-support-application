@@ -5,6 +5,8 @@ import { Prisma } from '@prisma/client';
 import { Long, MongoClient } from 'mongodb';
 import policy from '../src/database/legacy-policy.json' with { type: 'json' };
 import checks from '../prisma/mongodb-validators.json' with { type: 'json' };
+import nativeChecks from '../prisma/mongodb-native-validators.json' with { type: 'json' };
+import backfills from '../prisma/mongodb-backfills.json' with { type: 'json' };
 
 export const schemaPath = new URL('../prisma/schema.prisma', import.meta.url);
 export const scalarFields = (model) => model.fields.filter((field) => field.kind !== 'object');
@@ -45,7 +47,10 @@ export async function applyMongoSchema(database) {
   for (const model of Prisma.dmmf.datamodel.models) {
     const table = model.dbName ?? model.name;
     const fields = scalarFields(model);
-    const expressions = checks[table]?.map((check) => check.expression) ?? [];
+    const expressions = [
+      ...(checks[table]?.map((check) => check.expression) ?? []),
+      ...(nativeChecks[table] ?? []),
+    ];
     const validator = {
       $and: [
         {
@@ -75,6 +80,11 @@ export async function applyMongoSchema(database) {
       });
     // Safe additive defaults for existing documents after a schema change.
     // No field with an existing value is overwritten.
+    for (const [field, expression] of Object.entries(backfills[table] ?? {})) {
+      await database
+        .collection(table)
+        .updateMany({ [field]: { $exists: false } }, [{ $set: { [field]: expression } }]);
+    }
     const defaults = fields.filter(
       (field) =>
         field.hasDefaultValue && typeof field.default !== 'object' && field.type !== 'Json',
@@ -127,13 +137,11 @@ export async function applyMongoSchema(database) {
       const filter = Object.fromEntries(
         nullable.map((field) => [dbField(field), { $type: types[field.type] ?? 'string' }]),
       );
-      await database
-        .collection(table)
-        .createIndex(key, {
-          name: `mongo_${Object.keys(key).join('_')}_${index.unique ? 'key' : 'idx'}`,
-          ...(index.unique ? { unique: true } : {}),
-          ...(nullable.length ? { partialFilterExpression: filter } : {}),
-        });
+      await database.collection(table).createIndex(key, {
+        name: `mongo_${Object.keys(key).join('_')}_${index.unique ? 'key' : 'idx'}`,
+        ...(index.unique ? { unique: true } : {}),
+        ...(nullable.length ? { partialFilterExpression: filter } : {}),
+      });
     }
   }
   const special = [
@@ -153,9 +161,9 @@ export async function applyMongoSchema(database) {
     ],
     [
       'ai_verifications',
-      { artifact_id: 1 },
+      { artifact_id: 1, artifact_version: 1, reviewer_id: 1 },
       { status: 'ACTIVE' },
-      'ai_verifications_one_active_per_artifact',
+      'ai_verifications_one_active_per_reviewer',
     ],
   ];
   for (const [table, key, partialFilterExpression, name] of special)

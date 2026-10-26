@@ -25,6 +25,7 @@ import {
   ChevronRight,
   HardDrive,
   Target,
+  Video as VideoIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -43,10 +44,10 @@ import { LoadingState } from '@/components/shared/loading-state';
 import { ErrorState } from '@/components/shared/error-state';
 import { SafeImage } from '@/components/shared/safe-image';
 import { DeletePostDialog } from '@/features/post/components/delete-post-dialog';
-import { useArticlesQuery } from '@/features/post/queries/post.queries';
-import { useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
+import { useMyPostsQuery } from '@/features/post/queries/post.queries';
+import { removeTrackedUserPost } from '@/features/post/utils/user-posts-tracker';
 import { useAuthStore } from '@/store/useAuthStore';
-import type { Article } from '@/features/post/types/post.model';
+import type { MyPostModel } from '@/features/post/types/post.model';
 import { useDetailedProfileQuery } from '@/features/profile/queries/profile.queries';
 import { BasicProfileForm } from '@/features/profile/components/basic-profile-form';
 import { HealthProfileForm } from '@/features/profile/components/health-profile-form';
@@ -62,6 +63,7 @@ import { useMyApplicationsQuery } from '@/features/contributor/queries/contribut
 import { ScheduleEditor } from '@/features/diet-preferences/components/schedule-editor';
 
 type Tab = 'info' | 'health' | 'diet' | 'posts' | 'storage' | 'privacy' | 'contributor';
+const EMPTY_MY_POSTS: MyPostModel[] = [];
 
 const DIET_MODES = ['Thuần chay (Vegan)', 'Chay bán phần', 'Ăn chay rằm/mùng 1'];
 
@@ -109,6 +111,7 @@ export default function ProfilePage() {
   const shouldReduceMotion = useReducedMotion();
   const [healthSyncEnabled, setHealthSyncEnabled] = React.useState(true);
   const [isWhyDialogOpen, setIsWhyDialogOpen] = React.useState(false);
+  const [isEditingDiet, setIsEditingDiet] = React.useState(false);
 
   const {
     data: detailedProfile,
@@ -117,12 +120,22 @@ export default function ProfilePage() {
     refetch: refetchProfile,
   } = useDetailedProfileQuery();
 
-  const { user } = useAuthStore();
-  const { data: articlesPagination, isLoading: isArticlesLoading } = useArticlesQuery({
-    limit: 50,
-  });
-  const { data: recipesPagination, isLoading: isRecipesLoading } = useRecipesQuery({ limit: 50 });
-  const isMyPostsLoading = isArticlesLoading || isRecipesLoading;
+  const { user, setUser } = useAuthStore();
+  const currentUser = detailedProfile?.user ?? user;
+
+  // Tự động đồng bộ user từ detailedProfile vào useAuthStore nếu store chưa có
+  React.useEffect(() => {
+    if (detailedProfile?.user && !user) {
+      setUser(detailedProfile.user);
+    }
+  }, [detailedProfile?.user, user, setUser]);
+  const {
+    data: myPostsPagination,
+    isLoading: isMyPostsQueryLoading,
+    isError: isMyPostsError,
+    refetch: refetchMyPosts,
+  } = useMyPostsQuery(currentUser?.id, { limit: 100 }, { enabled: Boolean(currentUser?.id) });
+  const isMyPostsLoading = isProfileLoading || isMyPostsQueryLoading;
 
   const [postSearch, setPostSearch] = React.useState('');
   const [postStatusFilter, setPostStatusFilter] = React.useState<
@@ -161,43 +174,8 @@ export default function ProfilePage() {
     el.scrollBy({ left: direction === 'left' ? -distance : distance, behavior: 'smooth' });
   };
 
-  // Bài viết của tôi: kết hợp Công thức + Cẩm nang, lọc theo tác giả đang đăng nhập.
-  const myPosts = React.useMemo(() => {
-    if (!user) return [];
-    const articles = (articlesPagination?.items || []).map((a) => ({
-      id: a.id,
-      type: 'BLOG' as const,
-      title: a.title,
-      excerpt: a.excerpt,
-      coverImageUrl: a.coverImageUrl,
-      status: a.status,
-      statusLabel: a.statusLabel,
-      categoryName: a.category.name,
-      formattedPublishedAt: a.formattedPublishedAt,
-      authorId: a.author.id,
-      authorName: a.author.name,
-      version: a.version,
-    }));
-
-    const recipes = (recipesPagination?.items || []).map((r) => ({
-      id: r.id,
-      type: 'RECIPE' as const,
-      title: r.title,
-      excerpt: r.description || '',
-      coverImageUrl: r.coverImageUrl,
-      status: r.status,
-      statusLabel: r.statusLabel,
-      categoryName: typeof r.category === 'string' ? r.category : r.category?.name || 'Món chay',
-      formattedPublishedAt: r.formattedPublishedAt,
-      authorId: r.author.id,
-      authorName: r.author.name,
-      version: r.version,
-    }));
-
-    return [...articles, ...recipes].filter(
-      (p) => p.authorId === user.id || (user.displayName && p.authorName === user.displayName)
-    );
-  }, [articlesPagination?.items, recipesPagination?.items, user]);
+  // Backend giới hạn danh sách theo tác giả đã xác thực và trả đủ loại/trạng thái nội dung.
+  const myPosts = myPostsPagination?.items ?? EMPTY_MY_POSTS;
 
   const filteredMyPosts = React.useMemo(() => {
     let list = [...myPosts];
@@ -257,9 +235,14 @@ export default function ProfilePage() {
                   {detailedProfile.user.initials || 'U'}
                 </AvatarFallback>
               </Avatar>
-              <span className="absolute -bottom-2 -right-2 rounded-full bg-background p-1.5 shadow">
+              <button
+                type="button"
+                onClick={() => setTab('info')}
+                className="absolute -bottom-2 -right-2 rounded-full bg-background p-1.5 shadow border border-border/50 hover:scale-105 transition-transform cursor-pointer"
+                title="Thay đổi ảnh đại diện"
+              >
                 <Camera className="h-4 w-4 text-primary" />
-              </span>
+              </button>
             </div>
             <div className="flex-1">
               <div className="flex flex-wrap items-center gap-2">
@@ -278,14 +261,14 @@ export default function ProfilePage() {
                 {detailedProfile.user.email}
               </p>
               <div className="mt-3 grid max-w-md grid-cols-3 gap-4">
-                <div>
+                {/* <div>
                   <p className="text-lg font-bold text-primary">12</p>
                   <p className="text-xs text-muted-foreground">Công thức đăng</p>
-                </div>
-                <div>
+                </div> */}
+                {/* <div>
                   <p className="text-lg font-bold text-primary">1,850</p>
                   <p className="text-xs text-muted-foreground">Điểm sống lành</p>
-                </div>
+                </div> */}
                 <div>
                   <p className="text-lg font-bold text-primary">{detailedProfile.memberSince}</p>
                   <p className="text-xs text-muted-foreground">Ngày tham gia</p>
@@ -552,25 +535,33 @@ export default function ProfilePage() {
                   onRetry={() => void refetchProfile()}
                 />
               )}
-              {!isProfileLoading && !isProfileError && detailedProfile?.diet && (
-                <CurrentDietCard summary={detailedProfile.diet} />
-              )}
-              {!isProfileLoading && !isProfileError && (
-                <DietWizard
-                  initialSelection={
-                    detailedProfile?.diet
-                      ? {
-                          dietPattern: detailedProfile.diet.dietPattern,
-                          practiceSchedule: detailedProfile.diet.practiceSchedule,
-                          tradition: detailedProfile.diet.tradition,
-                        }
-                      : null
-                  }
-                  scheduleSlot={(preference) => (
-                    <ScheduleEditor initialDates={preference.schedule?.dates ?? []} />
-                  )}
+              {!isProfileLoading && !isProfileError && detailedProfile?.diet && !isEditingDiet && (
+                <CurrentDietCard
+                  summary={detailedProfile.diet}
+                  onChangeDiet={() => setIsEditingDiet(true)}
                 />
               )}
+              {!isProfileLoading &&
+                !isProfileError &&
+                (!detailedProfile?.diet || isEditingDiet) && (
+                  <DietWizard
+                    initial={detailedProfile?.diet}
+                    initialSelection={
+                      detailedProfile?.diet
+                        ? {
+                            dietPattern: detailedProfile.diet.dietPattern,
+                            practiceSchedule: detailedProfile.diet.practiceSchedule,
+                            tradition: detailedProfile.diet.tradition,
+                          }
+                        : null
+                    }
+                    onCancel={detailedProfile?.diet ? () => setIsEditingDiet(false) : undefined}
+                    onSaved={() => setIsEditingDiet(false)}
+                    scheduleSlot={(preference) => (
+                      <ScheduleEditor initialDates={preference.schedule?.dates ?? []} />
+                    )}
+                  />
+                )}
             </div>
           )}
 
@@ -594,6 +585,11 @@ export default function ProfilePage() {
                   <Button asChild variant="outline" size="sm" className="rounded-xl gap-1.5">
                     <Link href="/recipes/new">
                       <UtensilsCrossed className="h-4 w-4 text-primary" /> Đăng công thức
+                    </Link>
+                  </Button>
+                  <Button asChild variant="outline" size="sm" className="rounded-xl gap-1.5">
+                    <Link href="/videos/new">
+                      <VideoIcon className="h-4 w-4 text-primary" /> Đăng video
                     </Link>
                   </Button>
                 </div>
@@ -633,7 +629,12 @@ export default function ProfilePage() {
               </div>
 
               <div className="mt-4 space-y-3">
-                {isMyPostsLoading ? (
+                {isMyPostsError ? (
+                  <ErrorState
+                    title="Không tải được danh sách bài viết của bạn."
+                    onRetry={() => void refetchMyPosts()}
+                  />
+                ) : isMyPostsLoading ? (
                   [1, 2].map((i) => (
                     <div
                       key={i}
@@ -685,7 +686,11 @@ export default function ProfilePage() {
                                 variant="outline"
                                 className="rounded-full text-[10px] px-2 py-0.5"
                               >
-                                {p.type === 'RECIPE' ? 'Công thức' : 'Cẩm nang'}
+                                {p.type === 'RECIPE'
+                                  ? 'Công thức'
+                                  : p.type === 'VIDEO'
+                                    ? 'Video'
+                                    : 'Cẩm nang'}
                               </Badge>
                               <span className="text-[11px] text-muted-foreground">•</span>
                               <span className="text-xs text-muted-foreground">
@@ -718,7 +723,11 @@ export default function ProfilePage() {
                             >
                               <Link
                                 href={
-                                  p.type === 'RECIPE' ? `/recipes/${p.id}` : `/articles/${p.id}`
+                                  p.type === 'RECIPE'
+                                    ? `/recipes/${p.id}`
+                                    : p.type === 'VIDEO'
+                                      ? `/videos/${p.id}`
+                                      : `/articles/${p.id}`
                                 }
                               >
                                 <Eye className="h-4 w-4" />
@@ -728,14 +737,22 @@ export default function ProfilePage() {
                               asChild
                               variant="ghost"
                               size="icon"
-                              aria-label={p.type === 'RECIPE' ? 'Sửa công thức' : 'Sửa bài viết'}
+                              aria-label={
+                                p.type === 'RECIPE'
+                                  ? 'Sửa công thức'
+                                  : p.type === 'VIDEO'
+                                    ? 'Sửa video'
+                                    : 'Sửa bài viết'
+                              }
                               className="rounded-xl"
                             >
                               <Link
                                 href={
                                   p.type === 'RECIPE'
                                     ? `/recipes/${p.id}/edit`
-                                    : `/articles/${p.id}/edit`
+                                    : p.type === 'VIDEO'
+                                      ? `/videos/${p.id}/edit`
+                                      : `/articles/${p.id}/edit`
                                 }
                               >
                                 <Pencil className="h-4 w-4" />
@@ -772,6 +789,11 @@ export default function ProfilePage() {
                       <Button asChild size="sm" variant="outline" className="rounded-full text-xs">
                         <Link href="/articles/new">
                           <Plus className="h-3.5 w-3.5 mr-1" /> Viết cẩm nang mới
+                        </Link>
+                      </Button>
+                      <Button asChild size="sm" variant="outline" className="rounded-full text-xs">
+                        <Link href="/videos/new">
+                          <Plus className="h-3.5 w-3.5 mr-1" /> Đăng video mới
                         </Link>
                       </Button>
                     </div>
@@ -932,6 +954,10 @@ export default function ProfilePage() {
         postTitle={postToDelete?.title || ''}
         expectedVersion={postToDelete?.version}
         onSuccess={() => {
+          if (currentUser?.id && postToDelete?.id) {
+            removeTrackedUserPost(currentUser.id, postToDelete.id);
+          }
+          void refetchMyPosts();
           setPostToDelete(null);
         }}
       />

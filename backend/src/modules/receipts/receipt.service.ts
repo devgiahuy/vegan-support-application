@@ -7,6 +7,7 @@ import {
 } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
 import type { AppConfig } from '../../config/env.js';
+import { uniqueAssetIdsByContent } from '../../common/media/asset-dedup.js';
 import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 import type { ReceiptExtractionProvider, ReceiptProviderImageResult } from './receipt.provider.js';
 import {
@@ -17,6 +18,7 @@ import {
   ReceiptVersionConflictError,
 } from './receipt.repository.js';
 import type {
+  AddReceiptImagesInput,
   ConfirmReceiptJobInput,
   CreateReceiptJobInput,
   RetryReceiptJobInput,
@@ -75,32 +77,14 @@ export class ReceiptService {
 
   async create(ownerId: string, input: CreateReceiptJobInput) {
     this.ensureEnabled();
-    if (input.imageAssetIds.length > this.config.receipt.maxImages) {
-      throw new AppError({
-        statusCode: 422,
-        code: 'RECEIPT_IMAGE_LIMIT_EXCEEDED',
-        message: `A receipt job accepts at most ${String(this.config.receipt.maxImages)} images.`,
-      });
-    }
-    const assets = await this.repository.findOwnedAssets(ownerId, input.imageAssetIds);
-    const byId = new Map(assets.map((asset) => [asset.id, asset]));
-    if (assets.length !== input.imageAssetIds.length) throw this.invalidImage();
-    for (const id of input.imageAssetIds) {
-      const asset = byId.get(id);
-      if (
-        !asset?.mimeType ||
-        !(
-          this.config.receipt.provider === 'openai' ? OPENAI_IMAGE_MIME_TYPES : IMAGE_MIME_TYPES
-        ).has(asset.mimeType) ||
-        asset.bytes > BigInt(this.config.receipt.maxImageBytes)
-      ) {
-        throw this.invalidImage();
-      }
-    }
+    if (input.imageAssetIds.length > this.config.receipt.maxImages) throw this.imageLimit();
+    const byId = await this.loadValidAssets(ownerId, input.imageAssetIds);
+    // The same photo uploaded twice is stored as two assets; analyse its content only once.
+    const assetIds = uniqueAssetIdsByContent(input.imageAssetIds, byId);
     const requestHash = sha256({ imageAssetIds: input.imageAssetIds });
     const result = await this.repository.createJob({
       ownerId,
-      assetIds: input.imageAssetIds,
+      assetIds,
       provider: this.provider.name,
       modelId: this.provider.model,
       templateVersion: this.provider.templateVersion,
@@ -116,6 +100,33 @@ export class ReceiptService {
     }
     if (result.created) this.schedule(ownerId, result.job.id);
     return this.serializeJob(result.job);
+  }
+
+  /**
+   * Adds more photos to a reviewable job. Lines read from them are merged into the existing
+   * candidates (repeated lines collapse, nothing already read or edited is lost).
+   */
+  async addImages(ownerId: string, id: string, input: AddReceiptImagesInput) {
+    this.ensureEnabled();
+    const job = await this.repository.findOwnedJob(ownerId, id);
+    if (!job) throw this.notFound();
+    const byId = await this.loadValidAssets(ownerId, input.imageAssetIds);
+    const attached = new Set(job.inputs.map((item) => item.assetId));
+    const assetIds = uniqueAssetIdsByContent(
+      input.imageAssetIds.filter((assetId) => !attached.has(assetId)),
+      byId,
+      job.inputs.map((item) => item.asset.providerEtag),
+    );
+    if (job.inputs.length + assetIds.length > this.config.receipt.maxImages)
+      throw this.imageLimit();
+    try {
+      const result = await this.repository.appendInputs(ownerId, id, assetIds);
+      if (!result) throw this.notFound();
+      if (result.queued) this.schedule(ownerId, id);
+      return this.serializeJob(result.job);
+    } catch (error) {
+      throw this.mapConflict(error);
+    }
   }
 
   async get(ownerId: string, id: string) {
@@ -206,6 +217,16 @@ export class ReceiptService {
     const selected = new Map(input.candidates.map((candidate) => [candidate.id, candidate]));
     const candidates = [];
     for (const candidate of job.candidates.filter((item) => selected.has(item.id))) {
+      if (
+        candidate.status === ReceiptCandidateStatus.REJECTED &&
+        candidate.aiClassification === 'NON_FOOD'
+      ) {
+        throw new AppError({
+          statusCode: 409,
+          code: 'RECEIPT_CANDIDATE_EXCLUDED',
+          message: 'Mặt hàng này đã được loại vì không phải thực phẩm. Hãy khôi phục trước khi xác nhận.',
+        });
+      }
       if (candidate.quantity === null || !candidate.unit) {
         throw new AppError({
           statusCode: 422,
@@ -223,7 +244,11 @@ export class ReceiptService {
         ),
       });
     }
-    const requestHash = sha256({ jobId, candidates: input.candidates });
+    const requestHash = sha256({
+      jobId,
+      candidates: input.candidates,
+      receiptReviewDecision: input.receiptReviewDecision ?? null,
+    });
     try {
       const result = await this.repository.confirm({
         ownerId,
@@ -231,12 +256,14 @@ export class ReceiptService {
         candidates,
         idempotencyKey: input.idempotencyKey,
         requestHash,
+        receiptReviewDecision: input.receiptReviewDecision ?? null,
       });
       const pantryByCandidate = new Map(
         result.job.candidates.map((candidate) => [candidate.id, candidate.pantryItem]),
       );
       return {
         job: this.serializeJob(result.job),
+        duplicateCandidates: result.duplicates,
         pantryChanges: result.changes.map((change) => {
           const item = pantryByCandidate.get(change.candidateId);
           if (!item) throw new Error('Confirmed receipt candidate is missing its pantry item');
@@ -300,16 +327,18 @@ export class ReceiptService {
       job.modelId !== this.provider.model ||
       job.templateVersion !== this.provider.templateVersion
     ) {
-      await this.repository.markFailed(job.id);
+      await this.repository.markFailed(job.id, job.attemptCount);
       return;
     }
     try {
       const results = await this.provider.extract(
-        job.inputs.map((input) => ({
-          id: input.id,
-          position: input.position,
-          url: input.asset.secureUrl,
-        })),
+        job.inputs
+          .filter((input) => input.status === 'PENDING')
+          .map((input) => ({
+            id: input.id,
+            position: input.position,
+            url: input.asset.secureUrl,
+          })),
       );
       const successful = results.filter((result) => !result.error);
       const bestMetadata = successful
@@ -318,7 +347,16 @@ export class ReceiptService {
       const candidates = await this.mapProviderLines(results);
       await this.repository.saveResults({
         jobId: job.id,
-        inputs: results.map((result) => ({ inputId: result.inputId, error: result.error })),
+        expectedAttempt: job.attemptCount,
+        inputs: results.map((result) => ({
+          inputId: result.inputId,
+          error: result.error,
+          receiptNumber: result.receiptNumber,
+          merchantName: result.merchantName,
+          purchasedAt: result.purchasedAt ? new Date(`${result.purchasedAt}T00:00:00.000Z`) : null,
+          currency: result.currency,
+          totalAmount: result.totalAmount,
+        })),
         candidates,
         metadata: {
           merchantName: bestMetadata?.merchantName ?? null,
@@ -331,7 +369,7 @@ export class ReceiptService {
         },
       });
     } catch {
-      await this.repository.markFailed(job.id);
+      await this.repository.markFailed(job.id, job.attemptCount);
     }
   }
 
@@ -506,7 +544,19 @@ export class ReceiptService {
       for (const line of result.lines) {
         const normalizedName = normalizeVietnameseText(line.name);
         if (!normalizedName) continue;
-        const ingredient = await this.repository.resolveIngredient(normalizedName);
+        const excluded = line.classification === 'NON_FOOD';
+        const ingredient = excluded
+          ? null
+          : await this.repository.resolveIngredient(normalizedName);
+        const uncertaintyNote =
+          line.classification === 'UNCERTAIN'
+            ? [
+                line.uncertaintyNote,
+                'Chưa chắc mặt hàng này là thực phẩm; vui lòng kiểm tra trước khi xác nhận.',
+              ]
+                .filter(Boolean)
+                .join(' ')
+            : line.uncertaintyNote;
         candidates.push({
           inputId: result.inputId,
           ingredientId: ingredient?.id ?? null,
@@ -522,7 +572,13 @@ export class ReceiptService {
           currency: line.currency,
           confidence: line.confidence,
           matchConfidence: ingredient ? 0.9 : null,
-          uncertaintyNote: line.uncertaintyNote,
+          uncertaintyNote,
+          aiClassification: line.classification,
+          classificationConfidence: line.classificationConfidence,
+          classificationReason: excluded
+            ? line.classificationReason ?? 'Mặt hàng này không phải thực phẩm.'
+            : line.classificationReason,
+          status: excluded ? ReceiptCandidateStatus.REJECTED : ReceiptCandidateStatus.PROPOSED,
         });
       }
     }
@@ -579,6 +635,11 @@ export class ReceiptService {
   }
 
   private serializeJob(job: ReceiptJobRecord) {
+    const excluded = job.candidates.filter(
+      (candidate) =>
+        candidate.status === ReceiptCandidateStatus.REJECTED &&
+        candidate.aiClassification === 'NON_FOOD',
+    );
     return {
       id: job.id,
       status: job.status,
@@ -593,14 +654,40 @@ export class ReceiptService {
         totalAmount: number(job.totalAmount),
         confidence: number(job.metadataConfidence),
       },
+      reviewRequired: job.reviewRequired,
+      identityDecisionRequired: job.identityDecisionRequired,
+      receiptReviewDecision: job.receiptReviewDecision,
+      notices: excluded.length
+        ? [{
+            code: 'RECEIPT_NON_FOOD_ITEMS_EXCLUDED' as const,
+            message: `Đã loại ${excluded.length} mặt hàng không phải thực phẩm. Bạn có thể xem và khôi phục nếu cần.`,
+            count: excluded.length,
+          }]
+        : [],
+      excludedItems: excluded.map((candidate) => ({
+        id: candidate.id,
+        imageId: candidate.input.id,
+        lineText: candidate.lineText,
+        name: candidate.detectedName,
+        reason: candidate.classificationReason ?? 'Mặt hàng không phải thực phẩm.',
+        confidence: number(candidate.classificationConfidence) ?? 0,
+        version: candidate.version,
+      })),
       images: job.inputs.map((input) => ({
         id: input.id,
         position: input.position,
         url: input.asset.secureUrl,
         status: input.status,
+        receiptNumber: input.receiptNumber,
+        merchantName: input.merchantName,
+        purchasedAt: input.purchasedAt?.toISOString().slice(0, 10) ?? null,
+        currency: input.currency,
+        totalAmount: number(input.totalAmount),
         issue: input.errorMessage ?? null,
       })),
-      candidates: job.candidates.map((candidate) => ({
+      candidates: job.candidates
+        .filter((candidate) => !excluded.some((item) => item.id === candidate.id))
+        .map((candidate) => ({
         id: candidate.id,
         imageId: candidate.input.id,
         lineText: candidate.lineText,
@@ -620,9 +707,13 @@ export class ReceiptService {
         },
         confidence: number(candidate.confidence) ?? 0,
         uncertaintyNote: candidate.uncertaintyNote ?? null,
+        aiClassification: candidate.aiClassification,
+        classificationReason: candidate.classificationReason,
+        classificationConfidence: number(candidate.classificationConfidence),
         status: candidate.status,
+        duplicateOfJobId: candidate.duplicateOfJobId,
         version: candidate.version,
-      })),
+        })),
       attempt: job.attemptCount,
       issue: job.errorCode
         ? { code: job.errorCode, message: job.errorMessage ?? 'Không thể hoàn tất đọc hóa đơn.' }
@@ -646,6 +737,33 @@ export class ReceiptService {
         message: 'Receipt extraction is currently disabled.',
       });
     }
+  }
+
+  private async loadValidAssets(ownerId: string, assetIds: string[]) {
+    const assets = await this.repository.findOwnedAssets(ownerId, assetIds);
+    const byId = new Map(assets.map((asset) => [asset.id, asset]));
+    if (assets.length !== assetIds.length) throw this.invalidImage();
+    const allowedTypes =
+      this.config.receipt.provider === 'openai' ? OPENAI_IMAGE_MIME_TYPES : IMAGE_MIME_TYPES;
+    for (const id of assetIds) {
+      const asset = byId.get(id);
+      if (
+        !asset?.mimeType ||
+        !allowedTypes.has(asset.mimeType) ||
+        asset.bytes > BigInt(this.config.receipt.maxImageBytes)
+      ) {
+        throw this.invalidImage();
+      }
+    }
+    return byId;
+  }
+
+  private imageLimit(): AppError {
+    return new AppError({
+      statusCode: 422,
+      code: 'RECEIPT_IMAGE_LIMIT_EXCEEDED',
+      message: `A receipt job accepts at most ${String(this.config.receipt.maxImages)} images.`,
+    });
   }
 
   private invalidImage(): AppError {

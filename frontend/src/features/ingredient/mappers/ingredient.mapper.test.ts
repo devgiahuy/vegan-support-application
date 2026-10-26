@@ -17,6 +17,12 @@ const ITEM = {
 };
 
 describe('IngredientMapper.toModel', () => {
+  it('distinguishes canonical identity from reviewed composition', () => {
+    expect(ingredientMapper.toModel(ITEM).compositionStatus).toBe('UNKNOWN');
+    expect(
+      ingredientMapper.toModel({ ...ITEM, compositionStatus: 'PARTIAL' }).compositionStatusLabel
+    ).toBe('Cấu tạo mới có một phần');
+  });
   it('map đủ field, alias shape hỗn hợp, lọc rỗng', () => {
     const m = ingredientMapper.toModel({ ...ITEM });
 

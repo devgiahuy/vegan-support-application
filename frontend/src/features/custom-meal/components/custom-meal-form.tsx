@@ -151,13 +151,13 @@ export const CustomMealForm: React.FC<CustomMealFormProps> = ({
     if (userCalories && !isNaN(parseInt(userCalories, 10)) && parseInt(userCalories, 10) >= 0) {
       payload.userCalories = parseInt(userCalories, 10);
     }
-    if (userProtein && !isNaN(parseFloat(userProtein)) && parseFloat(userProtein) > 0) {
+    if (userProtein && !isNaN(parseFloat(userProtein)) && parseFloat(userProtein) >= 0) {
       payload.userProteinGrams = parseFloat(userProtein);
     }
-    if (userCarbs && !isNaN(parseFloat(userCarbs)) && parseFloat(userCarbs) > 0) {
+    if (userCarbs && !isNaN(parseFloat(userCarbs)) && parseFloat(userCarbs) >= 0) {
       payload.userCarbsGrams = parseFloat(userCarbs);
     }
-    if (userFat && !isNaN(parseFloat(userFat)) && parseFloat(userFat) > 0) {
+    if (userFat && !isNaN(parseFloat(userFat)) && parseFloat(userFat) >= 0) {
       payload.userFatGrams = parseFloat(userFat);
     }
 
@@ -178,7 +178,7 @@ export const CustomMealForm: React.FC<CustomMealFormProps> = ({
       : 1;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-4xl mx-auto">
+    <form onSubmit={handleSubmit} className="space-y-6 w-full">
       {/* Header nút quay lại và hành động */}
       <div className="flex items-center justify-between">
         <Button
@@ -326,10 +326,16 @@ export const CustomMealForm: React.FC<CustomMealFormProps> = ({
           {/* Bảng Dinh dưỡng */}
           <CustomMealNutritionBar
             coverageRatio={coverageRatio}
-            calculatedCalories={initialData?.calculatedCalories || null}
-            calculatedProtein={initialData?.calculatedProtein || null}
-            calculatedCarbs={initialData?.calculatedCarbs || null}
-            calculatedFat={initialData?.calculatedFat || null}
+            calculatedCalories={initialData?.calculatedCalories ?? null}
+            calculatedProtein={
+              userProtein !== '' ? Number(userProtein) : (initialData?.calculatedProtein ?? null)
+            }
+            calculatedCarbs={
+              userCarbs !== '' ? Number(userCarbs) : (initialData?.calculatedCarbs ?? null)
+            }
+            calculatedFat={userFat !== '' ? Number(userFat) : (initialData?.calculatedFat ?? null)}
+            isFullyCovered={initialData?.isFullyCovered ?? false}
+            nutritionNotes={initialData?.nutritionNotes}
             userCalories={userCalories ? parseFloat(userCalories) : null}
             unmatchedCount={unmatchedCount}
             totalIngredientCount={validIngredients.length}

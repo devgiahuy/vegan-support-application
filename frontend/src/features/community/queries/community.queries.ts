@@ -28,13 +28,13 @@ export function useCommentThreadQuery(postId: string, params?: CommunityQueryPar
   });
 }
 
-/** Tóm tắt aggregate + viewer (fixture). */
-export function useCommunitySummaryQuery(postId: string) {
+/** Tóm tắt aggregate + trạng thái viewer; có thể tắt request khi caller đã có bookmark state. */
+export function useCommunitySummaryQuery(postId: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: COMMUNITY_KEYS.summary(postId),
     queryFn: () => communityApi.getSummary(postId),
     staleTime: 30 * 1000,
-    enabled: postId.length > 0,
+    enabled: postId.length > 0 && (options?.enabled ?? true),
   });
 }
 

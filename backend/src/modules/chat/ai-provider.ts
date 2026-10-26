@@ -76,9 +76,7 @@ export interface CustomMealNutritionFallbackInput {
     amount: number;
     unit: string;
   }>;
-  missingMetrics: Array<
-    'calories' | 'proteinGrams' | 'carbsGrams' | 'fatGrams' | 'fiberGrams'
-  >;
+  missingMetrics: Array<'calories' | 'proteinGrams' | 'carbsGrams' | 'fatGrams' | 'fiberGrams'>;
   signal: AbortSignal;
 }
 
@@ -238,6 +236,8 @@ export class OpenAiProvider implements AiProvider {
         'Return only compact JSON estimating total nutrition for the entire custom meal.',
         'Use this exact shape: {"calories":null,"proteinGrams":null,"carbsGrams":null,"fatGrams":null,"fiberGrams":null,"confidence":0,"uncertaintyNote":""}.',
         'Estimate only metrics listed in missingMetrics; leave all other metrics null.',
+        'Each requested metric is the TOTAL for the entire meal, including all listed ingredients, never only the unknown ingredients. Do not multiply listed ingredient amounts by servings.',
+        'When only a recognizable meal name is supplied, you may estimate a common preparation for the given servings. State the assumed portion size and preparation in uncertaintyNote and use low confidence. Return null for vague names or insufficient information.',
         'Never present estimates as measured or canonical values. Use null when the ingredients or amounts are insufficient.',
         'Write uncertaintyNote in Vietnamese. All non-null nutrition values must be finite and non-negative; confidence must be from 0 to 1.',
       ].join('\n'),

@@ -83,7 +83,9 @@ const discovery = z.object({
       ),
     externalResultsSuppressed: z
       .boolean()
-      .describe('Unreviewed external places omitted because hard dietary constraints apply'),
+      .describe(
+        'Unreviewed external places omitted only when the request explicitly includes dietPattern; personal dietary profiles are not applied',
+      ),
     provider: z.string(),
     providerResultLimit: z.number(),
     locationStored: z.literal(false),
@@ -138,9 +140,9 @@ export function registerRestaurantOpenApi(registry: OpenAPIRegistry, error: z.Zo
     path: '/api/v1/restaurants/nearby',
     tags: ['Restaurants'],
     summary:
-      'Nearby approved internal and live provider places; hard diet filtering precedes ranking',
+      'Nearby approved internal and live provider places; explicit search filters only',
     description:
-      'Coordinates are explicit. DEVICE requires locationConsent=true. Provider results are dietary-unverified and excluded when hard constraints apply. Live provider content must be attributed in the UI. Nearby keyword queries run concurrently; SerpApi shares MAPS_TIMEOUT_MS across all pages/zooms per query and retains successful pages after a later failure. Results are deduplicated, radius-filtered and paginated (limit <= 20).',
+      'Coordinates are explicit. DEVICE requires locationConsent=true. Personal diet preferences, allergies, ingredient exclusions and tradition rules are not read or applied to restaurant discovery. An explicitly supplied dietPattern filters reviewed internal places and suppresses unreviewed provider results. Without that filter, guests and signed-in users search the same public place sources. Live provider content must be attributed in the UI and is not evidence of dietary or allergy compatibility. Nearby keyword queries run concurrently; SerpApi shares MAPS_TIMEOUT_MS across all pages/zooms per query and retains successful pages after a later failure. Results are deduplicated, radius-filtered and paginated (limit <= 20).',
     operationId: 'nearbyRestaurants',
     request: { query: nearbyQuerySchema },
     responses: {
@@ -157,7 +159,7 @@ export function registerRestaurantOpenApi(registry: OpenAPIRegistry, error: z.Zo
     tags: ['Restaurants'],
     summary: 'Search nearby restaurants and shops',
     description:
-      'Hard dietary constraints exclude all unreviewed external data. Provider price/rating/open filters are forwarded to SerpApi; internal records without those assertions are excluded when such filters are requested. Pagination and partial provider failure metadata match nearby discovery.',
+      'Only explicit query filters are applied; the caller dietary profile is ignored. An explicitly supplied dietPattern filters reviewed internal places and excludes unreviewed provider data. Provider price/rating/open filters are forwarded to SerpApi; internal records without those assertions are excluded when such filters are requested. Pagination and partial provider failure metadata match nearby discovery.',
     operationId: 'searchRestaurants',
     request: { query: searchQuerySchema },
     responses: {
@@ -185,6 +187,8 @@ export function registerRestaurantOpenApi(registry: OpenAPIRegistry, error: z.Zo
     path: '/api/v1/restaurants/{id}',
     tags: ['Restaurants'],
     summary: 'Get approved internal or live external place',
+    description:
+      'Public place details do not apply the caller dietary profile. Internal records must be APPROVED. External places resolve through the configured provider and remain dietary-unverified.',
     operationId: 'getRestaurant',
     request: { params: restaurantIdParamsSchema },
     responses: {

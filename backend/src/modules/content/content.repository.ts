@@ -27,10 +27,14 @@ import type { SubmissionDecision } from './content-publication.policy.js';
 import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 import { MODERATION_RULE_VERSION } from '../moderation/rule-moderation.service.js';
 import { aiCorrelationId } from '../ai-governance/ai-governance.context.js';
+import { loadIngredientSafetyCatalog } from '../catalog/ingredient-safety.js';
 
 const revisionInclude = {
   recipeDetail: true,
-  ingredients: { include: { ingredient: true }, orderBy: { position: 'asc' } },
+  ingredients: {
+    include: { ingredient: { include: { allergens: true } } },
+    orderBy: { position: 'asc' },
+  },
   recipeSteps: { include: { cookingMethod: true }, orderBy: { position: 'asc' } },
   dietCompatibility: { orderBy: { dietPattern: 'asc' } },
   categories: { include: { category: true }, orderBy: { category: { name: 'asc' } } },
@@ -43,6 +47,11 @@ const revisionInclude = {
 const postIdentityInclude = {
   author: true,
   publishedRevision: { select: { version: true } },
+} satisfies Prisma.PostInclude;
+const ownedPostInclude = {
+  author: true,
+  publishedRevision: { select: { version: true } },
+  revisions: { take: 1, orderBy: { version: 'desc' }, include: revisionInclude },
 } satisfies Prisma.PostInclude;
 const publishedPostInclude = {
   author: true,
@@ -67,6 +76,7 @@ const searchProfileSelect = {
     where: { active: true },
     select: { allergenCode: true },
   },
+  ingredientAllergies: { where: { active: true }, select: { ingredientId: true } },
   ingredientExclusions: {
     where: { active: true },
     select: { ingredientId: true, normalizedName: true },
@@ -82,6 +92,7 @@ const ingredientMetadataInclude = {
 
 export type RevisionRecord = Prisma.PostRevisionGetPayload<{ include: typeof revisionInclude }>;
 export type PostIdentityRecord = Prisma.PostGetPayload<{ include: typeof postIdentityInclude }>;
+export type OwnedPostRecord = Prisma.PostGetPayload<{ include: typeof ownedPostInclude }>;
 export type PublishedPostRecord = Prisma.PostGetPayload<{ include: typeof publishedPostInclude }>;
 export type SearchProfileRecord = Prisma.UserGetPayload<{ select: typeof searchProfileSelect }>;
 export type IngredientMetadataRecord = Prisma.IngredientGetPayload<{
@@ -144,6 +155,7 @@ export interface ContentSearchCriteria extends Omit<PostListQuery, 'q'> {
 export interface SearchConstraints {
   dietPattern?: DietPattern;
   allergenCodes: string[];
+  allergicIngredientIds?: string[];
   excludedIngredientIds: string[];
   excludedNormalizedNames: string[];
   traditions: Tradition[];
@@ -167,6 +179,82 @@ export class ContentActorInactiveError extends Error {
 export class ContentRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  async recipeUsageUserCount(postId: string): Promise<number> {
+    const result: unknown = await this.prisma.mealPlanItem.aggregateRaw({
+      pipeline: [
+        { $match: { recipe_id: postId, source_type: 'RECIPE', status: 'FILLED' } },
+        {
+          $lookup: {
+            from: 'meal_plans',
+            localField: 'meal_plan_id',
+            foreignField: '_id',
+            as: 'meal_plan',
+          },
+        },
+        { $unwind: '$meal_plan' },
+        { $match: { 'meal_plan.deleted_at': null } },
+        { $group: { _id: '$meal_plan.user_id' } },
+        { $count: 'count' },
+      ],
+    });
+    if (!Array.isArray(result) || result.length === 0) return 0;
+    const first: unknown = result[0];
+    if (!first || typeof first !== 'object' || Array.isArray(first)) return 0;
+    const count: unknown = 'count' in first ? first.count : undefined;
+    return typeof count === 'number' ? count : 0;
+  }
+
+  async recipeUsageUserCounts(postIds: string[]): Promise<Map<string, number>> {
+    const counts = new Map<string, number>();
+    if (!postIds.length) return counts;
+
+    const result: unknown = await this.prisma.mealPlanItem.aggregateRaw({
+      pipeline: [
+        {
+          $match: {
+            recipe_id: { $in: postIds },
+            source_type: 'RECIPE',
+            status: 'FILLED',
+          },
+        },
+        {
+          $lookup: {
+            from: 'meal_plans',
+            localField: 'meal_plan_id',
+            foreignField: '_id',
+            as: 'meal_plan',
+          },
+        },
+        { $unwind: '$meal_plan' },
+        { $match: { 'meal_plan.deleted_at': null } },
+        {
+          $group: {
+            _id: { recipeId: '$recipe_id', userId: '$meal_plan.user_id' },
+          },
+        },
+        {
+          $group: {
+            _id: '$_id.recipeId',
+            count: { $sum: 1 },
+          },
+        },
+      ],
+    });
+
+    if (!Array.isArray(result)) return counts;
+    const rows: unknown[] = result;
+    for (const item of rows) {
+      if (!item || typeof item !== 'object' || Array.isArray(item)) continue;
+      const row = item as Record<string, unknown>;
+      const recipeId = row['_id'];
+      const count = row['count'];
+      if (typeof recipeId === 'string' && typeof count === 'number') {
+        counts.set(recipeId, count);
+      }
+    }
+    return counts;
+  }
+
   async searchPublished(
     criteria: ContentSearchCriteria,
     constraints: SearchConstraints,
@@ -179,8 +267,31 @@ export class ContentRepository {
     return { records: await this.hydratePublished(result.ids), total: result.total };
   }
 
+  async findOwnedPosts(
+    authorId: string,
+    page: number,
+    limit: number,
+  ): Promise<{ records: OwnedPostRecord[]; total: number }> {
+    const where: Prisma.PostWhereInput = { authorId, deletedAt: null };
+    const [records, total] = await Promise.all([
+      this.prisma.post.findMany({
+        where,
+        include: ownedPostInclude,
+        orderBy: [{ updatedAt: 'desc' }, { id: 'asc' }],
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.post.count({ where }),
+    ]);
+    return { records, total };
+  }
+
   findSearchProfile(userId: string): Promise<SearchProfileRecord | null> {
     return this.prisma.user.findUnique({ where: { id: userId }, select: searchProfileSelect });
+  }
+
+  safetyCatalog() {
+    return loadIngredientSafetyCatalog(this.prisma);
   }
 
   findPublishedPost(id: string): Promise<PublishedPostRecord | null> {
@@ -408,6 +519,10 @@ export class ContentRepository {
       const post = byId.get(id);
       return post ? [post] : [];
     });
+  }
+
+  async slugExists(slug: string): Promise<boolean> {
+    return (await this.prisma.post.count({ where: { slug } })) > 0;
   }
 
   async createPost(

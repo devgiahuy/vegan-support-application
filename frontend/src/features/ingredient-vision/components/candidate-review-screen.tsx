@@ -34,8 +34,7 @@ import type {
   RecognitionCandidate,
   RecognitionConfirmationDiff,
 } from '../types/ingredient-recognition.model';
-import { AiArtifactType } from '@/common/enums';
-import { SaveArtifactButton } from '@/features/ai-artifacts';
+import { FridgeAddPhotosButton } from './fridge-add-photos-button';
 
 interface CandidateReviewScreenProps {
   job: RecognitionJob;
@@ -59,6 +58,7 @@ interface EditableCandidateItem {
   confidencePercent: number;
   confidenceTier: 'high' | 'medium' | 'low';
   freshnessObservation: string | null;
+  uncertaintyNote: string | null;
   evidence: Array<{ imageId: string; imagePosition: number; confidencePercent: number }>;
   initialName: string;
   initialQuantity: string;
@@ -119,6 +119,7 @@ export function CandidateReviewScreen({
         confidencePercent: c.confidencePercent,
         confidenceTier: c.confidenceTier,
         freshnessObservation: c.freshnessObservation,
+        uncertaintyNote: c.uncertaintyNote,
         evidence: c.evidence,
         initialName: c.name,
         initialQuantity: qVal,
@@ -128,15 +129,40 @@ export function CandidateReviewScreen({
     })
   );
 
-  // Sync state if job ID changes
+  // Đồng bộ lại khi job thay đổi, bảo toàn các chỉnh sửa thủ công của người dùng
   useEffect(() => {
-    setItems(
-      job.candidates.map((c) => {
+    setItems((prevItems) => {
+      const prevMap = new Map(prevItems.map((it) => [it.id, it]));
+      return job.candidates.map((c) => {
+        const existing = prevMap.get(c.id);
         const qVal =
           c.quantity.value !== null && c.quantity.value !== undefined
             ? String(c.quantity.value)
             : '';
         const qUnit = c.quantity.unit || '';
+
+        if (existing) {
+          const isUserEdited =
+            existing.name !== existing.initialName ||
+            existing.quantity !== existing.initialQuantity ||
+            existing.unit !== existing.initialUnit ||
+            existing.isRejected !== existing.initialIsRejected;
+
+          return {
+            ...existing,
+            version: c.version,
+            confidencePercent: c.confidencePercent,
+            confidenceTier: c.confidenceTier,
+            freshnessObservation: c.freshnessObservation,
+            uncertaintyNote: c.uncertaintyNote,
+            evidence: c.evidence,
+            name: isUserEdited ? existing.name : c.name,
+            quantity: isUserEdited ? existing.quantity : qVal,
+            unit: isUserEdited ? existing.unit : qUnit,
+            isRejected: isUserEdited ? existing.isRejected : c.isRejected,
+          };
+        }
+
         return {
           id: c.id,
           name: c.name,
@@ -149,15 +175,16 @@ export function CandidateReviewScreen({
           confidencePercent: c.confidencePercent,
           confidenceTier: c.confidenceTier,
           freshnessObservation: c.freshnessObservation,
+          uncertaintyNote: c.uncertaintyNote,
           evidence: c.evidence,
           initialName: c.name,
           initialQuantity: qVal,
           initialUnit: qUnit,
           initialIsRejected: c.isRejected,
         };
-      })
-    );
-  }, [job.id]);
+      });
+    });
+  }, [job.id, job.candidates]);
 
   const updateItem = (id: string, updates: Partial<EditableCandidateItem>) => {
     setItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...updates } : item)));
@@ -301,15 +328,7 @@ export function CandidateReviewScreen({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <SaveArtifactButton
-            type={AiArtifactType.FRIDGE_RECOGNITION}
-            sourceId={job.id}
-            defaultTitle="Nhận diện nguyên liệu từ ảnh tủ lạnh"
-            defaultSummary={`Kết quả AI nhận diện được ${job.candidates.length} nguyên liệu thực phẩm từ ảnh chụp tủ lạnh.`}
-            variant="outline"
-            size="sm"
-            className="text-xs"
-          />
+          <FridgeAddPhotosButton job={job} disabled={isSaving} size="sm" className="text-xs" />
 
           <Button
             type="button"
@@ -341,8 +360,8 @@ export function CandidateReviewScreen({
       {/* CHIA LÀM 2 PHẦN TRÊN TRANG */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
         {/* PHẦN BÊN TRÁI (5 CỘT TRÊN DESKTOP): HIỂN THỊ ẢNH TỦ LẠNH */}
-        <div className="lg:col-span-5 space-y-4">
-          <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-card p-4 sm:p-5 shadow-xs space-y-3 lg:sticky lg:top-24">
+        <div className="lg:col-span-5 space-y-4 lg:sticky lg:top-20">
+          <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-card p-4 sm:p-5 shadow-xs space-y-3">
             <div className="flex items-center justify-between gap-2 pb-2 border-b border-border/60">
               <div className="flex items-center gap-2">
                 <Camera className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
@@ -543,6 +562,12 @@ export function CandidateReviewScreen({
                           {item.freshnessObservation && (
                             <span className="text-[11px] text-amber-600 dark:text-amber-400">
                               · {item.freshnessObservation}
+                            </span>
+                          )}
+
+                          {item.uncertaintyNote && (
+                            <span className="text-[11px] text-amber-600 dark:text-amber-400">
+                              · {item.uncertaintyNote}
                             </span>
                           )}
                         </div>

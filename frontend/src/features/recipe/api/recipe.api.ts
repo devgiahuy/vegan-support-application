@@ -1,18 +1,20 @@
 import api from '@/lib/axios';
 import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
 import { PostType } from '@/common/enums';
-import { PaginationResult } from '@/types/api';
 import { recipeMapper } from '../mappers/recipe.mapper';
 import { shouldFallbackToFixtures, createNotFoundError } from '@/features/post/utils/api-fallback';
 import { MOCK_RECIPE_DTOS } from '../__fixtures__/recipe-fixtures';
 import type {
-  RecipeDetailDto,
   RecipeListResponseDto,
   RecipeDetailResponseDto,
   CreateRecipeRequestDto,
   UpdateRecipeRequestDto,
 } from '../types/recipe.dto';
-import type { Recipe, RecipePaginationResult } from '../types/recipe.model';
+import type {
+  Recipe,
+  RecipeEligibilityFilter,
+  RecipePaginationResult,
+} from '../types/recipe.model';
 
 export interface RecipeQueryParams {
   page?: number;
@@ -21,19 +23,8 @@ export interface RecipeQueryParams {
   category?: string;
   difficulty?: string;
   q?: string;
-}
-
-function matchesCategory(dto: RecipeDetailDto, category?: string): boolean {
-  if (!category) return true;
-  return (dto.categories || []).some((c) => c.id === category || c.slug === category);
-}
-
-function matchesQuery(dto: RecipeDetailDto, q?: string): boolean {
-  if (!q) return true;
-  const query = q.toLowerCase();
-  const title = dto.revision?.title?.toLowerCase() || '';
-  const slug = dto.slug?.toLowerCase() || '';
-  return title.includes(query) || slug.includes(query);
+  /** `INELIGIBLE` trả các món bị hồ sơ loại kèm lý do; mặc định backend là `ELIGIBLE`. */
+  eligibility?: RecipeEligibilityFilter;
 }
 
 export const recipeApi = {
@@ -41,39 +32,18 @@ export const recipeApi = {
    * Lấy danh sách công thức nấu ăn (hỗ trợ phân trang, lọc danh mục, độ khó, từ khóa)
    */
   getRecipes: async (params?: RecipeQueryParams): Promise<RecipePaginationResult> => {
-    try {
-      const res = await api.get<RecipeListResponseDto>(API_ENDPOINTS.POSTS.LIST, {
-        params: {
-          ...params,
-          type: PostType.RECIPE,
-        },
-        silent: true,
-      });
-
-      if (res.data?.success && Array.isArray(res.data.data)) {
-        return recipeMapper.toPaginationFromEnvelope(res.data.data, res.data.meta);
-      }
-      throw new Error('Phản hồi danh sách công thức không đúng định dạng.');
-    } catch (err) {
-      // Endpoint còn PLANNED (lỗi mạng / route 404 / 5xx) → fixture demo.
-      // Lỗi nghiệp vụ 4xx → ném tiếp cho UI xử lý.
-      if (!shouldFallbackToFixtures(err, 'list')) throw err;
-    }
-
-    // Dữ liệu mẫu cục bộ đạt chuẩn
-    let filtered = MOCK_RECIPE_DTOS.filter(
-      (r) => matchesCategory(r, params?.category) && matchesQuery(r, params?.q)
-    );
-    if (params?.difficulty) {
-      filtered = filtered.filter((r) => r.recipe?.difficulty === params.difficulty);
-    }
-
-    return recipeMapper.toPaginationFromEnvelope(filtered, {
-      page: params?.page || 1,
-      limit: params?.limit || 20,
-      total: filtered.length,
-      totalPages: 1,
+    const res = await api.get<RecipeListResponseDto>(API_ENDPOINTS.POSTS.LIST, {
+      params: {
+        ...params,
+        type: PostType.RECIPE,
+      },
+      silent: true,
     });
+
+    if (res.data?.success && Array.isArray(res.data.data)) {
+      return recipeMapper.toPaginationFromEnvelope(res.data.data, res.data.meta);
+    }
+    throw new Error('Phản hồi danh sách công thức không đúng định dạng.');
   },
 
   /**

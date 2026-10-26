@@ -3,15 +3,33 @@ import { toast } from 'sonner';
 import { toastApiError } from '@/lib/api-error';
 import { postApi, ArticleQueryParams } from '../api/post.api';
 import type { Article, RelatedGroup } from '../types/post.model';
+import { useAuthStore } from '@/store/useAuthStore';
 
 export const POST_QUERY_KEYS = {
   all: ['posts'] as const,
+  mineRoot: () => [...POST_QUERY_KEYS.all, 'mine'] as const,
+  mine: (userId: string | undefined, params?: { page?: number; limit?: number }) =>
+    [...POST_QUERY_KEYS.mineRoot(), userId, params] as const,
   articlesList: () => [...POST_QUERY_KEYS.all, 'articles'] as const,
   articles: (params?: ArticleQueryParams) => [...POST_QUERY_KEYS.articlesList(), params] as const,
   articleDetail: (idOrSlug: string) =>
     [...POST_QUERY_KEYS.all, 'articles', 'detail', idOrSlug] as const,
-  related: (id: string) => [...POST_QUERY_KEYS.all, 'related', id] as const,
+  related: (id: string, userId?: string) =>
+    [...POST_QUERY_KEYS.all, 'related', id, userId ?? 'guest'] as const,
 };
+
+export function useMyPostsQuery(
+  userId: string | undefined,
+  params?: { page?: number; limit?: number },
+  options?: { enabled?: boolean }
+) {
+  return useQuery({
+    queryKey: POST_QUERY_KEYS.mine(userId, params),
+    queryFn: () => postApi.getMyPosts(params),
+    staleTime: 30 * 1000,
+    enabled: options?.enabled ?? true,
+  });
+}
 
 /**
  * Hook truy vấn danh sách bài viết blog
@@ -42,8 +60,9 @@ export function useArticleDetailQuery(idOrSlug: string) {
  * `{ recipes, blogs, videos }` (đúng contract `GET /posts/:id/related`).
  */
 export function useRelatedPostsQuery(id: string) {
+  const userId = useAuthStore((state) => state.user?.id);
   return useQuery<RelatedGroup>({
-    queryKey: POST_QUERY_KEYS.related(id),
+    queryKey: POST_QUERY_KEYS.related(id, userId),
     queryFn: () => postApi.getRelatedPosts(id),
     enabled: Boolean(id),
     staleTime: 60 * 1000,
@@ -60,6 +79,7 @@ export function useCreateArticleMutation() {
     mutationFn: (article: Partial<Article>) => postApi.createArticle(article),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.articlesList() });
+      queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.mineRoot() });
       toast.success('Đã gửi bài viết thành công!', {
         description:
           data.status === 'PUBLISHED'
@@ -85,6 +105,7 @@ export function useUpdateArticleMutation() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.articleDetail(variables.id) });
       queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.articlesList() });
+      queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.mineRoot() });
       toast.success('Đã lưu bài viết thành công!');
     },
     onError: (err: unknown) => {
@@ -104,6 +125,7 @@ export function useDeleteArticleMutation() {
       postApi.deleteArticle(id, expectedVersion),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.articlesList() });
+      queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.mineRoot() });
       toast.success('Đã xóa bài viết thành công.');
     },
     onError: (err: unknown) => {

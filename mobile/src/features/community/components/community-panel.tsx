@@ -1,12 +1,13 @@
 import * as React from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Bookmark, Check, MessageCircle, Pencil, Star, ThumbsUp, Trash2, X } from 'lucide-react-native';
+import { Bookmark, Check, CornerDownRight, MessageCircle, Pencil, Star, ThumbsUp, Trash2, X } from 'lucide-react-native';
 
+import { LoadMoreButton } from '@/components/shared/load-more-button';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import {
   useBookmarkMutation,
-  useCommentThreadQuery,
+  useInfiniteCommentThreadQuery,
   useCreateCommentMutation,
   useCommunitySummaryQuery,
   useDeleteCommentMutation,
@@ -14,6 +15,7 @@ import {
   useUpdateCommentMutation,
   useVoteMutation,
 } from '../queries/community.queries';
+import { ReportButton } from '@/features/safety/components/report-button';
 import type { CommunityComment } from '../types/community.model';
 import { CommentStatus } from '@/common/enums';
 import { getApiErrorMessage } from '@/lib/api-error';
@@ -73,23 +75,28 @@ export function CommunityPanel({
   const [difficultyDraft, setDifficultyDraft] = React.useState(0);
 
   const { data: summary } = useCommunitySummaryQuery(postId);
-  const { data: commentsPagination, isLoading: isCommentsLoading } = useCommentThreadQuery(postId, {
-    limit: 10,
-    order: 'oldest',
-  });
+  const {
+    data: commentPages,
+    isLoading: isCommentsLoading,
+    hasNextPage: hasMoreComments,
+    fetchNextPage: fetchMoreComments,
+    isFetchingNextPage: isFetchingMoreComments,
+  } = useInfiniteCommentThreadQuery(postId, { limit: 10, order: 'oldest' });
   const voteMutation = useVoteMutation();
   const bookmarkMutation = useBookmarkMutation();
   const trackEvent = useTrackBehaviorEvent();
   const ratingMutation = useRatingMutation();
   const createCommentMutation = useCreateCommentMutation();
-  const comments = commentsPagination?.items ?? [];
+  const comments = commentPages?.pages.flatMap((page) => page.items) ?? [];
+  const viewerRating = summary?.viewerRating;
 
   React.useEffect(() => {
-    if (summary?.viewerRating) {
-      setTasteDraft(summary.viewerRating.taste);
-      setDifficultyDraft(summary.viewerRating.difficulty);
-    }
-  }, [summary?.viewerRating]);
+    if (!viewerRating) return;
+    queueMicrotask(() => {
+      setTasteDraft(viewerRating.taste);
+      setDifficultyDraft(viewerRating.difficulty);
+    });
+  }, [viewerRating]);
 
   const requireLogin = (message: string): boolean => {
     if (isAuthenticated) return true;
@@ -191,13 +198,16 @@ export function CommunityPanel({
           </Text>
 
           <View className="mt-3 gap-3">
-            <View className="gap-1.5">
-              <Text className="text-xs font-semibold text-muted-foreground">Khẩu vị</Text>
-              <StarRow value={tasteDraft} onChange={setTasteDraft} colors={colors} />
-            </View>
-            <View className="gap-1.5">
-              <Text className="text-xs font-semibold text-muted-foreground">Độ khó thực hiện</Text>
-              <StarRow value={difficultyDraft} onChange={setDifficultyDraft} colors={colors} />
+            {/* Hai thang điểm nằm cùng một hàng như web: Vị ngon (trái) · Độ khó (phải). */}
+            <View className="flex-row items-start justify-between gap-3">
+              <View className="gap-1.5">
+                <Text className="text-xs font-semibold text-muted-foreground">Vị ngon</Text>
+                <StarRow value={tasteDraft} onChange={setTasteDraft} colors={colors} />
+              </View>
+              <View className="gap-1.5">
+                <Text className="text-xs font-semibold text-muted-foreground">Độ khó</Text>
+                <StarRow value={difficultyDraft} onChange={setDifficultyDraft} colors={colors} />
+              </View>
             </View>
             <PrimaryButton
               label={ratingMutation.isPending ? 'Đang gửi...' : 'Gửi đánh giá'}
@@ -243,6 +253,11 @@ export function CommunityPanel({
               <CommentItem key={item.id} comment={item} postId={postId} currentUserId={currentUserId} colors={colors} />
             ))
           )}
+          <LoadMoreButton
+            hasNextPage={hasMoreComments}
+            isFetchingNextPage={isFetchingMoreComments}
+            onPress={() => void fetchMoreComments()}
+          />
         </View>
       </View>
     </View>
@@ -266,6 +281,9 @@ function CommentItem({
 }) {
   const [isEditing, setIsEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(comment.content ?? '');
+  const [isReplying, setIsReplying] = React.useState(false);
+  const [replyDraft, setReplyDraft] = React.useState('');
+  const createMutation = useCreateCommentMutation();
   const updateMutation = useUpdateCommentMutation();
   const deleteMutation = useDeleteCommentMutation();
 
@@ -288,6 +306,21 @@ function CommentItem({
       setIsEditing(false);
     } catch (error) {
       Alert.alert('Không lưu được', getApiErrorMessage(error));
+    }
+  };
+
+  const submitReply = async () => {
+    const content = replyDraft.trim();
+    if (content.length < 2) {
+      Alert.alert('Trả lời quá ngắn', 'Vui lòng nhập ít nhất 2 ký tự.');
+      return;
+    }
+    try {
+      await createMutation.mutateAsync({ postId, content, parentId: comment.id });
+      setReplyDraft('');
+      setIsReplying(false);
+    } catch (error) {
+      Alert.alert('Không gửi được trả lời', getApiErrorMessage(error));
     }
   };
 
@@ -367,12 +400,49 @@ function CommentItem({
         </Text>
       )}
 
+      {!!currentUserId && !isDeleted && !isEditing && comment.content !== null ? (
+        <View className="mt-1.5 flex-row items-center gap-4">
+          <Pressable
+            onPress={() => setIsReplying((value) => !value)}
+            hitSlop={6}
+            className="flex-row items-center gap-1 self-start">
+            <CornerDownRight size={12} color={colors.primary} />
+            <Text className="text-xs font-semibold text-primary">{isReplying ? 'Đóng' : 'Trả lời'}</Text>
+          </Pressable>
+          <ReportButton targetType="COMMENT" targetId={comment.id} authorId={comment.author?.id} compact />
+        </View>
+      ) : null}
+
+      {isReplying ? (
+        <View className="mt-2 gap-2">
+          <TextInput
+            value={replyDraft}
+            onChangeText={setReplyDraft}
+            multiline
+            placeholder={`Trả lời ${comment.author?.displayName ?? 'bình luận'}...`}
+            placeholderTextColor={colors.mutedForeground}
+            className="min-h-16 rounded-lg border border-input bg-background px-2.5 py-2 text-sm text-foreground"
+            textAlignVertical="top"
+          />
+          <PrimaryButton
+            label={createMutation.isPending ? 'Đang gửi...' : 'Gửi trả lời'}
+            loading={createMutation.isPending}
+            onPress={() => void submitReply()}
+          />
+        </View>
+      ) : null}
+
       {comment.replies.length > 0 ? (
         <View className="mt-2 gap-2 border-l border-border pl-3">
           {comment.replies.map((reply) => (
-            <Text key={reply.id} className="text-sm text-muted-foreground">
-              {reply.author?.displayName ?? 'Người dùng'}: {reply.content ?? 'Bình luận đã bị ẩn.'}
-            </Text>
+            <View key={reply.id} className="gap-1">
+              <Text className="text-sm text-muted-foreground">
+                {reply.author?.displayName ?? 'Người dùng'}: {reply.content ?? 'Bình luận đã bị ẩn.'}
+              </Text>
+              {reply.content !== null ? (
+                <ReportButton targetType="COMMENT" targetId={reply.id} authorId={reply.author?.id} compact />
+              ) : null}
+            </View>
           ))}
         </View>
       ) : null}

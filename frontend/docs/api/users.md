@@ -67,6 +67,7 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
         "rules",
         "schedule",
         "allergies",
+        "ingredientAllergies",
         "ingredientExclusions",
         "effectiveConstraints"
       ],
@@ -129,6 +130,13 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
           "additionalProperties": false
         },
         "allergies": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "_truncated": true
+          }
+        },
+        "ingredientAllergies": {
           "type": "array",
           "items": {
             "type": "object",
@@ -646,6 +654,26 @@ Thay thế danh sách ngày áp dụng tradition rules cho PERIODIC
             "_truncated": true
           },
           "reason": {
+            "type": "string",
+            "_truncated": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "ingredientAllergies": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "ingredientId"
+        ],
+        "properties": {
+          "ingredientId": {
+            "type": "string",
+            "_truncated": true
+          },
+          "severity": {
             "type": "string",
             "_truncated": true
           }

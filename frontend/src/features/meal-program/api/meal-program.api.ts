@@ -15,8 +15,7 @@ import { mealProgramMapper } from '../mappers/meal-program.mapper';
 export interface MealProgramQueryParams {
   page?: number;
   limit?: number;
-  type?: 'TEMPLATES' | 'MY_PROGRAMS';
-  status?: string;
+  status?: 'GENERATING' | 'DRAFT' | 'PARTIAL' | 'FAILED' | 'CONFIRMED';
 }
 
 function generateIdempotencyKey(prefix = 'mp'): string {
@@ -68,7 +67,8 @@ export const mealProgramApi = {
     };
     const res = await api.post<{ data: MealProgramDto }>(
       API_ENDPOINTS.MEAL_PROGRAMS.CREATE,
-      payload
+      payload,
+      { timeout: 180_000, silent: true }
     );
     return mealProgramMapper.toModel(res.data?.data);
   },
@@ -84,7 +84,8 @@ export const mealProgramApi = {
     };
     const res = await api.patch<{ data: MealProgramDto }>(
       API_ENDPOINTS.MEAL_PROGRAMS.UPDATE(id),
-      payload
+      payload,
+      action.action === 'REGENERATE_WEEK' ? { timeout: 180_000, silent: true } : undefined
     );
     return mealProgramMapper.toModel(res.data?.data);
   },

@@ -114,7 +114,7 @@ export const CustomMealIngredientInput: React.FC<CustomMealIngredientInputProps>
           {ingredients.map((row, index) => (
             <div
               key={index}
-              className="flex items-center gap-2.5 p-2.5 sm:p-3 rounded-xl border bg-background/50 border-input transition-colors"
+              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5 p-3 rounded-xl border bg-background/50 border-input transition-colors shadow-2xs"
             >
               {/* Tên nguyên liệu */}
               <div className="flex-1">
@@ -128,54 +128,57 @@ export const CustomMealIngredientInput: React.FC<CustomMealIngredientInputProps>
                 />
               </div>
 
-              {/* Số lượng */}
-              <div className="w-24 sm:w-28">
-                <Input
-                  type="number"
-                  placeholder="Số lượng"
-                  min="0.1"
-                  step="any"
-                  value={row.quantity || ''}
-                  onChange={(e) =>
-                    handleUpdateRow(index, 'quantity', parseFloat(e.target.value) || 0)
-                  }
-                  disabled={disabled}
-                  className="h-10 text-sm bg-background"
-                />
-              </div>
+              {/* Nhóm Số lượng + Đơn vị + Nút xóa */}
+              <div className="flex items-center gap-2">
+                {/* Số lượng */}
+                <div className="w-28 sm:w-28">
+                  <Input
+                    type="number"
+                    placeholder="Số lượng"
+                    min="0.1"
+                    step="any"
+                    value={row.quantity || ''}
+                    onChange={(e) =>
+                      handleUpdateRow(index, 'quantity', parseFloat(e.target.value) || 0)
+                    }
+                    disabled={disabled}
+                    className="h-10 text-sm bg-background"
+                  />
+                </div>
 
-              {/* Đơn vị */}
-              <div className="w-28 sm:w-32">
-                <Select
-                  value={row.unit}
-                  onValueChange={(val) => handleUpdateRow(index, 'unit', val)}
+                {/* Đơn vị */}
+                <div className="flex-1 sm:w-32">
+                  <Select
+                    value={row.unit}
+                    onValueChange={(val) => handleUpdateRow(index, 'unit', val)}
+                    disabled={disabled}
+                  >
+                    <SelectTrigger className="h-10 text-sm bg-background">
+                      <SelectValue placeholder="Đơn vị" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COMMON_UNITS.map((unit) => (
+                        <SelectItem key={unit} value={unit} className="text-sm">
+                          {unit}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Nút xóa dòng */}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleRemoveRow(index)}
                   disabled={disabled}
+                  className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0 rounded-lg"
+                  aria-label={`Xóa nguyên liệu ${row.name || index + 1}`}
                 >
-                  <SelectTrigger className="h-10 text-sm bg-background">
-                    <SelectValue placeholder="Đơn vị" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {COMMON_UNITS.map((unit) => (
-                      <SelectItem key={unit} value={unit} className="text-sm">
-                        {unit}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  <Trash2 className="w-4 h-4" />
+                </Button>
               </div>
-
-              {/* Nút xóa dòng */}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => handleRemoveRow(index)}
-                disabled={disabled}
-                className="h-10 w-10 text-muted-foreground hover:text-destructive hover:bg-destructive/10 shrink-0 rounded-lg"
-                aria-label={`Xóa nguyên liệu ${row.name || index + 1}`}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
             </div>
           ))}
         </div>

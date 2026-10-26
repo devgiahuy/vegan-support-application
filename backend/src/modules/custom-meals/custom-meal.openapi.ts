@@ -83,6 +83,8 @@ export function registerCustomMealOpenApi(
     path: '/api/v1/custom-meals',
     tags: [tag],
     summary: 'Tạo bữa ăn tùy chỉnh mới',
+    description:
+      'Tự tính tổng dinh dưỡng toàn bộ món từ nguyên liệu/tên hoặc alias đã duyệt. Chỉ số thiếu dữ liệu cho bất kỳ nguyên liệu nào được ước tính bằng AI khi khả dụng, không dùng tổng thiếu làm tổng đầy đủ. Tên món nhận diện được cũng có thể được ước tính khi chưa nhập nguyên liệu, với giả định khẩu phần rõ ràng. user* giữ các giá trị hiện hành để tương thích; nutritionMetadata.metrics phân biệt USER_PROVIDED, CANONICAL_CALCULATED và AI_ESTIMATED. Metadata trả nguồn/version/license, giả định, độ tin cậy và độ không chắc chắn. Provider lỗi không hủy món; chỉ số thiếu giữ null.',
     operationId: 'createCustomMeal',
     security,
     request: { body: { content: { 'application/json': { schema: createCustomMealSchema } } } },
@@ -119,6 +121,8 @@ export function registerCustomMealOpenApi(
     path: '/api/v1/custom-meals/{id}',
     tags: [tag],
     summary: 'Cập nhật bữa ăn tùy chỉnh',
+    description:
+      'Tính lại khi đổi tên, nguyên liệu, số khẩu phần hoặc chỉ số dinh dưỡng. Giữ giá trị USER_PROVIDED; xóa và tính lại giá trị tự động cũ. Gửi user*=null để bỏ ghi đè và cho phép tính lại chỉ số đó. Kết quả AI không ghi đè canonical data và không được lưu nếu món đã thay đổi trong lúc phân tích.',
     operationId: 'updateCustomMeal',
     security,
     request: {

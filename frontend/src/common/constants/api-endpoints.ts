@@ -1,4 +1,16 @@
 export const API_ENDPOINTS = {
+  ALLERGENS: { LIST: '/allergens' },
+  INGREDIENT_COMPOSITION: {
+    DETAIL: (id: string) => `/admin/ingredients/${id}/composition`,
+    SOURCES: '/admin/ingredient-composition-sources',
+  },
+  BILLING: {
+    PRODUCTS: '/billing/products',
+    ORDERS: '/billing/orders',
+    ORDER: (id: string) => '/billing/orders/' + id,
+    RECONCILE: (id: string) => '/billing/orders/' + id + '/reconcile',
+    ENTITLEMENTS: '/entitlements/me',
+  },
   AUTH: {
     LOGIN: '/auth/login',
     REGISTER: '/auth/register',
@@ -52,6 +64,7 @@ export const API_ENDPOINTS = {
   },
   POSTS: {
     LIST: '/posts',
+    MINE: '/posts/mine',
     DETAIL: (idOrSlug: string) => `/posts/${idOrSlug}`,
     CREATE: '/posts',
     UPDATE: (id: string) => `/posts/${id}`,
@@ -171,7 +184,7 @@ export const API_ENDPOINTS = {
     READ: (id: string) => `/notifications/${id}/read`,
     READ_ALL: '/notifications/read-all',
   },
-  // TODO(BE-READY): Restaurants/location còn PLANNED — 3 nhánh dưới CHƯA được import ở đâu.
+  // Phase 24: Restaurants/location chỉ áp dụng bộ lọc tìm kiếm được chọn rõ ràng.
   RESTAURANTS: {
     NEARBY: '/restaurants/nearby',
     SEARCH: '/restaurants/search',
@@ -248,6 +261,7 @@ export const API_ENDPOINTS = {
     CONFIRM: (id: string) => `/ingredient-recognition/jobs/${id}/confirm`,
     CANCEL: (id: string) => `/ingredient-recognition/jobs/${id}/cancel`,
     RETRY: (id: string) => `/ingredient-recognition/jobs/${id}/retry`,
+    ADD_IMAGES: (id: string) => `/ingredient-recognition/jobs/${id}/images`,
   },
   // Phase 22: Receipt Analysis & Shopping Gaps
   RECEIPT_JOBS: {
@@ -258,6 +272,11 @@ export const API_ENDPOINTS = {
     CONFIRM: (id: string) => `/receipt-jobs/${id}/confirm`,
     CANCEL: (id: string) => `/receipt-jobs/${id}/cancel`,
     RETRY: (id: string) => `/receipt-jobs/${id}/retry`,
+    ADD_IMAGES: (id: string) => `/receipt-jobs/${id}/images`,
+  },
+  // Phase 24: AI Recipe Draft Suggestion
+  RECIPE_DRAFTS: {
+    GENERATE: '/recipe-drafts/generate',
   },
   SHOPPING_LISTS: {
     PREVIEW: '/shopping-lists/preview',

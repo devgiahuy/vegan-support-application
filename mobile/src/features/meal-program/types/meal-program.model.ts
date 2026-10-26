@@ -103,6 +103,8 @@ export interface CreateMealProgramInput {
   horizonWeeks: number;
   alternativesPerWeek?: number;
   seed?: string;
+  /** Giữ nguyên khi thử lại cùng nội dung để backend không tạo trùng lộ trình. */
+  idempotencyKey?: string;
 }
 
 /** Hành động cập nhật lộ trình (map 1-1 với `PATCH /meal-programs/:id`). */

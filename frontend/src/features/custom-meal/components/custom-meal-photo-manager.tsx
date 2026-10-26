@@ -32,7 +32,7 @@ export const CustomMealPhotoManager: React.FC<CustomMealPhotoManagerProps> = ({
   }
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 gap-2.5">
       {photos.map((photo, index) => (
         <div
           key={photo.id || index}

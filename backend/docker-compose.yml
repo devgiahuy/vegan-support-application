@@ -66,7 +66,7 @@ services:
       OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://api.openai.com/v1}
       AI_MODEL_CHAT: ${AI_MODEL_CHAT:-gpt-5.6-terra}
       AI_MODEL_MODERATION: ${AI_MODEL_MODERATION:-omni-moderation-latest}
-      AI_TIMEOUT_MS: ${AI_TIMEOUT_MS:-30000}
+      AI_TIMEOUT_MS: ${AI_TIMEOUT_MS:-60000}
       AI_MAX_OUTPUT_TOKENS: ${AI_MAX_OUTPUT_TOKENS:-800}
       AI_GUEST_DAILY_QUOTA: ${AI_GUEST_DAILY_QUOTA:-5}
       AI_MEMBER_DAILY_QUOTA: ${AI_MEMBER_DAILY_QUOTA:-20}
@@ -84,7 +84,11 @@ services:
       RECEIPT_ENABLED: ${RECEIPT_ENABLED:-false}
       RECEIPT_PROVIDER: ${RECEIPT_PROVIDER:-openai}
       RECEIPT_MODEL: ${RECEIPT_MODEL:-}
-      RECEIPT_TEMPLATE_VERSION: ${RECEIPT_TEMPLATE_VERSION:-receipt-v1}
+      RECEIPT_TEMPLATE_VERSION: ${RECEIPT_TEMPLATE_VERSION:-receipt-v3}
+      AI_RECIPE_ENABLED: ${AI_RECIPE_ENABLED:-true}
+      AI_RECIPE_MODEL: ${AI_RECIPE_MODEL:-}
+      AI_RECIPE_TEMPLATE_VERSION: ${AI_RECIPE_TEMPLATE_VERSION:-recipe-draft-v1}
+      AI_RECIPE_MAX_OUTPUT_TOKENS: ${AI_RECIPE_MAX_OUTPUT_TOKENS:-4096}
       RECEIPT_MAX_OUTPUT_TOKENS: ${RECEIPT_MAX_OUTPUT_TOKENS:-4096}
       RECEIPT_MAX_IMAGES: ${RECEIPT_MAX_IMAGES:-4}
       RECEIPT_MAX_IMAGE_BYTES: ${RECEIPT_MAX_IMAGE_BYTES:-10000000}
@@ -92,6 +96,19 @@ services:
       GOOGLE_MAPS_API_KEY: ${GOOGLE_MAPS_API_KEY:-}
       SERPAPI_API_KEY: ${SERPAPI_API_KEY:-}
       SERPAPI_BASE_URL: ${SERPAPI_BASE_URL:-https://serpapi.com/search.json}
+      BILLING_ENABLED: ${BILLING_ENABLED:-false}
+      BILLING_PROVIDER: ${BILLING_PROVIDER:-payos}
+      BILLING_PUBLIC_URL: ${BILLING_PUBLIC_URL:-http://localhost:4000}
+      BILLING_RETURN_URL: ${BILLING_RETURN_URL:-http://localhost:3000/billing}
+      PAYOS_CLIENT_ID: ${PAYOS_CLIENT_ID:-}
+      PAYOS_API_KEY: ${PAYOS_API_KEY:-}
+      PAYOS_CHECKSUM_KEY: ${PAYOS_CHECKSUM_KEY:-}
+      BILLING_ORDER_TTL_MINUTES: ${BILLING_ORDER_TTL_MINUTES:-15}
+      BILLING_PANTRY_BASE_LIMIT: ${BILLING_PANTRY_BASE_LIMIT:-20}
+      BILLING_FRIDGE_TRIAL_JOBS: ${BILLING_FRIDGE_TRIAL_JOBS:-3}
+      BILLING_RECEIPT_TRIAL_JOBS: ${BILLING_RECEIPT_TRIAL_JOBS:-3}
+      BILLING_SCAN_MAX_ATTEMPTS: ${BILLING_SCAN_MAX_ATTEMPTS:-3}
+      BILLING_USAGE_LEASE_SECONDS: ${BILLING_USAGE_LEASE_SECONDS:-1800}
       SEED_MEMBER_EMAIL: ${SEED_MEMBER_EMAIL:-member@example.com}
       SEED_MEMBER_PASSWORD: ${SEED_MEMBER_PASSWORD}
       SEED_PLATFORM_CONTRIBUTOR_EMAIL: ${SEED_PLATFORM_CONTRIBUTOR_EMAIL:-contributor@example.com}
@@ -106,6 +123,27 @@ services:
         condition: service_healthy
       mongo-init:
         condition: service_completed_successfully
+    restart: unless-stopped
+
+  ngrok:
+    image: ngrok/ngrok:3
+    profiles: ['webhook']
+    command:
+      - http
+      - ${NGROK_UPSTREAM:-http://backend:4000}
+      - --url=${NGROK_URL:-}
+      - --config=/etc/ngrok.yml
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
+    volumes:
+      - ./ngrok.yml:/etc/ngrok.yml:ro
+    ports:
+      - '127.0.0.1:${NGROK_INSPECTOR_PORT:-4040}:4040'
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    depends_on:
+      backend:
+        condition: service_started
     restart: unless-stopped
 
 volumes:

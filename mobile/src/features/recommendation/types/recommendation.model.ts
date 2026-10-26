@@ -6,8 +6,10 @@ export interface Recommendation {
   coverImageUrl: string | null;
   cookTimeMinutes: number;
   difficulty: string;
+  difficultyLabel: string;
   calories: number | null;
   ratingAverage: number;
+  ratingCount: number;
   score: number;
   reasonCodes: string[];
   reasonLabels: string[];
@@ -17,7 +19,8 @@ export interface RecommendationMeta {
   scoringVersion: string;
   personalized: boolean;
   generatedAt: string;
-  appliedConstraints: string[];
+  /** Tóm tắt ràng buộc backend đã áp dụng, ví dụ "Đã lọc: chay trường · 1 dị ứng"; `null` khi không có. */
+  constraintsSummary: string | null;
 }
 
 export interface PersonalizationConsent {

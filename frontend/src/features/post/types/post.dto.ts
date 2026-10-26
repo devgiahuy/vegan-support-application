@@ -72,6 +72,17 @@ export interface PostListResponseDto {
   };
 }
 
+export interface MyPostListResponseDto {
+  success: boolean;
+  data: BasePostDto[];
+  meta: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export interface PostDetailResponseDto {
   success: boolean;
   data: BasePostDto;

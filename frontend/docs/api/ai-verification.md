@@ -45,6 +45,7 @@ Verify a submitted public artifact
             "author",
             "lifecycle",
             "activeVerification",
+            "statistics",
             "verificationHistory",
             "createdAt"
           ],
@@ -86,6 +87,10 @@ Verify a submitted public artifact
                 "object",
                 "null"
               ],
+              "_truncated": true
+            },
+            "statistics": {
+              "type": "object",
               "_truncated": true
             },
             "verificationHistory": {
@@ -134,12 +139,6 @@ Verify a submitted public artifact
               "type": "string",
               "_truncated": true
             },
-            "correction": {
-              "type": [
-                "string",
-                "null"
-              ],
-              "_truncate
   …(truncated — xem api-catalog.json)
 ```
 

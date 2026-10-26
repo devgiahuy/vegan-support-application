@@ -1,8 +1,8 @@
 # Software Requirements Specification — Vegan Support Application
 
-**Version:** 1.0
+**Version:** 1.6
 
-**Updated:** 2026-09-18
+**Updated:** 2026-10-25
 
 **Status:** Approved product baseline
 
@@ -46,6 +46,7 @@ The MVP is delivered through backend Phases 00–27. Phases 00–11 are the exis
 - Has all Member capabilities.
 - Share AI-generated drafts for community use after required review.
 - Verify eligible AI nutrition or content suggestions with an evidence note.
+- Review and decide publication for submitted Member recipes, handbooks, and videos that have no open AI moderation flags or high-priority reports (anti-self-approval strictly enforced; flagged/quarantined or non-Member content escalates to Administrator).
 - All Contributors have the same permissions. There are no nutrition-expert and experienced-practitioner permission tiers.
 
 Contributor approval is manual and performed by an Administrator. The system stores one approval basis for audit and presentation only:
@@ -80,6 +81,10 @@ MVP traditions are Buddhist and Christian. Other traditions may be added without
 
 When a user selects a diet pattern or tradition, the backend provides a default rule set. The user confirms it and may enable or disable individual rules. Allergy rules, explicit exclusions, the selected diet pattern, and enabled tradition rules are hard constraints enforced by the backend. Recommendations must never reintroduce an item removed by these constraints.
 
+Restaurant directory discovery and place details are an approved exception (2026-10-25): they do not automatically apply the personal dietary profile. Restaurant search applies only filters explicitly selected for that request; provider labels do not establish dietary or allergy compatibility.
+
+User-approved 2026-10-25 allergy/composition extension: members select allergies by catalog names and approved synonyms, without entering internal codes. Backend validates active definitions and checks reviewed ingredient components transitively. Unknown, partial, inactive or cyclic composition cannot pass any active diet, allergy, explicit ingredient exclusion or tradition constraint. Exact packaged-product/formulation scope, source/license/version and review audit are required for completeness; AI cannot promote composition. Existing demo data is normalized directly, without a legacy manual-code UI. Stored-plan analysis and program confirmation recheck current dietary constraints.
+
 ## 5. Functional requirements
 
 ### FR-01 Accounts and profiles
@@ -94,6 +99,7 @@ When a user selects a diet pattern or tradition, the backend provides a default 
 - Administrators manage food-type and recipe categories and normalized ingredients.
 - Members create and manage recipes, handbooks, videos, and their revisions.
 - Recipes use structured ingredients and structured cooking steps in addition to descriptive text.
+- A signed-in author may request an editable AI recipe draft from a title, description, and ordered ingredient names without uploading an image. The suggestion cannot create or publish a post; the author reviews it and saves through the normal draft/review flow.
 - Published content is searchable and viewable according to visibility rules.
 
 ### FR-03 Community
@@ -150,6 +156,8 @@ When a user selects a diet pattern or tradition, the backend provides a default 
 - Accept multiple fridge/ingredient images in one recognition job.
 - AI proposes detected ingredients, estimated quantities, and freshness observations; the user confirms or edits results before they affect planning.
 - Receipt analysis extracts candidate purchased items and quantities. The user confirms or edits candidates before inventory changes.
+- Receipt intake distinguishes different purchases from repeat photos of one receipt. Exact repeats, including receipts without a visible number whose remaining metadata and complete line multiset match, do not increase pantry quantity again. Partial photos of one receipt are merged for user review before confirmation.
+- Receipt analysis excludes clearly non-food goods from pantry candidates and tells the user which lines were excluded and why. Ready-to-eat foods and drinks remain candidates; uncertain classifications stay available for review. The user can restore an excluded line before confirmation.
 - Generate several recipe/meal options from confirmed pantry data; the user chooses before compatibility analysis and plan insertion.
 - Produce a shopping-gap list from confirmed inventory, selected recipes, serving counts, and unit conversions.
 - The system must not make definitive food-safety claims from images.
@@ -159,7 +167,7 @@ When a user selects a diet pattern or tradition, the backend provides a default 
 - Enforce per-file and per-account storage quotas before accepting durable uploads.
 - Reserve, commit, and release quota safely so failed or abandoned uploads do not leak capacity.
 - Report usage and limits to the user and administrators.
-- MVP has no payment or quota-purchase flow.
+- Media storage purchases remain outside MVP. A user-approved development/demo extension (2026-10-13, FR-17) supports AI usage and Pantry item-capacity packages; it does not increase media storage.
 
 ### FR-11 Video lifecycle
 
@@ -185,6 +193,8 @@ When a user selects a diet pattern or tradition, the backend provides a default 
 ### FR-14 Restaurants and maps
 
 - Find vegetarian shops/restaurants near a user-selected or permitted device location.
+- Discovery and place details do not read or apply personal diet preferences, allergies, ingredient exclusions or tradition rules (user-approved 2026-10-25). Guests and signed-in users use the same public sources for the same search filters.
+- An explicitly selected `dietPattern` filters reviewed internal claims and excludes dietary-unverified provider results. Without that filter, external places remain available with their unverified labels and source attribution.
 - Use a maps provider through an adapter and store only permitted cached data.
 - Support suggestions related to searched foods and disclose distance/provider limitations.
 
@@ -199,6 +209,16 @@ When a user selects a diet pattern or tradition, the backend provides a default 
 - Model/vendor identifiers and quotas are configuration, not domain constants.
 - Administrators can disable a capability/provider and route to a documented fallback.
 - Sensitive prompt and health data are minimized and access-controlled.
+
+### FR-17 Purchases and usage allowances — approved 2026-10-13; payOS conversion 2026-10-14
+
+- Signed-in users buy one-time packages for additional chat answers, fridge-analysis jobs, receipt-analysis jobs and simultaneous Pantry item capacity.
+- Purchased allowances accumulate without expiry in this demo scope. Free daily chat is consumed first; failed/fallback answers do not consume purchased credits.
+- Each scan job is bounded by configured image limits. Full/partial successful analysis consumes one job credit once; total failure releases it. A previously charged job can retry without another debit, subject to configured attempt limits.
+- All undeleted Pantry records count toward capacity, including zero-quantity records. Manual creation and both confirmation flows enforce the same transactional cap. Over-limit existing data remains readable, editable and deletable; no automatic deletion occurs.
+- Only verified server-side settlement grants snapshotted benefits, once. Browser return URLs cannot grant allowances. Purchases never modify roles or bypass dietary rules, consent, provider controls or confirmation.
+- User-authorized provider conversion (2026-10-14) uses payOS exclusively for new purchases. payOS has no independent sandbox and checkout transfers real money; the development application must disclose this. Missing merchant credentials disable checkout without a simulation fallback. Application production rollout, recurring subscriptions, automatic refunds and mobile-store distribution remain deferred.
+- Historical VNPAY/local simulation orders and existing balances remain readable with original provider identity. Their old settlement/checkout routes are removed. Partial payments remain pending; only a verified fully paid provider order grants the fixed package once. Extra transferred money does not add package benefits or trigger automatic refunds.
 
 ## 6. Non-functional requirements
 
@@ -243,4 +263,4 @@ When a user selects a diet pattern or tradition, the backend provides a default 
 
 ## 9. Post-MVP roadmap
 
-All deferred requirements, including wearable integration, automatic video summarization, broader religious traditions, certificate verification, payments, formal DMCA operations, advanced moderation, and mature AI evaluation, are retained in `docs/ROADMAP_PHASE_2.md`.
+All deferred requirements, including wearable integration, automatic video summarization, broader religious traditions, certificate verification, production payments, formal DMCA operations, advanced moderation, and mature AI evaluation, are retained in `docs/ROADMAP_PHASE_2.md`.

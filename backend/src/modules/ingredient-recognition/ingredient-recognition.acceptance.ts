@@ -1,7 +1,7 @@
 import { createPrismaClient } from '../../database/client.js';
 import 'dotenv/config';
 import assert from 'node:assert/strict';
-import { RecognitionJobStatus } from '@prisma/client';
+import { MediaKind, MediaResourceType, RecognitionJobStatus } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
 import { loadConfig } from '../../config/env.js';
 import { createIngredientVisionProvider } from './ingredient-vision.provider.js';
@@ -17,6 +17,11 @@ const service = new IngredientRecognitionService(
   config,
 );
 const acceptancePrefix = 'phase21-acceptance-';
+const twinAssetIds = [
+  '21000000-0000-4000-8000-0000000000b1',
+  '21000000-0000-4000-8000-0000000000b2',
+  '21000000-0000-4000-8000-0000000000b3',
+] as const;
 
 async function cleanup(ownerId: string): Promise<void> {
   const jobs = await prisma.recognitionJob.findMany({
@@ -28,8 +33,21 @@ async function cleanup(ownerId: string): Promise<void> {
     job.candidates.flatMap((candidate) => (candidate.pantryItemId ? [candidate.pantryItemId] : [])),
   );
   await prisma.$transaction(async (transaction) => {
-    if (jobIds.length)
+    if (jobIds.length) {
+      const candidateIds = (
+        await transaction.recognitionCandidate.findMany({
+          where: { jobId: { in: jobIds } },
+          select: { id: true },
+        })
+      ).map((candidate) => candidate.id);
+      await transaction.recognitionCandidateEvidence.deleteMany({
+        where: { candidateId: { in: candidateIds } },
+      });
+      await transaction.recognitionCandidate.deleteMany({ where: { jobId: { in: jobIds } } });
+      await transaction.recognitionInput.deleteMany({ where: { jobId: { in: jobIds } } });
       await transaction.recognitionJob.deleteMany({ where: { id: { in: jobIds } } });
+    }
+    await transaction.mediaAsset.deleteMany({ where: { id: { in: [...twinAssetIds] } } });
     if (pantryItemIds.length) {
       await transaction.pantryAdjustment.deleteMany({
         where: { ownerId, pantryItemId: { in: pantryItemIds } },
@@ -91,11 +109,13 @@ async function main(): Promise<void> {
     assert.equal(ready.status, RecognitionJobStatus.READY);
     const tofu = ready.candidates.find((candidate) => candidate.evidence.length === 2);
     assert(tofu, 'same ingredient across images must deduplicate and retain both evidence refs');
+    assert.equal(tofu.quantity, 120, 'duplicate quantities must retain conservative evidence, not sum');
     assert(ready.candidates.some((candidate) => candidate.confidence < 0.5));
     const unknown = ready.candidates.find(
       (candidate) => candidate.ingredientId === null && candidate.quantity === null,
     );
     assert(unknown, 'fake fixture must contain an unknown ingredient');
+    assert.equal(unknown.evidence.length, 2, 'merged unknown candidate must retain both images');
     assert.equal(unknown.detectedName, 'rau lá chưa xác định');
     assert.match(unknown.uncertaintyNote ?? '', /Chưa có đủ chi tiết/);
     assert.match(tofu.freshnessObservation ?? '', /ảnh|ánh sáng/);
@@ -119,6 +139,11 @@ async function main(): Promise<void> {
     });
     assert.equal(confirmed.pantryChanges.length, 1);
     assert.equal(confirmed.pantryChanges[0]?.pantryItem.quantity, 3);
+    assert.equal(
+      confirmed.pantryChanges[0]?.candidateId,
+      unknown.id,
+      'a merged candidate must remain editable and confirmable',
+    );
     const confirmReplay = await service.confirm(member.id, ready.id, {
       candidates: [{ id: unknown.id, expectedVersion: editedUnknown.version }],
       idempotencyKey: `${acceptancePrefix}confirm`,
@@ -156,6 +181,59 @@ async function main(): Promise<void> {
     const cancelled = await service.cancel(member.id, cancellable.id);
     assert.equal(cancelled.status, RecognitionJobStatus.CANCELLED);
 
+    // Same photo uploaded twice, then another photo added to the same job.
+    const primary = await prisma.mediaAsset.findUniqueOrThrow({ where: { id: normalAssetIds[0]! } });
+    for (const [index, id] of twinAssetIds.entries()) {
+      await prisma.mediaAsset.create({
+        data: {
+          id,
+          ownerId: member.id,
+          kind: MediaKind.FRIDGE_IMAGE,
+          resourceType: MediaResourceType.IMAGE,
+          publicId: `seed/fridge/phase21-twin-${String(index)}`,
+          secureUrl: primary.secureUrl,
+          mimeType: 'image/jpeg',
+          extension: '.jpg',
+          bytes: primary.bytes,
+          // b1 and b2 are the same file uploaded twice; b3 is a different photo.
+          providerEtag: index < 2 ? 'phase21-twin-etag' : 'phase21-other-etag',
+        },
+      });
+    }
+    const twin = await service.create(member.id, {
+      imageAssetIds: [twinAssetIds[0], twinAssetIds[1]],
+      idempotencyKey: `${acceptancePrefix}twin`,
+    });
+    assert.equal(twin.images.length, 1, 'identical content uploaded twice is analysed once');
+    const twinReady = await waitForTerminal(member.id, twin.id);
+    assert.equal(twinReady.status, RecognitionJobStatus.READY);
+    assert.equal(twinReady.candidates.length, 3);
+    const twinTofu = twinReady.candidates.find((candidate) => candidate.quantity === 120);
+    assert(twinTofu);
+    await service.updateCandidate(member.id, twin.id, twinTofu.id, {
+      expectedVersion: twinTofu.version,
+      quantity: 150,
+      unit: 'g',
+      decision: 'KEEP',
+    });
+    const unchanged = await service.addImages(member.id, twin.id, {
+      imageAssetIds: [twinAssetIds[0], twinAssetIds[1]],
+    });
+    assert.equal(unchanged.status, RecognitionJobStatus.READY, 'nothing new means nothing is queued');
+    const appended = await service.addImages(member.id, twin.id, { imageAssetIds: [twinAssetIds[2]] });
+    assert.equal(appended.images.length, 2);
+    const merged = await waitForTerminal(member.id, twin.id);
+    assert.equal(merged.status, RecognitionJobStatus.READY);
+    assert.equal(merged.candidates.length, 3, 'the same ingredients in the new photo are merged');
+    const mergedTofu = merged.candidates.find((candidate) => candidate.id === twinTofu.id);
+    assert(mergedTofu);
+    assert.equal(mergedTofu.quantity, 150, 'user-edited quantity survives and is never summed');
+    assert.equal(mergedTofu.evidence.length, 2, 'the added image is recorded as evidence');
+    await assert.rejects(
+      () => service.addImages(member.id, cancellable.id, { imageAssetIds: [twinAssetIds[2]] }),
+      (error: unknown) => error instanceof AppError && error.code === 'RECOGNITION_STATE_CONFLICT',
+    );
+
     const beforeInvalid = await prisma.recognitionJob.count({ where: { ownerId: admin.id } });
     await assert.rejects(
       () =>
@@ -171,7 +249,7 @@ async function main(): Promise<void> {
       'invalid ownership must roll back without attaching storage',
     );
     console.info(
-      'Phase 21 fake-provider acceptance passed: dedupe, low confidence, unknown correction, partial failure, retry/idempotency, cancel, storage ownership rollback, confirmation diff, and pantry boundary.',
+      'Phase 21 fake-provider acceptance passed: dedupe, duplicate-content collapse, appended images merge, low confidence, unknown correction, partial failure, retry/idempotency, cancel, storage ownership rollback, confirmation diff, and pantry boundary.',
     );
   } finally {
     await cleanup(member.id);

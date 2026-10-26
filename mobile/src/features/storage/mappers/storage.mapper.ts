@@ -39,6 +39,26 @@ export function validateImage(image: { name: string; mimeType: string; bytes: nu
   return `.${extension}`;
 }
 
+/** Định dạng video backend nhận (`mimeExtensions` của module storage). Giới hạn dung lượng do backend cấu hình. */
+const SUPPORTED_VIDEO: Record<string, string[]> = {
+  'video/mp4': ['mp4'],
+  'video/webm': ['webm'],
+  'video/quicktime': ['mov'],
+};
+
+export function validateVideo(video: { name: string; mimeType: string; bytes: number }): string {
+  const extension = video.name.split('.').pop()?.toLowerCase() ?? '';
+  if (!SUPPORTED_VIDEO[video.mimeType]?.includes(extension))
+    throw new Error('Chọn video MP4, WebM hoặc MOV có định dạng khớp tên tệp.');
+  if (!Number.isSafeInteger(video.bytes) || video.bytes <= 0)
+    throw new Error('Không đọc được dung lượng video. Hãy chọn lại video.');
+  return `.${extension}`;
+}
+
+export function videoExtensionForMime(mimeType: string): string {
+  return SUPPORTED_VIDEO[mimeType]?.[0] ?? '';
+}
+
 export class StorageMapper extends BaseMapper<StorageUsageResponseDto, StorageAccount> {
   toUsage(dto: StorageUsageDto): StorageUsage {
     const occupied = dto.usedBytes + dto.reservedBytes;
@@ -51,6 +71,8 @@ export class StorageMapper extends BaseMapper<StorageUsageResponseDto, StorageAc
       occupiedPercent: Math.min(100, Math.max(0, percent)),
       overQuota: dto.overQuota,
       warning: dto.overQuota || percent >= dto.warningPercent,
+      critical: dto.overQuota || percent >= 100,
+      warningPercent: dto.warningPercent,
     };
   }
   toModel(dto: StorageUsageResponseDto | null | undefined): StorageAccount {
@@ -92,7 +114,7 @@ export class StorageMapper extends BaseMapper<StorageUsageResponseDto, StorageAc
     return {
       kind: input.kind,
       mimeType: input.image.mimeType,
-      extension: validateImage(input.image),
+      extension: input.kind === 'VIDEO' ? validateVideo(input.image) : validateImage(input.image),
       bytes: input.image.bytes,
       idempotencyKey: input.idempotencyKey,
     };

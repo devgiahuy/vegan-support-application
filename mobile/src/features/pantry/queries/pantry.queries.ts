@@ -1,3 +1,4 @@
+import { BILLING_QUERY_KEYS } from '@/features/billing/queries/billing.queries';
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { pantryApi } from '../api/pantry.api';
 import type {
@@ -10,22 +11,22 @@ import type {
 
 export const PANTRY_QUERY_KEYS = {
   all: ['pantry'] as const,
-  list: (params?: PantryListFilters, expiring = false) =>
-    [...PANTRY_QUERY_KEYS.all, 'list', expiring, params] as const,
+  list: (params?: PantryListFilters) => [...PANTRY_QUERY_KEYS.all, 'list', params] as const,
   detail: (id: string) => [...PANTRY_QUERY_KEYS.all, 'detail', id] as const,
 };
 
 function invalidateInventory(client: QueryClient) {
   return Promise.all([
     client.invalidateQueries({ queryKey: PANTRY_QUERY_KEYS.all }),
+    client.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all }),
     client.invalidateQueries({ queryKey: ['shopping-preview'] }),
   ]);
 }
 
-export function usePantryItemsQuery(params?: PantryListFilters, enabled = true, expiring = false) {
+export function usePantryItemsQuery(params?: PantryListFilters, enabled = true) {
   return useQuery({
-    queryKey: PANTRY_QUERY_KEYS.list(params, expiring),
-    queryFn: () => pantryApi.getItems(params, expiring),
+    queryKey: PANTRY_QUERY_KEYS.list(params),
+    queryFn: () => pantryApi.getItems(params),
     enabled,
   });
 }
@@ -87,6 +88,7 @@ export function useCreatePantryItemMutation() {
     mutationFn: (values: PantryItemFormValues) => pantryApi.createItem(values),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: PANTRY_QUERY_KEYS.all });
+      void queryClient.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
       void queryClient.invalidateQueries({ queryKey: ['shopping-preview'] });
     },
   });
@@ -99,6 +101,7 @@ export function useDeletePantryItemMutation() {
       pantryApi.deleteItem(vars.id, vars.expectedVersion),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: PANTRY_QUERY_KEYS.all });
+      void queryClient.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
       void queryClient.invalidateQueries({ queryKey: ['shopping-preview'] });
     },
   });

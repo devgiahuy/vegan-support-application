@@ -73,6 +73,33 @@ describe('ProfileMapper.toModel', () => {
     expect(p.diet?.scheduleTimezone).toBe('Asia/Ho_Chi_Minh');
   });
 
+  it('map đầy đủ dị ứng và nguyên liệu kiêng trong dietPreference', () => {
+    const p = profileMapper.toModel({
+      success: true,
+      data: {
+        id: 'u-4',
+        email: 'd@example.com',
+        displayName: 'D',
+        role: 'MEMBER',
+        status: 'ACTIVE',
+        dietPreference: {
+          dietPattern: 'VEGAN',
+          practiceSchedule: 'PERMANENT',
+          tradition: 'NONE',
+          allergies: [{ allergenCode: 'PEANUT', label: 'Đậu phộng', severity: 'MODERATE' }],
+          ingredientExclusions: [{ ingredientName: 'mắm tôm', reason: 'Không thích mùi' }],
+        },
+      },
+      meta: null,
+    });
+
+    expect(p.diet?.allergies).toHaveLength(1);
+    expect(p.diet?.allergies[0].allergenCode).toBe('PEANUT');
+    expect(p.diet?.allergies[0].label).toBe('Đậu phộng');
+    expect(p.diet?.ingredientExclusions).toHaveLength(1);
+    expect(p.diet?.ingredientExclusions[0].ingredientName).toBe('mắm tôm');
+  });
+
   it('health/diet null khi backend chưa có dữ liệu', () => {
     const p = profileMapper.toModel({
       success: true,

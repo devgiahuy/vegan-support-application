@@ -327,5 +327,64 @@ describe('IngredientRecognitionMapper', () => {
       });
       expect(retryDto.idempotencyKey).toBe('retry-key-456');
     });
+
+    it('16. should calculate canAddImages and map merged evidence & uncertaintyNote', () => {
+      const readyDto = {
+        id: 'job-fridge-1',
+        status: 'READY' as const,
+        progress: { completedImages: 2, totalImages: 2 },
+        images: [
+          { id: 'img-1', position: 0, url: 'url1', status: 'PROCESSED' as const, issue: null },
+          { id: 'img-2', position: 1, url: 'url2', status: 'PROCESSED' as const, issue: null },
+        ],
+        candidates: [
+          {
+            id: 'c1',
+            name: 'Cà rốt',
+            ingredientSuggestion: { id: 'ing-1', name: 'Cà rốt', confidence: 0.95 },
+            quantity: { value: 3, unit: 'củ' },
+            freshnessObservation: 'Tươi',
+            confidence: 0.9,
+            uncertaintyNote:
+              'Ảnh góc 2 phát hiện thêm cà rốt; giữ nguyên số lượng góc 1 tránh cộng trùng.',
+            status: 'PROPOSED' as const,
+            version: 1,
+            evidence: [
+              { imageId: 'img-1', imagePosition: 0, confidence: 0.92 },
+              { imageId: 'img-2', imagePosition: 1, confidence: 0.88 },
+            ],
+          },
+        ],
+        freshnessDisclaimer: 'Lưu ý độ tươi chỉ ước tính.',
+        attempt: 1,
+        issue: null,
+        createdAt: '2026-10-19T00:00:00.000Z',
+        updatedAt: '2026-10-19T00:01:00.000Z',
+        completedAt: null,
+        confirmedAt: null,
+      };
+
+      const model = mapper.toModel(readyDto);
+      expect(model.canAddImages).toBe(true);
+      expect(model.candidates[0].evidence.length).toBe(2);
+      expect(model.candidates[0].uncertaintyNote).toContain('tránh cộng trùng');
+
+      // Khi đã có 6 ảnh -> canAddImages = false
+      const fullDto = {
+        ...readyDto,
+        images: [
+          { id: 'i1', position: 0, url: 'u1', status: 'PROCESSED' as const, issue: null },
+          { id: 'i2', position: 1, url: 'u2', status: 'PROCESSED' as const, issue: null },
+          { id: 'i3', position: 2, url: 'u3', status: 'PROCESSED' as const, issue: null },
+          { id: 'i4', position: 3, url: 'u4', status: 'PROCESSED' as const, issue: null },
+          { id: 'i5', position: 4, url: 'u5', status: 'PROCESSED' as const, issue: null },
+          { id: 'i6', position: 5, url: 'u6', status: 'PROCESSED' as const, issue: null },
+        ],
+      };
+      expect(mapper.toModel(fullDto).canAddImages).toBe(false);
+
+      // Khi đang PROCESSING -> canAddImages = false
+      expect(mapper.toModel({ ...readyDto, status: 'PROCESSING' }).canAddImages).toBe(false);
+    });
   });
 });

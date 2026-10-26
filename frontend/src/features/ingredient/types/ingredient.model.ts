@@ -20,6 +20,8 @@ export interface TraditionWarning {
 }
 
 export interface Ingredient {
+  compositionStatus: 'UNKNOWN' | 'PARTIAL' | 'COMPLETE';
+  compositionStatusLabel: string;
   id: string;
   canonicalName: string;
   normalizedName: string;

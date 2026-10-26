@@ -13,7 +13,13 @@ import type { UserDto } from '@/features/auth/types/auth.dto';
 import { formatDate } from '@/lib/utils';
 import { healthMapper } from './health.mapper';
 import type { ProfileResponseDto, UpdateBasicProfileRequestDto } from '../types/profile.dto';
-import type { AllergySummary, DetailedProfile, DietPreferenceSummary } from '../types/profile.model';
+import type {
+  AllergySummary,
+  DetailedProfile,
+  DietPreferenceSummary,
+  IngredientAllergySummary,
+  IngredientExclusionSummary,
+} from '../types/profile.model';
 
 const PATTERN_LABELS: Record<DietPattern, string> = {
   [DietPattern.VEGAN]: 'Thuần chay',
@@ -112,6 +118,33 @@ export function toDietSummary(raw: Record<string, unknown> | null | undefined): 
         severity: safeString(pickField(source, ['severity'], 'MODERATE')),
       };
     }).filter((allergy) => allergy.allergenCode.length > 0),
+    ingredientAllergies: safeArray<unknown, IngredientAllergySummary>(
+      pickField(raw, ['ingredientAllergies', 'ingredient_allergies'], null),
+      (entry) => {
+        const source = entry as Record<string, unknown>;
+        return {
+          ingredientId: safeString(pickField(source, ['ingredientId', 'ingredient_id'], '')),
+          ingredientName: safeString(pickField(source, ['ingredientName', 'ingredient_name'], '')),
+          severity: safeString(pickField(source, ['severity'], 'MODERATE')),
+          ingredientActive: safeBoolean(pickField(source, ['ingredientActive', 'ingredient_active'], true), true),
+        };
+      }
+    ).filter((entry) => entry.ingredientId.length > 0),
+    ingredientExclusions: safeArray<unknown, IngredientExclusionSummary & { active: boolean }>(
+      pickField(raw, ['ingredientExclusions', 'ingredient_exclusions'], null),
+      (entry) => {
+        const source = entry as Record<string, unknown>;
+        const reason = safeString(pickField(source, ['reason'], ''));
+        return {
+          ingredientId: safeString(pickField(source, ['ingredientId', 'ingredient_id'], '')) || null,
+          ingredientName: safeString(pickField(source, ['ingredientName', 'ingredient_name'], '')),
+          reason: reason.length > 0 ? reason : null,
+          active: safeBoolean(pickField(source, ['active'], true), true),
+        };
+      }
+    )
+      .filter((entry) => entry.active && entry.ingredientName.length > 0)
+      .map(({ ingredientId, ingredientName, reason }) => ({ ingredientId, ingredientName, reason })),
   };
 }
 

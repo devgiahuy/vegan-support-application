@@ -178,7 +178,7 @@ export function registerMealPlanOpenApi(registry: OpenAPIRegistry, errorSchema: 
     tags: ['Meal Plans'],
     summary: 'Thêm recipe hoặc private custom meal vào slot',
     description:
-      'Hệ thống kiểm tra dị ứng, nguyên liệu cần tránh, chế độ ăn và quy tắc truyền thống trước khi lưu. Món phù hợp vẫn được lưu khi các chỉ số chất đạm, chất xơ, chất béo hoặc tinh bột ước tính lệch khỏi khoảng mục tiêu; các lưu ý này chỉ là gợi ý điều chỉnh và không chặn thao tác.',
+      'Hệ thống kiểm tra dị ứng, nguyên liệu cần tránh, chế độ ăn và quy tắc truyền thống trước khi lưu. Dị ứng kiểm tra snapshot và thành phần lồng nhau theo nguồn đã rà soát; cấu tạo chưa đầy đủ trả reason INGREDIENT_COMPOSITION_UNCERTAIN; khi có ràng buộc, nguyên liệu chưa xác định trả MEAL_PLAN_HARD_CONSTRAINT_VIOLATION với reason UNRESOLVED_INGREDIENT. Món phù hợp vẫn được lưu khi các chỉ số chất đạm, chất xơ, chất béo hoặc tinh bột ước tính lệch khỏi khoảng mục tiêu; các lưu ý này chỉ là gợi ý điều chỉnh và không chặn thao tác.',
     operationId: 'manualAddMealPlanItem',
     security: authenticated,
     request: {

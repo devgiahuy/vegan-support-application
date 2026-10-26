@@ -51,6 +51,7 @@ If a backend change is breaking, set the affected endpoint status to `CHANGING`,
 ## Business-rule safety
 
 - Allergy, explicit ingredient exclusions, diet pattern, and enabled tradition rules are backend-enforced constraints. Frontend checks are UX only.
+- Restaurant directory discovery/details are a user-approved exception (2026-10-25): do not apply the personal eating profile automatically. Apply only explicit search filters; provider results remain dietary-unverified. Recipe recommendations and meal planning retain the hard constraints above.
 - Contributor intent or application data never grants permission. Only a manually approved Contributor role/profile returned by backend authorization is authoritative.
 - All approved Contributors have the same permissions. `ORGANIZATION_AFFILIATION`, `PLATFORM_TRACK_RECORD`, and `ADMIN_INVITED` describe approval basis only and must never be used as permission tiers.
 - AI flags and user reports are signals, not final violations. Automated logic must not hard-delete content.

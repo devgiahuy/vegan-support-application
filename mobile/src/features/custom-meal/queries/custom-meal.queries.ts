@@ -20,7 +20,7 @@ export function useCustomMealsQuery(params?: CustomMealQueryParams) {
 }
 
 /** Danh sách món riêng phân trang kiểu "Tải thêm". `params` không chứa `page`. */
-export function useInfiniteCustomMealsQuery(params?: Omit<CustomMealQueryParams, 'page'>) {
+export function useInfiniteCustomMealsQuery(params?: Omit<CustomMealQueryParams, 'page'>, enabled = true) {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   return useInfiniteQuery({
     queryKey: [...CUSTOM_MEAL_QUERY_KEYS.all, 'infinite', params ?? {}] as const,
@@ -28,7 +28,7 @@ export function useInfiniteCustomMealsQuery(params?: Omit<CustomMealQueryParams,
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage.pagination.page < lastPage.pagination.totalPages ? lastPage.pagination.page + 1 : undefined,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && enabled,
   });
 }
 

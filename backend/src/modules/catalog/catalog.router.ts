@@ -42,7 +42,8 @@ export function createCatalogAdminRouter(
   authentication: AuthenticationMiddleware,
 ): Router {
   const router = Router();
-  router.use(authentication.authenticate, requireRole(Role.ADMIN));
+  router.use('/categories', authentication.authenticate, requireRole(Role.ADMIN));
+  router.use('/ingredients', authentication.authenticate, requireRole(Role.ADMIN));
 
   router.get(
     '/categories',

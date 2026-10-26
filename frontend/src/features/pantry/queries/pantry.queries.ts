@@ -1,3 +1,4 @@
+import { BILLING_QUERY_KEYS } from '@/features/billing/queries/billing.queries';
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { pantryApi } from '../api/pantry.api';
@@ -11,7 +12,7 @@ import type {
   MergePreviewReqDto,
   MergePantryItemsReqDto,
 } from '../types/pantry.dto';
-import type { PantryItem, PantryAdjustment, PantryMergePreview } from '../types/pantry.model';
+import type { PantryItem } from '../types/pantry.model';
 import type { PaginationResult } from '@/types/api';
 
 export const PANTRY_QUERY_KEYS = {
@@ -89,6 +90,7 @@ export function useCreatePantryItemMutation() {
     onSuccess: (result) => {
       toast.success(`Đã thêm "${result.item.displayName}" vào tủ bếp thành công!`);
       queryClient.invalidateQueries({ queryKey: PANTRY_QUERY_KEYS.all });
+      void queryClient.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
     },
   });
 }
@@ -104,6 +106,7 @@ export function useUpdatePantryItemMutation() {
     onSuccess: (updated) => {
       toast.success(`Đã cập nhật thông tin "${updated.displayName}"`);
       queryClient.invalidateQueries({ queryKey: PANTRY_QUERY_KEYS.all });
+      void queryClient.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
     },
   });
 }
@@ -119,6 +122,7 @@ export function useDeletePantryItemMutation() {
     onSuccess: () => {
       toast.success('Đã xóa nguyên liệu khỏi tủ bếp');
       queryClient.invalidateQueries({ queryKey: PANTRY_QUERY_KEYS.all });
+      void queryClient.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
     },
   });
 }
@@ -136,6 +140,7 @@ export function useCreatePantryAdjustmentMutation() {
         `Đã ghi nhận ${result.adjustment.typeLabel.toLowerCase()} cho "${result.item.displayName}"!`
       );
       queryClient.invalidateQueries({ queryKey: PANTRY_QUERY_KEYS.all });
+      void queryClient.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
     },
   });
 }
@@ -159,6 +164,7 @@ export function useMergePantryItemsMutation() {
     onSuccess: (survivingItem) => {
       toast.success(`Đã gộp thành công vào "${survivingItem.displayName}"!`);
       queryClient.invalidateQueries({ queryKey: PANTRY_QUERY_KEYS.all });
+      void queryClient.invalidateQueries({ queryKey: BILLING_QUERY_KEYS.all });
     },
   });
 }

@@ -91,6 +91,31 @@ Xóa alias của ingredient
 - Request: —
 - Responses: `204` → Alias đã xóa, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
+## GET `/api/v1/admin/ingredient-composition-sources`
+Nguồn dữ liệu dùng để rà soát thành phần
+- operationId: `listCompositionSources`
+- Params: —
+- Request: —
+- Responses: `200` → CompositionSourcesResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse
+
+## GET `/api/v1/admin/ingredients/{id}/composition`
+Đọc thành phần, mức đầy đủ và lịch sử rà soát
+- operationId: `getIngredientComposition`
+- Params: `path:id* (string)`
+- Request: —
+- Responses: `200` → IngredientCompositionResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse
+
+## PUT `/api/v1/admin/ingredients/{id}/composition`
+Admin rà soát cấu tạo nguyên liệu
+- operationId: `saveIngredientComposition`
+- Params: `path:id* (string)`
+- Request: `object`
+- Responses: `200` → IngredientCompositionResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
+
+```json
+{"type":"object","required":["expectedVersion","status","kind","componentIds"],"properties":{"expectedVersion":{"type":"integer"},"status":{"type":"string","enum":["UNKNOWN","PARTIAL","COMPLETE"]},"kind":{"type":"string","enum":["UNSPECIFIED","SIMPLE","COMPOUND"]},"componentIds":{"type":"array","items":{"type":"string","format":"uuid"}},"evidence":{"type":"object","required":["sourceId","sourceVersion","sourceRecordId","scope"],"properties":{"sourceId":{"type":"string","format":"uuid"},"sourceVersion":{"type":"string"},"sourceRecordId":{"type":"string"},"scope":{"type":"string"}},"additionalProperties":false}},"additionalProperties":false}
+```
+
 ---
 ### Schemas dùng trong nhóm
 
@@ -326,6 +351,66 @@ Xóa alias của ingredient
 }
 ```
 
+#### CompositionSourcesResponse
+```json
+{
+  "type": "object",
+  "required": [
+    "success",
+    "data",
+    "meta"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "enum": [
+        true
+      ]
+    },
+    "data": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "name",
+          "licenseName",
+          "attribution"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "_truncated": true
+          },
+          "code": {
+            "type": "string",
+            "_truncated": true
+          },
+          "name": {
+            "type": "string",
+            "_truncated": true
+          },
+          "licenseName": {
+            "type": "string",
+            "_truncated": true
+          },
+          "attribution": {
+            "type": "string",
+            "_truncated": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "meta": {
+      "type": "null"
+    }
+  },
+  "additionalProperties": false
+}
+```
+
 #### ErrorResponse
 ```json
 {
@@ -369,6 +454,108 @@ Xóa alias của ingredient
 }
 ```
 
+#### IngredientCompositionResponse
+```json
+{
+  "type": "object",
+  "required": [
+    "success",
+    "data",
+    "meta"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "enum": [
+        true
+      ]
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "ingredientId",
+        "status",
+        "kind",
+        "version",
+        "componentIds",
+        "components",
+        "evidence",
+        "complete",
+        "inferredAllergenCodes",
+        "audit"
+      ],
+      "properties": {
+        "ingredientId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "UNKNOWN",
+            "PARTIAL",
+            "COMPLETE"
+          ]
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "UNSPECIFIED",
+            "SIMPLE",
+            "COMPOUND"
+          ]
+        },
+        "version": {
+          "type": "integer"
+        },
+        "componentIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "_truncated": true
+          }
+        },
+        "components": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "_truncated": true
+          }
+        },
+        "evidence": {
+          "type": [
+            "object",
+            "null"
+          ]
+        },
+        "complete": {
+          "type": "boolean"
+        },
+        "inferredAllergenCodes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "_truncated": true
+          }
+        },
+        "audit": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "_truncated": true
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "meta": {
+      "type": "null"
+    }
+  },
+  "additionalProperties": false
+}
+```
+
 #### IngredientListResponse
 ```json
 {
@@ -393,6 +580,10 @@ Xóa alias của ingredient
           "id",
           "canonicalName",
           "normalizedName",
+          "compositionStatus",
+          "compositionKind",
+          "compositionVersion",
+          "componentIds",
           "foodGroup",
           "status",
           "aliases",
@@ -413,6 +604,22 @@ Xóa alias của ingredient
           },
           "normalizedName": {
             "type": "string",
+            "_truncated": true
+          },
+          "compositionStatus": {
+            "type": "string",
+            "_truncated": true
+          },
+          "compositionKind": {
+            "type": "string",
+            "_truncated": true
+          },
+          "compositionVersion": {
+            "type": "integer",
+            "_truncated": true
+          },
+          "componentIds": {
+            "type": "array",
             "_truncated": true
           },
           "foodGroup": {
@@ -502,6 +709,10 @@ Xóa alias của ingredient
         "id",
         "canonicalName",
         "normalizedName",
+        "compositionStatus",
+        "compositionKind",
+        "compositionVersion",
+        "componentIds",
         "foodGroup",
         "status",
         "aliases",
@@ -521,6 +732,32 @@ Xóa alias của ingredient
         },
         "normalizedName": {
           "type": "string"
+        },
+        "compositionStatus": {
+          "type": "string",
+          "enum": [
+            "UNKNOWN",
+            "PARTIAL",
+            "COMPLETE"
+          ]
+        },
+        "compositionKind": {
+          "type": "string",
+          "enum": [
+            "UNSPECIFIED",
+            "SIMPLE",
+            "COMPOUND"
+          ]
+        },
+        "compositionVersion": {
+          "type": "integer"
+        },
+        "componentIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "_truncated": true
+          }
         },
         "foodGroup": {
           "type": "string",

@@ -27,12 +27,16 @@ import { toast } from 'sonner';
 import { VideoUploader } from '@/features/video/components/video-uploader';
 import { ImageUploader } from '@/features/post/components/image-uploader';
 import { useCreateVideoMutation } from '@/features/video/queries/video.queries';
+import { POST_QUERY_KEYS } from '@/features/post/queries/post.queries';
+import { useAuthStore } from '@/store/useAuthStore';
+import { addTrackedUserPost } from '@/features/post/utils/user-posts-tracker';
 import { reviewApi } from '@/features/review/api/review.api';
 import { CONTENT_REVIEW_KEYS } from '@/features/review/queries/review.queries';
 import { videoFormSchema, type VideoFormValues } from '@/features/video/schemas/video-form.schema';
 
 export default function UploadVideoPage() {
   const router = useRouter();
+  const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
   const createVideoMutation = useCreateVideoMutation();
   const { data: categoryTree = [] } = useCategoryTreeQuery(CategoryType.CONTENT_TOPIC);
@@ -76,6 +80,16 @@ export default function UploadVideoPage() {
         durationSeconds: values.durationSeconds ?? 0,
         description: values.description ?? '',
       });
+      void queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.mineRoot() });
+
+      if (created?.id && user?.id) {
+        addTrackedUserPost(user.id, {
+          id: created.id,
+          type: 'VIDEO',
+          title: created.title || values.title,
+          createdAt: new Date().toISOString(),
+        });
+      }
 
       if (created?.id && created?.revisionId) {
         try {

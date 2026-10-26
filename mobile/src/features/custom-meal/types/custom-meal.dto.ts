@@ -25,6 +25,14 @@ export interface CustomMealTagDto {
   normalizedTag?: string;
 }
 
+/** `nutritionMetadata` (v2): nguồn gốc/độ tin cậy từng chỉ số, giả định và trạng thái AI. */
+export interface CustomMealNutritionMetadataDto {
+  metrics?: Record<string, { origin?: string; confidence?: number | null; uncertainty?: unknown } | null> | null;
+  assumptions?: (string | null)[] | null;
+  ai?: { used?: boolean; providerDown?: boolean; uncertaintyNote?: string | null } | null;
+  disclaimer?: string | null;
+}
+
 export interface CustomMealDto {
   id?: string;
   ownerId?: string;
@@ -38,6 +46,8 @@ export interface CustomMealDto {
   userFatGrams?: number | string | null;
   userFiberGrams?: number | string | null;
   nutritionCoverage?: string;
+  nutritionMetadata?: CustomMealNutritionMetadataDto | null;
+  nutritionAnalyzedAt?: string | null;
   deletePolicy?: string;
   tags?: (CustomMealTagDto | string | null)[];
   photos?: (CustomMealPhotoDto | null)[];
@@ -89,4 +99,8 @@ export interface CreateCustomMealRequestDto {
   tags?: string[];
 }
 
-export type UpdateCustomMealRequestDto = Partial<CreateCustomMealRequestDto>;
+/** Chỉ số dinh dưỡng khi sửa: `null` = gỡ giá trị nhập tay để BE tự tính lại. */
+type NullableMacro = 'userCalories' | 'userProteinGrams' | 'userCarbsGrams' | 'userFatGrams' | 'userFiberGrams';
+export type UpdateCustomMealRequestDto = Partial<Omit<CreateCustomMealRequestDto, NullableMacro>> & {
+  [K in NullableMacro]?: number | null;
+};

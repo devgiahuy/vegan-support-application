@@ -15,8 +15,8 @@ export interface MealProgramQueryParams {
   status?: string;
 }
 
-/** Sinh nhiều tuần cùng lúc có thể mất lâu hơn mặc định 15 giây. */
-const GENERATION_TIMEOUT_MS = 60000;
+/** Backend sinh lần lượt từng tuần/phương án nên có thể mất vài phút, lâu hơn nhiều so với mặc định 15 giây. */
+const GENERATION_TIMEOUT_MS = 180000;
 
 /** Múi giờ của thiết bị, dự phòng giờ Việt Nam khi môi trường không cung cấp. */
 function deviceTimezone(): string {

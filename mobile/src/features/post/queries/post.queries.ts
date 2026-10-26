@@ -24,13 +24,25 @@ export function useArticlesQuery(params?: ArticleQueryParams) {
 }
 
 /** Danh sách bài viết phân trang kiểu "Tải thêm" (màn Cẩm nang). `params` không chứa `page`. */
-export function useInfiniteArticlesQuery(params?: Omit<ArticleQueryParams, 'page'>) {
+export function useInfiniteArticlesQuery(params?: Omit<ArticleQueryParams, 'page'>, options?: { enabled?: boolean }) {
   return useInfiniteQuery({
+    enabled: options?.enabled ?? true,
     queryKey: [...POST_QUERY_KEYS.all, 'infinite', params ?? {}] as const,
     queryFn: ({ pageParam }) => postApi.getArticles({ ...params, page: pageParam }),
     initialPageParam: 1,
     getNextPageParam: getNextPageNumber,
     staleTime: 60 * 1000,
+  });
+}
+
+/** "Bài viết của tôi" phân trang; luôn coi là cũ để mở lại màn hình sẽ thấy bài vừa gửi/duyệt. */
+export function useInfiniteMyPostsQuery(params?: { limit?: number }, options?: { enabled?: boolean }) {
+  return useInfiniteQuery({
+    enabled: options?.enabled ?? true,
+    queryKey: [...POST_QUERY_KEYS.all, 'mine', params ?? {}] as const,
+    queryFn: ({ pageParam }) => postApi.getMyPosts({ ...params, page: pageParam }),
+    initialPageParam: 1,
+    getNextPageParam: getNextPageNumber,
   });
 }
 

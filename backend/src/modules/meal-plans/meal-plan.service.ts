@@ -262,6 +262,38 @@ export class MealPlanService {
     private readonly mealAnalysisService: MealAnalysisService,
   ) {}
 
+  async assertGenerationPrerequisites(userId: string, weekStarts: string[]): Promise<void> {
+    if (!weekStarts.length) return;
+    if (!(await this.repository.findHealthProfile(userId)))
+      throw new AppError({
+        statusCode: 409,
+        code: 'HEALTH_PROFILE_INCOMPLETE',
+        message: 'Bạn cần bổ sung thông tin sức khỏe trước khi tạo thực đơn tuần.',
+      });
+    const profile = await this.contentRepository.findSearchProfile(userId);
+    if (profile?.dietPreference?.practiceSchedule !== PracticeSchedule.PERIODIC) return;
+    const scheduled = new Set(profile.dietScheduleDates.map((entry) => dateOnly(entry.date)));
+    const missing = weekStarts
+      .map((weekStart) => ({
+        weekStart,
+        dates: buildWeeklySlotBlueprint(dateFromDateOnly(weekStart))
+          .filter((slot) => slot.mealType === MealType.BREAKFAST)
+          .map((slot) => dateOnly(slot.date)),
+      }))
+      .filter((week) => !week.dates.some((day) => scheduled.has(day)));
+    if (missing.length)
+      throw new AppError({
+        statusCode: 409,
+        code: 'DIET_SCHEDULE_REQUIRED',
+        message:
+          'Vui lòng chọn và lưu ít nhất một ngày chay kỳ cho mỗi tuần của lộ trình trước khi tạo.',
+        fields: {
+          weekStarts: missing.map((week) => week.weekStart),
+          availableDates: missing.flatMap((week) => week.dates),
+        },
+      });
+  }
+
   async generate(userId: string, input: GenerateMealPlanInput) {
     const payloadHash = sha256({
       weekStart: input.weekStart,
@@ -1160,10 +1192,30 @@ export class MealPlanService {
       const recipe = await this.contentRepository.findPublishedPost(input.recipeId!);
       const revision = recipe?.publishedRevision;
       if (!recipe || !revision?.recipeDetail) throw this.notFound();
-      const hardReasons: string[] = [];
-      const allergens = new Set(revision.recipeDetail.allergenCodes as string[]);
+      const safetyCatalog = await this.contentRepository.safetyCatalog();
+      const hardReasons: string[] = safetyCatalog.reasons(
+        revision.ingredients.map((entry) => entry.ingredientId),
+        constraints,
+        {
+          unresolved: revision.ingredients.some((entry) => entry.resolutionStatus !== 'EXACT'),
+          snapshotAllergens: stringList(revision.recipeDetail.allergenCodes),
+        },
+      );
+      const allergens = new Set([
+        ...stringList(revision.recipeDetail.allergenCodes),
+        ...revision.ingredients.flatMap(
+          (ingredient) => ingredient.ingredient?.allergens.map((entry) => entry.allergenCode) ?? [],
+        ),
+      ]);
       if (constraints.allergenCodes.some((code) => allergens.has(code)))
         hardReasons.push('ALLERGY');
+      if (
+        constraints.requireResolvedIngredients &&
+        revision.ingredients.some(
+          (ingredient) => ingredient.resolutionStatus !== 'EXACT' || !ingredient.ingredient,
+        )
+      )
+        hardReasons.push('UNRESOLVED_INGREDIENT');
       if (
         revision.ingredients.some(
           (ingredient) =>
@@ -1175,8 +1227,8 @@ export class MealPlanService {
         hardReasons.push('INGREDIENT_EXCLUSION');
       if (
         constraints.dietPattern &&
-        revision.dietCompatibility.some(
-          (entry) => entry.dietPattern === constraints.dietPattern && !entry.compatible,
+        !revision.dietCompatibility.some(
+          (entry) => entry.dietPattern === constraints.dietPattern && entry.compatible,
         )
       )
         hardReasons.push('DIET_PATTERN');
@@ -1229,7 +1281,12 @@ export class MealPlanService {
     } else {
       const custom = await this.repository.findOwnedCustomMeal(userId, input.customMealId!);
       if (!custom) throw this.notFound();
-      const hardReasons: string[] = [];
+      const safetyCatalog = await this.contentRepository.safetyCatalog();
+      const hardReasons: string[] = safetyCatalog.reasons(
+        custom.ingredients.map((entry) => entry.ingredientId),
+        constraints,
+        { unresolved: custom.ingredients.some((entry) => entry.resolutionStatus !== 'EXACT') },
+      );
       for (const ingredient of custom.ingredients) {
         if (!ingredient.ingredient) {
           hardReasons.push('UNRESOLVED_INGREDIENT');
@@ -1396,7 +1453,7 @@ export class MealPlanService {
   }
 
   private async outputWithAnalysis(userId: string, plan: MealPlanRecord) {
-    let analysis;
+    let analysis: Awaited<ReturnType<MealAnalysisService['getCurrent']>>;
     try {
       analysis = await this.mealAnalysisService.getCurrent(userId, plan.id);
     } catch (error) {
@@ -1407,7 +1464,28 @@ export class MealPlanService {
         throw error;
       analysis = await this.mealAnalysisService.analyzeDefault(userId, plan.id, plan.lockVersion);
     }
-    return { ...this.output(plan), analysis };
+    const filledIds = plan.items.filter((item) => item.status === 'FILLED').map((item) => item.id);
+    if (
+      filledIds.length !== analysis.analyzedItemIds.length ||
+      filledIds.some((id) => !analysis.analyzedItemIds.includes(id))
+    ) {
+      analysis = await this.mealAnalysisService.analyzeDefault(userId, plan.id, plan.lockVersion);
+    }
+    const output = this.output(plan);
+    return {
+      ...output,
+      analysis,
+      userSummary: analysis.summary.hardConstraintsPreserved
+        ? output.userSummary
+        : {
+            status: 'HARD_CONSTRAINT_BLOCKED' as const,
+            title: analysis.summary.title,
+            detail: analysis.summary.detail,
+            suggestion:
+              'Vui lòng thay món không phù hợp hoặc bổ sung dữ liệu thành phần đã rà soát.',
+            hardConstraintsPreserved: false,
+          },
+    };
   }
 
   private notFound() {

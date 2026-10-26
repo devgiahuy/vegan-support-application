@@ -14,6 +14,7 @@ import {
 } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
+import { DatePickerModal } from '@/components/ui/date-field';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import {
   usePreviewDietRulesMutation,
@@ -23,13 +24,17 @@ import type { DietSelection } from '@/features/diet-preferences/api/diet-prefere
 import type {
   DietRulePreview,
   DraftAllergy,
+  DraftIngredientAllergy,
   DraftIngredientExclusion,
 } from '@/features/diet-preferences/types/diet-preferences.model';
 import { AllergySeverity, DietPattern, PracticeSchedule, Tradition } from '@/common/enums';
-import { getApiErrorCode, getApiErrorMessage } from '@/lib/api-error';
+import { getApiErrorCode, getApiErrorFields, getApiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
 import { IngredientPicker } from '@/features/ingredient/components/ingredient-picker';
+import { AllergenPicker } from '@/features/allergen/components/allergen-picker';
+import type { AllergenOption } from '@/features/allergen/types/allergen.model';
+import { useDetailedProfileQuery } from '@/features/profile/queries/profile.queries';
 import { useAuthStore } from '@/store/useAuthStore';
 
 const PATTERN_OPTIONS: { value: DietPattern; label: string; note: string }[] = [
@@ -58,7 +63,11 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 type Step = 'select' | 'review' | 'done';
 
-function OptionPill<T extends string>({
+function toSeverity(value: string): DraftAllergy['severity'] {
+  return value === 'MILD' || value === 'SEVERE' ? value : 'MODERATE';
+}
+
+function OptionPill({
   selected,
   label,
   note,
@@ -100,19 +109,65 @@ export default function DietPreferencesScreen() {
   const [confirmed, setConfirmed] = React.useState<DietSelection | null>(null);
   const [preview, setPreview] = React.useState<DietRulePreview | null>(null);
   const [ruleOverrides, setRuleOverrides] = React.useState<Record<string, boolean>>({});
-  const [allergies, setAllergies] = React.useState<DraftAllergy[]>([]);
-  const [exclusions, setExclusions] = React.useState<DraftIngredientExclusion[]>([]);
   const [scheduleDates, setScheduleDates] = React.useState<string[]>([]);
   const [saveError, setSaveError] = React.useState<string | null>(null);
   const [configUnavailable, setConfigUnavailable] = React.useState(false);
 
-  const [allergenCode, setAllergenCode] = React.useState('');
-  const [allergenLabel, setAllergenLabel] = React.useState('');
+  const [allergenQuery, setAllergenQuery] = React.useState('');
+  const [ingredientAllergyValue, setIngredientAllergyValue] = React.useState<{
+    displayName: string;
+    ingredientId: string | null;
+  }>({ displayName: '', ingredientId: null });
   const [allergenSeverity, setAllergenSeverity] = React.useState<AllergySeverity>(AllergySeverity.MODERATE);
   const [exclusionName, setExclusionName] = React.useState('');
   const [exclusionIngredientId, setExclusionIngredientId] = React.useState<string | null>(null);
   const [exclusionReason, setExclusionReason] = React.useState('');
-  const [dateInput, setDateInput] = React.useState('');
+  const [pickerOpen, setPickerOpen] = React.useState(false);
+
+  // Dị ứng đang lưu được dùng làm giá trị ban đầu để lưu lại không xoá nhầm lựa chọn đã khai báo ở nơi khác (web).
+  // Người dùng sửa thì `*Draft` thay thế hẳn bản ban đầu. `ingredientAllergies` chỉ gửi khi hồ sơ đã tải xong;
+  // chưa tải thì bỏ qua để BE giữ nguyên.
+  const profileQuery = useDetailedProfileQuery();
+  const profileLoaded = profileQuery.isSuccess;
+  const savedAllergies = React.useMemo<DraftAllergy[]>(
+    () =>
+      (profileQuery.data?.diet?.allergies ?? []).map((a) => ({
+        allergenCode: a.allergenCode,
+        label: a.label,
+        severity: toSeverity(a.severity),
+      })),
+    [profileQuery.data]
+  );
+  const savedIngredientAllergies = React.useMemo<DraftIngredientAllergy[]>(
+    () =>
+      (profileQuery.data?.diet?.ingredientAllergies ?? []).map((a) => ({
+        ingredientId: a.ingredientId,
+        ingredientName: a.ingredientName,
+        severity: toSeverity(a.severity),
+      })),
+    [profileQuery.data]
+  );
+  const [allergiesDraft, setAllergiesDraft] = React.useState<DraftAllergy[] | null>(null);
+  const [ingredientAllergiesDraft, setIngredientAllergiesDraft] = React.useState<DraftIngredientAllergy[] | null>(null);
+  const savedExclusions = React.useMemo<DraftIngredientExclusion[]>(
+    () =>
+      (profileQuery.data?.diet?.ingredientExclusions ?? []).map((e) => ({
+        ingredientName: e.ingredientName,
+        ...(e.ingredientId ? { ingredientId: e.ingredientId } : {}),
+        ...(e.reason ? { reason: e.reason } : {}),
+      })),
+    [profileQuery.data]
+  );
+  const [exclusionsDraft, setExclusionsDraft] = React.useState<DraftIngredientExclusion[] | null>(null);
+  const exclusions = exclusionsDraft ?? savedExclusions;
+  const setExclusions = (update: (current: DraftIngredientExclusion[]) => DraftIngredientExclusion[]) =>
+    setExclusionsDraft((draft) => update(draft ?? savedExclusions));
+  const allergies = allergiesDraft ?? savedAllergies;
+  const ingredientAllergies = ingredientAllergiesDraft ?? savedIngredientAllergies;
+  const setAllergies = (update: (current: DraftAllergy[]) => DraftAllergy[]) =>
+    setAllergiesDraft((draft) => update(draft ?? savedAllergies));
+  const setIngredientAllergies = (update: (current: DraftIngredientAllergy[]) => DraftIngredientAllergy[]) =>
+    setIngredientAllergiesDraft((draft) => update(draft ?? savedIngredientAllergies));
 
   const previewMutation = usePreviewDietRulesMutation();
   const saveMutation = useSaveDietPreferencesMutation();
@@ -151,20 +206,29 @@ export default function DietPreferencesScreen() {
     enabled: r.hardConstraint ? true : (ruleOverrides[r.id] ?? r.defaultEnabled),
   }));
 
-  const addAllergy = () => {
-    const code = allergenCode.trim().toUpperCase();
-    if (!code) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập mã chất gây dị ứng.');
-      return;
-    }
-    if (allergies.some((a) => a.allergenCode === code)) {
+  const selectedAllergenCodes = React.useMemo(() => new Set(allergies.map((a) => a.allergenCode)), [allergies]);
+
+  const addAllergy = (option: AllergenOption) => {
+    if (selectedAllergenCodes.has(option.code)) {
       Alert.alert('Đã tồn tại', 'Chất này đã có trong danh sách.');
       return;
     }
-    setAllergies((prev) => [...prev, { allergenCode: code, label: allergenLabel.trim() || code, severity: allergenSeverity }]);
-    setAllergenCode('');
-    setAllergenLabel('');
-    setAllergenSeverity(AllergySeverity.MODERATE);
+    setAllergies((prev) => [...prev, { allergenCode: option.code, label: option.label, severity: allergenSeverity }]);
+    setAllergenQuery('');
+  };
+
+  const addIngredientAllergy = () => {
+    const { ingredientId, displayName } = ingredientAllergyValue;
+    if (!ingredientId) {
+      Alert.alert('Chưa chọn nguyên liệu', 'Hãy chọn một nguyên liệu trong danh sách gợi ý.');
+      return;
+    }
+    if (ingredientAllergies.some((a) => a.ingredientId === ingredientId)) {
+      Alert.alert('Đã tồn tại', 'Nguyên liệu này đã có trong danh sách.');
+      return;
+    }
+    setIngredientAllergies((prev) => [...prev, { ingredientId, ingredientName: displayName, severity: allergenSeverity }]);
+    setIngredientAllergyValue({ displayName: '', ingredientId: null });
   };
 
   const addExclusion = () => {
@@ -186,8 +250,7 @@ export default function DietPreferencesScreen() {
     setExclusionReason('');
   };
 
-  const addDate = () => {
-    const value = dateInput.trim();
+  const addDate = (value: string) => {
     if (!DATE_RE.test(value)) {
       Alert.alert('Ngày không hợp lệ', 'Ngày phải đúng dạng YYYY-MM-DD (ví dụ 2026-09-15).');
       return;
@@ -197,11 +260,16 @@ export default function DietPreferencesScreen() {
       return;
     }
     setScheduleDates((prev) => [...prev, value].sort());
-    setDateInput('');
   };
 
   const handleSave = async () => {
     if (!confirmed || !preview) return;
+    const pendingIngredientText =
+      ingredientAllergyValue.displayName.trim().length > 0 && !ingredientAllergyValue.ingredientId;
+    if (allergenQuery.trim().length > 0 || pendingIngredientText) {
+      setSaveError('Bạn đang nhập dị ứng nhưng chưa chọn từ gợi ý. Hãy chọn một mục hoặc xoá chữ đã nhập.');
+      return;
+    }
     if (isPeriodic && scheduleDates.length === 0) {
       setSaveError('Lịch chay kỳ cần ít nhất một ngày. Hãy chọn ngày bên dưới rồi xác nhận.');
       return;
@@ -216,6 +284,7 @@ export default function DietPreferencesScreen() {
         ruleSelections: mergedRules.map((r) => ({ ruleDefinitionId: r.id, enabled: r.enabled })),
         ...(isPeriodic ? { scheduleDates } : {}),
         allergies,
+        ...(profileLoaded ? { ingredientAllergies } : {}),
         ingredientExclusions: exclusions,
       });
       setStep('done');
@@ -237,6 +306,19 @@ export default function DietPreferencesScreen() {
       }
       if (code === 'DIET_SCHEDULE_REQUIRED') {
         setSaveError('Lịch chay kỳ cần chọn ngày. Hãy thêm ít nhất một ngày rồi lưu lại.');
+        return;
+      }
+      if (code === 'INVALID_ALLERGEN_SELECTION') {
+        const invalid = getApiErrorFields(error)?.invalidAllergenCodes;
+        const invalidCodes = Array.isArray(invalid) ? invalid.filter((c): c is string => typeof c === 'string') : [];
+        if (invalidCodes.length > 0) {
+          setAllergies((prev) => prev.filter((a) => !invalidCodes.includes(a.allergenCode)));
+        }
+        setSaveError('Có dị ứng không còn trong danh mục nên đã được bỏ khỏi danh sách. Hãy chọn lại từ gợi ý rồi lưu.');
+        return;
+      }
+      if (code === 'INVALID_INGREDIENT_ALLERGIES') {
+        setSaveError('Có nguyên liệu dị ứng không còn hoạt động trong danh mục. Hãy bỏ hoặc chọn nguyên liệu khác.');
         return;
       }
       if (code === 'INVALID_INGREDIENT_EXCLUSIONS') {
@@ -365,21 +447,9 @@ export default function DietPreferencesScreen() {
                   ))}
                 </View>
               ) : null}
-              <TextInput
-                value={allergenCode}
-                onChangeText={setAllergenCode}
-                placeholder="Mã chất (VD: DAU_PHONG)"
-                placeholderTextColor={colors.mutedForeground}
-                autoCapitalize="characters"
-                className="rounded-xl border border-input bg-background p-2.5 text-sm text-foreground"
-              />
-              <TextInput
-                value={allergenLabel}
-                onChangeText={setAllergenLabel}
-                placeholder="Tên hiển thị (VD: Đậu phộng)"
-                placeholderTextColor={colors.mutedForeground}
-                className="rounded-xl border border-input bg-background p-2.5 text-sm text-foreground"
-              />
+              <Text className="text-[11px] text-muted-foreground">
+                Chọn mức độ, rồi tìm và chạm chọn dị ứng trong danh mục (áp dụng cho cả dị ứng theo nguyên liệu bên dưới).
+              </Text>
               <View className="flex-row gap-1.5">
                 {SEVERITY_OPTIONS.map((o) => (
                   <Pressable
@@ -390,7 +460,40 @@ export default function DietPreferencesScreen() {
                   </Pressable>
                 ))}
               </View>
-              <PrimaryButton label="Thêm dị ứng" variant="outline" onPress={addAllergy} />
+              <AllergenPicker
+                query={allergenQuery}
+                onQueryChange={setAllergenQuery}
+                selectedCodes={selectedAllergenCodes}
+                onSelect={addAllergy}
+              />
+            </View>
+
+            <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
+              <View className="flex-row items-center gap-1.5">
+                <ShieldAlert size={14} color={colors.destructive} />
+                <Text className="text-sm font-bold text-foreground">Dị ứng theo nguyên liệu (ràng buộc cứng)</Text>
+              </View>
+              {ingredientAllergies.length > 0 ? (
+                <View className="flex-row flex-wrap gap-1.5">
+                  {ingredientAllergies.map((a) => (
+                    <View key={a.ingredientId} className="flex-row items-center gap-1 rounded-full bg-destructive/10 px-2.5 py-1">
+                      <Text className="text-xs font-medium text-destructive">{a.ingredientName}</Text>
+                      <Pressable onPress={() => setIngredientAllergies((prev) => prev.filter((x) => x.ingredientId !== a.ingredientId))}>
+                        <X size={11} color={colors.destructive} />
+                      </Pressable>
+                    </View>
+                  ))}
+                </View>
+              ) : null}
+              <IngredientPicker
+                placeholder="Tên nguyên liệu (VD: Đậu phộng rang)"
+                value={ingredientAllergyValue}
+                onChange={setIngredientAllergyValue}
+              />
+              <Text className="text-[11px] text-muted-foreground">
+                Phải chọn một nguyên liệu chuẩn trong gợi ý, không dùng tên tự nhập.
+              </Text>
+              <PrimaryButton label="Thêm nguyên liệu dị ứng" variant="outline" onPress={addIngredientAllergy} />
             </View>
 
             <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
@@ -443,18 +546,18 @@ export default function DietPreferencesScreen() {
                     ))}
                   </View>
                 ) : null}
-                <View className="flex-row gap-2">
-                  <TextInput
-                    value={dateInput}
-                    onChangeText={setDateInput}
-                    placeholder="YYYY-MM-DD"
-                    placeholderTextColor={colors.mutedForeground}
-                    className="flex-1 rounded-xl border border-input bg-background p-2.5 text-sm text-foreground"
-                  />
-                  <Pressable onPress={addDate} className="items-center justify-center rounded-xl bg-primary px-4">
-                    <Text className="text-sm font-semibold text-primary-foreground">Thêm</Text>
-                  </Pressable>
-                </View>
+                <PrimaryButton
+                  label="Thêm ngày chay"
+                  variant="outline"
+                  icon={<CalendarPlus size={16} color={colors.primary} />}
+                  onPress={() => setPickerOpen(true)}
+                />
+                <DatePickerModal
+                  visible={pickerOpen}
+                  title="Chọn ngày chay"
+                  onSelect={addDate}
+                  onClose={() => setPickerOpen(false)}
+                />
               </View>
             ) : null}
 
@@ -484,7 +587,7 @@ export default function DietPreferencesScreen() {
             <PrimaryButton
               label={saveMutation.isPending ? 'Đang lưu...' : 'Xác nhận lưu'}
               loading={saveMutation.isPending}
-              disabled={configUnavailable}
+              disabled={configUnavailable || profileQuery.isLoading}
               icon={<CheckCircle2 size={16} color={colors.primaryForeground} />}
               onPress={() => void handleSave()}
             />

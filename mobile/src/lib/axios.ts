@@ -82,10 +82,28 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
 
+      // Request này đã bị 401 vì mang token cũ nhưng token mới đã được cấp trong lúc nó bay:
+      // chỉ cần gửi lại bằng token hiện tại, không gọi thêm một lượt refresh.
+      const currentToken = getAccessToken() ?? useAuthStore.getState().token;
+      const sentAuthorization = originalRequest.headers?.Authorization;
+      if (currentToken && sentAuthorization && sentAuthorization !== `Bearer ${currentToken}`) {
+        originalRequest._retry = true;
+        originalRequest.headers.Authorization = `Bearer ${currentToken}`;
+        return api(originalRequest);
+      }
+
       if (queueProcessing) {
+        // Xếp hàng chờ lượt refresh đang chạy rồi thử lại bằng token MỚI (header cũ còn nằm trong
+        // `originalRequest` nên phải ghi đè, nếu không request lại ăn 401 và gây thêm một lượt refresh).
         return new Promise<string | null>((resolve, reject) => {
           failedQueue.push({ resolve, reject });
-        }).then(() => api(originalRequest));
+        }).then((token) => {
+          originalRequest._retry = true;
+          if (token && originalRequest.headers) {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+          }
+          return api(originalRequest);
+        });
       }
 
       originalRequest._retry = true;
@@ -100,10 +118,8 @@ api.interceptors.response.use(
         return api(originalRequest);
       } catch (err) {
         processQueue(err, null);
+        // Root layout lắng nghe `onSessionExpired` để dọn cache và chuyển về màn đăng nhập.
         forceLogout();
-        // TODO(mobile-nav): khi có Expo Router auth group, điều hướng về màn Login ở đây
-        // (ví dụ qua một event emitter mà root layout lắng nghe), tương tự
-        // `redirectToLoginIfProtected` bên frontend web.
         return Promise.reject(error);
       } finally {
         queueProcessing = false;

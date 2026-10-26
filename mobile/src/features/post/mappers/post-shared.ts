@@ -1,3 +1,4 @@
+import { resolveMediaUrl } from '@/lib/env';
 import { pickField, safeString } from '@/lib/mapper';
 import { PostStatus } from '@/common/enums';
 import type { BasePostDto, PostAuthorDto, PostCategorySummaryDto, PostMediaDto } from '../types/post.dto';
@@ -52,7 +53,7 @@ export function coverUrlFromMedia(
   const cover = list.find(
     (m) => safeString(m?.kind).toUpperCase() === 'COVER_IMAGE' && isImageLike(m)
   );
-  if (cover?.secureUrl) return cover.secureUrl as string;
+  if (cover?.secureUrl) return resolveMediaUrl(cover.secureUrl as string);
   const firstImage = list.find(
     (m) =>
       safeString(m?.kind).toUpperCase() !== 'VIDEO' &&
@@ -62,7 +63,7 @@ export function coverUrlFromMedia(
         !safeString(m?.kind)) &&
       isImageLike(m)
   );
-  if (firstImage?.secureUrl) return firstImage.secureUrl as string;
+  if (firstImage?.secureUrl) return resolveMediaUrl(firstImage.secureUrl as string);
   return fallback;
 }
 
@@ -81,6 +82,6 @@ export function authorFromDto(
 ): { id: string; name: string; avatarUrl: string | null } {
   const author = pickField<PostAuthorDto | null>(dto, ['author'], null);
   const name = safeString(author?.displayName, fallbackName);
-  const avatar = safeString(author?.avatarUrl, '');
+  const avatar = resolveMediaUrl(safeString(author?.avatarUrl, ''));
   return { id: safeString(author?.id), name, avatarUrl: avatar || null };
 }

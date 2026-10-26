@@ -26,14 +26,35 @@ import type {
   NutritionFact,
   TraditionWarning,
   DietCompatibility,
+  RecipeEligibility,
   RecipePaginationResult,
 } from '../types/recipe.model';
+import { getIneligibilityReasonLabel } from '../utils/recipe-eligibility';
 
 /** Giá trị thiếu/không hợp lệ -> `null` (không đổi thành 0 để không bịa số dinh dưỡng). */
 function nullableNumber(val: unknown): number | null {
   if (val === null || val === undefined || val === '') return null;
   const parsed = safeNumber(val, Number.NaN);
   return Number.isNaN(parsed) ? null : parsed;
+}
+
+function toEligibility(raw: NonNullable<RecipeDetailDto['recipe']>['eligibility']): RecipeEligibility | null {
+  if (!raw) return null;
+  return {
+    eligible: safeBoolean(raw.eligible, false),
+    reasons: safeArray<NonNullable<NonNullable<typeof raw.reasons>[number]>>(raw.reasons)
+      .map((reason) => {
+        const code = safeString(reason?.code);
+        return {
+          code,
+          label: getIneligibilityReasonLabel(code),
+          ingredientNames: safeArray<string | null>(reason?.ingredientNames)
+            .map((name) => safeString(name))
+            .filter((name) => name.length > 0),
+        };
+      })
+      .filter((reason) => reason.code.length > 0),
+  };
 }
 
 function getDifficultyLabel(diff: string): string {
@@ -83,7 +104,9 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
 
     const ingredients: RecipeIngredient[] = safeArray<RecipeIngredientDto>(
       detail?.ingredients
-    ).map((item) => ({
+    ).map((item, index) => ({
+      position: safeNumber(item?.position, index),
+      optional: safeBoolean(item?.optional, false),
       ingredientId: item?.ingredientId ?? null,
       name: safeString(item?.displayName, 'Nguyên liệu'),
       amount: safeNumber(item?.amount, 1),
@@ -97,7 +120,11 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
         instruction: safeString(step?.instruction, ''),
         durationMinutes: nullableNumber(step?.durationMinutes),
         temperatureCelsius: nullableNumber(step?.temperatureCelsius),
-        cookingMethodName: safeString(step?.cookingMethod?.name, '') || null,
+        cookingMethodId: safeString(step?.cookingMethodId, '') || null,
+        cookingMethodName: safeString(step?.cookingMethodName, '') || null,
+        affectedIngredientPositions: safeArray<number>(step?.affectedIngredientPositions).filter(
+          (value) => Number.isInteger(value) && value >= 0
+        ),
       }))
       .filter((step) => step.instruction.length > 0)
       .sort((a, b) => a.position - b.position);
@@ -156,6 +183,7 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       allergenCodes: safeArray<string>(detail?.allergenCodes),
       traditionWarnings,
       dietCompatibilities,
+      eligibility: toEligibility(detail?.eligibility),
       rating: undefined,
       ratingCount: undefined,
     };

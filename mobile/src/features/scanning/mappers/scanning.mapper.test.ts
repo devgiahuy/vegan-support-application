@@ -50,3 +50,24 @@ test('confirmation maps the explicit pantry diff and retry preserves its operati
   assert.deepEqual(scanningMappers.fridge.toRetryDto('stable-retry-key'), { idempotencyKey: 'stable-retry-key' });
   assert.throws(() => scanningMappers.fridge.toConfirmation(undefined), /Không nhận được/);
 });
+
+test('receipt review state, excluded non-food items and duplicate count are preserved', () => {
+  const job = scanningMappers.receipt.toModel({
+    ...fixture, identityDecisionRequired: true, receiptReviewDecision: null,
+    notices: [{ code: 'RECEIPT_NON_FOOD_ITEMS_EXCLUDED', message: 'Đã loại 1 mặt hàng không phải thực phẩm', count: 1 }],
+    excludedItems: [{ id: 'x1', imageId: 'first', lineText: 'TÚI NYLON', name: 'Túi nylon', reason: 'Không phải thực phẩm', confidence: 0.9, version: 3 }],
+  });
+  assert.equal(job.identityDecisionRequired, true);
+  assert.deepEqual(job.notices, ['Đã loại 1 mặt hàng không phải thực phẩm']);
+  assert.equal(job.excludedItems[0].version, 3);
+  assert.deepEqual(scanningMappers.receipt.toRestoreDto(3), { expectedVersion: 3, decision: 'KEEP' });
+  const confirmation = scanningMappers.receipt.toConfirmation({ job: fixture, pantryChanges: [], duplicateCandidates: [{ candidateId: 'c', sourceJobId: 's' }] });
+  assert.equal(confirmation.duplicateCount, 1);
+});
+
+test('receipt confirmation carries the identity decision; fridge never does', () => {
+  const values = { candidates: [{ id: 'a', version: 1 }], operationKey: 'k', receiptReviewDecision: 'SAME_RECEIPT' as const };
+  assert.equal(scanningMappers.receipt.toConfirmDto(values).receiptReviewDecision, 'SAME_RECEIPT');
+  assert.equal('receiptReviewDecision' in scanningMappers.fridge.toConfirmDto(values), false);
+  assert.equal('receiptReviewDecision' in scanningMappers.receipt.toConfirmDto({ ...values, receiptReviewDecision: undefined }), false);
+});

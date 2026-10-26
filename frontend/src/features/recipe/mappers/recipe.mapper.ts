@@ -9,7 +9,6 @@ import {
 } from '@/lib/mapper';
 import { formatDate } from '@/lib/utils';
 import { RecipeDifficulty } from '@/common/enums';
-import { PaginationResult } from '@/types/api';
 import {
   authorFromDto,
   coverMediaInput,
@@ -22,20 +21,24 @@ import type {
   RecipeDetailDto,
   RecipeIngredientDto,
   NutritionFactDto,
+  RecipeUsageStatisticsDto,
   TraditionWarningDto,
   DietCompatibilityDto,
   CreateRecipeRequestDto,
   UpdateRecipeRequestDto,
   AppliedConstraintsDto,
+  RecipeEligibilityDto,
 } from '../types/recipe.dto';
 import type { PostMediaDto, PostRevisionDto } from '@/features/post/types/post.dto';
 import {
   getAllergenName,
   getDietPatternName,
   getDietReasonLabel,
+  getRecipeIneligibilityReasonLabel,
   getTraditionName,
 } from '@/common/constants/diet-labels';
 import type {
+  AuthorRole,
   Recipe,
   RecipeAllergen,
   RecipeIngredient,
@@ -72,6 +75,25 @@ export function stepsToBody(
     .filter(Boolean);
   const body = lines.join('\n\n');
   return body || fallback;
+}
+
+/**
+ * Tách ngược `body` markdown thành danh sách bước (ngược với `stepsToBody`).
+ * Backend không trả steps structured nên form sửa phải dựng lại từ `## Bước N`.
+ * Body không có heading được coi là một bước duy nhất.
+ */
+export function bodyToSteps(
+  body: string | undefined
+): { stepNumber: number; instruction: string }[] {
+  const text = (body || '').trim();
+  if (!text) return [];
+  const parts = text.split(/^##\s*Bước\s*\d+\s*$/m);
+  if (parts.length === 1) return [{ stepNumber: 1, instruction: text }];
+  return parts
+    .slice(1)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((instruction, idx) => ({ stepNumber: idx + 1, instruction }));
 }
 
 export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
@@ -121,6 +143,23 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       RECIPE_FALLBACK_COVER
     );
     const author = authorFromDto(dto, 'Bếp Chay An Nhiên');
+    const rawAuthor = pickField<Record<string, unknown> | null>(dto, ['author'], null);
+    const authorRole = pickField<string | undefined>(rawAuthor, ['role'], undefined) as
+      AuthorRole | undefined;
+    const authorVerified = safeBoolean(pickField(rawAuthor, ['verified'], false), false);
+    const expertVerified = safeBoolean(pickField(dto, ['expertVerified'], false), false);
+    const isExpertAuthor =
+      authorRole === 'NUTRITION_EXPERT' ||
+      authorRole === 'EXPERIENCED_COOK' ||
+      authorVerified ||
+      expertVerified;
+
+    const statistics = pickField<RecipeUsageStatisticsDto | null>(detail, ['statistics'], null);
+    const rawUsageCount =
+      pickField<number | string | null>(statistics, ['usageUserCount'], null) ??
+      pickField<number | string | null>(detail, ['usageCount'], null) ??
+      pickField<number | string | null>(dto, ['usageCount'], null);
+    const usageCount = safeNumber(rawUsageCount, 0);
 
     const traditionWarnings: TraditionWarning[] = safeArray<TraditionWarningDto>(
       detail?.traditionWarnings
@@ -150,6 +189,20 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
         reasonLabels: reasonCodes.map(getDietReasonLabel),
       };
     });
+
+    const eligibility = pickField<RecipeEligibilityDto | null>(detail, ['eligibility'], null);
+    const ineligibilityReasons = eligibility
+      ? safeArray<NonNullable<RecipeEligibilityDto['reasons']>[number]>(eligibility.reasons).map(
+          (reason) => {
+            const code = safeString(reason?.code);
+            return {
+              code,
+              label: getRecipeIneligibilityReasonLabel(code),
+              ingredientNames: safeArray<string>(reason?.ingredientNames).filter(Boolean),
+            };
+          }
+        )
+      : undefined;
 
     const allergenCodes = safeArray<string>(detail?.allergenCodes);
     const allergens: RecipeAllergen[] = allergenCodes.map((code) => ({
@@ -181,9 +234,15 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
         name: author.name,
         avatarUrl: author.avatarUrl,
         avatar: author.avatarUrl || 'https://i.pravatar.cc/80?img=32',
-        // Backend không trả trạng thái kiểm chứng tác giả: không claim verified.
-        verified: false,
-        roleTitle: undefined,
+        verified: authorVerified,
+        role: authorRole,
+        roleTitle:
+          authorRole === 'NUTRITION_EXPERT'
+            ? 'Chuyên gia dinh dưỡng'
+            : authorRole === 'EXPERIENCED_COOK'
+              ? 'Đầu bếp chay'
+              : undefined,
+        isExpert: isExpertAuthor,
       },
       category: firstCategory(dto),
       coverImageUrl,
@@ -223,6 +282,9 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       allergens,
       traditionWarnings,
       dietCompatibilities,
+      usageCount,
+      isExpertAuthor,
+      ineligibilityReasons,
     };
   }
 
@@ -243,7 +305,7 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
         page: safeNumber(meta?.page, 1),
         limit: safeNumber(meta?.limit, 20),
         totalItems: safeNumber(meta?.total, items.length),
-        totalPages: safeNumber(meta?.totalPages, 1),
+        totalPages: safeNumber(meta?.totalPages, items.length === 0 ? 0 : 1),
         appliedConstraints: meta?.appliedConstraints
           ? {
               authenticated: safeBoolean(meta.appliedConstraints.authenticated, false),

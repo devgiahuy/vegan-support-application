@@ -4,6 +4,9 @@ export const MAX_RADIUS_M = 50000;
 export const DEFAULT_RADIUS_M = 5000;
 export const RADIUS_OPTIONS_M = [500, 1000, 3000, 5000, 10000, 20000, 50000] as const;
 
+/** Tâm bản đồ khi chưa có vị trí người dùng: Quận 1, TP. Hồ Chí Minh. Không dùng để gọi API tìm quán. */
+export const DEFAULT_MAP_CENTER = { lat: 10.7769, lng: 106.7009, label: 'Quận 1, TP. Hồ Chí Minh' } as const;
+
 export const MIN_KEYWORD_LENGTH = 2;
 export const MIN_ADDRESS_LENGTH = 5;
 export const MAX_CATEGORIES = 30;

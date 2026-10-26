@@ -229,6 +229,17 @@ describe('sanitizeAdvancedFilters', () => {
 });
 
 describe('emptyStateCopy', () => {
+  it.each(['NEARBY', 'BOUNDS', 'KEYWORD'] as const)(
+    '%s giải thích kết quả bị giới hạn bởi bộ lọc chế độ ăn đã chọn',
+    (mode) => {
+      const copy = emptyStateCopy(mode, true);
+      expect(copy.title).toBe('Chưa có quán đáp ứng bộ lọc chế độ ăn');
+      expect(copy.description).toContain('các bộ lọc bạn đã chọn');
+      expect(copy.description).toContain('nhà cung cấp bản đồ');
+      expect(copy.actions).toEqual(emptyStateCopy(mode).actions);
+    }
+  );
+
   it('trả nhãn tiếng Việt khác nhau theo chế độ', () => {
     const nearby = emptyStateCopy('NEARBY');
     const bounds = emptyStateCopy('BOUNDS');

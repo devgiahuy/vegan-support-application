@@ -1,19 +1,22 @@
 import * as React from 'react';
 import { Share, Text, View } from 'react-native';
-import { Link, type Href, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Calendar, History, Settings2, Share2, User } from 'lucide-react-native';
+import { useLocalSearchParams } from 'expo-router';
+import { Calendar, FileCheck2, History, Settings2, Share2, User } from 'lucide-react-native';
 
+import { UserRole } from '@/common/enums';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/state-views';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { ArtifactContent } from '@/features/ai-artifact/components/artifact-content';
 import { AuthRequiredCard } from '@/features/ai-artifact/components/auth-required-card';
 import { ShareArtifactSheet } from '@/features/ai-artifact/components/share-artifact-sheet';
+import { VerificationSheet } from '@/features/ai-artifact/components/verification-sheet';
 import { VerificationBadge } from '@/features/ai-artifact/components/verification-badge';
 import { useInfinitePublicAiArtifactsQuery } from '@/features/ai-artifact/queries/ai-artifact.queries';
 import { getAiArtifactErrorMessage } from '@/features/ai-artifact/utils/ai-artifact-errors';
 import { getApiErrorCode } from '@/lib/api-error';
 import { useIconColors } from '@/lib/theme-colors';
+import { canManageSharing } from '@/features/ai-artifact/utils/can-manage-sharing';
 import { useAuthStore } from '@/store/useAuthStore';
 
 const DISCLAIMER =
@@ -27,11 +30,14 @@ export default function AiKnowledgeDetailScreen() {
   const colors = useIconColors();
   const { id } = useLocalSearchParams<{ id: string }>();
   const artifactId = typeof id === 'string' ? id : '';
+  const currentUser = useAuthStore((state) => state.user);
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const canVerify = currentUser?.role === UserRole.CONTRIBUTOR || currentUser?.role === UserRole.ADMIN;
 
   const { data, isLoading, isError, error, refetch, hasNextPage, fetchNextPage, isFetchingNextPage } =
     useInfinitePublicAiArtifactsQuery({ limit: 50 });
   const [shareOpen, setShareOpen] = React.useState(false);
+  const [verifyOpen, setVerifyOpen] = React.useState(false);
 
   const artifact = data?.pages.flatMap((page) => page.items).find((item) => item.id === artifactId);
 
@@ -40,12 +46,6 @@ export default function AiKnowledgeDetailScreen() {
     if (!artifact && hasNextPage && !isFetchingNextPage && !isError) void fetchNextPage();
   }, [artifact, hasNextPage, isFetchingNextPage, isError, fetchNextPage]);
   const searching = !artifact && (hasNextPage || isFetchingNextPage);
-
-  const back = (
-    <Link href={'/ai-knowledge' as Href} asChild>
-      <PrimaryButton label="Về danh sách tri thức" variant="outline" icon={<ArrowLeft size={15} color={colors.foreground} />} />
-    </Link>
-  );
 
   return (
     <SiteScreen>
@@ -62,7 +62,6 @@ export default function AiKnowledgeDetailScreen() {
               title="Liên kết không khả dụng"
               description="Tri thức AI này không tồn tại hoặc chủ sở hữu đã thu hồi quyền chia sẻ công khai."
             />
-            {back}
           </View>
         ) : (
           <>
@@ -96,13 +95,22 @@ export default function AiKnowledgeDetailScreen() {
                 icon={<Share2 size={14} color={colors.foreground} />}
                 onPress={() => void Share.share({ title: artifact.title, message: `${artifact.title}\n\n${artifact.summary}`.trim() })}
               />
-              {isAuthenticated ? (
+              {isAuthenticated && canManageSharing(artifact, currentUser) ? (
                 <PrimaryButton
                   label="Quản lý chia sẻ"
                   variant="outline"
                   className="h-10 px-4"
                   icon={<Settings2 size={14} color={colors.foreground} />}
                   onPress={() => setShareOpen(true)}
+                />
+              ) : null}
+              {canVerify ? (
+                <PrimaryButton
+                  label="Thẩm định"
+                  variant="outline"
+                  className="h-10 px-4"
+                  icon={<FileCheck2 size={14} color={colors.foreground} />}
+                  onPress={() => setVerifyOpen(true)}
                 />
               ) : null}
             </View>
@@ -169,9 +177,8 @@ export default function AiKnowledgeDetailScreen() {
               </View>
             ) : null}
 
-            {back}
-
             <ShareArtifactSheet artifact={artifact} visible={shareOpen} onClose={() => setShareOpen(false)} />
+            {verifyOpen ? <VerificationSheet artifact={artifact} onClose={() => setVerifyOpen(false)} /> : null}
           </>
         )}
       </View>

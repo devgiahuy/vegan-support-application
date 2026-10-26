@@ -462,4 +462,110 @@ describe('MealPlanMapper', () => {
     expect(slot.fat).toBe(12);
     expect(slot.carbs).toBe(91);
   });
+
+  it('map đúng các chỉ số đa lượng qua alias snake_case khi backend trả về định dạng snake_case', () => {
+    const plan = mealPlanMapper.toModel({
+      id: 'plan-snake-macros',
+      weekStart: '2026-10-05',
+      items: [
+        {
+          id: 'slot-snake',
+          date: '2026-10-05',
+          meal_type: 'LUNCH',
+          status: 'FILLED',
+          calories: 620,
+          protein_grams: 28,
+          fiber_grams: 14,
+          fat_grams: 16,
+          carbohydrate_grams: 85,
+          recipe: {
+            id: 'r-2',
+            title: 'Cơm Lứt Tempeh Bông Cải Sốt Gừng',
+          },
+        },
+      ],
+    });
+
+    const slot = plan.items[0];
+    expect(slot.filled).toBe(true);
+    expect(slot.calories).toBe(620);
+    expect(slot.protein).toBe(28);
+    expect(slot.fiber).toBe(14);
+    expect(slot.fat).toBe(16);
+    expect(slot.carbs).toBe(85);
+  });
+
+  it('map đúng coverImageUrl từ recipe Unsplash URL và fallback null khi không có ảnh', () => {
+    const plan = mealPlanMapper.toModel({
+      id: 'plan-cover-images',
+      weekStart: '2026-10-05',
+      items: [
+        {
+          id: 'slot-with-cover',
+          date: '2026-10-05',
+          mealType: 'DINNER',
+          status: 'FILLED',
+          recipe: {
+            id: 'r-3',
+            title: 'Phở Xào Nấm Đậu Hũ Cải Thìa',
+            coverImageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c',
+          },
+        },
+        {
+          id: 'slot-no-cover',
+          date: '2026-10-05',
+          mealType: 'BREAKFAST',
+          status: 'FILLED',
+          recipe: {
+            id: 'r-4',
+            title: 'Món không có ảnh',
+          },
+        },
+      ],
+    });
+
+    expect(plan.items[0].coverImageUrl).toBe(
+      'https://images.unsplash.com/photo-1546069901-ba9599a7e63c'
+    );
+    expect(plan.items[1].coverImageUrl).toBeNull();
+  });
+
+  it('map đúng món cá nhân với coverPhotoUrl và số khẩu phần servings > 1', () => {
+    const plan = mealPlanMapper.toModel({
+      id: 'plan-custom-servings',
+      weekStart: '2026-10-05',
+      items: [
+        {
+          id: 'slot-custom',
+          date: '2026-10-05',
+          mealType: 'LUNCH',
+          status: 'FILLED',
+          sourceType: 'CUSTOM_MEAL',
+          servings: 2,
+          calories: 800,
+          proteinGrams: 36,
+          fiberGrams: 20,
+          fatGrams: 22,
+          carbohydrateGrams: 110,
+          customMeal: {
+            id: 'cm-1',
+            name: 'Salad Đậu Hũ Trộn Hạt',
+            coverPhotoUrl: 'https://images.unsplash.com/photo-custom',
+            nutritionCoverage: 'FULL',
+          },
+        },
+      ],
+    });
+
+    const slot = plan.items[0];
+    expect(slot.isCustomMeal).toBe(true);
+    expect(slot.sourceType).toBe('CUSTOM_MEAL');
+    expect(slot.servings).toBe(2);
+    expect(slot.calories).toBe(800);
+    expect(slot.protein).toBe(36);
+    expect(slot.fiber).toBe(20);
+    expect(slot.fat).toBe(22);
+    expect(slot.carbs).toBe(110);
+    expect(slot.coverImageUrl).toBe('https://images.unsplash.com/photo-custom');
+  });
 });

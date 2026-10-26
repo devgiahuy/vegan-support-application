@@ -1,5 +1,6 @@
 import { isAxiosError } from 'axios';
 import { createOperationKey } from '@/lib/operation-key';
+import { formatBytes } from '../mappers/storage.mapper';
 import type {
   MediaAsset,
   ProviderUploadReceipt,
@@ -38,7 +39,11 @@ export async function runImageUpload(
         input.image.bytes > config.maxBytes ||
         !config.allowedMimeTypes.includes(input.image.mimeType)
       )
-        throw new Error('Ảnh không đáp ứng giới hạn tải lên của tài khoản.');
+        throw new Error(
+          input.kind === 'VIDEO'
+            ? `Video không đáp ứng giới hạn tải lên (tối đa ${config ? formatBytes(config.maxBytes) : "mức cho phép"}, định dạng MP4, WebM hoặc MOV).`
+            : 'Ảnh không đáp ứng giới hạn tải lên của tài khoản.'
+        );
       attempt.receipt = await transport.send(config, input.image, progress);
     }
     commitAttempted = true;
@@ -49,7 +54,7 @@ export async function runImageUpload(
       if (!isAxiosError(error) || error.response) throw error;
       committed = await transport.commit(attempt.reservationId, attempt.receipt);
     }
-    if (!committed.asset) throw new Error('Không nhận được ảnh sau khi xác nhận tải lên.');
+    if (!committed.asset) throw new Error('Không nhận được tệp sau khi xác nhận tải lên.');
     progress(100);
     return committed.asset;
   } catch (error) {

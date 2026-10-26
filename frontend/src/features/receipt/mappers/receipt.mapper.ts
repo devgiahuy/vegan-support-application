@@ -2,8 +2,13 @@ import { BaseMapper, pickField, safeArray, safeDate, safeNumber, safeString } fr
 import type {
   ReceiptCandidateDto,
   ReceiptConfirmationResponseDto,
+  ReceiptConfirmationPantryItemDto,
+  ReceiptDuplicateCandidateDto,
+  ReceiptExcludedItemDto,
   ReceiptImageDto,
   ReceiptJobResponseDto,
+  ReceiptNoticeDto,
+  ReceiptPantryChangeDto,
   CreateReceiptJobReqDto,
   UpdateReceiptCandidateReqDto,
   ConfirmReceiptJobReqDto,
@@ -18,6 +23,8 @@ import type {
   ReceiptCandidateQuantity,
   ReceiptCandidateStatus,
   ReceiptConfirmationDiff,
+  ReceiptDuplicateCandidate,
+  ReceiptExcludedItem,
   ReceiptConfirmationPantryItem,
   ReceiptImage,
   ReceiptIngredientSuggestion,
@@ -26,6 +33,7 @@ import type {
   ReceiptJobMetadata,
   ReceiptJobProgress,
   ReceiptJobStatus,
+  ReceiptNotice,
   ReceiptPantryChange,
   UpdateReceiptCandidateInput,
 } from '../types/receipt.model';
@@ -80,6 +88,27 @@ export class ReceiptMapper extends BaseMapper<ReceiptJobResponseDto, ReceiptJob>
 
     const statusLabel = STATUS_LABELS[status] || 'Không xác định';
     const statusBadgeVariant = STATUS_BADGE_VARIANTS[status] || 'secondary';
+
+    const rawNotices = pickField<ReceiptNoticeDto[]>(dto, ['notices'], []);
+    const notices: ReceiptNotice[] = safeArray(rawNotices, (notice) => ({
+      code: 'RECEIPT_NON_FOOD_ITEMS_EXCLUDED',
+      message: safeString(pickField(notice, ['message'], '')),
+      count: safeNumber(pickField(notice, ['count'], 0)),
+    }));
+    const rawExcludedItems = pickField<ReceiptExcludedItemDto[]>(dto, ['excludedItems'], []);
+    const excludedItems: ReceiptExcludedItem[] = safeArray(rawExcludedItems, (item) => ({
+      id: safeString(pickField(item, ['id'], '')),
+      imageId: safeString(pickField(item, ['imageId', 'image_id'], '')),
+      lineText: safeString(pickField(item, ['lineText', 'line_text'], '')),
+      name: safeString(pickField(item, ['name'], '')),
+      reason: safeString(pickField(item, ['reason'], 'Mặt hàng được loại khỏi danh sách.')),
+      confidencePercent: Math.round(safeNumber(pickField(item, ['confidence'], 0)) * 100),
+      version: safeNumber(pickField(item, ['version'], 1), 1),
+    }));
+    const rawReviewDecision = safeString(pickField(dto, ['receiptReviewDecision'], ''));
+    const receiptReviewDecision = ['SAME_RECEIPT', 'SEPARATE_RECEIPTS'].includes(rawReviewDecision)
+      ? (rawReviewDecision as ReceiptJob['receiptReviewDecision'])
+      : null;
 
     // Progress
     const completedImages = safeNumber(
@@ -172,12 +201,21 @@ export class ReceiptMapper extends BaseMapper<ReceiptJobResponseDto, ReceiptJob>
     const canConfirm = isReadyForReview && activeCandidates.length > 0;
     const canRetry = status === 'FAILED' || status === 'PARTIAL_FAILED';
     const canCancel = !isConfirmed && !isCancelled;
+    const canAddImages =
+      (status === 'READY' || status === 'PARTIAL_FAILED' || status === 'FAILED') &&
+      !isProcessing &&
+      images.length < 4;
 
     return {
       id,
       status,
       statusLabel,
       statusBadgeVariant,
+      reviewRequired: Boolean(pickField(dto, ['reviewRequired'], false)),
+      identityDecisionRequired: Boolean(pickField(dto, ['identityDecisionRequired'], false)),
+      receiptReviewDecision,
+      notices,
+      excludedItems,
       progress,
       receiptMetadata,
       images,
@@ -198,6 +236,7 @@ export class ReceiptMapper extends BaseMapper<ReceiptJobResponseDto, ReceiptJob>
       canConfirm,
       canRetry,
       canCancel,
+      canAddImages,
     };
   }
 
@@ -217,6 +256,11 @@ export class ReceiptMapper extends BaseMapper<ReceiptJobResponseDto, ReceiptJob>
     };
 
     const issue = pickField<string | null>(dto, ['issue'], null);
+    const receiptNumber = pickField<string | null>(dto, ['receiptNumber'], null);
+    const merchantName = pickField<string | null>(dto, ['merchantName'], null);
+    const purchasedAt = safeDate(pickField(dto, ['purchasedAt'], null));
+    const currency = pickField<string | null>(dto, ['currency'], null);
+    const totalAmount = pickField<number | null>(dto, ['totalAmount'], null);
 
     return {
       id,
@@ -224,6 +268,11 @@ export class ReceiptMapper extends BaseMapper<ReceiptJobResponseDto, ReceiptJob>
       url,
       status,
       statusLabel: statusLabels[status] || 'Không xác định',
+      receiptNumber,
+      merchantName,
+      purchasedAt,
+      currency,
+      totalAmount,
       issue,
     };
   }
@@ -317,6 +366,26 @@ export class ReceiptMapper extends BaseMapper<ReceiptJobResponseDto, ReceiptJob>
     const isRejected = status === 'REJECTED';
     const isEdited = status === 'EDITED';
     const isConfirmed = status === 'CONFIRMED';
+    const rawClassification = safeString(pickField(dto, ['aiClassification'], 'UNCERTAIN'));
+    const aiClassification: ReceiptCandidate['aiClassification'] = [
+      'FOOD',
+      'READY_TO_EAT',
+      'NON_FOOD',
+      'UNCERTAIN',
+    ].includes(rawClassification)
+      ? (rawClassification as ReceiptCandidate['aiClassification'])
+      : 'UNCERTAIN';
+    const classificationReason = pickField<string | null>(dto, ['classificationReason'], null);
+    const rawClassificationConfidence = pickField<number | null>(
+      dto,
+      ['classificationConfidence'],
+      null
+    );
+    const classificationConfidencePercent =
+      rawClassificationConfidence === null
+        ? null
+        : Math.round(safeNumber(rawClassificationConfidence) * 100);
+    const duplicateOfJobId = pickField<string | null>(dto, ['duplicateOfJobId'], null);
     const version = safeNumber(pickField(dto, ['version'], 1), 1);
 
     return {
@@ -331,11 +400,15 @@ export class ReceiptMapper extends BaseMapper<ReceiptJobResponseDto, ReceiptJob>
       confidencePercent,
       confidenceTier,
       uncertaintyNote,
+      aiClassification,
+      classificationReason,
+      classificationConfidencePercent,
       status,
       statusLabel,
       isRejected,
       isEdited,
       isConfirmed,
+      duplicateOfJobId,
       version,
     };
   }
@@ -346,14 +419,36 @@ export class ReceiptMapper extends BaseMapper<ReceiptJobResponseDto, ReceiptJob>
     const job = this.toModel(dto?.job);
     const rawChanges = pickField(dto, ['pantryChanges', 'pantry_changes'], []);
 
-    const pantryChanges: ReceiptPantryChange[] = safeArray(rawChanges, (change: any) => {
+    const pantryChanges: ReceiptPantryChange[] = safeArray<
+      ReceiptPantryChangeDto,
+      ReceiptPantryChange
+    >(rawChanges, (change) => {
       const candidateId = safeString(pickField(change, ['candidateId', 'candidate_id'], ''));
       const action = pickField<'CREATED' | 'UPDATED'>(change, ['action'], 'CREATED');
       const actionLabel = action === 'CREATED' ? 'Thêm mới' : 'Cộng dồn';
 
-      const pItem = pickField<any>(change, ['pantryItem', 'pantry_item'], {});
+      const pItem = pickField<ReceiptConfirmationPantryItemDto>(
+        change,
+        ['pantryItem', 'pantry_item'],
+        {
+          id: '',
+          ingredient: null,
+          unmatchedText: null,
+          quantity: 0,
+          unit: '',
+          source: 'RECEIPT',
+          confidence: 0,
+          confirmationStatus: 'CONFIRMED',
+          purchasedAt: null,
+          version: 1,
+        }
+      );
       const pId = safeString(pickField(pItem, ['id'], ''));
-      const ingredientObj = pickField<any>(pItem, ['ingredient'], null);
+      const ingredientObj = pickField<ReceiptConfirmationPantryItemDto['ingredient']>(
+        pItem,
+        ['ingredient'],
+        null
+      );
       const ingredientId = ingredientObj ? safeString(ingredientObj.id) || null : null;
       const ingredientName = ingredientObj ? safeString(ingredientObj.name) || null : null;
       const unmatchedText = pickField<string | null>(
@@ -394,9 +489,17 @@ export class ReceiptMapper extends BaseMapper<ReceiptJobResponseDto, ReceiptJob>
         pantryItem,
       };
     });
+    const duplicateCandidates: ReceiptDuplicateCandidate[] = safeArray<
+      ReceiptDuplicateCandidateDto,
+      ReceiptDuplicateCandidate
+    >(pickField(dto, ['duplicateCandidates', 'duplicate_candidates'], []), (item) => ({
+      candidateId: safeString(pickField(item, ['candidateId', 'candidate_id'], '')),
+      sourceJobId: safeString(pickField(item, ['sourceJobId', 'source_job_id'], '')),
+    }));
 
     return {
       job,
+      duplicateCandidates,
       pantryChanges,
     };
   }
@@ -430,10 +533,14 @@ export class ReceiptMapper extends BaseMapper<ReceiptJobResponseDto, ReceiptJob>
 
   toConfirmJobDto(input: {
     candidates: { id: string; expectedVersion: number }[];
+    receiptReviewDecision?: ReceiptJob['receiptReviewDecision'];
     idempotencyKey?: string;
   }): ConfirmReceiptJobReqDto {
     return {
       candidates: input.candidates,
+      ...(input.receiptReviewDecision
+        ? { receiptReviewDecision: input.receiptReviewDecision }
+        : {}),
       idempotencyKey: input.idempotencyKey || this.generateUuid(),
     };
   }

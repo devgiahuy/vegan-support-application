@@ -13,7 +13,7 @@ import type {
   PostRevisionDto,
   UpdatePostRequestDto,
 } from '../types/post.dto';
-import type { Article, RelatedGroup, RelatedItem } from '../types/post.model';
+import type { Article, MyPostModel, RelatedGroup, RelatedItem } from '../types/post.model';
 
 /** Nhãn tiếng Việt cho mọi trạng thái vòng đời backend `PostStatus`. */
 export function getPostStatusLabel(status: PostStatus): string {
@@ -98,6 +98,33 @@ export function authorFromDto(
   const name = safeString(author?.displayName, fallbackName);
   const avatar = safeString(author?.avatarUrl, '');
   return { id: safeString(author?.id), name, avatarUrl: avatar || null };
+}
+
+export function toMyPostModel(dto: BasePostDto | null | undefined): MyPostModel {
+  const author = authorFromDto(dto, 'Tác giả VeggieConnect');
+  const status = parsePostStatus(safeString(dto?.status, 'DRAFT'));
+  const rawType = safeString(dto?.type);
+  const type: MyPostModel['type'] =
+    rawType === PostType.RECIPE || rawType === PostType.VIDEO ? rawType : 'BLOG';
+  const publishedAt = safeDate(pickField(dto, ['publishedAt', 'published_at'], null));
+
+  return {
+    id: safeString(dto?.id),
+    type,
+    title: safeString(dto?.revision?.title, 'Bài viết chưa có tiêu đề'),
+    excerpt: safeString(dto?.revision?.excerpt),
+    coverImageUrl: coverUrlFromMedia(dto?.media, ''),
+    status,
+    statusLabel: getPostStatusLabel(status),
+    categoryName: safeString(
+      dto?.categories?.[0]?.name,
+      type === 'RECIPE' ? 'Món chay' : type === 'VIDEO' ? 'Video nấu ăn' : 'Cẩm nang'
+    ),
+    formattedPublishedAt: publishedAt ? formatDate(publishedAt) : '',
+    authorId: author.id,
+    authorName: author.name,
+    version: safeNumber(dto?.version, 1),
+  };
 }
 
 function estimateReadingMinutes(body: string): number {

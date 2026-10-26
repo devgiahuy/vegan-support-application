@@ -40,7 +40,22 @@ export async function sharedRefresh(): Promise<string | null> {
   return refreshPromise;
 }
 
-/** Đăng xuất cục bộ (xoá token + user trong store) khi refresh thất bại. */
+type SessionExpiredListener = () => void;
+const sessionExpiredListeners = new Set<SessionExpiredListener>();
+
+/** Đăng ký lắng nghe sự kiện hết phiên (refresh thất bại). Trả về hàm huỷ đăng ký. */
+export function onSessionExpired(listener: SessionExpiredListener): () => void {
+  sessionExpiredListeners.add(listener);
+  return () => {
+    sessionExpiredListeners.delete(listener);
+  };
+}
+
+/**
+ * Đăng xuất cục bộ (xoá token + user trong store) khi refresh thất bại, rồi báo cho root layout để
+ * dọn cache và đưa người dùng về màn đăng nhập nếu đang ở màn cần phiên (xem `use-session-expired`).
+ */
 export function forceLogout(): void {
   useAuthStore.getState().logout();
+  sessionExpiredListeners.forEach((listener) => listener());
 }

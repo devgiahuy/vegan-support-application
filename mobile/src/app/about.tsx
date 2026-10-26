@@ -1,7 +1,6 @@
-import { View } from 'react-native';
+import { Text, View } from 'react-native';
 import { Link, type Href } from 'expo-router';
 import { Heart, Leaf, ShieldCheck, Sprout, Target, Users } from 'lucide-react-native';
-import { Text } from 'react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
 import { IconCard, StaticHero } from '@/components/shared/static-page';

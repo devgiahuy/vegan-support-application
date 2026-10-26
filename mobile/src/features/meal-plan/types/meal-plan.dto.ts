@@ -17,6 +17,14 @@ export interface MealSlotDto {
   servings?: number | string | null;
   calories?: number | string | null;
   tolerancePercent?: number | string | null;
+  proteinGrams?: number | string | null;
+  fiberGrams?: number | string | null;
+  fatGrams?: number | string | null;
+  carbohydrateGrams?: number | string | null;
+  protein_grams?: number | string | null;
+  fiber_grams?: number | string | null;
+  fat_grams?: number | string | null;
+  carbohydrate_grams?: number | string | null;
   reasonCodes?: (string | null)[] | null;
   warningCodes?: (string | null)[] | null;
   reason?: string;
@@ -29,6 +37,10 @@ export interface MealSlotDto {
     name?: string;
     coverImageUrl?: string;
     difficulty?: string;
+    protein?: number | string;
+    carbs?: number | string;
+    fat?: number | string;
+    fiber?: number | string;
   } | null;
   customMeal?: {
     id?: string;

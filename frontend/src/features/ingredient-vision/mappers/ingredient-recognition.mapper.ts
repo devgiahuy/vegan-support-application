@@ -146,6 +146,10 @@ export class IngredientRecognitionMapper extends BaseMapper<
     const isFailed = status === 'FAILED';
     const canRetry = isFailed || status === 'PARTIAL_FAILED';
     const canConfirm = isReadyForReview && proposedCandidatesCount > 0;
+    const canAddImages =
+      (status === 'READY' || status === 'PARTIAL_FAILED' || status === 'FAILED') &&
+      !isProcessing &&
+      images.length < 6;
 
     return {
       id,
@@ -175,6 +179,7 @@ export class IngredientRecognitionMapper extends BaseMapper<
       isFailed,
       canRetry,
       canConfirm,
+      canAddImages,
     };
   }
 

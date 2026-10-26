@@ -59,6 +59,7 @@ List submitted public AI artifacts using a strict privacy-safe allowlist
         "author",
         "lifecycle",
         "activeVerification",
+        "statistics",
         "verificationHistory",
         "createdAt"
       ],
@@ -172,7 +173,6 @@ List submitted public AI artifacts using a strict privacy-safe allowlist
             "scope",
             "evidenceNote",
             "correction",
-            "status",
   …(truncated — xem api-catalog.json)
 ```
 
@@ -313,6 +313,7 @@ List submitted public AI artifacts using a strict privacy-safe allowlist
           "author",
           "lifecycle",
           "activeVerification",
+          "statistics",
           "verificationHistory",
           "createdAt"
         ],
@@ -354,6 +355,10 @@ List submitted public AI artifacts using a strict privacy-safe allowlist
               "object",
               "null"
             ],
+            "_truncated": true
+          },
+          "statistics": {
+            "type": "object",
             "_truncated": true
           },
           "verificationHistory": {

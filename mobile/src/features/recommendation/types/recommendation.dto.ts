@@ -34,7 +34,14 @@ export interface RecommendationResponseDto {
     lookbackDays?: number | string;
     decayHalfLifeDays?: number | string;
     generatedAt?: string;
-    appliedConstraints?: string[];
+    appliedConstraints?: {
+      authenticated?: boolean;
+      dietPattern?: string | null;
+      allergyCount?: number | string;
+      ingredientExclusionCount?: number | string;
+      traditions?: string[];
+      forDate?: string;
+    };
   };
 }
 

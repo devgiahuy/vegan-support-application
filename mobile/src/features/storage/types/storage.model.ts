@@ -6,6 +6,10 @@ export interface StorageUsage {
   occupiedPercent: number;
   overQuota: boolean;
   warning: boolean;
+  /** Dùng hết (hoặc vượt) hạn mức: không tải thêm được. */
+  critical: boolean;
+  /** Ngưỡng % bắt đầu cảnh báo do chính sách backend quy định. */
+  warningPercent: number;
 }
 
 export interface StorageAccount {
@@ -40,7 +44,8 @@ export interface UploadReservation {
   upload: UploadConfiguration | null;
 }
 
-export interface SelectedImage {
+/** Tệp ảnh hoặc video đã chọn từ thư viện/camera, chưa tải lên. */
+export interface SelectedMedia {
   uri: string;
   name: string;
   mimeType: string;
@@ -48,9 +53,12 @@ export interface SelectedImage {
   file?: File;
 }
 
+export type SelectedImage = SelectedMedia;
+
 export interface ReservationInput {
-  kind: 'COVER_IMAGE' | 'FRIDGE_IMAGE' | 'RECEIPT_IMAGE';
-  image: SelectedImage;
+  kind: 'COVER_IMAGE' | 'FRIDGE_IMAGE' | 'RECEIPT_IMAGE' | 'VIDEO';
+  /** Tệp cần tải lên (ảnh, hoặc video khi `kind` là `VIDEO`). */
+  image: SelectedMedia;
   idempotencyKey: string;
 }
 

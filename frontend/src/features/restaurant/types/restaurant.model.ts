@@ -82,7 +82,8 @@ export interface Restaurant {
 }
 
 /** Loại cảnh báo hiển thị trên đầu danh sách kết quả. */
-export type DiscoveryNoticeKind = 'UNAVAILABLE' | 'SUPPRESSED' | 'TRUNCATED' | 'ATTRIBUTION' | 'STALE' | 'PRIVACY';
+export type DiscoveryNoticeKind =
+  'UNAVAILABLE' | 'SUPPRESSED' | 'TRUNCATED' | 'ATTRIBUTION' | 'STALE' | 'PRIVACY';
 
 /** Một cảnh báo đã dịch sẵn — nội dung lấy thẳng từ `message`, không format trong JSX. */
 export interface DiscoveryNotice {
@@ -101,6 +102,7 @@ export interface RestaurantDiscoveryMeta {
   hasPrevPage: boolean;
   /** `true` khi không có nguồn provider nào phản hồi thành công. */
   externalDataUnavailable: boolean;
+  /** Chỉ áp dụng khi người dùng chọn bộ lọc chế độ ăn trong lần tìm này. */
   externalResultsSuppressed: boolean;
   /** `true` khi kết quả bị cắt bởi giới hạn nhà cung cấp. */
   resultsTruncated: boolean;

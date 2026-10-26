@@ -121,6 +121,74 @@ describe('ReceiptMapper', () => {
     expect(model.isProcessing).toBe(false);
   });
 
+  it('ánh xạ yêu cầu phân biệt hóa đơn, thông báo và dòng bị loại', () => {
+    const model = mapper.toModel({
+      id: 'job-review',
+      status: 'READY',
+      reviewRequired: true,
+      identityDecisionRequired: true,
+      receiptReviewDecision: null,
+      notices: [{ code: 'RECEIPT_NON_FOOD_ITEMS_EXCLUDED', message: 'Đã loại 1 dòng.', count: 1 }],
+      excludedItems: [
+        {
+          id: 'excluded-1',
+          imageId: 'image-1',
+          lineText: 'NUOC RUA CHEN',
+          name: 'Nước rửa chén',
+          reason: 'Mặt hàng không phải thực phẩm.',
+          confidence: 0.94,
+          version: 2,
+        },
+      ],
+      progress: { completedImages: 1, totalImages: 1 },
+      receipt: {
+        merchantName: 'Siêu thị',
+        purchasedAt: '2026-10-25',
+        currency: 'VND',
+        totalAmount: 100000,
+        confidence: 0.9,
+      },
+      images: [
+        {
+          id: 'image-1',
+          position: 0,
+          url: 'https://cdn.example.com/receipt.jpg',
+          status: 'PROCESSED',
+          receiptNumber: 'HD-15',
+          merchantName: 'Siêu thị',
+          purchasedAt: '2026-10-25',
+          currency: 'VND',
+          totalAmount: 100000,
+          issue: null,
+        },
+      ],
+      candidates: [],
+      attempt: 1,
+      issue: null,
+      createdAt: '2026-10-25T09:00:00.000Z',
+      updatedAt: '2026-10-25T09:01:00.000Z',
+      completedAt: '2026-10-25T09:01:00.000Z',
+      confirmedAt: null,
+    });
+
+    expect(model.reviewRequired).toBe(true);
+    expect(model.identityDecisionRequired).toBe(true);
+    expect(model.receiptReviewDecision).toBeNull();
+    expect(model.notices[0].count).toBe(1);
+    expect(model.excludedItems[0]).toMatchObject({
+      id: 'excluded-1',
+      name: 'Nước rửa chén',
+      confidencePercent: 94,
+      version: 2,
+    });
+    expect(model.images[0]).toMatchObject({
+      receiptNumber: 'HD-15',
+      merchantName: 'Siêu thị',
+      currency: 'VND',
+      totalAmount: 100000,
+    });
+  });
+
   it('phân loại confidence tier chính xác', () => {
     const candHigh = mapper.toCandidateModel({
       id: 'c1',
@@ -264,6 +332,7 @@ describe('ReceiptMapper', () => {
         completedAt: '2026-09-24T00:01:00.000Z',
         confirmedAt: '2026-09-24T00:02:00.000Z',
       },
+      duplicateCandidates: [{ candidateId: 'cand-2', sourceJobId: 'prior-job' }],
       pantryChanges: [
         {
           candidateId: 'cand-1',
@@ -307,6 +376,7 @@ describe('ReceiptMapper', () => {
     expect(diff.job.canConfirm).toBe(false);
     expect(diff.job.canCancel).toBe(false);
     expect(diff.pantryChanges.length).toBe(2);
+    expect(diff.duplicateCandidates).toEqual([{ candidateId: 'cand-2', sourceJobId: 'prior-job' }]);
 
     expect(diff.pantryChanges[0].actionLabel).toBe('Thêm mới');
     expect(diff.pantryChanges[0].pantryItem.displayName).toBe('Đậu phụ');
@@ -338,9 +408,77 @@ describe('ReceiptMapper', () => {
 
     const confirmDto = mapper.toConfirmJobDto({
       candidates: [{ id: 'c1', expectedVersion: 1 }],
+      receiptReviewDecision: 'SEPARATE_RECEIPTS',
       idempotencyKey: 'confirm-key',
     });
     expect(confirmDto.candidates).toEqual([{ id: 'c1', expectedVersion: 1 }]);
+    expect(confirmDto.receiptReviewDecision).toBe('SEPARATE_RECEIPTS');
     expect(confirmDto.idempotencyKey).toBe('confirm-key');
+  });
+
+  it('kiểm tra tính toán canAddImages và bảo toàn ghi chú không chắc chắn khi gộp dòng', () => {
+    // READY với 2 ảnh -> canAddImages = true
+    const readyDto: ReceiptJobResponseDto = {
+      id: 'job-ready',
+      status: 'READY',
+      progress: { completedImages: 2, totalImages: 2 },
+      receipt: {
+        merchantName: 'Siêu thị',
+        purchasedAt: null,
+        currency: 'VND',
+        totalAmount: 100000,
+        confidence: 0.9,
+      },
+      images: [
+        { id: 'img-1', position: 0, url: 'url1', status: 'PROCESSED', issue: null },
+        { id: 'img-2', position: 1, url: 'url2', status: 'PROCESSED', issue: null },
+      ],
+      candidates: [
+        {
+          id: 'c1',
+          imageId: 'img-1',
+          lineText: 'DUA LEO 15000',
+          name: 'Dưa leo',
+          ingredientSuggestion: null,
+          quantity: { value: 500, unit: 'g' },
+          pricing: { unitPrice: 15000, lineTotal: 15000, currency: 'VND' },
+          confidence: 0.85,
+          uncertaintyNote: 'Dòng xuất hiện ở nhiều ảnh hóa đơn, đã gộp thành một dòng.',
+          status: 'PROPOSED',
+          version: 1,
+        },
+      ],
+      attempt: 1,
+      issue: null,
+      createdAt: '2026-10-19T00:00:00.000Z',
+      updatedAt: '2026-10-19T00:01:00.000Z',
+      completedAt: null,
+      confirmedAt: null,
+    };
+    const readyJob = mapper.toModel(readyDto);
+
+    expect(readyJob.canAddImages).toBe(true);
+    expect(readyJob.candidates[0].uncertaintyNote).toBe(
+      'Dòng xuất hiện ở nhiều ảnh hóa đơn, đã gộp thành một dòng.'
+    );
+
+    // Khi đã đạt trần 4 ảnh -> canAddImages = false
+    const fullJob = mapper.toModel({
+      ...readyDto,
+      images: [
+        { id: 'img-1', position: 0, url: 'url1', status: 'PROCESSED', issue: null },
+        { id: 'img-2', position: 1, url: 'url2', status: 'PROCESSED', issue: null },
+        { id: 'img-3', position: 2, url: 'url3', status: 'PROCESSED', issue: null },
+        { id: 'img-4', position: 3, url: 'url4', status: 'PROCESSED', issue: null },
+      ],
+    });
+    expect(fullJob.canAddImages).toBe(false);
+
+    // Khi đang PROCESSING -> canAddImages = false
+    const processingJob = mapper.toModel({
+      ...readyDto,
+      status: 'PROCESSING',
+    });
+    expect(processingJob.canAddImages).toBe(false);
   });
 });

@@ -1,4 +1,5 @@
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { IncompleteDataNotice } from './incomplete-data-notice';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { BookMarked, TriangleAlert, X } from 'lucide-react-native';
 
 import { useIconColors } from '@/lib/theme-colors';
@@ -40,10 +41,10 @@ export function AnalysisWarningModal({
         : null;
 
   return (
-    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
-      <View className="flex-1 justify-end bg-black/50">
-        <Pressable className="flex-1" onPress={onClose} accessibilityLabel="Đóng" />
-        <View className="max-h-[85%] rounded-t-3xl bg-background px-5 pb-6 pt-4">
+    <Modal visible animationType="fade" transparent statusBarTranslucent onRequestClose={onClose}>
+      <View className="flex-1 items-center justify-center bg-black/60 px-5">
+        <Pressable accessibilityLabel="Đóng" onPress={onClose} style={StyleSheet.absoluteFill} />
+        <View className="w-full max-w-md max-h-[85%] rounded-3xl border border-border bg-background p-5">
           <View className="flex-row items-start justify-between gap-3">
             <View className="flex-1 flex-row items-start gap-2">
               <TriangleAlert size={18} color={colors.cta} />
@@ -125,12 +126,7 @@ export function AnalysisWarningModal({
             ) : null}
 
             {warning.incompleteDataNotes.length > 0 ? (
-              <View className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3">
-                <Text className="text-xs font-semibold text-amber-800">Dữ liệu chưa đầy đủ</Text>
-                <Text className="mt-1 text-xs leading-relaxed text-amber-800">
-                  {warning.incompleteDataNotes.join(' · ')}
-                </Text>
-              </View>
+              <IncompleteDataNotice notes={warning.incompleteDataNotes} compact />
             ) : null}
 
             <Text className="text-[11px] italic text-muted-foreground">

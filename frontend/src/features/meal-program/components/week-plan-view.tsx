@@ -2,7 +2,8 @@
 
 import React from 'react';
 import Image from 'next/image';
-import { Utensils, Flame, Sparkles, RefreshCw, Sun, Moon, Coffee, Calendar } from 'lucide-react';
+import Link from 'next/link';
+import { Utensils, Flame, Sparkles, RefreshCw, Sun, Moon, Calendar } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -67,6 +68,14 @@ export const WeekPlanView: React.FC<WeekPlanViewProps> = ({
         <p className="text-sm font-medium text-muted-foreground">
           Chưa có dữ liệu thực đơn cho tuần {week.weekNumber}.
         </p>
+        {week.failureMessage && (
+          <p className="text-sm text-muted-foreground">{week.failureMessage}</p>
+        )}
+        {week.failureCode === 'DIET_SCHEDULE_REQUIRED' && (
+          <Button asChild variant="link">
+            <Link href="/profile?tab=diet">Bổ sung lịch chay kỳ</Link>
+          </Button>
+        )}
         {isDraft && onOpenRegenerateModal && (
           <Button
             size="sm"

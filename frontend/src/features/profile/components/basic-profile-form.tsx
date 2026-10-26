@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,8 +14,9 @@ import { getApiErrorCode, getApiErrorFields } from '@/lib/api-error';
 import { AvatarUploader } from './avatar-uploader';
 
 /**
- * Form cập nhật tên hiển thị + ảnh đại diện (upload file → URL Cloudinary).
- * Nút lưu vô hiệu hóa khi không có thay đổi — PATCH yêu cầu ít nhất 1 field.
+ * Form cập nhật tên hiển thị + ảnh đại diện (upload file -> URL Cloudinary).
+ * Ảnh đại diện được tự động cập nhật ngay khi upload thành công để hiển thị
+ * đồng bộ trên thanh điều hướng (navbar) và đầu trang hồ sơ.
  */
 export function BasicProfileForm({
   initialDisplayName,
@@ -27,8 +29,6 @@ export function BasicProfileForm({
 }) {
   const updateMutation = useUpdateBasicProfileMutation();
   const [formError, setFormError] = React.useState<string | null>(null);
-  // `true` khi ảnh hiện tại chỉ là preview mock (`blob:`) vì backend
-  // upload chưa phục vụ — phải chặn submit để BE không 400.
   const [isMockAvatar, setIsMockAvatar] = React.useState(false);
 
   const form = useForm<BasicProfileFormValues>({
@@ -45,6 +45,26 @@ export function BasicProfileForm({
   const { isDirty } = form.formState;
   const avatarValue = form.watch('avatarUrl') ?? '';
 
+  const handleAutoSaveAvatar = async (newAvatarUrl: string | null) => {
+    setFormError(null);
+    try {
+      await updateMutation.mutateAsync({ avatarUrl: newAvatarUrl });
+      form.setValue('avatarUrl', newAvatarUrl ?? '', { shouldDirty: false });
+      toast.success(
+        newAvatarUrl
+          ? 'Đã cập nhật ảnh đại diện thành công!'
+          : 'Đã xóa ảnh đại diện khỏi tài khoản.'
+      );
+    } catch (error) {
+      const code = getApiErrorCode(error);
+      if (code === 'VALIDATION_ERROR') {
+        setFormError('Định dạng ảnh đại diện không hợp lệ trên máy chủ.');
+      } else {
+        setFormError('Không thể lưu ảnh đại diện vào hồ sơ. Vui lòng thử lại.');
+      }
+    }
+  };
+
   const onSubmit = async (values: BasicProfileFormValues) => {
     setFormError(null);
     const payload: { displayName?: string; avatarUrl?: string | null } = {};
@@ -52,7 +72,6 @@ export function BasicProfileForm({
     const avatar = (values.avatarUrl ?? '').trim();
     if (name.length > 0 && name !== initialDisplayName) payload.displayName = name;
     if (avatar !== initialAvatarUrl) {
-      // Chặn preview mock (`blob:`) — chỉ gửi URL http(s) thật hoặc xóa ảnh.
       if (avatar.startsWith('blob:') || isMockAvatar) {
         setFormError('Ảnh chưa tải lên máy chủ. Vui lòng thử lại khi backend sẵn sàng.');
         return;
@@ -111,6 +130,7 @@ export function BasicProfileForm({
           setIsMockAvatar(isMock);
           form.setValue('avatarUrl', url, { shouldDirty: true, shouldValidate: false });
         }}
+        onAutoSave={handleAutoSaveAvatar}
       />
       {form.formState.errors.avatarUrl && (
         <p className="text-xs text-destructive">{form.formState.errors.avatarUrl.message}</p>

@@ -296,6 +296,15 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
       statusLabel: this.mapWeekStatusLabel(status),
       complianceRate: safeNumber(pickField(dto, ['compliance_rate', 'complianceRate'], 0), 0),
       isDownstreamInvalidated,
+      failureCode: safeString(pickField(dto.failure, ['code'], '')),
+      failureMessage:
+        dto.failure?.code === 'DIET_SCHEDULE_REQUIRED'
+          ? 'Tuần này chưa có ngày chay kỳ. Hãy bổ sung và lưu lịch chay, sau đó tạo lại thực đơn tuần.'
+          : dto.failure?.code === 'HEALTH_PROFILE_INCOMPLETE'
+            ? 'Hãy bổ sung hồ sơ sức khỏe trước khi tạo thực đơn.'
+            : dto.failure
+              ? 'Không tạo được thực đơn tuần. Vui lòng kiểm tra hồ sơ và thử lại.'
+              : '',
       snapshot: this.mapSnapshot(rawSnapshot, effectiveStartDate),
     };
   }
@@ -322,18 +331,36 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
     }
 
     const macronutrients = dto.macronutrients ?? {};
+    const sumDailyMetric = (metric: keyof NonNullable<WeeklyPlanDayDto['estimatedTotals']>) =>
+      safeArray<WeeklyPlanDayDto>(dto.days).reduce(
+        (sum, day) => sum + safeNumber(day.estimatedTotals?.[metric], 0),
+        0
+      );
 
     return {
       capturedAt: safeString(pickField(dto, ['captured_at', 'capturedAt'], ''), ''),
       totalCalories: safeNumber(
-        pickField(dto, ['total_calories', 'totalCalories', 'targetCalories', 'target_calories'], 0),
+        pickField(
+          dto,
+          ['total_calories', 'totalCalories'],
+          days.reduce((sum, day) => sum + day.totalCalories, 0)
+        ),
         0
       ),
       macronutrients: {
-        protein: safeNumber(pickField(macronutrients, ['protein_g', 'protein'], 0), 0),
-        carbs: safeNumber(pickField(macronutrients, ['carbs_g', 'carbs'], 0), 0),
-        fat: safeNumber(pickField(macronutrients, ['fat_g', 'fat'], 0), 0),
-        fiber: safeNumber(pickField(macronutrients, ['fiber_g', 'fiber'], 0), 0),
+        protein: safeNumber(
+          pickField(macronutrients, ['protein_g', 'protein'], sumDailyMetric('proteinGrams')),
+          0
+        ),
+        carbs: safeNumber(
+          pickField(macronutrients, ['carbs_g', 'carbs'], sumDailyMetric('carbohydrateGrams')),
+          0
+        ),
+        fat: safeNumber(pickField(macronutrients, ['fat_g', 'fat'], sumDailyMetric('fatGrams')), 0),
+        fiber: safeNumber(
+          pickField(macronutrients, ['fiber_g', 'fiber'], sumDailyMetric('fiberGrams')),
+          0
+        ),
       },
       days,
     };
@@ -351,9 +378,14 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
       };
     }
 
-    const meals = safeArray<WeeklyPlanMealItemDto, MealItemSummary>(dto.meals, (mealDto) =>
-      this.mapMealItem(mealDto)
-    );
+    const rawMeals = dto.slots
+      ? [dto.slots.breakfast, dto.slots.lunch, dto.slots.dinner].filter(
+          (meal): meal is WeeklyPlanMealItemDto => Boolean(meal) && meal?.status !== 'UNFILLED'
+        )
+      : safeArray<WeeklyPlanMealItemDto>(dto.meals);
+    const meals = rawMeals
+      .filter((meal) => Boolean(meal) && meal?.status !== 'UNFILLED')
+      .map((meal) => this.mapMealItem(meal));
 
     const MEAL_TYPE_ORDER: Record<string, number> = {
       BREAKFAST: 1,
@@ -402,7 +434,10 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
 
     return {
       id: safeString(pickField(dto, ['id'], ''), ''),
-      name: safeString(pickField(dto, ['name'], ''), ''),
+      name: safeString(
+        pickField(dto, ['name'], dto.recipe?.title ?? dto.customMeal?.name ?? ''),
+        ''
+      ),
       mealType,
       mealTypeLabel: this.mapMealTypeLabel(mealType),
       sourceType,
@@ -413,7 +448,7 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
         ? safeString(dto.image_url)
         : dto.imageUrl
           ? safeString(dto.imageUrl)
-          : undefined,
+          : safeString(dto.recipe?.coverImageUrl ?? dto.customMeal?.photoUrl, '') || undefined,
     };
   }
 
@@ -518,6 +553,10 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
         return 'ARCHIVED';
       case 'FAILED':
         return 'FAILED';
+      case 'PARTIAL':
+        return 'PARTIAL';
+      case 'GENERATING':
+        return 'GENERATING';
       case 'DRAFT':
       default:
         return 'DRAFT';
@@ -526,6 +565,10 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
 
   private mapStatusLabel(status: MealProgramStatus): string {
     switch (status) {
+      case 'PARTIAL':
+        return 'Chưa đủ thực đơn các tuần';
+      case 'GENERATING':
+        return 'Đang tạo thực đơn';
       case 'CONFIRMED':
         return 'Đang tham gia';
       case 'COMPLETED':
@@ -739,6 +782,7 @@ export class MealProgramMapper extends BaseMapper<MealProgramDto, MealProgram> {
     for (const raw of rawSlots) {
       if (!raw || typeof raw !== 'object') continue;
       const slot = raw as Record<string, unknown>;
+      if (slot.status === 'UNFILLED') continue;
       const slotDate = safeString(pickField(slot, ['date', 'mealDate', 'meal_date'], ''), '');
 
       // Tìm ngày tương ứng cho slot này:

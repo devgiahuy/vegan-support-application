@@ -1,7 +1,9 @@
 'use client';
 
+import { AllowanceNotice } from '@/features/billing/components/allowance-notice';
+
 import React, { useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   ChevronLeft,
@@ -20,7 +22,6 @@ import { useReceiptJobQuery } from '@/features/receipt/queries/receipt.queries';
 import type { ReceiptConfirmationDiff, ReceiptJob } from '@/features/receipt/types/receipt.model';
 
 export function ReceiptScanClientView() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const urlJobId = searchParams.get('jobId');
 
@@ -35,10 +36,17 @@ export function ReceiptScanClientView() {
     refetch,
   } = useReceiptJobQuery(activeJobId);
 
+  React.useEffect(() => {
+    if (activeJobId && typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'instant' });
+    }
+  }, [activeJobId]);
+
   const handleJobCreated = (newJob: ReceiptJob) => {
     setActiveJobId(newJob.id);
     if (typeof window !== 'undefined') {
       window.history.replaceState(null, '', `/receipts/scan?jobId=${newJob.id}`);
+      window.scrollTo({ top: 0, behavior: 'instant' });
     }
   };
 
@@ -96,6 +104,7 @@ export function ReceiptScanClientView() {
         )}
       </div>
 
+      <AllowanceNotice feature="RECEIPT" />
       {/* Trường hợp lỗi tải tác vụ */}
       {activeJobId && isError && (
         <div className="max-w-xl mx-auto py-12 text-center space-y-5">
@@ -138,7 +147,6 @@ export function ReceiptScanClientView() {
           job={job}
           onConfirmationSuccess={(diff) => setConfirmationDiff(diff)}
           onCancel={handleCancelJob}
-          onScanAnother={handleScanAnother}
         />
       )}
 

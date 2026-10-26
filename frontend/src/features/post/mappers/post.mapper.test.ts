@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { postMapper } from './post.mapper';
+import { postMapper, toMyPostModel } from './post.mapper';
 import { PostStatus, PostType } from '@/common/enums';
 import type { BlogDetailDto } from '../types/post.dto';
 
@@ -41,6 +41,31 @@ function backendBlogDto(): BlogDetailDto {
 }
 
 describe('PostMapper', () => {
+  it('maps owner-only drafts to the profile model with status and revision details', () => {
+    const post = toMyPostModel({
+      id: 'draft-123',
+      type: 'BLOG',
+      status: 'PENDING_REVIEW',
+      version: 3,
+      author: { id: 'author-1', displayName: 'Ngô Gia Huy' },
+      revision: { title: 'Bài đang chờ', excerpt: 'Tóm tắt', status: 'PENDING_REVIEW' },
+      categories: [{ name: 'Dinh dưỡng' }],
+    });
+
+    expect(post).toMatchObject({
+      id: 'draft-123',
+      type: 'BLOG',
+      title: 'Bài đang chờ',
+      excerpt: 'Tóm tắt',
+      status: PostStatus.PENDING_REVIEW,
+      statusLabel: 'Chờ duyệt',
+      categoryName: 'Dinh dưỡng',
+      authorId: 'author-1',
+      authorName: 'Ngô Gia Huy',
+      version: 3,
+    });
+  });
+
   it('maps backend blog postSchema to Article Model correctly', () => {
     const model = postMapper.toModel(backendBlogDto());
 

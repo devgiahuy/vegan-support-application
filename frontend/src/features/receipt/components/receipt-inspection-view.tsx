@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import {
   CheckCircle2,
   Receipt,
-  XCircle,
   RotateCcw,
   Loader2,
   Sparkles,
@@ -16,6 +15,16 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  FieldContent,
+  FieldDescription,
+  FieldLegend,
+  FieldSet,
+  FieldTitle,
+  FieldLabel,
+} from '@/components/ui/field';
 import { toast } from 'sonner';
 import { ReceiptImageViewer } from './receipt-image-viewer';
 import { ReceiptCandidateRow, type EditableReceiptCandidateItem } from './receipt-candidate-row';
@@ -27,27 +36,45 @@ import {
   useRetryReceiptJobMutation,
   useUpdateReceiptCandidateMutation,
 } from '../queries/receipt.queries';
-import type { ReceiptCandidate, ReceiptConfirmationDiff, ReceiptJob } from '../types/receipt.model';
-import { AiArtifactType } from '@/common/enums';
-import { SaveArtifactButton } from '@/features/ai-artifacts';
+import type {
+  ReceiptCandidate,
+  ReceiptConfirmationDiff,
+  ReceiptJob,
+  ReceiptReviewDecision,
+} from '../types/receipt.model';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+import { ReceiptAddPhotosButton } from './receipt-add-photos-button';
+import { getApiErrorCode } from '@/lib/api-error';
 
 interface ReceiptInspectionViewProps {
   job: ReceiptJob;
   onConfirmationSuccess?: (diff: ReceiptConfirmationDiff) => void;
   onCancel?: () => void;
-  onScanAnother?: () => void;
 }
 
 export function ReceiptInspectionView({
   job,
   onConfirmationSuccess,
   onCancel,
-  onScanAnother,
 }: ReceiptInspectionViewProps) {
   const router = useRouter();
   const [editingCandidate, setEditingCandidate] = useState<ReceiptCandidate | null>(null);
   const [filterTab, setFilterTab] = useState<'all' | 'active' | 'rejected'>('all');
   const [isSavingLocal, setIsSavingLocal] = useState(false);
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
+  const [receiptDecisionState, setReceiptDecisionState] = useState<{
+    jobId: string;
+    imageCount: number;
+    decision?: ReceiptReviewDecision;
+    requiredByServer: boolean;
+  }>(() => ({ jobId: job.id, imageCount: job.images.length, requiredByServer: false }));
+  const hasCurrentReceiptDecisionState =
+    receiptDecisionState.jobId === job.id && receiptDecisionState.imageCount === job.images.length;
+  const receiptReviewDecision = hasCurrentReceiptDecisionState
+    ? receiptDecisionState.decision
+    : undefined;
+  const decisionRequiredByServer =
+    hasCurrentReceiptDecisionState && receiptDecisionState.requiredByServer;
 
   const confirmMutation = useConfirmReceiptJobMutation(job.id);
   const cancelMutation = useCancelReceiptJobMutation(job.id);
@@ -82,15 +109,40 @@ export function ReceiptInspectionView({
     })
   );
 
-  // Đồng bộ lại khi job thay đổi
+  // Đồng bộ lại khi job thay đổi, bảo toàn các chỉnh sửa thủ công của người dùng
   useEffect(() => {
-    setItems(
-      job.candidates.map((c) => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- TanStack Query refreshes this external job; merge it while retaining in-progress row edits.
+    setItems((prevItems) => {
+      const prevMap = new Map(prevItems.map((it) => [it.id, it]));
+      return job.candidates.map((c) => {
+        const existing = prevMap.get(c.id);
         const qVal =
           c.quantity.value !== null && c.quantity.value !== undefined
             ? String(c.quantity.value)
             : '';
         const qUnit = c.quantity.unit || '';
+
+        if (existing) {
+          const isUserEdited =
+            existing.name !== existing.initialName ||
+            existing.quantity !== existing.initialQuantity ||
+            existing.unit !== existing.initialUnit ||
+            existing.isRejected !== existing.initialIsRejected;
+
+          return {
+            ...existing,
+            version: c.version,
+            confidencePercent: c.confidencePercent,
+            confidenceTier: c.confidenceTier,
+            uncertaintyNote: c.uncertaintyNote,
+            pricing: c.pricing,
+            name: isUserEdited ? existing.name : c.name,
+            quantity: isUserEdited ? existing.quantity : qVal,
+            unit: isUserEdited ? existing.unit : qUnit,
+            isRejected: isUserEdited ? existing.isRejected : c.isRejected,
+          };
+        }
+
         return {
           id: c.id,
           name: c.name,
@@ -110,8 +162,8 @@ export function ReceiptInspectionView({
           initialUnit: qUnit,
           initialIsRejected: c.isRejected,
         };
-      })
-    );
+      });
+    });
   }, [job.id, job.candidates]);
 
   const updateItem = (id: string, updates: Partial<EditableReceiptCandidateItem>) => {
@@ -120,6 +172,18 @@ export function ReceiptInspectionView({
 
   const activeCandidatesCount = items.filter((c) => !c.isRejected).length;
   const rejectedCandidatesCount = items.filter((c) => c.isRejected).length;
+  const mustChooseReceiptDecision = job.identityDecisionRequired || decisionRequiredByServer;
+
+  const restoreExcludedItem = async (item: ReceiptJob['excludedItems'][number]) => {
+    try {
+      await updateCandidateMutation.mutateAsync({
+        candidateId: item.id,
+        input: { expectedVersion: item.version, decision: 'KEEP' },
+      });
+    } catch (error) {
+      console.error('Lỗi khi khôi phục mặt hàng đã loại:', error);
+    }
+  };
 
   const displayedItems = items.filter((item) => {
     if (filterTab === 'active') return !item.isRejected;
@@ -196,6 +260,7 @@ export function ReceiptInspectionView({
 
       const diff = await confirmMutation.mutateAsync({
         candidates: validCandidatesToConfirm,
+        ...(mustChooseReceiptDecision && receiptReviewDecision ? { receiptReviewDecision } : {}),
         idempotencyKey:
           typeof crypto !== 'undefined' && crypto.randomUUID
             ? crypto.randomUUID()
@@ -206,20 +271,35 @@ export function ReceiptInspectionView({
         onConfirmationSuccess(diff);
       }
     } catch (err) {
+      if (getApiErrorCode(err) === 'RECEIPT_REVIEW_DECISION_REQUIRED') {
+        setReceiptDecisionState({
+          jobId: job.id,
+          imageCount: job.images.length,
+          decision: receiptReviewDecision,
+          requiredByServer: true,
+        });
+        toast.error(
+          'BE cần bạn xác nhận đây là cùng hóa đơn hay lần mua riêng trước khi nhập kho.'
+        );
+        return;
+      }
       console.error('Lỗi khi lưu hóa đơn vào tủ bếp:', err);
     } finally {
       setIsSavingLocal(false);
     }
   };
 
-  const handleCancelInternal = async () => {
-    if (window.confirm('Bạn có chắc chắn muốn hủy tác vụ bóc tách hóa đơn này không?')) {
+  const handleConfirmCancelJob = async () => {
+    try {
       await cancelMutation.mutateAsync();
+      setIsCancelConfirmOpen(false);
       if (onCancel) {
         onCancel();
       } else {
         router.push('/pantry');
       }
+    } catch (err) {
+      console.error('Lỗi khi hủy tác vụ bóc tách:', err);
     }
   };
 
@@ -233,12 +313,24 @@ export function ReceiptInspectionView({
       <div className="space-y-6">
         <ReceiptProgressTracker
           job={job}
-          onCancel={handleCancelInternal}
+          onCancel={() => setIsCancelConfirmOpen(true)}
           isCancelling={cancelMutation.isPending}
         />
         <div className="max-w-md mx-auto aspect-3/4 rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800">
           <ReceiptImageViewer images={job.images} />
         </div>
+
+        <ConfirmDialog
+          open={isCancelConfirmOpen}
+          onOpenChange={setIsCancelConfirmOpen}
+          title="Hủy tác vụ bóc tách hóa đơn"
+          description="Bạn có chắc chắn muốn hủy tác vụ bóc tách hóa đơn này không? Tiến trình và các dữ liệu bóc tách chưa lưu sẽ bị xóa."
+          confirmLabel="Hủy tác vụ"
+          cancelLabel="Quay lại"
+          danger
+          loading={cancelMutation.isPending}
+          onConfirm={handleConfirmCancelJob}
+        />
       </div>
     );
   }
@@ -273,22 +365,14 @@ export function ReceiptInspectionView({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <SaveArtifactButton
-            type={AiArtifactType.RECEIPT_EXTRACTION}
-            sourceId={job.id}
-            defaultTitle={`Bóc tách hóa đơn: ${job.receiptMetadata?.merchantName || 'Mua sắm thực phẩm'}`}
-            defaultSummary={`Trích xuất ${job.candidates.length} mặt hàng từ hóa đơn mua sắm ngày ${job.receiptMetadata?.formattedDate || ''}.`}
-            variant="outline"
-            size="sm"
-            className="text-xs"
-          />
+          <ReceiptAddPhotosButton job={job} disabled={isSaving} size="sm" className="text-xs" />
 
           {job.canCancel && (
             <Button
               type="button"
               variant="outline"
               size="sm"
-              onClick={handleCancelInternal}
+              onClick={() => setIsCancelConfirmOpen(true)}
               disabled={isSaving || cancelMutation.isPending}
               className="text-xs text-muted-foreground hover:text-destructive"
             >
@@ -383,6 +467,129 @@ export function ReceiptInspectionView({
         {/* PHẦN BÊN PHẢI (7 CỘT TRÊN DESKTOP): DANH SÁCH TÊN, Ô NHẬP TRỌNG LƯỢNG, ĐƠN VỊ VÀ NÚT SAVE */}
         <div className="lg:col-span-7 space-y-4">
           <div className="rounded-2xl border border-neutral-200 dark:border-neutral-800 bg-card p-4 sm:p-6 shadow-xs space-y-5">
+            <Alert>
+              <Receipt className="size-4" />
+              <AlertTitle>Phân biệt lần mua</AlertTitle>
+              <AlertDescription>
+                Mua lại cùng món vào ngày khác được tính là lần mua mới và cộng dồn vào Tủ bếp. Ảnh
+                trùng của cùng hóa đơn sẽ không làm tăng số lượng lần nữa.
+              </AlertDescription>
+            </Alert>
+
+            {job.reviewRequired && !mustChooseReceiptDecision && (
+              <Alert>
+                <AlertTitle>Cần kiểm tra các dòng trùng</AlertTitle>
+                <AlertDescription>
+                  Backend phát hiện các dòng có thể thuộc cùng một hóa đơn. Hãy đối chiếu ảnh và bỏ
+                  chọn dòng nào không nên nhập thêm.
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {job.notices.map((notice, index) => (
+              <Alert key={`${notice.code}-${index}`}>
+                <AlertTitle>Đã loại mặt hàng không phải thực phẩm</AlertTitle>
+                <AlertDescription>{notice.message}</AlertDescription>
+              </Alert>
+            ))}
+
+            {job.excludedItems.length > 0 && (
+              <section
+                className="rounded-xl border border-border p-4"
+                aria-labelledby="excluded-items-title"
+              >
+                <div className="mb-3">
+                  <h4 id="excluded-items-title" className="font-semibold text-sm">
+                    Mặt hàng đã loại ({job.excludedItems.length})
+                  </h4>
+                  <p className="mt-1 text-xs text-muted-foreground text-pretty">
+                    Nếu một món bị nhận nhầm là phi thực phẩm, khôi phục và nhập số lượng trước khi
+                    xác nhận.
+                  </p>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {job.excludedItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-muted/40 p-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm">{item.name}</p>
+                        <p className="text-xs text-muted-foreground">{item.reason}</p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={isSaving || updateCandidateMutation.isPending}
+                        onClick={() => void restoreExcludedItem(item)}
+                      >
+                        Khôi phục để kiểm tra
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {mustChooseReceiptDecision && (
+              <section
+                className="rounded-xl border border-amber-300/70 bg-amber-50/60 p-4 dark:border-amber-900 dark:bg-amber-950/20"
+                aria-labelledby="receipt-decision-title"
+              >
+                <FieldSet className="gap-2">
+                  <FieldLegend id="receipt-decision-title" variant="label" className="mb-0 text-sm">
+                    Đây là ảnh của hóa đơn cũ hay một lần mua mới?
+                  </FieldLegend>
+                  <p className="mb-1 text-xs text-muted-foreground text-pretty">
+                    Backend chưa phân biệt được các ảnh có dòng hàng giống nhau. Chọn một phương án
+                    để tránh bỏ sót hoặc cộng kho hai lần.
+                  </p>
+                  <RadioGroup
+                    value={receiptReviewDecision}
+                    onValueChange={(value) =>
+                      setReceiptDecisionState({
+                        jobId: job.id,
+                        imageCount: job.images.length,
+                        decision: value as ReceiptReviewDecision,
+                        requiredByServer: decisionRequiredByServer,
+                      })
+                    }
+                    className="gap-2"
+                  >
+                    <FieldLabel
+                      htmlFor="receipt-same"
+                      className="items-start rounded-lg border bg-background p-3"
+                    >
+                      <RadioGroupItem value="SAME_RECEIPT" id="receipt-same" className="mt-0.5" />
+                      <FieldContent>
+                        <FieldTitle>Cùng hóa đơn / cùng lần mua</FieldTitle>
+                        <FieldDescription className="text-xs">
+                          Bỏ qua các dòng đã có từ hóa đơn trước.
+                        </FieldDescription>
+                      </FieldContent>
+                    </FieldLabel>
+                    <FieldLabel
+                      htmlFor="receipt-separate"
+                      className="items-start rounded-lg border bg-background p-3"
+                    >
+                      <RadioGroupItem
+                        value="SEPARATE_RECEIPTS"
+                        id="receipt-separate"
+                        className="mt-0.5"
+                      />
+                      <FieldContent>
+                        <FieldTitle>Hóa đơn khác / lần mua mới</FieldTitle>
+                        <FieldDescription className="text-xs">
+                          Giữ cả các món giống nhau và cộng số lượng mua mới vào kho.
+                        </FieldDescription>
+                      </FieldContent>
+                    </FieldLabel>
+                  </RadioGroup>
+                </FieldSet>
+              </section>
+            )}
+
             {/* Header danh sách */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-border/60">
               <div>
@@ -483,7 +690,7 @@ export function ReceiptInspectionView({
                     type="button"
                     variant="outline"
                     size="sm"
-                    onClick={handleCancelInternal}
+                    onClick={() => setIsCancelConfirmOpen(true)}
                     disabled={isSaving}
                     className="text-xs text-muted-foreground hover:text-destructive"
                   >
@@ -496,7 +703,11 @@ export function ReceiptInspectionView({
                   <Button
                     type="button"
                     onClick={handleSave}
-                    disabled={isSaving || activeCandidatesCount === 0}
+                    disabled={
+                      isSaving ||
+                      activeCandidatesCount === 0 ||
+                      (mustChooseReceiptDecision && !receiptReviewDecision)
+                    }
                     className="flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-6 rounded-xl flex items-center justify-center gap-2 shadow-xs transition-all text-xs sm:text-sm"
                   >
                     {isSaving ? (
@@ -539,6 +750,19 @@ export function ReceiptInspectionView({
         }}
         candidate={editingCandidate}
         jobId={job.id}
+      />
+
+      {/* Modal xác nhận hủy tác vụ */}
+      <ConfirmDialog
+        open={isCancelConfirmOpen}
+        onOpenChange={setIsCancelConfirmOpen}
+        title="Hủy tác vụ bóc tách hóa đơn"
+        description="Bạn có chắc chắn muốn hủy tác vụ bóc tách hóa đơn này không? Mọi thông tin và dữ liệu bóc tách chưa lưu sẽ bị xóa."
+        confirmLabel="Hủy tác vụ"
+        cancelLabel="Quay lại"
+        danger
+        loading={cancelMutation.isPending}
+        onConfirm={handleConfirmCancelJob}
       />
     </div>
   );

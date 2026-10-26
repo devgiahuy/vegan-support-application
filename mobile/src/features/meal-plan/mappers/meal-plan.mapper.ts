@@ -1,3 +1,4 @@
+import { resolveMediaUrl } from '@/lib/env';
 import { MealPlanGoal, MealType, NutritionDataQuality } from '@/common/enums';
 import { BaseMapper, pickField, safeArray, safeBoolean, safeDate, safeEnum, safeNumber, safeString } from '@/lib/mapper';
 import type { PaginationResult } from '@/types/api';
@@ -17,6 +18,7 @@ import type {
 } from '../types/meal-plan.dto';
 import type {
   EstimatedMacros,
+  EstimatedTargets,
   GenerateMealPlanInput,
   ManualAddMealInput,
   MealPlan,
@@ -100,6 +102,18 @@ function toMacros(dto: EstimatedMacroDto | null | undefined): EstimatedMacros | 
   };
 }
 
+const DEFAULT_TARGET_TOLERANCE_PERCENT = 15;
+
+function toTargets(dto: MealPlanDto['estimatedNutritionTargets'] | null | undefined): EstimatedTargets | null {
+  const macros = toMacros(dto);
+  if (!macros || !dto) return null;
+  return {
+    ...macros,
+    tolerancePercent: safeNumber(pickField(dto, ['tolerancePercent'], DEFAULT_TARGET_TOLERANCE_PERCENT)),
+    sourceDetail: safeString(pickField(dto, ['sourceDetail'], '')),
+  };
+}
+
 function stringList(value: unknown): string[] {
   return safeArray<string | null, string>(value as (string | null)[] | null | undefined, (item) => safeString(item)).filter(
     (item) => item.length > 0
@@ -141,7 +155,7 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
       warnings: this.toWarnings(pickField(dto, ['warningDetails'], null), pickField(dto, ['warnings'], null)),
       userSummary: this.toUserSummary(pickField(dto, ['userSummary'], null)),
       days: this.toDays(pickField(dto, ['days'], null)),
-      estimatedTargets: toMacros(pickField(dto, ['estimatedNutritionTargets'], null)),
+      estimatedTargets: toTargets(pickField(dto, ['estimatedNutritionTargets'], null)),
       nutritionDataQuality: quality,
       nutritionDataQualityLabel: QUALITY_LABELS[quality],
       vitaminB12Mcg: Number.isNaN(b12Raw) ? null : b12Raw,
@@ -167,6 +181,9 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
     const unresolved = pickField(dto, ['unresolved'], null) as MealSlotDto['unresolved'];
     const sourceType: MealSourceType | null = !filled ? null : hasCustomMeal ? 'CUSTOM_MEAL' : 'RECIPE';
     const servings = nullableNumber(pickField(dto, ['servings'], null));
+    const macro = (slotKeys: string[], recipeKey: 'protein' | 'carbs' | 'fat' | 'fiber'): number =>
+      filled ? safeNumber(pickField(dto, slotKeys, pickField(recipe, [recipeKey], 0)), 0) : 0;
+    const unresolvedCode = safeString(pickField(unresolved, ['code'], ''));
 
     return {
       id: safeString(pickField(dto, ['id', 'itemId', 'item_id'], '')),
@@ -188,15 +205,20 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
       recipeTitle: !filled
         ? ''
         : hasCustomMeal
-          ? safeString(pickField(customMeal, ['name'], 'Món tự tạo'))
+          ? safeString(pickField(customMeal, ['name'], 'Món ăn cá nhân'))
           : safeString(pickField(recipe, ['title', 'name'], 'Món chay')),
-      coverImageUrl: filled && hasRecipe ? safeString(pickField(recipe, ['coverImageUrl'], '')) || null : null,
+      coverImageUrl: filled && hasRecipe ? resolveMediaUrl(safeString(pickField(recipe, ['coverImageUrl'], ''))) || null : null,
       servings,
       customMealCoverage:
         filled && hasCustomMeal ? safeString(pickField(customMeal, ['nutritionCoverage'], '')) || null : null,
       calories,
       formattedCalories: `${calories} kcal`,
       targetCalories: safeNumber(pickField(dto, ['targetCalories', 'target_calories'], 0)),
+      protein: macro(['proteinGrams', 'protein_grams'], 'protein'),
+      carbs: macro(['carbohydrateGrams', 'carbohydrate_grams'], 'carbs'),
+      fat: macro(['fatGrams', 'fat_grams'], 'fat'),
+      fiber: macro(['fiberGrams', 'fiber_grams'], 'fiber'),
+      unresolvedCode: !filled && unresolvedCode.length > 0 ? unresolvedCode : null,
       warningCodes: stringList(pickField(dto, ['warningCodes'], null)),
     };
   }
@@ -271,6 +293,7 @@ export class MealPlanMapper extends BaseMapper<MealPlanDto, MealPlan> {
       title: safeString(pickField(dto, ['title'], '')),
       detail: safeString(pickField(dto, ['detail'], '')),
       suggestion: safeString(pickField(dto, ['suggestion'], '')) || null,
+      hardConstraintsPreserved: safeBoolean(pickField(dto, ['hardConstraintsPreserved'], false)),
     };
   }
 

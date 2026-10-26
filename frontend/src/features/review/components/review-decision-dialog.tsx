@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { AlertTriangle, CheckCircle2, Loader2, XCircle } from 'lucide-react';
+import { AlertCircle, AlertTriangle, CheckCircle2, Loader2, XCircle } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -16,8 +16,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { ReviewDecision } from '@/common/enums';
+import { getApiErrorFields, getApiErrorMessage } from '@/lib/api-error';
 import { useApprovePostMutation, useRejectPostMutation } from '../queries/review.queries';
 import { reviewDecisionSchema, type ReviewDecisionValues } from '../schemas/review-decision.schema';
+import { localizeReviewReasonError } from '../utils/review-error';
 
 interface ReviewDecisionDialogProps {
   open: boolean;
@@ -49,11 +51,15 @@ export function ReviewDecisionDialog({
   const rejectMutation = useRejectPostMutation();
   const isPending = approveMutation.isPending || rejectMutation.isPending;
 
+  const [serverError, setServerError] = React.useState<string | null>(null);
+
   const {
     register,
     handleSubmit,
     watch,
     reset,
+    setError,
+    clearErrors,
     formState: { errors },
   } = useForm<ReviewDecisionValues>({
     resolver: zodResolver(reviewDecisionSchema),
@@ -63,20 +69,46 @@ export function ReviewDecisionDialog({
   const reasonLength = (watch('reason') || '').trim().length;
 
   React.useEffect(() => {
-    if (open) reset({ reason: '' });
-  }, [open, reset]);
+    if (open) {
+      reset({ reason: '' });
+      setServerError(null);
+      clearErrors();
+    }
+  }, [open, reset, clearErrors]);
 
   const onSubmit = async (values: ReviewDecisionValues) => {
+    setServerError(null);
+    clearErrors();
+    const reasonPayload = (values.reason || '').trim();
+
     try {
       if (isApprove) {
-        await approveMutation.mutateAsync({ postId: targetId, reason: values.reason });
+        await approveMutation.mutateAsync({ postId: targetId, reason: reasonPayload });
       } else {
-        await rejectMutation.mutateAsync({ postId: targetId, reason: values.reason });
+        await rejectMutation.mutateAsync({ postId: targetId, reason: reasonPayload });
       }
       onOpenChange(false);
       onSuccess?.();
-    } catch {
-      // Toast lỗi đã xử lý trong mutation onError
+    } catch (err: unknown) {
+      const fields = getApiErrorFields(err);
+      let fieldErrorSet = false;
+
+      if (fields?.reason) {
+        const rawMsg = Array.isArray(fields.reason)
+          ? fields.reason.map((m) => String(m)).join(', ')
+          : String(fields.reason);
+        const translatedReason = localizeReviewReasonError(rawMsg, isApprove);
+        setError('reason', {
+          type: 'server',
+          message: translatedReason,
+        });
+        fieldErrorSet = true;
+      }
+
+      if (!fieldErrorSet) {
+        const msg = getApiErrorMessage(err, 'Không thể hoàn tất quyết định kiểm duyệt.');
+        setServerError(msg);
+      }
     }
   };
 
@@ -105,6 +137,13 @@ export function ReviewDecisionDialog({
           </DialogDescription>
         </DialogHeader>
 
+        {serverError && (
+          <div className="rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive flex items-start gap-2">
+            <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+            <span className="whitespace-pre-line leading-relaxed">{serverError}</span>
+          </div>
+        )}
+
         {!canDecide ? (
           <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-3.5 text-xs text-amber-900 dark:text-amber-200 flex items-start gap-2">
             <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
@@ -117,10 +156,11 @@ export function ReviewDecisionDialog({
           <form onSubmit={(e) => void handleSubmit(onSubmit)(e)} className="space-y-2" noValidate>
             <div className="flex items-center justify-between">
               <Label htmlFor="review-reason" className="font-semibold text-sm">
-                Lý do {isApprove ? 'duyệt' : 'từ chối'} *
+                {isApprove ? 'Lý do duyệt' : 'Lý do từ chối *'}
               </Label>
               <span className="text-xs text-muted-foreground">
-                {reasonLength}/{MAX_REASON_LENGTH} (tối thiểu 10)
+                {reasonLength}/{MAX_REASON_LENGTH}
+                {!isApprove && ' (tối thiểu 10)'}
               </span>
             </div>
             <Textarea
@@ -128,12 +168,18 @@ export function ReviewDecisionDialog({
               rows={4}
               placeholder={
                 isApprove
-                  ? 'Ví dụ: Nguyên liệu thuần chay rõ ràng, định lượng đầy đủ...'
+                  ? 'Ví dụ: Nguyên liệu thuần chay rõ ràng, định lượng đầy đủ... (hoặc để trống nếu duyệt nhanh)'
                   : 'Ví dụ: Thiếu định lượng nguyên liệu ở bước 2, ảnh bìa chưa rõ...'
               }
               className="resize-none"
               disabled={isPending}
-              {...register('reason')}
+              aria-invalid={Boolean(errors.reason)}
+              {...register('reason', {
+                onChange: () => {
+                  if (serverError) setServerError(null);
+                  if (errors.reason) clearErrors('reason');
+                },
+              })}
             />
             {errors.reason && (
               <p className="text-xs font-medium text-destructive">{errors.reason.message}</p>
@@ -151,7 +197,7 @@ export function ReviewDecisionDialog({
               <Button
                 type="submit"
                 variant={isApprove ? 'default' : 'destructive'}
-                disabled={isPending || reasonLength < 10}
+                disabled={isPending || (!isApprove && reasonLength < 10)}
                 className="rounded-xl gap-2 font-semibold"
               >
                 {isPending && <Loader2 className="h-4 w-4 animate-spin" />}

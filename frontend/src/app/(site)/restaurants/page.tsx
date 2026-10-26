@@ -2,7 +2,19 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import { MapPin, Plus, RotateCcw } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
+  Compass,
+  List,
+  Map as MapIcon,
+  MapPin,
+  Navigation,
+  Plus,
+  RotateCcw,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -12,8 +24,11 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { cn } from '@/lib/utils';
 import type { DietPattern } from '@/common/enums';
 import { DEFAULT_RADIUS_M, MAX_RADIUS_M } from '@/features/restaurant/schemas/restaurant.schema';
 import type {
@@ -42,23 +57,12 @@ import { RestaurantList } from '@/features/restaurant/components/restaurant-list
 import { RestaurantMap } from '@/features/restaurant/components/restaurant-map';
 import { SubmitForm } from '@/features/restaurant/components/submit-form';
 
-/**
- * Trang Khám Phá Quán Chay (UC-12 / BL-16).
- *
- * Luồng: chọn vị trí (thiết bị hoặc địa chỉ) → bộ lọc → bản đồ và danh sách đồng bộ hai chiều →
- * đề xuất quán mới.
- *
- * Ràng buộc riêng tư (FR-029/FR-030/FR-031): tọa độ người dùng chỉ nằm trong state của trang và
- * KHÔNG được lưu. `sessionStorage` chỉ giữ bộ lọc; mỗi lần mở trang phải xác nhận lại vị trí.
- */
 export default function RestaurantMapPage() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-
+  const isDesktop = useMediaQuery('(min-width: 1024px)');
   const [location, setLocation] = React.useState<ResolvedLocation | null>(null);
   const [locationError, setLocationError] = React.useState<string | null>(null);
   const [isChangingLocation, setIsChangingLocation] = React.useState(false);
-
-  // Bộ lọc được khôi phục ngay ở lần render đầu — không cần effect setState để nạp.
   const [persistedFilters] = React.useState(readPersistedFilters);
   const [query, setQuery] = React.useState(persistedFilters?.query ?? '');
   const [radiusM, setRadiusM] = React.useState(persistedFilters?.radiusM ?? DEFAULT_RADIUS_M);
@@ -68,38 +72,21 @@ export default function RestaurantMapPage() {
   const [advanced, setAdvanced] = React.useState<RestaurantSearchState['advanced']>(
     persistedFilters?.advanced ?? {}
   );
-
   const [selectedId, setSelectedId] = React.useState<string | null>(null);
   const [searchingArea, setSearchingArea] = React.useState(false);
   const [submitOpen, setSubmitOpen] = React.useState(false);
-
-  /**
-   * Khung vùng đang xem trên bản đồ — nằm ở REF, không phải state.
-   * Lý do: kéo/thu phóng bản đồ phải KHÔNG phát sinh request (SC-011); chỉ khi người dùng bấm
-   * "Tìm trong vùng đang xem" mới copy sang state và đổi `queryKey`.
-   */
+  const [mobileView, setMobileView] = React.useState<'list' | 'map'>('list');
   const boundsRef = React.useRef<RestaurantBounds | null>(null);
   const [activeBounds, setActiveBounds] = React.useState<RestaurantBounds | undefined>(undefined);
-  /** Đã có vùng xem hợp lệ trên bản đồ hay chưa — chỉ dùng để bật/tắt nút tìm theo vùng. */
   const [hasViewBounds, setHasViewBounds] = React.useState(false);
 
-  // Ghi bộ lọc vào phiên. Chỉ ghi bộ lọc — không có tọa độ (FR-029).
+  // Remember filters only. Coordinates, addresses and device consent stay in this page's memory.
   React.useEffect(() => {
     persistSearchFilters({ radiusM, query, dietPattern, advanced });
   }, [radiusM, query, dietPattern, advanced]);
-
-  /**
-   * Từ khoá đã debounce: chỉ gửi truy vấn sau khi người dùng ngừng gõ.
-   * Ô nhập vẫn phản hồi tức thì vì nó gắn vào `query`, không gắn vào giá trị debounce.
-   */
   const debouncedQuery = useDebounce(query, 400);
-
-  // Chế độ tìm quyết định tham số nào được gửi lên backend (FR-017).
-  // PHẢI lấy từ `resolveSearchMode`, không hardcode 'NEARBY': nếu hardcode thì chế độ BOUNDS sẽ
-  // gửi `lat`/`lng` thay vì `north`/`south`/`east`/`west` và nút "Tìm trong vùng đang xem" không
-  // đổi được kết quả.
-  const resolvedMode = React.useMemo(() => {
-    const mode = resolveSearchMode({
+  const baseSearchState = React.useMemo<RestaurantSearchState>(() => {
+    const state: Omit<RestaurantSearchState, 'mode'> = {
       radiusM,
       query: debouncedQuery,
       dietPattern,
@@ -113,50 +100,20 @@ export default function RestaurantMapPage() {
           }
         : {}),
       ...(searchingArea && activeBounds ? { bounds: activeBounds } : {}),
-    });
-    return mode ?? 'NEARBY';
+    };
+    return { ...state, mode: resolveSearchMode(state) ?? 'NEARBY' };
   }, [radiusM, debouncedQuery, dietPattern, advanced, location, searchingArea, activeBounds]);
-
-  const baseSearchState: RestaurantSearchState = React.useMemo(
-    () => ({
-      mode: resolvedMode,
-      radiusM,
-      query: debouncedQuery,
-      dietPattern,
-      advanced,
-      ...(location
-        ? {
-            lat: location.lat,
-            lng: location.lng,
-            locationSource: location.source,
-            locationConsent: location.source === 'DEVICE',
-          }
-        : {}),
-      ...(searchingArea && activeBounds ? { bounds: activeBounds } : {}),
-    }),
-    [
-      resolvedMode,
-      radiusM,
-      debouncedQuery,
-      dietPattern,
-      advanced,
-      location,
-      searchingArea,
-      activeBounds,
-    ]
-  );
-
+  const resolvedMode = baseSearchState.mode;
   const [pagination, setPagination] = React.useState({ scope: '', page: 1 });
   const searchScope = JSON.stringify(baseSearchState);
   const page = pagination.scope === searchScope ? pagination.page : 1;
-  const searchState = { ...baseSearchState, page, limit: 20 };
-
-  const { data, isLoading, isError, refetch } = useRestaurantDiscoveryQuery(
-    searchState,
+  const { data, isLoading, isFetching, isError, refetch } = useRestaurantDiscoveryQuery(
+    { ...baseSearchState, page, limit: 20 },
     location !== null
   );
-
   const restaurants = data?.restaurants ?? [];
+  const isQueryLoading = isLoading || (!data && !isError && location !== null);
+  const isDataRefreshing = isFetching && Boolean(data);
 
   const applyLocation = React.useCallback((next: ResolvedLocation) => {
     setLocation(next);
@@ -168,55 +125,41 @@ export default function RestaurantMapPage() {
     setHasViewBounds(false);
     setSelectedId(null);
   }, []);
-
-  /**
-   * Kéo/thu phóng bản đồ: chỉ ghi vào ref, tuyệt đối không refetch.
-   * `hasViewBounds` là state mirror chỉ để bật/tắt nút "Tìm trong vùng đang xem" — nó không
-   * nằm trong `searchState` nên không làm đổi `queryKey`.
-   */
   const handleBoundsChange = React.useCallback((bounds: RestaurantBounds | null) => {
     boundsRef.current = bounds;
     setHasViewBounds(isBoundsUsable(bounds));
   }, []);
-
-  // Người dùng bấm nút "Tìm trong vùng đang xem" — mới phát sinh truy vấn.
   const handleSearchThisArea = React.useCallback(() => {
     if (!boundsRef.current) return;
     setActiveBounds(boundsRef.current);
     setSearchingArea(true);
   }, []);
-
   const handleBackToNearby = React.useCallback(() => {
     setSearchingArea(false);
     setActiveBounds(undefined);
     boundsRef.current = null;
     setHasViewBounds(false);
   }, []);
-
   const clearAllFilters = React.useCallback(() => {
     setQuery('');
     setDietPattern(undefined);
     setAdvanced({});
     setRadiusM(DEFAULT_RADIUS_M);
   }, []);
-
-  const expandRadius = React.useCallback(() => {
-    setRadiusM((current) => Math.min(current * 2, 50000));
-  }, []);
-
+  const expandRadius = React.useCallback(
+    () => setRadiusM((current) => Math.min(current * 2, MAX_RADIUS_M)),
+    []
+  );
   const advancedCount = countActiveAdvancedFilters(advanced);
-  const hasFilters = query.length > 0 || dietPattern !== undefined || advancedCount > 0;
-  const showLocationStep = location === null || isChangingLocation;
-
-  /** Nội dung trạng thái rỗng theo chế độ tìm (FR-010, FR-012). */
-  const emptyCopy = React.useMemo(() => emptyStateCopy(resolvedMode), [resolvedMode]);
-
-  /**
-   * Nút hành động khi không có kết quả (FR-013): chỉ hiện hành động thực sự khả thi với chế độ hiện tại,
-   * và mỗi hành động đều do người dùng chủ động bấm — KHÔNG tự gọi lại dữ liệu.
-   * Mỗi nút phải BẤM ĐƯỢC VIỆC GÌ ĐÓ: nút "Xoá bộ lọc nâng cao" chỉ hiện khi thực sự có bộ lọc
-   * nâng cao đang bật, nút "Xoá từ khóa" chỉ hiện khi có từ khóa.
-   */
+  const hasFilters =
+    query.length > 0 ||
+    dietPattern !== undefined ||
+    advancedCount > 0 ||
+    radiusM !== DEFAULT_RADIUS_M;
+  const emptyCopy = React.useMemo(
+    () => emptyStateCopy(resolvedMode, data?.meta.externalResultsSuppressed),
+    [resolvedMode, data?.meta.externalResultsSuppressed]
+  );
   const emptyActions = React.useMemo(() => {
     const handlers: Record<string, () => void> = {
       'Nới bán kính': expandRadius,
@@ -239,88 +182,183 @@ export default function RestaurantMapPage() {
     resolvedMode,
     radiusM,
     hasFilters,
-    debouncedQuery,
     advancedCount,
+    debouncedQuery,
     expandRadius,
     clearAllFilters,
   ]);
+  const resultTitle =
+    resolvedMode === 'KEYWORD'
+      ? 'Kết quả tìm kiếm'
+      : searchingArea
+        ? 'Quán trong vùng đang xem'
+        : 'Gợi ý quanh bạn';
+
+  const contributeAction = isAuthenticated ? (
+    <Dialog open={submitOpen} onOpenChange={setSubmitOpen}>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="h-11 rounded-xl bg-card">
+          <Plus className="size-4" aria-hidden="true" />
+          Đề xuất quán
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Chia sẻ một quán chay bạn biết</DialogTitle>
+          <DialogDescription>
+            Quán sẽ được Ban quản trị xem xét trước khi xuất hiện công khai.
+          </DialogDescription>
+        </DialogHeader>
+        <SubmitForm onDone={() => setSubmitOpen(false)} />
+      </DialogContent>
+    </Dialog>
+  ) : (
+    <Button asChild variant="outline" className="h-11 rounded-xl bg-card">
+      <Link href={`/login?from=${encodeURIComponent('/restaurants')}`}>
+        <Plus className="size-4" aria-hidden="true" />
+        Đề xuất quán
+      </Link>
+    </Button>
+  );
 
   return (
-    <div className="mx-auto max-w-[1400px] space-y-4 px-4 py-6 lg:px-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Khám phá quán chay</h1>
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-            {location ? (
-              <>
-                <MapPin className="size-4 shrink-0 text-emerald-600" aria-hidden="true" />
-                <span className="font-medium text-foreground">{location.label}</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 gap-1 px-1.5 text-xs text-muted-foreground hover:text-foreground"
-                  onClick={() => setIsChangingLocation(true)}
-                >
-                  <RotateCcw className="size-3" aria-hidden="true" /> Đổi vị trí
-                </Button>
-              </>
-            ) : (
-              <span>Cho phép vị trí hoặc nhập địa chỉ để tìm quán chay gần bạn nhất.</span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {showLocationStep && (
-        <section className="flex flex-col gap-3 rounded-2xl border bg-card p-4 shadow-xs">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-semibold">Chọn khu vực tìm kiếm</h2>
-            {location && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() => setIsChangingLocation(false)}
-              >
-                Hủy
-              </Button>
-            )}
-          </div>
-
-          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
-            <LocationPrompt
-              onLocated={applyLocation}
-              onDenied={(message) => setLocationError(message)}
-            />
-            <span className="text-xs text-muted-foreground sm:px-1">hoặc</span>
-            <div className="w-full sm:flex-1">
-              <AddressForm
-                onResolved={applyLocation}
-                onDenied={(message) => setLocationError(message)}
-              />
-            </div>
-          </div>
-
-          {locationError && (
-            <p role="alert" className="text-xs font-medium text-destructive">
-              {locationError}
+    <div className="mx-auto flex max-w-[1400px] flex-col gap-5 px-4 py-6 sm:px-6 lg:py-7">
+      <header className="flex flex-wrap items-start justify-between gap-5">
+        <div className="flex max-w-2xl flex-col gap-3">
+          {!location && (
+            <p className="flex items-center gap-2 text-sm font-medium text-primary">
+              <Compass className="size-4" aria-hidden="true" />
+              Khám phá địa điểm
             </p>
           )}
-          <p className="text-xs text-muted-foreground">
-            Vị trí của bạn chỉ dùng cho lần tìm này và không được lưu giữ.
-          </p>
+          <h1
+            className={cn(
+              'text-balance font-semibold leading-tight',
+              location ? 'text-3xl sm:text-4xl' : 'text-4xl sm:text-5xl'
+            )}
+          >
+            {location ? (
+              'Quán chay gần bạn'
+            ) : (
+              <>
+                Khám phá quán chay,
+                <br />
+                <span className="text-primary">ngay gần bạn.</span>
+              </>
+            )}
+          </h1>
+          {!location && (
+            <p className="max-w-xl text-pretty text-sm leading-relaxed text-muted-foreground sm:text-base">
+              Tìm một địa điểm hợp ý, xem đánh giá và chọn đường đi cho bữa chay tiếp theo.
+            </p>
+          )}
+          {location && (
+            <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+              <MapPin className="size-4 shrink-0 text-primary" aria-hidden="true" />
+              <span className="line-clamp-1" title={location.label}>
+                {location.label}
+              </span>
+              <Button
+                variant="ghost"
+                className="h-11 shrink-0 rounded-lg px-2 text-primary"
+                onClick={() => setIsChangingLocation(true)}
+              >
+                <RotateCcw className="size-4" aria-hidden="true" />
+                <span className="hidden sm:inline">Đổi khu vực</span>
+                <span className="sr-only sm:hidden">Đổi khu vực tìm kiếm</span>
+              </Button>
+            </div>
+          )}
+        </div>
+        <div className="pt-1">{contributeAction}</div>
+      </header>
+
+      {(!location || isChangingLocation) && (
+        <section
+          className={cn(
+            'overflow-hidden rounded-2xl border bg-card',
+            !location && 'grid lg:grid-cols-[1.2fr_1fr]'
+          )}
+          aria-labelledby="restaurant-location-title"
+        >
+          <div className="flex flex-col justify-center gap-6 p-5 sm:p-8">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h2 id="restaurant-location-title" className="text-balance text-xl font-semibold">
+                  {location ? 'Tìm ở một khu vực khác' : 'Bạn muốn tìm quán ở đâu?'}
+                </h2>
+                <p className="mt-2 max-w-md text-pretty text-sm leading-relaxed text-muted-foreground">
+                  Chọn vị trí hiện tại hoặc nhập địa chỉ để khám phá các quán chay lân cận.
+                </p>
+              </div>
+              {location && (
+                <Button variant="ghost" onClick={() => setIsChangingLocation(false)}>
+                  Hủy
+                </Button>
+              )}
+            </div>
+            <div className="flex flex-col gap-4">
+              <LocationPrompt onLocated={applyLocation} onDenied={setLocationError} />
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="h-px flex-1 bg-border" />
+                hoặc tìm theo địa chỉ
+                <span className="h-px flex-1 bg-border" />
+              </div>
+              <AddressForm onResolved={applyLocation} onDenied={setLocationError} />
+            </div>
+            {locationError && (
+              <p role="alert" className="text-sm font-medium text-destructive">
+                {locationError}
+              </p>
+            )}
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              Vị trí của bạn chỉ dùng cho lần tìm này và không được lưu giữ.
+            </p>
+          </div>
+          {!location && (
+            <div
+              className="relative flex min-h-[300px] items-center justify-center overflow-hidden bg-secondary/40 p-8"
+              aria-hidden="true"
+            >
+              <svg
+                className="absolute inset-0 size-full"
+                viewBox="0 0 500 400"
+                preserveAspectRatio="xMidYMid slice"
+              >
+                <g fill="none" stroke="var(--background)" strokeWidth="24">
+                  <path d="M-30 80 L540 290 M80 -30 L350 440 M430 -30 L170 440 M-30 330 L540 120" />
+                </g>
+                <circle
+                  cx="250"
+                  cy="200"
+                  r="115"
+                  fill="var(--primary)"
+                  fillOpacity=".04"
+                  stroke="var(--primary)"
+                  strokeOpacity=".15"
+                  strokeDasharray="5 8"
+                />
+              </svg>
+              <div className="relative flex flex-col items-center gap-4 rounded-2xl border bg-background px-8 py-7 text-center shadow-sm">
+                <span className="flex size-16 items-center justify-center rounded-2xl bg-secondary text-primary">
+                  <MapPin className="size-8" strokeWidth={1.5} />
+                </span>
+                <p className="text-lg font-semibold">
+                  Bữa chay tiếp theo
+                  <br />
+                  bắt đầu từ đây.
+                </p>
+                <p className="max-w-52 text-sm leading-relaxed text-muted-foreground">
+                  Chọn khu vực để xem những địa điểm quanh bạn.
+                </p>
+              </div>
+            </div>
+          )}
         </section>
       )}
 
       {location && (
         <>
-          {/* Nêu rõ vùng đang tìm khi dùng chế độ tìm theo vùng bản đồ (FR-006). */}
-          {searchingArea && activeBounds && (
-            <p className="rounded-xl border bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-              {formatBoundsLabel(activeBounds)}
-            </p>
-          )}
-
           <RestaurantFilters
             query={query}
             radiusM={radiusM}
@@ -333,105 +371,182 @@ export default function RestaurantMapPage() {
             onAdvancedChange={setAdvanced}
             onClearAll={clearAllFilters}
           />
-
-          {/* Split view: bản đồ cố định + danh sách cuộn độc lập */}
-          <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
-            <div className="lg:sticky lg:top-20 lg:col-span-7 xl:col-span-7">
-              <div className="h-[420px] min-h-[420px] max-h-[750px] w-full overflow-hidden rounded-2xl shadow-xs lg:h-[calc(100vh-170px)]">
-                <RestaurantMap
-                  items={restaurants}
-                  userLocation={location}
-                  radiusM={radiusM}
-                  selectedId={selectedId}
-                  onSelectRestaurant={setSelectedId}
-                  onRadiusChange={setRadiusM}
-                  onBoundsChange={handleBoundsChange}
-                  onSearchThisArea={handleSearchThisArea}
-                  canSearchThisArea={hasViewBounds}
-                  isSearchingArea={searchingArea}
-                />
-              </div>
-              {searchingArea && (
-                <div className="mt-2 flex justify-center">
+          {searchingArea && activeBounds && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border bg-muted/30 px-4 py-2 text-xs">
+              <span>{formatBoundsLabel(activeBounds)}</span>
+              <Button variant="ghost" className="h-11 rounded-lg" onClick={handleBackToNearby}>
+                <ArrowLeft className="size-4" aria-hidden="true" />
+                Quay lại vị trí tìm kiếm
+              </Button>
+            </div>
+          )}
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-semibold">{resultTitle}</h2>
+              <p className="mt-1 text-sm text-muted-foreground" aria-live="polite">
+                {isQueryLoading ? (
+                  'Đang tìm các địa điểm quanh đây…'
+                ) : isError ? (
+                  'Chưa nhận được dữ liệu quán.'
+                ) : (
+                  <>
+                    <span className="font-medium tabular-nums text-foreground">
+                      {data?.meta.totalItems ?? restaurants.length}
+                    </span>{' '}
+                    địa điểm được tìm thấy
+                  </>
+                )}
+              </p>
+            </div>
+            <p className="hidden items-center gap-2 text-xs text-muted-foreground lg:flex">
+              <MapPin className="size-4" aria-hidden="true" />
+              Chọn ghim trên thẻ để định vị quán
+            </p>
+            <ToggleGroup
+              type="single"
+              value={mobileView}
+              onValueChange={(value) => {
+                if (value === 'list' || value === 'map') setMobileView(value);
+              }}
+              className="w-full rounded-xl border bg-muted/40 p-1 lg:hidden"
+              aria-label="Chế độ xem quán"
+            >
+              <ToggleGroupItem
+                value="list"
+                className="h-11 flex-1 rounded-lg"
+                aria-controls="restaurant-results"
+              >
+                <List className="size-4" aria-hidden="true" />
+                Danh sách
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="map"
+                className="h-11 flex-1 rounded-lg"
+                aria-controls="restaurant-map-panel"
+              >
+                <MapIcon className="size-4" aria-hidden="true" />
+                Bản đồ
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+          <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,1fr)] xl:gap-8">
+            <section
+              id="restaurant-results"
+              className={cn(
+                'min-w-0 scroll-mt-24',
+                mobileView === 'list' ? 'block' : 'hidden',
+                'lg:block'
+              )}
+              aria-label="Kết quả tìm quán"
+            >
+              <RestaurantList
+                result={data}
+                isLoading={isQueryLoading}
+                isFetching={isDataRefreshing}
+                isError={isError}
+                selectedId={selectedId}
+                onSelect={(id) => {
+                  setSelectedId(id);
+                  if (!isDesktop) setMobileView('map');
+                }}
+                onRetry={() => void refetch()}
+                emptyTitle={emptyCopy.title}
+                emptyDescription={emptyCopy.description}
+                emptyActions={emptyActions}
+              />
+              {data && data.meta.totalPages > 1 && (
+                <nav
+                  aria-label="Phân trang quán"
+                  className="mt-6 flex items-center justify-between gap-3 border-t pt-5"
+                >
                   <Button
                     variant="outline"
-                    size="sm"
-                    className="h-7 text-xs"
-                    onClick={handleBackToNearby}
+                    className="h-11 rounded-xl"
+                    disabled={!data.meta.hasPrevPage || isQueryLoading || isFetching}
+                    onClick={() => {
+                      setPagination({ scope: searchScope, page: page - 1 });
+                      setSelectedId(null);
+                      document
+                        .getElementById('restaurant-results')
+                        ?.scrollIntoView({ block: 'start' });
+                    }}
                   >
-                    Quay lại tìm quanh vị trí của tôi
+                    <ChevronLeft className="size-4" aria-hidden="true" />
+                    Trước
                   </Button>
-                </div>
-              )}
-            </div>
-
-            <div className="flex flex-col space-y-3 lg:col-span-5 xl:col-span-5">
-              <div className="flex items-center justify-between gap-2 bg-background/95 pb-1 backdrop-blur-xs">
-                <h2 className="text-base font-bold text-foreground">
-                  {resolvedMode === 'KEYWORD'
-                    ? 'Quán phù hợp từ khoá'
-                    : resolvedMode === 'BOUNDS'
-                      ? 'Quán trong vùng đang xem'
-                      : 'Quán chay lân cận'}
-                  <span className="ml-1.5 text-sm font-medium text-muted-foreground">
-                    ({data?.meta.totalItems ?? restaurants.length})
+                  <span className="text-sm tabular-nums text-muted-foreground" aria-live="polite">
+                    Trang <span className="font-medium text-foreground">{page}</span> /{' '}
+                    {data.meta.totalPages}
                   </span>
-                </h2>
-
-                {isAuthenticated ? (
-                  <Dialog open={submitOpen} onOpenChange={setSubmitOpen}>
-                    <DialogTrigger asChild>
-                      <Button size="sm" className="gap-1.5 rounded-full shadow-2xs">
-                        <Plus className="size-4" aria-hidden="true" /> Đề xuất quán
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-                      <DialogHeader>
-                        <DialogTitle>Đề xuất quán chay mới</DialogTitle>
-                        <DialogDescription>
-                          Quán sẽ được Ban quản trị xem xét và phê duyệt trước khi xuất hiện công
-                          khai.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <SubmitForm onDone={() => setSubmitOpen(false)} />
-                    </DialogContent>
-                  </Dialog>
-                ) : (
-                  <Button asChild size="sm" variant="outline" className="rounded-full shadow-2xs">
-                    <Link href={`/login?from=${encodeURIComponent('/restaurants')}`}>
-                      Đăng nhập để đề xuất
-                    </Link>
-                  </Button>
-                )}
-              </div>
-
-              <div className="lg:max-h-[calc(100vh-220px)] lg:overflow-y-auto lg:pr-1.5">
-                <RestaurantList
-                  result={data}
-                  isLoading={isLoading}
-                  isError={isError}
-                  selectedId={selectedId}
-                  onSelect={setSelectedId}
-                  onRetry={() => void refetch()}
-                  emptyTitle={emptyCopy.title}
-                  emptyDescription={emptyCopy.description}
-                  emptyActions={emptyActions}
-                />
-              </div>
-              {data && data.meta.totalPages > 1 && (
-                <nav aria-label="Phân trang quán" className="flex items-center justify-center gap-3">
-                  <Button variant="outline" size="sm" disabled={!data.meta.hasPrevPage || isLoading}
-                    onClick={() => setPagination({ scope: searchScope, page: page - 1 })}>
-                    Trang trước
-                  </Button>
-                  <span className="text-sm tabular-nums" aria-live="polite">{page} / {data.meta.totalPages}</span>
-                  <Button variant="outline" size="sm" disabled={!data.meta.hasNextPage || isLoading}
-                    onClick={() => setPagination({ scope: searchScope, page: page + 1 })}>
-                    Trang sau
+                  <Button
+                    variant="outline"
+                    className="h-11 rounded-xl"
+                    disabled={!data.meta.hasNextPage || isQueryLoading || isFetching}
+                    onClick={() => {
+                      setPagination({ scope: searchScope, page: page + 1 });
+                      setSelectedId(null);
+                      document
+                        .getElementById('restaurant-results')
+                        ?.scrollIntoView({ block: 'start' });
+                    }}
+                  >
+                    Sau
+                    <ChevronRight className="size-4" aria-hidden="true" />
                   </Button>
                 </nav>
               )}
-            </div>
+            </section>
+            <aside
+              id="restaurant-map-panel"
+              className={cn(
+                'min-w-0 lg:sticky lg:top-24',
+                mobileView === 'map' ? 'block' : 'hidden',
+                'lg:block'
+              )}
+              aria-label="Bản đồ các quán"
+            >
+              <div className="h-[65dvh] min-h-[480px] overflow-hidden rounded-2xl lg:h-[calc(100dvh-144px)] lg:max-h-[760px]">
+                {(isDesktop || mobileView === 'map') && (
+                  <RestaurantMap
+                    items={restaurants}
+                    userLocation={location}
+                    radiusM={radiusM}
+                    selectedId={selectedId}
+                    onSelectRestaurant={setSelectedId}
+                    onRadiusChange={setRadiusM}
+                    onBoundsChange={handleBoundsChange}
+                    onSearchThisArea={handleSearchThisArea}
+                    canSearchThisArea={hasViewBounds}
+                    isSearchingArea={searchingArea}
+                    isLoading={isQueryLoading || isFetching}
+                    emptyTitle={isError ? 'Chưa tải được vị trí các quán' : emptyCopy.title}
+                    emptyDescription={
+                      isError ? 'Thử tải lại ở phần danh sách quán.' : emptyCopy.description
+                    }
+                  />
+                )}
+              </div>
+              <p className="mt-3 flex items-center justify-between gap-3 px-1 text-xs leading-relaxed text-muted-foreground">
+                <span>Vị trí và khoảng cách mang tính tham khảo.</span>
+                <Navigation className="size-4 shrink-0" aria-hidden="true" />
+              </p>
+            </aside>
+          </div>
+          <div className="flex items-center justify-between gap-4 border-t py-4 text-sm">
+            <p className="text-muted-foreground">Bạn biết một địa điểm chay khác?</p>
+            {isAuthenticated ? (
+              <Button variant="link" onClick={() => setSubmitOpen(true)}>
+                Chia sẻ cùng cộng đồng
+                <ArrowUpRight className="size-4" aria-hidden="true" />
+              </Button>
+            ) : (
+              <Button asChild variant="link">
+                <Link href={`/login?from=${encodeURIComponent('/restaurants')}`}>
+                  Chia sẻ cùng cộng đồng
+                  <ArrowUpRight className="size-4" aria-hidden="true" />
+                </Link>
+              </Button>
+            )}
           </div>
         </>
       )}

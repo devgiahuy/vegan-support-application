@@ -90,6 +90,24 @@ export function macroDistance(values: MealMacroValues, targets: MealMacroValues)
   return comparable.reduce((sum, [value, target]) => sum + Math.abs(value - target) / target, 0);
 }
 
+/**
+ * Fibre is a floor-type target (adequate intake per 1000 kcal), not a ceiling: eating more
+ * than the target is not a deviation worth penalising or flagging. Only a very high daily
+ * intake is surfaced as a precaution, using this absolute threshold instead of the
+ * target-plus-tolerance band that applies to protein and fat.
+ */
+export const FIBER_UPPER_CAUTION_GRAMS = 70;
+
+/** Upper bound above which a daily macro total is flagged as exceeding its target. */
+export function macroUpperLimit(
+  targetValue: number,
+  tolerancePercent: number,
+  macro?: MealMacroCode,
+): number {
+  const band = targetValue * (1 + tolerancePercent / 100);
+  return macro === 'FIBER' ? Math.max(band, FIBER_UPPER_CAUTION_GRAMS) : band;
+}
+
 /** A bounded, unitless daily score across the four selectable macros. */
 export function macroTargetDeviationScore(
   values: MealMacroValues,
@@ -97,17 +115,21 @@ export function macroTargetDeviationScore(
   tolerancePercent: number,
 ): number {
   const pairs = [
-    [values.proteinGrams, targets.proteinGrams],
-    [values.fiberGrams, targets.fiberGrams],
-    [values.fatGrams, targets.fatGrams],
-    [values.carbohydrateGrams, targets.carbohydrateGrams],
+    [values.proteinGrams, targets.proteinGrams, false],
+    [values.fiberGrams, targets.fiberGrams, true],
+    [values.fatGrams, targets.fatGrams, false],
+    [values.carbohydrateGrams, targets.carbohydrateGrams, false],
   ] as const;
   const tolerance = tolerancePercent / 100;
-  return pairs.reduce((score, [value, target]) => {
+  return pairs.reduce((score, [value, target, isFloorTarget]) => {
     if (value === null || target === null || target <= 0) return score;
     const deviation = (value - target) / target;
     const outsideBand = Math.max(0, Math.abs(deviation) - tolerance);
-    return score + Math.min(12, Math.abs(deviation) * 0.15 + outsideBand * (deviation > 0 ? 3 : 1));
+    const overshootWeight = isFloorTarget ? 0 : 3;
+    return (
+      score +
+      Math.min(12, Math.abs(deviation) * 0.15 + outsideBand * (deviation > 0 ? overshootWeight : 1))
+    );
   }, 0);
 }
 
@@ -115,10 +137,11 @@ export function isMacroOverTarget(
   estimatedValue: number | null,
   targetValue: number | null,
   tolerancePercent: number,
+  macro?: MealMacroCode,
 ): boolean {
   return (
     estimatedValue !== null &&
     targetValue !== null &&
-    estimatedValue > targetValue * (1 + tolerancePercent / 100)
+    estimatedValue > macroUpperLimit(targetValue, tolerancePercent, macro)
   );
 }

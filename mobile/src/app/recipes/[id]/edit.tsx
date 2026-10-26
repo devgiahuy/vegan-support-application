@@ -80,17 +80,32 @@ export default function EditRecipeScreen() {
             prepTimeMinutes: recipe.prepTimeMinutes,
             cookTimeMinutes: recipe.cookTimeMinutes,
             difficulty: recipe.difficulty,
-            calories: recipe.nutrition.calories || undefined,
-            protein: recipe.nutrition.protein || undefined,
+            calories: recipe.nutrition.calories ?? undefined,
+            protein: recipe.nutrition.protein ?? undefined,
+            // Form chưa cho nhập các chỉ số này; giữ nguyên để bản sửa không làm mất dữ liệu đã có.
+            preservedNutrition: {
+              ...(recipe.nutrition.carbs !== null ? { carbsGrams: recipe.nutrition.carbs } : {}),
+              ...(recipe.nutrition.fat !== null ? { fatGrams: recipe.nutrition.fat } : {}),
+              ...(recipe.nutrition.fiber !== null ? { fiberGrams: recipe.nutrition.fiber } : {}),
+              ...(recipe.nutrition.vitaminB12 !== null ? { vitaminB12Mcg: recipe.nutrition.vitaminB12 } : {}),
+            },
             ingredients: recipe.ingredients.map((ing) => ({
               displayName: ing.name,
               amount: ing.amount,
               unit: ing.unit,
               ingredientId: ing.ingredientId,
+              optional: ing.optional,
+              position: ing.position,
             })),
             steps:
               recipe.steps.length > 0
-                ? recipe.steps.map((step) => ({ instruction: step.instruction, durationMinutes: step.durationMinutes }))
+                ? recipe.steps.map((step) => ({
+                    instruction: step.instruction,
+                    durationMinutes: step.durationMinutes,
+                    cookingMethodId: step.cookingMethodId,
+                    temperatureCelsius: step.temperatureCelsius,
+                    affectedIngredientPositions: step.affectedIngredientPositions,
+                  }))
                 : recipe.body
                   ? [{ instruction: recipe.body }]
                   : [],

@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
-  "source": "../backend/openapi.json",
-  "generatedAt": "2026-10-08T06:34:30.235Z",
+  "source": "http://localhost:4000/api-docs.json",
+  "generatedAt": "2026-10-25T20:21:24.092Z",
   "stats": {
-    "operations": 168,
-    "groups": 39,
-    "schemas": 150
+    "operations": 184,
+    "groups": 41,
+    "schemas": 162
   },
   "operations": [
     {
@@ -831,6 +831,177 @@
     },
     {
       "method": "GET",
+      "path": "/api/v1/allergens",
+      "group": "Allergens",
+      "summary": "Danh mục dị ứng theo tên và tên đồng nghĩa",
+      "operationId": "listAllergens",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "AllergenCatalogResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ingredient-composition-sources",
+      "group": "Catalog Admin",
+      "summary": "Nguồn dữ liệu dùng để rà soát thành phần",
+      "operationId": "listCompositionSources",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "CompositionSourcesResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ingredients/{id}/composition",
+      "group": "Catalog Admin",
+      "summary": "Đọc thành phần, mức đầy đủ và lịch sử rà soát",
+      "operationId": "getIngredientComposition",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "IngredientCompositionResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/api/v1/admin/ingredients/{id}/composition",
+      "group": "Catalog Admin",
+      "summary": "Admin rà soát cấu tạo nguyên liệu",
+      "operationId": "saveIngredientComposition",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "expectedVersion",
+            "status",
+            "kind",
+            "componentIds"
+          ],
+          "properties": {
+            "expectedVersion": {
+              "type": "integer"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "UNKNOWN",
+                "PARTIAL",
+                "COMPLETE"
+              ]
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "UNSPECIFIED",
+                "SIMPLE",
+                "COMPOUND"
+              ]
+            },
+            "componentIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            },
+            "evidence": {
+              "type": "object",
+              "required": [
+                "sourceId",
+                "sourceVersion",
+                "sourceRecordId",
+                "scope"
+              ],
+              "properties": {
+                "sourceId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "sourceVersion": {
+                  "type": "string"
+                },
+                "sourceRecordId": {
+                  "type": "string"
+                },
+                "scope": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "IngredientCompositionResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/posts/mine",
+      "group": "Content",
+      "summary": "List nội dung do người dùng hiện tại tạo",
+      "operationId": "listMyPosts",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "MyPostListResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
       "path": "/api/v1/posts",
       "group": "Content",
       "summary": "List nội dung published",
@@ -896,6 +1067,12 @@
         {
           "in": "query",
           "name": "forDate",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "eligibility",
           "required": false,
           "type": "string"
         }
@@ -1113,6 +1290,27 @@
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/recipe-drafts/generate",
+      "group": "Content",
+      "summary": "Generate an editable recipe draft from a title, description and ingredient names",
+      "operationId": "generateRecipeDraft",
+      "params": [],
+      "request": {
+        "schema": {
+          "$ref": "GenerateRecipeDraftRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "GenerateRecipeDraftResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "423": "ErrorResponse",
+        "503": "ErrorResponse"
       }
     },
     {
@@ -2904,6 +3102,286 @@
         "403": "ErrorResponse",
         "404": "ErrorResponse",
         "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/billing/products",
+      "group": "Billing",
+      "summary": "List packages and payOS checkout availability",
+      "operationId": "",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "BillingCatalogEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/entitlements/me",
+      "group": "Billing",
+      "summary": "Owned allowances, Pantry capacity and recent ledger",
+      "operationId": "",
+      "params": [],
+      "request": null,
+      "responses": {
+        "200": "EntitlementEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/billing/orders",
+      "group": "Billing",
+      "summary": "Paginated owned payment history",
+      "operationId": "",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "BillingOrdersEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/billing/orders",
+      "group": "Billing",
+      "summary": "Create idempotent package order; server snapshots price and benefits",
+      "operationId": "",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "productId",
+            "idempotencyKey"
+          ],
+          "properties": {
+            "productId": {
+              "type": "string"
+            },
+            "idempotencyKey": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        "required": false
+      },
+      "responses": {
+        "201": "BillingOrderEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/billing/orders/{id}",
+      "group": "Billing",
+      "summary": "Read owned order; return page does not settle it",
+      "operationId": "",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "BillingOrderEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/billing/orders/{id}/reconcile",
+      "group": "Billing",
+      "summary": "Recover same payOS checkout if needed, verify query and settle once; 30-second throttle",
+      "operationId": "",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "BillingOrderEnvelope",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/billing/payos/webhook",
+      "group": "Billing",
+      "summary": "Verify signed payOS notification and authoritative payment query; grant once",
+      "operationId": "",
+      "params": [],
+      "request": {
+        "schema": {
+          "type": "object",
+          "required": [
+            "code",
+            "desc",
+            "signature",
+            "data"
+          ],
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "desc": {
+              "type": "string"
+            },
+            "success": {
+              "type": "boolean"
+            },
+            "signature": {
+              "type": "string"
+            },
+            "data": {
+              "type": "object",
+              "required": [
+                "orderCode",
+                "amount",
+                "description",
+                "accountNumber",
+                "reference",
+                "transactionDateTime",
+                "currency",
+                "paymentLinkId",
+                "code",
+                "desc"
+              ],
+              "properties": {
+                "orderCode": {
+                  "type": "integer"
+                },
+                "amount": {
+                  "type": "integer"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "accountNumber": {
+                  "type": "string"
+                },
+                "reference": {
+                  "type": "string"
+                },
+                "transactionDateTime": {
+                  "type": "string"
+                },
+                "currency": {
+                  "type": "string"
+                },
+                "paymentLinkId": {
+                  "type": "string"
+                },
+                "code": {
+                  "type": "string"
+                },
+                "desc": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "required": false
+      },
+      "responses": {
+        "200": "object",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/billing/payos/return/{id}",
+      "group": "Billing",
+      "summary": "Display-only browser return/cancel redirect; never grant or trust query payment claims",
+      "operationId": "",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "303": "Configured application billing URL with local orderId",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "429": "ErrorResponse",
+        "503": "ErrorResponse"
       }
     },
     {
@@ -6821,7 +7299,7 @@
       "method": "GET",
       "path": "/api/v1/ingredient-recognition/jobs/{id}",
       "group": "Ingredient Recognition",
-      "summary": "Get recognition progress and editable candidates",
+      "summary": "Get recognition progress and consolidated editable candidates",
       "operationId": "getIngredientRecognitionJob",
       "params": [
         {
@@ -6836,6 +7314,36 @@
         "200": "RecognitionJobResponse",
         "401": "ErrorResponse",
         "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/ingredient-recognition/jobs/{id}/images",
+      "group": "Ingredient Recognition",
+      "summary": "Add more images to an unconfirmed recognition job and merge the new readings",
+      "operationId": "addIngredientRecognitionJobImages",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "AddRecognitionImagesRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "202": "RecognitionJobResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse",
+        "503": "ErrorResponse"
       }
     },
     {
@@ -6995,6 +7503,36 @@
         "200": "ReceiptJobResponse",
         "401": "ErrorResponse",
         "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/receipt-jobs/{id}/images",
+      "group": "Receipts",
+      "summary": "Add more images to an unconfirmed receipt job and merge the new lines",
+      "operationId": "addReceiptJobImages",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "AddReceiptImagesRequest"
+        },
+        "required": false
+      },
+      "responses": {
+        "202": "ReceiptJobResponse",
+        "401": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "422": "ErrorResponse",
+        "423": "ErrorResponse",
+        "503": "ErrorResponse"
       }
     },
     {
@@ -7309,7 +7847,7 @@
       "method": "GET",
       "path": "/api/v1/restaurants/nearby",
       "group": "Restaurants",
-      "summary": "Nearby approved internal and live provider places; hard diet filtering precedes ranking",
+      "summary": "Nearby approved internal and live provider places; explicit search filters only",
       "operationId": "nearbyRestaurants",
       "params": [
         {

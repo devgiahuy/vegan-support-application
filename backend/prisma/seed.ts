@@ -1,4 +1,5 @@
 import { createPrismaClient } from '../src/database/client.js';
+import { seedBillingProducts } from '../src/modules/billing/billing.catalog.js';
 import 'dotenv/config';
 import {
   ActivityLevel,
@@ -763,6 +764,7 @@ const seedEnvironment = z
   .parse(process.env);
 
 async function main(): Promise<void> {
+  await seedBillingProducts(prisma);
   const [memberPasswordHash, adminPasswordHash] = await Promise.all([
     passwordService.hash(seedEnvironment.SEED_MEMBER_PASSWORD),
     passwordService.hash(seedEnvironment.SEED_ADMIN_PASSWORD),
@@ -1334,6 +1336,77 @@ async function main(): Promise<void> {
     },
   });
 
+  // Placeholder YouTube demos without a real video, removed at the user's request (2026-10-26).
+  const retiredDemoVideoSlugs = [
+    'video-bua-an-xanh-demo',
+    'video-so-che-rau-cu-demo',
+    'video-nau-chao-nam-demo',
+  ] as const;
+  const retiredDemoVideos = await prisma.post.findMany({
+    where: { slug: { in: [...retiredDemoVideoSlugs] }, type: PostType.VIDEO },
+    select: { id: true },
+  });
+  if (retiredDemoVideos.length) {
+    const ids = retiredDemoVideos.map((post) => post.id);
+    await prisma.postBookmark.deleteMany({ where: { postId: { in: ids } } });
+    await prisma.post.updateMany({
+      where: { id: { in: ids }, status: { not: PostStatus.DELETED } },
+      data: {
+        status: PostStatus.DELETED,
+        deletedAt: new Date('2026-10-26T00:00:00.000Z'),
+        deletedById: admin.id,
+      },
+    });
+  }
+
+  // User-provided covers for the demo recipes created above; re-applied on every seed run.
+  const demoRecipeCovers = [
+    {
+      slug: 'bat-com-rau-xanh-demo',
+      publicId: 'seed/recipes/bat-com-rau-xanh',
+      secureUrl:
+        'https://cdn.24h.com.vn/upload/3-2024/images/2024-08-14/30-dia-com-1-1723619276-319-width1284height1770.jpg',
+      width: 1284,
+      height: 1770,
+      bytes: 272965,
+    },
+    {
+      slug: 'dau-hu-xao-bong-cai-demo',
+      publicId: 'seed/recipes/dau-hu-xao-bong-cai',
+      secureUrl:
+        'https://storage.googleapis.com/onelife-public/blog.onelife.vn/2021/11/cach-lam-djau-hu-xao-bong-cai-mon-chay-279614491484.jpg',
+      width: 640,
+      height: 359,
+      bytes: 112688,
+    },
+    {
+      slug: 'chao-nam-gao-lut-demo',
+      publicId: 'seed/recipes/chao-nam-gao-lut',
+      secureUrl:
+        'https://bizweb.dktcdn.net/100/495/560/files/z5007874225360-667261c6e194fea953699343273e700e.jpg?v=1703492238329',
+      width: 2560,
+      height: 1707,
+      bytes: 901156,
+    },
+  ] as const;
+  for (const { slug, ...cover } of demoRecipeCovers) {
+    const post = await prisma.post.findUnique({ where: { slug } });
+    if (!post?.publishedRevisionId) continue;
+    const media = { provider: MediaProvider.CLOUDINARY, mimeType: 'image/jpeg', ...cover };
+    await prisma.postMedia.upsert({
+      where: {
+        revisionId_kind: { revisionId: post.publishedRevisionId, kind: MediaKind.COVER_IMAGE },
+      },
+      update: { ...media, assetId: null },
+      create: {
+        revisionId: post.publishedRevisionId,
+        kind: MediaKind.COVER_IMAGE,
+        position: 0,
+        ...media,
+      },
+    });
+  }
+
   if (!(await prisma.post.findUnique({ where: { slug: 'dam-thuc-vat-trong-bua-an-demo' } }))) {
     await prisma.$transaction(async (transaction) => {
       const post = await transaction.post.create({
@@ -1373,52 +1446,6 @@ async function main(): Promise<void> {
     });
   }
 
-  if (!(await prisma.post.findUnique({ where: { slug: 'video-bua-an-xanh-demo' } }))) {
-    await prisma.$transaction(async (transaction) => {
-      const post = await transaction.post.create({
-        data: {
-          authorId: admin.id,
-          type: PostType.VIDEO,
-          slug: 'video-bua-an-xanh-demo',
-          status: PostStatus.PUBLISHED,
-          version: 1,
-          publishedAt: new Date(),
-        },
-      });
-      const revision = await transaction.postRevision.create({
-        data: {
-          postId: post.id,
-          createdById: admin.id,
-          version: 1,
-          status: PostRevisionStatus.PUBLISHED,
-          title: 'Video chuẩn bị bữa ăn xanh',
-          normalizedTitle: normalizeVietnameseText('Video chuẩn bị bữa ăn xanh'),
-          excerpt: 'Demo contract video YouTube cho local development.',
-          normalizedExcerpt: normalizeVietnameseText(
-            'Demo contract video YouTube cho local development.',
-          ),
-          body: 'Video minh họa quy trình chuẩn bị nguyên liệu và sắp xếp một bữa ăn thực vật.',
-          normalizedBody: normalizeVietnameseText(
-            'Video minh họa quy trình chuẩn bị nguyên liệu và sắp xếp một bữa ăn thực vật.',
-          ),
-          categories: { create: [{ categoryId: topicCategory.id }] },
-          tags: { create: postTagRows(['meal prep', 'lối sống xanh']) },
-          media: {
-            create: {
-              kind: MediaKind.VIDEO,
-              provider: MediaProvider.YOUTUBE,
-              secureUrl: 'https://www.youtube.com/watch?v=veganDemo01',
-            },
-          },
-        },
-      });
-      await transaction.post.update({
-        where: { id: post.id },
-        data: { publishedRevisionId: revision.id },
-      });
-    });
-  }
-
   const discoveryTextDemos = [
     {
       type: PostType.BLOG,
@@ -1443,24 +1470,6 @@ async function main(): Promise<void> {
       excerpt: 'Giảm lãng phí bằng cách sơ chế và chia hộp hợp lý.',
       body: 'Rau lá nên được làm ráo trước khi bảo quản, còn củ quả có thể chia theo từng bữa. Ghi ngày sơ chế trên hộp giúp ưu tiên nguyên liệu cần dùng trước và giảm lãng phí.',
       tags: ['rau củ', 'giảm lãng phí'],
-    },
-    {
-      type: PostType.VIDEO,
-      slug: 'video-so-che-rau-cu-demo',
-      title: 'Video sơ chế rau củ nhanh',
-      excerpt: 'Quy trình rửa, làm ráo và chia phần nguyên liệu.',
-      body: 'Video hướng dẫn tổ chức khu vực sơ chế và chuẩn bị rau củ an toàn cho nhiều bữa ăn trong tuần.',
-      tags: ['rau củ', 'meal prep'],
-      youtubeId: 'greenPrep01',
-    },
-    {
-      type: PostType.VIDEO,
-      slug: 'video-nau-chao-nam-demo',
-      title: 'Video nấu cháo nấm',
-      excerpt: 'Minh họa cách ninh gạo và thêm nấm đúng thời điểm.',
-      body: 'Video trình bày các bước nấu cháo nấm gạo lứt với thời gian và độ lửa phù hợp cho người mới.',
-      tags: ['nấm', 'cháo'],
-      youtubeId: 'mushroom001',
     },
   ] as const;
 
@@ -1491,17 +1500,6 @@ async function main(): Promise<void> {
           normalizedBody: normalizeVietnameseText(definition.body),
           categories: { create: [{ categoryId: topicCategory.id }] },
           tags: { create: postTagRows(definition.tags) },
-          ...('youtubeId' in definition
-            ? {
-                media: {
-                  create: {
-                    kind: MediaKind.VIDEO,
-                    provider: MediaProvider.YOUTUBE,
-                    secureUrl: `https://www.youtube.com/watch?v=${definition.youtubeId}`,
-                  },
-                },
-              }
-            : {}),
         },
       });
       await transaction.post.update({
@@ -1511,12 +1509,11 @@ async function main(): Promise<void> {
     });
   }
 
-  const [member, communityRecipe, communityVideo] = await Promise.all([
+  const [member, communityRecipe] = await Promise.all([
     prisma.user.findUniqueOrThrow({
       where: { email: seedEnvironment.SEED_MEMBER_EMAIL.toLowerCase() },
     }),
     prisma.post.findUniqueOrThrow({ where: { slug: 'dau-hu-xao-bong-cai-demo' } }),
-    prisma.post.findUniqueOrThrow({ where: { slug: 'video-bua-an-xanh-demo' } }),
   ]);
   const [customTofu, customBroccoli] = await Promise.all([
     prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'dau hu' } }),
@@ -1798,13 +1795,11 @@ async function main(): Promise<void> {
       update: { taste: 4, difficulty: 2, active: true },
       create: { userId: admin.id, postId: communityRecipe.id, taste: 4, difficulty: 2 },
     });
-    for (const postId of [communityRecipe.id, communityVideo.id]) {
-      await transaction.postBookmark.upsert({
-        where: { userId_postId: { userId: member.id, postId } },
-        update: {},
-        create: { userId: member.id, postId },
-      });
-    }
+    await transaction.postBookmark.upsert({
+      where: { userId_postId: { userId: member.id, postId: communityRecipe.id } },
+      update: {},
+      create: { userId: member.id, postId: communityRecipe.id },
+    });
   });
 
   const platformContributor = await prisma.user.findUniqueOrThrow({

@@ -41,6 +41,7 @@ export interface UserSeedDefinition {
     label: string;
     severity: AllergySeverity;
   }>;
+  ingredientAllergies?: Array<{ ingredientNormalizedName: string; severity: AllergySeverity }>;
   exclusions?: Array<{
     ingredientNormalizedName: string;
     ingredientName: string;
@@ -84,13 +85,20 @@ export const userDefinitions: readonly UserSeedDefinition[] = [
       approvalBasis: ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
       source: ContributorApplicationSource.REGISTRATION,
       referenceLinks: ['https://veggieconnect.vn/chef/minh-tam'],
-      experience: '10 năm nghiên cứu và chế tác món chay hiện đại, hoạt động tích cực trong cộng đồng ẩm thực thực vật.',
+      experience:
+        '10 năm nghiên cứu và chế tác món chay hiện đại, hoạt động tích cực trong cộng đồng ẩm thực thực vật.',
       approvalEvidence: {
         kind: ContributorApprovalBasis.PLATFORM_TRACK_RECORD,
         capturedAt: '2026-09-15T00:00:00.000Z',
         snapshotVersion: 'seed-platform-track-record-v1',
         posts: { total: 15, published: 15, pendingReview: 0, rejected: 0 },
-        interactions: { commentsReceived: 45, votesReceived: 120, ratingsReceived: 38, bookmarksReceived: 80, averageTasteRating: 4.9 },
+        interactions: {
+          commentsReceived: 45,
+          votesReceived: 120,
+          ratingsReceived: 38,
+          bookmarksReceived: 80,
+          averageTasteRating: 4.9,
+        },
       },
     },
   },
@@ -110,7 +118,8 @@ export const userDefinitions: readonly UserSeedDefinition[] = [
       source: ContributorApplicationSource.REGISTRATION,
       organizationClaim: 'Viện Nghiên Cứu Dinh Dưỡng Thực Vật Việt Nam',
       referenceLinks: ['https://example.com/plant-nutrition-institute'],
-      experience: 'Đại diện cố vấn dinh dưỡng thực vật từ đối tác nghiên cứu; hỗ trợ thẩm định các cẩm nang sức khỏe.',
+      experience:
+        'Đại diện cố vấn dinh dưỡng thực vật từ đối tác nghiên cứu; hỗ trợ thẩm định các cẩm nang sức khỏe.',
       approvalEvidence: {
         kind: ContributorApprovalBasis.ORGANIZATION_AFFILIATION,
         capturedAt: '2026-09-15T00:00:00.000Z',
@@ -136,7 +145,8 @@ export const userDefinitions: readonly UserSeedDefinition[] = [
       approvalBasis: ContributorApprovalBasis.ADMIN_INVITED,
       source: ContributorApplicationSource.ADMIN_INVITATION,
       referenceLinks: [],
-      experience: 'Nghệ nhân ẩm thực chay cổ truyền được Ban Quản Trị mời thẩm định công thức truyền thống.',
+      experience:
+        'Nghệ nhân ẩm thực chay cổ truyền được Ban Quản Trị mời thẩm định công thức truyền thống.',
       invitationReason: 'Chuyên gia văn hóa ẩm thực chay Phật giáo Việt Nam.',
       approvalEvidence: {
         kind: ContributorApprovalBasis.ADMIN_INVITED,
@@ -174,6 +184,9 @@ export const userDefinitions: readonly UserSeedDefinition[] = [
     allergies: [
       { allergenCode: 'PEANUT', label: 'Đậu phộng (lạc)', severity: AllergySeverity.MODERATE },
     ],
+    ingredientAllergies: [
+      { ingredientNormalizedName: 'nam huong', severity: AllergySeverity.MODERATE },
+    ],
   },
 
   // 6. Member 2: Người ăn chay kỳ Phật giáo - Kiêng ngũ vị tân vào ngày Rằm & Mùng Một
@@ -201,8 +214,16 @@ export const userDefinitions: readonly UserSeedDefinition[] = [
       tradition: Tradition.BUDDHIST,
     },
     exclusions: [
-      { ingredientNormalizedName: 'hanh boaro', ingredientName: 'Hành boaro (Tỏi tây)', reason: 'Kiêng ngũ vị tân theo truyền thống Phật giáo' },
-      { ingredientNormalizedName: 'hanh la', ingredientName: 'Hành lá', reason: 'Kiêng ngũ vị tân theo truyền thống Phật giáo' },
+      {
+        ingredientNormalizedName: 'hanh boaro',
+        ingredientName: 'Hành boaro (Tỏi tây)',
+        reason: 'Kiêng ngũ vị tân theo truyền thống Phật giáo',
+      },
+      {
+        ingredientNormalizedName: 'hanh la',
+        ingredientName: 'Hành lá',
+        reason: 'Kiêng ngũ vị tân theo truyền thống Phật giáo',
+      },
     ],
   },
 

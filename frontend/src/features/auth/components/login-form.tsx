@@ -94,7 +94,7 @@ export function LoginForm({
             id="login-email"
             type="email"
             autoComplete="email"
-            placeholder="vidu@veggieconnect.vn"
+            placeholder="user@veggieconnect.vn"
             className="h-12 rounded-xl pl-10 text-sm border-border/80 focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary transition-all"
             {...form.register('email')}
           />

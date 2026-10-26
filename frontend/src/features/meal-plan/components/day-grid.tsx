@@ -1,4 +1,5 @@
 import * as React from 'react';
+import Image from 'next/image';
 import { Calendar, UtensilsCrossed, AlertTriangle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -61,6 +62,7 @@ function createPlaceholderSlot(date: string, mealType: MealType): MealSlot {
     unresolvedCode: null,
     recipeId: '',
     recipeTitle: '',
+    coverImageUrl: null,
     sourceType: 'RECIPE',
     isCustomMeal: false,
     customMealId: null,
@@ -84,6 +86,29 @@ const UNRESOLVED_LABELS: Record<string, string> = {
   EXCLUDED_INGREDIENT: 'Chứa nguyên liệu cần tránh',
   HARD_CONSTRAINT_BLOCKED: 'Bảo vệ yêu cầu ăn kiêng',
 };
+
+function SlotThumbnail({ src, alt }: { src: string | null; alt: string }) {
+  const [hasError, setHasError] = React.useState(false);
+  if (!src || hasError) {
+    return (
+      <div className="w-12 h-12 rounded-lg bg-muted/40 border border-border/40 flex items-center justify-center shrink-0 text-muted-foreground/60">
+        <UtensilsCrossed className="w-5 h-5" />
+      </div>
+    );
+  }
+  return (
+    <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-muted/20 border border-border/50">
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        className="object-cover"
+        sizes="48px"
+        onError={() => setHasError(true)}
+      />
+    </div>
+  );
+}
 
 function SlotCard({
   slot,
@@ -120,24 +145,27 @@ function SlotCard({
           )}
         </div>
         {slot.filled ? (
-          <div className="space-y-1">
-            <p className="text-sm font-semibold leading-snug text-foreground line-clamp-2">
-              {slot.recipeTitle}
-            </p>
-            {slot.protein > 0 || slot.carbs > 0 || slot.fat > 0 || slot.fiber > 0 ? (
-              <p className="text-xs text-muted-foreground">
-                Đạm {slot.protein}g · Bột {slot.carbs}g · Béo {slot.fat}g
-                {slot.fiber > 0 && ` · Xơ ${slot.fiber}g`}
-                {slot.servings > 0 && ` · ${slot.servings} khẩu phần`}
+          <div className="flex items-start gap-2.5">
+            <SlotThumbnail src={slot.coverImageUrl} alt={slot.recipeTitle} />
+            <div className="space-y-1 min-w-0 flex-1">
+              <p className="text-sm font-semibold leading-snug text-foreground line-clamp-2">
+                {slot.recipeTitle}
               </p>
-            ) : (
-              slot.servings > 0 && (
+              {slot.protein > 0 || slot.carbs > 0 || slot.fat > 0 || slot.fiber > 0 ? (
                 <p className="text-xs text-muted-foreground">
-                  {slot.servings} khẩu phần{' '}
-                  {slot.customMealCoverage ? `· ${slot.customMealCoverage}` : ''}
+                  Đạm {slot.protein}g · Bột {slot.carbs}g · Béo {slot.fat}g
+                  {slot.fiber > 0 && ` · Xơ ${slot.fiber}g`}
+                  {slot.servings > 0 && ` · ${slot.servings} khẩu phần`}
                 </p>
-              )
-            )}
+              ) : (
+                slot.servings > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {slot.servings} khẩu phần{' '}
+                    {slot.customMealCoverage ? `· ${slot.customMealCoverage}` : ''}
+                  </p>
+                )
+              )}
+            </div>
           </div>
         ) : (
           <div className="py-1.5 space-y-1.5">
@@ -159,6 +187,9 @@ function SlotCard({
     </div>
   );
 }
+
+/** Ngưỡng thận trọng tuyệt đối cho chất xơ (g/ngày), đồng bộ với backend `FIBER_UPPER_CAUTION_GRAMS`. */
+const FIBER_UPPER_CAUTION_GRAMS = 70;
 
 export interface DayNutritionInfo {
   dayCalories: number;
@@ -213,44 +244,49 @@ export function computeDayNutrition(
   const dailyCalTarget = targetCalories && targetCalories > 0 ? targetCalories : 2000;
   const tolerancePercent = nutritionTargets?.tolerancePercent ?? 20;
 
-  const maxCal = Math.round(dailyCalTarget * (1 + tolerancePercent / 100));
+  const toleranceFactor = 1 + tolerancePercent / 100;
+
+  // So sánh với ngưỡng chưa làm tròn để không báo "vượt" vì sai số làm tròn.
+  const maxCal = dailyCalTarget * toleranceFactor;
 
   const targetProtein = nutritionTargets?.proteinGrams ?? Math.round((dailyCalTarget * 0.15) / 4);
-  const maxProtein = Math.round(targetProtein * (1 + tolerancePercent / 100));
+  const maxProtein = targetProtein * toleranceFactor;
 
   const targetFat = nutritionTargets?.fatGrams ?? Math.round((dailyCalTarget * 0.25) / 9);
-  const maxFat = Math.round(targetFat * (1 + tolerancePercent / 100));
+  const maxFat = targetFat * toleranceFactor;
 
+  // Chất xơ là mức tối thiểu khuyến nghị (không phải mức trần): ăn nhiều hơn mục tiêu là bình thường.
+  // Chỉ cảnh báo khi lượng xơ rất cao, khớp ngưỡng thận trọng của backend.
   const targetFiber = nutritionTargets?.fiberGrams ?? Math.round((dailyCalTarget / 1000) * 14);
-  const maxFiber = Math.round(targetFiber * (1 + tolerancePercent / 100));
+  const maxFiber = Math.max(targetFiber * toleranceFactor, FIBER_UPPER_CAUTION_GRAMS);
 
   const overWarnings: string[] = [];
 
   const isCalorieOver = dayCalories > maxCal;
   if (isCalorieOver) {
     overWarnings.push(
-      `Calo vượt ${dayCalories - maxCal} kcal (${dayCalories} / mục tiêu ~${dailyCalTarget} kcal, tối đa ~${maxCal} kcal)`
+      `Calo vượt ${Math.round(dayCalories - maxCal)} kcal (${dayCalories} / mục tiêu ~${dailyCalTarget} kcal, tối đa ~${Math.round(maxCal)} kcal)`
     );
   }
 
   const isProteinOver = targetProtein > 0 && protein > maxProtein;
   if (isProteinOver) {
     overWarnings.push(
-      `Chất đạm (Protein) vượt ${(protein - maxProtein).toFixed(1)}g (${protein}g / mục tiêu ~${targetProtein}g, tối đa ~${maxProtein}g)`
+      `Chất đạm (Protein) vượt ${(protein - maxProtein).toFixed(1)}g (${protein}g / mục tiêu ~${targetProtein}g, tối đa ~${Math.round(maxProtein)}g)`
     );
   }
 
   const isFatOver = targetFat > 0 && fat > maxFat;
   if (isFatOver) {
     overWarnings.push(
-      `Chất béo (Fat) vượt ${(fat - maxFat).toFixed(1)}g (${fat}g / mục tiêu ~${targetFat}g, tối đa ~${maxFat}g)`
+      `Chất béo (Fat) vượt ${(fat - maxFat).toFixed(1)}g (${fat}g / mục tiêu ~${targetFat}g, tối đa ~${Math.round(maxFat)}g)`
     );
   }
 
   const isFiberOver = targetFiber > 0 && fiber !== null && fiber > maxFiber;
   if (isFiberOver && fiber !== null) {
     overWarnings.push(
-      `Chất xơ (Fiber) vượt ${(fiber - maxFiber).toFixed(1)}g (${fiber}g / khuyến nghị ~${targetFiber}g)`
+      `Chất xơ (Fiber) rất cao: ${fiber}g/ngày (mục tiêu tối thiểu ~${targetFiber}g). Nên tăng chất xơ từ từ và uống đủ nước.`
     );
   }
 

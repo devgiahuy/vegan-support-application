@@ -2,7 +2,7 @@ import * as React from 'react';
 import { Alert, Pressable, Share, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Link, type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { AlertTriangle, ArrowLeft, Clock, Hourglass, Pencil, Share2, Trash2 } from 'lucide-react-native';
+import { AlertTriangle, Clock, Hourglass, Pencil, Share2, Trash2 } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -13,6 +13,7 @@ import {
   useRelatedArticlesQuery,
 } from '@/features/post/queries/post.queries';
 import { CommunityPanel } from '@/features/community/components/community-panel';
+import { ChatMarkdown } from '@/features/chat/components/chat-markdown';
 import { ReportButton } from '@/features/safety/components/report-button';
 import { PostStatus } from '@/common/enums';
 import { getApiErrorMessage } from '@/lib/api-error';
@@ -79,14 +80,7 @@ export default function ArticleDetailScreen() {
           <Text className="mt-2 text-center text-sm text-muted-foreground">
             Bài viết bạn đang tìm có thể đã bị xóa hoặc không tồn tại.
           </Text>
-          <View className="mt-6 flex-row gap-3">
-            <Link href={'/articles' as Href} asChild>
-              <PrimaryButton
-                label="Quay lại danh sách"
-                variant="outline"
-                icon={<ArrowLeft size={16} color={colors.foreground} />}
-              />
-            </Link>
+          <View className="mt-6">
             <PrimaryButton label="Thử lại" onPress={() => void refetch()} />
           </View>
         </View>
@@ -178,9 +172,11 @@ export default function ArticleDetailScreen() {
         </View>
 
         <View className="rounded-2xl border border-border p-4">
-          <Text className="text-sm leading-relaxed text-foreground">
-            {article.content || 'Đang cập nhật nội dung cho bài viết này...'}
-          </Text>
+          {article.content ? (
+            <ChatMarkdown content={article.content} />
+          ) : (
+            <Text className="text-sm leading-relaxed text-foreground">Đang cập nhật nội dung cho bài viết này...</Text>
+          )}
         </View>
 
         {article.tags.length > 0 ? (

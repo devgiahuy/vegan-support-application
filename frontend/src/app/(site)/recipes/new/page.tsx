@@ -3,12 +3,27 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Home, ChevronRight, Sparkles, Hourglass, ShieldCheck } from 'lucide-react';
-import { RecipeEditorForm } from '@/features/recipe/components/recipe-editor-form';
+import { useQueryClient } from '@tanstack/react-query';
+import { Home, ChevronRight, Hourglass, ShieldCheck } from 'lucide-react';
+import { toast } from 'sonner';
+import {
+  RecipeEditorForm,
+  RecipeEditorFormHandle,
+} from '@/features/recipe/components/recipe-editor-form';
+import { AiRecipeDraftAssistant } from '@/features/recipe/components/ai-recipe-draft-assistant';
+import { OverwriteConfirmDialog } from '@/features/recipe/components/overwrite-confirm-dialog';
+import { recipeDraftMapper } from '@/features/recipe/mappers/recipe-draft.mapper';
+import type { RecipeDraftSuggestion } from '@/features/recipe/types/recipe-draft.model';
 import { AuthGuard } from '@/components/shared/auth-guard';
-import { useCreateRecipeMutation } from '@/features/recipe/queries/recipe.queries';
+import {
+  RecipeSubmitForReviewError,
+  useCreateAndSubmitRecipeMutation,
+} from '@/features/recipe/queries/recipe.queries';
+import { POST_QUERY_KEYS } from '@/features/post/queries/post.queries';
+import { addTrackedUserPost } from '@/features/post/utils/user-posts-tracker';
 import type { RecipeFormValues } from '@/features/recipe/schemas/recipe-form.schema';
 import type { Recipe } from '@/features/recipe/types/recipe.model';
+import { recipeFormToRecipe } from '@/features/recipe/utils/recipe-form-values';
 import { useAuthStore } from '@/store/useAuthStore';
 import { UserRole } from '@/common/enums';
 import {
@@ -24,58 +39,70 @@ import { Badge } from '@/components/ui/badge';
 
 export default function CreateRecipePage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
-  const createRecipeMutation = useCreateRecipeMutation();
+  const createRecipeMutation = useCreateAndSubmitRecipeMutation();
   const [createdRecipe, setCreatedRecipe] = React.useState<Recipe | null>(null);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = React.useState(false);
 
-  const handleSubmit = async (values: RecipeFormValues) => {
-    const payload: Partial<Recipe> = {
-      title: values.title,
-      category: values.categoryId,
-      coverImageUrl: values.coverImageUrl || '',
-      coverMedia: values.coverMedia ?? null,
-      difficulty: values.difficulty,
-      servings: values.servings,
-      prepTimeMinutes: values.prepTimeMinutes,
-      cookTimeMinutes: values.cookTimeMinutes,
-      description: values.description || '',
-      ingredients: values.ingredients.map((ing) => ({
-        ingredientId: ing.ingredientId ?? null,
-        name: ing.name,
-        amount: ing.amount,
-        unit: ing.unit,
-        notes: ing.notes || '',
-      })),
-      steps: values.steps.map((st) => ({
-        stepNumber: st.stepNumber,
-        instruction: st.instruction,
-        imageUrl: st.imageUrl || null,
-      })),
-      nutrition: values.nutrition
-        ? {
-            calories: values.nutrition.calories,
-            protein: values.nutrition.protein,
-            carbs: values.nutrition.carbs,
-            fat: values.nutrition.fat,
-            fiber: values.nutrition.fiber,
-            vitaminB12: values.nutrition.vitaminB12,
-          }
-        : undefined,
-    };
+  // AI draft hydration & overwrite protection
+  const editorRef = React.useRef<RecipeEditorFormHandle>(null);
+  const [pendingDraft, setPendingDraft] = React.useState<RecipeDraftSuggestion | null>(null);
+  const [overwriteConfirmOpen, setOverwriteConfirmOpen] = React.useState(false);
 
+  const applyDraftToEditor = (draft: RecipeDraftSuggestion) => {
+    const formVals = recipeDraftMapper.toFormValues(draft);
+    editorRef.current?.setDraftValues(formVals);
+    toast.success('Đã điền gợi ý AI vào nguyên liệu và các bước nấu', {
+      description: 'Kiểm tra lại định lượng, liên kết nguyên liệu chuẩn rồi chọn danh mục.',
+    });
+  };
+
+  const handleApplyDraft = (draft: RecipeDraftSuggestion) => {
+    const hasContent = editorRef.current?.hasUserContent?.() ?? false;
+    if (hasContent) {
+      setPendingDraft(draft);
+      setOverwriteConfirmOpen(true);
+    } else {
+      applyDraftToEditor(draft);
+    }
+  };
+
+  const handleConfirmOverwrite = () => {
+    if (pendingDraft) {
+      applyDraftToEditor(pendingDraft);
+      setPendingDraft(null);
+    }
+  };
+
+  const trackCreated = (created: Recipe, fallbackTitle: string) => {
+    void queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.mineRoot() });
+    if (created.id && user?.id) {
+      addTrackedUserPost(user.id, {
+        id: created.id,
+        type: 'RECIPE',
+        title: created.title || fallbackTitle,
+        createdAt: new Date().toISOString(),
+      });
+    }
+  };
+
+  const handleSubmit = async (values: RecipeFormValues) => {
+    // Tạo + gửi kiểm duyệt trong một thao tác; toast do mutation hiển thị.
     try {
-      const created = await createRecipeMutation.mutateAsync(payload);
-      if (created?.status === 'PENDING_REVIEW') {
-        setCreatedRecipe(created);
-        setIsSuccessModalOpen(true);
-      } else if (created?.id) {
-        router.push(`/recipes/${created.id}`);
-      } else {
-        router.push('/recipes');
+      const created = await createRecipeMutation.mutateAsync(recipeFormToRecipe(values));
+      trackCreated(created, values.title);
+      setCreatedRecipe(created);
+      setIsSuccessModalOpen(true);
+    } catch (error) {
+      if (error instanceof RecipeSubmitForReviewError && error.recipe.id) {
+        // Đã lưu nháp: chuyển sang trang sửa, nơi có nút "Gửi kiểm duyệt" để thử lại.
+        trackCreated(error.recipe, values.title);
+        router.push(`/recipes/${error.recipe.id}/edit`);
+        return;
       }
-    } catch {
-      // Toast notification is handled in mutation onError
+      // Ném tiếp để form đưa người dùng về bước cần sửa.
+      throw error;
     }
   };
 
@@ -101,21 +128,36 @@ export default function CreateRecipePage() {
         </nav>
 
         {/* Header */}
-        <div className="mb-8 space-y-2">
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs font-semibold text-primary">
-            <Sparkles className="h-3.5 w-3.5" /> Sáng tạo &amp; Lan tỏa món chay
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-foreground">
-            Đóng góp công thức thuần chay mới
+        <div className="mb-6 flex flex-col gap-1">
+          <h1 className="text-2xl font-bold tracking-tight text-balance sm:text-3xl">
+            Đăng công thức món chay
           </h1>
-          <p className="text-sm text-muted-foreground leading-relaxed">
-            Chia sẻ những món ăn thanh lành, giàu dinh dưỡng cùng định lượng nguyên liệu chuẩn xác
-            để cộng đồng cùng thực hành.
+          <p className="text-sm text-pretty text-muted-foreground">
+            Năm bước ngắn: thông tin món, nguyên liệu, cách nấu, phân loại rồi xem lại. Công thức
+            được Ban biên tập duyệt trước khi xuất bản.
           </p>
         </div>
 
-        {/* Form */}
-        <RecipeEditorForm onSubmit={handleSubmit} isSubmitting={createRecipeMutation.isPending} />
+        <RecipeEditorForm
+          ref={editorRef}
+          formTitle="Đăng công thức mới"
+          onSubmit={handleSubmit}
+          isSubmitting={createRecipeMutation.isPending}
+          renderAssistant={(seed, { editBasics }) => (
+            <AiRecipeDraftAssistant
+              seed={seed}
+              onApplyDraft={handleApplyDraft}
+              onEditBasics={editBasics}
+            />
+          )}
+        />
+
+        {/* Overwrite Confirmation Modal */}
+        <OverwriteConfirmDialog
+          open={overwriteConfirmOpen}
+          onOpenChange={setOverwriteConfirmOpen}
+          onConfirm={handleConfirmOverwrite}
+        />
 
         {/* Success / Pending Review Modal */}
         <Dialog open={isSuccessModalOpen} onOpenChange={setIsSuccessModalOpen}>

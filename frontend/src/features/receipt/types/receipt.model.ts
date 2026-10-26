@@ -9,6 +9,8 @@ export type ReceiptJobStatus =
 export type ReceiptCandidateStatus = 'PROPOSED' | 'EDITED' | 'REJECTED' | 'CONFIRMED';
 
 export type ReceiptInputStatus = 'PENDING' | 'PROCESSED' | 'FAILED';
+export type ReceiptItemClassification = 'FOOD' | 'READY_TO_EAT' | 'NON_FOOD' | 'UNCERTAIN';
+export type ReceiptReviewDecision = 'SAME_RECEIPT' | 'SEPARATE_RECEIPTS';
 
 export type ConfidenceTier = 'high' | 'medium' | 'low';
 
@@ -18,7 +20,28 @@ export interface ReceiptImage {
   url: string;
   status: ReceiptInputStatus;
   statusLabel: string;
+  receiptNumber: string | null;
+  merchantName: string | null;
+  purchasedAt: Date | null;
+  currency: string | null;
+  totalAmount: number | null;
   issue: string | null;
+}
+
+export interface ReceiptNotice {
+  code: 'RECEIPT_NON_FOOD_ITEMS_EXCLUDED';
+  message: string;
+  count: number;
+}
+
+export interface ReceiptExcludedItem {
+  id: string;
+  imageId: string;
+  lineText: string;
+  name: string;
+  reason: string;
+  confidencePercent: number;
+  version: number;
 }
 
 export interface ReceiptCandidatePricing {
@@ -55,11 +78,15 @@ export interface ReceiptCandidate {
   confidencePercent: number;
   confidenceTier: ConfidenceTier;
   uncertaintyNote: string | null;
+  aiClassification: ReceiptItemClassification;
+  classificationReason: string | null;
+  classificationConfidencePercent: number | null;
   status: ReceiptCandidateStatus;
   statusLabel: string;
   isRejected: boolean;
   isEdited: boolean;
   isConfirmed: boolean;
+  duplicateOfJobId: string | null;
   version: number;
 }
 
@@ -90,6 +117,11 @@ export interface ReceiptJob {
   status: ReceiptJobStatus;
   statusLabel: string;
   statusBadgeVariant: 'default' | 'secondary' | 'outline' | 'destructive';
+  reviewRequired: boolean;
+  identityDecisionRequired: boolean;
+  receiptReviewDecision: ReceiptReviewDecision | null;
+  notices: ReceiptNotice[];
+  excludedItems: ReceiptExcludedItem[];
   progress: ReceiptJobProgress;
   receiptMetadata: ReceiptJobMetadata;
   images: ReceiptImage[];
@@ -110,7 +142,21 @@ export interface ReceiptJob {
   canConfirm: boolean;
   canRetry: boolean;
   canCancel: boolean;
+  canAddImages: boolean;
 }
+
+export type ReceiptErrorCode =
+  | 'RECEIPT_IMAGE_LIMIT_EXCEEDED'
+  | 'RECEIPT_STATE_CONFLICT'
+  | 'RECEIPT_NOT_FOUND'
+  | 'RECEIPT_CANDIDATE_NOT_FOUND'
+  | 'RECEIPT_CANDIDATE_VERSION_CONFLICT';
+
+export const RECEIPT_ERROR_MESSAGES: Record<string, string> = {
+  RECEIPT_IMAGE_LIMIT_EXCEEDED: 'Phiên quét hóa đơn chỉ cho phép tối đa 4 ảnh.',
+  RECEIPT_STATE_CONFLICT:
+    'Phiên quét đang trong quá trình xử lý. Vui lòng chờ hoàn tất trước khi bổ sung thêm ảnh.',
+};
 
 export interface ReceiptConfirmationPantryItem {
   id: string;
@@ -137,7 +183,13 @@ export interface ReceiptPantryChange {
 
 export interface ReceiptConfirmationDiff {
   job: ReceiptJob;
+  duplicateCandidates: ReceiptDuplicateCandidate[];
   pantryChanges: ReceiptPantryChange[];
+}
+
+export interface ReceiptDuplicateCandidate {
+  candidateId: string;
+  sourceJobId: string;
 }
 
 export interface CreateReceiptJobInput {
@@ -165,5 +217,6 @@ export interface ConfirmReceiptJobInput {
     id: string;
     expectedVersion: number;
   }[];
+  receiptReviewDecision?: ReceiptReviewDecision;
   idempotencyKey?: string;
 }

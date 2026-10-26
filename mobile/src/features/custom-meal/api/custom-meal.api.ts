@@ -4,6 +4,12 @@ import type { CustomMealListResponseDto, CustomMealResponseDto, CreateCustomMeal
 import type { CustomMeal, CustomMealListResult } from '../types/custom-meal.model';
 import { customMealMapper } from '../mappers/custom-meal.mapper';
 
+/**
+ * Tạo/sửa có thể phải chờ AI ước tính dinh dưỡng (BE giới hạn khoảng 30 giây cho phần fallback),
+ * nên dài hơn timeout mặc định 15 giây của axios để không báo lỗi khi BE vẫn đang lưu.
+ */
+const NUTRITION_WRITE_TIMEOUT_MS = 45_000;
+
 export interface CustomMealQueryParams {
   page?: number;
   limit?: number;
@@ -25,12 +31,16 @@ export const customMealApi = {
   },
 
   create: async (payload: CreateCustomMealRequestDto): Promise<CustomMeal> => {
-    const res = await api.post<CustomMealResponseDto>(API_ENDPOINTS.CUSTOM_MEALS.LIST, payload);
+    const res = await api.post<CustomMealResponseDto>(API_ENDPOINTS.CUSTOM_MEALS.LIST, payload, {
+      timeout: NUTRITION_WRITE_TIMEOUT_MS,
+    });
     return customMealMapper.toModel(res.data.data);
   },
 
   update: async (id: string, payload: UpdateCustomMealRequestDto): Promise<CustomMeal> => {
-    const res = await api.patch<CustomMealResponseDto>(API_ENDPOINTS.CUSTOM_MEALS.DETAIL(id), payload);
+    const res = await api.patch<CustomMealResponseDto>(API_ENDPOINTS.CUSTOM_MEALS.DETAIL(id), payload, {
+      timeout: NUTRITION_WRITE_TIMEOUT_MS,
+    });
     return customMealMapper.toModel(res.data.data);
   },
 

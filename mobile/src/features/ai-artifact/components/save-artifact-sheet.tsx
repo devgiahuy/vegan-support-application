@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { Bookmark, Lock, X } from 'lucide-react-native';
 
 import type { AiArtifactType } from '@/common/enums';
@@ -24,7 +24,12 @@ interface SaveArtifactSheetProps {
  * Lưu đầu ra AI thành "Tri thức AI" bất biến (riêng tư), rồi chuyển sang bước chia sẻ công khai/gửi thẩm định —
  * đồng bộ luồng `SaveArtifactDialog` → `ShareArtifactDialog` của web.
  */
-export function SaveArtifactSheet({ visible, type, sourceId, defaultTitle, defaultSummary, onClose }: SaveArtifactSheetProps) {
+export function SaveArtifactSheet(props: SaveArtifactSheetProps) {
+  if (!props.visible) return null;
+  return <SaveArtifactSheetContent key={`${props.sourceId}:${props.defaultTitle}:${props.defaultSummary}`} {...props} />;
+}
+
+function SaveArtifactSheetContent({ type, sourceId, defaultTitle, defaultSummary, onClose }: SaveArtifactSheetProps) {
   const colors = useIconColors();
   const createMutation = useCreateAiArtifactMutation();
 
@@ -33,18 +38,6 @@ export function SaveArtifactSheet({ visible, type, sourceId, defaultTitle, defau
   const [anonymous, setAnonymous] = React.useState(true);
   const [artifact, setArtifact] = React.useState<AiArtifact | null>(null);
   const [error, setError] = React.useState<string | null>(null);
-
-  React.useEffect(() => {
-    if (visible) {
-      setTitle(defaultTitle);
-      setSummary(defaultSummary);
-      setAnonymous(true);
-      setArtifact(null);
-      setError(null);
-    }
-  }, [visible, defaultTitle, defaultSummary]);
-
-  if (!visible) return null;
 
   const save = async () => {
     setError(null);
@@ -66,10 +59,10 @@ export function SaveArtifactSheet({ visible, type, sourceId, defaultTitle, defau
   };
 
   return (
-    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 justify-end bg-black/50">
-        <Pressable className="flex-1" onPress={onClose} accessibilityLabel="Đóng" />
-        <View className="max-h-[88%] rounded-t-3xl bg-background px-5 pb-6 pt-4">
+    <Modal visible animationType="fade" transparent statusBarTranslucent onRequestClose={onClose}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} className="flex-1 items-center justify-center bg-black/60 px-5">
+        <Pressable accessibilityLabel="Đóng" onPress={onClose} style={StyleSheet.absoluteFill} />
+        <View className="w-full max-w-md max-h-[88%] rounded-3xl border border-border bg-background p-5">
           <View className="flex-row items-start justify-between gap-3">
             <View className="flex-1">
               <Text className="text-base font-bold text-foreground">{artifact ? 'Đã lưu tri thức AI' : 'Lưu thành tri thức AI'}</Text>

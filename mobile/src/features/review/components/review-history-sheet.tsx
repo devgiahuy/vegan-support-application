@@ -1,4 +1,4 @@
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, Text, View, StyleSheet } from 'react-native';
 import { CheckCircle2, ShieldAlert, X } from 'lucide-react-native';
 
 import { PostStatus } from '@/common/enums';
@@ -98,10 +98,10 @@ export function ReviewHistorySheet({
   if (postId === null) return null;
 
   return (
-    <Modal visible animationType="slide" transparent onRequestClose={onClose}>
-      <View className="flex-1 justify-end bg-black/50">
-        <Pressable className="flex-1" onPress={onClose} accessibilityLabel="Đóng" />
-        <View className="max-h-[85%] rounded-t-3xl bg-background px-5 pb-6 pt-4">
+    <Modal visible animationType="fade" transparent statusBarTranslucent onRequestClose={onClose}>
+      <View className="flex-1 items-center justify-center bg-black/60 px-5">
+        <Pressable accessibilityLabel="Đóng" onPress={onClose} style={StyleSheet.absoluteFill} />
+        <View className="w-full max-w-md max-h-[85%] rounded-3xl border border-border bg-background p-5">
           <View className="flex-row items-start justify-between gap-3">
             <View className="flex-1">
               <Text className="text-base font-bold text-foreground">Lịch sử duyệt</Text>

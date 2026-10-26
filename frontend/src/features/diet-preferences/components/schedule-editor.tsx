@@ -13,7 +13,13 @@ import { getApiErrorCode } from '@/lib/api-error';
  * Cho phép lưu mảng rỗng (xóa hết ngày đã chọn). Chỉ dùng khi PERIODIC và đã
  * lưu preferences — parent (DietWizard) đảm bảo điều kiện này.
  */
-export function ScheduleEditor({ initialDates }: { initialDates?: string[] }) {
+export function ScheduleEditor({
+  initialDates,
+  onDirtyChange,
+}: {
+  initialDates?: string[];
+  onDirtyChange?: (dirty: boolean) => void;
+}) {
   const saveMutation = useSaveDietScheduleMutation();
   const [dates, setDates] = React.useState<string[]>(initialDates ?? []);
   const [error, setError] = React.useState<string | null>(null);
@@ -25,6 +31,7 @@ export function ScheduleEditor({ initialDates }: { initialDates?: string[] }) {
     try {
       await saveMutation.mutateAsync({ dates });
       setSaved(true);
+      onDirtyChange?.(false);
     } catch (err) {
       const code = getApiErrorCode(err);
       if (code === 'DIET_PREFERENCES_REQUIRED') {
@@ -50,6 +57,7 @@ export function ScheduleEditor({ initialDates }: { initialDates?: string[] }) {
           onChange={(next) => {
             setDates(next);
             setSaved(false);
+            onDirtyChange?.(true);
           }}
         />
         {error && (
@@ -64,6 +72,7 @@ export function ScheduleEditor({ initialDates }: { initialDates?: string[] }) {
         )}
 
         <Button
+          type="button"
           className="rounded-xl"
           disabled={saveMutation.isPending}
           onClick={() => void handleSave()}

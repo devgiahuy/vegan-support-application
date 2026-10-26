@@ -154,11 +154,27 @@ export function sanitizeAdvancedFilters(raw: unknown): RestaurantAdvancedFilters
 }
 
 /** Nội dung trạng thái rỗng và các hành động gợi ý, tùy theo chế độ tìm hiện tại. */
-export function emptyStateCopy(mode: RestaurantSearchMode | null): {
+export function emptyStateCopy(
+  mode: RestaurantSearchMode | null,
+  externalResultsSuppressed = false
+): {
   title: string;
   description: string;
   actions: string[];
 } {
+  if (externalResultsSuppressed) {
+    return {
+      title: 'Chưa có quán đáp ứng bộ lọc chế độ ăn',
+      description:
+        'Chưa tìm được quán phù hợp với các bộ lọc bạn đã chọn. Quán từ nhà cung cấp bản đồ chưa có thông tin xác minh chế độ ăn nên đã được loại khỏi kết quả.',
+      actions:
+        mode === 'KEYWORD'
+          ? ['Xoá bộ lọc nâng cao', 'Xoá từ khóa', 'Nới bán kính', 'Đổi vị trí']
+          : mode === 'BOUNDS'
+            ? ['Đổi vị trí']
+            : ['Nới bán kính', 'Đổi vị trí'],
+    };
+  }
   if (mode === 'KEYWORD') {
     return {
       title: 'Không tìm thấy quán phù hợp',

@@ -4,6 +4,12 @@ import type { SelectedShoppingMeal, ShoppingPreview } from '../types/shopping.mo
 function amount(value: { value: number; unit: string }): string {
   return `${value.value.toLocaleString('vi-VN')} ${value.unit}`;
 }
+function formatPantryTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const pad = (value: number) => String(value).padStart(2, '0');
+  return `${pad(date.getHours())}:${pad(date.getMinutes())} ${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
+}
 export class ShoppingMapper extends BaseMapper<ShoppingPreviewDto, ShoppingPreview> {
   toRequest(meals: SelectedShoppingMeal[]): ShoppingPreviewRequestDto {
     return {
@@ -29,6 +35,8 @@ export class ShoppingMapper extends BaseMapper<ShoppingPreviewDto, ShoppingPrevi
         missing: amount(item.missing),
         surplus: amount(item.surplus),
         needsPurchase: item.missing.value > 0,
+        status: item.missing.value <= 0 ? 'READY' : item.available.value > 0 ? 'PARTIAL' : 'MISSING',
+        hasAvailable: item.available.value > 0,
         confidencePercent: Math.round(item.confidence * 100),
         assumptions: item.conversionAssumptions ?? [],
         mealNames: item.sourceMeals.map((meal) => `${meal.name} (${meal.servings} phần)`),
@@ -44,8 +52,11 @@ export class ShoppingMapper extends BaseMapper<ShoppingPreviewDto, ShoppingPrevi
         mealNames: item.sourceMeals.map((meal) => meal.name),
       })),
       selectedMealCount: dto.summary.selectedMealCount,
+      readyItemCount: dto.summary.readyItemCount,
       missingItemCount: dto.summary.missingItemCount,
+      unresolvedItemCount: dto.summary.unresolvedItemCount,
       pantryAsOf: dto.pantryAsOf,
+      formattedPantryAsOf: formatPantryTime(dto.pantryAsOf),
     };
   }
 }

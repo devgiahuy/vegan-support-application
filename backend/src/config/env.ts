@@ -87,8 +87,15 @@ const environmentSchema = z
     AI_FALLBACK_MODEL: z.string().trim().min(1).max(100).default('static-fallback-v1'),
     AI_CHAT_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('chat-v1'),
     AI_NUTRITION_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('nutrition-v1'),
+    AI_RECIPE_ENABLED: z.stringbool().default(true),
+    AI_RECIPE_MODEL: z.preprocess(
+      (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+      z.string().trim().min(1).max(100).optional(),
+    ),
+    AI_RECIPE_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('recipe-draft-v1'),
+    AI_RECIPE_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(512).max(8192).default(4096),
     AI_TOPIC_RULE_VERSION: z.string().trim().min(1).max(80).default('topic-boundary-v1'),
-    AI_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(120_000).default(30_000),
+    AI_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(120_000).default(60_000),
     AI_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(64).max(4_096).default(800),
     AI_GUEST_DAILY_QUOTA: z.coerce.number().int().min(1).max(100).default(5),
     AI_MEMBER_DAILY_QUOTA: z.coerce.number().int().min(1).max(500).default(20),
@@ -96,6 +103,19 @@ const environmentSchema = z
     AI_GUEST_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(60).default(10),
     CHAT_GUEST_COOKIE_SECRET: z.string().min(32).optional(),
     CHAT_GUEST_COOKIE_TTL_DAYS: z.coerce.number().int().min(1).max(30).default(7),
+    BILLING_ENABLED: z.stringbool().default(false),
+    BILLING_PROVIDER: z.literal('payos').default('payos'),
+    BILLING_PUBLIC_URL: z.string().url().default('http://localhost:4000'),
+    BILLING_RETURN_URL: z.string().url().default('http://localhost:3000/billing'),
+    PAYOS_CLIENT_ID: z.preprocess((value) => value === '' ? undefined : value, z.string().trim().min(1).optional()),
+    PAYOS_API_KEY: z.preprocess((value) => value === '' ? undefined : value, z.string().trim().min(1).optional()),
+    PAYOS_CHECKSUM_KEY: z.preprocess((value) => value === '' ? undefined : value, z.string().trim().min(1).optional()),
+    BILLING_ORDER_TTL_MINUTES: z.coerce.number().int().min(5).max(60).default(15),
+    BILLING_PANTRY_BASE_LIMIT: z.coerce.number().int().min(1).max(10000).default(20),
+    BILLING_FRIDGE_TRIAL_JOBS: z.coerce.number().int().min(0).max(100).default(3),
+    BILLING_RECEIPT_TRIAL_JOBS: z.coerce.number().int().min(0).max(100).default(3),
+    BILLING_SCAN_MAX_ATTEMPTS: z.coerce.number().int().min(1).max(5).default(3),
+    BILLING_USAGE_LEASE_SECONDS: z.coerce.number().int().min(300).max(7200).default(1800),
     VISION_ENABLED: z.stringbool().default(true),
     VISION_PROVIDER: z.enum(['fake', 'openai']).default('openai'),
     VISION_MODEL: z.preprocess(
@@ -112,7 +132,7 @@ const environmentSchema = z
       (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
       z.string().trim().min(1).max(100).optional(),
     ),
-    RECEIPT_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('receipt-v1'),
+    RECEIPT_TEMPLATE_VERSION: z.string().trim().min(1).max(80).default('receipt-v3'),
     RECEIPT_MAX_OUTPUT_TOKENS: z.coerce.number().int().min(256).max(8192).default(4096),
     RECEIPT_MAX_IMAGES: z.coerce.number().int().min(1).max(8).default(4),
     RECEIPT_MAX_IMAGE_BYTES: z.coerce.number().int().min(1).max(25_000_000).default(10_000_000),
@@ -129,6 +149,9 @@ const environmentSchema = z
     MAPS_TIMEOUT_MS: z.coerce.number().int().min(1000).max(30000).default(5000),
   })
   .superRefine((environment, context) => {
+    if (environment.BILLING_ENABLED && environment.NODE_ENV === 'production') {
+      context.addIssue({ code: 'custom', path: ['BILLING_ENABLED'], message: 'billing rollout is development/test only; payOS itself processes real transfers' });
+    }
     const macroEnergyPercent =
       environment.MEAL_PLAN_PROTEIN_ENERGY_PERCENT +
       environment.MEAL_PLAN_FAT_ENERGY_PERCENT +
@@ -254,6 +277,10 @@ const environmentSchema = z
       fallbackModel: environment.AI_FALLBACK_MODEL,
       chatTemplateVersion: environment.AI_CHAT_TEMPLATE_VERSION,
       nutritionTemplateVersion: environment.AI_NUTRITION_TEMPLATE_VERSION,
+      recipeEnabled: environment.AI_RECIPE_ENABLED,
+      recipeModel: environment.AI_RECIPE_MODEL ?? environment.AI_MODEL_CHAT,
+      recipeTemplateVersion: environment.AI_RECIPE_TEMPLATE_VERSION,
+      recipeMaxOutputTokens: environment.AI_RECIPE_MAX_OUTPUT_TOKENS,
       topicRuleVersion: environment.AI_TOPIC_RULE_VERSION,
       timeoutMs: environment.AI_TIMEOUT_MS,
       maxOutputTokens: environment.AI_MAX_OUTPUT_TOKENS,
@@ -263,6 +290,21 @@ const environmentSchema = z
       guestRateLimitPerMinute: environment.AI_GUEST_RATE_LIMIT_PER_MINUTE,
       guestCookieSecret: environment.CHAT_GUEST_COOKIE_SECRET ?? environment.JWT_ACCESS_SECRET,
       guestCookieTtlDays: environment.CHAT_GUEST_COOKIE_TTL_DAYS,
+    },
+    billing: {
+      enabled: environment.BILLING_ENABLED,
+      provider: environment.BILLING_PROVIDER,
+      publicUrl: environment.BILLING_PUBLIC_URL.replace(/\/$/, ''),
+      returnUrl: environment.BILLING_RETURN_URL,
+      payosClientId: environment.PAYOS_CLIENT_ID,
+      payosApiKey: environment.PAYOS_API_KEY,
+      payosChecksumKey: environment.PAYOS_CHECKSUM_KEY,
+      orderTtlMinutes: environment.BILLING_ORDER_TTL_MINUTES,
+      pantryBaseLimit: environment.BILLING_PANTRY_BASE_LIMIT,
+      fridgeTrialJobs: environment.BILLING_FRIDGE_TRIAL_JOBS,
+      receiptTrialJobs: environment.BILLING_RECEIPT_TRIAL_JOBS,
+      scanMaxAttempts: environment.BILLING_SCAN_MAX_ATTEMPTS,
+      usageLeaseSeconds: environment.BILLING_USAGE_LEASE_SECONDS,
     },
     vision: {
       enabled: environment.VISION_ENABLED,

@@ -22,6 +22,7 @@ export function PrimaryButton({
 }: PrimaryButtonProps) {
   const colors = useIconColors();
   const isDisabled = Boolean(disabled) || Boolean(loading);
+  const textOnly = !icon && !loading;
 
   return (
     <Pressable
@@ -37,19 +38,20 @@ export function PrimaryButton({
     >
       {loading ? (
         <ActivityIndicator color={variant === 'primary' ? colors.primaryForeground : colors.primary} />
-      ) : (
-        <>
-          <Text
-            className={cn(
-              'text-sm font-semibold',
-              variant === 'primary' ? 'text-primary-foreground' : 'text-foreground'
-            )}
-          >
-            {label}
-          </Text>
-          {icon}
-        </>
-      )}
+      ) : null}
+      {/* Nút chỉ có chữ: nhãn rộng bằng cả nút và căn giữa để không bị đo hẹp rồi xuống dòng trên Android.
+          Có icon/đang tải: giữ độ rộng theo nội dung (flexShrink 0). Nhãn luôn hiện, kể cả khi đang tải. */}
+      <Text
+        numberOfLines={textOnly ? 1 : undefined}
+        style={textOnly ? { width: '100%', textAlign: 'center' } : { flexShrink: 0, textAlign: 'center' }}
+        className={cn(
+          'text-sm font-semibold',
+          variant === 'primary' ? 'text-primary-foreground' : 'text-foreground'
+        )}
+      >
+        {label}
+      </Text>
+      {loading ? null : icon}
     </Pressable>
   );
 }

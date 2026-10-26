@@ -26,10 +26,12 @@ export function NotificationPanel({ onNavigate }: { onNavigate?: () => void }) {
   const unread = items.filter((item) => !item.read).length;
 
   const handleOpen = (item: AppNotification) => {
-    // Bấm mục vừa điều hướng vừa đánh dấu (không await — panel đóng ngay).
+    // Bấm mục vừa điều hướng vừa đánh dấu.
     if (!item.read) markReadMutation.mutate(item.id);
-    onNavigate?.();
-    if (item.link) router.push(item.link);
+    if (item.link) {
+      onNavigate?.();
+      router.push(item.link);
+    }
   };
 
   return (

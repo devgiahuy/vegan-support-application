@@ -60,3 +60,32 @@ test('unresolved lines and conversion assumptions are preserved separately from 
   assert.equal(result.unresolvedItems[0].required, '1 bunch');
   assert.equal(result.unresolvedItems[0].explanation, 'No reviewed conversion');
 });
+
+test('item status distinguishes ready, partially missing and fully missing lines', () => {
+  const line = (id: string, available: number, missing: number) => ({
+    ingredient: { id, name: id },
+    required: { value: available + missing, unit: 'g' },
+    available: { value: available, unit: 'g' },
+    missing: { value: missing, unit: 'g' },
+    surplus: { value: 0, unit: 'g' },
+    confidence: 1,
+    conversionAssumptions: [],
+    sourceMeals: [],
+  });
+  const result = shoppingMapper.toModel({
+    items: [line('ready', 100, 0), line('partial', 50, 50), line('none', 0, 100)],
+    unresolvedItems: [],
+    summary: { selectedMealCount: 1, readyItemCount: 1, missingItemCount: 2, unresolvedItemCount: 0 },
+    pantryAsOf: '2026-10-03T00:00:00Z',
+  });
+  assert.deepEqual(
+    result.items.map((item) => [item.status, item.hasAvailable]),
+    [
+      ['READY', true],
+      ['PARTIAL', true],
+      ['MISSING', false],
+    ]
+  );
+  assert.equal(result.readyItemCount, 1);
+  assert.equal(result.unresolvedItemCount, 0);
+});

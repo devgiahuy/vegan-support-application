@@ -10,6 +10,9 @@ import { IngredientPicker, type IngredientPickerValue } from '@/features/ingredi
 import { ImagePickerField } from '@/features/storage/components/image-picker-field';
 import type { PickedImage } from '@/features/storage/types/storage.model';
 import type { CreateRecipeIngredientInput, CreateRecipeInput } from '../api/recipe.api';
+import { resolveExactIngredientId } from '@/features/ingredient/utils/ingredient-link';
+import type { RecipeDraftSuggestion } from '../types/recipe-draft.model';
+import { AiRecipeDraftPanel } from './ai-recipe-draft-panel';
 import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
 
@@ -27,12 +30,29 @@ function splitTags(value: string): string[] {
 
 interface DraftIngredient extends CreateRecipeIngredientInput {
   key: string;
+  /** Vị trí ban đầu khi sửa công thức; dùng để dịch lại tham chiếu của bước nấu sau khi xóa/thêm nguyên liệu. */
+  originalPosition?: number;
 }
 
-interface DraftStep {
+/** Các trường của bước nấu mà form di động chưa cho nhập nhưng phải giữ nguyên khi sửa. */
+interface PreservedStepFields {
+  cookingMethodId?: string | null;
+  temperatureCelsius?: number | null;
+  affectedIngredientPositions?: number[];
+}
+
+interface DraftStep extends PreservedStepFields {
   key: string;
   instruction: string;
   duration: string;
+}
+
+/** Các chỉ số dinh dưỡng form chưa cho nhập, được giữ nguyên khi sửa để không bị xóa khỏi bản mới. */
+export interface PreservedNutrition {
+  carbsGrams?: number;
+  fatGrams?: number;
+  fiberGrams?: number;
+  vitaminB12Mcg?: number;
 }
 
 export interface RecipeFormInitial {
@@ -48,8 +68,16 @@ export interface RecipeFormInitial {
   difficulty?: RecipeDifficulty;
   calories?: number;
   protein?: number;
-  ingredients?: { displayName: string; amount: number; unit: string; ingredientId?: string | null }[];
-  steps?: { instruction: string; durationMinutes?: number | null }[];
+  preservedNutrition?: PreservedNutrition;
+  ingredients?: {
+    displayName: string;
+    amount: number;
+    unit: string;
+    ingredientId?: string | null;
+    optional?: boolean;
+    position?: number;
+  }[];
+  steps?: ({ instruction: string; durationMinutes?: number | null } & PreservedStepFields)[];
 }
 
 function toDraftSteps(initial: RecipeFormInitial['steps']): DraftStep[] {
@@ -58,6 +86,9 @@ function toDraftSteps(initial: RecipeFormInitial['steps']): DraftStep[] {
     key: `step-${index}`,
     instruction: step.instruction,
     duration: step.durationMinutes ? String(step.durationMinutes) : '',
+    cookingMethodId: step.cookingMethodId ?? null,
+    temperatureCelsius: step.temperatureCelsius ?? null,
+    affectedIngredientPositions: step.affectedIngredientPositions ?? [],
   }));
 }
 
@@ -78,6 +109,8 @@ export function RecipeForm({
   onSubmit: (values: CreateRecipeInput) => void;
 }) {
   const colors = useIconColors();
+  const keySeq = React.useRef(0);
+  const nextKey = (prefix: string) => `${prefix}-new-${++keySeq.current}`;
 
   const [title, setTitle] = React.useState(initial?.title ?? '');
   const [excerpt, setExcerpt] = React.useState(initial?.excerpt ?? '');
@@ -93,7 +126,11 @@ export function RecipeForm({
   const [protein, setProtein] = React.useState(initial?.protein ? String(initial.protein) : '');
 
   const [ingredients, setIngredients] = React.useState<DraftIngredient[]>(
-    (initial?.ingredients ?? []).map((ing, idx) => ({ key: `initial-${idx}`, ...ing }))
+    (initial?.ingredients ?? []).map(({ position, ...ing }, idx) => ({
+      key: `initial-${idx}`,
+      ...ing,
+      originalPosition: position ?? idx,
+    }))
   );
   const [ingredient, setIngredient] = React.useState<IngredientPickerValue>({ displayName: '', ingredientId: null });
   const [ingAmount, setIngAmount] = React.useState('');
@@ -116,13 +153,60 @@ export function RecipeForm({
       Alert.alert('Thiếu thông tin', 'Vui lòng nhập đủ tên, số lượng (>0) và đơn vị nguyên liệu.');
       return;
     }
+    const key = nextKey('ing');
     setIngredients((prev) => [
       ...prev,
-      { key: `${Date.now()}`, displayName: name, amount: amountNum, unit, ingredientId: ingredient.ingredientId },
+      { key, displayName: name, amount: amountNum, unit, ingredientId: ingredient.ingredientId },
     ]);
+    if (!ingredient.ingredientId) void autoLinkIngredient(key, name);
     setIngredient({ displayName: '', ingredientId: null });
     setIngAmount('');
     setIngUnit('');
+  };
+
+  /** Tên tự nhập khớp đúng một nguyên liệu chuẩn thì tự gắn `ingredientId` để BE tính dinh dưỡng/kiểm tra dị ứng. */
+  const autoLinkIngredient = async (key: string, name: string) => {
+    const ingredientId = await resolveExactIngredientId(name);
+    if (!ingredientId) return;
+    setIngredients((prev) =>
+      prev.map((item) => (item.key === key && !item.ingredientId && item.displayName === name ? { ...item, ingredientId } : item))
+    );
+  };
+
+  const applyDraft = (draft: RecipeDraftSuggestion) => {
+    const stamp = nextKey('ai');
+    const drafted = draft.ingredients.map((item, index) => ({
+      key: `ai-${stamp}-${index}`,
+      displayName: item.name,
+      amount: item.amount,
+      unit: item.unit,
+      ...(item.optional ? { optional: true } : {}),
+      ingredientId: null,
+      // Vị trí AI dùng để tham chiếu nguyên liệu trong bước nấu, giữ nguyên khi người dùng chưa đổi thứ tự.
+      originalPosition: index,
+    }));
+    const run = () => {
+      setServings(String(draft.servings));
+      setPrepTime(String(draft.prepTimeMinutes));
+      setCookTime(String(draft.cookTimeMinutes));
+      setDifficulty(draft.difficulty);
+      setIngredients(drafted);
+      setSteps(
+        draft.steps.map((step, index) => ({
+          key: `ai-step-${stamp}-${index}`,
+          instruction: step.instruction,
+          duration: step.durationMinutes ? String(step.durationMinutes) : '',
+          affectedIngredientPositions: step.affectedIngredientPositions.filter((position) => position < drafted.length),
+        }))
+      );
+      drafted.forEach((item) => void autoLinkIngredient(item.key, item.displayName));
+    };
+    const hasContent = ingredients.length > 0 || steps.some((step) => step.instruction.trim().length > 0);
+    if (!hasContent) return run();
+    Alert.alert('Thay nội dung hiện có?', 'Nguyên liệu, các bước, khẩu phần và thời gian hiện tại sẽ được thay bằng bản nháp AI.', [
+      { text: 'Giữ nguyên', style: 'cancel' },
+      { text: 'Thay bằng bản nháp', style: 'destructive', onPress: run },
+    ]);
   };
 
   const removeIngredient = (key: string) => {
@@ -140,8 +224,19 @@ export function RecipeForm({
     }
     const cleanTitle = title.trim();
     const validSteps = steps
-      .map((step) => ({ instruction: step.instruction.trim(), duration: Number(step.duration) }))
+      .map((step) => ({
+        instruction: step.instruction.trim(),
+        duration: Number(step.duration),
+        cookingMethodId: step.cookingMethodId,
+        temperatureCelsius: step.temperatureCelsius,
+        affectedIngredientPositions: step.affectedIngredientPositions ?? [],
+      }))
       .filter((step) => step.instruction.length > 0);
+    // Nguyên liệu bị xóa/thêm làm đổi vị trí: dịch lại tham chiếu của bước nấu, bỏ tham chiếu tới nguyên liệu đã xóa.
+    const positionMap = new Map<number, number>();
+    ingredients.forEach((ing, index) => {
+      if (ing.originalPosition !== undefined) positionMap.set(ing.originalPosition, index);
+    });
     const servingsNum = Math.trunc(Number(servings));
     const prepNum = Math.trunc(Number(prepTime));
     const cookNum = Math.trunc(Number(cookTime));
@@ -181,17 +276,27 @@ export function RecipeForm({
       nutrition: {
         calories: calories.trim() ? Number(calories) : undefined,
         proteinGrams: protein.trim() ? Number(protein) : undefined,
+        ...initial?.preservedNutrition,
       },
-      ingredients: ingredients.map(({ displayName, amount, unit, ingredientId }) => ({
+      ingredients: ingredients.map(({ displayName, amount, unit, ingredientId, optional }) => ({
         displayName,
         amount,
         unit,
         ...(ingredientId ? { ingredientId } : {}),
+        ...(optional ? { optional: true } : {}),
       })),
-      steps: validSteps.map((step) => ({
-        instruction: step.instruction,
-        ...(Number.isFinite(step.duration) && step.duration > 0 ? { durationMinutes: Math.trunc(step.duration) } : {}),
-      })),
+      steps: validSteps.map((step) => {
+        const affected = step.affectedIngredientPositions
+          .map((position) => positionMap.get(position))
+          .filter((position): position is number => position !== undefined);
+        return {
+          instruction: step.instruction,
+          ...(Number.isFinite(step.duration) && step.duration > 0 ? { durationMinutes: Math.trunc(step.duration) } : {}),
+          ...(step.cookingMethodId ? { cookingMethodId: step.cookingMethodId } : {}),
+          ...(typeof step.temperatureCelsius === 'number' ? { temperatureCelsius: step.temperatureCelsius } : {}),
+          ...(affected.length > 0 ? { affectedIngredientPositions: affected } : {}),
+        };
+      }),
     });
   };
 
@@ -302,6 +407,13 @@ export function RecipeForm({
             />
           </View>
         </View>
+
+        <AiRecipeDraftPanel
+          title={title}
+          excerpt={excerpt}
+          existingIngredientNames={ingredients.map((item) => item.displayName)}
+          onApply={applyDraft}
+        />
 
         <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
           <Text className="text-xs font-bold uppercase text-muted-foreground">Nguyên liệu</Text>

@@ -9,7 +9,6 @@ import {
   Flame,
   Dumbbell,
   Star,
-  Bookmark,
   Share2,
   CalendarPlus,
   BadgeCheck,
@@ -41,6 +40,7 @@ import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { NutritionFactsPanel } from '@/features/food-data/components/nutrition-facts-panel';
 import { RecipeNutritionCard } from '@/features/recipe-nutrition/components/recipe-nutrition-card';
 import { RecipeCard } from './recipe-card';
+import { RecipeAllergenHighlight } from './recipe-allergen-highlight';
 import type { Recipe } from '../types/recipe.model';
 import {
   getAllergenName,
@@ -75,7 +75,6 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
   const { data: summary } = useCommunitySummaryQuery(recipe.id);
   const canModerate = user?.role === UserRole.ADMIN || user?.role === UserRole.CONTRIBUTOR;
   const [servings, setServings] = React.useState<number>(recipe.servings || 2);
-  const [isSaved, setIsSaved] = React.useState<boolean>(recipe.saved ?? false);
   const [checkedIngredients, setCheckedIngredients] = React.useState<string[]>([]);
   const [viewingNutritionIngredient, setViewingNutritionIngredient] = React.useState<{
     id?: string;
@@ -89,15 +88,6 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
   const toggleIngredient = (name: string) => {
     setCheckedIngredients((prev) =>
       prev.includes(name) ? prev.filter((i) => i !== name) : [...prev, name]
-    );
-  };
-
-  const handleSaveToggle = () => {
-    setIsSaved(!isSaved);
-    toast.success(
-      !isSaved
-        ? 'Đã lưu công thức vào mục Yêu thích của bạn!'
-        : 'Đã bỏ lưu công thức khỏi danh sách yêu thích.'
     );
   };
 
@@ -257,18 +247,7 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
                   size="sm"
                   itemTitle={recipe.title}
                 />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSaveToggle}
-                  className={cn(
-                    'gap-1.5 transition-colors',
-                    isSaved && 'text-red-500 border-red-200 bg-red-50 dark:bg-red-950/30'
-                  )}
-                >
-                  <Bookmark className={cn('h-4 w-4', isSaved && 'fill-current')} />
-                  <span>{isSaved ? 'Đã lưu' : 'Lưu món'}</span>
-                </Button>
+                <BookmarkButton postId={recipe.id} saveLabel="Lưu món" />
                 <Button variant="outline" size="sm" onClick={handleShare} className="gap-1.5">
                   <Share2 className="h-4 w-4" />
                   <span className="hidden sm:inline">Chia sẻ</span>
@@ -346,6 +325,9 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
               <p className="text-base font-bold text-foreground">{recipe.minutes} phút</p>
             </Card>
           </div> */}
+
+          {/* CẢNH BÁO DỊ ỨNG NỔI BẬT */}
+          <RecipeAllergenHighlight allergens={allergens} />
 
           {/* INGREDIENTS CHECKLIST SECTION */}
           <Card className="border-border/60 shadow-sm overflow-hidden">
@@ -548,7 +530,7 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
           </div>
 
           {/* Tương thích & dị ứng từ backend — chỉ hiện khi có dữ liệu thật */}
-          {hasCompatibilityInfo && (
+          {/* {hasCompatibilityInfo && (
             <Card className="border-border/60 shadow-sm">
               <CardHeader className="pb-3 border-b">
                 <CardTitle className="text-base font-bold flex items-center gap-2 text-foreground">
@@ -616,7 +598,7 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
                 })}
               </CardContent>
             </Card>
-          )}
+          )} */}
 
           {/* REVIEWS & COMMUNITY FEEDBACK — chỉ hiện khi có dữ liệu thật */}
           {((recipe.reviews && recipe.reviews.length > 0) ||
@@ -697,7 +679,6 @@ export function RecipeDetailView({ recipe, relatedRecipes }: RecipeDetailViewPro
             <div className="flex flex-wrap items-center gap-2">
               <CommunitySummary postId={recipe.id} />
               <VoteButton postId={recipe.id} />
-              <BookmarkButton postId={recipe.id} />
               <ReportButton
                 targetKind={ReportTargetKind.POST}
                 targetId={recipe.id}

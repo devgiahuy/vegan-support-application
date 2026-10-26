@@ -1,12 +1,12 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.2
+**Version:** 4.12
 
-**Updated:** 2026-10-08
+**Updated:** 2026-10-26
 
 **Status:** Approved implementation baseline
 
-**Current backend baseline:** Phases 00–11 completed; Phase 12 is next
+**Current backend baseline:** Phases 00–20 and 23–26 completed; Phases 21–22 and 27 in progress; sandbox billing is a separately approved extension.
 
 ## 1. Document authority
 
@@ -35,11 +35,13 @@ The current API contract may still contain legacy Contributor subtype fields unt
 | D15 | Custom meals | Users may add private meals outside the public catalog, photos, and arbitrary user-created tags such as `shopee`; no marketplace API is implied. |
 | D16 | Planning horizon | Support weekly plans first, then multi-week programs with cumulative and repeated-pattern analysis. |
 | D17 | Recognition | Fridge input supports multiple images and quantity estimates. User confirmation is required before pantry/plan changes. |
-| D18 | Receipts | Extract candidate purchased ingredients, require user confirmation, then update pantry and compute shopping gaps. |
+| D18 | Receipts | Extract candidate purchased ingredients, identify repeat photos by receipt number/merchant/date or exact complete metadata and line multiset when the number is absent, merge partial photos for user review, and only then update pantry on explicit confirmation. Different receipts accumulate. |
 | D19 | Video | Enforce storage first. Videos use recipe/handbook review parity. Formal DMCA and advanced audio/frame moderation are Roadmap Phase 2. |
 | D20 | Certificates | No certificate verification in MVP. Future evidence badges do not silently introduce Contributor permission tiers. |
 | D21 | Documentation | `docs/SRS.md` is canonical; runtime capability status stays in frontend integration docs; roadmap is separate from implementation phases. |
 | D22 | Safety | Nutrition, freshness, compatibility, BMI, and AI answers are educational support, not diagnosis or guaranteed safety. |
+| D23 | Usage billing | User-approved 2026-10-13 and payOS conversion 2026-10-14: payOS exclusively for new one-time cumulative AI usage/Pantry capacity packages. App rollout remains development/test; payOS checkout is real money, without sandbox or mock fallback. No recurring or media-storage purchase. |
+| D24 | AI recipe draft | Accept title, description and ordered ingredient names without image analysis; return editable amount/unit/serving/time/step suggestions. The author edits and saves via the existing DRAFT content flow. AI output does not publish or become canonical nutrition data. Approved by user 2026-10-24. |
 
 ## 3. MVP scope
 
@@ -218,6 +220,8 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
    - preferences and ranking signals.
 4. Hard constraints remove candidates before scoring. Ranking cannot restore them.
 5. MVP supports Buddhist and Christian traditions; the model remains extensible.
+6. Restaurant directory discovery/details follow BL-16's explicit-search exception and do not inherit these personal profile constraints.
+7. Recipe discovery may show profile-removed recipes only in an explicit, separately labelled "not suitable" view (`GET /posts?eligibility=INELIGIBLE`, user-approved 2026-10-26). Each item carries its reason codes and offending ingredients; the view never feeds ranking, recommendations or meal planning, and detail pages stay viewable as before.
 
 ### BL-03 — Practice schedule
 
@@ -227,6 +231,8 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 - Missing/ambiguous schedules fail safely by asking for confirmation rather than inferring religious observance.
 
 ### BL-04 — Canonical ingredients and compatibility
+
+User-approved 2026-10-25 extension: use a public named allergen catalog for explicit selection and reject unknown/inactive preference codes. Ingredient composition has UNKNOWN/PARTIAL/COMPLETE status, SIMPLE/COMPOUND/UNSPECIFIED kind, canonical component edges, reviewed source/version/record/license and exact formulation scope. Admin-only, versioned, audited transactions reject cycles and excessive depth, including concurrent cross-parent cycles. Evaluate all descendants for allergies/exclusions/diet/tradition rules; every active hard dietary constraint rejects incomplete data. AI remains suggestion-only. Direct ingredient metadata edits invalidate the composition assessment. Current-plan fingerprints include composition semantics and profile constraints; confirmation rechecks current selected plans. Normalize demo catalog/aliases/profiles directly under the user's instruction, reporting unresolved selections for explicit correction; known positive constraints are never silently discarded.
 
 1. Recipe ingredients map to canonical records; aliases are locale-aware.
 2. Quantities normalize to mass where a reviewed conversion exists.
@@ -250,6 +256,8 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 
 ### BL-06 — Content and video review lifecycle
 
+Maintenance clarification 2026-10-26: titles and bodies need not be unique. Automatically generated URLs are unique and collision-safe; an explicitly requested URL must remain unique. Editing without a requested URL change preserves the current slug.
+
 1. Author creates a draft and submits a specific immutable revision.
 2. Automated moderation may attach signals but cannot publish, reject, or delete.
 3. Admin approves or rejects with reason. Only approved revision becomes public.
@@ -264,7 +272,7 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 - Vote uniqueness and mutation idempotency are backend enforced.
 - Reports and AI flags create moderation signals.
 - Removal requires an Admin decision and reason; no signal performs hard deletion automatically.
-- Contributor role does not grant final moderation or publication authority.
+- Contributor role can review and decide publication for submitted Member community content (recipes, articles, videos) that have no open AI flags or high-priority reports. Flagged/quarantined items, reports, comments, users, and content by non-Members remain Admin-exclusive. Anti-self-approval is strictly enforced.
 
 ### BL-08 — Storage quota
 
@@ -273,7 +281,7 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 3. Release expired/failed reservations and decrement committed use only after a valid asset deletion.
 4. Prevent concurrent uploads from exceeding quota.
 5. Return used, reserved, limit, and remaining bytes plus typed quota errors.
-6. Admin may configure policy or grant audited adjustments. MVP has no payment flow.
+6. Admin may configure policy or grant audited adjustments. Media-storage payment remains deferred; the approved sandbox extension sells AI usage and Pantry capacity separately.
 
 ### BL-09 — Custom meals and user tags
 
@@ -281,6 +289,7 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 - It may contain name, notes, servings, structured ingredients, nutrition estimate, multiple images, source note, and arbitrary tags.
 - Tags such as `shopee` are normalized user text, not provider identities or API calls.
 - A custom meal can be inserted into a plan and analyzed like a recipe when sufficient ingredient data exists.
+- Create and nutrition-relevant edits recalculate the entire-meal estimate. Approved ingredient aliases resolve to canonical records; unresolved ingredients use the configured AI fallback when available, without replacing canonical food data. A recognizable meal name without ingredients may be estimated with explicit serving/preparation assumptions and low confidence. A missing metric for any ingredient requires a whole-meal fallback for that metric, rather than presenting a partial sum as the total. Preserve manual overrides, expose provenance/uncertainty, and retain nulls when estimation is unavailable. Clarified by user request on 2026-10-25.
 
 ### BL-10 — Meal planning and compatibility
 
@@ -303,6 +312,7 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 - Repeated-pattern and cumulative nutrient checks span the configured horizon.
 - Editing one week invalidates affected later analyses and shopping projections.
 - Generated programs are drafts until the user confirms them.
+- Before starting/resuming missing weekly alternatives, validate health and periodic calendar coverage for every week to generate. Return all missing week starts/dates before creating new records; users explicitly save days for each week. Successful repair of the last failed week recomputes PARTIAL/FAILED → DRAFT in the same versioned mutation, allowing confirmation. Do not infer religious observance or weaken hard dietary constraints.
 
 ### BL-12 — Pantry, fridge images, and receipts
 
@@ -311,6 +321,8 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 3. AI may estimate item, amount, unit, and freshness observation. Never state definitive food safety.
 4. The user confirms/edits/rejects candidates before pantry update.
 5. Receipt extraction follows the same confirmation boundary and records source image/job.
+5a. Compare receipt identity before merging line items. Different visible receipt numbers remain separate even when a product line matches. When either photo lacks a number, an exact match requires merchant, date, total, currency and the full line multiset; partial matches require the user to choose same receipt or separate purchases before confirmation. Confirmed overlap never increments Pantry twice, including across jobs.
+5b. Keep edible food, ready-to-eat products and drinks as receipt candidates. AI may initially exclude clearly non-food goods; persist the original line and reason, return an exclusion notice and allow the user to restore a mistaken exclusion before confirmation. Uncertain lines remain available for review. Excluded lines never affect Pantry unless restored and explicitly confirmed.
 6. Meal suggestions use confirmed pantry state and offer multiple candidates.
 7. Shopping gaps are computed only after recipe/custom-meal choice, servings, unit conversion, and confirmed pantry inventory.
 8. Shopping items show required, available, missing, unit, conversion assumptions, and confidence.
@@ -344,7 +356,8 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 - Use internal and external-source records through adapters.
 - Deduplicate using provider reference first, then normalized name/location heuristics.
 - Location requires consent or explicit user entry.
-- Dietary compatibility is applied before distance/relevance ranking.
+- Restaurant discovery and details do not automatically apply the personal eating profile, allergies, ingredient exclusions or tradition rules (user-approved 2026-10-25). Location, keyword and explicitly selected search filters determine the results.
+- An explicit `dietPattern` query filters reviewed internal dietary claims before ranking and suppresses unreviewed external places. Without it, signed-in users and guests can retrieve the same public provider results. Provider labels remain advisory and do not establish dietary/allergy compatibility.
 - Respect provider caching, attribution, and retention terms.
 
 ### BL-17 — Notifications
@@ -367,6 +380,19 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 - Soft-delete or anonymize where legal/audit retention is required.
 - Deletion jobs cover profile, health, behavior, AI, pantry, receipt, recognition, media, and location data according to policy.
 - Public content ownership/display after account deletion follows an explicit policy and audit trail.
+
+### BL-20 — Approved usage billing extension (2026-10-13; payOS conversion 2026-10-14)
+
+- payOS checkout expires after configured TTL (default 15 minutes); expired application orders hide the checkout URL. Retired local/VNPAY checkout and notification routes are removed; the old expiry recovery behavior is historical only.
+- Billing is opt-in and app rollout remains development/test. The provider is now payOS, whose transfers are real even from a development app. Missing Client ID/API key/checksum disables purchases, without mock fallback. Historical balances/orders retain original identity. Application production rollout remains deferred.
+- Signed payOS webhooks trigger an authoritative signed payment-request query. PAID with sufficient received money grants once; UNDERPAID/PROCESSING map to PENDING. Expected order amount/link/reference must match. Extra payment does not change package benefits and requires manual merchant handling. Late fully verified payment may supersede an unfulfilled terminal order; PAID never downgrades.
+- New payOS order code/link/checkout URL are persisted, distinct from application UUID. Ambiguous creates retry/recover the same code. Reconciliation uses an owner-scoped 30-second cooldown. Signed unknown webhook confirmation samples ACK without grants. Browser return/cancel claims are ignored for settlement.
+- Sell one-time cumulative packages for chat credits, fridge jobs, receipt jobs and additional Pantry slots. Demo benefits do not expire or grant roles/media storage. Prices and benefits are snapshotted on each order.
+- Only a verified provider IPN/query result (or guarded local simulation) may grant benefits. Browser return never grants. Duplicate payment events and concurrent callbacks grant once; a verified late success may upgrade an unpaid terminal order, while PAID never downgrades.
+- Chat consumes daily free quota first, then purchased credits. Reserve before provider work; complete atomically with the successful answer. Failures/fallbacks release; replay and stale workers cannot charge again or overwrite a newer attempt.
+- One bounded scan job costs one credit after any image succeeds, including a valid empty analysis. Total failure/cancellation before success releases it. Retries of an already charged job are free, with a configurable default maximum of three processing attempts. Expired queued/processing leases are fenced before release.
+- Pantry capacity counts every undeleted item, including zero quantity. Enforce the limit transactionally for manual creation and both scan confirmations. Existing over-limit items remain readable/editable/deletable; deletion/merge frees capacity. Results require explicit user confirmation before Pantry mutation.
+- Clients share account balances/history and use typed business errors. Mongo validators/indexes, additive queued timestamp backfill, idempotent seed, OpenAPI and consumer documentation are required release gates.
 
 ## 6. RBAC summary
 
@@ -540,6 +566,24 @@ A phase is complete only when:
 | Phase 2 ideas are forgotten or accidentally claimed READY | Dedicated roadmap plus explicit status taxonomy |
 
 ## 13. Change record
+
+- **4.13 — 2026-10-26:** User clarifies that approved Contributors have review/moderation permissions for submitted community content (recipes, articles, videos) created by Members (excluding self-created content and items flagged with open AI flags or high report counts requiring Admin review). Content review endpoints (`/api/v1/admin/content-review*`) allow both Admin and Contributor roles.
+
+- **4.12 — 2026-10-26:** User approves an explicit "not suitable" recipe-discovery view with per-recipe reasons (BL-02.7). Demo composition assertions extend to prepared foods used by seeded recipes.
+
+- **4.11 — 2026-10-26:** Clarify duplicate content titles with unique/stable generated URLs; preflight full-horizon periodic schedules and recover partially generated programs to DRAFT after week repairs.
+
+- **4.10 — 2026-10-25:** User approves named allergy selection, direct catalog normalization, reviewed transitive composition, fail-closed uncertain data, and current analysis/confirmation validation. No restaurant-directory or canonical-nutrition changes.
+
+- **4.9 — 2026-10-25:** Custom-meal maintenance clarifies recalculation, approved-alias resolution, whole-meal fallback for free text/name-only meals, manual overrides and unknown-value handling. Recipe discovery, recommendations, weekly generation and manual insertion enforce allergies against both revision snapshots and current ingredient metadata. Weekly programs already generate dishes; consumers must read `days[].slots` in generated snapshots.
+
+- **4.8 — 2026-10-25:** User explicitly excludes restaurant discovery and place details from automatic eating-profile filtering. Directory lookups use only requested location, keyword and explicit filters. A query `dietPattern` remains a reviewed-claim filter; external source attribution and unverified labels remain required. Recipe recommendations and meal planning retain their hard profile constraints.
+
+- **4.5 — 2026-10-14:** User requests all billing moved to payOS and will configure credentials later. New purchases use hosted payOS QR/bank transfer, signed SDK create/query/webhook, persisted unique provider references, partial-payment handling and 30-second reconciliation. Retired providers are read-only history; their routes/configuration are removed. payOS is real money with no sandbox; app production rollout remains deferred.
+
+- **4.4 — 2026-10-14:** Historical local-sandbox expiry fix; superseded for new purchases by payOS conversion 4.5. Retest distinguished 410 valid expiry from invalid signature and exercised repeated refresh rotation.
+
+- **4.3 — 2026-10-13:** User-authorized sandbox billing. Snapshot VND catalog/orders; verified IPN/query reconciliation and idempotent grants; free-first chat; one bounded scan job credit after any successful image; total failures release; charged retries free, default three processing attempts; undeleted Pantry count with transactional enforcement on all insert paths. No production billing, role grants or storage upgrades. Mongo native validators, queued timestamp backfill and worker/credit fencing are required. Checkout returns wait for session restoration and preserve order context.
 
 - **4.2 — 2026-10-08:** Reconcile dev estimated-macro planning/analysis updates with MongoDB persistence; preserve both approved decisions.
 

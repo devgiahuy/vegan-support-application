@@ -11,7 +11,8 @@ import type {
 } from './catalog.schemas.js';
 
 const ingredientInclude = {
-  aliases: { orderBy: { alias: 'asc' } },
+  components: true,
+  aliases: { where: { reviewStatus: 'APPROVED' }, orderBy: { alias: 'asc' } },
   allergens: { orderBy: { allergenCode: 'asc' } },
   dietCompatibilities: { orderBy: { dietPattern: 'asc' } },
   traditionWarnings: { orderBy: [{ tradition: 'asc' }, { warningCode: 'asc' }] },
@@ -185,7 +186,14 @@ export class CatalogRepository {
         ? {
             OR: [
               { normalizedName: { contains: normalizedQuery } },
-              { aliases: { some: { normalizedAlias: { contains: normalizedQuery } } } },
+              {
+                aliases: {
+                  some: {
+                    normalizedAlias: { contains: normalizedQuery },
+                    reviewStatus: 'APPROVED',
+                  },
+                },
+              },
             ],
           }
         : {}),
@@ -215,7 +223,7 @@ export class CatalogRepository {
         status: CatalogStatus.ACTIVE,
         OR: [
           { normalizedName: normalizedQuery },
-          { aliases: { some: { normalizedAlias: normalizedQuery } } },
+          { aliases: { some: { normalizedAlias: normalizedQuery, reviewStatus: 'APPROVED' } } },
         ],
       },
       include: ingredientInclude,
@@ -254,6 +262,13 @@ export class CatalogRepository {
             : {}),
           ...(input.foodGroup ? { foodGroup: input.foodGroup } : {}),
           ...(input.status ? { status: input.status } : {}),
+          ...(input.canonicalName || input.foodGroup || input.allergenCodes || input.status
+            ? {
+                compositionStatus: 'UNKNOWN',
+                compositionEvidence: null,
+                compositionVersion: { increment: 1 },
+              }
+            : {}),
         },
       });
 

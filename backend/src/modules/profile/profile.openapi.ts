@@ -268,6 +268,8 @@ export function registerProfileOpenApi(registry: OpenAPIRegistry, errorSchema: Z
         'INVALID_DIET_RULE_SELECTION',
         'DIET_RULE_REQUIRED',
         'INVALID_INGREDIENT_EXCLUSIONS',
+        'INVALID_ALLERGEN_SELECTION',
+        'INVALID_INGREDIENT_ALLERGIES',
         'DIET_SCHEDULE_NOT_APPLICABLE',
       ]),
       401: errorResponse(errorSchema, 'Yêu cầu đăng nhập', 'AUTH_REQUIRED'),

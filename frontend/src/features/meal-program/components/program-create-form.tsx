@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { toast } from 'sonner';
@@ -24,7 +24,14 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useDetailedProfileQuery } from '@/features/profile/queries/profile.queries';
+import { ScheduleEditor } from '@/features/diet-preferences/components/schedule-editor';
+import { PracticeSchedule } from '@/common/enums';
+import { missingScheduledWeeks } from '../utils/schedule-coverage';
 import { useCreateMealProgramMutation } from '../queries/meal-program.queries';
+import { isAxiosError, getApiErrorMessage, getApiErrorCode } from '@/lib/api-error';
 import type { MealProgramGoalDto } from '../types/meal-program.dto';
 import {
   formatVietnameseDate,
@@ -97,9 +104,20 @@ const createProgramSchema = z.object({
 
 type CreateProgramFormData = z.infer<typeof createProgramSchema>;
 
+function createIdempotencyKey(): string {
+  const id =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  return `meal-program-${id}`;
+}
+
 export const ProgramCreateForm: React.FC = () => {
   const router = useRouter();
   const createMutation = useCreateMealProgramMutation();
+  const profile = useDetailedProfileQuery();
+  const [scheduleDirty, setScheduleDirty] = useState(false);
+  const pendingCreate = useRef<{ signature: string; idempotencyKey: string } | null>(null);
 
   const detectedTimezone =
     typeof Intl !== 'undefined'
@@ -115,7 +133,7 @@ export const ProgramCreateForm: React.FC = () => {
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<CreateProgramFormData>({
     resolver: zodResolver(createProgramSchema),
@@ -128,9 +146,17 @@ export const ProgramCreateForm: React.FC = () => {
     },
   });
 
-  const selectedGoal = watch('goal');
-  const selectedWeeks = watch('horizonWeeks');
-  const selectedStartDate = watch('startDate');
+  const selectedGoal = useWatch({ control, name: 'goal' });
+  const selectedWeeks = useWatch({ control, name: 'horizonWeeks' });
+  const selectedStartDate = useWatch({ control, name: 'startDate' });
+  const diet = profile.data?.diet;
+  const periodic = diet?.practiceSchedule === PracticeSchedule.PERIODIC;
+  const scheduleDates = diet?.scheduleDates ?? [];
+  const missingWeeks = periodic
+    ? missingScheduledWeeks(selectedStartDate, selectedWeeks, scheduleDates)
+    : [];
+  const blocked =
+    profile.isPending || profile.isError || missingWeeks.length > 0 || (periodic && scheduleDirty);
 
   const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawVal = e.target.value;
@@ -159,27 +185,53 @@ export const ProgramCreateForm: React.FC = () => {
   };
 
   const onSubmit = async (data: CreateProgramFormData) => {
+    if (blocked) return;
+    const request = {
+      title: data.title.trim(),
+      goal: data.goal,
+      startDate: data.startDate,
+      timezone: data.timezone,
+      horizonWeeks: data.horizonWeeks,
+      alternativesPerWeek: 2,
+    };
+    const signature = JSON.stringify(request);
+    if (pendingCreate.current?.signature !== signature) {
+      pendingCreate.current = { signature, idempotencyKey: createIdempotencyKey() };
+    }
+
     try {
       const created = await createMutation.mutateAsync({
-        title: data.title.trim(),
-        goal: data.goal,
-        startDate: data.startDate,
-        timezone: data.timezone,
-        horizonWeeks: data.horizonWeeks,
-        alternativesPerWeek: 2,
+        ...request,
+        idempotencyKey: pendingCreate.current.idempotencyKey,
       });
 
-      toast.success('Khởi tạo lộ trình dinh dưỡng thành công!');
+      pendingCreate.current = null;
+      if (created.status === 'PARTIAL' || created.status === 'FAILED')
+        toast.warning(
+          'Lộ trình còn tuần chưa tạo được thực đơn. Hãy kiểm tra thông báo ở từng tuần.'
+        );
+      else toast.success('Khởi tạo lộ trình dinh dưỡng thành công!');
       router.push(`/meal-programs/${created.id}`);
     } catch (err: unknown) {
-      const errorMsg =
-        err instanceof Error ? err.message : 'Có lỗi xảy ra khi tạo lộ trình. Vui lòng thử lại.';
-      toast.error(errorMsg);
+      if (getApiErrorCode(err) === 'DIET_SCHEDULE_REQUIRED') void profile.refetch();
+      if (isAxiosError(err) && (err.code === 'ECONNABORTED' || !err.response)) {
+        toast.error('Chưa nhận được phản hồi từ máy chủ', {
+          description:
+            'Lộ trình có thể vẫn đang được tạo. Hãy thử lại với cùng thông tin để tiếp tục yêu cầu trước.',
+        });
+        return;
+      }
+      toast.error(getApiErrorMessage(err, 'Không thể tạo lộ trình. Vui lòng thử lại.'));
     }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-2xl mx-auto">
+    <form
+      onSubmit={(event) => {
+        void handleSubmit(onSubmit)(event);
+      }}
+      className="space-y-6 max-w-2xl mx-auto"
+    >
       {/* 1. Tên lộ trình */}
       <div className="space-y-2">
         <Label htmlFor="title" className="text-base font-semibold">
@@ -367,6 +419,51 @@ export const ProgramCreateForm: React.FC = () => {
         </div>
       </div>
 
+      {profile.isPending && <Skeleton className="h-20 w-full" />}
+      {profile.isError && (
+        <Alert variant="destructive">
+          <AlertDescription>
+            Không tải được hồ sơ để kiểm tra lịch chay.{' '}
+            <Button type="button" variant="link" onClick={() => void profile.refetch()}>
+              Thử lại
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+      {periodic && (
+        <section className="flex flex-col gap-4" aria-label="Lịch chay cho toàn bộ lộ trình">
+          {missingWeeks.length > 0 ? (
+            <Alert>
+              <AlertDescription>
+                {missingWeeks
+                  .map(
+                    (week) =>
+                      `Tuần ${week.weekNumber} (${formatVietnameseDate(week.startDate ?? '')}–${formatVietnameseDate(week.endDate ?? '')})`
+                  )
+                  .join(', ')}{' '}
+                chưa có ngày chay kỳ. Hãy chọn và lưu ít nhất một ngày trong mỗi tuần trước khi tạo
+                lộ trình. Hệ thống chỉ áp dụng quy tắc truyền thống vào ngày bạn chọn.
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <Alert>
+              <AlertDescription>
+                Đã có ngày chay kỳ trong tất cả các tuần của lộ trình.
+              </AlertDescription>
+            </Alert>
+          )}
+          <ScheduleEditor
+            key={JSON.stringify(scheduleDates)}
+            initialDates={scheduleDates}
+            onDirtyChange={setScheduleDirty}
+          />
+          {scheduleDirty && (
+            <p className="text-sm text-muted-foreground" role="status">
+              Hãy lưu các ngày vừa chỉnh trước khi tạo lộ trình.
+            </p>
+          )}
+        </section>
+      )}
       {/* Submit / Cancel Buttons */}
       <div className="flex items-center justify-end gap-3 pt-4 border-t">
         <Button
@@ -377,7 +474,11 @@ export const ProgramCreateForm: React.FC = () => {
         >
           Hủy bỏ
         </Button>
-        <Button type="submit" disabled={createMutation.isPending} className="min-w-[140px]">
+        <Button
+          type="submit"
+          disabled={createMutation.isPending || blocked}
+          className="min-w-[140px]"
+        >
           {createMutation.isPending ? (
             <>
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />

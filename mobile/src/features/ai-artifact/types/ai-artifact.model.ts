@@ -61,6 +61,8 @@ export interface AiArtifact {
   summary: string;
   content: AiArtifactContent;
   authorName: string;
+  /** Tác giả chọn ẩn danh — khi đó tên không cho biết chủ sở hữu. */
+  authorAnonymous: boolean;
   status: AiArtifactStatus;
   visibility: AiArtifactVisibility;
   /** Phiên bản vòng đời — dùng làm `expectedLifecycleVersion` khi chia sẻ/gửi thẩm định. */
@@ -85,6 +87,15 @@ export interface CreateAiArtifactInput {
   title: string;
   summary: string;
   authorAnonymous: boolean;
+}
+
+export interface CreateAiVerificationInput {
+  artifactId: string;
+  expectedArtifactVersion: number;
+  conclusion: AiVerificationConclusion;
+  scope: string;
+  evidenceNote: string;
+  correction: string;
 }
 
 export interface PublicAiArtifactsQuery {

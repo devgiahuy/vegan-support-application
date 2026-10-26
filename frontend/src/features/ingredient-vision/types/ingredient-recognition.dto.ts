@@ -137,3 +137,7 @@ export interface RecognitionConfirmationEnvelopeDto {
   success: true;
   data: RecognitionConfirmationResponseDto;
 }
+
+export interface AddFridgeImagesRequestDto {
+  imageAssetIds: string[];
+}

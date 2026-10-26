@@ -41,8 +41,8 @@ export function WhyRecommendedDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader className="space-y-2">
           <div className="flex items-center gap-2">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Sparkles className="h-4 w-4" />
+            <span className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10 text-primary">
+              <Sparkles className="w-4 h-4" />
             </span>
             <DialogTitle className="text-lg font-bold text-foreground">
               Vì sao tôi thấy gợi ý này?
@@ -54,25 +54,25 @@ export function WhyRecommendedDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
+        <div className="py-2 space-y-4">
           {/* Target item indicator */}
-          <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs">
+          <div className="p-3 text-xs border rounded-xl border-primary/20 bg-primary/5">
             <span className="text-muted-foreground">Gợi ý áp dụng cho: </span>
             <strong className="text-foreground">{targetTitle}</strong>
           </div>
 
           {/* Behavioral Signals Breakdown */}
           <div className="space-y-3">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            <h4 className="text-xs font-bold tracking-wider uppercase text-muted-foreground">
               Các tín hiệu hành vi đã ghi nhận (với sự đồng thuận của bạn):
             </h4>
 
             <div className="space-y-2.5">
               {/* Signal 1 */}
-              <div className="flex items-start gap-3 p-3 rounded-xl border bg-muted/20 text-xs">
+              <div className="flex items-start gap-3 p-3 text-xs border rounded-xl bg-muted/20">
                 <Compass className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <div className="space-y-0.5">
-                  <span className="font-semibold text-foreground block">
+                  <span className="block font-semibold text-foreground">
                     Trường phái ăn chay đã chọn
                   </span>
                   <p className="text-muted-foreground">
@@ -84,25 +84,25 @@ export function WhyRecommendedDialog({
               </div>
 
               {/* Signal 2 */}
-              <div className="flex items-start gap-3 p-3 rounded-xl border bg-muted/20 text-xs">
+              <div className="flex items-start gap-3 p-3 text-xs border rounded-xl bg-muted/20">
                 <MessageSquare className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <div className="space-y-0.5">
-                  <span className="font-semibold text-foreground block">
+                  <span className="block font-semibold text-foreground">
                     Chủ đề trao đổi gần đây với Trợ lý AI (UC-07)
                   </span>
                   <p className="text-muted-foreground">
                     Hôm qua bạn hỏi Chatbot:{' '}
-                    <em>"Bổ sung protein thuần chay từ nguồn nào tốt nhất?"</em> &rarr; AI tăng tỷ
-                    lệ nấm đùi gà, đậu phụ và hạt sen vào thực đơn.
+                    <em>"Bổ sung protein thuần chay từ nguồn nào tốt nhất?&quot;</em> &rarr; AI tăng
+                    tỷ lệ nấm đùi gà, đậu phụ và hạt sen vào thực đơn.
                   </p>
                 </div>
               </div>
 
               {/* Signal 3 */}
-              <div className="flex items-start gap-3 p-3 rounded-xl border bg-muted/20 text-xs">
+              <div className="flex items-start gap-3 p-3 text-xs border rounded-xl bg-muted/20">
                 <Bookmark className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <div className="space-y-0.5">
-                  <span className="font-semibold text-foreground block">
+                  <span className="block font-semibold text-foreground">
                     Món ăn yêu thích đã lưu
                   </span>
                   <p className="text-muted-foreground">
@@ -113,10 +113,10 @@ export function WhyRecommendedDialog({
               </div>
 
               {/* Signal 4 */}
-              <div className="flex items-start gap-3 p-3 rounded-xl border bg-muted/20 text-xs">
+              <div className="flex items-start gap-3 p-3 text-xs border rounded-xl bg-muted/20">
                 <Scale className="h-4 w-4 text-primary shrink-0 mt-0.5" />
                 <div className="space-y-0.5">
-                  <span className="font-semibold text-foreground block">
+                  <span className="block font-semibold text-foreground">
                     Chỉ số thể trạng &amp; Calo mục tiêu (BMI / TDEE)
                   </span>
                   <p className="text-muted-foreground">
@@ -142,7 +142,7 @@ export function WhyRecommendedDialog({
           </div>
         </div>
 
-        <DialogFooter className="flex flex-col sm:flex-row gap-2 pt-2">
+        <DialogFooter className="flex flex-col gap-2 pt-2 sm:flex-row">
           <Button variant="outline" asChild size="sm" className="gap-1.5 text-xs">
             <Link href="/profile" onClick={onClose}>
               Quản lý cài đặt cá nhân hoá <ArrowRight className="h-3.5 w-3.5" />

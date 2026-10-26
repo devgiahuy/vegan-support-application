@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { AppError } from '../../common/errors/app-error.js';
 import { getValidatedBody, getValidatedParams } from '../../common/validation/validate-request.js';
 import type {
+  AddRecognitionImagesInput,
   ConfirmRecognitionJobInput,
   CreateRecognitionJobInput,
   RetryRecognitionJobInput,
@@ -11,7 +12,7 @@ import type { IngredientRecognitionService } from './ingredient-recognition.serv
 
 function ownerId(request: Request): string {
   if (request.auth) return request.auth.userId;
-  throw new AppError({ statusCode: 401, code: 'AUTH_REQUIRED', message: 'Authentication required' });
+  throw new AppError({ statusCode: 401, code: 'AUTH_REQUIRED', message: 'Vui lòng đăng nhập' });
 }
 
 export class IngredientRecognitionController {
@@ -21,6 +22,15 @@ export class IngredientRecognitionController {
     const job = await this.service.create(
       ownerId(request),
       getValidatedBody<CreateRecognitionJobInput>(request),
+    );
+    response.status(202).json({ success: true, data: job });
+  };
+
+  addImages = async (request: Request, response: Response): Promise<void> => {
+    const job = await this.service.addImages(
+      ownerId(request),
+      getValidatedParams<{ id: string }>(request).id,
+      getValidatedBody<AddRecognitionImagesInput>(request),
     );
     response.status(202).json({ success: true, data: job });
   };

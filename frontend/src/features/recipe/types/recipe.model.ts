@@ -3,7 +3,7 @@ import { PostStatus, RecipeDifficulty } from '@/common/enums';
 export type ContentType = 'blog' | 'video';
 export type Difficulty = 'Dễ làm' | 'Trung bình' | 'Nâng cao';
 export type DietSchool = 'PHAT_GIAO' | 'DAO_GIAO' | 'THUAN_CHAY' | 'ALL';
-export type AuthorRole = 'NUTRITION_EXPERT' | 'EXPERIENCED_COOK' | 'CONTRIBUTOR';
+export type AuthorRole = 'NUTRITION_EXPERT' | 'EXPERIENCED_COOK' | 'CONTRIBUTOR' | 'USER';
 
 export interface RecipeAuthor {
   id?: string;
@@ -13,6 +13,7 @@ export interface RecipeAuthor {
   avatarUrl?: string | null;
   role?: AuthorRole;
   roleTitle?: string;
+  isExpert?: boolean;
 }
 
 export interface IngredientItem {
@@ -95,6 +96,14 @@ export interface RecipeCategoryObject {
   slug?: string;
 }
 
+export type RecipeEligibilityFilter = 'ELIGIBLE' | 'INELIGIBLE';
+
+export interface RecipeIneligibilityReason {
+  code: string;
+  label: string;
+  ingredientNames: string[];
+}
+
 export interface Recipe {
   id: string;
   title: string;
@@ -164,6 +173,12 @@ export interface Recipe {
   allergens?: RecipeAllergen[];
   traditionWarnings?: TraditionWarning[];
   dietCompatibilities?: DietCompatibility[];
+  /** Con số kiểm chứng: Số lượng người đang sử dụng công thức món ăn này. Mặc định luôn là 0 nếu thiếu. */
+  usageCount?: number;
+  /** Cờ xác định tác giả là chuyên gia (giúp UI render badge chuyên gia hay người dùng thường). */
+  isExpertAuthor?: boolean;
+  /** Lý do hồ sơ ăn uống loại món này; chỉ có ở tab "Không phù hợp". */
+  ineligibilityReasons?: RecipeIneligibilityReason[];
 }
 
 export interface AppliedSearchConstraints {

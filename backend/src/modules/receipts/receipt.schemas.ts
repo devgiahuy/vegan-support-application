@@ -1,4 +1,9 @@
-import { PantryItemSource, ReceiptCandidateStatus, ReceiptJobStatus } from '@prisma/client';
+import {
+  PantryItemSource,
+  ReceiptCandidateStatus,
+  ReceiptItemClassification,
+  ReceiptJobStatus,
+} from '@prisma/client';
 import {
   mediaUrlSchema,
   optionalNullableTrimmedTextSchema,
@@ -17,6 +22,14 @@ export const createReceiptJobSchema = z
     imageAssetIds: z.array(z.string().uuid()).min(1).max(8),
     idempotencyKey: idempotencyKeySchema,
   })
+  .strict()
+  .refine((input) => new Set(input.imageAssetIds).size === input.imageAssetIds.length, {
+    message: 'Image asset IDs must be unique',
+    path: ['imageAssetIds'],
+  });
+
+export const addReceiptImagesSchema = z
+  .object({ imageAssetIds: z.array(z.string().uuid()).min(1).max(8) })
   .strict()
   .refine((input) => new Set(input.imageAssetIds).size === input.imageAssetIds.length, {
     message: 'Image asset IDs must be unique',
@@ -50,6 +63,7 @@ export const updateReceiptCandidateSchema = z
 
 export const confirmReceiptJobSchema = z
   .object({
+    receiptReviewDecision: z.enum(['SAME_RECEIPT', 'SEPARATE_RECEIPTS']).optional(),
     candidates: z
       .array(
         z.object({ id: z.string().uuid(), expectedVersion: z.number().int().positive() }).strict(),
@@ -95,6 +109,11 @@ const receiptImageSchema = z.object({
   position: z.number().int().nonnegative(),
   url: mediaUrlSchema,
   status: z.enum(['PENDING', 'PROCESSED', 'FAILED']),
+  receiptNumber: z.string().nullable(),
+  merchantName: z.string().nullable(),
+  purchasedAt: z.string().nullable(),
+  currency: z.string().nullable(),
+  totalAmount: z.number().nullable(),
   issue: z.string().nullable(),
 });
 
@@ -114,13 +133,38 @@ const receiptCandidateSchema = z.object({
   }),
   confidence: z.number().min(0).max(1),
   uncertaintyNote: z.string().nullable(),
+  aiClassification: z.nativeEnum(ReceiptItemClassification),
+  classificationReason: z.string().nullable(),
+  classificationConfidence: z.number().min(0).max(1).nullable(),
   status: z.nativeEnum(ReceiptCandidateStatus),
+  duplicateOfJobId: z.string().uuid().nullable(),
   version: z.number().int().positive(),
 });
 
 export const receiptJobResponseSchema = z.object({
   id: z.string().uuid(),
   status: z.nativeEnum(ReceiptJobStatus),
+  reviewRequired: z.boolean(),
+  identityDecisionRequired: z.boolean(),
+  receiptReviewDecision: z.enum(['SAME_RECEIPT', 'SEPARATE_RECEIPTS']).nullable(),
+  notices: z.array(
+    z.object({
+      code: z.literal('RECEIPT_NON_FOOD_ITEMS_EXCLUDED'),
+      message: z.string(),
+      count: z.number().int().positive(),
+    }),
+  ),
+  excludedItems: z.array(
+    z.object({
+      id: z.string().uuid(),
+      imageId: z.string().uuid(),
+      lineText: z.string(),
+      name: z.string(),
+      reason: z.string(),
+      confidence: z.number().min(0).max(1),
+      version: z.number().int().positive(),
+    }),
+  ),
   progress: z.object({ completedImages: z.number().int(), totalImages: z.number().int() }),
   receipt: z.object({
     merchantName: z.string().nullable(),
@@ -148,6 +192,9 @@ export const receiptConfirmationEnvelopeSchema = z.object({
   success: z.literal(true),
   data: z.object({
     job: receiptJobResponseSchema,
+    duplicateCandidates: z.array(
+      z.object({ candidateId: z.string().uuid(), sourceJobId: z.string().uuid() }),
+    ),
     pantryChanges: z.array(
       z.object({
         candidateId: z.string().uuid(),
@@ -211,6 +258,7 @@ export const shoppingGapEnvelopeSchema = z.object({
   }),
 });
 
+export type AddReceiptImagesInput = z.infer<typeof addReceiptImagesSchema>;
 export type CreateReceiptJobInput = z.infer<typeof createReceiptJobSchema>;
 export type UpdateReceiptCandidateInput = z.infer<typeof updateReceiptCandidateSchema>;
 export type ConfirmReceiptJobInput = z.infer<typeof confirmReceiptJobSchema>;

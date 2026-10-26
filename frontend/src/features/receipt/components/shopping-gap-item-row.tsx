@@ -1,21 +1,26 @@
 'use client';
 
 import React from 'react';
-import { Check, AlertCircle, ShoppingCart, HelpCircle, Info } from 'lucide-react';
+import { Check, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import type { ShoppingGapItem } from '../types/shopping-gap.model';
 
 interface ShoppingGapItemRowProps {
   item: ShoppingGapItem;
+  hideSourceMeals?: boolean;
+  hideConversion?: boolean;
 }
 
-export function ShoppingGapItemRow({ item }: ShoppingGapItemRowProps) {
+export function ShoppingGapItemRow({
+  item,
+  hideSourceMeals = false,
+  hideConversion = false,
+}: ShoppingGapItemRowProps) {
   const {
     ingredientName,
     required,
     available,
     missing,
-    surplus,
     isFullyAvailable,
     isPartiallyMissing,
     isCompletelyMissing,
@@ -70,22 +75,24 @@ export function ShoppingGapItemRow({ item }: ShoppingGapItemRowProps) {
             )}
           </div>
 
-          {/* Món ăn sử dụng */}
-          <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-            <span className="font-medium">Món dùng:</span>
-            {sourceMeals.map((sm, idx) => (
-              <span key={`${sm.id}-${idx}`} className="inline-flex items-center">
-                <span className="underline decoration-dotted">{sm.name}</span>
-                <span className="text-[11px] text-muted-foreground/80 ml-0.5">
-                  ({sm.servings} phần)
+          {/* Món ăn sử dụng (ẩn nếu hideSourceMeals = true) */}
+          {!hideSourceMeals && sourceMeals.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+              <span className="font-medium">Món dùng:</span>
+              {sourceMeals.map((sm, idx) => (
+                <span key={`${sm.id}-${idx}`} className="inline-flex items-center">
+                  <span className="underline decoration-dotted">{sm.name}</span>
+                  <span className="text-[11px] text-muted-foreground/80 ml-0.5">
+                    ({sm.servings} phần)
+                  </span>
+                  {idx < sourceMeals.length - 1 && <span className="mx-1">•</span>}
                 </span>
-                {idx < sourceMeals.length - 1 && <span className="mx-1">•</span>}
-              </span>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
-          {/* Giả định quy đổi đơn vị nếu có */}
-          {conversionAssumptions.length > 0 && (
+          {/* Giả định quy đổi đơn vị nếu có (ẩn nếu hideConversion = true) */}
+          {!hideConversion && conversionAssumptions.length > 0 && (
             <div className="flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 pt-0.5">
               <Info className="h-3.5 w-3.5 shrink-0" />
               <span>Quy đổi: {conversionAssumptions.join('; ')}</span>
@@ -93,7 +100,7 @@ export function ShoppingGapItemRow({ item }: ShoppingGapItemRowProps) {
           )}
         </div>
 
-        {/* 4 Cột đối chiếu số lượng */}
+        {/* 3 Cột đối chiếu số lượng: Cần dùng, Có sẵn, Cần mua */}
         <div className="grid grid-cols-3 sm:grid-cols-3 gap-2 sm:gap-4 shrink-0 text-center sm:text-right bg-card sm:bg-transparent p-2.5 sm:p-0 rounded-xl border sm:border-0 border-neutral-100 dark:border-neutral-800">
           {/* Cần dùng */}
           <div className="space-y-0.5">

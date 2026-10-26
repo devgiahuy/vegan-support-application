@@ -1,6 +1,10 @@
 import api from '@/lib/axios';
 import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
-import type { ReceiptConfirmationEnvelopeDto, ReceiptJobEnvelopeDto } from '../types/receipt.dto';
+import type {
+  AddReceiptImagesRequestDto,
+  ReceiptConfirmationEnvelopeDto,
+  ReceiptJobEnvelopeDto,
+} from '../types/receipt.dto';
 import type {
   ConfirmReceiptJobInput,
   CreateReceiptJobInput,
@@ -90,6 +94,18 @@ export const receiptApi = {
     };
     const res = await api.post<ReceiptJobEnvelopeDto>(
       API_ENDPOINTS.RECEIPT_JOBS.RETRY(jobId),
+      payload,
+      { showErrorToast: true }
+    );
+    return receiptMapper.toModel(res.data.data);
+  },
+
+  /**
+   * Bổ sung ảnh vào phiên quét hóa đơn chưa xác nhận (READY, PARTIAL_FAILED, FAILED)
+   */
+  addImages: async (jobId: string, payload: AddReceiptImagesRequestDto): Promise<ReceiptJob> => {
+    const res = await api.post<ReceiptJobEnvelopeDto>(
+      API_ENDPOINTS.RECEIPT_JOBS.ADD_IMAGES(jobId),
       payload,
       { showErrorToast: true }
     );

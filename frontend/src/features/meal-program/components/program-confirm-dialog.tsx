@@ -14,6 +14,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { useConfirmMealProgramMutation } from '../queries/meal-program.queries';
 import type { MealProgram } from '../types/meal-program.model';
+import { getApiErrorCode, getApiErrorMessage } from '@/lib/api-error';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface ProgramConfirmDialogProps {
   program: MealProgram;
@@ -27,8 +29,10 @@ export const ProgramConfirmDialog: React.FC<ProgramConfirmDialogProps> = ({
   onOpenChange,
 }) => {
   const confirmMutation = useConfirmMealProgramMutation(program.id);
+  const [confirmError, setConfirmError] = React.useState('');
 
   const handleConfirm = async () => {
+    setConfirmError('');
     try {
       await confirmMutation.mutateAsync({
         expectedVersion: program.version,
@@ -40,10 +44,10 @@ export const ProgramConfirmDialog: React.FC<ProgramConfirmDialogProps> = ({
       onOpenChange(false);
     } catch (err: unknown) {
       const errorMsg =
-        err instanceof Error
-          ? err.message
-          : 'Có lỗi xảy ra khi xác nhận lộ trình. Vui lòng thử lại.';
-      toast.error(errorMsg);
+        getApiErrorCode(err) === 'MEAL_PROGRAM_HARD_CONSTRAINT_VIOLATION'
+          ? 'Có món không còn phù hợp với hồ sơ ăn uống hoặc dữ liệu thành phần chưa đủ. Hãy xem lại từng tuần và thay món trước khi xác nhận.'
+          : getApiErrorMessage(err, 'Không xác nhận được lộ trình. Vui lòng thử lại.');
+      setConfirmError(errorMsg);
     }
   };
 
@@ -74,12 +78,17 @@ export const ProgramConfirmDialog: React.FC<ProgramConfirmDialogProps> = ({
           <div className="flex gap-2.5 p-3 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/30 text-amber-900 dark:text-amber-200">
             <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
             <p>
-              Sau khi xác nhận, lộ trình sẽ chuyển sang chế độ theo dõi tiến độ hàng ngày. Bạn vẫn
-              có thể tùy biến hoặc sinh lại từng tuần lẻ nếu có nhu cầu phát sinh sau này.
+              Hệ thống sẽ kiểm tra lại toàn bộ món theo hồ sơ và dữ liệu thành phần hiện tại. Sau
+              khi xác nhận, các lựa chọn món trong lộ trình đã chốt không thể chỉnh sửa.
             </p>
           </div>
         </div>
 
+        {confirmError && (
+          <Alert variant="destructive">
+            <AlertDescription>{confirmError}</AlertDescription>
+          </Alert>
+        )}
         <DialogFooter className="gap-2 sm:gap-0 pt-2">
           <Button
             type="button"

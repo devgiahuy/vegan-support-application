@@ -1,15 +1,66 @@
 'use client';
 
 import * as React from 'react';
-import { UseFormReturn } from 'react-hook-form';
-import { CheckCircle2, AlertCircle, Trash2, Loader2, Sparkles } from 'lucide-react';
+import { useFormState, useWatch, type UseFormReturn } from 'react-hook-form';
+import { CheckCircle2, AlertCircle, Loader2, Trash2, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useDebounce } from '@/hooks/useDebounce';
-import { useIngredientsQuery } from '@/features/ingredient/queries/ingredient.queries';
+import { FieldError } from '@/components/ui/field';
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { ResolutionMatch } from '@/common/enums';
+import { IngredientSuggestions } from '@/features/ingredient/components/ingredient-suggestions';
+import { useIngredientResolveQuery } from '@/features/ingredient/queries/ingredient.queries';
 import type { Ingredient } from '@/features/ingredient/types/ingredient.model';
 import type { RecipeFormValues } from '../schemas/recipe-form.schema';
+import { fieldDomId } from './recipe-editor-steps';
+
+/** Các đơn vị định lượng phổ biến trong nấu ăn chay */
+export const COMMON_UNITS_CONFIG = [
+  {
+    category: 'Khối lượng & Thể tích',
+    units: [
+      { value: 'g', label: 'g (gam)' },
+      { value: 'kg', label: 'kg (kilôgam)' },
+      { value: 'ml', label: 'ml (mililít)' },
+      { value: 'l', label: 'l (lít)' },
+      { value: 'muỗng canh', label: 'muỗng canh (tbsp)' },
+      { value: 'muỗng cà phê', label: 'muỗng cà phê (tsp)' },
+      { value: 'chén', label: 'chén (bát)' },
+    ],
+  },
+  {
+    category: 'Đơn vị đếm & Sơ chế',
+    units: [
+      { value: 'quả', label: 'quả / trái' },
+      { value: 'củ', label: 'củ' },
+      { value: 'tép', label: 'tép (tỏi/hành)' },
+      { value: 'cây', label: 'cây (sả/hành)' },
+      { value: 'nhánh', label: 'nhánh (gừng/cần)' },
+      { value: 'lát', label: 'lát (miếng)' },
+      { value: 'bìa', label: 'bìa (đậu hũ)' },
+      { value: 'bó', label: 'bó (rau)' },
+      { value: 'gói', label: 'gói' },
+      { value: 'hộp', label: 'hộp' },
+      { value: 'lon', label: 'lon' },
+      { value: 'tai', label: 'tai (nấm/mộc nhĩ)' },
+      { value: 'nắm', label: 'nắm' },
+      { value: 'chút', label: 'chút / nhúm' },
+    ],
+  },
+] as const;
+
+export const ALL_COMMON_UNIT_VALUES: readonly string[] = COMMON_UNITS_CONFIG.flatMap((cat) =>
+  cat.units.map((u) => u.value)
+);
 
 interface RecipeIngredientRowProps {
   index: number;
@@ -25,19 +76,39 @@ export function RecipeIngredientRow({
   canRemove,
 }: RecipeIngredientRowProps) {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [isCustomUnit, setIsCustomUnit] = React.useState(false);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
-  const rawName = form.watch(`ingredients.${index}.name`) || '';
-  const ingredientId = form.watch(`ingredients.${index}.ingredientId`);
-  const debouncedSearch = useDebounce(rawName.trim(), 300);
-
-  // Chỉ query khi có từ khóa >= 2 ký tự và dropdown đang mở
-  const { data: ingredientResult, isLoading } = useIngredientsQuery({
-    q: debouncedSearch,
-    limit: 6,
+  const rawName = useWatch({ control: form.control, name: `ingredients.${index}.name` }) || '';
+  const ingredientId = useWatch({
+    control: form.control,
+    name: `ingredients.${index}.ingredientId`,
   });
+  const currentUnit = useWatch({ control: form.control, name: `ingredients.${index}.unit` }) || '';
 
-  const candidates = ingredientResult?.items || [];
+  // Tự liên kết danh mục chuẩn: dò tên khi dòng được nạp (bản nháp AI, trang sửa) và khi
+  // rời ô tên. Chỉ tự chọn khi backend trả EXACT; AMBIGUOUS phải để người dùng chọn.
+  const [resolveTarget, setResolveTarget] = React.useState(() =>
+    ingredientId ? '' : rawName.trim()
+  );
+  const resolveQuery = useIngredientResolveQuery(resolveTarget, !ingredientId);
+  const resolution =
+    !ingredientId && resolveTarget && resolveTarget === rawName.trim() ? resolveQuery : null;
+  const exactMatch =
+    resolution?.data?.match === ResolutionMatch.EXACT && resolution.data.candidates.length === 1
+      ? resolution.data.candidates[0]
+      : undefined;
+
+  React.useEffect(() => {
+    if (!exactMatch) return;
+    form.setValue(`ingredients.${index}.name`, exactMatch.canonicalName, { shouldValidate: true });
+    form.setValue(`ingredients.${index}.ingredientId`, exactMatch.id, { shouldDirty: true });
+  }, [exactMatch, form, index]);
+  const { errors } = useFormState({ control: form.control, name: `ingredients.${index}` });
+  const rowErrors = errors.ingredients?.[index];
+  const errorList = [rowErrors?.name, rowErrors?.amount, rowErrors?.unit];
+  const hasError = errorList.some(Boolean);
+  const errorId = `${fieldDomId(`ingredients.${index}`)}-error`;
 
   // Đóng dropdown khi click ngoài
   React.useEffect(() => {
@@ -58,132 +129,219 @@ export function RecipeIngredientRow({
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    form.setValue(`ingredients.${index}.name`, val, { shouldValidate: true });
-    // Nếu sửa text khác với tên chuẩn ban đầu, reset ingredientId
+    form.setValue(`ingredients.${index}.name`, val, {
+      shouldValidate: Boolean(rowErrors?.name),
+      shouldDirty: true,
+    });
+    // Sửa tên khác tên chuẩn → bỏ liên kết cũ (backend trả INGREDIENT_ID_NAME_MISMATCH nếu giữ).
     if (ingredientId) {
-      form.setValue(`ingredients.${index}.ingredientId`, null, { shouldValidate: true });
+      form.setValue(`ingredients.${index}.ingredientId`, null, { shouldDirty: true });
     }
     setIsOpen(true);
   };
 
-  return (
-    <div className="rounded-xl border bg-card p-3 shadow-xs transition-colors hover:border-primary/40 space-y-2">
-      <div className="grid grid-cols-12 gap-2 sm:gap-3 items-center">
-        {/* Tên nguyên liệu + Auto-suggest dropdown */}
-        <div className="col-span-12 sm:col-span-5 relative" ref={dropdownRef}>
-          <div className="relative">
-            <Input
-              value={rawName}
-              onChange={handleNameChange}
-              onFocus={() => {
-                if (rawName.trim().length >= 2) setIsOpen(true);
-              }}
-              placeholder="Tên nguyên liệu (vd: Đậu hũ, Nấm đùi gà...)"
-              className="h-10 rounded-lg text-sm pr-8"
-            />
-            {isLoading && (
-              <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 animate-spin text-muted-foreground pointer-events-none" />
-            )}
-          </div>
+  const setUnit = (unit: string) =>
+    form.setValue(`ingredients.${index}.unit`, unit, {
+      shouldValidate: Boolean(rowErrors?.unit),
+      shouldDirty: true,
+    });
 
-          {/* Trạng thái chuẩn hóa */}
-          <div className="mt-1 flex items-center gap-1.5">
+  const amountField = form.register(`ingredients.${index}.amount` as const, {
+    valueAsNumber: true,
+  });
+
+  return (
+    <div
+      data-invalid={hasError || undefined}
+      className="rounded-xl border bg-card p-3 shadow-xs transition-colors hover:border-primary/40 data-[invalid]:border-destructive/60"
+    >
+      <div className="grid grid-cols-12 items-start gap-2 sm:gap-3">
+        <span
+          aria-hidden
+          className="col-span-1 mt-2.5 hidden text-xs font-semibold text-muted-foreground tabular-nums sm:block"
+        >
+          {index + 1}.
+        </span>
+
+        {/* Tên nguyên liệu + gợi ý từ danh mục chuẩn */}
+        <div className="relative col-span-12 sm:col-span-5" ref={dropdownRef}>
+          <Input
+            id={fieldDomId(`ingredients.${index}.name`)}
+            value={rawName}
+            onChange={handleNameChange}
+            onFocus={() => {
+              if (rawName.trim().length >= 2) setIsOpen(true);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setIsOpen(false);
+            }}
+            onBlur={() => {
+              if (!ingredientId) setResolveTarget(rawName.trim());
+            }}
+            placeholder="Tên nguyên liệu, vd: Đậu hũ"
+            aria-label={`Tên nguyên liệu ${index + 1}`}
+            aria-invalid={Boolean(rowErrors?.name)}
+            aria-describedby={hasError ? errorId : undefined}
+            autoComplete="off"
+            className="h-10 rounded-lg text-sm"
+          />
+
+          <div className="mt-1 flex min-h-4 items-center gap-1.5">
             {ingredientId ? (
               <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                <CheckCircle2 className="h-3 w-3" /> Chuẩn hóa (Khớp cơ sở dữ liệu)
+                <CheckCircle2 aria-hidden className="h-3 w-3" /> Đã liên kết danh mục chuẩn
+              </span>
+            ) : resolution?.isFetching || exactMatch ? (
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-muted-foreground">
+                <Loader2 aria-hidden className="h-3 w-3 animate-spin" /> Đang tìm trong danh mục
+                chuẩn…
               </span>
             ) : rawName.trim().length > 0 ? (
-              <span
-                className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400 cursor-help"
-                title="Nguyên liệu tự do có thể bị ẩn đối với các tài khoản có chế độ ăn kiêng nghiêm ngặt cho tới khi được duyệt chuẩn."
-              >
-                <AlertCircle className="h-3 w-3" /> Tự do (Chưa liên kết chuẩn)
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                <AlertCircle aria-hidden className="h-3 w-3" />
+                {resolution?.data?.match === ResolutionMatch.AMBIGUOUS
+                  ? `Có ${resolution.data.candidates.length} nguyên liệu khớp — chọn một từ gợi ý`
+                  : resolution?.data?.match === ResolutionMatch.NONE
+                    ? 'Không có trong danh mục chuẩn — thử tên khác hoặc chọn từ gợi ý'
+                    : 'Chưa liên kết — chọn từ gợi ý để hiển thị cho người ăn kiêng'}
               </span>
             ) : null}
           </div>
 
-          {/* Dropdown gợi ý */}
-          {isOpen && candidates.length > 0 && (
-            <div className="absolute left-0 top-full z-50 mt-1 w-full rounded-xl border bg-popover p-1 text-popover-foreground shadow-lg animate-in fade-in-0 zoom-in-95">
-              <div className="px-2 py-1 text-[11px] font-semibold text-muted-foreground flex items-center justify-between border-b pb-1">
-                <span>Gợi ý nguyên liệu chuẩn</span>
-                <Sparkles className="h-3 w-3 text-primary" />
-              </div>
-              <ul className="max-h-48 overflow-y-auto py-1 space-y-0.5">
-                {candidates.map((cand) => (
-                  <li key={cand.id}>
-                    <button
-                      type="button"
-                      onClick={() => handleSelect(cand)}
-                      className="flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
-                    >
-                      <div>
-                        <span className="font-medium">{cand.canonicalName}</span>
-                        {cand.aliases && cand.aliases.length > 0 && (
-                          <span className="ml-1.5 text-xs text-muted-foreground">
-                            (
-                            {cand.aliases
-                              .map((a) => a.alias)
-                              .slice(0, 2)
-                              .join(', ')}
-                            )
-                          </span>
-                        )}
-                      </div>
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 rounded">
-                        {cand.foodGroupLabel || 'Chuẩn'}
-                      </Badge>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+          {isOpen && rawName.trim().length >= 2 && (
+            <div className="absolute top-11 left-0 z-50 w-full rounded-xl border bg-popover p-1 shadow-lg">
+              <IngredientSuggestions query={rawName} onSelect={handleSelect} />
             </div>
           )}
         </div>
 
-        {/* Số lượng */}
-        <div className="col-span-4 sm:col-span-2">
+        {/* Định lượng */}
+        <div className="col-span-5 sm:col-span-2">
           <Input
+            id={fieldDomId(`ingredients.${index}.amount`)}
             type="number"
             step="any"
-            placeholder="Số lượng (vd: 150)"
+            min={0}
+            inputMode="decimal"
+            placeholder="Số lượng"
+            aria-label={`Định lượng nguyên liệu ${index + 1}`}
+            aria-invalid={Boolean(rowErrors?.amount)}
+            aria-describedby={hasError ? errorId : undefined}
             className="h-10 rounded-lg text-sm"
-            {...form.register(`ingredients.${index}.amount` as const, { valueAsNumber: true })}
+            {...amountField}
           />
         </div>
 
-        {/* Đơn vị */}
-        <div className="col-span-4 sm:col-span-2">
-          <Input
-            placeholder="Đơn vị (g, ml, lát...)"
-            className="h-10 rounded-lg text-sm"
-            {...form.register(`ingredients.${index}.unit`)}
-          />
+        {/* Đơn vị: chọn nhanh hoặc tự nhập */}
+        <div className="col-span-5 sm:col-span-3">
+          {isCustomUnit ? (
+            <div className="relative flex items-center">
+              <Input
+                id={fieldDomId(`ingredients.${index}.unit`)}
+                value={currentUnit}
+                onChange={(e) => setUnit(e.target.value)}
+                placeholder="Nhập đơn vị"
+                aria-label={`Đơn vị nguyên liệu ${index + 1}`}
+                aria-invalid={Boolean(rowErrors?.unit)}
+                className="h-10 rounded-lg bg-background pr-8 text-sm"
+                autoFocus
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setIsCustomUnit(false);
+                  setUnit('g');
+                }}
+                aria-label="Quay lại danh sách đơn vị"
+                className="absolute right-0.5 size-8 text-muted-foreground"
+              >
+                <X aria-hidden className="size-3.5" />
+              </Button>
+            </div>
+          ) : (
+            <Select
+              value={currentUnit}
+              onValueChange={(val) => {
+                if (val === '__custom__') {
+                  setIsCustomUnit(true);
+                  setUnit('');
+                } else {
+                  setUnit(val);
+                }
+              }}
+            >
+              <SelectTrigger
+                id={fieldDomId(`ingredients.${index}.unit`)}
+                aria-label={`Đơn vị nguyên liệu ${index + 1}`}
+                aria-invalid={Boolean(rowErrors?.unit)}
+                className="h-10 w-full rounded-lg bg-background text-sm"
+              >
+                <SelectValue placeholder="Đơn vị" />
+              </SelectTrigger>
+              <SelectContent className="max-h-64">
+                {COMMON_UNITS_CONFIG.map((group, groupIdx) => (
+                  <React.Fragment key={group.category}>
+                    {groupIdx > 0 && <SelectSeparator className="my-1" />}
+                    <SelectGroup>
+                      <SelectLabel className="px-2 py-1 text-[11px] font-semibold text-muted-foreground uppercase">
+                        {group.category}
+                      </SelectLabel>
+                      {group.units.map((u) => (
+                        <SelectItem key={u.value} value={u.value} className="text-sm">
+                          {u.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </React.Fragment>
+                ))}
+
+                {currentUnit && !ALL_COMMON_UNIT_VALUES.includes(currentUnit) && (
+                  <>
+                    <SelectSeparator className="my-1" />
+                    <SelectGroup>
+                      <SelectLabel className="px-2 py-1 text-[11px] font-semibold text-muted-foreground uppercase">
+                        Đơn vị hiện tại
+                      </SelectLabel>
+                      <SelectItem value={currentUnit} className="text-sm">
+                        {currentUnit}
+                      </SelectItem>
+                    </SelectGroup>
+                  </>
+                )}
+
+                <SelectSeparator className="my-1" />
+                <SelectItem value="__custom__" className="text-sm font-medium text-primary">
+                  Tự nhập đơn vị khác…
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
-        {/* Ghi chú */}
-        <div className="col-span-3 sm:col-span-2">
-          <Input
-            placeholder="Ghi chú (sơ chế...)"
-            className="h-10 rounded-lg text-sm"
-            {...form.register(`ingredients.${index}.notes`)}
-          />
-        </div>
-
-        {/* Nút xóa */}
-        <div className="col-span-1 flex justify-end">
+        <div className="col-span-2 flex justify-end sm:col-span-1">
           <Button
             type="button"
             variant="ghost"
             size="icon"
             onClick={onRemove}
             disabled={!canRemove}
-            className="h-9 w-9 text-muted-foreground hover:text-destructive"
+            aria-label={`Xóa nguyên liệu ${index + 1}`}
+            className="size-10 text-muted-foreground hover:text-destructive"
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 aria-hidden className="h-4 w-4" />
           </Button>
         </div>
       </div>
+
+      {hasError && (
+        <FieldError
+          id={errorId}
+          className="mt-1 text-xs sm:pl-[8.33%]"
+          errors={errorList.filter(Boolean)}
+        />
+      )}
     </div>
   );
 }

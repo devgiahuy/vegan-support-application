@@ -5,6 +5,8 @@ import {
   contentReviewHistoryResponseSchema,
   deletePostQuerySchema,
   deletePostResponseSchema,
+  myPostsQuerySchema,
+  myPostListResponseSchema,
   postIdentifierParamsSchema,
   postIdParamsSchema,
   postListQuerySchema,
@@ -83,6 +85,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
   const updateRequest = registry.register('UpdatePostRequest', updatePostRequestSchema);
   const postResponse = registry.register('PostResponse', postResponseSchema);
   const postListResponse = registry.register('PostListResponse', postListResponseSchema);
+  const myPostListResponse = registry.register('MyPostListResponse', myPostListResponseSchema);
   const relatedPostsResponse = registry.register(
     'RelatedPostsResponse',
     relatedPostsResponseSchema,
@@ -96,11 +99,36 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
 
   registry.registerPath({
     method: 'get',
+    path: '/api/v1/posts/mine',
+    tags: ['Content'],
+    summary: 'List nội dung do người dùng hiện tại tạo',
+    description:
+      'Chỉ trả nội dung thuộc tài khoản đã xác thực, gồm mọi trạng thái kiểm duyệt và bản revision mới nhất. Nội dung đã xóa không được trả về. Không áp dụng ranking hoặc bộ lọc nội dung công khai.',
+    operationId: 'listMyPosts',
+    security: authenticated,
+    request: { query: myPostsQuerySchema },
+    responses: {
+      200: {
+        description: 'Nội dung cá nhân có phân trang',
+        content: { 'application/json': { schema: myPostListResponse } },
+      },
+      400: errorResponse(errorSchema, 'Query phân trang không hợp lệ', ['VALIDATION_ERROR']),
+      401: errorResponse(errorSchema, 'Vui lòng đăng nhập', [
+        'AUTH_REQUIRED',
+        'INVALID_ACCESS_TOKEN',
+        'TOKEN_EXPIRED',
+      ]),
+      403: errorResponse(errorSchema, 'Tài khoản bị cấm', ['ACCOUNT_BANNED']),
+    },
+  });
+
+  registry.registerPath({
+    method: 'get',
     path: '/api/v1/posts',
     tags: ['Content'],
     summary: 'List nội dung published',
     description:
-      'Tìm kiếm không dấu và filter published content. Ranking v1: title > canonical ingredient > category/tag > body, sau đó publishedAt và UUID. Với access token hợp lệ, backend tự áp dụng allergy, ingredient exclusion, diet pattern và enabled tradition rules trước ranking; dietPattern từ query không thể nới profile đã lưu. ingredientIds yêu cầu Recipe chứa đủ toàn bộ ID.',
+      'Tìm kiếm không dấu và filter published content. Recipe list/related/detail trả statistics.usageUserCount là số user riêng biệt đã thêm công thức vào meal plan chưa xóa; usageTracking=MEAL_PLAN_ADDITION và cookedUserCount=null vì backend chưa theo dõi sự kiện đã nấu hoặc hoàn thành món. Ranking v1: title > canonical ingredient > category/tag > body, sau đó publishedAt và UUID. Với access token hợp lệ, backend tự áp dụng allergy, ingredient exclusion, diet pattern và enabled tradition rules trước ranking; dietPattern từ query không thể nới profile đã lưu. Dị ứng kiểm tra snapshot và toàn bộ thành phần lồng nhau hiện tại. Mọi ràng buộc ăn uống bắt buộc loại nguyên liệu có cấu tạo UNKNOWN/PARTIAL, nguồn ngừng dùng, thiếu thành phần hoặc vòng lặp trước ranking/phân trang. ingredientIds yêu cầu Recipe chứa đủ toàn bộ ID.',
     operationId: 'listPublishedPosts',
     security: optionalAuthenticated,
     request: { query: postListQuerySchema },
@@ -127,7 +155,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     tags: ['Content'],
     summary: 'Lấy related Recipe, Blog và Video',
     description:
-      'Chỉ dùng active published revisions, loại current post và dedupe theo post ID. Mỗi type trả tối đa limitPerType; category/canonical ingredient/normalized tag overlap có trọng số 5/4/3, sau đó publishedAt và UUID. Hard constraints từ profile authenticated luôn chạy trước related score.',
+      'Chỉ dùng active published revisions, loại current post và dedupe theo post ID. Mỗi type trả tối đa limitPerType; Recipe kèm statistics.usageUserCount là số user riêng biệt đã thêm công thức vào meal plan chưa xóa, không phải số người đã nấu hoặc hoàn thành món. Category/canonical ingredient/normalized tag overlap có trọng số 5/4/3, sau đó publishedAt và UUID. Hard constraints từ profile authenticated luôn chạy trước related score.',
     operationId: 'getRelatedPosts',
     security: optionalAuthenticated,
     request: { params: postIdParamsSchema, query: relatedPostsQuerySchema },
@@ -152,7 +180,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     tags: ['Content'],
     summary: 'Tạo Recipe, Blog hoặc Video',
     description:
-      'Không nhận author/status/publishedAt từ client. Mọi content type tạo immutable DRAFT; publication chỉ xảy ra sau explicit submit và Admin approval. Video upload chỉ nhận committed Phase 15 asset thuộc author; YouTube URL được allowlist và không tính quota.',
+      'Không nhận author/status/publishedAt từ client. Tiêu đề/nội dung có thể trùng; khi không gửi slug, backend tự tạo đường dẫn duy nhất, thêm hậu tố nếu cần. Slug client chỉ định vẫn phải duy nhất. Mọi content type tạo immutable DRAFT; publication chỉ xảy ra sau explicit submit và Admin approval. Video upload chỉ nhận committed Phase 15 asset thuộc author; YouTube URL được allowlist và không tính quota.',
     operationId: 'createPost',
     security: authenticated,
     request: {
@@ -209,7 +237,11 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
         'ACCOUNT_BANNED',
         'ACCOUNT_LOCKED',
       ]),
-      409: errorResponse(errorSchema, 'Slug đã được sử dụng', ['CONTENT_SLUG_CONFLICT']),
+      409: errorResponse(
+        errorSchema,
+        'Slug do client chỉ định đã được sử dụng; slug tự sinh được thêm hậu tố khi trùng tiêu đề',
+        ['CONTENT_SLUG_CONFLICT'],
+      ),
     },
   });
 
@@ -219,7 +251,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     tags: ['Content'],
     summary: 'Lấy content detail theo UUID hoặc slug',
     description:
-      'Guest/non-owner chỉ thấy active published revision. Owner/Admin thấy revision mới nhất để tiếp tục edit; soft-deleted content trả 410 cho owner/Admin và 404 cho public.',
+      'Guest/non-owner chỉ thấy active published revision. Owner/Admin thấy revision mới nhất để tiếp tục edit; soft-deleted content trả 410 cho owner/Admin và 404 cho public. Recipe detail có statistics.usageUserCount là số user riêng biệt đã thêm recipe vào meal plan chưa xóa; usageTracking=MEAL_PLAN_ADDITION và cookedUserCount=null vì backend chưa theo dõi sự kiện đã nấu/hoàn thành.',
     operationId: 'getPost',
     request: { params: postIdentifierParamsSchema },
     responses: {
@@ -241,7 +273,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     tags: ['Content'],
     summary: 'Tạo revision mới cho content thuộc quyền sở hữu',
     description:
-      'Request là full revision snapshot và bắt buộc expectedVersion. Author-only mutation luôn tạo DRAFT. Khi sửa content đã approved, published revision cũ tiếp tục phục vụ public cho tới khi revision mới được submit và Admin approve.',
+      'Request là full revision snapshot và bắt buộc expectedVersion. Nếu không gửi slug, giữ đường dẫn hiện tại kể cả khi đổi tiêu đề. Author-only mutation luôn tạo DRAFT. Khi sửa content đã approved, published revision cũ tiếp tục phục vụ public cho tới khi revision mới được submit và Admin approve.',
     operationId: 'updatePost',
     security: authenticated,
     request: {
@@ -294,7 +326,10 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
       body: { required: true, content: { 'application/json': { schema: submitRequest } } },
     },
     responses: {
-      200: { description: 'Revision submitted as PENDING_REVIEW', content: { 'application/json': { schema: postResponse } } },
+      200: {
+        description: 'Revision submitted as PENDING_REVIEW',
+        content: { 'application/json': { schema: postResponse } },
+      },
       400: errorResponse(errorSchema, 'Invalid or uncommitted video media', [
         'VALIDATION_ERROR',
         'INVALID_MEDIA_REFERENCE',
@@ -326,7 +361,10 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     security: authenticated,
     request: { params: postIdParamsSchema, query: reviewHistoryQuerySchema },
     responses: {
-      200: { description: 'Paginated review history', content: { 'application/json': { schema: reviewHistoryResponse } } },
+      200: {
+        description: 'Paginated review history',
+        content: { 'application/json': { schema: reviewHistoryResponse } },
+      },
       400: errorResponse(errorSchema, 'Invalid pagination', ['VALIDATION_ERROR']),
       401: errorResponse(errorSchema, 'Authentication required', [
         'AUTH_REQUIRED',
@@ -359,5 +397,4 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
       409: errorResponse(errorSchema, 'Optimistic version conflict', ['CONTENT_VERSION_CONFLICT']),
     },
   });
-
 }

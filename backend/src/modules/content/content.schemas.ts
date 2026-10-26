@@ -245,6 +245,18 @@ export const postListQuerySchema = z
     forDate: dateOnlySchema
       .optional()
       .describe('Ngày YYYY-MM-DD để áp lịch tradition PERIODIC; mặc định ngày hiện tại VN'),
+    eligibility: z
+      .enum(['ELIGIBLE', 'INELIGIBLE'])
+      .default('ELIGIBLE')
+      .describe(
+        'ELIGIBLE: chỉ món qua ràng buộc hồ sơ. INELIGIBLE: chỉ Recipe bị ràng buộc loại, kèm recipe.eligibility.reasons',
+      ),
+  })
+  .strict();
+export const myPostsQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(100).default(20),
   })
   .strict();
 export const postIdentifierParamsSchema = z.object({ idOrSlug: z.string().trim().min(1).max(220) });
@@ -349,6 +361,30 @@ const recipeCompatibilitySchema = z
 const traditionWarningSchema = z
   .object({ tradition: z.enum(Tradition), warningCode: z.string(), label: z.string() })
   .strict();
+export const recipeIneligibilityReasonCodes = [
+  'ALLERGY',
+  'ALLERGEN_SELECTION_UNRESOLVED',
+  'DIET_PATTERN',
+  'INGREDIENT_COMPOSITION_UNCERTAIN',
+  'INGREDIENT_EXCLUSION',
+  'TRADITION_RULE',
+  'UNRESOLVED_INGREDIENT',
+] as const;
+const recipeEligibilitySchema = z
+  .object({
+    eligible: z.boolean(),
+    reasons: z.array(
+      z
+        .object({
+          code: z.enum(recipeIneligibilityReasonCodes),
+          ingredientNames: z
+            .array(z.string())
+            .describe('Tên hiển thị nguyên liệu gây ra lý do; rỗng nếu lý do ở cấp món'),
+        })
+        .strict(),
+    ),
+  })
+  .strict();
 const recipeOutputSchema = z
   .object({
     servings: z.number().int().positive(),
@@ -371,6 +407,18 @@ const recipeOutputSchema = z
     dietCompatibilities: z.array(recipeCompatibilitySchema),
     ingredients: z.array(recipeIngredientSchema),
     steps: z.array(recipeStepSchema),
+    statistics: z
+      .object({
+        usageUserCount: z.number().int().nonnegative(),
+        usageTracking: z.literal('MEAL_PLAN_ADDITION'),
+        cookedUserCount: z.null(),
+        limitation: z.string(),
+      })
+      .strict()
+      .optional(),
+    eligibility: recipeEligibilitySchema
+      .optional()
+      .describe('Chỉ có khi list với eligibility=INELIGIBLE'),
   })
   .strict();
 
@@ -432,6 +480,20 @@ export const postResponseSchema = z
   .strict();
 export const postListResponseSchema = z
   .object({ success: z.literal(true), data: z.array(postSchema), meta: paginationMetaSchema })
+  .strict();
+export const myPostListResponseSchema = z
+  .object({
+    success: z.literal(true),
+    data: z.array(postSchema),
+    meta: z
+      .object({
+        page: z.number().int().positive(),
+        limit: z.number().int().positive(),
+        total: z.number().int().nonnegative(),
+        totalPages: z.number().int().nonnegative(),
+      })
+      .strict(),
+  })
   .strict();
 export const relatedPostsResponseSchema = z
   .object({
@@ -509,6 +571,8 @@ export type UpdatePostInput = z.infer<typeof updatePostRequestSchema>;
 export type SubmitPostInput = z.infer<typeof submitPostRequestSchema>;
 export type ReviewHistoryQuery = z.infer<typeof reviewHistoryQuerySchema>;
 export type PostListQuery = z.infer<typeof postListQuerySchema>;
+export type RecipeEligibilityOutput = z.infer<typeof recipeEligibilitySchema>;
+export type MyPostsQuery = z.infer<typeof myPostsQuerySchema>;
 export type PostIdentifierParams = z.infer<typeof postIdentifierParamsSchema>;
 export type PostIdParams = z.infer<typeof postIdParamsSchema>;
 export type RelatedPostsQuery = z.infer<typeof relatedPostsQuerySchema>;

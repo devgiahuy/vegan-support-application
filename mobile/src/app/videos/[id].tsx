@@ -1,7 +1,8 @@
 import * as React from 'react';
-import { Alert, Linking, Pressable, Share, Text, View } from 'react-native';
+import { Alert, Pressable, Share, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Link, type Href, useLocalSearchParams, useRouter } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import { ExternalLink, Pencil, Share2, Sparkles, Trash2 } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
@@ -28,9 +29,18 @@ export default function VideoDetailScreen() {
 
   const isOwner = !!currentUserId && video?.author.id === currentUserId;
 
-  const openVideo = () => {
+  const openVideo = async () => {
     if (!video?.videoUrl) return;
-    void Linking.openURL(video.videoUrl);
+    try {
+      await WebBrowser.openBrowserAsync(video.videoUrl, {
+        presentationStyle: WebBrowser.WebBrowserPresentationStyle.FULL_SCREEN,
+      });
+    } catch {
+      Alert.alert(
+        'Không mở được video',
+        'Liên kết video không khả dụng hoặc thiết bị không hỗ trợ trình phát trong app.'
+      );
+    }
   };
 
   const shareVideo = () => {
@@ -96,7 +106,7 @@ export default function VideoDetailScreen() {
     <SiteScreen>
       <View className="gap-5 px-5 pt-4">
         <View className="overflow-hidden rounded-3xl border border-border bg-card">
-          <Pressable onPress={openVideo} className="relative aspect-video w-full">
+          <Pressable onPress={() => void openVideo()} className="relative aspect-video w-full">
             <Image source={{ uri: video.thumbnailUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
             <View className="absolute inset-0 items-center justify-center bg-black/20">
               <View className="h-16 w-16 items-center justify-center rounded-full bg-primary">
@@ -147,42 +157,33 @@ export default function VideoDetailScreen() {
           </View>
         </View>
 
-        <View className="gap-2">
+        <View className="flex-row gap-2">
           <PrimaryButton
             label="Mở video"
+            className="flex-1"
             disabled={!video.videoUrl}
             icon={<ExternalLink size={16} color={colors.primaryForeground} />}
-            onPress={openVideo}
+            onPress={() => void openVideo()}
           />
           <PrimaryButton
             label="Chia sẻ"
             variant="outline"
+            className="flex-1"
             icon={<Share2 size={16} color={colors.foreground} />}
             onPress={shareVideo}
           />
+          {!isOwner ? <ReportButton targetType="POST" targetId={video.id} layout="inline" /> : null}
         </View>
-
-        {!isOwner ? <ReportButton targetType="POST" targetId={video.id} /> : null}
 
         <CommunityPanel postId={video.id} showBookmark commentPlaceholder="Chia sẻ cảm nhận hoặc câu hỏi về video..." />
 
-        <View className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
-          <View className="flex-row items-center gap-2">
-            <Sparkles size={16} color={colors.primary} />
-            <Text className="font-bold text-foreground">Tóm tắt công thức</Text>
-          </View>
-          <Text className="mt-3 text-sm leading-relaxed text-muted-foreground">
-            {video.summary || 'Backend chưa có tóm tắt công thức cho video này.'}
-          </Text>
-        </View>
-
-        {video.tags.length > 0 ? (
-          <View className="flex-row flex-wrap gap-2">
-            {video.tags.map((tag) => (
-              <View key={tag} className="rounded-md bg-muted px-2.5 py-1">
-                <Text className="text-xs font-medium text-muted-foreground">#{tag}</Text>
-              </View>
-            ))}
+        {video.summary ? (
+          <View className="rounded-2xl border border-primary/20 bg-primary/5 p-4">
+            <View className="flex-row items-center gap-2">
+              <Sparkles size={16} color={colors.primary} />
+              <Text className="font-bold text-foreground">Tóm tắt công thức</Text>
+            </View>
+            <Text className="mt-3 text-sm leading-relaxed text-muted-foreground">{video.summary}</Text>
           </View>
         ) : null}
 

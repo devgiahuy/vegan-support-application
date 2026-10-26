@@ -1,4 +1,5 @@
 import { lockDocument } from '../../database/locking.js';
+import { loadIngredientSafetyCatalog } from '../catalog/ingredient-safety.js';
 import {
   FoodDataReviewStatus,
   MealAnalysisStatus,
@@ -13,6 +14,7 @@ const analysisPlanInclude = {
       recipeRevision: {
         include: {
           recipeDetail: true,
+          dietCompatibility: true,
           ingredients: { include: { ingredient: true }, orderBy: { position: 'asc' } },
           nutritionEstimates: {
             where: { status: RecipeNutritionEstimateStatus.CURRENT },
@@ -35,7 +37,9 @@ const profileSelect = {
   dietPreference: true,
   dietPreferenceRules: { where: { enabled: true }, include: { ruleDefinition: true } },
   allergies: { where: { active: true } },
+  ingredientAllergies: { where: { active: true }, select: { ingredientId: true } },
   ingredientExclusions: { where: { active: true } },
+  dietScheduleDates: { where: { enabled: true }, select: { date: true } },
 } satisfies Prisma.UserSelect;
 
 export type AnalysisPlanRecord = Prisma.MealPlanGetPayload<{ include: typeof analysisPlanInclude }>;
@@ -44,6 +48,10 @@ export type MealAnalysisRecord = Prisma.MealAnalysisGetPayload<Record<string, ne
 
 export class MealAnalysisRepository {
   constructor(private readonly prisma: PrismaClient) {}
+
+  safetyCatalog() {
+    return loadIngredientSafetyCatalog(this.prisma);
+  }
 
   findOwnedPlan(userId: string, mealPlanId: string): Promise<AnalysisPlanRecord | null> {
     return this.prisma.mealPlan.findFirst({
