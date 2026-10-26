@@ -13,6 +13,7 @@ import {
   X,
 } from 'lucide-react-native';
 
+import { ShowMoreButton, useShowMore } from '@/components/shared/show-more';
 import { ErrorState, LoadingState } from '@/components/shared/state-views';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { getApiErrorMessage } from '@/lib/api-error';
@@ -202,6 +203,41 @@ function RecalculateModal({
   );
 }
 
+const VISIBLE_OTHER_NUTRIENTS = 2;
+
+/** Vi chất và dưỡng chất khác: danh sách rất dài nên chỉ hiện vài dòng đầu, phần còn lại mở bằng "Xem thêm". */
+function OtherNutrients({ lines }: { lines: NutrientLine[] }) {
+  const list = useShowMore(lines, VISIBLE_OTHER_NUTRIENTS);
+  if (lines.length === 0) return null;
+  return (
+    <View className="gap-1">
+      <Text className="text-xs font-semibold text-foreground">Vi chất và dưỡng chất khác ({lines.length})</Text>
+      {list.visible.map((line) => (
+        <View key={line.code} className="gap-1 border-b border-border/60 py-2">
+          <View className="flex-row items-center justify-between gap-2">
+            <Text className="flex-1 text-sm text-foreground">{line.name}</Text>
+            <Text className="text-sm font-semibold text-foreground">
+              {line.formattedAmount} {line.unit}
+            </Text>
+          </View>
+          <View className="flex-row flex-wrap items-center gap-2">
+            <OriginBadge line={line} />
+            {line.rangeLabel ? (
+              <Text className="text-[10px] text-muted-foreground">
+                Khoảng {line.rangeLabel} {line.unit}
+              </Text>
+            ) : null}
+            {line.confidencePercent > 0 && line.confidencePercent < 100 ? (
+              <Text className="text-[10px] text-muted-foreground">tin cậy {line.confidencePercent}%</Text>
+            ) : null}
+          </View>
+        </View>
+      ))}
+      <ShowMoreButton collapsible={list.collapsible} expanded={list.expanded} hiddenCount={list.hiddenCount} onPress={list.toggle} />
+    </View>
+  );
+}
+
 /**
  * Thẻ "Phân tích dinh dưỡng theo cách nấu" — đồng bộ `RecipeNutritionCard` của web, hiển thị theo mỗi khẩu phần:
  * chỉ số chính, phân bổ năng lượng, nguyên liệu thiếu dữ liệu, bảng dưỡng chất kèm nguồn gốc số liệu
@@ -367,32 +403,7 @@ export function RecipeNutritionCard({ postId, canManage }: { postId: string; can
         </View>
       ) : null}
 
-      {otherNutrients.length > 0 ? (
-        <View className="gap-1">
-          <Text className="text-xs font-semibold text-foreground">Vi chất và dưỡng chất khác</Text>
-          {otherNutrients.map((line) => (
-            <View key={line.code} className="gap-1 border-b border-border/60 py-2">
-              <View className="flex-row items-center justify-between gap-2">
-                <Text className="flex-1 text-sm text-foreground">{line.name}</Text>
-                <Text className="text-sm font-semibold text-foreground">
-                  {line.formattedAmount} {line.unit}
-                </Text>
-              </View>
-              <View className="flex-row flex-wrap items-center gap-2">
-                <OriginBadge line={line} />
-                {line.rangeLabel ? (
-                  <Text className="text-[10px] text-muted-foreground">
-                    Khoảng {line.rangeLabel} {line.unit}
-                  </Text>
-                ) : null}
-                {line.confidencePercent > 0 && line.confidencePercent < 100 ? (
-                  <Text className="text-[10px] text-muted-foreground">tin cậy {line.confidencePercent}%</Text>
-                ) : null}
-              </View>
-            </View>
-          ))}
-        </View>
-      ) : null}
+      <OtherNutrients lines={otherNutrients} />
 
       {nutrition.assumptions.length > 0 ? (
         <Collapsible title={`Giả định khi tính (${nutrition.assumptions.length})`}>

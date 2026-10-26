@@ -2,6 +2,7 @@ import api from '@/lib/axios';
 import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
 import { PostType, RecipeDifficulty } from '@/common/enums';
 import { recipeMapper } from '../mappers/recipe.mapper';
+import { stepsToBody } from '../utils/recipe-body';
 import type { RecipeDetailResponseDto, RecipeListResponseDto } from '../types/recipe.dto';
 import type { RelatedPostsResponseDto } from '@/features/post/types/post.dto';
 import type { Recipe, RecipePaginationResult } from '../types/recipe.model';
@@ -67,10 +68,6 @@ export interface UpdateRecipeInput extends CreateRecipeInput {
   expectedVersion: number;
 }
 
-/** Gộp các bước thành văn bản `revision.body` (backend yêu cầu có nội dung hướng dẫn). */
-function stepsToBody(steps: CreateRecipeStepInput[]): string {
-  return steps.map((step, index) => `Bước ${index + 1}: ${step.instruction.trim()}`).join('\n');
-}
 
 function buildRecipePayload(input: CreateRecipeInput) {
   return {

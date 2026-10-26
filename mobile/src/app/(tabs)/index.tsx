@@ -9,6 +9,7 @@ import {
   MapPin,
   Navigation,
   Scale,
+  ShieldAlert,
   Sparkles,
   TrendingUp,
   UtensilsCrossed,
@@ -20,6 +21,7 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { RecommendedForYou } from '@/features/recommendation/components/recommended-for-you';
 import { RecipeCard } from '@/features/recipe/components/recipe-card';
 import { useRecipesQuery } from '@/features/recipe/queries/recipe.queries';
+import { RESTAURANT_SEARCH_PANEL_ENABLED } from '@/features/restaurant/lib/feature-flags';
 import { useIconColors } from '@/lib/theme-colors';
 
 /** Bốn lối vào tra cứu dinh dưỡng — đồng bộ khối "Tra cứu Dinh dưỡng & Kiến thức Khoa học" của web. */
@@ -50,6 +52,14 @@ const KNOWLEDGE_CARDS: {
     title: 'Phương pháp nấu nướng',
     description: 'Hệ số hao hụt khối lượng và bảo tồn vi chất khi luộc, hấp, xào.',
     action: 'Khám phá',
+  },
+  {
+    // Mobile gộp nhu cầu khuyến nghị (RDA/AI) và giới hạn UL vào khối "kiêng kỵ & tương tác", nên thẻ này cuộn thẳng tới đó.
+    tab: 'INTERACTION',
+    icon: ShieldAlert,
+    title: 'Nhu cầu khuyến nghị & UL',
+    description: 'Chuẩn tiêu thụ RDA/AI hàng ngày và giới hạn dung nạp tối đa theo nhóm đối tượng.',
+    action: 'Đối chiếu',
   },
 ];
 
@@ -163,7 +173,7 @@ export default function HomeScreen() {
 
         <View className="mt-4 flex-row flex-wrap gap-3">
           {KNOWLEDGE_CARDS.map((card) => (
-            <Link key={card.tab} href={`/food-data?tab=${card.tab}` as Href} asChild>
+            <Link key={card.title} href={`/food-data?tab=${card.tab}` as Href} asChild>
               <Pressable className="w-[47%] justify-between rounded-2xl border border-border bg-card p-4">
                 <View>
                   <View className="h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
@@ -194,7 +204,9 @@ export default function HomeScreen() {
 
         <View className="mt-3.5 rounded-2xl border border-border bg-card p-4">
           <Text className="text-sm text-muted-foreground">
-            Cho phép vị trí hoặc nhập địa chỉ để xem quán chay gần bạn và tìm theo món.
+            {RESTAURANT_SEARCH_PANEL_ENABLED
+              ? 'Cho phép vị trí hoặc nhập địa chỉ để xem quán chay gần bạn và tìm theo món.'
+              : 'Cho phép vị trí để xem quán chay gần bạn trên bản đồ.'}
           </Text>
           <View className="mt-4">
             <Link href={'/restaurants' as Href} asChild>

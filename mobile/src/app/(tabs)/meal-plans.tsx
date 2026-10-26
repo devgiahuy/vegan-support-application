@@ -18,6 +18,7 @@ import {
 import { MealPlanGoal } from '@/common/enums';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { EmptyState, ErrorState, LoadingState } from '@/components/shared/state-views';
+import { DropdownField } from '@/components/ui/dropdown-field';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { PlanCard } from '@/features/meal-plan/components/plan-card';
 import { useGenerateMealPlanMutation, useMealPlansQuery } from '@/features/meal-plan/queries/meal-plan.queries';
@@ -194,31 +195,25 @@ export default function MealPlansScreen() {
           </View>
 
           {plans.length > 0 ? (
-            <>
-              <Text className="mt-4 text-sm font-semibold text-foreground">Tạo lại từ phiên bản (tùy chọn)</Text>
-              <View className="mt-2 flex-row flex-wrap gap-1.5">
-                {[{ id: null as string | null, label: 'Tạo mới hoàn toàn' }, ...plans.map((plan) => ({
-                  id: plan.id as string | null,
-                  label: `${plan.formattedWeekRange} · bản ${plan.version}`,
-                }))].map((option) => {
-                  const selected = supersedesId === option.id;
-                  return (
-                    <Pressable
-                      key={option.id ?? 'new'}
-                      onPress={() => setSupersedesId(option.id)}
-                      className={cn('rounded-full px-3 py-1.5', selected ? 'bg-primary' : 'bg-muted')}>
-                      <Text
-                        className={cn(
-                          'text-xs font-medium',
-                          selected ? 'text-primary-foreground' : 'text-muted-foreground'
-                        )}>
-                        {option.label}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+            <View className="mt-4 flex-row items-center justify-between gap-3">
+              <View className="flex-1">
+                <Text className="text-sm font-semibold text-foreground">Tạo lại từ phiên bản</Text>
+                <Text className="text-xs text-muted-foreground">(tùy chọn)</Text>
               </View>
-            </>
+              <DropdownField<string | null>
+                className="w-44"
+                label="Chọn phiên bản"
+                value={supersedesId}
+                options={[
+                  { value: null, label: 'Tạo mới hoàn toàn', shortLabel: 'Tạo mới' },
+                  ...plans.map((plan) => ({
+                    value: plan.id as string | null,
+                    label: `${plan.formattedWeekRange} · bản ${plan.version}`,
+                  })),
+                ]}
+                onChange={setSupersedesId}
+              />
+            </View>
           ) : null}
 
           <View className="mt-4">

@@ -44,7 +44,7 @@ export function RecipeCard({ recipe, className }: { recipe: Recipe; className?: 
           />
         </View>
 
-        <View className="gap-2 p-3.5">
+        <View className="flex-1 gap-2 p-3.5">
           <View className="flex-row items-center gap-3">
             {kcal !== null && kcal > 0 ? (
               <View className="flex-row items-center gap-1">
@@ -75,7 +75,7 @@ export function RecipeCard({ recipe, className }: { recipe: Recipe; className?: 
             </View>
           ) : null}
 
-          <View className="mt-1 flex-row items-center gap-2 border-t border-border pt-2.5">
+          <View className="mt-auto flex-row items-center gap-2 border-t border-border pt-2.5">
             <UserAvatar name={recipe.author.name} uri={recipe.author.avatarUrl} size={28} />
             <Text numberOfLines={1} className="flex-1 text-xs font-medium text-foreground">
               {recipe.author.name}

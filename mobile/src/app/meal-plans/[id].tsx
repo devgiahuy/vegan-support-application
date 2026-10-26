@@ -12,6 +12,7 @@ import {
 
 import { MealType } from '@/common/enums';
 import { SiteScreen } from '@/components/layout/site-screen';
+import { ShowMoreButton, useShowMore } from '@/components/shared/show-more';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { IncompleteDataNotice } from '@/features/meal-analysis/components/incomplete-data-notice';
 import { AnalysisWarningModal } from '@/features/meal-analysis/components/analysis-warning-modal';
@@ -80,6 +81,18 @@ function PlanSummary({ plan }: { plan: MealPlan }) {
   if (!summary || (!summary.title && !summary.detail)) return null;
 
   const isBlocked = summary.status === 'HARD_CONSTRAINT_BLOCKED';
+
+  // Món vi phạm ràng buộc bắt buộc: chỉ hiện một thẻ đỏ; chi tiết đầy đủ nằm ở mục "Phân tích thực đơn".
+  if (isBlocked) {
+    return (
+      <View className="flex-row items-center gap-1.5 self-start rounded-full border border-destructive/30 bg-destructive/10 px-3 py-1.5">
+        <TriangleAlert size={14} color={colors.destructive} />
+        <Text className="shrink text-xs font-semibold text-destructive">
+          {summary.title || 'Có món chưa đáp ứng yêu cầu ăn uống bắt buộc'}
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View
@@ -171,6 +184,8 @@ function AnalysisPanel({
 }) {
   const colors = useIconColors();
   const attentionCount = analysis ? analysis.summary.highCount + analysis.summary.cautionCount : 0;
+  // Danh sách lưu ý có thể rất dài (mỗi ngày một thẻ) nên chỉ hiện thẻ đầu, phần còn lại mở bằng "Xem thêm".
+  const warningList = useShowMore(analysis?.warnings ?? [], 1);
 
   return (
     <View className="rounded-2xl border border-border bg-card p-4">
@@ -245,7 +260,7 @@ function AnalysisPanel({
               <Text className="mt-1 text-xs leading-relaxed text-muted-foreground">{analysis.disclaimer}</Text>
             </View>
           ) : (
-            analysis.warnings.map((warning) => (
+            warningList.visible.map((warning) => (
               <Pressable
                 key={warning.id}
                 onPress={() => onOpenWarning(warning)}
@@ -280,6 +295,12 @@ function AnalysisPanel({
               </Pressable>
             ))
           )}
+          <ShowMoreButton
+            collapsible={warningList.collapsible}
+            expanded={warningList.expanded}
+            hiddenCount={warningList.hiddenCount}
+            onPress={warningList.toggle}
+          />
         </View>
       ) : null}
     </View>
@@ -449,8 +470,23 @@ export default function MealPlanDetailScreen() {
   const targets = plan.estimatedTargets;
 
   return (
-    <SiteScreen onRefresh={() => refetch()}>
-      <View className="gap-4 px-5 pb-4 pt-4">
+    <SiteScreen
+      onRefresh={() => refetch()}
+      // Mỗi khối là con trực tiếp của ScrollView để giữ nguyên vị trí đang xem khi phân tích/lưu ý phía trên tải lại sau khi đổi món.
+      contentClassName="gap-4 px-5 pt-4"
+      maintainContentPosition
+      fab={
+        <>
+          <MealItemSelector
+            visible={pickSlot !== null}
+            slotLabel={pickSlot ? `bữa ${pickSlot.mealTypeLabel.toLowerCase()} (${pickSlot.dateLabel})` : 'bữa ăn'}
+            onSelect={(item) => void pickMeal(item)}
+            onClose={() => setPickSlot(null)}
+          />
+          <AnalysisWarningModal warning={openWarning} onClose={() => setOpenWarning(null)} />
+        </>
+      }>
+      <>
         <View className="gap-2">
           <View className="flex-row items-start justify-between gap-3">
             <Text className="flex-1 text-2xl font-bold tracking-tight text-foreground">
@@ -535,15 +571,7 @@ export default function MealPlanDetailScreen() {
             ? `Tổng vitamin B12 ước tính: ${plan.vitaminB12Mcg} mcg (chỉ tính từ món có dữ liệu).`
             : 'Chưa có dữ liệu vitamin B12 cho thực đơn này.'}
         </Text>
-      </View>
-
-      <MealItemSelector
-        visible={pickSlot !== null}
-        slotLabel={pickSlot ? `bữa ${pickSlot.mealTypeLabel.toLowerCase()} (${pickSlot.dateLabel})` : 'bữa ăn'}
-        onSelect={(item) => void pickMeal(item)}
-        onClose={() => setPickSlot(null)}
-      />
-      <AnalysisWarningModal warning={openWarning} onClose={() => setOpenWarning(null)} />
+      </>
     </SiteScreen>
   );
 }
