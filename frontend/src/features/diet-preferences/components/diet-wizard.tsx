@@ -485,7 +485,7 @@ export function DietWizard({
             )}
           </CardContent>
 
-          <CardFooter className="flex flex-col items-stretch gap-3 border-t">
+          <CardFooter className="flex flex-col items-stretch gap-3 border-t pt-6">
             {stepError && (
               <p role="alert" className="text-sm text-destructive">
                 {stepError}

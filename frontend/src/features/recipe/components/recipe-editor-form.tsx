@@ -767,7 +767,7 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
               )}
             </CardContent>
 
-            <CardFooter className="flex flex-col-reverse gap-2 border-t sm:flex-row sm:justify-between">
+            <CardFooter className="flex flex-col-reverse gap-2 border-t pt-6 sm:flex-row sm:justify-between">
               {prev ? (
                 <Button
                   type="button"
