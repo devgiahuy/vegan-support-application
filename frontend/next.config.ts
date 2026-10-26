@@ -24,6 +24,9 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'storage.googleapis.com' },
       { protocol: 'https', hostname: 'eggyolk.vn' },
       { protocol: 'https', hostname: 'i.redd.it' },
+      { protocol: 'https', hostname: 'cdn.24h.com.vn' },
+      { protocol: 'https', hostname: 'bizweb.dktcdn.net' },
+      { protocol: 'https', hostname: 'noomfood.com' },
     ],
   },
   async redirects() {

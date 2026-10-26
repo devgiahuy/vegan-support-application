@@ -501,16 +501,27 @@ export async function seedScenarioData(
     ],
   });
 
-  const [topicCategory, recipeCategory, tofu, mushroom, milk, brownRice, broccoli] =
-    await Promise.all([
-      prisma.category.findFirstOrThrow({ where: { slug: 'dinh-duong' } }),
-      prisma.category.findFirstOrThrow({ where: { slug: 'com-va-ngu-coc' } }),
-      prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'dau hu' } }),
-      prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'nam huong' } }),
-      prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'sua bo' } }),
-      prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'gao lut' } }),
-      prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'bong cai xanh' } }),
-    ]);
+  const [topicCategory, recipeCategory, tofu, milk, brownRice, broccoli] = await Promise.all([
+    prisma.category.findFirstOrThrow({ where: { slug: 'dinh-duong' } }),
+    prisma.category.findFirstOrThrow({ where: { slug: 'com-va-ngu-coc' } }),
+    prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'dau hu' } }),
+    prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'sua bo' } }),
+    prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'gao lut' } }),
+    prisma.ingredient.findUniqueOrThrow({ where: { normalizedName: 'bong cai xanh' } }),
+  ]);
+
+  // "Nấm om gạo lứt nhiều bước" fixture removed at the user's request (2026-10-26).
+  await prisma.postBookmark.deleteMany({
+    where: { postId: 'a2000000-0000-4000-8000-000000000004' },
+  });
+  await prisma.post.updateMany({
+    where: { id: 'a2000000-0000-4000-8000-000000000004', status: { not: PostStatus.DELETED } },
+    data: {
+      status: PostStatus.DELETED,
+      deletedAt: new Date('2026-10-26T00:00:00.000Z'),
+      deletedById: admin.id,
+    },
+  });
 
   const coverImage = {
     kind: MediaKind.COVER_IMAGE,
@@ -675,59 +686,6 @@ export async function seedScenarioData(
       ],
     });
     await seedPost(transaction, {
-      id: 'a2000000-0000-4000-8000-000000000004',
-      authorId: organizationContributor.id,
-      type: PostType.RECIPE,
-      slug: 'seed-cong-thuc-kho-nam-gao-lut',
-      status: PostStatus.PUBLISHED,
-      publishedRevisionId: 'a2100000-0000-4000-8000-000000000005',
-      revisions: [
-        {
-          id: 'a2100000-0000-4000-8000-000000000005',
-          version: 1,
-          status: PostRevisionStatus.PUBLISHED,
-          title: 'Nấm om gạo lứt nhiều bước',
-          excerpt: 'Công thức mức khó để frontend hiển thị đủ bộ lọc độ khó.',
-          body: 'Ngâm gạo, sơ chế nấm, nấu nền rau củ rồi om chậm đến khi đạt độ sánh.',
-          categoryId: recipeCategory.id,
-          tags: ['nấm', 'mức khó', 'gạo lứt'],
-          media: coverImage,
-          recipe: {
-            servings: 4,
-            prepTimeMinutes: 35,
-            cookTimeMinutes: 75,
-            difficulty: RecipeDifficulty.HARD,
-            calories: 490,
-            proteinGrams: 18,
-            carbsGrams: 72,
-            fatGrams: 12,
-            fiberGrams: 11,
-            mealPlannerEligible: true,
-            allergenCodes: [],
-            traditionWarnings: [],
-            ingredients: [
-              {
-                ingredientId: mushroom.id,
-                displayName: mushroom.canonicalName,
-                normalizedName: mushroom.normalizedName,
-                amount: 220,
-                unit: 'g',
-              },
-              {
-                ingredientId: brownRice.id,
-                displayName: brownRice.canonicalName,
-                normalizedName: brownRice.normalizedName,
-                amount: 180,
-                unit: 'g',
-              },
-            ],
-            vegan: true,
-            lactoOvo: true,
-          },
-        },
-      ],
-    });
-    await seedPost(transaction, {
       id: 'a2000000-0000-4000-8000-000000000005',
       authorId: organizationContributor.id,
       type: PostType.RECIPE,
@@ -744,7 +702,14 @@ export async function seedScenarioData(
           body: 'Nấu gạo lứt mềm rồi thêm sữa; công thức này không phù hợp với chế độ vegan.',
           categoryId: recipeCategory.id,
           tags: ['lacto ovo', 'sữa', 'cháo'],
-          media: coverImage,
+          media: {
+            ...coverImage,
+            secureUrl:
+              'https://noomfood.com/wp-content/uploads/2024/01/chao-gao-lut-2-1024x1024.jpg',
+            publicId: 'seed/recipes/chao-gao-lut-sua',
+            width: 1024,
+            height: 1024,
+          },
           recipe: {
             servings: 2,
             prepTimeMinutes: 10,
