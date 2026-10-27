@@ -94,6 +94,8 @@ import { MealAnalysisService } from './modules/meal-analysis/meal-analysis.servi
 import { createAiProvider } from './modules/chat/ai-provider.js';
 import { AiGovernanceService } from './modules/ai-governance/ai-governance.service.js';
 import { AiGovernanceController } from './modules/ai-governance/ai-governance.controller.js';
+import { createAdminInsightsRouter } from './modules/admin-insights/admin-insights.router.js';
+import { AdminInsightsService } from './modules/admin-insights/admin-insights.service.js';
 import { createAiGovernanceRouter } from './modules/ai-governance/ai-governance.router.js';
 import {
   governAiProvider,
@@ -351,6 +353,10 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/admin', createContributorAdminRouter(contributorController, authentication));
   app.use('/api/v1/admin', createStorageAdminRouter(storageController, authentication));
   app.use('/api/v1/admin', createAiReviewAdminRouter(aiReviewController, authentication));
+  app.use(
+    '/api/v1/admin',
+    createAdminInsightsRouter(new AdminInsightsService(database.client), authentication),
+  );
   app.use(
     '/api/v1/admin',
     createAiGovernanceRouter(new AiGovernanceController(aiGovernance), authentication),

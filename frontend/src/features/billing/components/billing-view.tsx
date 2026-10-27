@@ -17,6 +17,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { billingErrorMessage } from '@/features/billing/lib/billing-errors';
 import {
   billingCheckMessage,
@@ -31,7 +32,7 @@ import {
   useEntitlementsQuery,
   useReconcileBillingOrderMutation,
 } from '@/features/billing/queries/billing.queries';
-import type { BillingOrder } from '@/features/billing/types/billing.model';
+import type { BillingOrder, BillingProduct } from '@/features/billing/types/billing.model';
 
 function OrderRow({
   order,
@@ -69,7 +70,12 @@ function OrderRow({
     <div className="flex flex-col gap-3 rounded-lg border p-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <p className="font-medium">{order.productName}</p>
+          <p className="font-medium">
+            {order.productName}
+            {order.durationLabel !== 'Mua một lần' && (
+              <span className="text-muted-foreground"> · {order.durationLabel}</span>
+            )}
+          </p>
           <p className="text-sm text-muted-foreground">
             {order.priceLabel} · {order.createdAtLabel}
           </p>
@@ -114,6 +120,85 @@ function OrderRow({
   );
 }
 
+function DurationPlanCard({
+  plans,
+  enabled,
+  pendingProductId,
+  onBuy,
+}: {
+  plans: BillingProduct[];
+  enabled: boolean;
+  pendingProductId: string | null;
+  onBuy: (productId: string) => void;
+}) {
+  const [selectedId, setSelectedId] = useState(plans[0]?.id ?? '');
+  const plan = plans.find((item) => item.id === selectedId) ?? plans[0];
+  if (!plan) return null;
+  return (
+    <Card className="flex flex-col">
+      <CardHeader className="gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle className="text-balance">Gói tiện ích theo thời hạn</CardTitle>
+          {plan.savingsPercent > 0 && (
+            <Badge variant="secondary" className="tabular-nums">
+              Tiết kiệm {plan.savingsPercent}%
+            </Badge>
+          )}
+        </div>
+        <CardDescription className="text-pretty">{plan.description}</CardDescription>
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          value={plan.id}
+          onValueChange={(value) => {
+            if (value) setSelectedId(value);
+          }}
+          aria-label="Chọn thời hạn gói tiện ích"
+          className="w-full"
+        >
+          {plans.map((item) => (
+            <ToggleGroupItem key={item.id} value={item.id} className="flex-1">
+              {item.durationLabel}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      </CardHeader>
+      <CardContent className="flex flex-1 flex-col gap-4">
+        <div>
+          <p className="tabular-nums text-2xl font-semibold">{plan.priceLabel}</p>
+          {plan.durationMonths !== null && plan.durationMonths > 1 && (
+            <p className="tabular-nums text-sm text-muted-foreground">
+              Tương đương {plan.monthlyPriceLabel} / tháng
+            </p>
+          )}
+        </div>
+        <ul className="flex flex-col gap-2 text-sm">
+          {plan.periodBenefitLabels.map((label) => (
+            <li key={label}>{label}</li>
+          ))}
+        </ul>
+        <p className="text-pretty text-xs text-muted-foreground">
+          {plan.durationMonths} chu kỳ × {plan.periodDays} ngày kể từ khi thanh toán. Lượt của chu
+          kỳ được dùng trước lượt mua lẻ và hết hạn khi sang chu kỳ mới. Không tự gia hạn; mua khi
+          còn hạn sẽ nối tiếp sau ngày hết hạn hiện tại.
+        </p>
+      </CardContent>
+      <CardFooter>
+        <Button
+          className="w-full"
+          disabled={!enabled || !plan.canBuy || pendingProductId !== null}
+          onClick={() => onBuy(plan.id)}
+        >
+          <QrCode data-icon="inline-start" />
+          {pendingProductId === plan.id
+            ? 'Đang tạo đơn…'
+            : 'Thanh toán gói ' + plan.durationLabel + ' qua payOS'}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+
 function BillingContent() {
   const router = useRouter();
   const params = useSearchParams();
@@ -155,8 +240,9 @@ function BillingContent() {
         <p className="text-sm font-medium text-primary">Gói tiện ích VeggieConnect</p>
         <h1 className="text-balance text-3xl font-semibold sm:text-4xl">Thêm lượt, chủ động hơn</h1>
         <p className="max-w-2xl text-pretty text-muted-foreground">
-          Mua một lần, cộng dồn vào tài khoản. Lượt chat miễn phí được dùng trước. Gói mua thêm
-          không tự gia hạn và không tăng dung lượng ảnh lưu trữ.
+          Gói tiện ích chọn thời hạn 1 tháng, 3 tháng hoặc 1 năm và nhận lượt mới mỗi 30 ngày. Gói
+          lẻ mua một lần, cộng dồn vào tài khoản. Lượt chat miễn phí được dùng trước. Không tự gia
+          hạn và không tăng dung lượng ảnh lưu trữ.
         </p>
       </header>
       <Alert>
@@ -208,6 +294,33 @@ function BillingContent() {
               </Card>
             ))}
           </section>
+          {allowances.data?.subscription && (
+            <Card aria-label="Gói tiện ích đang dùng">
+              <CardHeader>
+                <CardDescription>Gói tiện ích còn hạn đến</CardDescription>
+                <CardTitle className="tabular-nums text-xl">
+                  {allowances.data.subscription.endsAtLabel}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3">
+                <p className="text-pretty text-sm text-muted-foreground">
+                  Chu kỳ hiện tại kết thúc lúc{' '}
+                  <span className="tabular-nums">
+                    {allowances.data.subscription.periodEndsAtLabel}
+                  </span>
+                  . Lượt còn lại của chu kỳ không được cộng dồn sang chu kỳ sau.
+                </p>
+                <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                  {allowances.data.subscription.periodRows.map((row) => (
+                    <div key={row.label} className="flex flex-col gap-1">
+                      <dt className="text-muted-foreground">{row.label}</dt>
+                      <dd className="tabular-nums font-medium">{row.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </CardContent>
+            </Card>
+          )}
           {!catalog.data?.enabled && (
             <Alert>
               <AlertTitle>Thanh toán payOS chưa sẵn sàng</AlertTitle>
@@ -271,7 +384,15 @@ function BillingContent() {
           <p className="text-muted-foreground">Chưa có gói đang mở bán. Hãy thử tải lại sau.</p>
         )}
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {catalog.data?.products.map((product) => (
+          {catalog.data && catalog.data.durationPlans.length > 0 && (
+            <DurationPlanCard
+              plans={catalog.data.durationPlans}
+              enabled={catalog.data.enabled}
+              pendingProductId={purchase.isPending ? (purchase.variables?.productId ?? '') : null}
+              onBuy={(productId) => void buy(productId)}
+            />
+          )}
+          {catalog.data?.oneTimeProducts.map((product) => (
             <Card key={product.id} className="flex flex-col">
               <CardHeader>
                 <CardTitle className="text-balance">{product.name}</CardTitle>

@@ -3,6 +3,7 @@ import type { PaymentOrder, PrismaClient } from '@prisma/client';
 import type { AppConfig } from '../../config/env.js';
 import { lockDocument } from '../../database/locking.js';
 import type { EntitlementService } from '../entitlements/entitlement.service.js';
+import { subscriptionPeriodDays } from './billing.catalog.js';
 import { BillingProviders, paymentError, type VerifiedPayment } from './billing.providers.js';
 
 export class BillingService {
@@ -35,6 +36,8 @@ export class BillingService {
         fridgeCredits: p.fridgeCredits,
         receiptCredits: p.receiptCredits,
         pantrySlots: p.pantrySlots,
+        durationMonths: p.durationMonths ?? null,
+        periodDays: p.durationMonths ? subscriptionPeriodDays : null,
       })),
     };
   }
@@ -85,6 +88,7 @@ export class BillingService {
           fridgeCredits: product.fridgeCredits,
           receiptCredits: product.receiptCredits,
           pantrySlots: product.pantrySlots,
+          durationMonths: product.durationMonths ?? null,
           provider: this.config.billing.provider,
           providerOrderCode: String(randomInt(1, 2 ** 48 - 1)),
           providerLinkId: null,
@@ -241,6 +245,7 @@ export class BillingService {
       fridgeCredits: order.fridgeCredits,
       receiptCredits: order.receiptCredits,
       pantrySlots: order.pantrySlots,
+      durationMonths: order.durationMonths ?? null,
       provider: order.provider,
       simulated: order.provider === 'sandbox',
       status,

@@ -1,5 +1,9 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Combo theo thời hạn và thống kê AI cho admin — Updated 2026-10-27
+
+Gói tiện ích bán theo 1 tháng / 3 tháng / 1 năm (69.000đ / 176.000đ / 580.000đ), cấp 100 chat + 10 tủ lạnh + 10 hóa đơn mỗi 30 ngày, +50 ô tủ khi còn hạn; lượt chu kỳ dùng trước và hết hạn khi sang chu kỳ, mua khi còn hạn thì nối tiếp. Gói lẻ giữ nguyên. Trang `/billing` có bộ chọn thời hạn và thẻ gói đang dùng; số lượt hiển thị gồm cả lượt chu kỳ. Admin dashboard thêm tab "Doanh thu AI" (`GET /admin/billing/revenue`: tổng quan, biểu đồ ngày/tuần/tháng, trạng thái đơn) và "Truy vết AI" (`GET /admin/ai/usage`: người dùng, tính năng, nguồn lượt, kết quả, provider/token; lọc theo tính năng/kết quả/người dùng/ngày; không hiện prompt). Backend lint/typecheck/build/OpenAPI, billing acceptance 12 PASS; FE tsc, 67 files/721 tests, build pass; browser kiểm 2 tab admin và trang mua gói ở 375px. Mobile chưa cập nhật.
+
 ## Duplicate recipe titles and four-week program recovery — Updated 2026-10-26
 
 Backend cho tạo công thức trùng tiêu đề bằng slug tự sinh duy nhất; sửa không đổi URL nếu không yêu cầu. Meal-programs kiểm lịch chay kỳ toàn bộ các tuần trước khi tạo; form cho bổ sung/lưu ngày tại chỗ, chặn dữ liệu thiếu/chưa lưu. Giữ trạng thái PARTIAL/GENERATING, hiện nguyên nhân ở tuần lỗi và hướng dẫn bổ sung lịch. Khôi phục tuần thiếu cập nhật PARTIAL → DRAFT và xác nhận được; ẩn sinh lại khi đã xác nhận, tăng timeout regeneration. Backend gates/acceptance/OpenAPI và FE typecheck/scoped lint, 64 files/704 tests/build pass. HTTP: 4 tuần × 2 phương án = 168 FILLED; browser tuần 2/3/4 mỗi tuần hiện 21 món, lưu lịch mở nút tạo. Phase 17/19 giữ 100% → 100%; không đổi readiness 21/22/27, không thêm backend test suite hoặc migration.

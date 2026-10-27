@@ -10,6 +10,8 @@ export interface BillingProductDto extends BillingBenefitsDto {
   description?: string;
   version?: number | string;
   priceVnd?: number | string;
+  durationMonths?: number | string | null;
+  periodDays?: number | string | null;
 }
 export interface BillingCatalogDto {
   enabled?: boolean;
@@ -22,6 +24,7 @@ export interface BillingOrderDto extends BillingBenefitsDto {
   productId?: string;
   productName?: string;
   priceVnd?: number | string;
+  durationMonths?: number | string | null;
   provider?: string;
   simulated?: boolean;
   status?: string;
@@ -55,7 +58,22 @@ export interface EntitlementDto extends BillingBenefitsDto {
   fridgeMaxImages?: number | string;
   receiptMaxImages?: number | string;
   scanMaxAttempts?: number | string;
+  subscription?: EntitlementSubscriptionDto | null;
   ledger?: EntitlementLedgerDto[];
+}
+export interface EntitlementSubscriptionDto {
+  productId?: string;
+  startsAt?: string;
+  endsAt?: string;
+  periodEndsAt?: string;
+  periodDays?: number | string;
+  chatCredits?: number | string;
+  fridgeCredits?: number | string;
+  receiptCredits?: number | string;
+  pantrySlots?: number | string;
+  chatPerPeriod?: number | string;
+  fridgePerPeriod?: number | string;
+  receiptPerPeriod?: number | string;
 }
 export interface CreateBillingOrderRequestDto {
   productId: string;

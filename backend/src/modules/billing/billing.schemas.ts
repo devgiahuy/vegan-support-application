@@ -47,6 +47,18 @@ export const billingProductSchema = z
     version: z.number().int().positive(),
     priceVnd: z.number().int().positive(),
     ...benefits,
+    durationMonths: z
+      .number()
+      .int()
+      .positive()
+      .nullable()
+      .describe('null = one-time permanent credits; otherwise number of credit periods'),
+    periodDays: z
+      .number()
+      .int()
+      .positive()
+      .nullable()
+      .describe('Length of one credit period; benefits are granted once per period'),
   })
   .strict();
 export const billingCatalogSchema = z
@@ -64,6 +76,7 @@ export const billingOrderSchema = z
     productName: z.string(),
     priceVnd: z.number().int().positive(),
     ...benefits,
+    durationMonths: z.number().int().positive().nullable(),
     provider: z.enum(['payos', 'sandbox', 'vnpay']),
     simulated: z.boolean(),
     status: z.enum(['PENDING', 'PAID', 'CANCELLED', 'FAILED', 'EXPIRED']),
@@ -95,6 +108,29 @@ export const entitlementSchema = z
     fridgeMaxImages: z.number().int().positive(),
     receiptMaxImages: z.number().int().positive(),
     scanMaxAttempts: z.number().int().positive(),
+    subscription: z
+      .object({
+        productId: z.string(),
+        startsAt: z.string().datetime(),
+        endsAt: z
+          .string()
+          .datetime()
+          .describe('End of the last appended paid period, including queued purchases'),
+        periodEndsAt: z.string().datetime(),
+        periodDays: z.number().int().positive(),
+        chatCredits: z.number().int().nonnegative(),
+        fridgeCredits: z.number().int().nonnegative(),
+        receiptCredits: z.number().int().nonnegative(),
+        pantrySlots: z.number().int().nonnegative(),
+        chatPerPeriod: z.number().int().nonnegative(),
+        fridgePerPeriod: z.number().int().nonnegative(),
+        receiptPerPeriod: z.number().int().nonnegative(),
+      })
+      .strict()
+      .nullable()
+      .describe(
+        'Active duration combo. Period credits are spent before permanent credits and expire at periodEndsAt.',
+      ),
     ledger: z.array(
       z
         .object({

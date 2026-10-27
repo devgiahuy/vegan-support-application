@@ -209,6 +209,11 @@ export const API_ENDPOINTS = {
     FEATURES_AUDIT: '/admin/ai/features/audit',
     FEATURE_TOGGLE: (feature: string) => `/admin/ai/features/${feature}`,
   },
+  // Admin insights: doanh thu mua quota AI và truy vết sử dụng AI (READY 2026-10-27)
+  ADMIN_INSIGHTS: {
+    BILLING_REVENUE: '/admin/billing/revenue',
+    AI_USAGE: '/admin/ai/usage',
+  },
   // Custom meals Phase 17 — phục vụ món ăn cá nhân (Owner-scoped)
   CUSTOM_MEALS: {
     LIST: '/custom-meals',

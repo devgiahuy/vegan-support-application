@@ -2,21 +2,21 @@
 # Content Review Admin
 
 ## GET `/api/v1/admin/content-review`
-Admin list submitted content revisions
+Admin and Contributor list submitted content revisions
 - operationId: `listContentReviewAdmin`
 - Params: `query:page (integer)`, `query:limit (integer)`, `query:status (string)`, `query:type (string)`, `query:priority (string)`
 - Request: —
 - Responses: `200` → ReviewQueueListResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse
 
 ## GET `/api/v1/admin/content-review/{id}`
-Admin inspect one immutable revision and its evidence
+Admin and Contributor inspect one immutable revision and its evidence
 - operationId: `getContentReviewAdmin`
 - Params: `path:id* (string)`
 - Request: —
 - Responses: `200` → AdminContentReviewDetailResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse
 
 ## PATCH `/api/v1/admin/content-review/{id}`
-Admin approve or reject a submitted revision
+Admin or Contributor approve or reject a submitted revision
 - operationId: `reviewContentAdmin`
 - Params: `path:id* (string)`
 - Request: `AdminContentReviewDecisionRequest` (required)
