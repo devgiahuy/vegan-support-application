@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
-  "source": "http://localhost:4000/api-docs.json",
-  "generatedAt": "2026-10-25T20:21:24.092Z",
+  "source": "../backend/openapi.json",
+  "generatedAt": "2026-10-27T16:25:08.323Z",
   "stats": {
-    "operations": 184,
-    "groups": 41,
-    "schemas": 162
+    "operations": 186,
+    "groups": 42,
+    "schemas": 164
   },
   "operations": [
     {
@@ -2070,7 +2070,7 @@
       "method": "GET",
       "path": "/api/v1/admin/content-review",
       "group": "Content Review Admin",
-      "summary": "Admin list submitted content revisions",
+      "summary": "Admin and Contributor list submitted content revisions",
       "operationId": "listContentReviewAdmin",
       "params": [
         {
@@ -2116,7 +2116,7 @@
       "method": "GET",
       "path": "/api/v1/admin/content-review/{id}",
       "group": "Content Review Admin",
-      "summary": "Admin inspect one immutable revision and its evidence",
+      "summary": "Admin and Contributor inspect one immutable revision and its evidence",
       "operationId": "getContentReviewAdmin",
       "params": [
         {
@@ -2138,7 +2138,7 @@
       "method": "PATCH",
       "path": "/api/v1/admin/content-review/{id}",
       "group": "Content Review Admin",
-      "summary": "Admin approve or reject a submitted revision",
+      "summary": "Admin or Contributor approve or reject a submitted revision",
       "operationId": "reviewContentAdmin",
       "params": [
         {
@@ -8820,6 +8820,98 @@
       "request": null,
       "responses": {
         "200": "AiGovernanceHealthResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "422": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/billing/revenue",
+      "group": "Admin Insights",
+      "summary": "Revenue from AI allowance purchases: overview, time series and order statuses",
+      "operationId": "getAdminBillingRevenue",
+      "params": [
+        {
+          "in": "query",
+          "name": "from",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "to",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "granularity",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "AdminBillingRevenueResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "422": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/ai/usage",
+      "group": "Admin Insights",
+      "summary": "Paginated per-user AI usage trace with allowance source and outcome",
+      "operationId": "listAdminAiUsage",
+      "params": [
+        {
+          "in": "query",
+          "name": "page",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "limit",
+          "required": false,
+          "type": "integer"
+        },
+        {
+          "in": "query",
+          "name": "feature",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "outcome",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "user",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "from",
+          "required": false,
+          "type": "string"
+        },
+        {
+          "in": "query",
+          "name": "to",
+          "required": false,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "AdminAiUsageTraceResponse",
         "401": "ErrorResponse",
         "403": "ErrorResponse",
         "422": "ErrorResponse"

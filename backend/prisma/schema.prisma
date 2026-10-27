@@ -40,6 +40,7 @@ model BillingProduct {
   fridgeCredits    Int      @map("fridge_credits")
   receiptCredits   Int      @map("receipt_credits")
   pantrySlots      Int      @map("pantry_slots")
+  durationMonths   Int?     @map("duration_months")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
@@ -58,6 +59,7 @@ model PaymentOrder {
   fridgeCredits       Int                @map("fridge_credits")
   receiptCredits      Int                @map("receipt_credits")
   pantrySlots         Int                @map("pantry_slots")
+  durationMonths      Int?               @map("duration_months")
   provider            String
   providerOrderCode   String?            @unique @map("provider_order_code")
   providerLinkId      String?            @unique @map("provider_link_id")
@@ -75,6 +77,8 @@ model PaymentOrder {
   @@unique([ownerId, idempotencyKey])
   @@index([ownerId, createdAt])
   @@index([status, expiresAt])
+  @@index([status, paidAt])
+  @@index([createdAt])
   @@map("payment_orders")
 }
 
@@ -92,18 +96,47 @@ model PaymentEvent {
 }
 
 model EntitlementAccount {
-  referenceVersion Int      @default(0) @map("reference_version")
-  id               String   @id @default(uuid()) @map("_id")
-  ownerId          String   @unique @map("owner_id")
-  chatCredits      Int      @default(0) @map("chat_credits")
-  fridgeCredits    Int      @default(0) @map("fridge_credits")
-  receiptCredits   Int      @default(0) @map("receipt_credits")
-  pantrySlots      Int      @default(0) @map("pantry_slots")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-  owner            User     @relation(fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  referenceVersion     Int       @default(0) @map("reference_version")
+  id                   String    @id @default(uuid()) @map("_id")
+  ownerId              String    @unique @map("owner_id")
+  chatCredits          Int       @default(0) @map("chat_credits")
+  fridgeCredits        Int       @default(0) @map("fridge_credits")
+  receiptCredits       Int       @default(0) @map("receipt_credits")
+  pantrySlots          Int       @default(0) @map("pantry_slots")
+  periodKey            String?   @map("period_key")
+  periodEndsAt         DateTime? @map("period_ends_at")
+  periodChatCredits    Int?      @map("period_chat_credits")
+  periodFridgeCredits  Int?      @map("period_fridge_credits")
+  periodReceiptCredits Int?      @map("period_receipt_credits")
+  periodPantrySlots    Int?      @map("period_pantry_slots")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+  owner                User      @relation(fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("entitlement_accounts")
+}
+
+// One paid duration-based combo order. Credits are granted per period from startsAt;
+// unused period credits expire at the period boundary. Purchases while active append.
+model EntitlementSubscription {
+  referenceVersion Int      @default(0) @map("reference_version")
+  id               String   @id @default(uuid()) @map("_id")
+  ownerId          String   @map("owner_id")
+  orderId          String   @unique @map("order_id")
+  productId        String   @map("product_id")
+  periodDays       Int      @map("period_days")
+  periodCount      Int      @map("period_count")
+  chatCredits      Int      @map("chat_credits")
+  fridgeCredits    Int      @map("fridge_credits")
+  receiptCredits   Int      @map("receipt_credits")
+  pantrySlots      Int      @map("pantry_slots")
+  startsAt         DateTime @map("starts_at")
+  endsAt           DateTime @map("ends_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+  owner            User     @relation(fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([ownerId, endsAt])
+  @@map("entitlement_subscriptions")
 }
 
 model UsageReservation {
@@ -115,12 +148,15 @@ model UsageReservation {
   status           UsageReservationStatus @default(HELD)
   leaseUntil       DateTime               @map("lease_until")
   generation       Int                    @default(1)
+  source           String?
+  periodKey        String?                @map("period_key")
   createdAt        DateTime               @default(now()) @map("created_at")
   updatedAt        DateTime               @updatedAt @map("updated_at")
   owner            User                   @relation(fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([status, leaseUntil])
   @@index([ownerId, feature, status])
+  @@index([feature, createdAt])
   @@map("usage_reservations")
 }
 
@@ -726,6 +762,7 @@ model User {
   entitlementAccount             EntitlementAccount?
   entitlementLedger              EntitlementLedger[]
   usageReservations              UsageReservation[]
+  entitlementSubscriptions       EntitlementSubscription[]
   id                             String                      @id @default(uuid()) @map("_id")
   email                          String                      @unique
   passwordHash                   String                      @map("password_hash")
@@ -2009,6 +2046,8 @@ model AiRequestLog {
   inputTokens       Int?            @map("input_tokens")
   outputTokens      Int?            @map("output_tokens")
   errorCode         String?         @map("error_code")
+  quotaSource       String?         @map("quota_source")
+  usageResourceKey  String?         @map("usage_resource_key")
   redactedMetadata  Json            @default("{}") @map("redacted_metadata")
   startedAt         DateTime        @map("started_at")
   completedAt       DateTime?       @map("completed_at")

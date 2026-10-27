@@ -1,8 +1,8 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.56
+**Version:** 4.57
 
-**Cập nhật:** 26/10/2026
+**Cập nhật:** 27/10/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
@@ -13,6 +13,24 @@
 ---
 
 ## 1. Source of truth và status
+
+### Combo durations and Admin AI insights — 2026-10-27 (4.57, READY)
+
+User-approved BL-20.1. Additive contract; no endpoint returns to `CHANGING`.
+
+| Method   | Endpoint                                                                  | Status  | FE integrated                  | Notes                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| -------- | ------------------------------------------------------------------------- | ------- | ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET      | `/billing/products`                                                       | `READY` | Web 2026-10-27; mobile not yet | New `durationMonths` (null = one-time) and `periodDays`. Catalog: four single packs + `combo-1m` 69.000đ / `combo-3m` 176.000đ / `combo-12m` 580.000đ; old one-time `combo` inactive                                                                                                                                                                                                                                  |
+| POST/GET | `/billing/orders`, `/billing/orders/:id`, `/billing/orders/:id/reconcile` | `READY` | Web 2026-10-27; mobile not yet | Order snapshot adds `durationMonths`                                                                                                                                                                                                                                                                                                                                                                                  |
+| GET      | `/entitlements/me`                                                        | `READY` | Web 2026-10-27; mobile not yet | New nullable `subscription` (period credits, per-period allotment, `periodEndsAt`, `endsAt` incl. appended purchases). Top-level `chatCredits/fridgeCredits/receiptCredits/pantrySlots` stay permanent balances; `pantryLimit` includes active +50. New ledger reasons `SUBSCRIPTION_PERIOD_GRANT`, `SUBSCRIPTION_PERIOD_EXPIRED`, `USAGE_RELEASED_PERIOD_EXPIRED`                                                    |
+| GET      | `/admin/billing/revenue`                                                  | `READY` | Yes, web 2026-10-27            | ADMIN only. Query `from`, `to` (ISO, default last 30 days, max 731), `granularity=day\|week\|month`. Overview, contiguous series (Asia/Ho_Chi_Minh, Monday weeks, revenue by `paidAt`), status counts by `createdAt` + `successRate`. Sandbox history excluded                                                                                                                                                        |
+| GET      | `/admin/ai/usage`                                                         | `READY` | Yes, web 2026-10-27            | ADMIN only. Query `page`, `limit≤100`, `feature=CHAT\|FRIDGE\|RECEIPT`, `outcome=HELD\|SPENT\|RELEASED`, `user` (email/name contains), `from`, `to`. Rows: user, feature, `quotaSource` (`FREE_DAILY`, `SUBSCRIPTION`, `CREDITS`, `NONE`, `UNKNOWN` for chat before 2026-10-27), `quotaCharged`, outcome, AI status, provider/model, tokens, latency, error code. Never prompt/image/receipt content; guests excluded |
+
+Behaviour: each paid duration combo = N × 30-day periods from activation; per period 100 chat / 10 fridge / 10 receipt, unused credits expire; +50 Pantry slots while active; period credits are spent before permanent ones; buying while active appends. Persistence: additive Mongo collection `entitlement_subscriptions`, optional fields on `billing_products`, `payment_orders`, `entitlement_accounts`, `usage_reservations`, `ai_request_logs`, new indexes and native validators — run `npm run prisma:push` then seed (deactivates `combo`). New error `ADMIN_STATS_WINDOW_INVALID` (422): unordered window or > 731 days.
+
+Verified: backend lint/typecheck/build/OpenAPI; `billing:acceptance` (12 PASS, updated for `combo-1m`) and a scripted period/append/expiry/revenue/trace check on an isolated `billing_*` database; HTTP 200 admin / 403 member / 422 window. Web: DTO/Model/Mapper/API/Query + mapper tests, tsc, 721 tests, build; browser check of both admin tabs and the duration selector at 375px. Mobile billing consumers still ignore `subscription`/durations (follow-up).
+
+Changelog 2026-10-27 (4.57): combo durations 1 tháng/3 tháng/1 năm with per-period credits; `GET /admin/billing/revenue`; `GET /admin/ai/usage`; dashboard tabs "Doanh thu AI" and "Truy vết AI".
 
 ### Recipe eligibility view — 2026-10-26 (4.56, READY)
 
@@ -214,6 +232,7 @@ Completed migration: recognize payos in mappers, allow new purchases only for pa
 | `BILLING_RECONCILE_COOLDOWN`                                                          | Wait at least 30 seconds                                                                                                                                        |
 | `BILLING_CHECKOUT_EXPIRED`                                                            | Historical retired local-checkout code; not emitted by current billing routes                                                                                   |
 | `ENTITLEMENT_QUOTA_EXCEEDED`, `PANTRY_CAPACITY_EXCEEDED`, `SCAN_RETRY_LIMIT_EXCEEDED` | Existing quota/capacity/retry handling                                                                                                                          |
+| `ADMIN_STATS_WINDOW_INVALID`                                                          | Admin insights: unordered or > 731-day window (422); UI shows error state and keeps filters                                                                     |
 
 Changelog 2026-10-25 (4.50): đồng bộ receipt consumer với contract Phase 22; giải thích mua cùng món ngày khác sẽ cộng dồn, thêm lựa chọn cùng/khác hóa đơn khi BE yêu cầu, gửi lựa chọn trong confirm, hiển thị các dòng phi thực phẩm đã loại và cho khôi phục, báo các dòng trùng bị bỏ qua. Các receipt endpoint vẫn `IN_PROGRESS` chờ kiểm tra hóa đơn thực tế và release gates BE.
 

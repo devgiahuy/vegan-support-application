@@ -16,6 +16,8 @@ import {
   Database,
   Newspaper,
   Menu,
+  Wallet,
+  Activity,
 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { cn } from '@/lib/utils';
@@ -39,6 +41,8 @@ const NAV_MAIN = [
 const NAV_MONITOR = [
   { label: 'Báo cáo vi phạm', href: '/admin/dashboard?tab=reports', icon: Flag, badge: '5' },
   { label: 'Kiểm chứng AI', href: '/admin/dashboard?tab=ai-verifications', icon: ShieldCheck },
+  { label: 'Doanh thu AI', href: '/admin/dashboard?tab=ai-revenue', icon: Wallet },
+  { label: 'Truy vết AI', href: '/admin/dashboard?tab=ai-usage', icon: Activity },
   { label: 'Nhật ký hệ thống', href: '/admin/dashboard?tab=logs', icon: ScrollText },
   { label: 'Lưu trữ & Quota', href: '/admin/storage', icon: HardDrive },
 ];
@@ -101,6 +105,10 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         return 'Kiểm duyệt bình luận';
       case 'ai-governance':
         return 'Giám sát AI';
+      case 'ai-revenue':
+        return 'Doanh thu mua quota AI';
+      case 'ai-usage':
+        return 'Truy vết sử dụng AI';
       case 'restaurants':
         return 'Quán ăn chờ duyệt';
       default:

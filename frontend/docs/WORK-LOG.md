@@ -1,5 +1,13 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-27] — Combo theo thời hạn, doanh thu và truy vết AI cho admin
+
+- **Yêu cầu**: Dashboard admin thêm API thống kê tiền mua quota AI và bảng truy vết sử dụng AI; phần mua gói cho chọn 1 tháng, 3 tháng, 1 năm. Các điểm mơ hồ đã hỏi và người dùng chốt (BL-20.1 trong IMPLEMENTATION_PLAN).
+- **Backend**: `entitlement_subscriptions` + trường tùy chọn trên product/order/account/reservation/AI request log; lượt theo chu kỳ 30 ngày, hết hạn cuối chu kỳ, dùng trước lượt cộng dồn, mua chồng thì nối tiếp. Module `admin-insights`: `GET /admin/billing/revenue`, `GET /admin/ai/usage` (ADMIN). Chat ghi `quotaSource` để phân biệt lượt miễn phí/gói/cộng dồn.
+- **Frontend**: billing DTO/Model/Mapper thêm thời hạn, `subscription`, tổng lượt khả dụng; `DurationPlanCard` dùng ToggleGroup; feature mới `features/admin-insights` (DTO/Model/Mapper/API/Query + test) với `RevenueStatsPanel` và `AiUsageTraceTable`; 2 tab + 2 mục sidebar admin.
+- **Kiểm chứng**: Backend lint/typecheck/build/OpenAPI; `billing:acceptance` 12 PASS và script kiểm chu kỳ/nối tiếp/hết hạn/doanh thu/truy vết trên DB `billing_*` tách riêng (đã xóa sau khi kiểm). FE tsc, 721 test, build; browser: 2 tab admin, lọc theo người dùng, bộ chọn thời hạn và thẻ gói đang dùng ở 375px, không tràn ngang.
+- **Còn lại**: Ứng dụng mobile chưa hiển thị thời hạn/lượt chu kỳ; chưa thanh toán payOS thật cho gói theo thời hạn.
+
 ## [2026-10-26] — Thiết kế lại luồng tạo/sửa công thức
 
 - **Yêu cầu**: Form công thức lặp thông tin, thứ tự bước chưa rõ, submit thiếu field không có thông báo. Bổ sung sau review: nguyên liệu tự liên kết danh mục chuẩn; bấm gửi là gửi kiểm duyệt luôn.

@@ -24,6 +24,8 @@ import {
   Bot,
   Database,
   Newspaper,
+  Wallet,
+  Activity,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -66,6 +68,7 @@ import {
   FeaturesAuditTable,
 } from '@/features/ai-governance';
 import { AiVerificationTable } from '@/features/ai-artifacts';
+import { AiUsageTraceTable, RevenueStatsPanel } from '@/features/admin-insights';
 import { AdminContentManager } from '@/features/admin-content/components/admin-content-manager';
 
 type Tab =
@@ -82,6 +85,8 @@ type Tab =
   | 'contrib-apps'
   | 'restaurants'
   | 'ai-governance'
+  | 'ai-revenue'
+  | 'ai-usage'
   | 'ai-verifications';
 
 export default function AdminDashboardPage() {
@@ -109,6 +114,8 @@ function parseTabParam(value: string | null): Tab {
     value === 'contrib-apps' ||
     value === 'restaurants' ||
     value === 'ai-governance' ||
+    value === 'ai-revenue' ||
+    value === 'ai-usage' ||
     value === 'ai-verifications'
   ) {
     return value;
@@ -212,6 +219,8 @@ function AdminDashboardContent() {
     { id: 'mod-comments', label: 'Kiểm duyệt BL', icon: MessagesSquare },
     // { id: 'contrib-apps', label: 'Đơn cộng tác', icon: UserCheck },
     { id: 'ai-governance', label: 'Giám sát AI', icon: Bot },
+    { id: 'ai-revenue', label: 'Doanh thu AI', icon: Wallet },
+    { id: 'ai-usage', label: 'Truy vết AI', icon: Activity },
     { id: 'restaurants', label: 'Quán chờ duyệt', icon: Store },
     { id: 'categories', label: 'Cây danh mục', icon: FolderTree },
     { id: 'ingredients', label: 'Nguyên liệu', icon: Leaf },
@@ -355,6 +364,12 @@ function AdminDashboardContent() {
                 <RequestsTable />
               </div>
             )}
+
+            {/* TAB: AI-REVENUE — doanh thu mua quota AI (features/admin-insights) */}
+            {tab === 'ai-revenue' && <RevenueStatsPanel />}
+
+            {/* TAB: AI-USAGE — truy vết sử dụng AI theo người dùng (features/admin-insights) */}
+            {tab === 'ai-usage' && <AiUsageTraceTable />}
 
             {/* TAB: AI-VERIFICATIONS — quản trị kiểm chứng AI (features/ai-artifacts, Phase 23) */}
             {tab === 'ai-verifications' && (

@@ -1,8 +1,8 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.12
+**Version:** 4.13
 
-**Updated:** 2026-10-26
+**Updated:** 2026-10-27
 
 **Status:** Approved implementation baseline
 
@@ -40,7 +40,7 @@ The current API contract may still contain legacy Contributor subtype fields unt
 | D20 | Certificates | No certificate verification in MVP. Future evidence badges do not silently introduce Contributor permission tiers. |
 | D21 | Documentation | `docs/SRS.md` is canonical; runtime capability status stays in frontend integration docs; roadmap is separate from implementation phases. |
 | D22 | Safety | Nutrition, freshness, compatibility, BMI, and AI answers are educational support, not diagnosis or guaranteed safety. |
-| D23 | Usage billing | User-approved 2026-10-13 and payOS conversion 2026-10-14: payOS exclusively for new one-time cumulative AI usage/Pantry capacity packages. App rollout remains development/test; payOS checkout is real money, without sandbox or mock fallback. No recurring or media-storage purchase. |
+| D23 | Usage billing | User-approved 2026-10-13 and payOS conversion 2026-10-14: payOS exclusively for new one-time cumulative AI usage/Pantry capacity packages and, since 2026-10-27, a non-renewing combo with 1-month/3-month/1-year durations (BL-20.1). App rollout remains development/test; payOS checkout is real money, without sandbox or mock fallback. No recurring or media-storage purchase. |
 | D24 | AI recipe draft | Accept title, description and ordered ingredient names without image analysis; return editable amount/unit/serving/time/step suggestions. The author edits and saves via the existing DRAFT content flow. AI output does not publish or become canonical nutrition data. Approved by user 2026-10-24. |
 
 ## 3. MVP scope
@@ -394,6 +394,14 @@ Maintenance clarification 2026-10-26: titles and bodies need not be unique. Auto
 - Pantry capacity counts every undeleted item, including zero quantity. Enforce the limit transactionally for manual creation and both scan confirmations. Existing over-limit items remain readable/editable/deletable; deletion/merge frees capacity. Results require explicit user confirmation before Pantry mutation.
 - Clients share account balances/history and use typed business errors. Mongo validators/indexes, additive queued timestamp backfill, idempotent seed, OpenAPI and consumer documentation are required release gates.
 
+### BL-20.1 — Duration combo and Admin insights (user-approved 2026-10-27)
+
+- Only the combo has durations; the four single packs remain one-time and permanent. Catalog: `combo-1m` 69.000đ, `combo-3m` 176.000đ (−15%, rounded from 175.950), `combo-12m` 580.000đ (−30%, rounded from 579.600). The former one-time `combo` is deactivated; historical/pending orders keep their snapshot (demo data, no migration).
+- A paid duration order creates one subscription of N periods × 30 days from activation (1 year = 12 periods = 360 days). Each period grants 100 chat, 10 fridge and 10 receipt credits once; unused period credits expire at the boundary (ledger `SUBSCRIPTION_PERIOD_EXPIRED`). +50 Pantry slots apply while active, not multiplied; after expiry existing items remain and only new additions are blocked.
+- Current-period credits are spent before permanent (trial and single-pack) credits. A release returns to the same period only while it is current; a release after the boundary is not refunded (`USAGE_RELEASED_PERIOD_EXPIRED`). Buying while active appends after the current end date. No auto-renewal.
+- Admin revenue statistics: overview (revenue of PAID orders, paid orders, buyers, average), contiguous series by day/week/month and order-status counts with success rate. Asia/Ho_Chi_Minh buckets, weeks start Monday; revenue by `paidAt`, statuses by `createdAt`; default 30 days, maximum 731. Simulated sandbox history is excluded. No per-product breakdown or export.
+- Admin AI usage trace: signed-in chat requests (free daily, combo period or permanent credits) and fridge/receipt reservations with user name/email, feature, time, allowance source, units charged, outcome (spent/released/held), AI status, provider/model, tokens, latency and error code. Filters: feature, outcome, user email/name, date range. Prompts, images, receipts and provider payloads are never returned; guests are excluded; chat rows follow AI request-log retention; chat rows created before 2026-10-27 report source `UNKNOWN`. No CSV export.
+
 ## 6. RBAC summary
 
 | Capability | Guest | Member | Contributor | Admin |
@@ -568,6 +576,8 @@ A phase is complete only when:
 ## 13. Change record
 
 - **4.13 — 2026-10-26:** User clarifies that approved Contributors have review/moderation permissions for submitted community content (recipes, articles, videos) created by Members (excluding self-created content and items flagged with open AI flags or high report counts requiring Admin review). Content review endpoints (`/api/v1/admin/content-review*`) allow both Admin and Contributor roles.
+
+- **4.13 — 2026-10-27:** User approves combo durations (1 month / 3 months / 1 year, per-30-day credits, −15%/−30%) and Admin revenue statistics plus per-user AI usage trace (BL-20.1). Single packs remain one-time.
 
 - **4.12 — 2026-10-26:** User approves an explicit "not suitable" recipe-discovery view with per-recipe reasons (BL-02.7). Demo composition assertions extend to prepared foods used by seeded recipes.
 

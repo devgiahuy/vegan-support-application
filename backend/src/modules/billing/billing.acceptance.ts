@@ -319,8 +319,9 @@ try {
   );
   const before = await balance();
   const key = randomUUID();
-  const order = await createOrder('combo', key);
-  assert.equal((await createOrder('combo', key)).id, order.id);
+  const order = await createOrder('combo-1m', key);
+  assert.equal((await createOrder('combo-1m', key)).id, order.id);
+  assert.equal(order.durationMonths, 1);
   assert.equal(
     (await request('/billing/orders', 'POST', { productId: 'chat-100', idempotencyKey: key }))
       .status,
@@ -353,11 +354,25 @@ try {
   );
   assert(replayResponses.every((response) => response.status === 200));
   const purchased = await balance();
-  assert.equal(purchased.chatCredits, before.chatCredits + 100);
-  assert.equal(purchased.fridgeCredits, before.fridgeCredits + 10);
-  assert.equal(purchased.receiptCredits, before.receiptCredits + 10);
-  assert.equal(purchased.pantrySlots, 50);
+  // Duration combos grant per-period credits; permanent balances are unchanged.
+  assert.equal(purchased.chatCredits, before.chatCredits);
+  assert(purchased.subscription);
+  assert.equal(purchased.subscription.chatCredits, 100);
+  assert.equal(purchased.subscription?.fridgeCredits, 10);
+  assert.equal(purchased.subscription?.receiptCredits, 10);
+  assert.equal(purchased.subscription?.pantrySlots, 50);
+  assert.equal(purchased.pantryLimit, (before.pantryLimit ?? 0) + 50);
+  assert.equal(
+    Date.parse(purchased.subscription.endsAt) - Date.parse(purchased.subscription.startsAt),
+    30 * 86_400_000,
+  );
   assert.equal(await db.paymentEvent.count({ where: { orderId: order.id } }), 1);
+  // Later checks exercise permanent credits, so end the period instead of spending it first.
+  await db.entitlementSubscription.updateMany({
+    where: { ownerId: user.id },
+    data: { startsAt: new Date(Date.now() - 2000), endsAt: new Date(Date.now() - 1000) },
+  });
+  assert.equal((await balance()).subscription, null);
   await assert.rejects(
     billing.settle('payos', {
       orderId: order.id,
@@ -645,7 +660,17 @@ try {
   const receiptReady = await receiptRepo.saveResults({
     jobId: receiptRunning.id,
     expectedAttempt: receiptRunning.attemptCount,
-    inputs: [{ inputId: receiptRunning.inputs[0]!.id, error: null, receiptNumber: null, merchantName: null, purchasedAt: null, currency: null, totalAmount: null }],
+    inputs: [
+      {
+        inputId: receiptRunning.inputs[0]!.id,
+        error: null,
+        receiptNumber: null,
+        merchantName: null,
+        purchasedAt: null,
+        currency: null,
+        totalAmount: null,
+      },
+    ],
     candidates: [
       {
         inputId: receiptRunning.inputs[0]!.id,
