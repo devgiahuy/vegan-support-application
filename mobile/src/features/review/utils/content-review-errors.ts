@@ -32,6 +32,8 @@ export function getContentReviewErrorMessage(error: unknown, decision: ContentRe
       return 'Bản nộp này đã được người kiểm duyệt khác xử lý trước đó. Hàng chờ sẽ được tải lại.';
     case 'CONTENT_STATE_CONFLICT':
       return 'Trạng thái nội dung đã thay đổi. Hãy tải lại hàng chờ rồi thử lại.';
+    case 'RECIPE_NUTRITION_INCOMPLETE':
+      return 'Công thức chưa đủ 5 chỉ số dinh dưỡng mỗi khẩu phần. Hãy nhập tay chỉ số còn trống hoặc bấm "AI tính lại" trong chi tiết bản nộp.';
     case 'CONTENT_AUTHOR_INACTIVE':
       return 'Tác giả không còn hoạt động nên không thể quyết định nội dung này.';
     case 'NOT_FOUND':
@@ -48,6 +50,26 @@ export function getContentReviewErrorMessage(error: unknown, decision: ContentRe
     }
     default:
       return getApiErrorMessage(error, 'Không thể hoàn tất quyết định kiểm duyệt.');
+  }
+}
+
+/** Lỗi khi xem/sửa/tính lại dinh dưỡng của bản nộp công thức. */
+export function getReviewNutritionErrorMessage(error: unknown): string {
+  switch (getApiErrorCode(error)) {
+    case 'SELF_APPROVAL_FORBIDDEN':
+      return 'Bạn không thể chỉnh dinh dưỡng của công thức do chính mình tạo.';
+    case 'ADMIN_REVIEW_REQUIRED':
+      return 'Bản nộp này cần Quản trị viên xử lý (có cảnh báo hoặc nhiều báo cáo).';
+    case 'REVIEW_ALREADY_DECIDED':
+    case 'CONTENT_STATE_CONFLICT':
+    case 'REVIEW_CONFLICT':
+      return 'Bản nộp không còn ở trạng thái chờ duyệt.';
+    case 'INVALID_CONTENT':
+      return 'Bản nộp này không phải công thức có dữ liệu cấu trúc.';
+    case 'VALIDATION_ERROR':
+      return 'Giá trị phải là số không âm và nhỏ hơn 100.000.';
+    default:
+      return getApiErrorMessage(error, 'Không thể xử lý dinh dưỡng của bản nộp.');
   }
 }
 

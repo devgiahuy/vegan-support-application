@@ -90,7 +90,7 @@ function QueueCard({
           <Eye size={14} color={colors.foreground} />
           <Text className="text-xs font-semibold text-foreground">Xem xét</Text>
         </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel="Duyệt bài viết" disabled={!decidable} onPress={() => onDecide('APPROVE')} className={cn('h-10 flex-1 flex-row items-center justify-center gap-1.5 rounded-xl bg-emerald-600', !decidable && 'opacity-40')}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Duyệt bài viết" disabled={!decidable} onPress={() => (item.type === PostType.RECIPE ? onView() : onDecide('APPROVE'))} className={cn('h-10 flex-1 flex-row items-center justify-center gap-1.5 rounded-xl bg-emerald-600', !decidable && 'opacity-40')}>
           <Check size={14} color="#ffffff" />
           <Text className="text-xs font-semibold text-white">Duyệt</Text>
         </Pressable>

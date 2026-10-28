@@ -52,14 +52,6 @@ export interface CreateRecipeInput {
   prepTimeMinutes: number;
   cookTimeMinutes: number;
   difficulty: RecipeDifficulty;
-  nutrition?: {
-    calories?: number;
-    proteinGrams?: number;
-    carbsGrams?: number;
-    fatGrams?: number;
-    fiberGrams?: number;
-    vitaminB12Mcg?: number;
-  };
   ingredients: CreateRecipeIngredientInput[];
   steps: CreateRecipeStepInput[];
 }
@@ -85,7 +77,6 @@ function buildRecipePayload(input: CreateRecipeInput) {
       prepTimeMinutes: input.prepTimeMinutes,
       cookTimeMinutes: input.cookTimeMinutes,
       difficulty: input.difficulty,
-      nutrition: input.nutrition ?? {},
       ingredients: input.ingredients.map((ing) => ({
         ...(ing.ingredientId ? { ingredientId: ing.ingredientId } : {}),
         displayName: ing.displayName,

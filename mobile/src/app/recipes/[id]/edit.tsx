@@ -80,15 +80,6 @@ export default function EditRecipeScreen() {
             prepTimeMinutes: recipe.prepTimeMinutes,
             cookTimeMinutes: recipe.cookTimeMinutes,
             difficulty: recipe.difficulty,
-            // Form không cho nhập tay dinh dưỡng; giữ nguyên số đã có để bản sửa không làm mất dữ liệu.
-            nutrition: {
-              ...(recipe.nutrition.calories !== null ? { calories: recipe.nutrition.calories } : {}),
-              ...(recipe.nutrition.protein !== null ? { proteinGrams: recipe.nutrition.protein } : {}),
-              ...(recipe.nutrition.carbs !== null ? { carbsGrams: recipe.nutrition.carbs } : {}),
-              ...(recipe.nutrition.fat !== null ? { fatGrams: recipe.nutrition.fat } : {}),
-              ...(recipe.nutrition.fiber !== null ? { fiberGrams: recipe.nutrition.fiber } : {}),
-              ...(recipe.nutrition.vitaminB12 !== null ? { vitaminB12Mcg: recipe.nutrition.vitaminB12 } : {}),
-            },
             ingredients: recipe.ingredients.map((ing) => ({
               displayName: ing.name,
               amount: ing.amount,

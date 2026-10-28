@@ -138,7 +138,7 @@ export function RecipeForm({
       return;
     }
     try {
-      await onSubmit(buildRecipeInput(values, { coverAssetId: cover?.assetId, tags: initial?.tags, nutrition: initial?.nutrition }));
+      await onSubmit(buildRecipeInput(values, { coverAssetId: cover?.assetId, tags: initial?.tags }));
     } catch (error) {
       const code = getApiErrorCode(error);
       if (code && INGREDIENT_ERROR_CODES.has(code)) {
@@ -213,7 +213,9 @@ export function RecipeForm({
           </View>
         ) : null}
 
-        {step === 'basics' ? (
+        {/* Luôn giữ mounted (chỉ ẩn khi sang bước khác): ô chọn ảnh giữ tiến trình tải lên và tự báo `coverBusy` về
+            false khi xong. Gỡ nó khi đổi bước làm `coverBusy` kẹt ở true nếu ảnh đang tải → không gửi được công thức. */}
+        <View className={step === 'basics' ? '' : 'hidden'}>
           <BasicsSection
             values={values}
             errorOf={errorOf}
@@ -223,7 +225,7 @@ export function RecipeForm({
             onCoverBusyChange={setCoverBusy}
             existingCoverUrl={initial?.coverImageUrl}
           />
-        ) : null}
+        </View>
 
         {step === 'ingredients' ? (
           <IngredientsSection

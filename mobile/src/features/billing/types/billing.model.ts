@@ -15,6 +15,15 @@ export interface BillingProduct extends BillingBenefits {
   priceVnd: number;
   priceLabel: string;
   canBuy: boolean;
+  /** null = gói lẻ cộng dồn vĩnh viễn; số chu kỳ cho gói tiện ích theo thời hạn. */
+  durationMonths: number | null;
+  durationLabel: string;
+  periodDays: number | null;
+  monthlyPriceLabel: string;
+  /** Quyền lợi theo chu kỳ cho gói theo thời hạn; rỗng với gói lẻ. */
+  periodBenefitLabels: string[];
+  /** Phần trăm tiết kiệm so với gói 1 tháng cùng loại; 0 khi không giảm. */
+  savingsPercent: number;
 }
 export interface BillingCatalog {
   enabled: boolean;
@@ -22,11 +31,15 @@ export interface BillingCatalog {
   providerLabel: string;
   simulated: boolean;
   products: BillingProduct[];
+  oneTimeProducts: BillingProduct[];
+  /** Các lựa chọn thời hạn của gói tiện ích, tăng dần theo số tháng. */
+  durationPlans: BillingProduct[];
 }
 export interface BillingOrder extends BillingBenefits {
   id: string;
   productId: string;
   productName: string;
+  durationLabel: string;
   provider: BillingProvider;
   priceLabel: string;
   providerLabel: string;
@@ -52,7 +65,23 @@ export interface EntitlementLedger {
   reasonLabel: string;
   createdAtLabel: string;
 }
+export interface EntitlementSubscription {
+  productId: string;
+  endsAtLabel: string;
+  periodEndsAtLabel: string;
+  periodDays: number;
+  chatCredits: number;
+  fridgeCredits: number;
+  receiptCredits: number;
+  pantrySlots: number;
+  periodRows: { label: string; value: string }[];
+}
 export interface Entitlements extends BillingBenefits {
+  /** Tổng lượt dùng được = lượt chu kỳ gói tiện ích + lượt cộng dồn. */
+  chatAvailable: number;
+  fridgeAvailable: number;
+  receiptAvailable: number;
+  subscription: EntitlementSubscription | null;
   enabled: boolean;
   simulated: boolean;
   providerLabel: string;

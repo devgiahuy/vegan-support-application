@@ -68,6 +68,8 @@ export const API_ENDPOINTS = {
   CONTENT_REVIEW: {
     LIST: '/admin/content-review',
     DETAIL: (revisionId: string) => `/admin/content-review/${revisionId}`,
+    NUTRITION: (revisionId: string) => `/admin/content-review/${revisionId}/nutrition`,
+    NUTRITION_RECALCULATE: (revisionId: string) => `/admin/content-review/${revisionId}/nutrition/recalculate`,
   },
   COMMUNITY: {
     COMMENTS: (postId: string) => `/posts/${postId}/comments`,

@@ -79,8 +79,6 @@ export interface RecipeFormInitial {
   prepTimeMinutes?: number;
   cookTimeMinutes?: number;
   difficulty?: RecipeDifficulty;
-  /** Form không cho nhập tay dinh dưỡng; giữ nguyên số đã có khi sửa. */
-  nutrition?: CreateRecipeInput['nutrition'];
   /** Form không có ô tag; giữ nguyên tag đã có khi sửa. */
   tags?: string[];
   ingredients?: {
@@ -228,7 +226,7 @@ export function hasUserContent(values: RecipeEditorValues): boolean {
  */
 export function buildRecipeInput(
   values: RecipeEditorValues,
-  extras: { coverAssetId?: string; tags?: string[]; nutrition?: CreateRecipeInput['nutrition'] }
+  extras: { coverAssetId?: string; tags?: string[] }
 ): CreateRecipeInput {
   const positionMap = new Map<number, number>();
   values.ingredients.forEach((ingredient, index) => {
@@ -256,7 +254,6 @@ export function buildRecipeInput(
     prepTimeMinutes: Math.trunc(parseAmount(values.prepTime)),
     cookTimeMinutes: Math.trunc(parseAmount(values.cookTime)),
     difficulty: values.difficulty,
-    ...(extras.nutrition ? { nutrition: extras.nutrition } : {}),
     ingredients: values.ingredients.map((ingredient) => ({
       displayName: ingredient.name.trim(),
       amount: parseAmount(ingredient.amount),

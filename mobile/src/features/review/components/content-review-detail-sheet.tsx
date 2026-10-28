@@ -7,7 +7,9 @@ import { FormSheet } from '@/components/shared/form-sheet';
 import { ErrorState, LoadingState } from '@/components/shared/state-views';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { useIconColors } from '@/lib/theme-colors';
-import { useContentReviewDetailQuery } from '../queries/content-review.queries';
+import { PostType } from '@/common/enums';
+import { useContentReviewDetailQuery, useReviewNutritionPanelQuery } from '../queries/content-review.queries';
+import { ReviewNutritionPanel } from './review-nutrition-panel';
 import type { ContentReviewDecision } from '../types/content-review.model';
 import { getContentReviewErrorMessage } from '../utils/content-review-errors';
 
@@ -37,6 +39,10 @@ export function ContentReviewDetailSheet({
   const colors = useIconColors();
   const { data, isLoading, isError, error, refetch } = useContentReviewDetailQuery(revisionId);
   const canDecide = Boolean(data?.canDecide) && !isOwn;
+  const isRecipe = data?.type === PostType.RECIPE;
+  // Dùng chung cache với ReviewNutritionPanel: chỉ cho duyệt khi BE xác nhận đủ 5 chỉ số.
+  const nutritionQuery = useReviewNutritionPanelQuery(revisionId, isRecipe);
+  const nutritionBlocksApproval = isRecipe && !nutritionQuery.data?.canApprove;
 
   return (
     <FormSheet title="Chi tiết bản nộp" onClose={onClose}>
@@ -109,6 +115,9 @@ export function ContentReviewDetailSheet({
             </View>
           ) : null}
 
+          {/* Dinh dưỡng do hệ thống tính khi nộp; người duyệt xác nhận/sửa trước khi duyệt. */}
+          {isRecipe ? <ReviewNutritionPanel revisionId={revisionId} /> : null}
+
           {data.body ? (
             <View className="gap-1.5">
               <Text className="text-xs font-bold uppercase text-muted-foreground">Nội dung toàn văn</Text>
@@ -145,7 +154,13 @@ export function ContentReviewDetailSheet({
             </View>
           ) : (
             <View className="gap-2">
-              <PrimaryButton label="Duyệt" onPress={() => onDecide('APPROVE')} className="bg-emerald-600" />
+              {nutritionBlocksApproval ? (
+                <View className="flex-row items-start gap-2 rounded-xl border border-destructive/30 bg-destructive/10 p-3">
+                  <TriangleAlert size={16} color={colors.destructive} />
+                  <Text className="flex-1 text-xs leading-5 text-destructive">Cần đủ 5 chỉ số dinh dưỡng mỗi khẩu phần trước khi duyệt.</Text>
+                </View>
+              ) : null}
+              <PrimaryButton label="Duyệt" disabled={nutritionBlocksApproval} onPress={() => onDecide('APPROVE')} className="bg-emerald-600" />
               <PrimaryButton label="Từ chối" variant="outline" icon={<CircleX size={16} color={colors.destructive} />} onPress={() => onDecide('REJECT')} />
             </View>
           )}
