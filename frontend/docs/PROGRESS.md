@@ -1,5 +1,9 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Pantry card responsive layout — Updated 2026-10-25
+
+Điều chỉnh card nguyên liệu tại `/pantry` để nhãn và nguồn dữ liệu tự xuống dòng ở màn hình hẹp, số lượng/khối lượng không chèn ép nhau, hạn dùng có thể wrap và các nút thao tác đạt chiều cao dễ chạm hơn. Tiến độ tính năng Pantry giữ nguyên; đây là sửa lỗi hiển thị responsive.
+
 ## Branch handoff and follow-up verification — Updated 2026-10-25
 
 Phase 17/19 giữ 100% → 100%. Kiểm tra lại 3 luồng trên nhánh `codex/fix-allergy-custom-meals-weekly-plan`: 12 runtime/API checks pass; payload thực map đủ 42 món. Bổ sung lưu macro bằng 0, hiển thị macro nhập tay, xóa ghi đè để tính lại và tổng macro tuần từ `estimatedTotals`. Browser xác nhận tạo/sửa custom meal; không có ảnh gốc hoặc kiểm thử native mobile. Kết quả gates cuối được ghi trong WORK-LOG.

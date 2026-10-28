@@ -30,6 +30,25 @@ Nếu thời gian chỉ 8 phút, hoàn thành hai mức đầu. Nếu được 1
 
 Lượt demo có thể bị vướng UI/cache hoặc dữ liệu seed. Chuẩn bị một tab OpenAPI/HTTP response để chỉ ra request, `error.code`, state và `requestId`. Khi UI hiển thị trái backend, nói rõ đó là gap frontend và dùng response backend để chứng minh rule server.
 
+## Phương án ưu tiên Pantry, quét tủ lạnh và hóa đơn (cập nhật 25/10/2026)
+
+Nếu ba chức năng này **bắt buộc phải show**, đổi trọng tâm từ meal plan/kiểm duyệt sang một câu chuyện: **nguyên liệu nhập tay + ảnh tủ lạnh + hàng vừa mua trên hóa đơn → người dùng rà soát → xác nhận → Pantry mới thay đổi → tính lại món còn thiếu**. Đăng nhập và chọn một recipe là bối cảnh ngắn; meal plan, Contributor, moderation và payOS chuyển sang phần hỏi đáp/dự phòng.
+
+| Mốc (10–12 phút) | Thao tác trực tiếp | Điều cần chứng minh |
+|---|---|---|
+| 0:00–1:30 | Đăng nhập Member, mở `/pantry`, ghi số lượng ban đầu của 1–2 nguyên liệu và ledger. | Pantry là dữ liệu của owner; chỉnh tay có lịch sử/version. |
+| 1:30–4:00 | `/pantry/scan`: upload 1 ảnh tủ lạnh, mở job đã xử lý nếu AI còn chạy; chỉ candidate, sửa một lượng/tên, bỏ một nhận dạng sai. Ghi Pantry **chưa đổi**; bấm xác nhận và reload Pantry. | AI tạo gợi ý có uncertainty; **confirm** là ranh giới ghi kho. |
+| 4:00–7:00 | `/receipts/scan`: quét hóa đơn test có 2 thực phẩm và 1 món phi thực phẩm, đọc notice/excluded item; sửa một dòng, confirm các dòng được chọn; reload Pantry và xem diff. | Hóa đơn không tự cộng kho; sản phẩm phi thực phẩm bị loại nhưng user có quyền sửa phân loại trước confirm. |
+| 7:00–9:00 | Mở shopping preview cho recipe đã chọn; so `required/available/missing` trước và sau khi xác nhận scan. | Chỉ lượng Pantry **confirmed**, quy đổi được mới giảm `missing`; `unresolvedItems` vẫn tách riêng. |
+| 9:00–10:30 | Show một tình huống lỗi đã chuẩn bị: ảnh trùng/receipt trùng, ảnh provider lỗi, hoặc version conflict; nêu cách retry/refetch. | Không cộng đôi, không ghi âm thầm; lỗi có state và cách phục hồi. |
+| 10:30–12:00 | Tóm tắt bằng sơ đồ `upload → job → review → confirm → Pantry → shopping`. | Phân biệt phần `READY` của Pantry/shopping với job scan `IN_PROGRESS`. |
+
+**Chuẩn bị trước buổi chấm:** dùng database demo riêng và một Member riêng; ghi Pantry ban đầu, asset ID, job ID/URL, provider đang chạy, HTTP response và ảnh chụp cho từng mốc. Cloudinary cần credential upload thật; Compose mặc định tắt `VISION_ENABLED` và `RECEIPT_ENABLED`. Muốn minh họa AI trên ảnh thật phải bật provider OpenAI hợp lệ và kiểm tra trước bằng chính ảnh Việt Nam sẽ dùng. Nếu chỉ có fake provider, công bố đó là bài test state machine/confirm, không gọi là nhận dạng ảnh thật. Chuẩn bị một job `READY` chưa confirm cho mỗi loại để mở ngay khi live job chậm; nói rõ đó là job chuẩn bị trước. Không confirm các job dự phòng vào cùng Pantry sau khi đã confirm luồng live, tránh cộng trùng.
+
+**Hóa đơn test nên có:** `Cà rốt 2 kg`, `Gạo lứt 1 kg`, `Nước rửa chén 1 chai` trên hóa đơn giả rõ chữ. `Nước rửa chén` dự kiến ở `excludedItems`; nếu AI phân loại sai, đó là cơ hội show bước sửa tay. Với hóa đơn trùng, tách **cùng ảnh/cùng hóa đơn** khỏi **một lần mua khác cùng tên sản phẩm**. Contract 25/10 có `reviewRequired`, `identityDecisionRequired`, `receiptReviewDecision` để user quyết định khi hai ảnh/đơn chỉ trùng một phần; không nói mọi hàng cùng tên đều bị gộp. Ghi nhận kết quả thực tế thay vì hứa AI đọc chính xác từng dòng.
+
+**Đường lui khi provider lỗi:** mở job `FAILED`/`PARTIAL_FAILED`, trình bày retry ảnh lỗi và khả năng nhập Pantry thủ công; sau đó vẫn demo shopping preview `READY` bằng item đã xác nhận. Nếu upload Cloudinary hoặc provider không hoạt động, không giả lập thao tác thành công trên giao diện. Dùng ảnh/Network log của lần chạy trước và phân loại ca trực tiếp là `BLOCKED`. Checklist chi tiết cho ba chức năng nằm ở [L10–L13 của bộ test tay](06_KICH_BAN_TEST_TAY_16_LUONG.md).
+
 ## Chuẩn bị dữ liệu trước buổi chấm
 
 - Một Guest session và ba tài khoản **riêng**: Member, Contributor đã duyệt, Admin. Nội dung do Admin tạo phải được một Admin khác duyệt nếu rule self-review áp dụng.

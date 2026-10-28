@@ -4596,3 +4596,10 @@
 - Đã làm: merge `origin/dev` vào `feature/mobile-table-completion`, giữ cả mục mobile follow-up và mục sửa font footer trong `frontend/docs/WORK-LOG.md`.
 - Verify: mobile `npx tsc --noEmit`, `npm run lint` và `git diff --check` đều pass sau merge.
 - PROGRESS: không đổi phần trăm tính năng; chỉ giải quyết xung đột nhật ký. Thay đổi chưa commit ở workspace chính được giữ nguyên.
+## [2026-10-25] — Sửa responsive card nguyên liệu `/pantry`
+
+- Mục tiêu: khắc phục nội dung card bị dồn/chèn trên viewport hẹp như ảnh người dùng cung cấp.
+- Đã làm: cho nhóm nhãn tự wrap; nguồn dữ liệu có thể xuống dòng; giới hạn co giãn nội dung, quantity và hạn dùng; tăng nút menu và hai nút điều chỉnh lên vùng chạm 44px, thêm accessible label cho nút menu.
+- File sửa: `src/features/pantry/components/pantry-item-card.tsx`, `docs/PROGRESS.md`, `docs/WORK-LOG.md`.
+- Verify: `npx tsc --noEmit` pass. Chưa chạy production build hoặc kiểm tra viewport thực tế trong task này.
+- Tiến độ Pantry: giữ nguyên; chỉ sửa bố cục responsive.

@@ -43,26 +43,26 @@ export function PantryItemCard({
   onOpenMerge,
 }: PantryItemCardProps) {
   return (
-    <Card className="flex flex-col justify-between hover:shadow-md transition-shadow border-neutral-200/80 dark:border-neutral-800">
-      <CardContent className="p-4 sm:p-5 flex-1 flex flex-col justify-between gap-3">
+    <Card className="flex min-w-0 flex-col justify-between border-neutral-200/80 transition-shadow hover:shadow-md dark:border-neutral-800">
+      <CardContent className="flex flex-1 flex-col justify-between gap-3 p-4 sm:p-5">
         <div>
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-base text-neutral-900 dark:text-neutral-100 truncate">
+          <div className="flex min-w-0 items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <h3 className="truncate text-base font-semibold text-neutral-900 text-balance dark:text-neutral-100">
                 {item.displayName}
               </h3>
-              <div className="flex items-center gap-1.5 mt-0.5">
+              <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
                 {item.isCanonical ? (
                   <Badge
                     variant="outline"
-                    className="text-[10px] text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200"
+                    className="max-w-full whitespace-normal text-[10px] text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200"
                   >
                     Chuẩn từ điển
                   </Badge>
                 ) : (
                   <Badge
                     variant="outline"
-                    className="text-[10px] text-neutral-600 bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-400"
+                    className="whitespace-normal text-[10px] text-neutral-600 bg-neutral-100 dark:bg-neutral-800 dark:text-neutral-400"
                   >
                     Tự do
                   </Badge>
@@ -71,14 +71,17 @@ export function PantryItemCard({
                   <Badge
                     variant="outline"
                     onClick={() => onOpenMerge?.(item)}
-                    className="text-[10px] text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300 border-amber-300 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/60"
+                    className="max-w-full whitespace-normal text-[10px] text-amber-700 bg-amber-50 dark:bg-amber-950/40 dark:text-amber-300 border-amber-300 cursor-pointer hover:bg-amber-100 dark:hover:bg-amber-900/60"
                     title="Nhấn để gộp nguyên liệu trùng lặp"
                   >
                     <GitMerge className="h-2.5 w-2.5 mr-0.5" />
                     Có trùng lặp
                   </Badge>
                 )}
-                <span className="text-xs text-muted-foreground">• {item.sourceLabel}</span>
+                <span className="min-w-0 flex-1 basis-full text-xs text-muted-foreground text-pretty">
+                  <span aria-hidden="true">• </span>
+                  {item.sourceLabel}
+                </span>
               </div>
             </div>
 
@@ -87,7 +90,8 @@ export function PantryItemCard({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 -mr-1.5 text-muted-foreground"
+                  aria-label={`Tùy chọn cho ${item.displayName}`}
+                  className="-mr-1.5 size-11 shrink-0 text-muted-foreground"
                 >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
@@ -122,12 +126,12 @@ export function PantryItemCard({
             </DropdownMenu>
           </div>
 
-          <div className="mt-4 flex items-baseline justify-between">
-            <div className="text-xl sm:text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
+          <div className="mt-4 flex min-w-0 items-baseline justify-between gap-2">
+            <div className="min-w-0 break-words text-xl font-bold tabular-nums tracking-tight text-neutral-900 dark:text-neutral-50 sm:text-2xl">
               {item.formattedQuantity}
             </div>
             {item.conversion.formattedGrams && (
-              <span className="text-xs text-muted-foreground font-medium">
+              <span className="shrink-0 text-right text-xs font-medium text-muted-foreground">
                 {item.conversion.formattedGrams}
               </span>
             )}
@@ -135,12 +139,15 @@ export function PantryItemCard({
         </div>
 
         <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800/80 flex flex-col gap-1.5 text-xs text-muted-foreground">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="flex items-center gap-1">
-              <Calendar className="h-3.5 w-3.5" />
+              <Calendar className="size-3.5 shrink-0" />
               Hạn sử dụng:
             </span>
-            <Badge variant={item.expiryBadgeVariant} className="text-[11px] font-normal">
+            <Badge
+              variant={item.expiryBadgeVariant}
+              className="max-w-full whitespace-normal text-[11px] font-normal"
+            >
               {item.expiryBadgeLabel}
             </Badge>
           </div>
@@ -153,12 +160,12 @@ export function PantryItemCard({
         </div>
       </CardContent>
 
-      <CardFooter className="px-4 py-2.5 bg-neutral-50/70 dark:bg-neutral-900/40 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between gap-2">
+      <CardFooter className="flex items-center justify-between gap-2 border-t border-neutral-100 bg-neutral-50/70 px-4 py-2.5 dark:border-neutral-800 dark:bg-neutral-900/40">
         <Button
           variant="outline"
           size="sm"
           onClick={() => onOpenAdjustment(item, 'CONSUME')}
-          className="flex-1 h-8 text-xs font-medium"
+          className="h-11 min-w-0 flex-1 whitespace-normal px-2 text-xs font-medium"
         >
           <MinusCircle className="h-3.5 w-3.5 mr-1 text-amber-600 dark:text-amber-400" />
           Tiêu hao
@@ -167,7 +174,7 @@ export function PantryItemCard({
           variant="outline"
           size="sm"
           onClick={() => onOpenAdjustment(item, 'RESTORE')}
-          className="flex-1 h-8 text-xs font-medium"
+          className="h-11 min-w-0 flex-1 whitespace-normal px-2 text-xs font-medium"
         >
           <PlusCircle className="h-3.5 w-3.5 mr-1 text-emerald-600 dark:text-emerald-400" />
           Bổ sung
