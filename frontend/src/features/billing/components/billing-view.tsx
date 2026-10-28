@@ -478,20 +478,34 @@ function BillingContent() {
         {allowances.data?.ledger.length === 0 && (
           <p className="text-muted-foreground">Chưa có biến động quyền lợi.</p>
         )}
-        {allowances.data?.ledger.map((entry) => (
-          <div
-            key={entry.id}
-            className="flex items-center justify-between gap-4 border-b py-3 text-sm"
-          >
-            <div>
-              <p>
-                {entry.featureLabel} · {entry.reasonLabel}
-              </p>
-              <p className="text-xs text-muted-foreground">{entry.createdAtLabel}</p>
+        {allowances.data?.ledger.map((entry) => {
+          const isPositive = entry.delta > 0 || entry.deltaLabel.startsWith('+');
+          const isNegative = entry.delta < 0 || entry.deltaLabel.startsWith('-');
+          return (
+            <div
+              key={entry.id}
+              className="flex items-center justify-between gap-4 border-b py-3 text-sm"
+            >
+              <div>
+                <p>
+                  {entry.featureLabel} · {entry.reasonLabel}
+                </p>
+                <p className="text-xs text-muted-foreground">{entry.createdAtLabel}</p>
+              </div>
+              <span
+                className={`tabular-nums font-semibold ${
+                  isPositive
+                    ? 'text-emerald-600 dark:text-emerald-400'
+                    : isNegative
+                      ? 'text-rose-600 dark:text-rose-400'
+                      : 'text-muted-foreground font-medium'
+                }`}
+              >
+                {entry.deltaLabel}
+              </span>
             </div>
-            <span className="tabular-nums font-medium">{entry.deltaLabel}</span>
-          </div>
-        ))}
+          );
+        })}
       </section>
       <nav className="flex flex-wrap gap-3" aria-label="Tiếp tục sử dụng">
         <Button asChild variant="outline">

@@ -60,6 +60,7 @@ export interface BillingOrders {
 }
 export interface EntitlementLedger {
   id: string;
+  delta: number;
   featureLabel: string;
   deltaLabel: string;
   reasonLabel: string;

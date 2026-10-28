@@ -18,7 +18,7 @@ export function PlanCard({ plan }: { plan: MealPlan }) {
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between gap-2">
-          <CardTitle className="text-base">Tuần {plan.formattedWeekRange}</CardTitle>
+          <CardTitle className="text-base">Ngày {plan.formattedWeekRange}</CardTitle>
           <Badge variant="secondary">{plan.goalLabel}</Badge>
         </div>
         <CardDescription>

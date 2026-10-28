@@ -63,14 +63,31 @@ describe('billing mapper', () => {
     const model = entitlementMapper.toModel({
       chatCredits: '2',
       chatReserved: '1',
-      ledger: [{ feature: 'CHAT', delta: '-1', reason: 'USAGE_RESERVED', createdAt: 'invalid' }],
+      ledger: [
+        { feature: 'CHAT', delta: '-1', reason: 'USAGE_RESERVED', createdAt: 'invalid' },
+        { feature: 'RECEIPT', delta: '3', reason: 'TRIAL_GRANT', createdAt: 'invalid' },
+        { feature: 'RECEIPT', delta: 0, reason: 'USAGE_COMPLETED', createdAt: 'invalid' },
+      ],
     });
     expect(model.usageRows[0].note).toContain('1 đang giữ chỗ');
     expect(model.ledger[0]).toMatchObject({
+      delta: -1,
       featureLabel: 'Chat AI',
       deltaLabel: '-1',
       reasonLabel: 'Giữ chỗ cho tác vụ',
       createdAtLabel: 'Chưa có',
+    });
+    expect(model.ledger[1]).toMatchObject({
+      delta: 3,
+      featureLabel: 'Phân tích hóa đơn',
+      deltaLabel: '+3',
+      reasonLabel: 'Cấp lượt dùng thử',
+    });
+    expect(model.ledger[2]).toMatchObject({
+      delta: 0,
+      featureLabel: 'Phân tích hóa đơn',
+      deltaLabel: '0',
+      reasonLabel: 'Hoàn tất sử dụng',
     });
   });
   it('maps empty history and a validated pending checkout', () => {

@@ -3,14 +3,6 @@
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Bold,
-  Italic,
-  Heading2,
-  Heading3,
-  Quote,
-  List,
-  ListOrdered,
-  Lightbulb,
   Eye,
   Edit3,
   Image as ImageIcon,
@@ -18,7 +10,6 @@ import {
   Clock,
   Sparkles,
   FileText,
-  AlertTriangle,
   Send,
   Save,
   Tag,
@@ -32,7 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Select,
   SelectContent,
@@ -40,7 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SafeImage } from '@/components/shared/safe-image';
 import { CategoryType, PostStatus, UserRole } from '@/common/enums';
 import { useAuthStore } from '@/store/useAuthStore';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
@@ -125,8 +116,8 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
   const [title, setTitle] = React.useState(initialPost?.title || '');
   const [summary, setSummary] = React.useState(() => {
     if (!initialPost) return '';
-    if ('summary' in initialPost) return initialPost.summary;
-    if ('excerpt' in initialPost) return initialPost.excerpt;
+    if ('summary' in initialPost && initialPost.summary) return initialPost.summary;
+    if ('excerpt' in initialPost && initialPost.excerpt) return initialPost.excerpt;
     return '';
   });
   const [category, setCategory] = React.useState(() => {
@@ -145,8 +136,9 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
   });
   const [coverImage, setCoverImage] = React.useState(() => {
     if (!initialPost) return COVER_PRESETS[0].url;
-    if ('coverImage' in initialPost) return initialPost.coverImage;
-    if ('coverImageUrl' in initialPost) return initialPost.coverImageUrl;
+    if ('coverImage' in initialPost && initialPost.coverImage) return initialPost.coverImage;
+    if ('coverImageUrl' in initialPost && initialPost.coverImageUrl)
+      return initialPost.coverImageUrl;
     return COVER_PRESETS[0].url;
   });
   const [coverMedia, setCoverMedia] = React.useState<{
@@ -158,22 +150,23 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
     if (initialPost && 'coverMedia' in initialPost) return initialPost.coverMedia ?? null;
     return null;
   });
-  const [contentMarkdown, setContentMarkdown] = React.useState(() => {
+  const [content, setContent] = React.useState(() => {
     if (!initialPost) return '';
-    if ('contentMarkdown' in initialPost) return initialPost.contentMarkdown;
-    if ('content' in initialPost) return initialPost.content;
+    if ('content' in initialPost && initialPost.content) return initialPost.content;
+    if ('contentMarkdown' in initialPost && initialPost.contentMarkdown)
+      return initialPost.contentMarkdown;
     return '';
   });
   const [tags, setTags] = React.useState<string[]>(initialPost?.tags || []);
   const [newTagInput, setNewTagInput] = React.useState('');
 
-  // Quyền xuất bản lấy từ phiên đăng nhập thật (không mô phỏng):
+  // Quyền xuất bản lấy từ phiên đăng nhập thật:
   // Người đóng góp / Quản trị viên được xuất bản ngay, Thành viên phải chờ duyệt.
   const sessionUser = useAuthStore((s) => s.user);
   const canPublishDirectly =
     sessionUser?.role === UserRole.CONTRIBUTOR || sessionUser?.role === UserRole.ADMIN;
-  // Tên tác giả hiển thị ở xem trước: ưu tiên tác giả gốc của bài đang sửa,
-  // bài mới lấy tên user đang đăng nhập.
+
+  // Tên tác giả hiển thị ở xem trước
   const previewAuthorName =
     (isEditing &&
       initialPost &&
@@ -189,36 +182,12 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
 
   // Đếm từ & tính thời gian đọc ước tính
   const wordCount = React.useMemo(() => {
-    return contentMarkdown.trim().split(/\s+/).filter(Boolean).length;
-  }, [contentMarkdown]);
+    return content.trim().split(/\s+/).filter(Boolean).length;
+  }, [content]);
 
   const readingMinutes = React.useMemo(() => {
     return Math.max(1, Math.ceil(wordCount / 160));
   }, [wordCount]);
-
-  // Chèn cú pháp Markdown tại vị trí con trỏ
-  const insertMarkdown = (prefix: string, suffix: string = '') => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-    const selected = text.substring(start, end);
-
-    const replacement = `${prefix}${selected || 'nội dung'}${suffix}`;
-    const newText = text.substring(0, start) + replacement + text.substring(end);
-
-    setContentMarkdown(newText);
-
-    setTimeout(() => {
-      textarea.focus();
-      textarea.setSelectionRange(
-        start + prefix.length,
-        start + prefix.length + (selected.length || 'nội dung'.length)
-      );
-    }, 10);
-  };
 
   const handleAddTag = () => {
     const trimmed = newTagInput.trim().replace(/^#/, '');
@@ -233,12 +202,34 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
   };
 
   const handleSubmit = async (actionType: 'DRAFT' | 'SUBMIT') => {
-    if (!title.trim()) {
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
       toast.error('Vui lòng nhập tiêu đề bài viết!');
       return;
     }
-    if (!contentMarkdown.trim()) {
+    if (trimmedTitle.length < 5) {
+      toast.error('Tiêu đề bài viết quá ngắn!', {
+        description: 'Tiêu đề cần có ít nhất 5 ký tự.',
+      });
+      return;
+    }
+    if (trimmedTitle.length > 200) {
+      toast.error('Tiêu đề bài viết quá dài!', {
+        description: 'Tiêu đề không được vượt quá 200 ký tự.',
+      });
+      return;
+    }
+
+    const trimmedContent = content.trim();
+    if (!trimmedContent) {
       toast.error('Vui lòng nhập nội dung bài viết!');
+      return;
+    }
+    if (trimmedContent.length < 100) {
+      toast.error('Nội dung bài viết quá ngắn!', {
+        description: `Nội dung cần có ít nhất 100 ký tự để chia sẻ kiến thức hữu ích (hiện có ${trimmedContent.length}/100 ký tự). Hãy bổ sung thêm chi tiết chia sẻ nhé!`,
+      });
+      textareaRef.current?.focus();
       return;
     }
 
@@ -246,22 +237,20 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
     if (actionType === 'DRAFT') {
       postStatus = PostStatus.DRAFT;
     } else {
-      // Người đóng góp / Quản trị viên: xuất bản ngay; Thành viên: chờ duyệt.
       postStatus = canPublishDirectly ? PostStatus.PUBLISHED : PostStatus.PENDING_REVIEW;
     }
 
     setIsSubmitting(true);
     try {
-      // Backend nhận categoryIds (UUID) — map tên chuyên mục đang chọn sang id trong cây thật.
       const categoryId = flatCategories.find((c) => c.name === category)?.id || '';
       if (isEditing && initialPost) {
         await updateArticleMutation.mutateAsync({
           id: initialPost.id,
           article: {
-            title,
+            title: trimmedTitle,
             category: { id: categoryId, name: category },
-            excerpt: summary || title,
-            content: contentMarkdown,
+            excerpt: summary.trim() || trimmedTitle,
+            content: trimmedContent,
             coverImageUrl: coverImage,
             coverMedia,
             tags,
@@ -284,17 +273,17 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
           addTrackedUserPost(user.id, {
             id: initialPost.id,
             type: 'BLOG',
-            title,
+            title: trimmedTitle,
             createdAt: new Date().toISOString(),
           });
         }
         router.push(`/articles/${initialPost.id}`);
       } else {
         const res = await createArticleMutation.mutateAsync({
-          title,
+          title: trimmedTitle,
           category: { id: categoryId, name: category },
-          excerpt: summary || title,
-          content: contentMarkdown,
+          excerpt: summary.trim() || trimmedTitle,
+          content: trimmedContent,
           coverImageUrl: coverImage,
           coverMedia,
           tags,
@@ -305,7 +294,7 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
           actionType === 'DRAFT'
             ? 'Đã lưu bài viết vào Bản nháp!'
             : postStatus === 'PUBLISHED'
-              ? '🎉 Bài viết đã được Chuyên gia Dinh dưỡng kiểm chứng và xuất bản!'
+              ? '🎉 Bài viết đã được xuất bản công khai!'
               : '🎉 Bài viết đã gửi thành công! Đang chờ Chuyên gia Dinh dưỡng kiểm duyệt.'
         );
 
@@ -314,7 +303,7 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
           addTrackedUserPost(user.id, {
             id: targetId,
             type: 'BLOG',
-            title,
+            title: trimmedTitle,
             createdAt: new Date().toISOString(),
           });
         }
@@ -331,94 +320,68 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
     }
   };
 
-  // Render markdown đơn giản cho Live Preview
-  const renderPreviewContent = (md: string) => {
-    return md.split('\n\n').map((block, idx) => {
-      const trimmed = block.trim();
-      if (trimmed.startsWith('## ')) {
-        return (
-          <h2 key={idx} className="text-xl font-bold text-foreground mt-6 mb-2">
-            {trimmed.replace(/^## /, '')}
-          </h2>
-        );
-      }
-      if (trimmed.startsWith('### ')) {
-        return (
-          <h3 key={idx} className="text-lg font-semibold text-foreground mt-4 mb-2">
-            {trimmed.replace(/^### /, '')}
-          </h3>
-        );
-      }
-      if (trimmed.startsWith('> [!TIP]')) {
-        return (
-          <div
-            key={idx}
-            className="my-4 rounded-xl border-l-4 border-emerald-500 bg-emerald-500/10 p-4"
-          >
-            <div className="flex items-center gap-1.5 font-bold text-emerald-600 dark:text-emerald-400 text-sm mb-1">
-              <Lightbulb className="h-4 w-4" /> Mẹo Dinh Dưỡng Từ Chuyên Gia
-            </div>
-            <p className="text-sm text-foreground leading-relaxed">
-              {trimmed.replace(/^> \[!TIP\]\s*/, '').replace(/^> /gm, '')}
-            </p>
-          </div>
-        );
-      }
-      if (trimmed.startsWith('> ')) {
-        return (
-          <blockquote
-            key={idx}
-            className="my-4 border-l-4 border-primary pl-4 italic text-muted-foreground bg-primary/5 py-2.5 rounded-r-lg"
-          >
-            {trimmed.replace(/^> /gm, '')}
-          </blockquote>
-        );
-      }
-      if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-        const items = trimmed.split('\n');
-        return (
-          <ul
-            key={idx}
-            className="list-disc list-inside space-y-1 my-2 text-sm leading-relaxed text-muted-foreground"
-          >
-            {items.map((it, i) => (
-              <li key={i}>{it.replace(/^[-*]\s*/, '')}</li>
-            ))}
-          </ul>
-        );
-      }
-      return (
-        <p key={idx} className="text-sm sm:text-base leading-relaxed text-muted-foreground my-3">
-          {trimmed}
-        </p>
-      );
-    });
-  };
-
   return (
-    <div className="space-y-8">
-      {/* Thông tin quyền xuất bản theo vai trò thật của tài khoản */}
-      <Card className="border-primary/30 bg-primary/5">
-        <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4">
+    <div className="space-y-6">
+      {/* Mobile quick action bar (chỉ hiển thị trên màn hình nhỏ < lg) */}
+      <div className="flex lg:hidden items-center justify-between gap-3 p-3.5 rounded-2xl bg-card border border-border/80 shadow-xs">
+        <div className="flex items-center gap-2 min-w-0">
+          <Badge variant="secondary" className="text-[11px] rounded-full shrink-0">
+            {sessionUser?.role === UserRole.ADMIN
+              ? 'Admin'
+              : sessionUser?.role === UserRole.CONTRIBUTOR
+                ? 'Đóng góp'
+                : 'Thành viên'}
+          </Badge>
+          <span className="text-xs text-muted-foreground truncate">
+            {canPublishDirectly ? 'Xuất bản trực tiếp' : 'Chờ duyệt'}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isSubmitting}
+            onClick={() => handleSubmit('DRAFT')}
+            className="h-8 text-xs rounded-xl px-2.5"
+          >
+            <Save className="h-3.5 w-3.5 mr-1" /> Lưu nháp
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            disabled={isSubmitting}
+            onClick={() => handleSubmit('SUBMIT')}
+            className="h-8 text-xs rounded-xl px-3 font-semibold shadow-xs"
+          >
+            <Send className="h-3.5 w-3.5 mr-1" />
+            {canPublishDirectly ? 'Xuất bản' : 'Gửi duyệt'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Thông tin quyền xuất bản */}
+      <Card className="border-primary/25 bg-gradient-to-r from-primary/10 via-primary/5 to-transparent">
+        <CardContent className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-              <Sparkles className="h-5 w-5" />
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-2xs">
+              <Sparkles className="h-4.5 w-4.5" />
             </span>
-            <div>
+            <div className="min-w-0">
               <p className="text-sm font-semibold text-foreground">
                 {canPublishDirectly
-                  ? 'Bạn có quyền xuất bản ngay'
-                  : 'Bài viết sẽ chờ chuyên gia duyệt'}
+                  ? 'Quyền tài khoản: Xuất bản bài viết trực tiếp'
+                  : 'Quyền thành viên: Bài viết sẽ được kiểm duyệt'}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground line-clamp-1 sm:line-clamp-none">
                 {canPublishDirectly
-                  ? 'Vai trò của bạn được xuất bản ngay kèm trạng thái công khai.'
+                  ? 'Bài viết của bạn sẽ được hiển thị công khai ngay sau khi đăng.'
                   : 'Bài viết sẽ được chuyển vào hàng đợi kiểm duyệt của Chuyên gia Dinh dưỡng trước khi công khai.'}
               </p>
             </div>
           </div>
 
-          <Badge variant="secondary" className="rounded-full text-xs">
+          <Badge variant="secondary" className="rounded-full text-xs shrink-0 font-medium">
             {sessionUser?.role === UserRole.ADMIN
               ? 'Quản trị viên'
               : sessionUser?.role === UserRole.CONTRIBUTOR
@@ -428,10 +391,10 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
         </CardContent>
       </Card>
 
-      {/* Main Form Fields */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* LEFT 2 COLS: Editor Area */}
-        <div className="lg:col-span-2 space-y-6">
+      {/* Main Grid: 7 cols left, 5 cols right trên lg; 8/4 trên xl */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+        {/* LEFT COLUMN: Editor Area */}
+        <div className="lg:col-span-7 xl:col-span-8 min-w-0 space-y-6">
           {/* Post Title */}
           <div className="space-y-2">
             <Label htmlFor="post-title" className="text-sm font-bold text-foreground">
@@ -442,7 +405,7 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
               placeholder="VD: Cẩm nang ăn chay trường không lo thiếu máu và Vitamin B12..."
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="h-12 text-base font-semibold rounded-xl"
+              className="h-12 text-base font-semibold rounded-xl bg-card border-border/80"
             />
           </div>
 
@@ -457,114 +420,50 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
               placeholder="VD: Hướng dẫn kết hợp các loại hạt lên men và ngũ cốc để duy trì năng lượng bền bỉ..."
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
-              className="rounded-xl resize-none text-sm"
+              className="rounded-xl resize-none text-sm bg-card border-border/80"
             />
           </div>
 
-          {/* Markdown Content Section */}
+          {/* Content Section (Chữ thường / văn bản thông thường) */}
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-bold text-foreground flex items-center gap-2">
-                <FileText className="h-4 w-4 text-primary" /> Nội dung bài viết (Định dạng Markdown)
-              </Label>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <span>{wordCount} từ</span>
-                <span>•</span>
-                <span className="flex items-center gap-1 text-primary font-medium">
-                  <Clock className="h-3 w-3" /> ~{readingMinutes} phút đọc
-                </span>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <Label
+                  htmlFor="post-content"
+                  className="text-sm font-bold text-foreground flex items-center gap-2"
+                >
+                  <FileText className="h-4 w-4 text-primary" /> Nội dung bài viết{' '}
+                  <span className="text-destructive">*</span>
+                </Label>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Nhập văn bản thông thường (tối thiểu 100 ký tự). Xuống dòng (Enter) để phân tách
+                  các đoạn văn.
+                </p>
               </div>
-            </div>
 
-            {/* Toolbar & Tabs */}
-            <div className="rounded-2xl border border-border/80 overflow-hidden bg-card shadow-sm">
-              <div className="flex flex-wrap items-center justify-between border-b border-border/70 bg-muted/40 p-2 gap-2">
-                {/* Formatting Action Buttons */}
-                <div className="flex flex-wrap items-center gap-1">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-lg"
-                    title="In đậm (**văn bản**)"
-                    onClick={() => insertMarkdown('**', '**')}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  <span
+                    className={
+                      content.trim().length < 100
+                        ? 'font-semibold text-amber-600 dark:text-amber-400'
+                        : 'font-semibold text-emerald-600 dark:text-emerald-400'
+                    }
                   >
-                    <Bold className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-lg"
-                    title="In nghiêng (*văn bản*)"
-                    onClick={() => insertMarkdown('*', '*')}
-                  >
-                    <Italic className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-lg"
-                    title="Tiêu đề mục (H2)"
-                    onClick={() => insertMarkdown('\n## ')}
-                  >
-                    <Heading2 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-lg"
-                    title="Tiêu đề nhỏ (H3)"
-                    onClick={() => insertMarkdown('\n### ')}
-                  >
-                    <Heading3 className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-lg"
-                    title="Trích dẫn danh ngôn (> )"
-                    onClick={() => insertMarkdown('\n> ')}
-                  >
-                    <Quote className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-lg text-emerald-600"
-                    title="Khung mẹo dinh dưỡng (> [!TIP])"
-                    onClick={() => insertMarkdown('\n> [!TIP]\n> Mẹo dinh dưỡng: ')}
-                  >
-                    <Lightbulb className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-lg"
-                    title="Danh sách gạch đầu dòng"
-                    onClick={() => insertMarkdown('\n- ')}
-                  >
-                    <List className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-lg"
-                    title="Danh sách có số thứ tự"
-                    onClick={() => insertMarkdown('\n1. ')}
-                  >
-                    <ListOrdered className="h-4 w-4" />
-                  </Button>
+                    {content.trim().length}/100 ký tự
+                  </span>
+                  <span>•</span>
+                  <span>
+                    <strong className="text-foreground">{wordCount}</strong> từ
+                  </span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1 text-primary font-medium">
+                    <Clock className="h-3 w-3" /> ~{readingMinutes} phút đọc
+                  </span>
                 </div>
 
                 {/* Edit vs Preview Toggle */}
-                <div className="flex items-center gap-1 bg-background/80 p-0.5 rounded-xl border">
+                <div className="flex items-center gap-1 bg-muted/70 p-0.5 rounded-xl border border-border/60">
                   <Button
                     type="button"
                     size="sm"
@@ -585,39 +484,125 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
                   </Button>
                 </div>
               </div>
+            </div>
 
-              {activeTab === 'edit' ? (
-                <Textarea
-                  ref={textareaRef}
-                  value={contentMarkdown}
-                  onChange={(e) => setContentMarkdown(e.target.value)}
-                  placeholder="Bắt đầu viết nội dung bài chia sẻ của bạn bằng Markdown..."
-                  rows={16}
-                  className="w-full rounded-none border-none p-4 font-mono text-sm leading-relaxed resize-y focus-visible:ring-0"
-                />
-              ) : (
-                <div className="p-6 bg-card min-h-[380px] max-h-[600px] overflow-y-auto">
-                  <h1 className="text-2xl font-black text-foreground mb-3">
+            {activeTab === 'edit' ? (
+              <Textarea
+                id="post-content"
+                ref={textareaRef}
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+                placeholder="Bắt đầu nhập nội dung bài chia sẻ của bạn tại đây... Hãy chia sẻ kinh nghiệm ăn chay, câu chuyện hoặc kiến thức dinh dưỡng với cộng đồng (xuống dòng để chia thành các đoạn văn riêng biệt)."
+                rows={18}
+                className="w-full rounded-2xl border border-border/80 p-4 sm:p-5 font-sans text-sm sm:text-base leading-relaxed resize-y focus-visible:ring-1 focus-visible:ring-primary shadow-2xs bg-card"
+              />
+            ) : (
+              <div className="rounded-2xl border border-border/80 p-5 sm:p-6 bg-card min-h-[400px] max-h-[650px] overflow-y-auto space-y-4 shadow-2xs">
+                <div>
+                  <Badge variant="outline" className="mb-2 text-xs">
+                    {category}
+                  </Badge>
+                  <h1 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight">
                     {title || 'Tiêu đề bài viết'}
                   </h1>
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground pb-4 border-b">
-                    <Badge variant="outline">{category}</Badge>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground mt-2 pb-3 border-b border-border/60">
+                    <span>
+                      Tác giả: <strong className="text-foreground">{previewAuthorName}</strong>
+                    </span>
                     <span>•</span>
                     <span>{readingMinutes} phút đọc</span>
                     <span>•</span>
-                    <span>Tác giả: {previewAuthorName}</span>
+                    <span>{wordCount} từ</span>
                   </div>
-                  <div className="mt-4">{renderPreviewContent(contentMarkdown)}</div>
                 </div>
-              )}
-            </div>
+
+                {summary && (
+                  <p className="text-sm sm:text-base italic text-muted-foreground border-l-3 border-primary/60 pl-3 py-1 bg-muted/30 rounded-r-lg">
+                    {summary}
+                  </p>
+                )}
+
+                <div className="space-y-4 pt-2 text-sm sm:text-base text-foreground/90 leading-relaxed font-normal">
+                  {content ? (
+                    content.split(/\n{2,}/).map((paragraph, idx) => (
+                      <p key={idx} className="leading-relaxed whitespace-pre-line">
+                        {paragraph}
+                      </p>
+                    ))
+                  ) : (
+                    <p className="text-muted-foreground italic text-sm">
+                      Chưa có nội dung để xem trước...
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* RIGHT 1 COL: Metadata, Cover, Tags & Publish Options */}
-        <div className="space-y-6">
-          {/* Cover Image Selector */}
-          <Card className="rounded-2xl border-border/70 overflow-hidden shadow-sm">
+        {/* RIGHT COLUMN: Sidebar (Sticky on desktop, responsive layout) */}
+        <div className="lg:col-span-5 xl:col-span-4 min-w-0 space-y-6 lg:sticky lg:top-20">
+          {/* Card 1: Thao tác xuất bản (Action Card) */}
+          <Card className="rounded-2xl border-primary/30 bg-gradient-to-br from-card via-card to-primary/5 shadow-sm overflow-hidden">
+            <CardHeader className="p-4 pb-2">
+              <div className="flex items-center justify-between gap-2">
+                <CardTitle className="text-sm font-bold flex items-center gap-2">
+                  <Send className="h-4 w-4 text-primary" /> Thao tác xuất bản
+                </CardTitle>
+                <Badge variant="secondary" className="text-[10px] rounded-full px-2 py-0.5">
+                  {sessionUser?.role === UserRole.ADMIN
+                    ? 'Quản trị viên'
+                    : sessionUser?.role === UserRole.CONTRIBUTOR
+                      ? 'Người đóng góp'
+                      : 'Thành viên'}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 pt-1 space-y-3">
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {canPublishDirectly ? (
+                  <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
+                    <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+                    Bài viết sẽ xuất bản công khai ngay lập tức.
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-medium">
+                    <Clock className="h-3.5 w-3.5 shrink-0" />
+                    Bài viết sẽ gửi tới Chuyên gia duyệt trước khi công khai.
+                  </span>
+                )}
+              </p>
+
+              <div className="space-y-2 pt-1">
+                <Button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={() => handleSubmit('SUBMIT')}
+                  className="w-full rounded-xl gap-2 font-bold h-10 shadow-xs"
+                >
+                  <Send className="h-4 w-4" />
+                  {isSubmitting
+                    ? 'Đang lưu bài viết...'
+                    : canPublishDirectly
+                      ? 'Xuất bản bài viết'
+                      : 'Gửi chuyên gia duyệt bài'}
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={isSubmitting}
+                  onClick={() => handleSubmit('DRAFT')}
+                  className="w-full rounded-xl gap-2 text-xs h-9 text-muted-foreground hover:text-foreground"
+                >
+                  <Save className="h-3.5 w-3.5" /> Lưu bản nháp (DRAFT)
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Card 2: Ảnh bìa bài viết */}
+          <Card className="rounded-2xl border-border/70 overflow-hidden shadow-xs">
             <CardHeader className="p-4 pb-2">
               <CardTitle className="text-sm font-bold flex items-center gap-2">
                 <ImageIcon className="h-4 w-4 text-primary" /> Ảnh bìa bài viết
@@ -645,40 +630,61 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
                 <Label className="text-xs text-muted-foreground">
                   Hoặc chọn nhanh ảnh bìa có sẵn:
                 </Label>
-                <div className="grid grid-cols-2 gap-2">
-                  {COVER_PRESETS.map((p, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        setCoverImage(p.url);
-                        setCoverMedia(null);
-                      }}
-                      className={cn(
-                        'text-left text-[11px] p-2 rounded-lg border transition-all truncate',
-                        coverImage === p.url
-                          ? 'border-primary bg-primary/10 font-bold text-primary'
-                          : 'border-border/60 hover:border-primary/40 bg-muted/20'
-                      )}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
+                <div className="grid grid-cols-3 gap-2">
+                  {COVER_PRESETS.map((p, idx) => {
+                    const isSelected = coverImage === p.url;
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        onClick={() => {
+                          setCoverImage(p.url);
+                          setCoverMedia(null);
+                        }}
+                        title={p.label}
+                        className={cn(
+                          'group relative aspect-video w-full overflow-hidden rounded-xl border transition-all text-left focus:outline-hidden focus:ring-2 focus:ring-primary',
+                          isSelected
+                            ? 'border-primary ring-2 ring-primary shadow-xs'
+                            : 'border-border/60 hover:border-primary/50 opacity-80 hover:opacity-100'
+                        )}
+                      >
+                        <SafeImage
+                          src={p.url}
+                          fallbackSrc="/logo/logo-mark.png"
+                          alt={p.label}
+                          fill
+                          sizes="120px"
+                          className="object-cover transition-transform group-hover:scale-105"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent flex items-end p-1.5">
+                          <span className="text-[10px] text-white font-medium line-clamp-1 leading-tight drop-shadow-xs">
+                            {p.label}
+                          </span>
+                        </div>
+                        {isSelected && (
+                          <div className="absolute top-1 right-1 bg-primary text-primary-foreground rounded-full p-0.5 shadow-xs">
+                            <CheckCircle2 className="h-3 w-3" />
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Classification: Category & Diet School */}
-          <Card className="rounded-2xl border-border/70 shadow-sm">
+          {/* Card 3: Phân loại & Trường phái */}
+          <Card className="rounded-2xl border-border/70 shadow-xs">
             <CardHeader className="p-4 pb-2">
-              <CardTitle className="text-sm font-bold">Phân loại & Trường phái</CardTitle>
+              <CardTitle className="text-sm font-bold">Phân loại &amp; Trường phái</CardTitle>
             </CardHeader>
             <CardContent className="p-4 space-y-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-semibold">Chuyên mục cẩm nang</Label>
                 <Select value={category} onValueChange={setCategory}>
-                  <SelectTrigger className="rounded-xl text-xs h-10">
+                  <SelectTrigger className="rounded-xl text-xs h-10 w-full min-w-0">
                     <SelectValue placeholder="Chọn chuyên mục" />
                   </SelectTrigger>
                   <SelectContent>
@@ -704,14 +710,21 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
                   value={dietSchool}
                   onValueChange={(val) => setDietSchool(val as DietSchool)}
                 >
-                  <SelectTrigger className="rounded-xl text-xs h-10">
-                    <SelectValue placeholder="Chọn trường phái" />
+                  <SelectTrigger className="rounded-xl text-xs h-10 w-full min-w-0">
+                    <SelectValue placeholder="Chọn trường phái">
+                      {DIET_SCHOOLS.find((ds) => ds.value === dietSchool)?.label ||
+                        'Chọn trường phái'}
+                    </SelectValue>
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-w-[340px]">
                     {DIET_SCHOOLS.map((ds) => (
-                      <SelectItem key={ds.value} value={ds.value} className="text-xs">
-                        <span className="font-semibold">{ds.label}</span> —{' '}
-                        <span className="text-muted-foreground">{ds.desc}</span>
+                      <SelectItem key={ds.value} value={ds.value} className="text-xs py-2">
+                        <div className="flex flex-col gap-0.5 text-left">
+                          <span className="font-semibold text-foreground">{ds.label}</span>
+                          <span className="text-[11px] text-muted-foreground leading-snug">
+                            {ds.desc}
+                          </span>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -719,22 +732,23 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
               </div>
 
               {/* Tags */}
-              <div className="space-y-2 pt-2 border-t">
+              <div className="space-y-2 pt-2 border-t border-border/60">
                 <Label className="text-xs font-semibold flex items-center gap-1.5">
                   <Tag className="h-3.5 w-3.5 text-primary" /> Thẻ chủ đề (Tags)
                 </Label>
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap gap-1.5 min-w-0">
                   {tags.map((t) => (
                     <Badge
                       key={t}
                       variant="secondary"
-                      className="gap-1 rounded-md text-xs py-0.5 px-2 bg-muted"
+                      className="gap-1 rounded-md text-xs py-0.5 px-2 bg-muted max-w-full"
                     >
-                      #{t}
+                      <span className="truncate">#{t}</span>
                       <button
                         type="button"
                         onClick={() => handleRemoveTag(t)}
-                        className="hover:text-destructive transition-colors"
+                        className="hover:text-destructive transition-colors shrink-0"
+                        aria-label={`Xóa thẻ ${t}`}
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -752,67 +766,18 @@ export function PostEditorForm({ initialPost, isEditing = false }: PostEditorFor
                         handleAddTag();
                       }
                     }}
-                    className="h-8 text-xs rounded-lg"
+                    className="h-8 text-xs rounded-lg min-w-0"
                   />
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
                     onClick={handleAddTag}
-                    className="h-8 px-2.5 rounded-lg text-xs"
+                    className="h-8 px-2.5 rounded-lg text-xs shrink-0"
                   >
                     <Plus className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Action Buttons */}
-          <Card className="rounded-2xl border-primary/40 bg-gradient-to-br from-card to-primary/5 shadow-md">
-            <CardContent className="p-5 space-y-3">
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p className="font-semibold text-foreground flex items-center gap-1.5">
-                  <CheckCircle2 className="h-4 w-4 text-primary" />
-                  {canPublishDirectly ? (
-                    <span className="text-emerald-600 dark:text-emerald-400">
-                      Quyền xuất bản ngay
-                    </span>
-                  ) : (
-                    <span>Quyền Thành viên: Chờ chuyên gia duyệt</span>
-                  )}
-                </p>
-                <p className="text-[11px] leading-relaxed">
-                  {canPublishDirectly
-                    ? 'Bài viết sẽ xuất hiện ngay trên trang Cẩm nang ở trạng thái công khai.'
-                    : 'Bài viết sẽ được chuyển vào hàng đợi kiểm duyệt của Chuyên gia Dinh dưỡng trước khi công khai.'}
-                </p>
-              </div>
-
-              <div className="space-y-2 pt-2">
-                <Button
-                  type="button"
-                  disabled={isSubmitting}
-                  onClick={() => handleSubmit('SUBMIT')}
-                  className="w-full rounded-xl gap-2 font-bold h-11 shadow-sm"
-                >
-                  <Send className="h-4 w-4" />
-                  {isSubmitting
-                    ? 'Đang lưu bài viết...'
-                    : canPublishDirectly
-                      ? 'Xuất bản bài viết'
-                      : 'Gửi Chuyên gia duyệt bài'}
-                </Button>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={isSubmitting}
-                  onClick={() => handleSubmit('DRAFT')}
-                  className="w-full rounded-xl gap-2 text-xs h-9 text-muted-foreground hover:text-foreground"
-                >
-                  <Save className="h-3.5 w-3.5" /> Lưu bản nháp (DRAFT)
-                </Button>
               </div>
             </CardContent>
           </Card>

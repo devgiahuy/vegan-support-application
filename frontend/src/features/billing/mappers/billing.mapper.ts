@@ -315,6 +315,7 @@ export class EntitlementMapper extends BaseMapper<EntitlementDto, Entitlements> 
           const reason = safeString(pickField(entry, ['reason'], ''));
           return {
             id: safeString(pickField(entry, ['id'], '')),
+            delta,
             featureLabel: featureLabels[feature] ?? 'Quyền lợi',
             deltaLabel: (delta > 0 ? '+' : '') + delta,
             reasonLabel: reasons[reason] ?? 'Điều chỉnh quyền lợi',

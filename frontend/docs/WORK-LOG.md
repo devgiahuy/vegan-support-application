@@ -1,5 +1,56 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-28] — Trang /pantry: Bổ sung tùy chọn tự nhập nguyên liệu chuẩn & dropdown đơn vị thông dụng
+
+- **Yêu cầu**: Trên trang `/pantry`, tại modal "Thêm nguyên liệu vào tủ bếp":
+  1. Thêm tùy chọn tự nhập tên nguyên liệu từ người dùng ngay trong ô chọn nguyên liệu chuẩn.
+  2. Chuyển ô đơn vị thành dropdown có gợi ý sẵn các đơn vị thực phẩm thông dụng và hỗ trợ tự nhập khi cần.
+- **Frontend**:
+  - `pantry-item-dialog.tsx`:
+    - **Tự nhập nguyên liệu**:
+      - Thêm mục `✏️ Khác (Tự nhập tên nguyên liệu...)` ở đầu và chân danh sách dropdown nguyên liệu chuẩn, kèm nút thao tác nhanh `Tự nhập tên khác` trên nhãn trường.
+      - Khi người dùng chọn mục này, form tự động đồng bộ switch sang chế độ nhập nguyên liệu tự do (`isCanonical = false`), xóa ID chuẩn và tự động trỏ focus vào ô văn bản.
+      - Tại chế độ tự nhập, bổ sung nút điều hướng nhanh `← Chọn từ danh mục chuẩn` để chuyển đổi qua lại thuận tiện.
+    - **Dropdown đơn vị thông dụng**:
+      - Bổ sung bộ danh mục đơn vị thông dụng `COMMON_UNITS` gồm khối lượng (`g`, `kg`), thể tích (`ml`, `l`, `muỗng canh`, `muỗng cà phê`, `chén`), đếm/bao bì (`quả/trái`, `củ`, `tép/nhánh`, `cây`, `bó`, `miếng/lát`, `gói`, `hộp`, `lon`, `túi/bịch`).
+      - Thay thế input thô bằng `<Select>` chuẩn hóa hiển thị các đơn vị trên, kèm tùy chọn `✏️ Đơn vị khác (tự nhập)...` và nút `Tự nhập` trên label.
+      - Khi chọn tự nhập đơn vị, trường hiển thị input tự do với nút quay lại `← Chọn từ gợi ý` mượt mà, bảo toàn 100% logic validate của form schema.
+- **Kiểm chứng**:
+  - `npx tsc --noEmit` pass 0 lỗi type.
+  - `npm test` toàn bộ 68 test suite (731 tests pass).
+  - `npm run build` pass thành công 47 routes (bao gồm `/pantry`).
+
+## [2026-10-28] — Thiết kế lại giao diện trang /articles/new & chuyển nội dung sang chữ thường
+
+- **Yêu cầu**: Làm lại giao diện trang `/articles/new` khắc phục lỗi responsive cột bên phải và đổi nội dung bài viết thành chữ thường cho người dùng nhập tự nhiên thay vì cú pháp Markdown.
+- **Frontend**:
+  - `post-editor-form.tsx`:
+    - **Nội dung bài viết (Chữ thường)**: Bỏ thanh công cụ định dạng Markdown (`**`, `##`, `> [!TIP]`, v.v.), đổi nhãn thành "Nội dung bài viết" và hướng dẫn rõ ràng cho người dùng nhập văn bản thông thường (xuống dòng giữa các đoạn). Đổi `textarea` sang font chữ sans-serif chuẩn, giữ live preview với định dạng đoạn văn phân cách tự nhiên và bộ đếm từ/thời gian đọc.
+    - **Validation & Toast tiếng Việt**: Thêm kiểm tra độ dài nội dung tối thiểu 100 ký tự (theo contract backend `body >= 100 characters`) và tiêu đề 5-200 ký tự trước khi gửi; hiển thị toast tiếng Việt thân thiện kèm số ký tự hiện có/tối thiểu; bổ sung chỉ số đếm ký tự trực quan thời gian thực trên thanh công cụ.
+    - **Khắc phục Responsive cột bên phải**:
+      - Tái cấu trúc grid thành `grid-cols-1 lg:grid-cols-12` (7/8 cột trái, 5/4 cột phải kèm `min-w-0`) chống tràn layout trên mọi kích thước màn hình.
+      - Chuyển `COVER_PRESETS` từ các nút chữ hẹp bị cắt xén (`...`) sang gallery 3 cột ảnh thumbnail trực quan kèm viền chọn và nhãn rõ ràng.
+      - Tối ưu `SelectTrigger` trường phái ăn chay hiển thị nhãn ngắn gọn, đưa mô tả chi tiết vào danh sách thả xuống để không bị tràn card.
+      - Đưa Card thao tác xuất bản lên vị trí đầu cột bên phải (sticky trên desktop) và bổ sung thanh thao tác nhanh trên mobile, giúp người dùng không bị mất nút xuất bản/lưu nháp.
+  - `post.queries.ts`: Bỏ toast thành công trùng lặp trong `useCreateArticleMutation.onSuccess` và `useUpdateArticleMutation.onSuccess` để chỉ có một toast theo đúng ngữ cảnh (DRAFT vs PUBLISHED) được phát từ form.
+  - `api-error.ts`: Chuẩn hóa và Việt hóa tự động các lỗi Zod/validation từ backend (ví dụ: `body: Too small: expected string to have >=100 characters` chuyển thành `Nội dung bài viết: quá ngắn (yêu cầu tối thiểu 100 ký tự)`), kèm unit test trong `api-error.test.ts`.
+- **Kiểm chứng**:
+  - `vitest` toàn bộ 68 test suite (730 tests pass).
+  - `tsc --noEmit` pass 0 lỗi type.
+  - `npm run build` pass thành công 47 routes (bao gồm `/articles/new` và `/articles/[id]/edit`).
+
+## [2026-10-28] — Hiển thị màu sắc biến động quyền lợi trang /billing
+
+- **Yêu cầu**: Cập nhật giao diện trang `/billing` tại mục "Biến động quyền lợi gần đây": hiển thị số lượt tăng bằng màu xanh (green) và giảm bằng màu đỏ (red).
+- **Frontend**:
+  - `billing.model.ts`: Bổ sung trường `delta: number` vào `EntitlementLedger`.
+  - `billing.mapper.ts`: Map chính xác `delta` từ DTO và cập nhật mapper test tương ứng với các trường hợp tăng, giảm và không đổi.
+  - `billing-view.tsx`: Hiển thị số lượt biến động với styling trực quan `text-emerald-600 dark:text-emerald-400 font-semibold` khi tăng (`delta > 0`), `text-rose-600 dark:text-rose-400 font-semibold` khi giảm (`delta < 0`), và `text-muted-foreground font-medium` khi không đổi (`delta === 0`).
+- **Kiểm chứng**:
+  - `vitest` toàn bộ 68 test suite (730 tests pass).
+  - `tsc --noEmit` pass không có lỗi type.
+  - `npm run build` pass thành công 47 routes bao gồm `/billing`.
+
 ## [2026-10-28] — Dinh dưỡng công thức: tính khi gửi duyệt, người duyệt xác nhận
 
 - **Yêu cầu**: Người tạo không nhập dinh dưỡng; backend tự tính khi submit, thiếu dữ liệu thì chạy job AI nền (hệ thống trả, không trừ quota, có truy vết); người duyệt xem/sửa/tính lại và chỉ duyệt khi đủ chỉ số. Các điểm mơ hồ đã hỏi người dùng: 1 lần + 3 retry; "AI tính lại" giữ giá trị sửa tay; bỏ B12 (duyệt 5 chỉ số); nguyên liệu có hồ sơ nhưng thiếu 1 chỉ số coi là thiếu; job xong sau khi đã quyết định thì bỏ qua.
