@@ -53,11 +53,11 @@ export function CustomMealForm({
   const [notes, setNotes] = React.useState(initial?.notes ?? '');
   const [servings, setServings] = React.useState(String(initial?.servings ?? 1));
   const [sourceNote, setSourceNote] = React.useState(initial?.sourceNote ?? '');
-  const [calories, setCalories] = React.useState(numberToText(initial?.calories));
-  const [protein, setProtein] = React.useState(numberToText(initial?.proteinGrams));
-  const [carbs, setCarbs] = React.useState(numberToText(initial?.carbsGrams));
-  const [fat, setFat] = React.useState(numberToText(initial?.fatGrams));
-  const [fiber, setFiber] = React.useState(numberToText(initial?.fiberGrams));
+  const [calories, setCalories] = React.useState(numberToText(initial?.manual.calories));
+  const [protein, setProtein] = React.useState(numberToText(initial?.manual.proteinGrams));
+  const [carbs, setCarbs] = React.useState(numberToText(initial?.manual.carbsGrams));
+  const [fat, setFat] = React.useState(numberToText(initial?.manual.fatGrams));
+  const [fiber, setFiber] = React.useState(numberToText(initial?.manual.fiberGrams));
   const [tags, setTags] = React.useState<string[]>(initial?.tags ?? []);
   const [ingredients, setIngredients] = React.useState<CustomMealIngredient[]>(
     initial?.ingredients.length ? initial.ingredients : [emptyIngredient('local-1')]
@@ -203,4 +203,8 @@ export function CustomMealForm({
 
 export function toCustomMealCreateDto(values: CustomMealFormValues) {
   return customMealMapper.toCreateDto(values);
+}
+
+export function toCustomMealUpdateDto(values: CustomMealFormValues, initial: CustomMeal) {
+  return customMealMapper.toUpdateDto(values, initial);
 }

@@ -1,4 +1,5 @@
-export type MealProgramStatusDto = 'DRAFT' | 'CONFIRMED' | 'COMPLETED' | 'ARCHIVED' | 'FAILED';
+export type MealProgramStatusDto =
+  'DRAFT' | 'PARTIAL' | 'GENERATING' | 'CONFIRMED' | 'COMPLETED' | 'ARCHIVED' | 'FAILED';
 export type ProgramWeekStatusDto =
   'PENDING' | 'GENERATING' | 'READY' | 'FAILED' | 'UPCOMING' | 'ACTIVE' | 'COMPLETED';
 export type MealProgramGoalDto = 'MAINTAIN' | 'LOSE' | 'GAIN';
@@ -92,6 +93,7 @@ export interface ProgramWeekDto {
   selectedAlternativeRank?: number | null;
   selected_alternative_rank?: number | null;
   alternatives?: WeekAlternativeDto[];
+  failure?: { code?: string; message?: string } | null;
   snapshot?: WeeklyPlanSnapshotDto | null;
 }
 

@@ -110,11 +110,15 @@ export function CurrentDietCard({
           <div className="rounded-xl border border-border/70 bg-muted/20 p-3.5 text-xs sm:text-sm space-y-2">
             <div className="flex items-center gap-1.5 font-semibold text-foreground">
               <ShieldAlert className="h-4 w-4 text-amber-500 shrink-0" />
-              <span>Dị ứng ({summary.allergies?.length ?? 0}):</span>
+              <span>
+                Dị ứng (
+                {(summary.allergies?.length ?? 0) + (summary.ingredientAllergies?.length ?? 0)}
+                ):
+              </span>
             </div>
-            {summary.allergies && summary.allergies.length > 0 ? (
+            {(summary.allergies?.length ?? 0) + (summary.ingredientAllergies?.length ?? 0) > 0 ? (
               <div className="flex flex-wrap gap-1.5">
-                {summary.allergies.map((a) => (
+                {(summary.allergies ?? []).map((a) => (
                   <span
                     key={a.allergenCode}
                     className="inline-flex items-center gap-1.5 rounded-full bg-secondary/80 border border-secondary-foreground/10 px-2.5 py-1 text-xs text-secondary-foreground"
@@ -125,6 +129,17 @@ export function CurrentDietCard({
                         {SEVERITY_LABELS[a.severity] ?? a.severity}
                       </span>
                     )}
+                  </span>
+                ))}
+                {(summary.ingredientAllergies ?? []).map((a) => (
+                  <span
+                    key={a.ingredientId}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-secondary/80 border border-secondary-foreground/10 px-2.5 py-1 text-xs text-secondary-foreground"
+                  >
+                    <span className="font-medium">{a.ingredientName}</span>
+                    <span className="text-[10px] text-muted-foreground bg-background/60 rounded px-1.5 py-0.5">
+                      Nguyên liệu · {SEVERITY_LABELS[a.severity] ?? a.severity}
+                    </span>
                   </span>
                 ))}
               </div>

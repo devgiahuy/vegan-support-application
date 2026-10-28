@@ -8,6 +8,7 @@ import {
 import { registerAuthOpenApi } from '../modules/auth/auth.openapi.js';
 import { registerProfileOpenApi } from '../modules/profile/profile.openapi.js';
 import { registerCatalogOpenApi } from '../modules/catalog/catalog.openapi.js';
+import { registerCompositionOpenApi } from '../modules/catalog/composition.openapi.js';
 import { registerContentOpenApi } from '../modules/content/content.openapi.js';
 import { registerRecipeDraftOpenApi } from '../modules/content/recipe-draft.openapi.js';
 import { registerCommunityOpenApi } from '../modules/community/community.openapi.js';
@@ -28,6 +29,7 @@ import { registerReceiptOpenApi } from '../modules/receipts/receipt.openapi.js';
 import { registerAiReviewOpenApi } from '../modules/ai-review/ai-review.openapi.js';
 import { registerRestaurantOpenApi } from '../modules/restaurants/restaurant.openapi.js';
 import { registerNotificationOpenApi } from '../modules/notifications/notification.openapi.js';
+import { registerAdminInsightsOpenApi } from '../modules/admin-insights/admin-insights.openapi.js';
 import { registerAiGovernanceOpenApi } from '../modules/ai-governance/ai-governance.openapi.js';
 
 const registry = new OpenAPIRegistry();
@@ -60,6 +62,7 @@ registry.registerPath({
 registerAuthOpenApi(registry, registeredErrorResponse);
 registerProfileOpenApi(registry, registeredErrorResponse);
 registerCatalogOpenApi(registry, registeredErrorResponse);
+registerCompositionOpenApi(registry, registeredErrorResponse);
 registerContentOpenApi(registry, registeredErrorResponse);
 registerRecipeDraftOpenApi(registry, registeredErrorResponse);
 registerCommunityOpenApi(registry, registeredErrorResponse);
@@ -82,6 +85,7 @@ registerAiReviewOpenApi(registry, registeredErrorResponse);
 registerRestaurantOpenApi(registry, registeredErrorResponse);
 registerNotificationOpenApi(registry, registeredErrorResponse);
 registerAiGovernanceOpenApi(registry, registeredErrorResponse);
+registerAdminInsightsOpenApi(registry, registeredErrorResponse);
 
 const generator = new OpenApiGeneratorV31(registry.definitions);
 
@@ -159,6 +163,10 @@ const generatedDocument = generator.generateDocument({
     {
       name: 'AI Governance Admin',
       description: 'Redacted AI operations, metrics, controls and health',
+    },
+    {
+      name: 'Admin Insights',
+      description: 'AI allowance purchase revenue and per-user AI usage trace',
     },
   ],
 });

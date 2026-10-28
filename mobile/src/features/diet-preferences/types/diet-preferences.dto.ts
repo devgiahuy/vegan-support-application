@@ -37,6 +37,11 @@ export interface AllergyInputDto {
   severity?: string;
 }
 
+export interface IngredientAllergyInputDto {
+  ingredientId: string;
+  severity?: string;
+}
+
 export interface IngredientExclusionInputDto {
   ingredientId?: string;
   ingredientName: string;
@@ -52,6 +57,8 @@ export interface SaveDietPreferencesRequestDto {
   rules: SelectedDietRuleDto[];
   scheduleDates?: string[];
   allergies: AllergyInputDto[];
+  /** Bỏ qua = giữ nguyên lựa chọn hiện có; `[]` = xoá hết. Tối đa 100, không trùng. */
+  ingredientAllergies?: IngredientAllergyInputDto[];
   ingredientExclusions: IngredientExclusionInputDto[];
 }
 

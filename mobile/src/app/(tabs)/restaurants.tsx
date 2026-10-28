@@ -20,6 +20,7 @@ import {
   RADIUS_OPTIONS_M,
 } from '@/features/restaurant/schemas/restaurant.schema';
 import { hasSearchKeyword } from '@/features/restaurant/mappers/restaurant.mapper';
+import { RESTAURANT_SEARCH_PANEL_ENABLED } from '@/features/restaurant/lib/feature-flags';
 import type {
   LocationQuery,
   LocationSource,
@@ -175,11 +176,14 @@ export default function RestaurantsScreen() {
             </View>
           ) : (
             <Text className="mt-1 text-sm text-muted-foreground">
-              Cho phép vị trí hoặc nhập địa chỉ để tìm quán chay gần bạn nhất.
+              {RESTAURANT_SEARCH_PANEL_ENABLED
+                ? 'Cho phép vị trí hoặc nhập địa chỉ để tìm quán chay gần bạn nhất.'
+                : 'Bấm nút định vị trên bản đồ để xem quán chay gần bạn nhất.'}
             </Text>
           )}
         </View>
 
+        {RESTAURANT_SEARCH_PANEL_ENABLED ? (
         <View className="gap-3 rounded-2xl border border-border bg-card p-4">
           <Text className="text-sm font-semibold text-foreground">Tìm quán chay</Text>
 
@@ -257,6 +261,9 @@ export default function RestaurantsScreen() {
 
           {locationMessage ? <Text className="text-xs text-destructive">{locationMessage}</Text> : null}
         </View>
+        ) : (
+          locationMessage ? <Text className="text-xs text-destructive">{locationMessage}</Text> : null
+        )}
 
         <RestaurantMap
           items={restaurants}
@@ -323,7 +330,11 @@ export default function RestaurantsScreen() {
             {!location ? (
               <EmptyState
                 title="Chưa chọn khu vực tìm kiếm"
-                description="Nhập địa chỉ, bấm nút định vị trên bản đồ, hoặc kéo bản đồ rồi bấm “Tìm trong vùng đang xem” để xem quán chay gần bạn."
+                description={
+                  RESTAURANT_SEARCH_PANEL_ENABLED
+                    ? 'Nhập địa chỉ, bấm nút định vị trên bản đồ, hoặc kéo bản đồ rồi bấm “Tìm trong vùng đang xem” để xem quán chay gần bạn.'
+                    : 'Bấm nút định vị trên bản đồ, hoặc kéo bản đồ rồi bấm “Tìm trong vùng đang xem” để xem quán chay gần bạn.'
+                }
               />
             ) : isLoading ? (
               <LoadingState message="Đang tìm quán chay quanh bạn..." />

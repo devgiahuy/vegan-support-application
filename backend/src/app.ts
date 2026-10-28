@@ -1,4 +1,5 @@
 import cors from 'cors';
+import { createCompositionRouter } from './modules/catalog/composition.router.js';
 import { BillingService } from './modules/billing/billing.service.js';
 import { createBillingRouter } from './modules/billing/billing.router.js';
 import { EntitlementService } from './modules/entitlements/entitlement.service.js';
@@ -93,6 +94,8 @@ import { MealAnalysisService } from './modules/meal-analysis/meal-analysis.servi
 import { createAiProvider } from './modules/chat/ai-provider.js';
 import { AiGovernanceService } from './modules/ai-governance/ai-governance.service.js';
 import { AiGovernanceController } from './modules/ai-governance/ai-governance.controller.js';
+import { createAdminInsightsRouter } from './modules/admin-insights/admin-insights.router.js';
+import { AdminInsightsService } from './modules/admin-insights/admin-insights.service.js';
 import { createAiGovernanceRouter } from './modules/ai-governance/ai-governance.router.js';
 import {
   governAiProvider,
@@ -342,13 +345,18 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/diet-rules', createDietRouter(dietController, authentication));
   app.use('/api/v1/categories', createCategoryRouter(catalogController));
   app.use('/api/v1/ingredients', createIngredientRouter(catalogController));
+  app.use('/api/v1', createCompositionRouter(database.client, authentication));
   app.use('/api/v1/food-data', createFoodDataRouter(foodDataController));
+  app.use('/api/v1/admin', createModerationAdminRouter(moderationController, authentication));
   app.use('/api/v1/admin', createCatalogAdminRouter(catalogController, authentication));
   app.use('/api/v1/admin', createFoodDataAdminRouter(foodDataController, authentication));
   app.use('/api/v1/admin', createContributorAdminRouter(contributorController, authentication));
-  app.use('/api/v1/admin', createModerationAdminRouter(moderationController, authentication));
   app.use('/api/v1/admin', createStorageAdminRouter(storageController, authentication));
   app.use('/api/v1/admin', createAiReviewAdminRouter(aiReviewController, authentication));
+  app.use(
+    '/api/v1/admin',
+    createAdminInsightsRouter(new AdminInsightsService(database.client), authentication),
+  );
   app.use(
     '/api/v1/admin',
     createAiGovernanceRouter(new AiGovernanceController(aiGovernance), authentication),

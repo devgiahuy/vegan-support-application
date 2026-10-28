@@ -1,8 +1,8 @@
 # Software Requirements Specification — Vegan Support Application
 
-**Version:** 1.5
+**Version:** 1.7
 
-**Updated:** 2026-10-25
+**Updated:** 2026-10-27
 
 **Status:** Approved product baseline
 
@@ -46,6 +46,7 @@ The MVP is delivered through backend Phases 00–27. Phases 00–11 are the exis
 - Has all Member capabilities.
 - Share AI-generated drafts for community use after required review.
 - Verify eligible AI nutrition or content suggestions with an evidence note.
+- Review and decide publication for submitted Member recipes, handbooks, and videos that have no open AI moderation flags or high-priority reports (anti-self-approval strictly enforced; flagged/quarantined or non-Member content escalates to Administrator).
 - All Contributors have the same permissions. There are no nutrition-expert and experienced-practitioner permission tiers.
 
 Contributor approval is manual and performed by an Administrator. The system stores one approval basis for audit and presentation only:
@@ -81,6 +82,8 @@ MVP traditions are Buddhist and Christian. Other traditions may be added without
 When a user selects a diet pattern or tradition, the backend provides a default rule set. The user confirms it and may enable or disable individual rules. Allergy rules, explicit exclusions, the selected diet pattern, and enabled tradition rules are hard constraints enforced by the backend. Recommendations must never reintroduce an item removed by these constraints.
 
 Restaurant directory discovery and place details are an approved exception (2026-10-25): they do not automatically apply the personal dietary profile. Restaurant search applies only filters explicitly selected for that request; provider labels do not establish dietary or allergy compatibility.
+
+User-approved 2026-10-25 allergy/composition extension: members select allergies by catalog names and approved synonyms, without entering internal codes. Backend validates active definitions and checks reviewed ingredient components transitively. Unknown, partial, inactive or cyclic composition cannot pass any active diet, allergy, explicit ingredient exclusion or tradition constraint. Exact packaged-product/formulation scope, source/license/version and review audit are required for completeness; AI cannot promote composition. Existing demo data is normalized directly, without a legacy manual-code UI. Stored-plan analysis and program confirmation recheck current dietary constraints.
 
 ## 5. Functional requirements
 
@@ -210,7 +213,7 @@ Restaurant directory discovery and place details are an approved exception (2026
 ### FR-17 Purchases and usage allowances — approved 2026-10-13; payOS conversion 2026-10-14
 
 - Signed-in users buy one-time packages for additional chat answers, fridge-analysis jobs, receipt-analysis jobs and simultaneous Pantry item capacity.
-- Purchased allowances accumulate without expiry in this demo scope. Free daily chat is consumed first; failed/fallback answers do not consume purchased credits.
+- Purchased single-pack allowances accumulate without expiry in this demo scope. The combo is sold with a 1-month, 3-month or 1-year duration (approved 2026-10-27): credits are granted per 30-day period and unused period credits expire at the period boundary; it never renews automatically. Administrators can view purchase revenue statistics and a per-user AI usage trace that never exposes prompt content. Free daily chat is consumed first; failed/fallback answers do not consume purchased credits.
 - Each scan job is bounded by configured image limits. Full/partial successful analysis consumes one job credit once; total failure releases it. A previously charged job can retry without another debit, subject to configured attempt limits.
 - All undeleted Pantry records count toward capacity, including zero-quantity records. Manual creation and both confirmation flows enforce the same transactional cap. Over-limit existing data remains readable, editable and deletable; no automatic deletion occurs.
 - Only verified server-side settlement grants snapshotted benefits, once. Browser return URLs cannot grant allowances. Purchases never modify roles or bypass dietary rules, consent, provider controls or confirmation.

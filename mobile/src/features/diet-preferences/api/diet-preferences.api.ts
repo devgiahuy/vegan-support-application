@@ -9,7 +9,12 @@ import type {
   DietScheduleResponseDto,
   SaveDietPreferencesRequestDto,
 } from '../types/diet-preferences.dto';
-import type { DietRulePreview, DraftAllergy, DraftIngredientExclusion } from '../types/diet-preferences.model';
+import type {
+  DietRulePreview,
+  DraftAllergy,
+  DraftIngredientAllergy,
+  DraftIngredientExclusion,
+} from '../types/diet-preferences.model';
 import type { DietPreferenceSummary } from '@/features/profile/types/profile.model';
 
 export interface DietSelection {
@@ -23,6 +28,8 @@ export interface SaveDietPreferencesInput extends DietSelection {
   ruleSelections: { ruleDefinitionId: string; enabled: boolean }[];
   scheduleDates?: string[];
   allergies: DraftAllergy[];
+  /** undefined = không gửi (BE giữ nguyên); mảng = thay thế toàn bộ. */
+  ingredientAllergies?: DraftIngredientAllergy[];
   ingredientExclusions: DraftIngredientExclusion[];
 }
 
@@ -47,6 +54,14 @@ export const dietPreferencesApi = {
         label: a.label || undefined,
         severity: a.severity,
       })),
+      ...(input.ingredientAllergies
+        ? {
+            ingredientAllergies: input.ingredientAllergies.map((a) => ({
+              ingredientId: a.ingredientId,
+              severity: a.severity,
+            })),
+          }
+        : {}),
       ingredientExclusions: input.ingredientExclusions.map((e) => ({
         ingredientName: e.ingredientName,
         ...(e.ingredientId ? { ingredientId: e.ingredientId } : {}),

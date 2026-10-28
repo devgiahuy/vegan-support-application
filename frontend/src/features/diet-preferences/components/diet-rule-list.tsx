@@ -2,12 +2,19 @@
 
 import { Lock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { FieldDescription, FieldLegend, FieldSet } from '@/components/ui/field';
 import { Switch } from '@/components/ui/switch';
 import type { DietRule } from '../types/diet.model';
 
+const SOURCE_LABELS: Record<string, string> = {
+  DIET_PATTERN: 'Kiểu ăn',
+  TRADITION: 'Truyền thống',
+};
+const sourceLabel = (source: string) => SOURCE_LABELS[source] ?? source;
+
 /**
- * Danh sách quy tắc với công tắc bật/tắt. Quy tắc cứng (`isHard`)
- * bị disabled kèm nhãn "Luôn bật" — backend luôn enforce.
+ * Danh sách quy tắc chia 2 nhóm: quy tắc cứng (`isHard`) luôn bật vì backend luôn
+ * enforce, và quy tắc tùy chọn người dùng bật/tắt.
  */
 export function DietRuleList({
   rules,
@@ -18,46 +25,71 @@ export function DietRuleList({
 }) {
   if (rules.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed p-4 text-center text-sm text-muted-foreground">
+      <p className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
         Chưa có quy tắc nào cho lựa chọn này.
       </p>
     );
   }
 
+  const hard = rules.filter((rule) => rule.isHard);
+  const optional = rules.filter((rule) => !rule.isHard);
+
   return (
-    <ul className="space-y-2">
-      {rules.map((rule) => (
-        <li
-          key={rule.ruleDefinitionId}
-          className="flex items-center justify-between gap-3 rounded-xl border p-3"
-        >
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{rule.name}</p>
-            <div className="mt-1 flex flex-wrap items-center gap-1.5">
-              {rule.source && (
-                <span className="text-xs text-muted-foreground">Nguồn: {rule.source}</span>
-              )}
-              {rule.isHard ? (
-                <Badge variant="secondary" className="gap-1 rounded-full text-[11px]">
-                  <Lock className="h-3 w-3" /> Luôn bật
-                </Badge>
-              ) : (
-                rule.isDefault && (
-                  <Badge variant="outline" className="rounded-full text-[11px]">
-                    Mặc định bật
-                  </Badge>
-                )
-              )}
-            </div>
-          </div>
-          <Switch
-            checked={rule.isHard ? true : rule.enabled}
-            disabled={rule.isHard}
-            onCheckedChange={(checked) => onToggle(rule.ruleDefinitionId, checked)}
-            aria-label={`Bật/tắt quy tắc ${rule.name}`}
-          />
-        </li>
-      ))}
-    </ul>
+    <div className="flex flex-col gap-8">
+      {hard.length > 0 && (
+        <FieldSet>
+          <FieldLegend>Luôn áp dụng ({hard.length})</FieldLegend>
+          <FieldDescription>
+            Đây là định nghĩa của kiểu ăn bạn chọn nên không thể tắt.
+          </FieldDescription>
+          <ul className="flex flex-col divide-y rounded-xl border">
+            {hard.map((rule) => (
+              <li key={rule.ruleDefinitionId} className="flex items-center gap-3 p-3">
+                <Lock aria-hidden className="size-4 shrink-0 text-muted-foreground" />
+                <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <p className="text-sm font-medium text-pretty">{rule.name}</p>
+                  {rule.source && (
+                    <p className="text-xs text-muted-foreground">
+                      Theo: {sourceLabel(rule.source)}
+                    </p>
+                  )}
+                </div>
+                <Badge variant="secondary">Luôn bật</Badge>
+              </li>
+            ))}
+          </ul>
+        </FieldSet>
+      )}
+
+      {optional.length > 0 && (
+        <FieldSet>
+          <FieldLegend>Tùy chọn ({optional.length})</FieldLegend>
+          <FieldDescription>
+            Bật những quy tắc bạn muốn hệ thống áp dụng thêm khi lọc món và lập thực đơn.
+          </FieldDescription>
+          <ul className="flex flex-col divide-y rounded-xl border">
+            {optional.map((rule) => {
+              const switchId = `diet-rule-${rule.ruleDefinitionId}`;
+              return (
+                <li key={rule.ruleDefinitionId} className="flex items-center gap-3 p-3">
+                  <label htmlFor={switchId} className="flex min-w-0 flex-1 flex-col gap-0.5">
+                    <span className="text-sm font-medium text-pretty">{rule.name}</span>
+                    <span className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                      {rule.source && <span>Theo: {sourceLabel(rule.source)}</span>}
+                      {rule.isDefault && <Badge variant="outline">Gợi ý bật</Badge>}
+                    </span>
+                  </label>
+                  <Switch
+                    id={switchId}
+                    checked={rule.enabled}
+                    onCheckedChange={(checked) => onToggle(rule.ruleDefinitionId, checked)}
+                  />
+                </li>
+              );
+            })}
+          </ul>
+        </FieldSet>
+      )}
+    </div>
   );
 }

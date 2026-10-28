@@ -9,22 +9,23 @@ import {
   BadgeCheck,
   Camera,
   Info,
-  FlaskConical,
   BookOpen,
   CalendarDays,
   ChevronRight,
+  ClipboardCheck,
   Leaf,
   LogOut,
   Package,
-  Receipt,
   RefreshCw,
   ShieldCheck,
   Sparkles,
   Store,
+  Target,
   Trash2,
   UtensilsCrossed,
   UserRound,
   Warehouse,
+  type LucideIcon,
 } from 'lucide-react-native';
 import { useQueryClient } from '@tanstack/react-query';
 
@@ -32,6 +33,7 @@ import {
   ActivityLevel,
   BiologicalSex,
   PracticeSchedule,
+  UserRole,
 } from '@/common/enums';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { DropdownField, type DropdownOption } from '@/components/ui/dropdown-field';
@@ -51,7 +53,7 @@ import {
 import { useDeleteBehaviorHistoryMutation } from '@/features/safety/queries/safety.queries';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { useAuthStore } from '@/store/useAuthStore';
-import { formatDate } from '@/lib/utils';
+import { cn, formatDate } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
 
 /** Nhãn đồng bộ form sức khỏe của web (`health-profile-form.tsx`). */
@@ -67,6 +69,14 @@ const ACTIVITY_OPTIONS: DropdownOption<ActivityLevel>[] = [
   { value: ActivityLevel.VERY_ACTIVE, label: 'Vận động nhiều (cường độ cao 6–7 ngày/tuần)' },
   { value: ActivityLevel.EXTRA_ACTIVE, label: 'Vận động rất nhiều (lao động nặng / 2 buổi mỗi ngày)' },
 ];
+
+/** Một dòng trong danh sách "Nội dung của bạn". */
+interface ProfileMenuEntry {
+  href: Href;
+  title: string;
+  note: string;
+  icon: LucideIcon;
+}
 
 function toNumber(value: string): number {
   return Number(value.replace(',', '.').trim());
@@ -254,6 +264,29 @@ export default function ProfileScreen() {
   const displayProfile = profile;
   const health = displayProfile.health;
   const diet = displayProfile.diet;
+  const contributionNote = displayProfile.user.contributorProfile
+    ? `Đã duyệt • ${displayProfile.user.contributorProfile.approvalBasisLabel}`
+    : displayProfile.user.contributorApplication
+      ? `Trạng thái: ${displayProfile.user.contributorApplication.rawStatus}`
+      : 'Chưa gửi nguyện vọng nào.';
+  // Cùng thứ tự/nhãn với menu tài khoản của web. Mục "Hóa đơn mua sắm" và "Tra cứu dinh dưỡng 100g" đã được web gỡ khỏi
+  // menu này nên không đặt ở đây (hóa đơn vẫn quét được từ Tủ bếp). Bảng điều khiển Contributor chỉ hiện với Contributor;
+  // app không có màn quản trị Admin.
+  const menuItems: ProfileMenuEntry[] = [
+    { href: '/my-content' as Href, icon: BookOpen, title: 'Bài viết của tôi', note: 'Công thức, cẩm nang, video bạn đã đăng — sửa, xoá, theo dõi trạng thái duyệt.' },
+    { href: '/meal-plans' as Href, icon: CalendarDays, title: 'Kế hoạch bữa ăn tuần', note: 'Tạo và xem thực đơn tuần theo chế độ ăn của bạn.' },
+    { href: '/meal-plans/saved' as Href, icon: UtensilsCrossed, title: 'Thực đơn đã lưu', note: 'Các thực đơn tuần bạn đã tạo, kèm cảnh báo và phân tích.' },
+    { href: '/custom-meals' as Href, icon: Leaf, title: 'Món ăn của tôi', note: 'Lưu món ăn cá nhân, thẻ phân loại và đưa vào thực đơn tuần.' },
+    { href: '/meal-programs' as Href, icon: Target, title: 'Lộ trình nhiều tuần', note: 'Tạo lộ trình 2-12 tuần và xem phân tích tích lũy.' },
+    { href: '/billing' as Href, icon: Package, title: 'Gói tiện ích', note: 'Mua thêm lượt AI và ô tủ đồ ăn.' },
+    { href: '/pantry' as Href, icon: Warehouse, title: 'Tủ bếp gia đình', note: 'Quản lý nguyên liệu đã xác nhận, số lượng và hạn dùng.' },
+    { href: '/restaurants/mine' as Href, icon: Store, title: 'Quán chay tôi đề xuất', note: 'Theo dõi trạng thái duyệt các quán bạn đã gửi.' },
+    { href: '/ai-knowledge' as Href, icon: Sparkles, title: 'Khám phá Tri thức AI', note: 'Câu trả lời AI do cộng đồng chia sẻ và được thẩm định.' },
+    { href: '/contributor-status' as Href, icon: BadgeCheck, title: 'Đóng góp', note: contributionNote },
+    ...(displayProfile.user.role === UserRole.CONTRIBUTOR
+      ? [{ href: '/contributor-dashboard' as Href, icon: ClipboardCheck, title: 'Bảng điều khiển Contributor', note: 'Hàng chờ kiểm duyệt, lối tắt đóng góp và quy chuẩn duyệt bài.' }]
+      : []),
+  ];
 
   return (
     <SiteScreen>
@@ -480,12 +513,22 @@ export default function ProfileScreen() {
                 Thực phẩm dị ứng
               </Text>
               <View className="mt-2 flex-row flex-wrap gap-2">
-                {diet.allergies.length ? (
-                  diet.allergies.map((allergy) => (
-                    <View key={allergy.allergenCode} className="rounded-full bg-destructive/10 px-3 py-1.5">
-                      <Text className="text-xs font-semibold text-destructive">{allergy.label}</Text>
-                    </View>
-                  ))
+                {diet.allergies.length || diet.ingredientAllergies.length ? (
+                  <>
+                    {diet.allergies.map((allergy) => (
+                      <View key={allergy.allergenCode} className="rounded-full bg-destructive/10 px-3 py-1.5">
+                        <Text className="text-xs font-semibold text-destructive">{allergy.label}</Text>
+                      </View>
+                    ))}
+                    {diet.ingredientAllergies.map((allergy) => (
+                      <View key={allergy.ingredientId} className="rounded-full bg-destructive/10 px-3 py-1.5">
+                        <Text className="text-xs font-semibold text-destructive">
+                          {allergy.ingredientName}
+                          {allergy.ingredientActive ? '' : ' (đã gỡ khỏi danh mục)'}
+                        </Text>
+                      </View>
+                    ))}
+                  </>
                 ) : (
                   <Text className="text-sm text-muted-foreground">Chưa khai báo dị ứng.</Text>
                 )}
@@ -521,161 +564,25 @@ export default function ProfileScreen() {
 
         <SectionTitle title="Nội dung của bạn" subtitle="Nội dung và nguyện vọng bạn đã lưu/gửi trên VeggieConnect." />
         <View className="overflow-hidden rounded-2xl border border-border bg-card">
-          <Link href={'/my-content' as Href} asChild>
-            <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                <BookOpen size={18} color={colors.primary} />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-semibold text-foreground">Bài viết của tôi</Text>
-                <Text className="mt-0.5 text-xs text-muted-foreground">
-                  Công thức, cẩm nang, video bạn đã đăng — sửa, xoá, theo dõi trạng thái duyệt.
-                </Text>
-              </View>
-              <ChevronRight size={16} color={colors.mutedForeground} />
-            </Pressable>
-          </Link>
-          <Link href={'/custom-meals' as Href} asChild>
-            <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                <Leaf size={18} color={colors.primary} />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-semibold text-foreground">Món ăn của tôi</Text>
-                <Text className="mt-0.5 text-xs text-muted-foreground">
-                  Lưu món ăn cá nhân, thẻ phân loại và đưa vào thực đơn tuần.
-                </Text>
-              </View>
-              <ChevronRight size={16} color={colors.mutedForeground} />
-            </Pressable>
-          </Link>
-          <Link href={'/meal-programs' as Href} asChild>
-            <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                <CalendarDays size={18} color={colors.primary} />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-semibold text-foreground">Lộ trình nhiều tuần</Text>
-                <Text className="mt-0.5 text-xs text-muted-foreground">
-                  Tạo lộ trình 2-12 tuần và xem phân tích tích lũy.
-                </Text>
-              </View>
-              <ChevronRight size={16} color={colors.mutedForeground} />
-            </Pressable>
-          </Link>
-          <Link href={'/billing' as Href} asChild>
-            <Pressable
-              accessibilityRole="link"
-              className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted"
-            >
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                <Package size={18} color={colors.primary} />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-semibold text-foreground">Gói tiện ích</Text>
-                <Text className="mt-0.5 text-xs text-muted-foreground">
-                  Mua thêm lượt AI và ô tủ đồ ăn.
-                </Text>
-              </View>
-              <ChevronRight size={16} color={colors.mutedForeground} />
-            </Pressable>
-          </Link>
-          <Link href={'/pantry' as Href} asChild>
-            <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                <Warehouse size={18} color={colors.primary} />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-semibold text-foreground">Tủ bếp</Text>
-                <Text className="mt-0.5 text-xs text-muted-foreground">
-                  Quản lý nguyên liệu đã xác nhận, số lượng và hạn dùng.
-                </Text>
-              </View>
-              <ChevronRight size={16} color={colors.mutedForeground} />
-            </Pressable>
-          </Link>
-          <Link href={'/receipts' as Href} asChild>
-            <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                <Receipt size={18} color={colors.primary} />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-semibold text-foreground">Hóa đơn mua sắm</Text>
-                <Text className="mt-0.5 text-xs text-muted-foreground">
-                  Quét hóa đơn, đối chiếu và cập nhật Tủ bếp.
-                </Text>
-              </View>
-              <ChevronRight size={16} color={colors.mutedForeground} />
-            </Pressable>
-          </Link>
-          <Link href={'/meal-plans/saved' as Href} asChild>
-            <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                <UtensilsCrossed size={18} color={colors.primary} />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-semibold text-foreground">Thực đơn đã lưu</Text>
-                <Text className="mt-0.5 text-xs text-muted-foreground">Các thực đơn tuần bạn đã tạo, kèm cảnh báo và phân tích.</Text>
-              </View>
-              <ChevronRight size={16} color={colors.mutedForeground} />
-            </Pressable>
-          </Link>
-          <Link href={'/restaurants/mine' as Href} asChild>
-            <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                <Store size={18} color={colors.primary} />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-semibold text-foreground">Quán chay tôi đề xuất</Text>
-                <Text className="mt-0.5 text-xs text-muted-foreground">Theo dõi trạng thái duyệt các quán bạn đã gửi.</Text>
-              </View>
-              <ChevronRight size={16} color={colors.mutedForeground} />
-            </Pressable>
-          </Link>
-          <Link href={'/ai-knowledge' as Href} asChild>
-            <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                <Sparkles size={18} color={colors.primary} />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-semibold text-foreground">Khám phá Tri thức AI</Text>
-                <Text className="mt-0.5 text-xs text-muted-foreground">Câu trả lời AI do cộng đồng chia sẻ và được thẩm định.</Text>
-              </View>
-              <ChevronRight size={16} color={colors.mutedForeground} />
-            </Pressable>
-          </Link>
-          <Link href={'/food-data' as Href} asChild>
-            <Pressable className="flex-row items-center gap-3 border-b border-border p-4 active:bg-muted">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                <FlaskConical size={18} color={colors.primary} />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-semibold text-foreground">Tra cứu dinh dưỡng 100g</Text>
-                <Text className="mt-0.5 text-xs text-muted-foreground">
-                  Nguyên liệu 100g, cách nấu, nhu cầu khuyến nghị và quy tắc tương kỵ.
-                </Text>
-              </View>
-              <ChevronRight size={16} color={colors.mutedForeground} />
-            </Pressable>
-          </Link>
-          <Link href={'/contributor-status' as Href} asChild>
-            <Pressable className="flex-row items-center gap-3 p-4 active:bg-muted">
-              <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                <BadgeCheck size={18} color={colors.primary} />
-              </View>
-              <View className="flex-1">
-                <Text className="text-sm font-semibold text-foreground">Đóng góp</Text>
-                <Text className="mt-0.5 text-xs text-muted-foreground">
-                  {displayProfile.user.contributorProfile
-                    ? `Đã duyệt • ${displayProfile.user.contributorProfile.approvalBasisLabel}`
-                    : displayProfile.user.contributorApplication
-                      ? `Trạng thái: ${displayProfile.user.contributorApplication.rawStatus}`
-                      : 'Chưa gửi nguyện vọng nào.'}
-                </Text>
-              </View>
-              <ChevronRight size={16} color={colors.mutedForeground} />
-            </Pressable>
-          </Link>
+          {menuItems.map((entry, index) => {
+            const Icon = entry.icon;
+            return (
+              <Link key={entry.title} href={entry.href} asChild>
+                <Pressable
+                  accessibilityRole="link"
+                  className={cn('flex-row items-center gap-3 p-4 active:bg-muted', index < menuItems.length - 1 ? 'border-b border-border' : '')}>
+                  <View className="h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                    <Icon size={18} color={colors.primary} />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-sm font-semibold text-foreground">{entry.title}</Text>
+                    <Text className="mt-0.5 text-xs text-muted-foreground">{entry.note}</Text>
+                  </View>
+                  <ChevronRight size={16} color={colors.mutedForeground} />
+                </Pressable>
+              </Link>
+            );
+          })}
         </View>
 
         <PrivacySection />

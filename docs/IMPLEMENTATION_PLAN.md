@@ -1,8 +1,8 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.9
+**Version:** 4.13
 
-**Updated:** 2026-10-25
+**Updated:** 2026-10-27
 
 **Status:** Approved implementation baseline
 
@@ -40,7 +40,7 @@ The current API contract may still contain legacy Contributor subtype fields unt
 | D20 | Certificates | No certificate verification in MVP. Future evidence badges do not silently introduce Contributor permission tiers. |
 | D21 | Documentation | `docs/SRS.md` is canonical; runtime capability status stays in frontend integration docs; roadmap is separate from implementation phases. |
 | D22 | Safety | Nutrition, freshness, compatibility, BMI, and AI answers are educational support, not diagnosis or guaranteed safety. |
-| D23 | Usage billing | User-approved 2026-10-13 and payOS conversion 2026-10-14: payOS exclusively for new one-time cumulative AI usage/Pantry capacity packages. App rollout remains development/test; payOS checkout is real money, without sandbox or mock fallback. No recurring or media-storage purchase. |
+| D23 | Usage billing | User-approved 2026-10-13 and payOS conversion 2026-10-14: payOS exclusively for new one-time cumulative AI usage/Pantry capacity packages and, since 2026-10-27, a non-renewing combo with 1-month/3-month/1-year durations (BL-20.1). App rollout remains development/test; payOS checkout is real money, without sandbox or mock fallback. No recurring or media-storage purchase. |
 | D24 | AI recipe draft | Accept title, description and ordered ingredient names without image analysis; return editable amount/unit/serving/time/step suggestions. The author edits and saves via the existing DRAFT content flow. AI output does not publish or become canonical nutrition data. Approved by user 2026-10-24. |
 
 ## 3. MVP scope
@@ -221,6 +221,7 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 4. Hard constraints remove candidates before scoring. Ranking cannot restore them.
 5. MVP supports Buddhist and Christian traditions; the model remains extensible.
 6. Restaurant directory discovery/details follow BL-16's explicit-search exception and do not inherit these personal profile constraints.
+7. Recipe discovery may show profile-removed recipes only in an explicit, separately labelled "not suitable" view (`GET /posts?eligibility=INELIGIBLE`, user-approved 2026-10-26). Each item carries its reason codes and offending ingredients; the view never feeds ranking, recommendations or meal planning, and detail pages stay viewable as before.
 
 ### BL-03 — Practice schedule
 
@@ -230,6 +231,8 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 - Missing/ambiguous schedules fail safely by asking for confirmation rather than inferring religious observance.
 
 ### BL-04 — Canonical ingredients and compatibility
+
+User-approved 2026-10-25 extension: use a public named allergen catalog for explicit selection and reject unknown/inactive preference codes. Ingredient composition has UNKNOWN/PARTIAL/COMPLETE status, SIMPLE/COMPOUND/UNSPECIFIED kind, canonical component edges, reviewed source/version/record/license and exact formulation scope. Admin-only, versioned, audited transactions reject cycles and excessive depth, including concurrent cross-parent cycles. Evaluate all descendants for allergies/exclusions/diet/tradition rules; every active hard dietary constraint rejects incomplete data. AI remains suggestion-only. Direct ingredient metadata edits invalidate the composition assessment. Current-plan fingerprints include composition semantics and profile constraints; confirmation rechecks current selected plans. Normalize demo catalog/aliases/profiles directly under the user's instruction, reporting unresolved selections for explicit correction; known positive constraints are never silently discarded.
 
 1. Recipe ingredients map to canonical records; aliases are locale-aware.
 2. Quantities normalize to mass where a reviewed conversion exists.
@@ -253,6 +256,8 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 
 ### BL-06 — Content and video review lifecycle
 
+Maintenance clarification 2026-10-26: titles and bodies need not be unique. Automatically generated URLs are unique and collision-safe; an explicitly requested URL must remain unique. Editing without a requested URL change preserves the current slug.
+
 1. Author creates a draft and submits a specific immutable revision.
 2. Automated moderation may attach signals but cannot publish, reject, or delete.
 3. Admin approves or rejects with reason. Only approved revision becomes public.
@@ -267,7 +272,7 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 - Vote uniqueness and mutation idempotency are backend enforced.
 - Reports and AI flags create moderation signals.
 - Removal requires an Admin decision and reason; no signal performs hard deletion automatically.
-- Contributor role does not grant final moderation or publication authority.
+- Contributor role can review and decide publication for submitted Member community content (recipes, articles, videos) that have no open AI flags or high-priority reports. Flagged/quarantined items, reports, comments, users, and content by non-Members remain Admin-exclusive. Anti-self-approval is strictly enforced.
 
 ### BL-08 — Storage quota
 
@@ -307,6 +312,7 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 - Repeated-pattern and cumulative nutrient checks span the configured horizon.
 - Editing one week invalidates affected later analyses and shopping projections.
 - Generated programs are drafts until the user confirms them.
+- Before starting/resuming missing weekly alternatives, validate health and periodic calendar coverage for every week to generate. Return all missing week starts/dates before creating new records; users explicitly save days for each week. Successful repair of the last failed week recomputes PARTIAL/FAILED → DRAFT in the same versioned mutation, allowing confirmation. Do not infer religious observance or weaken hard dietary constraints.
 
 ### BL-12 — Pantry, fridge images, and receipts
 
@@ -387,6 +393,14 @@ AI artifacts keep provider/model version, input/output trace metadata, prompt/te
 - One bounded scan job costs one credit after any image succeeds, including a valid empty analysis. Total failure/cancellation before success releases it. Retries of an already charged job are free, with a configurable default maximum of three processing attempts. Expired queued/processing leases are fenced before release.
 - Pantry capacity counts every undeleted item, including zero quantity. Enforce the limit transactionally for manual creation and both scan confirmations. Existing over-limit items remain readable/editable/deletable; deletion/merge frees capacity. Results require explicit user confirmation before Pantry mutation.
 - Clients share account balances/history and use typed business errors. Mongo validators/indexes, additive queued timestamp backfill, idempotent seed, OpenAPI and consumer documentation are required release gates.
+
+### BL-20.1 — Duration combo and Admin insights (user-approved 2026-10-27)
+
+- Only the combo has durations; the four single packs remain one-time and permanent. Catalog: `combo-1m` 69.000đ, `combo-3m` 176.000đ (−15%, rounded from 175.950), `combo-12m` 580.000đ (−30%, rounded from 579.600). The former one-time `combo` is deactivated; historical/pending orders keep their snapshot (demo data, no migration).
+- A paid duration order creates one subscription of N periods × 30 days from activation (1 year = 12 periods = 360 days). Each period grants 100 chat, 10 fridge and 10 receipt credits once; unused period credits expire at the boundary (ledger `SUBSCRIPTION_PERIOD_EXPIRED`). +50 Pantry slots apply while active, not multiplied; after expiry existing items remain and only new additions are blocked.
+- Current-period credits are spent before permanent (trial and single-pack) credits. A release returns to the same period only while it is current; a release after the boundary is not refunded (`USAGE_RELEASED_PERIOD_EXPIRED`). Buying while active appends after the current end date. No auto-renewal.
+- Admin revenue statistics: overview (revenue of PAID orders, paid orders, buyers, average), contiguous series by day/week/month and order-status counts with success rate. Asia/Ho_Chi_Minh buckets, weeks start Monday; revenue by `paidAt`, statuses by `createdAt`; default 30 days, maximum 731. Simulated sandbox history is excluded. No per-product breakdown or export.
+- Admin AI usage trace: signed-in chat requests (free daily, combo period or permanent credits) and fridge/receipt reservations with user name/email, feature, time, allowance source, units charged, outcome (spent/released/held), AI status, provider/model, tokens, latency and error code. Filters: feature, outcome, user email/name, date range. Prompts, images, receipts and provider payloads are never returned; guests are excluded; chat rows follow AI request-log retention; chat rows created before 2026-10-27 report source `UNKNOWN`. No CSV export.
 
 ## 6. RBAC summary
 
@@ -560,6 +574,16 @@ A phase is complete only when:
 | Phase 2 ideas are forgotten or accidentally claimed READY | Dedicated roadmap plus explicit status taxonomy |
 
 ## 13. Change record
+
+- **4.13 — 2026-10-26:** User clarifies that approved Contributors have review/moderation permissions for submitted community content (recipes, articles, videos) created by Members (excluding self-created content and items flagged with open AI flags or high report counts requiring Admin review). Content review endpoints (`/api/v1/admin/content-review*`) allow both Admin and Contributor roles.
+
+- **4.13 — 2026-10-27:** User approves combo durations (1 month / 3 months / 1 year, per-30-day credits, −15%/−30%) and Admin revenue statistics plus per-user AI usage trace (BL-20.1). Single packs remain one-time.
+
+- **4.12 — 2026-10-26:** User approves an explicit "not suitable" recipe-discovery view with per-recipe reasons (BL-02.7). Demo composition assertions extend to prepared foods used by seeded recipes.
+
+- **4.11 — 2026-10-26:** Clarify duplicate content titles with unique/stable generated URLs; preflight full-horizon periodic schedules and recover partially generated programs to DRAFT after week repairs.
+
+- **4.10 — 2026-10-25:** User approves named allergy selection, direct catalog normalization, reviewed transitive composition, fail-closed uncertain data, and current analysis/confirmation validation. No restaurant-directory or canonical-nutrition changes.
 
 - **4.9 — 2026-10-25:** Custom-meal maintenance clarifies recalculation, approved-alias resolution, whole-meal fallback for free text/name-only meals, manual overrides and unknown-value handling. Recipe discovery, recommendations, weekly generation and manual insertion enforce allergies against both revision snapshots and current ingredient metadata. Weekly programs already generate dishes; consumers must read `days[].slots` in generated snapshots.
 

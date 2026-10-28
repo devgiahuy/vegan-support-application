@@ -123,4 +123,76 @@ describe('billing mapper', () => {
       })
     ).toMatchObject({ provider: 'vnpay', checkoutUrl: null, pending: false });
   });
+  it('groups duration plans with savings and keeps one-time packs separate', () => {
+    const catalog = catalogMapper.toModel({
+      enabled: true,
+      provider: 'payos',
+      products: [
+        { id: 'chat-100', priceVnd: 29000, chatCredits: 100, durationMonths: null },
+        {
+          id: 'combo-12m',
+          priceVnd: 580000,
+          chatCredits: 100,
+          pantrySlots: 50,
+          durationMonths: 12,
+          periodDays: 30,
+        },
+        {
+          id: 'combo-1m',
+          priceVnd: 69000,
+          chatCredits: 100,
+          pantrySlots: 50,
+          durationMonths: 1,
+          periodDays: 30,
+        },
+        {
+          id: 'combo-3m',
+          priceVnd: '176000',
+          chatCredits: 100,
+          pantrySlots: 50,
+          durationMonths: '3',
+          periodDays: 30,
+        },
+      ],
+    });
+    expect(catalog.oneTimeProducts.map((p) => p.id)).toEqual(['chat-100']);
+    expect(catalog.durationPlans.map((p) => [p.id, p.durationLabel, p.savingsPercent])).toEqual([
+      ['combo-1m', '1 tháng', 0],
+      ['combo-3m', '3 tháng', 15],
+      ['combo-12m', '1 năm', 30],
+    ]);
+    expect(catalog.durationPlans[0]?.periodBenefitLabels).toEqual([
+      '100 lượt chat AI mỗi 30 ngày',
+      '+50 ô tủ đồ ăn khi còn hạn',
+    ]);
+    expect(catalog.oneTimeProducts[0]?.periodBenefitLabels).toEqual([]);
+    expect(orderMapper.toModel({ durationMonths: 3 }).durationLabel).toBe('3 tháng');
+  });
+  it('adds active subscription period credits to available allowances', () => {
+    const model = entitlementMapper.toModel({
+      enabled: true,
+      provider: 'payos',
+      chatCredits: 5,
+      fridgeCredits: 1,
+      receiptCredits: 0,
+      subscription: {
+        productId: 'combo-3m',
+        endsAt: '2027-01-25T00:00:00.000Z',
+        periodEndsAt: '2026-11-26T00:00:00.000Z',
+        periodDays: 30,
+        chatCredits: 90,
+        fridgeCredits: 10,
+        receiptCredits: 10,
+        pantrySlots: 50,
+        chatPerPeriod: 100,
+        fridgePerPeriod: 10,
+        receiptPerPeriod: 10,
+      },
+    });
+    expect(model.chatAvailable).toBe(95);
+    expect(model.fridgeAvailable).toBe(11);
+    expect(model.subscription?.periodRows[0]).toEqual({ label: 'Chat AI', value: '90 / 100' });
+    expect(model.usageRows[0]?.value).toBe('95 lượt');
+    expect(entitlementMapper.toModel({ subscription: null }).subscription).toBeNull();
+  });
 });

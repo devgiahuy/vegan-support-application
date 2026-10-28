@@ -1,5 +1,6 @@
 import type { Prisma, PrismaClient } from '@prisma/client';
 import { z } from 'zod';
+import { loadIngredientSafetyCatalog } from '../catalog/ingredient-safety.js';
 import type { ContentSearchCriteria, SearchConstraints } from './content.repository.js';
 
 type Expression = Prisma.InputJsonObject;
@@ -111,6 +112,34 @@ export async function searchMongoPublished(
   join('recipe_diet_compatibilities', 'published_revision_id', 'revision_id', 'compatibilities');
   pipeline.push({ $set: { detail: { $arrayElemAt: ['$details', 0] } } });
   const recipeChecks: Expression[] = [{ $gt: [{ $size: '$details' }, 0] }];
+  if (
+    constraints.requireResolvedIngredients ||
+    constraints.dietPattern ||
+    constraints.traditions.length ||
+    constraints.allergenCodes.length ||
+    constraints.allergicIngredientIds?.length ||
+    constraints.excludedIngredientIds.length ||
+    constraints.excludedNormalizedNames.length
+  ) {
+    const catalog = await loadIngredientSafetyCatalog(prisma);
+    const blockedIds = catalog.blockedIngredientIds(constraints);
+    if (blockedIds.length)
+      recipeChecks.push({ $not: [overlap('$ingredients.ingredient_id', blockedIds)] });
+    recipeChecks.push({
+      $eq: [
+        {
+          $size: {
+            $setDifference: [
+              '$ingredients.ingredient_id',
+              catalog.ingredients.map((item) => item.id),
+            ],
+          },
+        },
+        0,
+      ],
+    });
+    recipeChecks.push({ $gt: [{ $size: '$ingredients' }, 0] });
+  }
   if (constraints.dietPattern)
     recipeChecks.push({
       $anyElementTrue: [
@@ -171,8 +200,21 @@ export async function searchMongoPublished(
         },
       ],
     });
+  const [hasRecipeDetail, ...safetyChecks] = recipeChecks;
   pipeline.push({
-    $match: { $expr: { $or: [{ $ne: ['$type', 'RECIPE'] }, { $and: recipeChecks }] } },
+    $match: {
+      $expr:
+        filters.eligibility === 'INELIGIBLE'
+          ? // Explicit opt-in view of recipes the profile removed; never mixed into ranked results.
+            {
+              $and: [
+                { $eq: ['$type', 'RECIPE'] },
+                hasRecipeDetail!,
+                safetyChecks.length ? { $not: [{ $and: safetyChecks }] } : { $literal: false },
+              ],
+            }
+          : { $or: [{ $ne: ['$type', 'RECIPE'] }, { $and: recipeChecks }] },
+    },
   });
   if (filters.category)
     pipeline.push({

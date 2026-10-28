@@ -8,9 +8,25 @@ const nextConfig: NextConfig = {
       { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
       { protocol: 'https', hostname: 'res.cloudinary.com' },
       { protocol: 'https', hostname: 'i.pravatar.cc' },
+      // Ảnh công thức mẫu có giấy phép mở từ Wikimedia Commons.
+      { protocol: 'https', hostname: 'upload.wikimedia.org' },
       // Thumbnail ảnh bìa video YouTube (resolveVideoCover đổi watch URL sang i.ytimg.com).
       { protocol: 'https', hostname: 'i.ytimg.com' },
       { protocol: 'https', hostname: 'img.youtube.com' },
+      // Ảnh bìa cẩm nang/công thức mẫu do người dùng chọn.
+      { protocol: 'https', hostname: 'cdn.diag.vn' },
+      { protocol: 'https', hostname: 'weeknightbite.com' },
+      { protocol: 'https', hostname: 'file.hstatic.net' },
+      { protocol: 'https', hostname: 'images2.thanhnien.vn' },
+      { protocol: 'https', hostname: 'cdn.tgdd.vn' },
+      { protocol: 'https', hostname: 'afamilycdn.com' },
+      { protocol: 'https', hostname: 'encrypted-tbn0.gstatic.com' },
+      { protocol: 'https', hostname: 'storage.googleapis.com' },
+      { protocol: 'https', hostname: 'eggyolk.vn' },
+      { protocol: 'https', hostname: 'i.redd.it' },
+      { protocol: 'https', hostname: 'cdn.24h.com.vn' },
+      { protocol: 'https', hostname: 'bizweb.dktcdn.net' },
+      { protocol: 'https', hostname: 'noomfood.com' },
     ],
   },
   async redirects() {

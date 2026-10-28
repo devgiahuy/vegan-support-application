@@ -16,9 +16,8 @@ import {
 import { SiteScreen } from '@/components/layout/site-screen';
 import { LoadMoreButton } from '@/components/shared/load-more-button';
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { useInfiniteRecipesQuery } from '@/features/recipe/queries/recipe.queries';
-import { useDeletePostMutation, useInfiniteArticlesQuery } from '@/features/post/queries/post.queries';
-import { useInfiniteVideosQuery } from '@/features/video/queries/video.queries';
+import { useDeletePostMutation, useInfiniteMyPostsQuery } from '@/features/post/queries/post.queries';
+import type { MyPost, MyPostType } from '@/features/post/types/post.model';
 import { PostStatus } from '@/common/enums';
 import { getApiErrorMessage } from '@/lib/api-error';
 import { useIconColors } from '@/lib/theme-colors';
@@ -27,20 +26,8 @@ import { BookmarksList } from '@/features/community/components/bookmarks-list';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/useAuthStore';
 
-type ContentType = 'RECIPE' | 'BLOG' | 'VIDEO';
-
-interface MyContentItem {
-  id: string;
-  type: ContentType;
-  title: string;
-  excerpt: string;
-  categoryName: string;
-  coverImageUrl: string;
-  status: PostStatus;
-  statusLabel: string;
-  version: number;
-  formattedPublishedAt: string;
-}
+type ContentType = MyPostType;
+type MyContentItem = MyPost;
 
 const STATUS_FILTERS: { value: 'ALL' | PostStatus; label: string }[] = [
   { value: 'ALL', label: 'Tất cả' },
@@ -173,119 +160,36 @@ function MyContentRow({
 }
 
 /**
- * "Bài viết của tôi" — gộp Công thức/Cẩm nang/Video do người dùng hiện tại đăng, lọc
- * theo `author.id` từ chính danh sách công khai (`GET /recipes|articles|videos`) vì
- * backend chưa có API "bài đăng của tôi" riêng — đồng bộ cách làm của
- * `frontend/src/app/(site)/profile/page.tsx` (biến `myPosts`). Có thể sửa/xoá trực
+ * "Bài viết của tôi" — Công thức/Cẩm nang/Video do người dùng hiện tại tạo, ở mọi trạng thái
+ * kiểm duyệt, lấy từ `GET /posts/mine` (BE tự giới hạn theo tài khoản). Có thể sửa/xoá trực
  * tiếp vì mọi mục ở đây chắc chắn thuộc sở hữu người dùng.
  */
 export default function MyContentScreen() {
   const colors = useIconColors();
   const router = useRouter();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const currentUserId = useAuthStore((state) => state.user?.id);
 
   const [search, setSearch] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<'ALL' | PostStatus>('ALL');
   const [historyItem, setHistoryItem] = React.useState<MyContentItem | null>(null);
 
   const {
-    data: recipePages,
-    isLoading: isRecipesLoading,
-    isError: isRecipesError,
-    refetch: refetchRecipes,
-    hasNextPage: hasMoreRecipes,
-    fetchNextPage: fetchMoreRecipes,
-    isFetchingNextPage: isFetchingMoreRecipes,
-  } = useInfiniteRecipesQuery({ limit: 50 });
-  const {
-    data: articlePages,
-    isLoading: isArticlesLoading,
-    isError: isArticlesError,
-    refetch: refetchArticles,
-    hasNextPage: hasMoreArticles,
-    fetchNextPage: fetchMoreArticles,
-    isFetchingNextPage: isFetchingMoreArticles,
-  } = useInfiniteArticlesQuery({ limit: 50 });
-  const {
-    data: videoPages,
-    isLoading: isVideosLoading,
-    isError: isVideosError,
-    refetch: refetchVideos,
-    hasNextPage: hasMoreVideos,
-    fetchNextPage: fetchMoreVideos,
-    isFetchingNextPage: isFetchingMoreVideos,
-  } = useInfiniteVideosQuery({ limit: 50 });
-
-  // Backend chưa có API "bài đăng của tôi" nên phải duyệt các danh sách chung; "Tải thêm" nạp trang kế của cả 3 loại.
-  const hasMore = Boolean(hasMoreRecipes || hasMoreArticles || hasMoreVideos);
-  const isFetchingMore = isFetchingMoreRecipes || isFetchingMoreArticles || isFetchingMoreVideos;
-  const fetchMore = () => {
-    if (hasMoreRecipes) void fetchMoreRecipes();
-    if (hasMoreArticles) void fetchMoreArticles();
-    if (hasMoreVideos) void fetchMoreVideos();
-  };
+    data: myPostPages,
+    isLoading,
+    isError,
+    refetch: refetchAll,
+    hasNextPage: hasMore,
+    fetchNextPage,
+    isFetchingNextPage: isFetchingMore,
+  } = useInfiniteMyPostsQuery({ limit: 50 }, { enabled: isAuthenticated });
+  const fetchMore = () => void fetchNextPage();
 
   const deleteMutation = useDeletePostMutation();
 
-  const isLoading = isRecipesLoading || isArticlesLoading || isVideosLoading;
-  const isError = isRecipesError || isArticlesError || isVideosError;
-  const refetchAll = () => {
-    void refetchRecipes();
-    void refetchArticles();
-    void refetchVideos();
-  };
-
-  const myItems = React.useMemo<MyContentItem[]>(() => {
-    if (!currentUserId) return [];
-
-    const fromRecipes: MyContentItem[] = (recipePages?.pages.flatMap((page) => page.items) ?? [])
-      .filter((r) => r.author.id === currentUserId)
-      .map((r) => ({
-        id: r.id,
-        type: 'RECIPE',
-        title: r.title,
-        excerpt: r.description,
-        categoryName: r.category.name,
-        coverImageUrl: r.coverImageUrl,
-        status: r.status,
-        statusLabel: r.statusLabel,
-        version: r.version,
-        formattedPublishedAt: r.formattedPublishedAt,
-      }));
-
-    const fromArticles: MyContentItem[] = (articlePages?.pages.flatMap((page) => page.items) ?? [])
-      .filter((a) => a.author.id === currentUserId)
-      .map((a) => ({
-        id: a.id,
-        type: 'BLOG',
-        title: a.title,
-        excerpt: a.excerpt,
-        categoryName: a.category.name,
-        coverImageUrl: a.coverImageUrl,
-        status: a.status,
-        statusLabel: a.statusLabel,
-        version: a.version,
-        formattedPublishedAt: a.formattedPublishedAt,
-      }));
-
-    const fromVideos: MyContentItem[] = (videoPages?.pages.flatMap((page) => page.items) ?? [])
-      .filter((v) => v.author.id === currentUserId)
-      .map((v) => ({
-        id: v.id,
-        type: 'VIDEO',
-        title: v.title,
-        excerpt: v.excerpt,
-        categoryName: v.category.name,
-        coverImageUrl: v.thumbnailUrl,
-        status: v.status,
-        statusLabel: v.statusLabel,
-        version: v.version,
-        formattedPublishedAt: v.formattedPublishedAt,
-      }));
-
-    return [...fromRecipes, ...fromArticles, ...fromVideos];
-  }, [recipePages?.pages, articlePages?.pages, videoPages?.pages, currentUserId]);
+  const myItems = React.useMemo<MyContentItem[]>(
+    () => myPostPages?.pages.flatMap((page) => page.items) ?? [],
+    [myPostPages?.pages]
+  );
 
   const filteredItems = React.useMemo(() => {
     let list = myItems;
@@ -345,7 +249,7 @@ export default function MyContentScreen() {
   }
 
   return (
-    <SiteScreen onRefresh={async () => refetchAll()}>
+    <SiteScreen onRefresh={async () => void (await refetchAll())}>
       <View className="gap-4 px-5 pb-4 pt-4">
         <View className="gap-3 rounded-2xl border border-border bg-card p-4">
           <View className="gap-1">
@@ -416,7 +320,7 @@ export default function MyContentScreen() {
               Không tải được danh sách bài đăng. Kiểm tra kết nối mạng và thử lại.
             </Text>
             <View className="mt-3 w-full">
-              <PrimaryButton label="Thử lại" variant="outline" onPress={refetchAll} />
+              <PrimaryButton label="Thử lại" variant="outline" onPress={() => void refetchAll()} />
             </View>
           </View>
         ) : filteredItems.length === 0 ? (
@@ -458,8 +362,8 @@ export default function MyContentScreen() {
         )}
 
         <Text className="text-[11px] leading-4 text-muted-foreground">
-          Danh sách lấy từ nội dung đã xuất bản. Bản nháp hoặc bài đang chờ duyệt chưa hiển thị ở đây; hãy mở
-          &quot;Lịch sử duyệt&quot; của bài để xem các bản chỉnh sửa đang chờ.
+          Danh sách gồm mọi bài của bạn ở các trạng thái kiểm duyệt (trừ bài đã xoá). Mở &quot;Lịch sử duyệt&quot; của
+          bài để xem các bản chỉnh sửa và lý do.
         </Text>
 
         <View className="gap-3 rounded-2xl border border-border bg-card p-4">

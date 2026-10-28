@@ -27,12 +27,14 @@ import type {
   CreateRecipeRequestDto,
   UpdateRecipeRequestDto,
   AppliedConstraintsDto,
+  RecipeEligibilityDto,
 } from '../types/recipe.dto';
 import type { PostMediaDto, PostRevisionDto } from '@/features/post/types/post.dto';
 import {
   getAllergenName,
   getDietPatternName,
   getDietReasonLabel,
+  getRecipeIneligibilityReasonLabel,
   getTraditionName,
 } from '@/common/constants/diet-labels';
 import type {
@@ -73,6 +75,25 @@ export function stepsToBody(
     .filter(Boolean);
   const body = lines.join('\n\n');
   return body || fallback;
+}
+
+/**
+ * Tách ngược `body` markdown thành danh sách bước (ngược với `stepsToBody`).
+ * Backend không trả steps structured nên form sửa phải dựng lại từ `## Bước N`.
+ * Body không có heading được coi là một bước duy nhất.
+ */
+export function bodyToSteps(
+  body: string | undefined
+): { stepNumber: number; instruction: string }[] {
+  const text = (body || '').trim();
+  if (!text) return [];
+  const parts = text.split(/^##\s*Bước\s*\d+\s*$/m);
+  if (parts.length === 1) return [{ stepNumber: 1, instruction: text }];
+  return parts
+    .slice(1)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((instruction, idx) => ({ stepNumber: idx + 1, instruction }));
 }
 
 export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
@@ -169,6 +190,20 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       };
     });
 
+    const eligibility = pickField<RecipeEligibilityDto | null>(detail, ['eligibility'], null);
+    const ineligibilityReasons = eligibility
+      ? safeArray<NonNullable<RecipeEligibilityDto['reasons']>[number]>(eligibility.reasons).map(
+          (reason) => {
+            const code = safeString(reason?.code);
+            return {
+              code,
+              label: getRecipeIneligibilityReasonLabel(code),
+              ingredientNames: safeArray<string>(reason?.ingredientNames).filter(Boolean),
+            };
+          }
+        )
+      : undefined;
+
     const allergenCodes = safeArray<string>(detail?.allergenCodes);
     const allergens: RecipeAllergen[] = allergenCodes.map((code) => ({
       code,
@@ -249,6 +284,7 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       dietCompatibilities,
       usageCount,
       isExpertAuthor,
+      ineligibilityReasons,
     };
   }
 

@@ -40,6 +40,7 @@ model BillingProduct {
   fridgeCredits    Int      @map("fridge_credits")
   receiptCredits   Int      @map("receipt_credits")
   pantrySlots      Int      @map("pantry_slots")
+  durationMonths   Int?     @map("duration_months")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
@@ -58,6 +59,7 @@ model PaymentOrder {
   fridgeCredits       Int                @map("fridge_credits")
   receiptCredits      Int                @map("receipt_credits")
   pantrySlots         Int                @map("pantry_slots")
+  durationMonths      Int?               @map("duration_months")
   provider            String
   providerOrderCode   String?            @unique @map("provider_order_code")
   providerLinkId      String?            @unique @map("provider_link_id")
@@ -75,6 +77,8 @@ model PaymentOrder {
   @@unique([ownerId, idempotencyKey])
   @@index([ownerId, createdAt])
   @@index([status, expiresAt])
+  @@index([status, paidAt])
+  @@index([createdAt])
   @@map("payment_orders")
 }
 
@@ -92,18 +96,47 @@ model PaymentEvent {
 }
 
 model EntitlementAccount {
-  referenceVersion Int      @default(0) @map("reference_version")
-  id               String   @id @default(uuid()) @map("_id")
-  ownerId          String   @unique @map("owner_id")
-  chatCredits      Int      @default(0) @map("chat_credits")
-  fridgeCredits    Int      @default(0) @map("fridge_credits")
-  receiptCredits   Int      @default(0) @map("receipt_credits")
-  pantrySlots      Int      @default(0) @map("pantry_slots")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
-  owner            User     @relation(fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  referenceVersion     Int       @default(0) @map("reference_version")
+  id                   String    @id @default(uuid()) @map("_id")
+  ownerId              String    @unique @map("owner_id")
+  chatCredits          Int       @default(0) @map("chat_credits")
+  fridgeCredits        Int       @default(0) @map("fridge_credits")
+  receiptCredits       Int       @default(0) @map("receipt_credits")
+  pantrySlots          Int       @default(0) @map("pantry_slots")
+  periodKey            String?   @map("period_key")
+  periodEndsAt         DateTime? @map("period_ends_at")
+  periodChatCredits    Int?      @map("period_chat_credits")
+  periodFridgeCredits  Int?      @map("period_fridge_credits")
+  periodReceiptCredits Int?      @map("period_receipt_credits")
+  periodPantrySlots    Int?      @map("period_pantry_slots")
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+  owner                User      @relation(fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@map("entitlement_accounts")
+}
+
+// One paid duration-based combo order. Credits are granted per period from startsAt;
+// unused period credits expire at the period boundary. Purchases while active append.
+model EntitlementSubscription {
+  referenceVersion Int      @default(0) @map("reference_version")
+  id               String   @id @default(uuid()) @map("_id")
+  ownerId          String   @map("owner_id")
+  orderId          String   @unique @map("order_id")
+  productId        String   @map("product_id")
+  periodDays       Int      @map("period_days")
+  periodCount      Int      @map("period_count")
+  chatCredits      Int      @map("chat_credits")
+  fridgeCredits    Int      @map("fridge_credits")
+  receiptCredits   Int      @map("receipt_credits")
+  pantrySlots      Int      @map("pantry_slots")
+  startsAt         DateTime @map("starts_at")
+  endsAt           DateTime @map("ends_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+  owner            User     @relation(fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([ownerId, endsAt])
+  @@map("entitlement_subscriptions")
 }
 
 model UsageReservation {
@@ -115,12 +148,15 @@ model UsageReservation {
   status           UsageReservationStatus @default(HELD)
   leaseUntil       DateTime               @map("lease_until")
   generation       Int                    @default(1)
+  source           String?
+  periodKey        String?                @map("period_key")
   createdAt        DateTime               @default(now()) @map("created_at")
   updatedAt        DateTime               @updatedAt @map("updated_at")
   owner            User                   @relation(fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([status, leaseUntil])
   @@index([ownerId, feature, status])
+  @@index([feature, createdAt])
   @@map("usage_reservations")
 }
 
@@ -726,6 +762,7 @@ model User {
   entitlementAccount             EntitlementAccount?
   entitlementLedger              EntitlementLedger[]
   usageReservations              UsageReservation[]
+  entitlementSubscriptions       EntitlementSubscription[]
   id                             String                      @id @default(uuid()) @map("_id")
   email                          String                      @unique
   passwordHash                   String                      @map("password_hash")
@@ -754,6 +791,7 @@ model User {
   dietPreferenceRules            DietPreferenceRule[]
   dietScheduleDates              DietScheduleDate[]
   allergies                      UserAllergy[]
+  ingredientAllergies            UserIngredientAllergy[]
   ingredientExclusions           UserIngredientExclusion[]
   categoryProposals              CategoryProposal[]          @relation("CategoryProposalAuthor")
   reviewedCategoryProposals      CategoryProposal[]          @relation("CategoryProposalReviewer")
@@ -962,7 +1000,26 @@ model CategoryProposal {
   @@map("category_proposals")
 }
 
+enum IngredientCompositionStatus {
+  UNKNOWN
+  PARTIAL
+  COMPLETE
+}
+
+enum IngredientCompositionKind {
+  UNSPECIFIED
+  SIMPLE
+  COMPOUND
+}
+
 model Ingredient {
+  compositionStatus     IngredientCompositionStatus   @default(UNKNOWN) @map("composition_status")
+  compositionKind       IngredientCompositionKind     @default(UNSPECIFIED) @map("composition_kind")
+  compositionEvidence   Json?                         @map("composition_evidence")
+  compositionVersion    Int                           @default(0) @map("composition_version")
+  components            IngredientComponent[]         @relation("CompositionParent")
+  componentOf           IngredientComponent[]         @relation("CompositionChild")
+  compositionAudits     IngredientCompositionAudit[]
   referenceVersion      Int                           @default(0) @map("reference_version")
   id                    String                        @id @default(uuid()) @map("_id")
   canonicalName         String                        @map("canonical_name")
@@ -976,6 +1033,7 @@ model Ingredient {
   dietCompatibilities   IngredientDietCompatibility[]
   traditionWarnings     IngredientTraditionWarning[]
   userExclusions        UserIngredientExclusion[]
+  userAllergies         UserIngredientAllergy[]
   recipeIngredients     RecipeIngredient[]
   mealPlanShoppingItems MealPlanShoppingItem[]
   foodProfiles          IngredientFoodProfile[]
@@ -991,6 +1049,41 @@ model Ingredient {
 
   @@index([status, foodGroup, canonicalName])
   @@map("ingredients")
+}
+
+model IngredientComponent {
+  referenceVersion Int        @default(0) @map("reference_version")
+  id               String     @id @default(uuid()) @map("_id")
+  ingredientId     String     @map("ingredient_id")
+  componentId      String     @map("component_id")
+  ingredient       Ingredient @relation("CompositionParent", fields: [ingredientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  component        Ingredient @relation("CompositionChild", fields: [componentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([ingredientId, componentId])
+  @@index([componentId])
+  @@map("ingredient_components")
+}
+
+model IngredientCompositionAudit {
+  referenceVersion Int        @default(0) @map("reference_version")
+  id               String     @id @default(uuid()) @map("_id")
+  ingredientId     String     @map("ingredient_id")
+  version          Int
+  actorId          String     @map("actor_id")
+  snapshot         Json
+  createdAt        DateTime   @default(now()) @map("created_at")
+  ingredient       Ingredient @relation(fields: [ingredientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([ingredientId, version])
+  @@map("ingredient_composition_audits")
+}
+
+model CatalogGraphState {
+  referenceVersion Int    @default(0) @map("reference_version")
+  id               String @id @map("_id")
+  version          Int    @default(0)
+
+  @@map("catalog_graph_states")
 }
 
 model PantryItem {
@@ -1167,40 +1260,40 @@ model RecognitionCandidateEvidence {
 }
 
 model ReceiptJob {
-  queuedAt              DateTime           @default(now()) @map("queued_at")
-  referenceVersion      Int                @default(0) @map("reference_version")
-  id                    String             @id @default(uuid()) @map("_id")
-  ownerId               String             @map("owner_id")
-  status                ReceiptJobStatus   @default(QUEUED)
-  provider              String
-  modelId               String             @map("model_id")
-  templateVersion       String             @map("template_version")
-  idempotencyKey        String             @map("idempotency_key")
-  requestHash           String             @map("request_hash")
-  attemptCount          Int                @default(0) @map("attempt_count")
-  merchantName          String?            @map("merchant_name")
-  purchasedAt           DateTime?          @map("purchased_at")
-  currency              String?
-  totalAmount           Float?             @map("total_amount")
-  metadataConfidence    Float?             @map("metadata_confidence")
-  reviewRequired        Boolean            @default(false) @map("review_required")
-  identityDecisionRequired Boolean         @default(false) @map("identity_decision_required")
-  receiptReviewDecision String?            @map("receipt_review_decision")
-  errorCode             String?            @map("error_code")
-  errorMessage          String?            @map("error_message")
-  confirmationKey       String?            @map("confirmation_key")
-  confirmationHash      String?            @map("confirmation_hash")
-  lastRetryKey          String?            @map("last_retry_key")
-  lastRetryHash         String?            @map("last_retry_hash")
-  processingStartedAt   DateTime?          @map("processing_started_at")
-  processingCompletedAt DateTime?          @map("processing_completed_at")
-  confirmedAt           DateTime?          @map("confirmed_at")
-  cancelledAt           DateTime?          @map("cancelled_at")
-  createdAt             DateTime           @default(now()) @map("created_at")
-  updatedAt             DateTime           @updatedAt @map("updated_at")
-  owner                 User               @relation(fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  inputs                ReceiptInput[]
-  candidates            ReceiptCandidate[]
+  queuedAt                 DateTime           @default(now()) @map("queued_at")
+  referenceVersion         Int                @default(0) @map("reference_version")
+  id                       String             @id @default(uuid()) @map("_id")
+  ownerId                  String             @map("owner_id")
+  status                   ReceiptJobStatus   @default(QUEUED)
+  provider                 String
+  modelId                  String             @map("model_id")
+  templateVersion          String             @map("template_version")
+  idempotencyKey           String             @map("idempotency_key")
+  requestHash              String             @map("request_hash")
+  attemptCount             Int                @default(0) @map("attempt_count")
+  merchantName             String?            @map("merchant_name")
+  purchasedAt              DateTime?          @map("purchased_at")
+  currency                 String?
+  totalAmount              Float?             @map("total_amount")
+  metadataConfidence       Float?             @map("metadata_confidence")
+  reviewRequired           Boolean            @default(false) @map("review_required")
+  identityDecisionRequired Boolean            @default(false) @map("identity_decision_required")
+  receiptReviewDecision    String?            @map("receipt_review_decision")
+  errorCode                String?            @map("error_code")
+  errorMessage             String?            @map("error_message")
+  confirmationKey          String?            @map("confirmation_key")
+  confirmationHash         String?            @map("confirmation_hash")
+  lastRetryKey             String?            @map("last_retry_key")
+  lastRetryHash            String?            @map("last_retry_hash")
+  processingStartedAt      DateTime?          @map("processing_started_at")
+  processingCompletedAt    DateTime?          @map("processing_completed_at")
+  confirmedAt              DateTime?          @map("confirmed_at")
+  cancelledAt              DateTime?          @map("cancelled_at")
+  createdAt                DateTime           @default(now()) @map("created_at")
+  updatedAt                DateTime           @updatedAt @map("updated_at")
+  owner                    User               @relation(fields: [ownerId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  inputs                   ReceiptInput[]
+  candidates               ReceiptCandidate[]
 
   @@unique([ownerId, idempotencyKey])
   @@unique([ownerId, confirmationKey])
@@ -1238,37 +1331,37 @@ model ReceiptInput {
 }
 
 model ReceiptCandidate {
-  referenceVersion Int                    @default(0) @map("reference_version")
-  id               String                 @id @default(uuid()) @map("_id")
-  jobId            String                 @map("job_id")
-  inputId          String                 @map("input_id")
-  ingredientId     String?                @map("ingredient_id")
-  lineText         String                 @map("line_text")
-  detectedName     String                 @map("detected_name")
-  normalizedName   String                 @map("normalized_name")
-  quantity         Float?
-  unit             String?
-  unitPrice        Float?                 @map("unit_price")
-  lineTotal        Float?                 @map("line_total")
-  currency         String?
-  confidence       Float
-  matchConfidence  Float?                 @map("match_confidence")
-  uncertaintyNote  String?                @map("uncertainty_note")
-  aiClassification ReceiptItemClassification @default(FOOD_OR_INGREDIENT) @map("ai_classification")
-  classificationReason String?             @map("classification_reason")
-  classificationConfidence Float?         @map("classification_confidence")
-  status           ReceiptCandidateStatus @default(PROPOSED)
-  version          Int                    @default(1)
-  editedByUser     Boolean                @default(false) @map("edited_by_user")
-  pantryItemId     String?                @map("pantry_item_id")
-  pantryAction     String?                @map("pantry_action")
-  duplicateOfJobId String?                @map("duplicate_of_job_id")
-  createdAt        DateTime               @default(now()) @map("created_at")
-  updatedAt        DateTime               @updatedAt @map("updated_at")
-  job              ReceiptJob             @relation(fields: [jobId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  input            ReceiptInput           @relation(fields: [inputId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  ingredient       Ingredient?            @relation(fields: [ingredientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  pantryItem       PantryItem?            @relation(fields: [pantryItemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  referenceVersion         Int                       @default(0) @map("reference_version")
+  id                       String                    @id @default(uuid()) @map("_id")
+  jobId                    String                    @map("job_id")
+  inputId                  String                    @map("input_id")
+  ingredientId             String?                   @map("ingredient_id")
+  lineText                 String                    @map("line_text")
+  detectedName             String                    @map("detected_name")
+  normalizedName           String                    @map("normalized_name")
+  quantity                 Float?
+  unit                     String?
+  unitPrice                Float?                    @map("unit_price")
+  lineTotal                Float?                    @map("line_total")
+  currency                 String?
+  confidence               Float
+  matchConfidence          Float?                    @map("match_confidence")
+  uncertaintyNote          String?                   @map("uncertainty_note")
+  aiClassification         ReceiptItemClassification @default(FOOD_OR_INGREDIENT) @map("ai_classification")
+  classificationReason     String?                   @map("classification_reason")
+  classificationConfidence Float?                    @map("classification_confidence")
+  status                   ReceiptCandidateStatus    @default(PROPOSED)
+  version                  Int                       @default(1)
+  editedByUser             Boolean                   @default(false) @map("edited_by_user")
+  pantryItemId             String?                   @map("pantry_item_id")
+  pantryAction             String?                   @map("pantry_action")
+  duplicateOfJobId         String?                   @map("duplicate_of_job_id")
+  createdAt                DateTime                  @default(now()) @map("created_at")
+  updatedAt                DateTime                  @updatedAt @map("updated_at")
+  job                      ReceiptJob                @relation(fields: [jobId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  input                    ReceiptInput              @relation(fields: [inputId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  ingredient               Ingredient?               @relation(fields: [ingredientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pantryItem               PantryItem?               @relation(fields: [pantryItemId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([jobId, status, createdAt])
   @@index([inputId])
@@ -1953,6 +2046,8 @@ model AiRequestLog {
   inputTokens       Int?            @map("input_tokens")
   outputTokens      Int?            @map("output_tokens")
   errorCode         String?         @map("error_code")
+  quotaSource       String?         @map("quota_source")
+  usageResourceKey  String?         @map("usage_resource_key")
   redactedMetadata  Json            @default("{}") @map("redacted_metadata")
   startedAt         DateTime        @map("started_at")
   completedAt       DateTime?       @map("completed_at")
@@ -3025,6 +3120,24 @@ model UserAllergy {
   @@unique([userId, allergenCode])
   @@index([userId, active])
   @@map("user_allergies")
+}
+
+model UserIngredientAllergy {
+  referenceVersion Int             @default(0) @map("reference_version")
+  id               String          @id @default(uuid()) @map("_id")
+  userId           String          @map("user_id")
+  ingredientId     String          @map("ingredient_id")
+  severity         AllergySeverity @default(MODERATE)
+  active           Boolean         @default(true)
+  createdAt        DateTime        @default(now()) @map("created_at")
+  updatedAt        DateTime        @updatedAt @map("updated_at")
+  user             User            @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  ingredient       Ingredient      @relation(fields: [ingredientId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([userId, ingredientId])
+  @@index([userId, active])
+  @@index([ingredientId])
+  @@map("user_ingredient_allergies")
 }
 
 model UserIngredientExclusion {

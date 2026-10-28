@@ -32,7 +32,7 @@ export function buildGuestSearchConstraints(
       excludedIngredientIds: [],
       excludedNormalizedNames: [],
       traditions: [],
-      requireResolvedIngredients: false,
+      requireResolvedIngredients: Boolean(requestedDietPattern),
     },
     summary: {
       authenticated: false,
@@ -69,6 +69,8 @@ export function buildAuthenticatedSearchConstraints(
       ]
     : [];
   const allergenCodes = profile?.allergies.map((allergy) => allergy.allergenCode) ?? [];
+  const allergicIngredientIds =
+    profile?.ingredientAllergies?.map((entry) => entry.ingredientId) ?? [];
   const exclusions = profile?.ingredientExclusions ?? [];
   const excludedIngredientIds = exclusions.flatMap((exclusion) =>
     exclusion.ingredientId ? [exclusion.ingredientId] : [],
@@ -76,12 +78,17 @@ export function buildAuthenticatedSearchConstraints(
   const excludedNormalizedNames = exclusions.map((exclusion) => exclusion.normalizedName);
   const dietPattern = preference?.dietPattern ?? requestedDietPattern;
   const requireResolvedIngredients = Boolean(
-    dietPattern || allergenCodes.length || exclusions.length || traditions.length,
+    dietPattern ||
+    allergenCodes.length ||
+    allergicIngredientIds.length ||
+    exclusions.length ||
+    traditions.length,
   );
   return {
     constraints: {
       ...(dietPattern ? { dietPattern } : {}),
       allergenCodes,
+      allergicIngredientIds,
       excludedIngredientIds,
       excludedNormalizedNames,
       traditions,
@@ -90,7 +97,7 @@ export function buildAuthenticatedSearchConstraints(
     summary: {
       authenticated: true,
       dietPattern: dietPattern ?? null,
-      allergyCount: allergenCodes.length,
+      allergyCount: allergenCodes.length + allergicIngredientIds.length,
       ingredientExclusionCount: exclusions.length,
       traditions,
       forDate,

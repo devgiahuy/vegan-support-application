@@ -48,6 +48,16 @@ export class IngredientMapper extends BaseMapper<IngredientDto, Ingredient> {
       FoodGroup.OTHER
     );
     return {
+      compositionStatus:
+        dto?.compositionStatus === 'COMPLETE' || dto?.compositionStatus === 'PARTIAL'
+          ? dto.compositionStatus
+          : 'UNKNOWN',
+      compositionStatusLabel:
+        dto?.compositionStatus === 'COMPLETE'
+          ? 'Đã rà soát cấu tạo'
+          : dto?.compositionStatus === 'PARTIAL'
+            ? 'Cấu tạo mới có một phần'
+            : 'Cấu tạo chưa rõ',
       id: safeString(pickField(dto, ['id'], '')),
       canonicalName: safeString(pickField(dto, ['canonicalName', 'canonical_name', 'name'], '')),
       normalizedName: safeString(pickField(dto, ['normalizedName', 'normalized_name'], '')),

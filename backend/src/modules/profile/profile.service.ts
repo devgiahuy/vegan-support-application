@@ -118,8 +118,21 @@ function dietPreferenceOutput(
       reason: exclusion.reason,
       active: exclusion.active,
     })),
+    ingredientAllergies: profile.ingredientAllergies.map((entry) => ({
+      ingredientId: entry.ingredientId,
+      ingredientName: entry.ingredient.canonicalName,
+      severity: entry.severity,
+      ingredientActive: entry.ingredient.status === 'ACTIVE',
+    })),
     effectiveConstraints: {
       always: [
+        ...profile.ingredientAllergies.map((entry) => ({
+          priority: 1,
+          source: 'ALLERGY' as const,
+          code: entry.ingredientId,
+          label: entry.ingredient.canonicalName,
+          hardConstraint: true as const,
+        })),
         ...profile.allergies.map((allergy) => ({
           priority: 1,
           source: 'ALLERGY' as const,
@@ -209,6 +222,36 @@ export class ProfileService {
     userId: string,
     input: SaveDietPreferencesInput,
   ): Promise<DietPreferenceOutput> {
+    const ingredientIds = input.ingredientAllergies?.map((entry) => entry.ingredientId) ?? [];
+    const activeIngredients = await this.repository.findActiveIngredients(ingredientIds);
+    const validIds = new Set(activeIngredients.map((entry) => entry.id));
+    const invalidIngredientIds = ingredientIds.filter((id) => !validIds.has(id));
+    if (invalidIngredientIds.length)
+      throw new AppError({
+        statusCode: 400,
+        code: 'INVALID_INGREDIENT_ALLERGIES',
+        message: 'Vui lòng chọn nguyên liệu dị ứng đang hoạt động từ danh mục chuẩn.',
+        fields: { ingredientIds: invalidIngredientIds },
+      });
+    const allergens = await this.repository.findActiveAllergens(
+      input.allergies.map((entry) => entry.allergenCode),
+    );
+    const labels = new Map(allergens.map((entry) => [entry.code, entry.label]));
+    const invalid = input.allergies.filter((entry) => !labels.has(entry.allergenCode));
+    if (invalid.length)
+      throw new AppError({
+        statusCode: 400,
+        code: 'INVALID_ALLERGEN_SELECTION',
+        message: 'Vui lòng chọn dị ứng từ danh mục thực phẩm được hỗ trợ.',
+        fields: { invalidAllergenCodes: invalid.map((entry) => entry.allergenCode) },
+      });
+    input = {
+      ...input,
+      allergies: input.allergies.map((entry) => ({
+        ...entry,
+        label: labels.get(entry.allergenCode)!,
+      })),
+    };
     if (input.practiceSchedule === PracticeSchedule.PERIODIC && !input.scheduleDates?.length) {
       throw new AppError({
         statusCode: 409,

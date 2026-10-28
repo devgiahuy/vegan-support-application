@@ -68,6 +68,12 @@ export function useScanMutations(kind: ScanKind) {
     onSuccess: cacheJob,
     onError: refresh,
   });
+  const restore = useMutation({
+    mutationFn: (input: { id: string; itemId: string; version: number }) =>
+      scanningApi.restoreExcluded(input.id, input.itemId, input.version),
+    onSuccess: cacheJob,
+    onError: refresh,
+  });
   const cancel = useMutation({
     mutationFn: (id: string) => scanningApi.cancel(kind, id),
     onSuccess: cacheJob,
@@ -90,5 +96,5 @@ export function useScanMutations(kind: ScanKind) {
       await Promise.all([refresh(), inventory()]);
     },
   });
-  return { create, edit, cancel, retry, confirm };
+  return { create, edit, restore, cancel, retry, confirm };
 }

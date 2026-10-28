@@ -66,9 +66,12 @@ export function MealAnalysisSummaryBar({
   }
 
   const { isStale, summary, formattedAnalyzedAt, hasIncompleteData, overallConfidence } = analysis;
-  const hasDanger = summary.dangerCount > 0;
+  const hasDanger =
+    summary.dangerCount > 0 ||
+    summary.hardConstraintViolationCount > 0 ||
+    !summary.hardConstraintsPreserved;
   const hasWarning = summary.warningCount > 0;
-  const isClean = summary.totalWarnings === 0;
+  const isClean = summary.totalWarnings === 0 && !hasDanger;
 
   return (
     <div
@@ -117,13 +120,16 @@ export function MealAnalysisSummaryBar({
                         ? `Có ${summary.warningCount} điểm cần lưu ý về dinh dưỡng`
                         : 'Thực đơn đạt chuẩn an toàn dinh dưỡng')}
               </h3>
-              {summary.hardConstraintsPreserved && (
+              {summary.hardConstraintsPreserved && !isStale && (
                 <Badge
                   variant="outline"
                   className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400 text-xs"
                 >
                   ✓ Bảo toàn ăn kiêng
                 </Badge>
+              )}
+              {!summary.hardConstraintsPreserved && (
+                <Badge variant="destructive">Cần thay món hoặc rà soát thành phần</Badge>
               )}
               {isStale && (
                 <Badge

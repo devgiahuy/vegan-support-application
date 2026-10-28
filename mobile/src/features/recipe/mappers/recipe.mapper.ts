@@ -26,14 +26,35 @@ import type {
   NutritionFact,
   TraditionWarning,
   DietCompatibility,
+  RecipeEligibility,
   RecipePaginationResult,
 } from '../types/recipe.model';
+import { getIneligibilityReasonLabel } from '../utils/recipe-eligibility';
 
 /** Giá trị thiếu/không hợp lệ -> `null` (không đổi thành 0 để không bịa số dinh dưỡng). */
 function nullableNumber(val: unknown): number | null {
   if (val === null || val === undefined || val === '') return null;
   const parsed = safeNumber(val, Number.NaN);
   return Number.isNaN(parsed) ? null : parsed;
+}
+
+function toEligibility(raw: NonNullable<RecipeDetailDto['recipe']>['eligibility']): RecipeEligibility | null {
+  if (!raw) return null;
+  return {
+    eligible: safeBoolean(raw.eligible, false),
+    reasons: safeArray<NonNullable<NonNullable<typeof raw.reasons>[number]>>(raw.reasons)
+      .map((reason) => {
+        const code = safeString(reason?.code);
+        return {
+          code,
+          label: getIneligibilityReasonLabel(code),
+          ingredientNames: safeArray<string | null>(reason?.ingredientNames)
+            .map((name) => safeString(name))
+            .filter((name) => name.length > 0),
+        };
+      })
+      .filter((reason) => reason.code.length > 0),
+  };
 }
 
 function getDifficultyLabel(diff: string): string {
@@ -162,6 +183,7 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       allergenCodes: safeArray<string>(detail?.allergenCodes),
       traditionWarnings,
       dietCompatibilities,
+      eligibility: toEligibility(detail?.eligibility),
       rating: undefined,
       ratingCount: undefined,
     };

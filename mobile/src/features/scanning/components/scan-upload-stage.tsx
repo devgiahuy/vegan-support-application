@@ -21,18 +21,16 @@ const COPY = {
     selectedHint: 'AI sẽ nhận diện đồng thời các loại rau củ, trái cây, gia vị trong tất cả ảnh',
     drop: (max: number) => `Chọn ảnh từ thiết bị. Bạn có thể chụp từ 1 đến ${max} ảnh các ngăn tủ (ngăn mát, ngăn rau củ, ngăn đông, cánh tủ) để AI quét toàn diện.`,
     limitChip: (max: number) => `Tối đa ${max} ảnh các ngăn tủ`, first: 'Ảnh 1 (Toàn cảnh / Ngăn chính)', ready: 'Đã sẵn sàng nhận diện thực phẩm',
-    moreTitle: 'Chụp thêm các ngăn khác?', moreHint: (max: number) => `Bạn có thể chụp thêm tối đa ${max - 1} ảnh nữa (ngăn rau củ, ngăn đông, cánh tủ...) để kiểm kê đầy đủ Tủ bếp.`,
-    morePick: 'Chọn ảnh ngăn khác', moreCamera: 'Chụp tiếp', uploading: 'Đang tải ảnh tủ lạnh và khởi tạo AI nhận diện...',
+    addPick: () => 'Chọn ảnh ngăn khác', addCamera: () => 'Chụp tiếp', uploading: 'Đang tải ảnh tủ lạnh và khởi tạo AI nhận diện...',
     after: 'Sau khi quét, AI sẽ gợi ý danh sách thực phẩm, bạn có thể kiểm tra và chỉnh sửa trước khi lưu vào Tủ bếp.',
     start: (count: number) => `Bắt đầu nhận diện AI (${count} ảnh)`,
   },
   receipt: {
-    unit: 'đoạn', part: 'Đoạn', title: 'Tải ảnh hóa đơn siêu thị', selectedTitle: 'Ảnh hóa đơn đã chọn',
-    selectedHint: 'AI sẽ đọc và tự động ghép nối các đoạn theo thứ tự từ trên xuống dưới',
+    unit: 'ảnh', part: 'Ảnh', title: 'Tải ảnh hóa đơn siêu thị', selectedTitle: 'Ảnh hóa đơn đã chọn',
+    selectedHint: 'AI sẽ đọc và tự động ghép nối các ảnh theo thứ tự từ trên xuống dưới',
     drop: (max: number) => `Chọn ảnh từ thiết bị. Hóa đơn dài có thể chụp từ 1 đến ${max} ảnh liên tiếp để AI tự động ghép nối.`,
-    limitChip: (max: number) => `Tối đa ${max} ảnh liên tiếp`, first: 'Đoạn 1 (Chính)', ready: 'Đã sẵn sàng nhận diện OCR',
-    moreTitle: 'Hóa đơn còn dài chưa chụp hết?', moreHint: () => 'Bạn có thể chụp hoặc tải thêm đoạn 2, 3 hoặc 4. AI sẽ nối các phần theo thứ tự.',
-    morePick: 'Chọn ảnh đoạn 2', moreCamera: 'Chụp đoạn 2', uploading: 'Đang tải ảnh và khởi tạo tác vụ bóc tách OCR...',
+    limitChip: (max: number) => `Tối đa ${max} ảnh liên tiếp`, first: 'Ảnh 1 (Chính)', ready: 'Đã sẵn sàng nhận diện OCR',
+    addPick: () => 'Chọn ảnh ngăn khác', addCamera: () => 'Chụp tiếp', uploading: 'Đang tải ảnh và khởi tạo tác vụ bóc tách OCR...',
     after: 'Sau khi bắt đầu, AI sẽ bóc tách các món và bạn có thể kiểm tra danh sách trước khi lưu vào Tủ bếp.',
     start: (count: number) => `Bắt đầu bóc tách hóa đơn (${count} ảnh)`,
   },
@@ -162,8 +160,8 @@ export function ScanUploadStage({ kind, images, limit, busy, starting, progress,
         <View className="flex-row flex-wrap items-center gap-2">
           {canAdd ? (
             <>
-              <Pressable accessibilityRole="button" onPress={() => onPick(false)} className="h-9 flex-row items-center gap-1 rounded-xl border border-input bg-background px-3"><Plus size={14} color={colors.foreground} /><Text className="text-xs font-medium text-foreground">Thêm ảnh {images.length + 1}</Text></Pressable>
-              {camera ? <Pressable accessibilityRole="button" accessibilityLabel="Chụp ảnh tiếp theo" onPress={() => onPick(true)} className="h-9 w-10 items-center justify-center rounded-xl border border-input bg-background"><Camera size={14} color={colors.foreground} /></Pressable> : null}
+              <Pressable accessibilityRole="button" onPress={() => onPick(false)} className="h-9 flex-row items-center gap-1 rounded-xl border border-input bg-background px-3"><Plus size={14} color={colors.foreground} /><Text className="text-xs font-medium text-foreground">{copy.addPick()}</Text></Pressable>
+              {camera ? <Pressable accessibilityRole="button" onPress={() => onPick(true)} className="h-9 flex-row items-center gap-1 rounded-xl border border-input bg-background px-3"><Camera size={14} color={colors.foreground} /><Text className="text-xs font-medium text-foreground">{copy.addCamera()}</Text></Pressable> : null}
             </>
           ) : null}
           {!busy ? <Pressable accessibilityRole="button" onPress={onClear} className="h-9 flex-row items-center gap-1 rounded-xl px-2.5"><Trash2 size={14} color={colors.destructive} /><Text className="text-xs font-medium text-muted-foreground">Xóa tất cả</Text></Pressable> : null}
@@ -187,19 +185,6 @@ export function ScanUploadStage({ kind, images, limit, busy, starting, progress,
             <View className="flex-row flex-wrap items-center justify-between gap-2 px-1">
               <Text className="text-xs text-muted-foreground">Dung lượng: {images[0].bytes ? megabytes(images[0].bytes) : 'chưa rõ'}</Text>
               <View className="flex-row items-center gap-1"><CheckCircle2 size={14} color={colors.primary} /><Text className="text-xs font-medium text-primary">{copy.ready}</Text></View>
-            </View>
-          </View>
-          <View className="gap-3 rounded-2xl border-2 border-dashed border-border bg-muted/40 p-4">
-            <View className="flex-row items-center gap-3">
-              <View className="h-10 w-10 items-center justify-center rounded-xl bg-primary/10"><Plus size={20} color={colors.primary} /></View>
-              <View className="flex-1 gap-0.5">
-                <Text className="text-sm font-bold text-foreground">{copy.moreTitle}</Text>
-                <Text className="text-xs leading-4 text-muted-foreground">{copy.moreHint(limit)}</Text>
-              </View>
-            </View>
-            <View className="flex-row flex-wrap gap-2">
-              <Pressable accessibilityRole="button" disabled={busy} onPress={() => onPick(false)} className="h-9 flex-row items-center gap-1.5 rounded-xl border border-input bg-background px-3"><UploadCloud size={14} color={colors.foreground} /><Text className="text-xs font-medium text-foreground">{copy.morePick}</Text></Pressable>
-              {camera ? <Pressable accessibilityRole="button" disabled={busy} onPress={() => onPick(true)} className="h-9 flex-row items-center gap-1.5 rounded-xl border border-input bg-background px-3"><Camera size={14} color={colors.foreground} /><Text className="text-xs font-medium text-foreground">{copy.moreCamera}</Text></Pressable> : null}
             </View>
           </View>
         </View>

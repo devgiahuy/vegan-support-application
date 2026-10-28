@@ -72,11 +72,15 @@ export function registerMealProgramOpenApi(registry: OpenAPIRegistry, errorSchem
         'MEAL_PROGRAM_LIMIT_EXCEEDED',
       ]),
       ...authErrors(errorSchema),
-      409: errorResponse(errorSchema, 'Profile, schedule, or idempotency conflict', [
-        'HEALTH_PROFILE_INCOMPLETE',
-        'DIET_SCHEDULE_REQUIRED',
-        'MEAL_PROGRAM_IDEMPOTENCY_CONFLICT',
-      ]),
+      409: errorResponse(
+        errorSchema,
+        'Profile, schedule, or idempotency conflict. Before creating/resuming generation, validate every missing week. DIET_SCHEDULE_REQUIRED returns fields.weekStarts and fields.availableDates for all unscheduled weeks; a new invalid request creates no program/plans.',
+        [
+          'HEALTH_PROFILE_INCOMPLETE',
+          'DIET_SCHEDULE_REQUIRED',
+          'MEAL_PROGRAM_IDEMPOTENCY_CONFLICT',
+        ],
+      ),
     },
   });
   registry.registerPath({
@@ -119,7 +123,7 @@ export function registerMealProgramOpenApi(registry: OpenAPIRegistry, errorSchem
     security: authenticated,
     summary: 'Edit, regenerate, reanalyze, or confirm a program',
     description:
-      'Actions are UPDATE_METADATA, SELECT_ALTERNATIVE, REGENERATE_WEEK, REANALYZE, and CONFIRM. Every mutation is idempotent and version checked. Week edits invalidate later projections. Confirmed program content is immutable.',
+      'Actions are UPDATE_METADATA, SELECT_ALTERNATIVE, REGENERATE_WEEK, REANALYZE, and CONFIRM. Every mutation is idempotent and version checked. Week edits invalidate later projections. Regeneration preserves health/schedule requirements and recomputes generation status/failureSummary transactionally: repairing the last missing week promotes PARTIAL/FAILED to DRAFT. Confirmed program content is immutable.',
     request: {
       params: mealProgramParamsSchema,
       body: { required: true, content: { 'application/json': { schema: patchRequest } } },
@@ -136,10 +140,13 @@ export function registerMealProgramOpenApi(registry: OpenAPIRegistry, errorSchem
         'MEAL_PROGRAM_ALTERNATIVE_NOT_FOUND',
       ]),
       409: errorResponse(errorSchema, 'Mutation conflict', [
+        'HEALTH_PROFILE_INCOMPLETE',
+        'DIET_SCHEDULE_REQUIRED',
         'MEAL_PROGRAM_VERSION_CONFLICT',
         'MEAL_PROGRAM_IDEMPOTENCY_CONFLICT',
         'MEAL_PROGRAM_CONFIRMED_IMMUTABLE',
         'MEAL_PROGRAM_NOT_CONFIRMABLE',
+        'MEAL_PROGRAM_HARD_CONSTRAINT_VIOLATION',
         'MEAL_PROGRAM_REGENERATION_LIMIT',
       ]),
     },

@@ -7,6 +7,7 @@ import { isScanDraftDirty, mergeScanDrafts, parseScanDraft, toScanDraft } from '
 const candidate: ScanCandidate = {
   id: 'c1', name: 'Trứng', ingredient: { id: 'i1', name: 'Trứng gà', confidence: 0.9 }, quantity: null, unit: null, confidence: 0.92,
   uncertainty: null, freshness: 'Còn tươi', status: 'PROPOSED', version: 1, lineText: null, unitPrice: null, lineTotal: null, currency: null, imageIds: [],
+  classification: null, classificationReason: null, duplicateOfJobId: null,
 };
 
 test('unknown quantity must be entered before an active draft can be saved', () => {

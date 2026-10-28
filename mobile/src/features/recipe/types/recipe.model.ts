@@ -58,6 +58,20 @@ export interface RecipeCategoryObject {
   slug?: string;
 }
 
+/** Lý do một món bị loại khỏi danh sách phù hợp (BE tính, mobile chỉ hiển thị). */
+export interface RecipeIneligibilityReason {
+  code: string;
+  label: string;
+  /** Nguyên liệu gây ra lý do; rỗng nếu lý do ở cấp món. */
+  ingredientNames: string[];
+}
+
+/** Chỉ có khi danh sách được gọi với `eligibility=INELIGIBLE`. */
+export interface RecipeEligibility {
+  eligible: boolean;
+  reasons: RecipeIneligibilityReason[];
+}
+
 /** Domain Model cho danh sách/hiển thị công thức (đọc — chưa gồm create/update). */
 export interface Recipe {
   id: string;
@@ -89,6 +103,8 @@ export interface Recipe {
   allergenCodes: string[];
   traditionWarnings: TraditionWarning[];
   dietCompatibilities: DietCompatibility[];
+  /** null khi BE không trả (danh sách mặc định chỉ có món phù hợp). */
+  eligibility: RecipeEligibility | null;
   /** Backend chưa có rating: chỉ hiện khi có dữ liệu thật (giữ `undefined`, không bịa số). */
   rating?: number;
   ratingCount?: number;

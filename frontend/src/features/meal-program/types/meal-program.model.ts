@@ -1,4 +1,5 @@
-export type MealProgramStatus = 'DRAFT' | 'CONFIRMED' | 'COMPLETED' | 'ARCHIVED' | 'FAILED';
+export type MealProgramStatus =
+  'DRAFT' | 'PARTIAL' | 'GENERATING' | 'CONFIRMED' | 'COMPLETED' | 'ARCHIVED' | 'FAILED';
 export type ProgramWeekStatus = 'UPCOMING' | 'ACTIVE' | 'COMPLETED';
 export type MealProgramGoal = 'MAINTAIN' | 'LOSE' | 'GAIN';
 
@@ -47,6 +48,8 @@ export interface ProgramWeek {
   statusLabel: string; // 'Sắp tới' | 'Đang thực hiện' | 'Đã hoàn thành'
   complianceRate: number; // 0 - 100
   isDownstreamInvalidated: boolean;
+  failureCode?: string;
+  failureMessage?: string;
   snapshot?: WeeklyPlanSnapshot | null;
 }
 

@@ -27,6 +27,7 @@ import type { SubmissionDecision } from './content-publication.policy.js';
 import { normalizeVietnameseText } from '../catalog/catalog.normalization.js';
 import { MODERATION_RULE_VERSION } from '../moderation/rule-moderation.service.js';
 import { aiCorrelationId } from '../ai-governance/ai-governance.context.js';
+import { loadIngredientSafetyCatalog } from '../catalog/ingredient-safety.js';
 
 const revisionInclude = {
   recipeDetail: true,
@@ -75,6 +76,7 @@ const searchProfileSelect = {
     where: { active: true },
     select: { allergenCode: true },
   },
+  ingredientAllergies: { where: { active: true }, select: { ingredientId: true } },
   ingredientExclusions: {
     where: { active: true },
     select: { ingredientId: true, normalizedName: true },
@@ -153,6 +155,7 @@ export interface ContentSearchCriteria extends Omit<PostListQuery, 'q'> {
 export interface SearchConstraints {
   dietPattern?: DietPattern;
   allergenCodes: string[];
+  allergicIngredientIds?: string[];
   excludedIngredientIds: string[];
   excludedNormalizedNames: string[];
   traditions: Tradition[];
@@ -285,6 +288,10 @@ export class ContentRepository {
 
   findSearchProfile(userId: string): Promise<SearchProfileRecord | null> {
     return this.prisma.user.findUnique({ where: { id: userId }, select: searchProfileSelect });
+  }
+
+  safetyCatalog() {
+    return loadIngredientSafetyCatalog(this.prisma);
   }
 
   findPublishedPost(id: string): Promise<PublishedPostRecord | null> {
@@ -512,6 +519,10 @@ export class ContentRepository {
       const post = byId.get(id);
       return post ? [post] : [];
     });
+  }
+
+  async slugExists(slug: string): Promise<boolean> {
+    return (await this.prisma.post.count({ where: { slug } })) > 0;
   }
 
   async createPost(

@@ -3,7 +3,7 @@ import { type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import { SiteScreen } from '@/components/layout/site-screen';
 import { ErrorState, LoadingState } from '@/components/shared/state-views';
 import { LoginRequired } from '@/components/shared/login-required';
-import { CustomMealForm, toCustomMealCreateDto } from '@/features/custom-meal/components/custom-meal-form';
+import { CustomMealForm, toCustomMealUpdateDto } from '@/features/custom-meal/components/custom-meal-form';
 import { useCustomMealDetailQuery, useUpdateCustomMealMutation } from '@/features/custom-meal/queries/custom-meal.queries';
 import { getCustomMealErrorMessage } from '@/features/custom-meal/utils/custom-meal-errors';
 import { useAuthStore } from '@/store/useAuthStore';
@@ -43,7 +43,7 @@ export default function EditCustomMealScreen() {
             isSubmitting={mutation.isPending}
             onSubmit={async (values) => {
               try {
-                const updated = await mutation.mutateAsync(toCustomMealCreateDto(values));
+                const updated = await mutation.mutateAsync(toCustomMealUpdateDto(values, meal));
                 Alert.alert('Đã cập nhật', 'Món ăn đã được lưu.');
                 router.replace(`/custom-meals/${updated.id}` as Href);
               } catch (error) {

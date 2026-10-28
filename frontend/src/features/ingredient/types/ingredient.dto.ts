@@ -25,6 +25,10 @@ export interface TraditionWarningDto {
 }
 
 export interface IngredientDto {
+  compositionStatus?: 'UNKNOWN' | 'PARTIAL' | 'COMPLETE';
+  compositionKind?: 'UNSPECIFIED' | 'SIMPLE' | 'COMPOUND';
+  compositionVersion?: number;
+  componentIds?: string[];
   id?: string;
   canonicalName?: string;
   canonical_name?: string;

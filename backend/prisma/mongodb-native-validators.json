@@ -1,33 +1,75 @@
 {
+  "ingredient_components": [{ "$ne": ["$ingredient_id", "$component_id"] }],
+  "ingredient_composition_audits": [{ "$gt": ["$version", 0] }],
+  "ingredients": [
+    { "$gte": [{ "$ifNull": ["$composition_version", 0] }, 0] },
+    {
+      "$or": [
+        { "$ne": [{ "$ifNull": ["$composition_status", "UNKNOWN"] }, "COMPLETE"] },
+        {
+          "$and": [
+            { "$in": ["$composition_kind", ["SIMPLE", "COMPOUND"]] },
+            { "$eq": [{ "$type": "$composition_evidence" }, "object"] }
+          ]
+        }
+      ]
+    }
+  ],
   "billing_products": [
     { "$gt": ["$price_vnd", 0] },
     { "$gte": ["$chat_credits", 0] },
     { "$gte": ["$fridge_credits", 0] },
     { "$gte": ["$receipt_credits", 0] },
-    { "$gte": ["$pantry_slots", 0] }
+    { "$gte": ["$pantry_slots", 0] },
+    { "$in": [{ "$ifNull": ["$duration_months", null] }, [null, 1, 3, 12]] }
   ],
   "payment_orders": [
     { "$gt": ["$price_vnd", 0] },
     { "$in": ["$provider", ["payos", "sandbox", "vnpay"]] },
-    { "$cond": [
-      { "$eq": ["$provider", "payos"] },
-      { "$regexMatch": { "input": { "$ifNull": ["$provider_order_code", ""] }, "regex": "^[1-9][0-9]{0,14}$" } },
-      true
-    ] },
+    {
+      "$cond": [
+        { "$eq": ["$provider", "payos"] },
+        {
+          "$regexMatch": {
+            "input": { "$ifNull": ["$provider_order_code", ""] },
+            "regex": "^[1-9][0-9]{0,14}$"
+          }
+        },
+        true
+      ]
+    },
     { "$gte": ["$chat_credits", 0] },
     { "$gte": ["$fridge_credits", 0] },
     { "$gte": ["$receipt_credits", 0] },
-    { "$gte": ["$pantry_slots", 0] }
+    { "$gte": ["$pantry_slots", 0] },
+    { "$in": [{ "$ifNull": ["$duration_months", null] }, [null, 1, 3, 12]] }
   ],
   "entitlement_accounts": [
     { "$gte": ["$chat_credits", 0] },
     { "$gte": ["$fridge_credits", 0] },
     { "$gte": ["$receipt_credits", 0] },
-    { "$gte": ["$pantry_slots", 0] }
+    { "$gte": ["$pantry_slots", 0] },
+    { "$gte": [{ "$ifNull": ["$period_chat_credits", 0] }, 0] },
+    { "$gte": [{ "$ifNull": ["$period_fridge_credits", 0] }, 0] },
+    { "$gte": [{ "$ifNull": ["$period_receipt_credits", 0] }, 0] },
+    { "$gte": [{ "$ifNull": ["$period_pantry_slots", 0] }, 0] }
   ],
   "usage_reservations": [
     { "$in": ["$feature", ["CHAT", "FRIDGE", "RECEIPT"]] },
-    { "$gte": ["$generation", 1] }
+    { "$gte": ["$generation", 1] },
+    { "$in": [{ "$ifNull": ["$source", null] }, [null, "SUBSCRIPTION", "CREDITS"]] }
   ],
-  "payment_events": [{ "$gt": ["$amount_vnd", 0] }]
+  "payment_events": [{ "$gt": ["$amount_vnd", 0] }],
+  "entitlement_subscriptions": [
+    { "$gt": ["$period_days", 0] },
+    { "$gt": ["$period_count", 0] },
+    { "$gte": ["$chat_credits", 0] },
+    { "$gte": ["$fridge_credits", 0] },
+    { "$gte": ["$receipt_credits", 0] },
+    { "$gte": ["$pantry_slots", 0] },
+    { "$gt": ["$ends_at", "$starts_at"] }
+  ],
+  "ai_request_logs": [
+    { "$in": [{ "$ifNull": ["$quota_source", null] }, [null, "FREE", "ENTITLEMENT", "NONE"]] }
+  ]
 }

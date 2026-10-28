@@ -371,7 +371,13 @@ export class ChatRepository {
     modelId: string;
     redactedMetadata: Prisma.InputJsonValue;
     startedAt: Date;
+    quotaSource: 'FREE' | 'ENTITLEMENT' | 'NONE';
+    usageResourceKey?: string | null;
   }) {
+    const quota = {
+      quotaSource: data.quotaSource,
+      usageResourceKey: data.usageResourceKey ?? null,
+    };
     return this.prisma.aiRequestLog.upsert({
       where: { requestMessageId: data.requestMessageId },
       create: {
@@ -386,8 +392,10 @@ export class ChatRepository {
         providerCallCount: 0,
         redactedMetadata: data.redactedMetadata,
         startedAt: data.startedAt,
+        ...quota,
       },
       update: {
+        ...quota,
         provider: data.provider,
         modelId: data.modelId,
         status: AiRequestStatus.IN_PROGRESS,

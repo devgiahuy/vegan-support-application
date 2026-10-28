@@ -1,9 +1,10 @@
 import api from '@/lib/axios';
 import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
 import { PostType } from '@/common/enums';
+import { myPostMapper } from '../mappers/my-post.mapper';
 import { postMapper } from '../mappers/post.mapper';
 import type { PostDetailResponseDto, PostListResponseDto, RelatedPostsResponseDto } from '../types/post.dto';
-import type { Article } from '../types/post.model';
+import type { Article, MyPost } from '../types/post.model';
 import type { PaginationResult } from '@/types/api';
 
 export interface ArticleQueryParams {
@@ -38,6 +39,15 @@ export async function deletePost(id: string, expectedVersion: number): Promise<v
 }
 
 export const postApi = {
+  /**
+   * Nội dung do chính mình tạo, mọi trạng thái kiểm duyệt (trừ đã xoá). `GET /posts/mine` — yêu cầu đăng nhập,
+   * BE tự giới hạn theo tài khoản nên client không gửi author id.
+   */
+  getMyPosts: async (params?: { page?: number; limit?: number }): Promise<PaginationResult<MyPost>> => {
+    const res = await api.get<PostListResponseDto>(API_ENDPOINTS.POSTS.MINE, { params, silent: true });
+    return myPostMapper.toPaginationFromEnvelope(res.data.data, res.data.meta);
+  },
+
   /** Danh sách bài viết Cẩm nang. `GET /posts?type=BLOG`. */
   getArticles: async (params?: ArticleQueryParams): Promise<PaginationResult<Article>> => {
     const res = await api.get<PostListResponseDto>(API_ENDPOINTS.POSTS.LIST, {

@@ -68,6 +68,16 @@ export class MealProgramService {
       throw this.idempotencyConflict();
     }
     const startDate = dateFromDateOnly(input.startDate);
+    if (existing?.status !== MealProgramStatus.CONFIRMED) {
+      const missingWeekStarts = existing
+        ? existing.weeks
+            .filter((week) => week.alternatives.length < input.alternativesPerWeek)
+            .map((week) => dateOnly(week.weekStart))
+        : Array.from({ length: input.horizonWeeks }, (_, index) =>
+            dateOnly(addDays(startDate, index * 7)),
+          );
+      await this.mealPlanService.assertGenerationPrerequisites(userId, missingWeekStarts);
+    }
     let program =
       existing ??
       (await this.repository.create({
@@ -187,9 +197,24 @@ export class MealProgramService {
               message: 'Every program week must have a selected alternative before confirmation',
             });
           }
-          if (!program.analyses[0] || program.analyses[0].status !== 'CURRENT') {
-            await this.analyze(program, null);
+          for (const week of program.weeks) {
+            const selected = week.alternatives.find(
+              (entry) => entry.rank === week.selectedAlternativeRank,
+            );
+            if (!selected) continue;
+            const plan = await this.mealPlanService.get(userId, selected.mealPlanId);
+            if (!plan.analysis.summary.hardConstraintsPreserved)
+              throw new AppError({
+                statusCode: 409,
+                code: 'MEAL_PROGRAM_HARD_CONSTRAINT_VIOLATION',
+                message:
+                  'Thành phần hoặc hồ sơ đã thay đổi. Vui lòng thay món không phù hợp trước khi xác nhận.',
+                fields: { weekIndexes: [String(week.weekIndex)] },
+              });
+            await this.repository.updateAlternativeSnapshot(selected.id, inputJson(plan));
           }
+          program = await this.requireOwned(userId, id);
+          await this.analyze(program, null);
           program = await this.repository.confirm(common);
           break;
         }

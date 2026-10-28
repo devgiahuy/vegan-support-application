@@ -3,7 +3,7 @@ import '@/lib/web-alert';
 
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'nativewind';
+import { colorScheme as appColorScheme, useColorScheme } from 'nativewind';
 import { QueryClientProvider } from '@tanstack/react-query';
 import * as React from 'react';
 
@@ -12,6 +12,9 @@ import { useSessionRestore } from '@/features/auth/lib/restore-session';
 import { createQueryClient } from '@/lib/query-client';
 
 SplashScreen.preventAutoHideAsync();
+
+// Mặc định luôn mở app ở giao diện Sáng, không theo giao diện của hệ điều hành; người dùng vẫn đổi được bằng nút ở header.
+appColorScheme.set('light');
 
 export default function RootLayout() {
   const { colorScheme } = useColorScheme();

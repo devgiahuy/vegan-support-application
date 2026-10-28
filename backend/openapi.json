@@ -159,6 +159,10 @@
     {
       "name": "AI Governance Admin",
       "description": "Redacted AI operations, metrics, controls and health"
+    },
+    {
+      "name": "Admin Insights",
+      "description": "AI allowance purchase revenue and per-user AI usage trace"
     }
   ],
   "components": {
@@ -1050,6 +1054,39 @@
                       "additionalProperties": false
                     }
                   },
+                  "ingredientAllergies": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "ingredientId": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "ingredientName": {
+                          "type": "string"
+                        },
+                        "severity": {
+                          "type": "string",
+                          "enum": [
+                            "MILD",
+                            "MODERATE",
+                            "SEVERE"
+                          ]
+                        },
+                        "ingredientActive": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "ingredientId",
+                        "ingredientName",
+                        "severity",
+                        "ingredientActive"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
                   "ingredientExclusions": {
                     "type": "array",
                     "items": {
@@ -1240,6 +1277,7 @@
                   "rules",
                   "schedule",
                   "allergies",
+                  "ingredientAllergies",
                   "ingredientExclusions",
                   "effectiveConstraints"
                 ],
@@ -1676,6 +1714,32 @@
             },
             "maxItems": 100,
             "default": []
+          },
+          "ingredientAllergies": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "ingredientId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "severity": {
+                  "type": "string",
+                  "enum": [
+                    "MILD",
+                    "MODERATE",
+                    "SEVERE"
+                  ],
+                  "default": "MODERATE"
+                }
+              },
+              "required": [
+                "ingredientId"
+              ],
+              "additionalProperties": false
+            },
+            "maxItems": 100
           }
         },
         "required": [
@@ -1848,6 +1912,39 @@
                     "label",
                     "severity",
                     "active"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "ingredientAllergies": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "ingredientId": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "ingredientName": {
+                      "type": "string"
+                    },
+                    "severity": {
+                      "type": "string",
+                      "enum": [
+                        "MILD",
+                        "MODERATE",
+                        "SEVERE"
+                      ]
+                    },
+                    "ingredientActive": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "ingredientId",
+                    "ingredientName",
+                    "severity",
+                    "ingredientActive"
                   ],
                   "additionalProperties": false
                 }
@@ -2042,6 +2139,7 @@
               "rules",
               "schedule",
               "allergies",
+              "ingredientAllergies",
               "ingredientExclusions",
               "effectiveConstraints"
             ],
@@ -2483,6 +2581,33 @@
               "normalizedName": {
                 "type": "string"
               },
+              "compositionStatus": {
+                "type": "string",
+                "enum": [
+                  "UNKNOWN",
+                  "PARTIAL",
+                  "COMPLETE"
+                ]
+              },
+              "compositionKind": {
+                "type": "string",
+                "enum": [
+                  "UNSPECIFIED",
+                  "SIMPLE",
+                  "COMPOUND"
+                ]
+              },
+              "compositionVersion": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "componentIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
               "foodGroup": {
                 "type": "string",
                 "enum": [
@@ -2598,6 +2723,10 @@
               "id",
               "canonicalName",
               "normalizedName",
+              "compositionStatus",
+              "compositionKind",
+              "compositionVersion",
+              "componentIds",
               "foodGroup",
               "status",
               "aliases",
@@ -2643,6 +2772,33 @@
                 },
                 "normalizedName": {
                   "type": "string"
+                },
+                "compositionStatus": {
+                  "type": "string",
+                  "enum": [
+                    "UNKNOWN",
+                    "PARTIAL",
+                    "COMPLETE"
+                  ]
+                },
+                "compositionKind": {
+                  "type": "string",
+                  "enum": [
+                    "UNSPECIFIED",
+                    "SIMPLE",
+                    "COMPOUND"
+                  ]
+                },
+                "compositionVersion": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "componentIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
                 },
                 "foodGroup": {
                   "type": "string",
@@ -2759,6 +2915,10 @@
                 "id",
                 "canonicalName",
                 "normalizedName",
+                "compositionStatus",
+                "compositionKind",
+                "compositionVersion",
+                "componentIds",
                 "foodGroup",
                 "status",
                 "aliases",
@@ -2847,6 +3007,33 @@
                     },
                     "normalizedName": {
                       "type": "string"
+                    },
+                    "compositionStatus": {
+                      "type": "string",
+                      "enum": [
+                        "UNKNOWN",
+                        "PARTIAL",
+                        "COMPLETE"
+                      ]
+                    },
+                    "compositionKind": {
+                      "type": "string",
+                      "enum": [
+                        "UNSPECIFIED",
+                        "SIMPLE",
+                        "COMPOUND"
+                      ]
+                    },
+                    "compositionVersion": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "componentIds": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
                     },
                     "foodGroup": {
                       "type": "string",
@@ -2963,6 +3150,10 @@
                     "id",
                     "canonicalName",
                     "normalizedName",
+                    "compositionStatus",
+                    "compositionKind",
+                    "compositionVersion",
+                    "componentIds",
                     "foodGroup",
                     "status",
                     "aliases",
@@ -3023,6 +3214,250 @@
               "status"
             ],
             "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "IngredientCompositionResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "ingredientId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "UNKNOWN",
+                  "PARTIAL",
+                  "COMPLETE"
+                ]
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "UNSPECIFIED",
+                  "SIMPLE",
+                  "COMPOUND"
+                ]
+              },
+              "version": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "componentIds": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "components": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "active": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "name",
+                    "active"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "evidence": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "additionalProperties": {}
+              },
+              "complete": {
+                "type": "boolean"
+              },
+              "inferredAllergenCodes": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "audit": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "version": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "actorId": {
+                      "type": "string"
+                    },
+                    "snapshot": {
+                      "type": "object",
+                      "additionalProperties": {}
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "version",
+                    "actorId",
+                    "snapshot",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "ingredientId",
+              "status",
+              "kind",
+              "version",
+              "componentIds",
+              "components",
+              "evidence",
+              "complete",
+              "inferredAllergenCodes",
+              "audit"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "AllergenCatalogResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "label": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "searchTerms": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              },
+              "required": [
+                "code",
+                "label",
+                "description",
+                "searchTerms"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "CompositionSourcesResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "code": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "licenseName": {
+                  "type": "string"
+                },
+                "attribution": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "id",
+                "code",
+                "name",
+                "licenseName",
+                "attribution"
+              ],
+              "additionalProperties": false
+            }
           },
           "meta": {
             "type": "null"
@@ -4702,6 +5137,52 @@
                           "limitation"
                         ],
                         "additionalProperties": false
+                      },
+                      "eligibility": {
+                        "type": "object",
+                        "properties": {
+                          "eligible": {
+                            "type": "boolean"
+                          },
+                          "reasons": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "code": {
+                                  "type": "string",
+                                  "enum": [
+                                    "ALLERGY",
+                                    "ALLERGEN_SELECTION_UNRESOLVED",
+                                    "DIET_PATTERN",
+                                    "INGREDIENT_COMPOSITION_UNCERTAIN",
+                                    "INGREDIENT_EXCLUSION",
+                                    "TRADITION_RULE",
+                                    "UNRESOLVED_INGREDIENT"
+                                  ]
+                                },
+                                "ingredientNames": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  },
+                                  "description": "Tên hiển thị nguyên liệu gây ra lý do; rỗng nếu lý do ở cấp món"
+                                }
+                              },
+                              "required": [
+                                "code",
+                                "ingredientNames"
+                              ],
+                              "additionalProperties": false
+                            }
+                          }
+                        },
+                        "required": [
+                          "eligible",
+                          "reasons"
+                        ],
+                        "additionalProperties": false,
+                        "description": "Chỉ có khi list với eligibility=INELIGIBLE"
                       }
                     },
                     "required": [
@@ -5937,6 +6418,52 @@
                             "limitation"
                           ],
                           "additionalProperties": false
+                        },
+                        "eligibility": {
+                          "type": "object",
+                          "properties": {
+                            "eligible": {
+                              "type": "boolean"
+                            },
+                            "reasons": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "code": {
+                                    "type": "string",
+                                    "enum": [
+                                      "ALLERGY",
+                                      "ALLERGEN_SELECTION_UNRESOLVED",
+                                      "DIET_PATTERN",
+                                      "INGREDIENT_COMPOSITION_UNCERTAIN",
+                                      "INGREDIENT_EXCLUSION",
+                                      "TRADITION_RULE",
+                                      "UNRESOLVED_INGREDIENT"
+                                    ]
+                                  },
+                                  "ingredientNames": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "description": "Tên hiển thị nguyên liệu gây ra lý do; rỗng nếu lý do ở cấp món"
+                                  }
+                                },
+                                "required": [
+                                  "code",
+                                  "ingredientNames"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "eligible",
+                            "reasons"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Chỉ có khi list với eligibility=INELIGIBLE"
                         }
                       },
                       "required": [
@@ -7257,6 +7784,52 @@
                             "limitation"
                           ],
                           "additionalProperties": false
+                        },
+                        "eligibility": {
+                          "type": "object",
+                          "properties": {
+                            "eligible": {
+                              "type": "boolean"
+                            },
+                            "reasons": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "code": {
+                                    "type": "string",
+                                    "enum": [
+                                      "ALLERGY",
+                                      "ALLERGEN_SELECTION_UNRESOLVED",
+                                      "DIET_PATTERN",
+                                      "INGREDIENT_COMPOSITION_UNCERTAIN",
+                                      "INGREDIENT_EXCLUSION",
+                                      "TRADITION_RULE",
+                                      "UNRESOLVED_INGREDIENT"
+                                    ]
+                                  },
+                                  "ingredientNames": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "description": "Tên hiển thị nguyên liệu gây ra lý do; rỗng nếu lý do ở cấp món"
+                                  }
+                                },
+                                "required": [
+                                  "code",
+                                  "ingredientNames"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "eligible",
+                            "reasons"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Chỉ có khi list với eligibility=INELIGIBLE"
                         }
                       },
                       "required": [
@@ -8519,6 +9092,52 @@
                             "limitation"
                           ],
                           "additionalProperties": false
+                        },
+                        "eligibility": {
+                          "type": "object",
+                          "properties": {
+                            "eligible": {
+                              "type": "boolean"
+                            },
+                            "reasons": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "properties": {
+                                  "code": {
+                                    "type": "string",
+                                    "enum": [
+                                      "ALLERGY",
+                                      "ALLERGEN_SELECTION_UNRESOLVED",
+                                      "DIET_PATTERN",
+                                      "INGREDIENT_COMPOSITION_UNCERTAIN",
+                                      "INGREDIENT_EXCLUSION",
+                                      "TRADITION_RULE",
+                                      "UNRESOLVED_INGREDIENT"
+                                    ]
+                                  },
+                                  "ingredientNames": {
+                                    "type": "array",
+                                    "items": {
+                                      "type": "string"
+                                    },
+                                    "description": "Tên hiển thị nguyên liệu gây ra lý do; rỗng nếu lý do ở cấp món"
+                                  }
+                                },
+                                "required": [
+                                  "code",
+                                  "ingredientNames"
+                                ],
+                                "additionalProperties": false
+                              }
+                            }
+                          },
+                          "required": [
+                            "eligible",
+                            "reasons"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Chỉ có khi list với eligibility=INELIGIBLE"
                         }
                       },
                       "required": [
@@ -14488,10 +15107,7 @@
                     ]
                   },
                   "hardConstraintsPreserved": {
-                    "type": "boolean",
-                    "enum": [
-                      true
-                    ]
+                    "type": "boolean"
                   }
                 },
                 "required": [
@@ -16505,10 +17121,7 @@
                       ]
                     },
                     "hardConstraintsPreserved": {
-                      "type": "boolean",
-                      "enum": [
-                        true
-                      ]
+                      "type": "boolean"
                     }
                   },
                   "required": [
@@ -18541,6 +19154,22 @@
                     "pantrySlots": {
                       "type": "integer",
                       "minimum": 0
+                    },
+                    "durationMonths": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "exclusiveMinimum": 0,
+                      "description": "null = one-time permanent credits; otherwise number of credit periods"
+                    },
+                    "periodDays": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "exclusiveMinimum": 0,
+                      "description": "Length of one credit period; benefits are granted once per period"
                     }
                   },
                   "required": [
@@ -18552,7 +19181,9 @@
                     "chatCredits",
                     "fridgeCredits",
                     "receiptCredits",
-                    "pantrySlots"
+                    "pantrySlots",
+                    "durationMonths",
+                    "periodDays"
                   ],
                   "additionalProperties": false
                 }
@@ -18615,6 +19246,13 @@
                 "type": "integer",
                 "minimum": 0
               },
+              "durationMonths": {
+                "type": [
+                  "integer",
+                  "null"
+                ],
+                "exclusiveMinimum": 0
+              },
               "provider": {
                 "type": "string",
                 "enum": [
@@ -18668,6 +19306,7 @@
               "fridgeCredits",
               "receiptCredits",
               "pantrySlots",
+              "durationMonths",
               "provider",
               "simulated",
               "status",
@@ -18732,6 +19371,13 @@
                       "type": "integer",
                       "minimum": 0
                     },
+                    "durationMonths": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ],
+                      "exclusiveMinimum": 0
+                    },
                     "provider": {
                       "type": "string",
                       "enum": [
@@ -18785,6 +19431,7 @@
                     "fridgeCredits",
                     "receiptCredits",
                     "pantrySlots",
+                    "durationMonths",
                     "provider",
                     "simulated",
                     "status",
@@ -18896,6 +19543,78 @@
                 "type": "integer",
                 "exclusiveMinimum": 0
               },
+              "subscription": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "productId": {
+                    "type": "string"
+                  },
+                  "startsAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "endsAt": {
+                    "type": "string",
+                    "format": "date-time",
+                    "description": "End of the last appended paid period, including queued purchases"
+                  },
+                  "periodEndsAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "periodDays": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "chatCredits": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "fridgeCredits": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "receiptCredits": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "pantrySlots": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "chatPerPeriod": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "fridgePerPeriod": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "receiptPerPeriod": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "productId",
+                  "startsAt",
+                  "endsAt",
+                  "periodEndsAt",
+                  "periodDays",
+                  "chatCredits",
+                  "fridgeCredits",
+                  "receiptCredits",
+                  "pantrySlots",
+                  "chatPerPeriod",
+                  "fridgePerPeriod",
+                  "receiptPerPeriod"
+                ],
+                "additionalProperties": false,
+                "description": "Active duration combo. Period credits are spent before permanent credits and expire at periodEndsAt."
+              },
               "ledger": {
                 "type": "array",
                 "items": {
@@ -18951,6 +19670,7 @@
               "fridgeMaxImages",
               "receiptMaxImages",
               "scanMaxAttempts",
+              "subscription",
               "ledger"
             ],
             "additionalProperties": false
@@ -30533,6 +31253,355 @@
           "success",
           "data"
         ]
+      },
+      "AdminBillingRevenueResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "window": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "to": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "granularity": {
+                    "type": "string",
+                    "enum": [
+                      "day",
+                      "week",
+                      "month"
+                    ]
+                  },
+                  "timezone": {
+                    "type": "string",
+                    "enum": [
+                      "Asia/Ho_Chi_Minh"
+                    ]
+                  }
+                },
+                "required": [
+                  "from",
+                  "to",
+                  "granularity",
+                  "timezone"
+                ],
+                "additionalProperties": false
+              },
+              "currency": {
+                "type": "string",
+                "enum": [
+                  "VND"
+                ]
+              },
+              "overview": {
+                "type": "object",
+                "properties": {
+                  "revenueVnd": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "paidOrders": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "buyers": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "averageOrderVnd": {
+                    "type": [
+                      "integer",
+                      "null"
+                    ],
+                    "minimum": 0
+                  }
+                },
+                "required": [
+                  "revenueVnd",
+                  "paidOrders",
+                  "buyers",
+                  "averageOrderVnd"
+                ],
+                "additionalProperties": false,
+                "description": "PAID orders by paidAt within the window; simulated sandbox orders excluded"
+              },
+              "series": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "bucketStart": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "revenueVnd": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "paidOrders": {
+                      "type": "integer",
+                      "minimum": 0
+                    }
+                  },
+                  "required": [
+                    "bucketStart",
+                    "revenueVnd",
+                    "paidOrders"
+                  ],
+                  "additionalProperties": false
+                },
+                "description": "Contiguous buckets in Asia/Ho_Chi_Minh; weeks start Monday; empty buckets are 0"
+              },
+              "statuses": {
+                "type": "object",
+                "properties": {
+                  "total": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "counts": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "status": {
+                          "type": "string",
+                          "enum": [
+                            "PENDING",
+                            "PAID",
+                            "CANCELLED",
+                            "FAILED",
+                            "EXPIRED"
+                          ]
+                        },
+                        "count": {
+                          "type": "integer",
+                          "minimum": 0
+                        }
+                      },
+                      "required": [
+                        "status",
+                        "count"
+                      ],
+                      "additionalProperties": false
+                    }
+                  },
+                  "successRate": {
+                    "type": [
+                      "number",
+                      "null"
+                    ],
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                },
+                "required": [
+                  "total",
+                  "counts",
+                  "successRate"
+                ],
+                "additionalProperties": false,
+                "description": "Orders by createdAt within the window; elapsed PENDING orders count as EXPIRED"
+              }
+            },
+            "required": [
+              "window",
+              "currency",
+              "overview",
+              "series",
+              "statuses"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "AdminAiUsageTraceResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "string"
+                },
+                "feature": {
+                  "type": "string",
+                  "enum": [
+                    "CHAT",
+                    "FRIDGE",
+                    "RECEIPT"
+                  ]
+                },
+                "occurredAt": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "user": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "email": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "displayName",
+                    "email"
+                  ],
+                  "additionalProperties": false
+                },
+                "quotaSource": {
+                  "type": "string",
+                  "enum": [
+                    "FREE_DAILY",
+                    "SUBSCRIPTION",
+                    "CREDITS",
+                    "NONE",
+                    "UNKNOWN"
+                  ]
+                },
+                "quotaCharged": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Paid allowance units held or spent; free daily chat and released usage are 0"
+                },
+                "outcome": {
+                  "type": "string",
+                  "enum": [
+                    "HELD",
+                    "SPENT",
+                    "RELEASED"
+                  ]
+                },
+                "aiStatus": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "provider": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "modelId": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "inputTokens": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "outputTokens": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "latencyMs": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "errorCode": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "id",
+                "feature",
+                "occurredAt",
+                "user",
+                "quotaSource",
+                "quotaCharged",
+                "outcome",
+                "aiStatus",
+                "provider",
+                "modelId",
+                "inputTokens",
+                "outputTokens",
+                "latencyMs",
+                "errorCode"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "page": {
+                "type": "integer"
+              },
+              "limit": {
+                "type": "integer"
+              },
+              "total": {
+                "type": "integer"
+              },
+              "totalPages": {
+                "type": "integer"
+              }
+            },
+            "required": [
+              "page",
+              "limit",
+              "total",
+              "totalPages"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
       }
     },
     "parameters": {}
@@ -31433,6 +32502,26 @@
                       "success": false,
                       "error": {
                         "code": "INVALID_INGREDIENT_EXCLUSIONS",
+                        "message": "Rule hoặc preference không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ALLERGEN_SELECTION": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ALLERGEN_SELECTION",
+                        "message": "Rule hoặc preference không hợp lệ",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_INGREDIENT_ALLERGIES": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_INGREDIENT_ALLERGIES",
                         "message": "Rule hoặc preference không hợp lệ",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
@@ -32960,6 +34049,7 @@
           "Ingredients"
         ],
         "summary": "List canonical ingredient active",
+        "description": "Tra cứu tên chuẩn và alias đã APPROVED; response chỉ trả alias đã duyệt. Cấu tạo UNKNOWN/PARTIAL không xác lập tương thích dị ứng.",
         "operationId": "listPublicIngredients",
         "parameters": [
           {
@@ -33051,7 +34141,7 @@
           "Ingredients"
         ],
         "summary": "Resolve tên/alias ingredient không phân biệt dấu",
-        "description": "Trả NONE, EXACT hoặc AMBIGUOUS. Khi ambiguous, client phải cho người dùng chọn candidate; backend không tự chọn.",
+        "description": "Chỉ đối chiếu tên chuẩn và alias APPROVED. Trả NONE, EXACT hoặc AMBIGUOUS. Khi ambiguous, client phải cho người dùng chọn candidate; backend không tự chọn. Resolve danh tính không đồng nghĩa cấu tạo đã được rà soát.",
         "operationId": "resolveIngredient",
         "parameters": [
           {
@@ -34968,6 +36058,381 @@
         }
       }
     },
+    "/api/v1/allergens": {
+      "get": {
+        "tags": [
+          "Allergens"
+        ],
+        "summary": "Danh mục dị ứng theo tên và tên đồng nghĩa",
+        "operationId": "listAllergens",
+        "description": "Active reviewed catalog labels and approved ingredient search terms. Search/typo suggestions never select a code automatically. Preferences accept only active catalog codes.",
+        "responses": {
+          "200": {
+            "description": "Named catalog",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllergenCatalogResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/ingredient-composition-sources": {
+      "get": {
+        "tags": [
+          "Catalog Admin"
+        ],
+        "summary": "Nguồn dữ liệu dùng để rà soát thành phần",
+        "operationId": "listCompositionSources",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Active sources and licenses",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CompositionSourcesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR, INVALID_INGREDIENT_COMPONENT, INGREDIENT_COMPOSITION_CYCLE, INGREDIENT_COMPOSITION_DEPTH, INVALID_COMPOSITION_SOURCE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN: ADMIN only",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "INGREDIENT_COMPOSITION_CONFLICT: reload latest version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/ingredients/{id}/composition": {
+      "get": {
+        "tags": [
+          "Catalog Admin"
+        ],
+        "summary": "Đọc thành phần, mức đầy đủ và lịch sử rà soát",
+        "operationId": "getIngredientComposition",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Current composition and latest 20 audit entries",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngredientCompositionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR, INVALID_INGREDIENT_COMPONENT, INGREDIENT_COMPOSITION_CYCLE, INGREDIENT_COMPOSITION_DEPTH, INVALID_COMPOSITION_SOURCE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN: ADMIN only",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "INGREDIENT_COMPOSITION_CONFLICT: reload latest version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Catalog Admin"
+        ],
+        "summary": "Admin rà soát cấu tạo nguyên liệu",
+        "operationId": "saveIngredientComposition",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "description": "Replace canonical component edges and reviewed completeness. Source/version/record and exact product/formulation scope are required for PARTIAL/COMPLETE. Reviewer/time and license attribution are server-set; append-only audit. Serialized writes reject cycles and depth >32. COMPLETE parent is still uncertain if any descendant/source is incomplete/inactive. Does not certify allergy safety or alter nutrition.",
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "expectedVersion": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "UNKNOWN",
+                      "PARTIAL",
+                      "COMPLETE"
+                    ]
+                  },
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "UNSPECIFIED",
+                      "SIMPLE",
+                      "COMPOUND"
+                    ]
+                  },
+                  "componentIds": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "maxItems": 100
+                  },
+                  "evidence": {
+                    "type": "object",
+                    "properties": {
+                      "sourceId": {
+                        "type": "string",
+                        "format": "uuid"
+                      },
+                      "sourceVersion": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                      },
+                      "sourceRecordId": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 240
+                      },
+                      "scope": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1000
+                      }
+                    },
+                    "required": [
+                      "sourceId",
+                      "sourceVersion",
+                      "sourceRecordId",
+                      "scope"
+                    ],
+                    "additionalProperties": false
+                  }
+                },
+                "required": [
+                  "expectedVersion",
+                  "status",
+                  "kind",
+                  "componentIds"
+                ],
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated assessment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngredientCompositionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR, INVALID_INGREDIENT_COMPONENT, INGREDIENT_COMPOSITION_CYCLE, INGREDIENT_COMPOSITION_DEPTH, INVALID_COMPOSITION_SOURCE",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "AUTH_REQUIRED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN: ADMIN only",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "INGREDIENT_COMPOSITION_CONFLICT: reload latest version",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/posts/mine": {
       "get": {
         "tags": [
@@ -35113,7 +36578,7 @@
           "Content"
         ],
         "summary": "List nội dung published",
-        "description": "Tìm kiếm không dấu và filter published content. Recipe list/related/detail trả statistics.usageUserCount là số user riêng biệt đã thêm công thức vào meal plan chưa xóa; usageTracking=MEAL_PLAN_ADDITION và cookedUserCount=null vì backend chưa theo dõi sự kiện đã nấu hoặc hoàn thành món. Ranking v1: title > canonical ingredient > category/tag > body, sau đó publishedAt và UUID. Với access token hợp lệ, backend tự áp dụng allergy, ingredient exclusion, diet pattern và enabled tradition rules trước ranking; dietPattern từ query không thể nới profile đã lưu. Dị ứng kiểm tra cả snapshot công thức và metadata nguyên liệu hiện tại. ingredientIds yêu cầu Recipe chứa đủ toàn bộ ID.",
+        "description": "Tìm kiếm không dấu và filter published content. Recipe list/related/detail trả statistics.usageUserCount là số user riêng biệt đã thêm công thức vào meal plan chưa xóa; usageTracking=MEAL_PLAN_ADDITION và cookedUserCount=null vì backend chưa theo dõi sự kiện đã nấu hoặc hoàn thành món. Ranking v1: title > canonical ingredient > category/tag > body, sau đó publishedAt và UUID. Với access token hợp lệ, backend tự áp dụng allergy, ingredient exclusion, diet pattern và enabled tradition rules trước ranking; dietPattern từ query không thể nới profile đã lưu. Dị ứng kiểm tra snapshot và toàn bộ thành phần lồng nhau hiện tại. Mọi ràng buộc ăn uống bắt buộc loại nguyên liệu có cấu tạo UNKNOWN/PARTIAL, nguồn ngừng dùng, thiếu thành phần hoặc vòng lặp trước ranking/phân trang. ingredientIds yêu cầu Recipe chứa đủ toàn bộ ID.",
         "operationId": "listPublishedPosts",
         "security": [
           {},
@@ -35252,6 +36717,21 @@
             "description": "Ngày YYYY-MM-DD để áp lịch tradition PERIODIC; mặc định ngày hiện tại VN",
             "name": "forDate",
             "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ELIGIBLE",
+                "INELIGIBLE"
+              ],
+              "default": "ELIGIBLE",
+              "description": "ELIGIBLE: chỉ món qua ràng buộc hồ sơ. INELIGIBLE: chỉ Recipe bị ràng buộc loại, kèm recipe.eligibility.reasons"
+            },
+            "required": false,
+            "description": "ELIGIBLE: chỉ món qua ràng buộc hồ sơ. INELIGIBLE: chỉ Recipe bị ràng buộc loại, kèm recipe.eligibility.reasons",
+            "name": "eligibility",
+            "in": "query"
           }
         ],
         "responses": {
@@ -35358,7 +36838,7 @@
           "Content"
         ],
         "summary": "Tạo Recipe, Blog hoặc Video",
-        "description": "Không nhận author/status/publishedAt từ client. Mọi content type tạo immutable DRAFT; publication chỉ xảy ra sau explicit submit và Admin approval. Video upload chỉ nhận committed Phase 15 asset thuộc author; YouTube URL được allowlist và không tính quota.",
+        "description": "Không nhận author/status/publishedAt từ client. Tiêu đề/nội dung có thể trùng; khi không gửi slug, backend tự tạo đường dẫn duy nhất, thêm hậu tố nếu cần. Slug client chỉ định vẫn phải duy nhất. Mọi content type tạo immutable DRAFT; publication chỉ xảy ra sau explicit submit và Admin approval. Video upload chỉ nhận committed Phase 15 asset thuộc author; YouTube URL được allowlist và không tính quota.",
         "operationId": "createPost",
         "security": [
           {
@@ -35577,7 +37057,7 @@
             }
           },
           "409": {
-            "description": "Slug đã được sử dụng",
+            "description": "Slug do client chỉ định đã được sử dụng; slug tự sinh được thêm hậu tố khi trùng tiêu đề",
             "content": {
               "application/json": {
                 "examples": {
@@ -35586,7 +37066,7 @@
                       "success": false,
                       "error": {
                         "code": "CONTENT_SLUG_CONFLICT",
-                        "message": "Slug đã được sử dụng",
+                        "message": "Slug do client chỉ định đã được sử dụng; slug tự sinh được thêm hậu tố khi trùng tiêu đề",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -35887,7 +37367,7 @@
           "Content"
         ],
         "summary": "Tạo revision mới cho content thuộc quyền sở hữu",
-        "description": "Request là full revision snapshot và bắt buộc expectedVersion. Author-only mutation luôn tạo DRAFT. Khi sửa content đã approved, published revision cũ tiếp tục phục vụ public cho tới khi revision mới được submit và Admin approve.",
+        "description": "Request là full revision snapshot và bắt buộc expectedVersion. Nếu không gửi slug, giữ đường dẫn hiện tại kể cả khi đổi tiêu đề. Author-only mutation luôn tạo DRAFT. Khi sửa content đã approved, published revision cũ tiếp tục phục vụ public cho tới khi revision mới được submit và Admin approve.",
         "operationId": "updatePost",
         "security": [
           {
@@ -41037,8 +42517,8 @@
         "tags": [
           "Content Review Admin"
         ],
-        "summary": "Admin list submitted content revisions",
-        "description": "Admin-only paginated queue. Supports type=VIDEO and status/priority filters. Moderation signals affect priority only and never make a publication decision.",
+        "summary": "Admin and Contributor list submitted content revisions",
+        "description": "Paginated queue for Admin and Contributor. Contributors review member submitted content without open flags/quarantines. Supports type=VIDEO and status/priority filters. Moderation signals affect priority only and never make a publication decision.",
         "operationId": "listContentReviewAdmin",
         "security": [
           {
@@ -41195,7 +42675,7 @@
             }
           },
           "403": {
-            "description": "Admin only",
+            "description": "Reviewer permission required",
             "content": {
               "application/json": {
                 "examples": {
@@ -41204,7 +42684,7 @@
                       "success": false,
                       "error": {
                         "code": "FORBIDDEN",
-                        "message": "Admin only",
+                        "message": "Reviewer permission required",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -41214,7 +42694,7 @@
                       "success": false,
                       "error": {
                         "code": "ACCOUNT_BANNED",
-                        "message": "Admin only",
+                        "message": "Reviewer permission required",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -41234,7 +42714,7 @@
         "tags": [
           "Content Review Admin"
         ],
-        "summary": "Admin inspect one immutable revision and its evidence",
+        "summary": "Admin and Contributor inspect one immutable revision and its evidence",
         "description": "Returns full text, media source/reference, moderation signals, author, submission state, and any existing decision. Hidden/deleted evidence is retained and remains inspectable.",
         "operationId": "getContentReviewAdmin",
         "security": [
@@ -41379,7 +42859,7 @@
         "tags": [
           "Content Review Admin"
         ],
-        "summary": "Admin approve or reject a submitted revision",
+        "summary": "Admin or Contributor approve or reject a submitted revision",
         "description": "Reason is mandatory. The exact latest revision is locked transactionally. Approve replaces the public pointer; reject keeps any prior approved revision public. Signals are recorded evidence only.",
         "operationId": "reviewContentAdmin",
         "security": [
@@ -41497,7 +42977,7 @@
             }
           },
           "403": {
-            "description": "Admin only or self-review forbidden",
+            "description": "Reviewer role, Admin review requirement or self-review forbidden",
             "content": {
               "application/json": {
                 "examples": {
@@ -41506,7 +42986,7 @@
                       "success": false,
                       "error": {
                         "code": "FORBIDDEN",
-                        "message": "Admin only or self-review forbidden",
+                        "message": "Reviewer role, Admin review requirement or self-review forbidden",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -41516,7 +42996,17 @@
                       "success": false,
                       "error": {
                         "code": "SELF_APPROVAL_FORBIDDEN",
-                        "message": "Admin only or self-review forbidden",
+                        "message": "Reviewer role, Admin review requirement or self-review forbidden",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ADMIN_REVIEW_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ADMIN_REVIEW_REQUIRED",
+                        "message": "Reviewer role, Admin review requirement or self-review forbidden",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -41526,7 +43016,7 @@
                       "success": false,
                       "error": {
                         "code": "ACCOUNT_BANNED",
-                        "message": "Admin only or self-review forbidden",
+                        "message": "Reviewer role, Admin review requirement or self-review forbidden",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -44928,7 +46418,7 @@
           "Meal Plans"
         ],
         "summary": "Thêm recipe hoặc private custom meal vào slot",
-        "description": "Hệ thống kiểm tra dị ứng, nguyên liệu cần tránh, chế độ ăn và quy tắc truyền thống trước khi lưu. Dị ứng kiểm tra cả snapshot công thức và metadata nguyên liệu hiện tại; khi có ràng buộc, nguyên liệu chưa xác định trả MEAL_PLAN_HARD_CONSTRAINT_VIOLATION với reason UNRESOLVED_INGREDIENT. Món phù hợp vẫn được lưu khi các chỉ số chất đạm, chất xơ, chất béo hoặc tinh bột ước tính lệch khỏi khoảng mục tiêu; các lưu ý này chỉ là gợi ý điều chỉnh và không chặn thao tác.",
+        "description": "Hệ thống kiểm tra dị ứng, nguyên liệu cần tránh, chế độ ăn và quy tắc truyền thống trước khi lưu. Dị ứng kiểm tra snapshot và thành phần lồng nhau theo nguồn đã rà soát; cấu tạo chưa đầy đủ trả reason INGREDIENT_COMPOSITION_UNCERTAIN; khi có ràng buộc, nguyên liệu chưa xác định trả MEAL_PLAN_HARD_CONSTRAINT_VIOLATION với reason UNRESOLVED_INGREDIENT. Món phù hợp vẫn được lưu khi các chỉ số chất đạm, chất xơ, chất béo hoặc tinh bột ước tính lệch khỏi khoảng mục tiêu; các lưu ý này chỉ là gợi ý điều chỉnh và không chặn thao tác.",
         "operationId": "manualAddMealPlanItem",
         "security": [
           {
@@ -45683,7 +47173,7 @@
             }
           },
           "409": {
-            "description": "Profile, schedule, or idempotency conflict",
+            "description": "Profile, schedule, or idempotency conflict. Before creating/resuming generation, validate every missing week. DIET_SCHEDULE_REQUIRED returns fields.weekStarts and fields.availableDates for all unscheduled weeks; a new invalid request creates no program/plans.",
             "content": {
               "application/json": {
                 "examples": {
@@ -45692,7 +47182,7 @@
                       "success": false,
                       "error": {
                         "code": "HEALTH_PROFILE_INCOMPLETE",
-                        "message": "Profile, schedule, or idempotency conflict",
+                        "message": "Profile, schedule, or idempotency conflict. Before creating/resuming generation, validate every missing week. DIET_SCHEDULE_REQUIRED returns fields.weekStarts and fields.availableDates for all unscheduled weeks; a new invalid request creates no program/plans.",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -45702,7 +47192,7 @@
                       "success": false,
                       "error": {
                         "code": "DIET_SCHEDULE_REQUIRED",
-                        "message": "Profile, schedule, or idempotency conflict",
+                        "message": "Profile, schedule, or idempotency conflict. Before creating/resuming generation, validate every missing week. DIET_SCHEDULE_REQUIRED returns fields.weekStarts and fields.availableDates for all unscheduled weeks; a new invalid request creates no program/plans.",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -45712,7 +47202,7 @@
                       "success": false,
                       "error": {
                         "code": "MEAL_PROGRAM_IDEMPOTENCY_CONFLICT",
-                        "message": "Profile, schedule, or idempotency conflict",
+                        "message": "Profile, schedule, or idempotency conflict. Before creating/resuming generation, validate every missing week. DIET_SCHEDULE_REQUIRED returns fields.weekStarts and fields.availableDates for all unscheduled weeks; a new invalid request creates no program/plans.",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -46057,7 +47547,7 @@
           }
         ],
         "summary": "Edit, regenerate, reanalyze, or confirm a program",
-        "description": "Actions are UPDATE_METADATA, SELECT_ALTERNATIVE, REGENERATE_WEEK, REANALYZE, and CONFIRM. Every mutation is idempotent and version checked. Week edits invalidate later projections. Confirmed program content is immutable.",
+        "description": "Actions are UPDATE_METADATA, SELECT_ALTERNATIVE, REGENERATE_WEEK, REANALYZE, and CONFIRM. Every mutation is idempotent and version checked. Week edits invalidate later projections. Regeneration preserves health/schedule requirements and recomputes generation status/failureSummary transactionally: repairing the last missing week promotes PARTIAL/FAILED to DRAFT. Confirmed program content is immutable.",
         "parameters": [
           {
             "schema": {
@@ -46213,6 +47703,26 @@
             "content": {
               "application/json": {
                 "examples": {
+                  "HEALTH_PROFILE_INCOMPLETE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "HEALTH_PROFILE_INCOMPLETE",
+                        "message": "Mutation conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "DIET_SCHEDULE_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "DIET_SCHEDULE_REQUIRED",
+                        "message": "Mutation conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
                   "MEAL_PROGRAM_VERSION_CONFLICT": {
                     "value": {
                       "success": false,
@@ -46248,6 +47758,16 @@
                       "success": false,
                       "error": {
                         "code": "MEAL_PROGRAM_NOT_CONFIRMABLE",
+                        "message": "Mutation conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "MEAL_PROGRAM_HARD_CONSTRAINT_VIOLATION": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "MEAL_PROGRAM_HARD_CONSTRAINT_VIOLATION",
                         "message": "Mutation conflict",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
@@ -62928,6 +64448,238 @@
           },
           "422": {
             "description": "Invalid input or AI_GOVERNANCE_WINDOW_INVALID / AI_PROVIDER_NOT_CONFIGURED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/billing/revenue": {
+      "get": {
+        "tags": [
+          "Admin Insights"
+        ],
+        "operationId": "getAdminBillingRevenue",
+        "summary": "Revenue from AI allowance purchases: overview, time series and order statuses",
+        "description": "Default window is the last 30 days, maximum 731 days. Revenue counts PAID orders by paidAt; status counts use createdAt. Buckets use Asia/Ho_Chi_Minh, weeks start Monday. Simulated sandbox orders are excluded.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "day",
+                "week",
+                "month"
+              ],
+              "default": "day"
+            },
+            "required": false,
+            "name": "granularity",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Revenue statistics",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminBillingRevenueResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administrator role required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input or ADMIN_STATS_WINDOW_INVALID",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/ai/usage": {
+      "get": {
+        "tags": [
+          "Admin Insights"
+        ],
+        "operationId": "listAdminAiUsage",
+        "summary": "Paginated per-user AI usage trace with allowance source and outcome",
+        "description": "Rows combine signed-in chat requests (including free daily chat) with fridge/receipt allowance reservations, newest first. `user` matches email or display name. Prompts, images, receipts and provider payloads are never returned. Chat rows follow AI request-log retention.",
+        "security": [
+          {
+            "bearerAuth": []
+          },
+          {
+            "cookieAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000,
+              "default": 1
+            },
+            "required": false,
+            "name": "page",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "CHAT",
+                "FRIDGE",
+                "RECEIPT"
+              ]
+            },
+            "required": false,
+            "name": "feature",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "HELD",
+                "SPENT",
+                "RELEASED"
+              ]
+            },
+            "required": false,
+            "name": "outcome",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120
+            },
+            "required": false,
+            "name": "user",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "from",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "required": false,
+            "name": "to",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Usage trace page",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminAiUsageTraceResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Administrator role required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Invalid input or ADMIN_STATS_WINDOW_INVALID",
             "content": {
               "application/json": {
                 "schema": {

@@ -35,6 +35,8 @@ import { CatalogStatus, DietPattern, FoodGroup, Tradition } from '@/common/enums
 import { getApiErrorCode, getApiErrorFields } from '@/lib/api-error';
 import { useDebounce } from '@/hooks/useDebounce';
 import { AliasEditor } from './alias-editor';
+import { CompositionEditor } from './composition-editor';
+import { useAllergenCatalogQuery } from '@/features/diet-preferences/queries/allergen.queries';
 
 const FOOD_GROUP_OPTIONS = [
   { value: 'ALL', label: 'Mọi nhóm' },
@@ -73,8 +75,8 @@ export function IngredientManager() {
 
   const [canonicalName, setCanonicalName] = React.useState('');
   const [formFoodGroup, setFormFoodGroup] = React.useState<FoodGroup>(FoodGroup.OTHER);
-  const [allergenInput, setAllergenInput] = React.useState('');
   const [allergenCodes, setAllergenCodes] = React.useState<string[]>([]);
+  const allergenCatalog = useAllergenCatalogQuery();
   const [compat, setCompat] = React.useState<Array<{ dietPattern: string; compatible: boolean }>>(
     []
   );
@@ -107,7 +109,6 @@ export function IngredientManager() {
     setCanonicalName('');
     setFormFoodGroup(FoodGroup.OTHER);
     setAllergenCodes([]);
-    setAllergenInput('');
     setCompat(DIET_PATTERNS.map((dietPattern) => ({ dietPattern, compatible: true })));
     setWarnings([]);
     setWarnTradition(Tradition.NONE);
@@ -123,7 +124,6 @@ export function IngredientManager() {
     setCanonicalName(item.canonicalName);
     setFormFoodGroup(item.foodGroup);
     setAllergenCodes([...item.allergenCodes]);
-    setAllergenInput('');
     setCompat(
       item.dietCompatibilities.length > 0
         ? item.dietCompatibilities.map((c) => ({ ...c }))
@@ -136,13 +136,6 @@ export function IngredientManager() {
     setFormError(null);
     setFieldError(null);
     setDialogOpen(true);
-  };
-
-  const addAllergen = () => {
-    const code = allergenInput.trim().toUpperCase();
-    if (code.length === 0) return;
-    if (!allergenCodes.includes(code)) setAllergenCodes((prev) => [...prev, code]);
-    setAllergenInput('');
   };
 
   const addWarning = () => {
@@ -321,10 +314,16 @@ export function IngredientManager() {
                       <p className="text-xs text-muted-foreground">
                         {item.foodGroupLabel} ·{' '}
                         {item.status === CatalogStatus.ACTIVE ? 'Đang hoạt động' : 'Đã lưu trữ'} ·{' '}
-                        {item.aliases.length} tên gọi khác
+                        {item.aliases.length} tên gọi khác · {item.compositionStatusLabel}
                       </p>
                     </div>
                     <div className="inline-flex gap-1.5">
+                      {item.status === CatalogStatus.ACTIVE && (
+                        <CompositionEditor
+                          ingredientId={item.id}
+                          ingredientName={item.canonicalName}
+                        />
+                      )}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -418,14 +417,15 @@ export function IngredientManager() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Mã dị ứng</Label>
+              <Label>Thực phẩm gây dị ứng trực tiếp</Label>
               <div className="flex flex-wrap gap-1.5">
                 {allergenCodes.map((c) => (
                   <Badge key={c} variant="secondary" className="gap-1 rounded-full text-[11px]">
-                    {c}
+                    {allergenCatalog.data?.find((option) => option.code === c)?.label ??
+                      'Lựa chọn cần kiểm tra'}
                     <button
                       type="button"
-                      aria-label={`Xóa mã ${c}`}
+                      aria-label={`Xóa ${allergenCatalog.data?.find((option) => option.code === c)?.label ?? 'lựa chọn dị ứng'}`}
                       onClick={() => setAllergenCodes((prev) => prev.filter((x) => x !== c))}
                       className="text-muted-foreground hover:text-foreground"
                     >
@@ -434,23 +434,45 @@ export function IngredientManager() {
                   </Badge>
                 ))}
               </div>
-              <div className="flex gap-2">
-                <Input
-                  value={allergenInput}
-                  onChange={(e) => setAllergenInput(e.target.value)}
-                  placeholder="Thêm mã, vd: PEANUT (Enter để thêm)"
-                  aria-label="Mã dị ứng mới"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addAllergen();
-                    }
-                  }}
-                />
-                <Button type="button" variant="outline" onClick={addAllergen}>
-                  Thêm
-                </Button>
-              </div>
+              <Select
+                value=""
+                disabled={allergenCatalog.isPending || allergenCatalog.isError}
+                onValueChange={(code) =>
+                  setAllergenCodes((previous) =>
+                    previous.includes(code) ? previous : [...previous, code]
+                  )
+                }
+              >
+                <SelectTrigger aria-label="Chọn thực phẩm gây dị ứng trực tiếp">
+                  <SelectValue placeholder="Chọn tên thực phẩm…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {(allergenCatalog.data ?? [])
+                    .filter((option) => !allergenCodes.includes(option.code))
+                    .map((option) => (
+                      <SelectItem key={option.code} value={option.code}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              {allergenCatalog.isError && (
+                <Alert variant="destructive">
+                  <AlertDescription>
+                    Không tải được danh mục dị ứng.{' '}
+                    <Button
+                      type="button"
+                      variant="link"
+                      onClick={() => void allergenCatalog.refetch()}
+                    >
+                      Thử lại
+                    </Button>
+                  </AlertDescription>
+                </Alert>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Dị ứng từ thành phần con được suy ra trong mục “Cấu tạo & dị ứng”.
+              </p>
             </div>
 
             <div className="space-y-1.5">

@@ -1,4 +1,4 @@
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { Link, type Href } from 'expo-router';
 import { Plus, Store } from 'lucide-react-native';
 
@@ -51,7 +51,13 @@ export default function MyRestaurantsScreen() {
             <Text className="mt-1 text-sm text-muted-foreground">Theo dõi trạng thái duyệt các quán bạn đã gửi.</Text>
           </View>
           <Link href={'/restaurants/new' as Href} asChild>
-            <PrimaryButton label="Thêm" icon={<Plus size={16} color={colors.primaryForeground} />} />
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Đề xuất quán mới"
+              className="h-10 flex-row items-center justify-center gap-1.5 self-start rounded-xl bg-primary px-4 active:opacity-90">
+              <Plus size={16} color={colors.primaryForeground} />
+              <Text numberOfLines={1} className="text-sm font-semibold text-primary-foreground">Thêm</Text>
+            </Pressable>
           </Link>
         </View>
 

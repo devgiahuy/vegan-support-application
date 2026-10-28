@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {
   DietPattern,
   IngredientResolutionStatus,
@@ -30,11 +31,13 @@ import type {
   PostListQuery,
   MyPostsQuery,
   PostOutput,
+  RecipeEligibilityOutput,
   RelatedPostsQuery,
   ReviewHistoryQuery,
   SubmitPostInput,
   UpdatePostInput,
 } from './content.schemas.js';
+import { recipeIneligibilityReasonCodes } from './content.schemas.js';
 import type { MediaService } from './media.service.js';
 import type { ContentPublicationPolicy } from './content-publication.policy.js';
 import {
@@ -66,6 +69,8 @@ function pagination(
     appliedConstraints,
   };
 }
+
+type RecipeIneligibilityReasonCode = (typeof recipeIneligibilityReasonCodes)[number];
 
 function stringList(value: Prisma.JsonValue): string[] {
   return Array.isArray(value)
@@ -103,7 +108,9 @@ function paginationWithoutConstraints(page: number, limit: number, total: number
 
 function stepPositions(value: Prisma.JsonValue): number[] {
   return Array.isArray(value)
-    ? value.filter((item): item is number => typeof item === 'number' && Number.isInteger(item) && item >= 0)
+    ? value.filter(
+        (item): item is number => typeof item === 'number' && Number.isInteger(item) && item >= 0,
+      )
     : [];
 }
 
@@ -133,6 +140,8 @@ export class ContentService {
       .filter((post) => post.type === PostType.RECIPE)
       .map((post) => post.id);
     const recipeUsageCounts = await this.repository.recipeUsageUserCounts(recipeIds);
+    const safetyCatalog =
+      query.eligibility === 'INELIGIBLE' ? await this.repository.safetyCatalog() : null;
     return {
       data: result.records.flatMap((post) => {
         if (!post.publishedRevision) return [];
@@ -140,7 +149,14 @@ export class ContentService {
           post.type === PostType.RECIPE
             ? this.recipeUsageStatistics(recipeUsageCounts.get(post.id) ?? 0)
             : undefined;
-        return [this.postOutput(post, post.publishedRevision, statistics)];
+        const output = this.postOutput(post, post.publishedRevision, statistics);
+        if (!safetyCatalog || output.type !== PostType.RECIPE) return [output];
+        const eligibility = this.recipeEligibility(
+          post.publishedRevision,
+          searchContext.constraints,
+          safetyCatalog,
+        );
+        return [{ ...output, recipe: { ...output.recipe, eligibility } }];
       }),
       meta: pagination(query.page, query.limit, result.total, searchContext.summary),
     };
@@ -174,9 +190,7 @@ export class ContentService {
         post,
         this.recipeUsageStatistics(recipeUsageCounts.get(post.id) ?? 0),
       ),
-    ).filter(
-      (post): post is Extract<PostOutput, { type: 'RECIPE' }> => post.type === 'RECIPE',
-    );
+    ).filter((post): post is Extract<PostOutput, { type: 'RECIPE' }> => post.type === 'RECIPE');
     const blogs = groups.BLOG.map((post) => this.publishedPostOutput(post)).filter(
       (post): post is Extract<PostOutput, { type: 'BLOG' }> => post.type === 'BLOG',
     );
@@ -224,21 +238,37 @@ export class ContentService {
   }
 
   async createPost(actor: ContentActor, input: CreatePostInput): Promise<PostOutput> {
-    const slug = input.slug ?? catalogSlug(input.title);
-    if (!slug) throw this.invalidContentError('Tiêu đề không tạo được slug hợp lệ');
+    const baseSlug = input.slug ?? catalogSlug(input.title);
+    if (!baseSlug) throw this.invalidContentError('Tiêu đề không tạo được slug hợp lệ');
     const snapshot = await this.buildSnapshot(actor.userId, input);
-    try {
-      const created = await this.repository.createPost(
-        actor.userId,
-        input.type,
-        slug,
-        snapshot,
-        this.publicationPolicy.draft(),
-      );
-      return this.postOutput(created.post, created.revision);
-    } catch (error) {
-      throw this.mapPersistenceError(error);
+    const occupied = !input.slug && (await this.repository.slugExists(baseSlug));
+    for (let attempt = 0; attempt < 4; attempt++) {
+      const slug =
+        input.slug || (attempt === 0 && !occupied)
+          ? baseSlug
+          : `${baseSlug.slice(0, 183).replace(/-+$/, '')}-${randomUUID()}`;
+      try {
+        const created = await this.repository.createPost(
+          actor.userId,
+          input.type,
+          slug,
+          snapshot,
+          this.publicationPolicy.draft(),
+        );
+        return this.postOutput(created.post, created.revision);
+      } catch (error) {
+        if (
+          !input.slug &&
+          attempt < 3 &&
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002' &&
+          (await this.repository.slugExists(slug))
+        )
+          continue;
+        throw this.mapPersistenceError(error);
+      }
     }
+    throw this.invalidContentError('Không tạo được đường dẫn duy nhất cho nội dung');
   }
 
   async updatePost(actor: ContentActor, id: string, input: UpdatePostInput): Promise<PostOutput> {
@@ -268,7 +298,7 @@ export class ContentService {
         message: 'Revision mới nhất đang chờ Admin review và chưa thể chỉnh sửa',
       });
     }
-    const slug = input.slug ?? catalogSlug(input.title);
+    const slug = input.slug ?? post.slug;
     if (!slug) throw this.invalidContentError('Tiêu đề không tạo được slug hợp lệ');
     const snapshot = await this.buildSnapshot(actor.userId, input);
     try {
@@ -297,11 +327,7 @@ export class ContentService {
     return { id: post.id, status: PostStatus.DELETED };
   }
 
-  async submitPost(
-    actor: ContentActor,
-    id: string,
-    input: SubmitPostInput,
-  ): Promise<PostOutput> {
+  async submitPost(actor: ContentActor, id: string, input: SubmitPostInput): Promise<PostOutput> {
     const post = await this.requireOwnedPost(actor, id);
     if (post.status === PostStatus.DELETED) throw this.deletedError();
     if (post.status === PostStatus.HIDDEN) {
@@ -330,7 +356,8 @@ export class ContentService {
       throw new AppError({
         statusCode: 400,
         code: 'INVALID_MEDIA_REFERENCE',
-        message: 'Video upload phải là asset đã commit thuộc author; external URL phải thuộc allowlist',
+        message:
+          'Video upload phải là asset đã commit thuộc author; external URL phải thuộc allowlist',
       });
     }
     const decision = this.publicationPolicy.decideSubmission(actor, {
@@ -432,6 +459,52 @@ export class ContentService {
 
     const profile = await this.repository.findSearchProfile(userId);
     return buildAuthenticatedSearchConstraints(profile, requestedDietPattern, forDate);
+  }
+
+  /** Explains why the profile removes a recipe, grouped by reason with the offending ingredients. */
+  private recipeEligibility(
+    revision: RevisionRecord,
+    constraints: SearchConstraints,
+    catalog: Awaited<ReturnType<ContentRepository['safetyCatalog']>>,
+  ): RecipeEligibilityOutput {
+    const byCode = new Map<RecipeIneligibilityReasonCode, Set<string>>();
+    const add = (code: string, ingredientName?: string) => {
+      if (!(recipeIneligibilityReasonCodes as readonly string[]).includes(code)) return;
+      const names = byCode.get(code as RecipeIneligibilityReasonCode) ?? new Set<string>();
+      if (ingredientName) names.add(ingredientName);
+      byCode.set(code as RecipeIneligibilityReasonCode, names);
+    };
+    if (!revision.ingredients.length) add('UNRESOLVED_INGREDIENT');
+    for (const ingredient of revision.ingredients) {
+      const name = ingredient.ingredient?.canonicalName ?? ingredient.displayName;
+      if (!ingredient.ingredientId || ingredient.resolutionStatus !== 'EXACT')
+        add('UNRESOLVED_INGREDIENT', name);
+      for (const code of catalog.reasons([ingredient.ingredientId], constraints)) {
+        add(code, code === 'ALLERGEN_SELECTION_UNRESOLVED' ? undefined : name);
+      }
+      if (constraints.excludedNormalizedNames.includes(ingredient.normalizedName))
+        add('INGREDIENT_EXCLUSION', name);
+    }
+    const detail = revision.recipeDetail;
+    if (constraints.allergenCodes.some((code) => stringList(detail?.allergenCodes ?? null).includes(code)))
+      add('ALLERGY');
+    if (
+      constraints.dietPattern &&
+      !revision.dietCompatibility.some(
+        (entry) => entry.dietPattern === constraints.dietPattern && entry.compatible,
+      )
+    )
+      add('DIET_PATTERN');
+    if (
+      traditionWarningList(detail?.traditionWarnings ?? null).some((warning) =>
+        constraints.traditions.includes(warning.tradition),
+      )
+    )
+      add('TRADITION_RULE');
+    const reasons = [...byCode.entries()]
+      .map(([code, names]) => ({ code, ingredientNames: [...names] }))
+      .sort((a, b) => a.code.localeCompare(b.code));
+    return { eligible: reasons.length === 0, reasons };
   }
 
   private async buildRecipeSnapshot(

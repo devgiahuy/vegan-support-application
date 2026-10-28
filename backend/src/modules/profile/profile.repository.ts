@@ -1,3 +1,4 @@
+import { AppError } from '../../common/errors/app-error.js';
 import {
   ContributorApplicationStatus,
   DietRuleSource,
@@ -40,6 +41,11 @@ const profileInclude = {
     where: { active: true },
     orderBy: { normalizedName: 'asc' },
   },
+  ingredientAllergies: {
+    where: { active: true },
+    include: { ingredient: true },
+    orderBy: { createdAt: 'asc' },
+  },
 } satisfies Prisma.UserInclude;
 
 export type ProfileRecord = Prisma.UserGetPayload<{ include: typeof profileInclude }>;
@@ -64,6 +70,13 @@ function dateFromDateOnly(value: string): Date {
 
 export class ProfileRepository {
   constructor(private readonly prisma: PrismaClient) {}
+
+  findActiveAllergens(codes: string[]) {
+    return this.prisma.allergenDefinition.findMany({
+      where: { code: { in: codes }, active: true },
+      select: { code: true, label: true },
+    });
+  }
 
   findProfile(userId: string): Promise<ProfileRecord | null> {
     return this.prisma.user.findUnique({ where: { id: userId }, include: profileInclude });
@@ -186,6 +199,23 @@ export class ProfileRepository {
       }
 
       await transaction.userIngredientExclusion.deleteMany({ where: { userId } });
+      if (input.ingredientAllergies !== undefined) {
+        const ids = input.ingredientAllergies.map((entry) => entry.ingredientId);
+        const active = await transaction.ingredient.count({
+          where: { id: { in: ids }, status: 'ACTIVE' },
+        });
+        if (active !== ids.length)
+          throw new AppError({
+            statusCode: 400,
+            code: 'INVALID_INGREDIENT_ALLERGIES',
+            message: 'Nguyên liệu dị ứng đã thay đổi. Vui lòng chọn lại từ danh mục chuẩn.',
+          });
+        await transaction.userIngredientAllergy.deleteMany({ where: { userId } });
+        if (input.ingredientAllergies.length)
+          await transaction.userIngredientAllergy.createMany({
+            data: input.ingredientAllergies.map((entry) => ({ userId, ...entry })),
+          });
+      }
       if (exclusions.length) {
         await transaction.userIngredientExclusion.createMany({
           data: exclusions.map((exclusion) => ({ userId, ...exclusion })),
