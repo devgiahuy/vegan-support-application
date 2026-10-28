@@ -781,8 +781,15 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
               ) : (
                 <span aria-hidden className="hidden sm:block" />
               )}
+              {/* key khác nhau: nếu React tái dùng cùng nút DOM, cú click "Tiếp" ở bước 4 đổi
+                  type thành submit trước khi trình duyệt chạy hành động mặc định → tự gửi form. */}
               {step === 'review' ? (
-                <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>
+                <Button
+                  key="submit-recipe"
+                  type="submit"
+                  className="w-full sm:w-auto"
+                  disabled={isSubmitting}
+                >
                   {isSubmitting ? (
                     <Loader2 data-icon="inline-start" className="animate-spin" />
                   ) : (
@@ -792,6 +799,7 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
                 </Button>
               ) : (
                 <Button
+                  key="next-step"
                   type="button"
                   className="w-full sm:w-auto"
                   onClick={() => void handleNext()}
