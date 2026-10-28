@@ -17,16 +17,30 @@ const customMealNutritionFallbackSchema = z
   .strict();
 
 const reviewNutritionAmountSchema = z.number().finite().nonnegative().max(999_999).nullable();
+/** Models sometimes echo the input key `position`; accept it as the documented key. */
+function aliasPosition(target: 'stepPosition' | 'ingredientPosition') {
+  return (value: unknown) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) return value;
+    const record = value as Record<string, unknown>;
+    return record[target] === undefined && record.position !== undefined
+      ? { ...record, [target]: record.position }
+      : value;
+  };
+}
+
 const recipeNutritionReviewEstimateSchema = z
   .object({
     stepMethods: z
       .array(
-        z.object({
-          stepPosition: z.number().int().nonnegative(),
-          cookingMethodCode: z.string().trim().min(1).max(80),
-          confidence: z.number().min(0).max(1),
-          assumption: z.string().trim().min(1).max(1_000),
-        }),
+        z.preprocess(
+          aliasPosition('stepPosition'),
+          z.object({
+            stepPosition: z.number().int().nonnegative(),
+            cookingMethodCode: z.string().trim().min(1).max(80),
+            confidence: z.number().min(0).max(1),
+            assumption: z.string().trim().min(1).max(1_000),
+          }),
+        ),
       )
       .max(100)
       .default([]),
@@ -44,16 +58,19 @@ const recipeNutritionReviewEstimateSchema = z
       .default([]),
     ingredientEstimates: z
       .array(
-        z.object({
-          ingredientPosition: z.number().int().nonnegative(),
-          calories: reviewNutritionAmountSchema,
-          proteinGrams: reviewNutritionAmountSchema,
-          carbsGrams: reviewNutritionAmountSchema,
-          fatGrams: reviewNutritionAmountSchema,
-          fiberGrams: reviewNutritionAmountSchema,
-          confidence: z.number().min(0).max(1),
-          assumption: z.string().trim().min(1).max(1_000),
-        }),
+        z.preprocess(
+          aliasPosition('ingredientPosition'),
+          z.object({
+            ingredientPosition: z.number().int().nonnegative(),
+            calories: reviewNutritionAmountSchema,
+            proteinGrams: reviewNutritionAmountSchema,
+            carbsGrams: reviewNutritionAmountSchema,
+            fatGrams: reviewNutritionAmountSchema,
+            fiberGrams: reviewNutritionAmountSchema,
+            confidence: z.number().min(0).max(1),
+            assumption: z.string().trim().min(1).max(1_000),
+          }),
+        ),
       )
       .max(200)
       .default([]),
@@ -220,6 +237,17 @@ export class AiProviderResponseError extends Error {
   }
 }
 
+/** The provider answered but the payload failed JSON/schema validation. `issues` holds paths only, no content. */
+export class AiProviderInvalidOutputError extends AiProviderResponseError {
+  constructor(
+    message: string,
+    readonly issues: string[] = [],
+  ) {
+    super(message);
+    this.name = 'AiProviderInvalidOutputError';
+  }
+}
+
 export class OpenAiProvider implements AiProvider {
   readonly name = 'openai' as const;
   readonly chatModel: string;
@@ -362,6 +390,9 @@ export class OpenAiProvider implements AiProvider {
       instructions: [
         'Return only compact JSON that fills gaps in a vegetarian recipe nutrition estimate for a human reviewer.',
         'Use this exact shape: {"stepMethods":[],"retentionFactors":[],"ingredientEstimates":[]}.',
+        'stepMethods items: {"stepPosition":0,"cookingMethodCode":"","confidence":0,"assumption":""}.',
+        'retentionFactors items: {"nutrientCode":"","cookingMethodCode":"","factor":0,"confidence":0,"assumption":""}.',
+        'ingredientEstimates items: {"ingredientPosition":0,"calories":null,"proteinGrams":null,"carbsGrams":null,"fatGrams":null,"fiberGrams":null,"confidence":0,"assumption":""}. ingredientPosition is the ingredient "position" from the input.',
         'stepMethods: for steps without cookingMethodCode that affect ingredients, choose a code from availableCookingMethodCodes only.',
         'retentionFactors: optional nutrient retention factors (0 to 1) for the chosen cooking methods.',
         'ingredientEstimates: one item per ingredient whose missingMetrics is non-empty. Each value is the TOTAL for that ingredient line exactly as used in the recipe (its amount and unit, after cooking), never per serving and never per 100 g.',
@@ -385,13 +416,23 @@ export class OpenAiProvider implements AiProvider {
     })) {
       if (chunk.type === 'delta') content += chunk.delta;
     }
+    let parsed: unknown;
     try {
-      return recipeNutritionReviewEstimateSchema.parse(JSON.parse(content) as unknown);
+      parsed = JSON.parse(content) as unknown;
     } catch {
-      throw new AiProviderResponseError(
+      throw new AiProviderInvalidOutputError(
         'AI recipe review nutrition estimate returned invalid JSON',
+        [`json:${content.length}chars`],
       );
     }
+    const result = recipeNutritionReviewEstimateSchema.safeParse(parsed);
+    if (!result.success) {
+      throw new AiProviderInvalidOutputError(
+        'AI recipe review nutrition estimate does not match the schema',
+        result.error.issues.map((issue) => `${issue.path.join('.')}:${issue.code}`),
+      );
+    }
+    return result.data;
   }
 }
 

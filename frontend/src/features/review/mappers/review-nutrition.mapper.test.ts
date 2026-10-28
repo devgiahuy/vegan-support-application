@@ -225,5 +225,6 @@ describe('ReviewNutritionMapper', () => {
     expect(getReviewNutritionOriginLabel(ReviewNutritionOrigin.UNKNOWN)).toBe('Không rõ nguồn');
     expect(getJobErrorLabel(null)).toBeNull();
     expect(getJobErrorLabel('SOMETHING_NEW')).toBe('Lỗi không xác định');
+    expect(getJobErrorLabel('AI_INVALID_OUTPUT')).toBe('AI trả về dữ liệu sai định dạng');
   });
 });

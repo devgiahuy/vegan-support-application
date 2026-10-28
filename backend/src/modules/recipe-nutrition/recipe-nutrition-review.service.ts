@@ -10,10 +10,11 @@ import {
   type Prisma,
 } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
-import type {
-  AiProvider,
-  RecipeNutritionReviewEstimateSuggestion,
-  RecipeReviewNutritionMetric,
+import {
+  AiProviderInvalidOutputError,
+  type AiProvider,
+  type RecipeNutritionReviewEstimateSuggestion,
+  type RecipeReviewNutritionMetric,
 } from '../chat/ai-provider.js';
 import {
   missingMetricsByLine,
@@ -350,9 +351,21 @@ export class RecipeNutritionReviewService {
     const errorCode =
       error instanceof Error && error.name === 'AiProviderUnavailableError'
         ? 'AI_PROVIDER_UNAVAILABLE'
-        : error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')
-          ? 'AI_TIMEOUT'
-          : 'AI_PROVIDER_ERROR';
+        : error instanceof AiProviderInvalidOutputError
+          ? 'AI_INVALID_OUTPUT'
+          : error instanceof Error && (error.name === 'TimeoutError' || error.name === 'AbortError')
+            ? 'AI_TIMEOUT'
+            : 'AI_PROVIDER_ERROR';
+    // Never log prompt or model content; schema issue paths are enough to diagnose.
+    console.warn('[RecipeNutritionReview] AI attempt failed', {
+      jobId: job.id,
+      attempt: job.attemptCount,
+      errorCode,
+      error: error instanceof Error ? `${error.name}: ${error.message}` : 'unknown',
+      ...(error instanceof AiProviderInvalidOutputError
+        ? { issues: error.issues.slice(0, 10) }
+        : {}),
+    });
     const delay = REVIEW_JOB_RETRY_DELAYS_MS[job.attemptCount - 1];
     if (job.attemptCount < job.maxAttempts && delay !== undefined) {
       const nextAttemptAt = new Date(Date.now() + delay);

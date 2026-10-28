@@ -120,6 +120,8 @@ export function getJobErrorLabel(code: string | null): string | null {
       return 'AI phản hồi quá thời gian chờ';
     case 'AI_PROVIDER_ERROR':
       return 'Dịch vụ AI trả về lỗi';
+    case 'AI_INVALID_OUTPUT':
+      return 'AI trả về dữ liệu sai định dạng';
     case 'WORKER_INTERRUPTED':
       return 'Máy chủ khởi động lại khi đang chạy';
     case 'ESTIMATE_BUILD_FAILED':
