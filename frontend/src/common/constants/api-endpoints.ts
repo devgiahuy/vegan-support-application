@@ -97,6 +97,9 @@ export const API_ENDPOINTS = {
     LIST: '/admin/content-review',
     DETAIL: (revisionId: string) => `/admin/content-review/${revisionId}`,
     DECISION: (revisionId: string) => `/admin/content-review/${revisionId}`,
+    NUTRITION: (revisionId: string) => `/admin/content-review/${revisionId}/nutrition`,
+    NUTRITION_RECALCULATE: (revisionId: string) =>
+      `/admin/content-review/${revisionId}/nutrition/recalculate`,
   },
   /** @deprecated Backend Phase 16 deprecated in favor of ADMIN_CONTENT_REVIEW */
   REVIEW_QUEUE: {

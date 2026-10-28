@@ -73,11 +73,12 @@ interface RevisionFixture {
     prepTimeMinutes: number;
     cookTimeMinutes: number;
     difficulty: RecipeDifficulty;
-    calories: number;
-    proteinGrams: number;
-    carbsGrams: number;
-    fatGrams: number;
-    fiberGrams: number;
+    /** Null on pending revisions: nutrition becomes official only when a reviewer approves. */
+    calories: number | null;
+    proteinGrams: number | null;
+    carbsGrams: number | null;
+    fatGrams: number | null;
+    fiberGrams: number | null;
     vitaminB12Mcg?: number;
     mealPlannerEligible: boolean;
     allergenCodes: string[];
@@ -647,13 +648,13 @@ export async function seedScenarioData(
             prepTimeMinutes: 15,
             cookTimeMinutes: 30,
             difficulty: RecipeDifficulty.MEDIUM,
-            calories: 525,
-            proteinGrams: 25,
-            carbsGrams: 66,
-            fatGrams: 16,
-            fiberGrams: 14,
-            vitaminB12Mcg: 0,
-            mealPlannerEligible: true,
+            // Pending revision: values are calculated on submit and written only on approval.
+            calories: null,
+            proteinGrams: null,
+            carbsGrams: null,
+            fatGrams: null,
+            fiberGrams: null,
+            mealPlannerEligible: false,
             allergenCodes: ['SOY'],
             traditionWarnings: [],
             ingredients: [

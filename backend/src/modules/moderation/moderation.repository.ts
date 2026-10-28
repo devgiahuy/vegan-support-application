@@ -9,6 +9,7 @@ import {
   ModerationTargetType,
   PostRevisionStatus,
   PostStatus,
+  PostType,
   ReportStatus,
   ReportTargetType,
   Role,
@@ -16,6 +17,12 @@ import {
   type PrismaClient,
 } from '@prisma/client';
 import { AppError } from '../../common/errors/app-error.js';
+import {
+  applyApprovedReviewNutrition,
+  cancelActiveReviewJobs,
+  resolveReviewNutrition,
+  type ResolvedReviewNutrition,
+} from '../recipe-nutrition/recipe-nutrition-review.repository.js';
 import type {
   AdminCommentsQuery,
   AdminReportsQuery,
@@ -206,10 +213,10 @@ export class ModerationRepository {
         throw new AppError({
           statusCode: 403,
           code: 'ADMIN_REVIEW_REQUIRED',
-          message:
-            'Flagged/quarantined/high-priority hoặc Admin content bắt buộc Admin review',
+          message: 'Flagged/quarantined/high-priority hoặc Admin content bắt buộc Admin review',
         });
       }
+      const reviewNutrition = await this.requireReviewNutrition(transaction, revision, decision);
       const now = new Date();
       const updated = await transaction.postRevision.updateMany({
         where: { id: revision.id, status: revision.status },
@@ -225,6 +232,11 @@ export class ModerationRepository {
       });
       if (updated.count !== 1) {
         throw this.conflict('REVIEW_CONFLICT', 'Revision đã được reviewer khác xử lý');
+      }
+      if (reviewNutrition) {
+        await applyApprovedReviewNutrition(transaction, revision.id, reviewNutrition);
+      } else if (revision.post.type === PostType.RECIPE) {
+        await cancelActiveReviewJobs(transaction, revision.id, 'REVISION_DECIDED');
       }
       if (decision === ModerationDecision.APPROVE) {
         const remainsHidden = revision.post.status === PostStatus.HIDDEN;
@@ -271,6 +283,7 @@ export class ModerationRepository {
             previousPostStatus: revision.post.status,
             previousRevisionStatus: revision.status,
             reviewRouteDecision: decision,
+            ...(reviewNutrition ? { nutrition: this.nutritionAuditSnapshot(reviewNutrition) } : {}),
           },
         },
       });
@@ -334,8 +347,7 @@ export class ModerationRepository {
         throw new AppError({
           statusCode: 403,
           code: 'ADMIN_REVIEW_REQUIRED',
-          message:
-            'Flagged/quarantined/high-priority hoặc Admin content bắt buộc Admin review',
+          message: 'Flagged/quarantined/high-priority hoặc Admin content bắt buộc Admin review',
         });
       }
       const reviewableStatuses: PostRevisionStatus[] = [
@@ -370,6 +382,7 @@ export class ModerationRepository {
           'Nội dung đang bị ẩn hoặc đã xóa; review evidence được giữ nhưng không thể quyết định publication',
         );
       }
+      const reviewNutrition = await this.requireReviewNutrition(transaction, revision, decision);
       const now = new Date();
       const updated = await transaction.postRevision.updateMany({
         where: { id: revision.id, status: revision.status },
@@ -385,6 +398,11 @@ export class ModerationRepository {
       });
       if (updated.count !== 1) {
         throw this.conflict('REVIEW_CONFLICT', 'Revision đã được reviewer khác xử lý');
+      }
+      if (reviewNutrition) {
+        await applyApprovedReviewNutrition(transaction, revision.id, reviewNutrition);
+      } else if (revision.post.type === PostType.RECIPE) {
+        await cancelActiveReviewJobs(transaction, revision.id, 'REVISION_DECIDED');
       }
       if (decision === ModerationDecision.APPROVE) {
         await transaction.post.update({
@@ -426,6 +444,7 @@ export class ModerationRepository {
             previousRevisionStatus: revision.status,
             reviewRouteDecision: decision,
             automatedDecision: false,
+            ...(reviewNutrition ? { nutrition: this.nutritionAuditSnapshot(reviewNutrition) } : {}),
           },
         },
       });
@@ -728,6 +747,41 @@ export class ModerationRepository {
         include: adminCommentInclude,
       });
     });
+  }
+
+  /** Approving a recipe requires all five reviewed per-serving values (estimate or reviewer override). */
+  private async requireReviewNutrition(
+    transaction: Prisma.TransactionClient,
+    revision: { id: string; post: { type: PostType } },
+    decision: 'APPROVE' | 'REJECT',
+  ): Promise<ResolvedReviewNutrition | null> {
+    if (decision !== ModerationDecision.APPROVE || revision.post.type !== PostType.RECIPE)
+      return null;
+    const resolved = await resolveReviewNutrition(transaction, revision.id);
+    if (resolved.missingMetrics.length) {
+      throw new AppError({
+        statusCode: 409,
+        code: 'RECIPE_NUTRITION_INCOMPLETE',
+        message: 'Cần đủ 5 chỉ số dinh dưỡng trên mỗi khẩu phần trước khi duyệt công thức',
+        fields: { missingMetrics: resolved.missingMetrics },
+      });
+    }
+    return resolved;
+  }
+
+  private nutritionAuditSnapshot(resolved: ResolvedReviewNutrition): Prisma.InputJsonObject {
+    return {
+      estimateId: resolved.estimateId,
+      servings: resolved.servings,
+      metrics: resolved.metrics.map((item) => ({
+        metric: item.metric,
+        finalValue: item.finalValue,
+        finalOrigin: item.finalOrigin,
+        estimateValue: item.estimate.value,
+        estimateOrigin: item.estimate.origin,
+        overridden: item.override !== null,
+      })),
+    };
   }
 
   private async hydrateRevisions(ids: string[]): Promise<ReviewRevisionRecord[]> {

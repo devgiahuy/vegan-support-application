@@ -121,14 +121,6 @@ export interface CreateRecipeRequestDto {
     prepTimeMinutes: number;
     cookTimeMinutes: number;
     difficulty: string;
-    nutrition?: {
-      calories?: number;
-      proteinGrams?: number;
-      carbsGrams?: number;
-      fatGrams?: number;
-      fiberGrams?: number;
-      vitaminB12Mcg?: number;
-    };
     ingredients: CreateRecipeIngredientInput[];
   };
 }

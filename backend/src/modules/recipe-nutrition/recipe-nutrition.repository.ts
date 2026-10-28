@@ -16,24 +16,24 @@ const effectiveApproved = (now: Date) => ({
   AND: [{ OR: [{ effectiveTo: null }, { effectiveTo: { gte: now } }] }],
 });
 
-const revisionInclude = {
+export const nutritionRevisionInclude = {
   post: { include: { author: true } },
   recipeDetail: true,
   ingredients: { include: { ingredient: true }, orderBy: { position: 'asc' } },
   recipeSteps: { include: { cookingMethod: true }, orderBy: { position: 'asc' } },
 } satisfies Prisma.PostRevisionInclude;
 
-const estimateInclude = {
+export const nutritionEstimateInclude = {
   revision: { include: { post: true } },
   lines: { orderBy: { position: 'asc' } },
   aiJobs: { orderBy: { createdAt: 'desc' }, take: 1 },
 } satisfies Prisma.RecipeNutritionEstimateInclude;
 
 export type NutritionRevisionRecord = Prisma.PostRevisionGetPayload<{
-  include: typeof revisionInclude;
+  include: typeof nutritionRevisionInclude;
 }>;
 export type NutritionEstimateRecord = Prisma.RecipeNutritionEstimateGetPayload<{
-  include: typeof estimateInclude;
+  include: typeof nutritionEstimateInclude;
 }>;
 export type NutritionAiJobRecord = Prisma.RecipeNutritionAiJobGetPayload<object>;
 
@@ -52,7 +52,7 @@ export class RecipeNutritionRepository {
     const post = await this.prisma.post.findUnique({
       where: { id: postId },
       include: {
-        publishedRevision: { include: revisionInclude },
+        publishedRevision: { include: nutritionRevisionInclude },
       },
     });
     if (!post || post.type !== PostType.RECIPE || post.status === PostStatus.DELETED) return null;
@@ -60,7 +60,7 @@ export class RecipeNutritionRepository {
     if (privileged) {
       return this.prisma.postRevision.findFirst({
         where: { postId },
-        include: revisionInclude,
+        include: nutritionRevisionInclude,
         orderBy: { version: 'desc' },
       });
     }
@@ -71,6 +71,13 @@ export class RecipeNutritionRepository {
       return post.publishedRevision;
     }
     return null;
+  }
+
+  findRevisionById(revisionId: string): Promise<NutritionRevisionRecord | null> {
+    return this.prisma.postRevision.findUnique({
+      where: { id: revisionId },
+      include: nutritionRevisionInclude,
+    });
   }
 
   async findOwnedRecipeRevision(postId: string, actor: NutritionActor) {
@@ -124,7 +131,7 @@ export class RecipeNutritionRepository {
   findCurrentEstimate(revisionId: string) {
     return this.prisma.recipeNutritionEstimate.findFirst({
       where: { revisionId, status: RecipeNutritionEstimateStatus.CURRENT },
-      include: estimateInclude,
+      include: nutritionEstimateInclude,
       orderBy: { version: 'desc' },
     });
   }
@@ -135,7 +142,7 @@ export class RecipeNutritionRepository {
       Promise.all([
         transaction.recipeNutritionEstimate.findMany({
           where,
-          include: estimateInclude,
+          include: nutritionEstimateInclude,
           orderBy: { version: 'desc' },
           skip: (page - 1) * limit,
           take: limit,
@@ -203,7 +210,7 @@ export class RecipeNutritionRepository {
           status: RecipeNutritionEstimateStatus.CURRENT,
           lines: { create: input.lines },
         },
-        include: estimateInclude,
+        include: nutritionEstimateInclude,
       });
       if (input.aiJobId) {
         await transaction.recipeNutritionAiJob.update({

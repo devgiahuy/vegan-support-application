@@ -14,7 +14,7 @@ const logger = pino({
   },
 });
 const database = new PrismaDatabase();
-const app = createApp({ config, database, logger });
+const app = createApp({ config, database, logger, startBackgroundJobs: true });
 const server = createServer(app);
 
 let shuttingDown = false;

@@ -7,6 +7,8 @@ import {
   type CustomMealNutritionFallbackSuggestion,
   type RecipeNutritionFallbackInput,
   type RecipeNutritionFallbackSuggestion,
+  type RecipeNutritionReviewEstimateInput,
+  type RecipeNutritionReviewEstimateSuggestion,
 } from '../chat/ai-provider.js';
 import type {
   IngredientVisionProvider,
@@ -256,6 +258,60 @@ export function governAiProvider(
           templateVersion: config.ai.nutritionTemplateVersion,
           status: 'FAILED',
           errorClass: 'PROVIDER_UNAVAILABLE',
+          startedAt,
+        });
+        throw error;
+      }
+    },
+    async estimateRecipeNutritionForReview(
+      input: RecipeNutritionReviewEstimateInput,
+    ): Promise<RecipeNutritionReviewEstimateSuggestion> {
+      const startedAt = new Date();
+      if (provider.name === 'unavailable') {
+        await governance.record({
+          capability: 'NUTRITION',
+          provider: provider.name,
+          modelId: provider.chatModel,
+          templateVersion: config.ai.nutritionTemplateVersion,
+          status: 'FALLBACK',
+          errorClass: 'PROVIDER_UNAVAILABLE',
+          startedAt,
+        });
+        throw new AiProviderUnavailableError();
+      }
+      if (!(await governance.allowed('NUTRITION', provider.name))) {
+        await governance.record({
+          capability: 'NUTRITION',
+          provider: provider.name,
+          modelId: provider.chatModel,
+          templateVersion: config.ai.nutritionTemplateVersion,
+          status: 'FALLBACK',
+          errorClass: 'DISABLED',
+          startedAt,
+        });
+        throw new AiProviderUnavailableError('Nutrition AI disabled by governance control');
+      }
+      try {
+        const result = await provider.estimateRecipeNutritionForReview(input);
+        const confidences = result.ingredientEstimates.map((item) => item.confidence);
+        await governance.record({
+          capability: 'NUTRITION',
+          provider: provider.name,
+          modelId: provider.chatModel,
+          templateVersion: config.ai.nutritionTemplateVersion,
+          status: 'SUCCESS',
+          startedAt,
+          confidence: confidences.length ? Math.min(...confidences) : null,
+        });
+        return result;
+      } catch (error) {
+        await governance.record({
+          capability: 'NUTRITION',
+          provider: provider.name,
+          modelId: provider.chatModel,
+          templateVersion: config.ai.nutritionTemplateVersion,
+          status: input.signal.aborted ? 'ABORTED' : 'FAILED',
+          errorClass: input.signal.aborted ? 'TIMEOUT' : 'PROVIDER_UNAVAILABLE',
           startedAt,
         });
         throw error;

@@ -27,16 +27,6 @@ export function recipeFormToRecipe(values: RecipeFormValues): Partial<Recipe> {
       instruction: st.instruction,
       imageUrl: st.imageUrl || null,
     })),
-    nutrition: values.nutrition
-      ? {
-          calories: values.nutrition.calories,
-          protein: values.nutrition.protein,
-          carbs: values.nutrition.carbs,
-          fat: values.nutrition.fat,
-          fiber: values.nutrition.fiber,
-          vitaminB12: values.nutrition.vitaminB12,
-        }
-      : undefined,
   };
 }
 
@@ -93,15 +83,5 @@ export function recipeToFormValues(recipe: Recipe): Partial<RecipeFormValues> {
       unit: ing.unit || 'phần',
     })),
     steps,
-    nutrition: recipe.nutrition
-      ? {
-          calories: recipe.nutrition.calories,
-          protein: recipe.nutrition.protein,
-          carbs: recipe.nutrition.carbs,
-          fat: recipe.nutrition.fat,
-          fiber: recipe.nutrition.fiber,
-          vitaminB12: recipe.nutrition.vitaminB12,
-        }
-      : undefined,
   };
 }

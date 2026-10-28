@@ -1,5 +1,14 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-28] — Dinh dưỡng công thức: tính khi gửi duyệt, người duyệt xác nhận
+
+- **Yêu cầu**: Người tạo không nhập dinh dưỡng; backend tự tính khi submit, thiếu dữ liệu thì chạy job AI nền (hệ thống trả, không trừ quota, có truy vết); người duyệt xem/sửa/tính lại và chỉ duyệt khi đủ chỉ số. Các điểm mơ hồ đã hỏi người dùng: 1 lần + 3 retry; "AI tính lại" giữ giá trị sửa tay; bỏ B12 (duyệt 5 chỉ số); nguyên liệu có hồ sơ nhưng thiếu 1 chỉ số coi là thiếu; job xong sau khi đã quyết định thì bỏ qua.
+- **Backend**: `recipe-nutrition-review.*` (metrics, repository, service, schemas, controller, router `/admin/content-review/:id/nutrition[/recalculate]`); job state/trigger/attempt/lease trên `recipe_nutrition_ai_jobs`, collection `recipe_nutrition_review_overrides` + `recipe_nutrition_review_audits`; provider `estimateRecipeNutritionForReview` qua governance `NUTRITION`; submit hook; cổng duyệt `RECIPE_NUTRITION_INCOMPLETE` và ghi `RecipeDetail`; content bỏ qua `recipe.nutrition`; quét job khi khởi động server.
+- **Frontend**: bỏ dinh dưỡng khỏi form/schema/request DTO công thức; `review-nutrition` DTO/Model/Mapper + test; API + hook (`useReviewNutritionPanelQuery` polling khi job chạy, mutation sửa tay/tính lại); `ReviewNutritionPanel` trong `ReviewDetailModal`, khoá nút duyệt khi thiếu chỉ số.
+- **Kiểm chứng**: Backend lint/typecheck/build/OpenAPI; smoke trên DB Mongo tạm (provider giả lập và base URL OpenAI không tới được) cho submit, job, retry 1/5 phút, quét job RUNNING khi khởi động, FAILED sau 4 lượt, sửa tay + audit, 409 rồi duyệt, revision v2 tính lại. FE tsc, vitest toàn bộ, build; browser: panel, AI tính lại, sửa tay chất xơ, lịch sử, tham khảo bản trước.
+- **Sửa thêm (QA)**: Wizard công thức tự gửi duyệt khi bấm "Tiếp" ở bước 4: nút "Tiếp" (`type=button`) và "Gửi" (`type=submit`) cùng vị trí nên React tái dùng một nút DOM; validate xong thì bước 5 render và nút đổi thành submit trước khi trình duyệt chạy hành động mặc định của cú click. Thêm `key` riêng cho hai nút. Đã tái hiện trên browser (1 submit) và xác nhận sau khi sửa (0 submit; nút Gửi ở bước 5 vẫn hoạt động).
+- **Còn lại**: Mobile chưa có panel dinh dưỡng khi duyệt (duyệt công thức trên mobile sẽ nhận 409 nếu thiếu chỉ số); chưa thử provider OpenAI thật cho job ước tính.
+
 ## [2026-10-27] — Combo theo thời hạn, doanh thu và truy vết AI cho admin
 
 - **Yêu cầu**: Dashboard admin thêm API thống kê tiền mua quota AI và bảng truy vết sử dụng AI; phần mua gói cho chọn 1 tháng, 3 tháng, 1 năm. Các điểm mơ hồ đã hỏi và người dùng chốt (BL-20.1 trong IMPLEMENTATION_PLAN).

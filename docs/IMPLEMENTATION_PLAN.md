@@ -1,8 +1,8 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.13
+**Version:** 4.14
 
-**Updated:** 2026-10-27
+**Updated:** 2026-10-28
 
 **Status:** Approved implementation baseline
 
@@ -253,6 +253,17 @@ User-approved 2026-10-25 extension: use a public named allergen catalog for expl
 6. Return assumptions, confidence, uncertainty range, uncovered ingredients, source versions, and calculation version.
 7. AI estimates never overwrite canonical food data. Corrections create versioned records.
 8. Recalculate when ingredient quantities, serving count, cooking steps, or source/factor versions change.
+
+#### BL-05.1 — Recipe nutrition on submit and reviewer confirmation (user-approved 2026-10-28)
+
+1. Authors no longer enter nutrition. Client-supplied `recipe.nutrition` is ignored; draft revisions carry null nutrition and are not meal-planner eligible.
+2. Submitting a recipe revision calculates a canonical estimate (BL-05 steps 1–3) and attaches it to that pending revision. When reviewed data is complete, AI is not called.
+3. Insufficient data (free-text ingredient, missing canonical profile or any of the five review metrics, unit conversion unavailable, or a step that changes ingredients without a cooking method) never blocks submission. It queues one asynchronous AI job that sees the whole recipe and may suggest missing cooking methods, retention factors and whole-line estimates for the missing metrics. The job makes 1 attempt plus 3 automatic retries after 1, 5 and 15 minutes, then becomes `FAILED`; a startup sweep resumes interrupted jobs. A job that finishes after the revision is decided is discarded.
+4. Recipe AI calls in this pipeline are system-paid: they never consume any user quota or credit, and every call is traced as a `NUTRITION` AI governance event.
+5. Reviewers (Admin or Contributor, under the same eligibility as the publication decision) see five per-serving metrics — calories, protein, carbohydrate, fat, fiber; vitamin B12 is excluded — each with source label (`CANONICAL_CALCULATED`, `AI_ESTIMATED`, `VERIFIED_OVERRIDE` for reviewer edits), confidence, uncovered ingredients and job state. They may trigger a system-paid recalculation ("AI tính lại", overrides kept) and edit each value; every edit is audited with actor, role, time, reason and value/origin before and after.
+6. A recipe revision can be approved only when all five values are present, even while a job runs or after it failed. A metric missing on any ingredient line is missing; partial sums are never presented as totals. Approval writes the final values into the revision's recipe detail used by cards and the meal planner, and cancels active jobs.
+7. Editing a published recipe creates a new revision that is recalculated from scratch on submit and must be reviewed again. Values approved or overridden for the previous revision are shown for reference only and are never carried over.
+8. AI suggestions apply only to that revision's estimate and remain labelled `AI_ESTIMATED`. They are never written to canonical ingredient data (`IngredientFoodProfile`, nutrient values, factors). Numbers become official for the recipe only through reviewer approval.
 
 ### BL-06 — Content and video review lifecycle
 
@@ -574,6 +585,8 @@ A phase is complete only when:
 | Phase 2 ideas are forgotten or accidentally claimed READY | Dedicated roadmap plus explicit status taxonomy |
 
 ## 13. Change record
+
+- **4.14 — 2026-10-28:** User approves BL-05.1: recipe nutrition calculated on submit, async system-paid AI gap filling (1 + 3 retries at 1/5/15 min, startup sweep, quota-free, governance-traced), reviewer panel with five metrics (B12 excluded), audited overrides kept across recalculation, approval gated on five values and written to recipe detail, no carry-over between revisions, and no AI write to canonical food data.
 
 - **4.13 — 2026-10-26:** User clarifies that approved Contributors have review/moderation permissions for submitted community content (recipes, articles, videos) created by Members (excluding self-created content and items flagged with open AI flags or high report counts requiring Admin review). Content review endpoints (`/api/v1/admin/content-review*`) allow both Admin and Contributor roles.
 

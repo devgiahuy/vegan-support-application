@@ -119,6 +119,9 @@ export class ContentService {
     private readonly repository: ContentRepository,
     private readonly mediaService: MediaService,
     private readonly publicationPolicy: ContentPublicationPolicy,
+    /** Recipe submit hook: attaches a nutrition estimate to the pending revision; must never throw. */
+    private readonly onRecipeSubmitted: (revisionId: string) => Promise<void> = () =>
+      Promise.resolve(),
   ) {}
 
   async listPublished(query: PostListQuery, actor?: ContentActor) {
@@ -374,6 +377,7 @@ export class ContentService {
         input.expectedVersion,
         decision,
       );
+      if (post.type === PostType.RECIPE) await this.onRecipeSubmitted(revision.id);
       return this.postOutput(submitted.post, submitted.revision);
     } catch (error) {
       throw this.mapPersistenceError(error);
@@ -486,7 +490,11 @@ export class ContentService {
         add('INGREDIENT_EXCLUSION', name);
     }
     const detail = revision.recipeDetail;
-    if (constraints.allergenCodes.some((code) => stringList(detail?.allergenCodes ?? null).includes(code)))
+    if (
+      constraints.allergenCodes.some((code) =>
+        stringList(detail?.allergenCodes ?? null).includes(code),
+      )
+    )
       add('ALLERGY');
     if (
       constraints.dietPattern &&
@@ -623,24 +631,14 @@ export class ContentService {
         reasonCodes: [...reasons],
       };
     });
-    const nutrition = recipe.nutrition;
-    const nutritionComplete =
-      nutrition.calories !== undefined &&
-      nutrition.proteinGrams !== undefined &&
-      nutrition.carbsGrams !== undefined &&
-      nutrition.fatGrams !== undefined;
+    // Author-supplied `recipe.nutrition` is ignored (2026-10-28): nutrition is calculated on submit
+    // and becomes official only when a reviewer approves the revision.
     return {
       servings: recipe.servings,
       prepTimeMinutes: recipe.prepTimeMinutes,
       cookTimeMinutes: recipe.cookTimeMinutes,
       difficulty: recipe.difficulty,
-      ...(nutrition.calories !== undefined ? { calories: nutrition.calories } : {}),
-      ...(nutrition.proteinGrams !== undefined ? { proteinGrams: nutrition.proteinGrams } : {}),
-      ...(nutrition.carbsGrams !== undefined ? { carbsGrams: nutrition.carbsGrams } : {}),
-      ...(nutrition.fatGrams !== undefined ? { fatGrams: nutrition.fatGrams } : {}),
-      ...(nutrition.fiberGrams !== undefined ? { fiberGrams: nutrition.fiberGrams } : {}),
-      ...(nutrition.vitaminB12Mcg !== undefined ? { vitaminB12Mcg: nutrition.vitaminB12Mcg } : {}),
-      mealPlannerEligible: !unresolved && nutritionComplete,
+      mealPlannerEligible: false,
       allergenCodes,
       traditionWarnings: [...warningMap.values()],
       ingredients: resolved,
