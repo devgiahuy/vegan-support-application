@@ -16,6 +16,50 @@ const customMealNutritionFallbackSchema = z
   })
   .strict();
 
+const reviewNutritionAmountSchema = z.number().finite().nonnegative().max(999_999).nullable();
+const recipeNutritionReviewEstimateSchema = z
+  .object({
+    stepMethods: z
+      .array(
+        z.object({
+          stepPosition: z.number().int().nonnegative(),
+          cookingMethodCode: z.string().trim().min(1).max(80),
+          confidence: z.number().min(0).max(1),
+          assumption: z.string().trim().min(1).max(1_000),
+        }),
+      )
+      .max(100)
+      .default([]),
+    retentionFactors: z
+      .array(
+        z.object({
+          nutrientCode: z.string().trim().min(1).max(80),
+          cookingMethodCode: z.string().trim().min(1).max(80),
+          factor: z.number().min(0).max(1),
+          confidence: z.number().min(0).max(1),
+          assumption: z.string().trim().min(1).max(1_000),
+        }),
+      )
+      .max(100)
+      .default([]),
+    ingredientEstimates: z
+      .array(
+        z.object({
+          ingredientPosition: z.number().int().nonnegative(),
+          calories: reviewNutritionAmountSchema,
+          proteinGrams: reviewNutritionAmountSchema,
+          carbsGrams: reviewNutritionAmountSchema,
+          fatGrams: reviewNutritionAmountSchema,
+          fiberGrams: reviewNutritionAmountSchema,
+          confidence: z.number().min(0).max(1),
+          assumption: z.string().trim().min(1).max(1_000),
+        }),
+      )
+      .max(200)
+      .default([]),
+  })
+  .strip();
+
 export interface AiChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -67,6 +111,50 @@ export interface RecipeNutritionFallbackSuggestion {
   }>;
 }
 
+export type RecipeReviewNutritionMetric =
+  'calories' | 'proteinGrams' | 'carbsGrams' | 'fatGrams' | 'fiberGrams';
+
+export interface RecipeNutritionReviewEstimateInput {
+  recipeTitle: string;
+  servings: number;
+  ingredients: Array<{
+    position: number;
+    displayName: string;
+    canonicalName: string | null;
+    amount: number;
+    unit: string;
+    optional: boolean;
+    /** Metrics the reviewed food data could not supply for this ingredient line. */
+    missingMetrics: RecipeReviewNutritionMetric[];
+  }>;
+  steps: Array<{
+    position: number;
+    instruction: string;
+    cookingMethodCode: string | null;
+    durationMinutes: number | null;
+    temperatureCelsius: number | null;
+    affectedIngredientPositions: number[];
+  }>;
+  availableCookingMethodCodes: string[];
+  signal: AbortSignal;
+}
+
+export interface RecipeNutritionReviewEstimateSuggestion {
+  stepMethods: RecipeNutritionFallbackSuggestion['stepMethods'];
+  retentionFactors: RecipeNutritionFallbackSuggestion['retentionFactors'];
+  /** Whole-line amounts (as cooked in this recipe) for ingredients with missing metrics. */
+  ingredientEstimates: Array<{
+    ingredientPosition: number;
+    calories: number | null;
+    proteinGrams: number | null;
+    carbsGrams: number | null;
+    fatGrams: number | null;
+    fiberGrams: number | null;
+    confidence: number;
+    assumption: string;
+  }>;
+}
+
 export interface CustomMealNutritionFallbackInput {
   mealName: string;
   servings: number;
@@ -113,6 +201,9 @@ export interface AiProvider {
   suggestCustomMealNutritionFallback(
     input: CustomMealNutritionFallbackInput,
   ): Promise<CustomMealNutritionFallbackSuggestion>;
+  estimateRecipeNutritionForReview(
+    input: RecipeNutritionReviewEstimateInput,
+  ): Promise<RecipeNutritionReviewEstimateSuggestion>;
 }
 
 export class AiProviderUnavailableError extends Error {
@@ -262,6 +353,46 @@ export class OpenAiProvider implements AiProvider {
       throw new AiProviderResponseError('AI custom-meal nutrition fallback returned invalid JSON');
     }
   }
+
+  async estimateRecipeNutritionForReview(
+    input: RecipeNutritionReviewEstimateInput,
+  ): Promise<RecipeNutritionReviewEstimateSuggestion> {
+    let content = '';
+    for await (const chunk of this.streamChat({
+      instructions: [
+        'Return only compact JSON that fills gaps in a vegetarian recipe nutrition estimate for a human reviewer.',
+        'Use this exact shape: {"stepMethods":[],"retentionFactors":[],"ingredientEstimates":[]}.',
+        'stepMethods: for steps without cookingMethodCode that affect ingredients, choose a code from availableCookingMethodCodes only.',
+        'retentionFactors: optional nutrient retention factors (0 to 1) for the chosen cooking methods.',
+        'ingredientEstimates: one item per ingredient whose missingMetrics is non-empty. Each value is the TOTAL for that ingredient line exactly as used in the recipe (its amount and unit, after cooking), never per serving and never per 100 g.',
+        'Fill only metrics listed in that ingredient missingMetrics; set the others to null. calories are kcal; proteinGrams, carbsGrams, fatGrams and fiberGrams are grams.',
+        'Use null when the amount, unit or ingredient is too vague. Never present estimates as measured or canonical values.',
+        'Each item needs confidence from 0 to 1 and a short Vietnamese assumption describing the assumed food form and portion.',
+      ].join('\n'),
+      messages: [
+        {
+          role: 'user',
+          content: JSON.stringify({
+            recipeTitle: input.recipeTitle,
+            servings: input.servings,
+            ingredients: input.ingredients,
+            steps: input.steps,
+            availableCookingMethodCodes: input.availableCookingMethodCodes,
+          }),
+        },
+      ],
+      signal: input.signal,
+    })) {
+      if (chunk.type === 'delta') content += chunk.delta;
+    }
+    try {
+      return recipeNutritionReviewEstimateSchema.parse(JSON.parse(content) as unknown);
+    } catch {
+      throw new AiProviderResponseError(
+        'AI recipe review nutrition estimate returned invalid JSON',
+      );
+    }
+  }
 }
 
 export class FakeAiProvider implements AiProvider {
@@ -344,6 +475,71 @@ export class FakeAiProvider implements AiProvider {
       uncertaintyNote: 'Bộ cung cấp thử nghiệm không ước tính dinh dưỡng khi thiếu dữ liệu chuẩn.',
     });
   }
+
+  estimateRecipeNutritionForReview(
+    input: RecipeNutritionReviewEstimateInput,
+  ): Promise<RecipeNutritionReviewEstimateSuggestion> {
+    if (input.signal.aborted) {
+      return Promise.reject(new Error('Request aborted', { cause: input.signal.reason }));
+    }
+    const hasBoiling = input.availableCookingMethodCodes.includes('BOILING');
+    // Local fixture: a fixed generic vegetable-like density per gram, clearly low confidence.
+    const perGram = {
+      calories: 0.5,
+      proteinGrams: 0.02,
+      carbsGrams: 0.08,
+      fatGrams: 0.01,
+      fiberGrams: 0.02,
+    };
+    const massUnits = new Map([
+      ['g', 1],
+      ['gram', 1],
+      ['kg', 1000],
+      ['mg', 0.001],
+    ]);
+    return Promise.resolve({
+      stepMethods: hasBoiling
+        ? input.steps.flatMap((step) => {
+            const normalized = step.instruction.toLocaleLowerCase('vi');
+            return !step.cookingMethodCode &&
+              step.affectedIngredientPositions.length > 0 &&
+              ['luộc', 'luoc', 'nấu', 'nau', 'sôi', 'soi'].some((term) => normalized.includes(term))
+              ? [
+                  {
+                    stepPosition: step.position,
+                    cookingMethodCode: 'BOILING',
+                    confidence: 0.72,
+                    assumption: 'Local fixture inferred boiling-like method from step text.',
+                  },
+                ]
+              : [];
+          })
+        : [],
+      retentionFactors: [],
+      ingredientEstimates: input.ingredients.flatMap((ingredient) => {
+        const factor = massUnits.get(ingredient.unit.trim().toLowerCase());
+        if (!ingredient.missingMetrics.length || factor === undefined) return [];
+        const grams = ingredient.amount * factor;
+        const value = (metric: keyof typeof perGram) =>
+          ingredient.missingMetrics.includes(metric)
+            ? Math.round(grams * perGram[metric] * 100) / 100
+            : null;
+        return [
+          {
+            ingredientPosition: ingredient.position,
+            calories: value('calories'),
+            proteinGrams: value('proteinGrams'),
+            carbsGrams: value('carbsGrams'),
+            fatGrams: value('fatGrams'),
+            fiberGrams: value('fiberGrams'),
+            confidence: 0.3,
+            assumption:
+              'Bộ cung cấp thử nghiệm dùng mật độ dinh dưỡng chung cho rau củ; chỉ để demo.',
+          },
+        ];
+      }),
+    });
+  }
 }
 
 export class UnavailableAiProvider implements AiProvider {
@@ -373,6 +569,9 @@ export class UnavailableAiProvider implements AiProvider {
   }
 
   suggestCustomMealNutritionFallback(): Promise<CustomMealNutritionFallbackSuggestion> {
+    return Promise.reject(new AiProviderUnavailableError());
+  }
+  estimateRecipeNutritionForReview(): Promise<RecipeNutritionReviewEstimateSuggestion> {
     return Promise.reject(new AiProviderUnavailableError());
   }
 }

@@ -130,6 +130,8 @@ async function main(): Promise<void> {
       moderate: () => Promise.resolve({ flagged: true }),
       suggestRecipeNutritionFallback: () =>
         Promise.resolve({ stepMethods: [], yieldFactors: [], retentionFactors: [] }),
+      estimateRecipeNutritionForReview: () =>
+        Promise.resolve({ stepMethods: [], retentionFactors: [], ingredientEstimates: [] }),
       suggestCustomMealNutritionFallback: () =>
         Promise.resolve({
           calories: null,

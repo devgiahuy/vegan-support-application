@@ -158,7 +158,6 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
         steps: initialValues?.steps?.length
           ? initialValues.steps
           : [{ stepNumber: 1, instruction: '' }],
-        nutrition: initialValues?.nutrition,
       },
     });
 

@@ -141,7 +141,8 @@ describe('RecipeMapper', () => {
     expect(createDto.recipe.prepTimeMinutes).toBe(10);
     expect(createDto.recipe.ingredients[0].displayName).toBe('Nấm');
     expect(createDto.recipe.ingredients[0].ingredientId).toBe('ing-1');
-    expect(createDto.recipe.nutrition?.proteinGrams).toBe(5);
+    // Author nutrition is never sent: backend calculates it on submit for reviewer approval.
+    expect('nutrition' in createDto.recipe).toBe(false);
     expect(createDto.body).toContain('Nấu sôi nước');
   });
 

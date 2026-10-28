@@ -22,6 +22,27 @@ Admin or Contributor approve or reject a submitted revision
 - Request: `AdminContentReviewDecisionRequest` (required)
 - Responses: `200` → AdminContentReviewDetailResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
 
+## GET `/api/v1/admin/content-review/{id}/nutrition`
+Reviewer nutrition panel for a submitted recipe revision
+- operationId: `getRecipeNutritionReviewPanel`
+- Params: `path:id* (string)`
+- Request: —
+- Responses: `200` → RecipeNutritionReviewPanelResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse
+
+## PATCH `/api/v1/admin/content-review/{id}/nutrition`
+Reviewer sets or clears per-serving nutrition overrides
+- operationId: `updateRecipeNutritionReviewOverrides`
+- Params: `path:id* (string)`
+- Request: `RecipeNutritionReviewOverrideRequest` (required)
+- Responses: `200` → RecipeNutritionReviewPanelResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
+
+## POST `/api/v1/admin/content-review/{id}/nutrition/recalculate`
+Reviewer recalculates nutrition ("AI tính lại")
+- operationId: `recalculateRecipeNutritionReview`
+- Params: `path:id* (string)`
+- Request: —
+- Responses: `202` → RecipeNutritionReviewPanelResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `423` → ErrorResponse
+
 ---
 ### Schemas dùng trong nhóm
 
@@ -239,6 +260,199 @@ Admin or Contributor approve or reject a submitted revision
   },
   "additionalProperties": false
 }
+```
+
+#### RecipeNutritionReviewOverrideRequest
+```json
+{
+  "type": "object",
+  "required": [
+    "values"
+  ],
+  "properties": {
+    "values": {
+      "type": "object",
+      "properties": {
+        "calories": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "proteinGrams": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "carbsGrams": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "fatGrams": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "fiberGrams": {
+          "type": [
+            "number",
+            "null"
+          ]
+        }
+      },
+      "additionalProperties": false
+    },
+    "reason": {
+      "type": "string"
+    }
+  },
+  "additionalProperties": false
+}
+```
+
+#### RecipeNutritionReviewPanelResponse
+```json
+{
+  "type": "object",
+  "required": [
+    "success",
+    "data",
+    "meta"
+  ],
+  "properties": {
+    "success": {
+      "type": "boolean",
+      "enum": [
+        true
+      ]
+    },
+    "data": {
+      "type": "object",
+      "required": [
+        "revisionId",
+        "postId",
+        "revisionVersion",
+        "revisionStatus",
+        "servings",
+        "canEdit",
+        "canApprove",
+        "missingMetrics",
+        "metrics",
+        "estimate",
+        "uncoveredIngredients",
+        "aiJob",
+        "previousApproved",
+        "audit"
+      ],
+      "properties": {
+        "revisionId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "postId": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "revisionVersion": {
+          "type": "integer"
+        },
+        "revisionStatus": {
+          "type": "string"
+        },
+        "servings": {
+          "type": "integer"
+        },
+        "canEdit": {
+          "type": "boolean"
+        },
+        "canApprove": {
+          "type": "boolean"
+        },
+        "missingMetrics": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "_truncated": true
+          }
+        },
+        "metrics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "_truncated": true
+          }
+        },
+        "estimate": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "required": [
+            "id",
+            "version",
+            "confidence",
+            "aiUsed",
+            "calculationVersion",
+            "disclaimer",
+            "createdAt"
+          ],
+          "properties": {
+            "id": {
+              "type": "string",
+              "_truncated": true
+            },
+            "version": {
+              "type": "integer",
+              "_truncated": true
+            },
+            "confidence": {
+              "type": "number",
+              "_truncated": true
+            },
+            "aiUsed": {
+              "type": "boolean",
+              "_truncated": true
+            },
+            "calculationVersion": {
+              "type": "string",
+              "_truncated": true
+            },
+            "disclaimer": {
+              "type": "string",
+              "_truncated": true
+            },
+            "createdAt": {
+              "type": "string",
+              "_truncated": true
+            }
+          },
+          "additionalProperties": false
+        },
+        "uncoveredIngredients": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "_truncated": true
+          }
+        },
+        "aiJob": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "required": [
+            "id",
+            "state",
+            "trigger",
+            "attemptCount",
+            "maxAttempts",
+            "nextAttemptAt",
+            "errorCode",
+  …(truncated — xem api-catalog.json)
 ```
 
 #### ReviewQueueListResponse

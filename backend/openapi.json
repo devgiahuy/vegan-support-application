@@ -3643,7 +3643,8 @@
                       }
                     },
                     "default": {},
-                    "additionalProperties": false
+                    "additionalProperties": false,
+                    "description": "Deprecated 2026-10-28 and ignored: authors no longer supply nutrition. It is calculated on submit and written to the revision only when a reviewer approves."
                   },
                   "ingredients": {
                     "type": "array",
@@ -4172,7 +4173,8 @@
                       }
                     },
                     "default": {},
-                    "additionalProperties": false
+                    "additionalProperties": false,
+                    "description": "Deprecated 2026-10-28 and ignored: authors no longer supply nutrition. It is calculated on submit and written to the revision only when a reviewer approves."
                   },
                   "ingredients": {
                     "type": "array",
@@ -10502,7 +10504,8 @@
                           }
                         },
                         "default": {},
-                        "additionalProperties": false
+                        "additionalProperties": false,
+                        "description": "Deprecated 2026-10-28 and ignored: authors no longer supply nutrition. It is calculated on submit and written to the revision only when a reviewer approves."
                       },
                       "ingredients": {
                         "type": "array",
@@ -21191,6 +21194,673 @@
           "success",
           "data",
           "meta"
+        ],
+        "additionalProperties": false
+      },
+      "RecipeNutritionReviewPanelResponse": {
+        "type": "object",
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "enum": [
+              true
+            ]
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "revisionId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "postId": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "revisionVersion": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "revisionStatus": {
+                "type": "string"
+              },
+              "servings": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "canEdit": {
+                "type": "boolean"
+              },
+              "canApprove": {
+                "type": "boolean"
+              },
+              "missingMetrics": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "calories",
+                    "proteinGrams",
+                    "carbsGrams",
+                    "fatGrams",
+                    "fiberGrams"
+                  ]
+                }
+              },
+              "metrics": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "metric": {
+                      "type": "string",
+                      "enum": [
+                        "calories",
+                        "proteinGrams",
+                        "carbsGrams",
+                        "fatGrams",
+                        "fiberGrams"
+                      ]
+                    },
+                    "unit": {
+                      "type": "string"
+                    },
+                    "estimate": {
+                      "type": "object",
+                      "properties": {
+                        "value": {
+                          "type": [
+                            "number",
+                            "null"
+                          ],
+                          "minimum": 0
+                        },
+                        "partialValue": {
+                          "type": [
+                            "number",
+                            "null"
+                          ],
+                          "minimum": 0
+                        },
+                        "origin": {
+                          "type": [
+                            "string",
+                            "null"
+                          ],
+                          "enum": [
+                            "CANONICAL_CALCULATED",
+                            "AI_ESTIMATED",
+                            "USER_PROVIDED",
+                            "VERIFIED_OVERRIDE",
+                            null
+                          ]
+                        },
+                        "confidence": {
+                          "type": [
+                            "number",
+                            "null"
+                          ],
+                          "minimum": 0,
+                          "maximum": 1
+                        }
+                      },
+                      "required": [
+                        "value",
+                        "partialValue",
+                        "origin",
+                        "confidence"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "override": {
+                      "type": [
+                        "object",
+                        "null"
+                      ],
+                      "properties": {
+                        "value": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "updatedBy": {
+                          "type": "object",
+                          "properties": {
+                            "id": {
+                              "type": "string",
+                              "format": "uuid"
+                            },
+                            "displayName": {
+                              "type": "string"
+                            },
+                            "role": {
+                              "type": "string",
+                              "enum": [
+                                "MEMBER",
+                                "CONTRIBUTOR",
+                                "ADMIN"
+                              ]
+                            }
+                          },
+                          "required": [
+                            "id",
+                            "displayName",
+                            "role"
+                          ],
+                          "additionalProperties": false
+                        },
+                        "updatedAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        }
+                      },
+                      "required": [
+                        "value",
+                        "updatedBy",
+                        "updatedAt"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "finalValue": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "finalOrigin": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "CANONICAL_CALCULATED",
+                        "AI_ESTIMATED",
+                        "USER_PROVIDED",
+                        "VERIFIED_OVERRIDE",
+                        null
+                      ]
+                    }
+                  },
+                  "required": [
+                    "metric",
+                    "unit",
+                    "estimate",
+                    "override",
+                    "finalValue",
+                    "finalOrigin"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "estimate": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "version": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "confidence": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  },
+                  "aiUsed": {
+                    "type": "boolean"
+                  },
+                  "calculationVersion": {
+                    "type": "string"
+                  },
+                  "disclaimer": {
+                    "type": "string"
+                  },
+                  "createdAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "id",
+                  "version",
+                  "confidence",
+                  "aiUsed",
+                  "calculationVersion",
+                  "disclaimer",
+                  "createdAt"
+                ],
+                "additionalProperties": false
+              },
+              "uncoveredIngredients": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "position": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "displayName": {
+                      "type": "string"
+                    },
+                    "reason": {
+                      "type": "string",
+                      "description": "UNRESOLVED_INGREDIENT, MISSING_CANONICAL_PROFILE, UNIT_CONVERSION_UNAVAILABLE, MISSING_NUTRIENT_VALUES or MISSING_REVIEW_METRICS (profile lacks some of the five metrics)."
+                    },
+                    "missingMetrics": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "calories",
+                          "proteinGrams",
+                          "carbsGrams",
+                          "fatGrams",
+                          "fiberGrams"
+                        ]
+                      }
+                    },
+                    "aiEstimated": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "position",
+                    "displayName",
+                    "reason",
+                    "missingMetrics",
+                    "aiEstimated"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "aiJob": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "state": {
+                    "type": "string",
+                    "enum": [
+                      "QUEUED",
+                      "RUNNING",
+                      "RETRY_SCHEDULED",
+                      "SUCCEEDED",
+                      "FAILED",
+                      "CANCELLED"
+                    ]
+                  },
+                  "trigger": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "enum": [
+                      "SUBMIT",
+                      "REVIEWER_RETRY",
+                      null
+                    ]
+                  },
+                  "attemptCount": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "maxAttempts": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "nextAttemptAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "errorCode": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "startedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  },
+                  "completedAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "updatedAt": {
+                    "type": "string",
+                    "format": "date-time"
+                  }
+                },
+                "required": [
+                  "id",
+                  "state",
+                  "trigger",
+                  "attemptCount",
+                  "maxAttempts",
+                  "nextAttemptAt",
+                  "errorCode",
+                  "startedAt",
+                  "completedAt",
+                  "updatedAt"
+                ],
+                "additionalProperties": false
+              },
+              "previousApproved": {
+                "type": [
+                  "object",
+                  "null"
+                ],
+                "properties": {
+                  "revisionId": {
+                    "type": "string",
+                    "format": "uuid"
+                  },
+                  "revisionVersion": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0
+                  },
+                  "reviewedAt": {
+                    "type": [
+                      "string",
+                      "null"
+                    ],
+                    "format": "date-time"
+                  },
+                  "values": {
+                    "type": "object",
+                    "properties": {
+                      "calories": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "minimum": 0
+                      },
+                      "proteinGrams": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "minimum": 0
+                      },
+                      "carbsGrams": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "minimum": 0
+                      },
+                      "fatGrams": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "minimum": 0
+                      },
+                      "fiberGrams": {
+                        "type": [
+                          "number",
+                          "null"
+                        ],
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "calories",
+                      "proteinGrams",
+                      "carbsGrams",
+                      "fatGrams",
+                      "fiberGrams"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "overriddenMetrics": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "enum": [
+                        "calories",
+                        "proteinGrams",
+                        "carbsGrams",
+                        "fatGrams",
+                        "fiberGrams"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "revisionId",
+                  "revisionVersion",
+                  "reviewedAt",
+                  "values",
+                  "overriddenMetrics"
+                ],
+                "additionalProperties": false,
+                "description": "Reference only: values approved for the previous published revision are never carried over."
+              },
+              "audit": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "metric": {
+                      "type": "string",
+                      "enum": [
+                        "calories",
+                        "proteinGrams",
+                        "carbsGrams",
+                        "fatGrams",
+                        "fiberGrams"
+                      ]
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "SET_OVERRIDE",
+                        "CLEAR_OVERRIDE"
+                      ]
+                    },
+                    "previousValue": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "previousOrigin": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "CANONICAL_CALCULATED",
+                        "AI_ESTIMATED",
+                        "USER_PROVIDED",
+                        "VERIFIED_OVERRIDE",
+                        null
+                      ]
+                    },
+                    "newValue": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0
+                    },
+                    "newOrigin": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "enum": [
+                        "CANONICAL_CALCULATED",
+                        "AI_ESTIMATED",
+                        "USER_PROVIDED",
+                        "VERIFIED_OVERRIDE",
+                        null
+                      ]
+                    },
+                    "reason": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "actor": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "displayName": {
+                          "type": "string"
+                        },
+                        "role": {
+                          "type": "string",
+                          "enum": [
+                            "MEMBER",
+                            "CONTRIBUTOR",
+                            "ADMIN"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "id",
+                        "displayName",
+                        "role"
+                      ],
+                      "additionalProperties": false
+                    },
+                    "createdAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "metric",
+                    "action",
+                    "previousValue",
+                    "previousOrigin",
+                    "newValue",
+                    "newOrigin",
+                    "reason",
+                    "actor",
+                    "createdAt"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "revisionId",
+              "postId",
+              "revisionVersion",
+              "revisionStatus",
+              "servings",
+              "canEdit",
+              "canApprove",
+              "missingMetrics",
+              "metrics",
+              "estimate",
+              "uncoveredIngredients",
+              "aiJob",
+              "previousApproved",
+              "audit"
+            ],
+            "additionalProperties": false
+          },
+          "meta": {
+            "type": "null"
+          }
+        },
+        "required": [
+          "success",
+          "data",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "RecipeNutritionReviewOverrideRequest": {
+        "type": "object",
+        "properties": {
+          "values": {
+            "type": "object",
+            "properties": {
+              "calories": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 99999
+              },
+              "proteinGrams": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 99999
+              },
+              "carbsGrams": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 99999
+              },
+              "fatGrams": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 99999
+              },
+              "fiberGrams": {
+                "type": [
+                  "number",
+                  "null"
+                ],
+                "minimum": 0,
+                "maximum": 99999
+              }
+            },
+            "additionalProperties": false,
+            "description": "Per-serving values. A number sets a reviewer override; null clears it back to the calculated estimate; an omitted key is unchanged."
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 500
+          }
+        },
+        "required": [
+          "values"
         ],
         "additionalProperties": false
       },
@@ -37867,7 +38537,7 @@
           "Content Review"
         ],
         "summary": "Submit một immutable draft revision để Admin review",
-        "description": "Author-only. Revalidates latest version and video media ownership/committed state. Text/metadata moderation may attach a signal and priority, but never approves, rejects, hides, or deletes automatically.",
+        "description": "Author-only. Revalidates latest version and video media ownership/committed state. Text/metadata moderation may attach a signal and priority, but never approves, rejects, hides, or deletes automatically. For recipes (changed 2026-10-28) the backend calculates a per-revision nutrition estimate from reviewed canonical food data; when data is insufficient (free-text ingredient, missing USDA profile/metric, unit conversion, or a cooking step without a method) it queues a system-paid asynchronous AI gap-filling job (no user quota). Nutrition never blocks submission and is not official until a reviewer approves.",
         "operationId": "submitPostRevision",
         "security": [
           {
@@ -42189,7 +42859,7 @@
             }
           },
           "409": {
-            "description": "Concurrent/already decided review",
+            "description": "Concurrent/already decided review or incomplete recipe nutrition",
             "content": {
               "application/json": {
                 "examples": {
@@ -42198,7 +42868,7 @@
                       "success": false,
                       "error": {
                         "code": "REVIEW_CONFLICT",
-                        "message": "Concurrent/already decided review",
+                        "message": "Concurrent/already decided review or incomplete recipe nutrition",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -42208,7 +42878,7 @@
                       "success": false,
                       "error": {
                         "code": "REVIEW_ALREADY_DECIDED",
-                        "message": "Concurrent/already decided review",
+                        "message": "Concurrent/already decided review or incomplete recipe nutrition",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -42218,7 +42888,17 @@
                       "success": false,
                       "error": {
                         "code": "CONTENT_AUTHOR_INACTIVE",
-                        "message": "Concurrent/already decided review",
+                        "message": "Concurrent/already decided review or incomplete recipe nutrition",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "RECIPE_NUTRITION_INCOMPLETE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RECIPE_NUTRITION_INCOMPLETE",
+                        "message": "Concurrent/already decided review or incomplete recipe nutrition",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -42450,7 +43130,7 @@
             }
           },
           "409": {
-            "description": "Concurrent/already decided review",
+            "description": "Concurrent/already decided review or incomplete recipe nutrition",
             "content": {
               "application/json": {
                 "examples": {
@@ -42459,7 +43139,7 @@
                       "success": false,
                       "error": {
                         "code": "REVIEW_CONFLICT",
-                        "message": "Concurrent/already decided review",
+                        "message": "Concurrent/already decided review or incomplete recipe nutrition",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -42469,7 +43149,7 @@
                       "success": false,
                       "error": {
                         "code": "REVIEW_ALREADY_DECIDED",
-                        "message": "Concurrent/already decided review",
+                        "message": "Concurrent/already decided review or incomplete recipe nutrition",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -42479,7 +43159,17 @@
                       "success": false,
                       "error": {
                         "code": "CONTENT_AUTHOR_INACTIVE",
-                        "message": "Concurrent/already decided review",
+                        "message": "Concurrent/already decided review or incomplete recipe nutrition",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "RECIPE_NUTRITION_INCOMPLETE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RECIPE_NUTRITION_INCOMPLETE",
+                        "message": "Concurrent/already decided review or incomplete recipe nutrition",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }
@@ -42860,7 +43550,7 @@
           "Content Review Admin"
         ],
         "summary": "Admin or Contributor approve or reject a submitted revision",
-        "description": "Reason is mandatory. The exact latest revision is locked transactionally. Approve replaces the public pointer; reject keeps any prior approved revision public. Signals are recorded evidence only.",
+        "description": "Reason is mandatory. The exact latest revision is locked transactionally. Approve replaces the public pointer; reject keeps any prior approved revision public. Signals are recorded evidence only. Recipe approval (changed 2026-10-28) requires all five per-serving values (calories, proteinGrams, carbsGrams, fatGrams, fiberGrams) from the submit-time estimate or reviewer overrides (see GET /api/v1/admin/content-review/{id}/nutrition); a running or failed AI job does not block approval. Approval writes the final values into RecipeDetail (vitaminB12Mcg is not written), recomputes mealPlannerEligible, cancels active nutrition AI jobs and stores a nutrition snapshot in the moderation audit. Missing values return 409 RECIPE_NUTRITION_INCOMPLETE with fields.missingMetrics.",
         "operationId": "reviewContentAdmin",
         "security": [
           {
@@ -43090,6 +43780,16 @@
                       "success": false,
                       "error": {
                         "code": "CONTENT_AUTHOR_INACTIVE",
+                        "message": "Review state or concurrency conflict",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "RECIPE_NUTRITION_INCOMPLETE": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RECIPE_NUTRITION_INCOMPLETE",
                         "message": "Review state or concurrency conflict",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
@@ -55486,6 +56186,711 @@
                 },
                 "schema": {
                   "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/content-review/{id}/nutrition": {
+      "get": {
+        "tags": [
+          "Content Review Admin"
+        ],
+        "summary": "Reviewer nutrition panel for a submitted recipe revision",
+        "description": "Admin or Contributor. Five per-serving values (calories, proteinGrams, carbsGrams, fatGrams, fiberGrams) with source label (CANONICAL_CALCULATED, AI_ESTIMATED, VERIFIED_OVERRIDE for reviewer edits), confidence, ingredients that reviewed data could not cover, the latest AI gap-filling job state, the previous approved values (reference only, never carried over) and the edit audit. canApprove is true when every value is present, even while an AI job runs or after it failed. canEdit mirrors the publication decision rules. Path id is the revision id.",
+        "operationId": "getRecipeNutritionReviewPanel",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Nutrition review panel",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeNutritionReviewPanelResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Revision is not a structured recipe",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Revision is not a structured recipe",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CONTENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CONTENT",
+                        "message": "Revision is not a structured recipe",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Reviewer role required",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Reviewer role required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Reviewer role required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Revision not found",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Revision not found",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Content Review Admin"
+        ],
+        "summary": "Reviewer sets or clears per-serving nutrition overrides",
+        "description": "A number sets a reviewer override (VERIFIED_OVERRIDE); null clears it back to the calculated estimate; omitted keys are unchanged. Calories are rounded to an integer, grams to two decimals. Each change appends an audit row with actor, time, reason and the effective value/origin before and after. Overrides apply only to this revision and never change canonical ingredient data.",
+        "operationId": "updateRecipeNutritionReviewOverrides",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeNutritionReviewOverrideRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated nutrition review panel",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeNutritionReviewPanelResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid values or not a recipe",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Invalid values or not a recipe",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CONTENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CONTENT",
+                        "message": "Invalid values or not a recipe",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Reviewer role, self-review or Admin-only review boundary",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Reviewer role, self-review or Admin-only review boundary",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Reviewer role, self-review or Admin-only review boundary",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "SELF_APPROVAL_FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "SELF_APPROVAL_FORBIDDEN",
+                        "message": "Reviewer role, self-review or Admin-only review boundary",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ADMIN_REVIEW_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ADMIN_REVIEW_REQUIRED",
+                        "message": "Reviewer role, self-review or Admin-only review boundary",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Revision not found",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Revision not found",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision is no longer awaiting review",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "REVIEW_ALREADY_DECIDED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "REVIEW_ALREADY_DECIDED",
+                        "message": "Revision is no longer awaiting review",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CONTENT_STATE_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTENT_STATE_CONFLICT",
+                        "message": "Revision is no longer awaiting review",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "REVIEW_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "REVIEW_CONFLICT",
+                        "message": "Revision is no longer awaiting review",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/admin/content-review/{id}/nutrition/recalculate": {
+      "post": {
+        "tags": [
+          "Content Review Admin"
+        ],
+        "summary": "Reviewer recalculates nutrition (\"AI tính lại\")",
+        "description": "Recomputes the estimate from current reviewed food data and keeps reviewer overrides. If data is still insufficient, cancels any active job and queues a new asynchronous AI gap-filling job (1 attempt + 3 automatic retries after 1, 5 and 15 minutes, then FAILED). AI calls are system-paid, never charge a user quota, and are traced as NUTRITION governance events. AI output is labelled AI_ESTIMATED, applies only to this revision estimate and never writes IngredientFoodProfile or nutrient values.",
+        "operationId": "recalculateRecipeNutritionReview",
+        "security": [
+          {
+            "BearerAuth": []
+          },
+          {
+            "AccessTokenCookie": []
+          }
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": true,
+            "name": "id",
+            "in": "path"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Recalculated panel; aiJob shows the queued job when one was needed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeNutritionReviewPanelResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Revision is not a structured recipe",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "VALIDATION_ERROR": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "VALIDATION_ERROR",
+                        "message": "Revision is not a structured recipe",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_CONTENT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_CONTENT",
+                        "message": "Revision is not a structured recipe",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "AUTH_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "AUTH_REQUIRED",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "INVALID_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "INVALID_ACCESS_TOKEN",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "TOKEN_EXPIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "TOKEN_EXPIRED",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "STALE_ACCESS_TOKEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "STALE_ACCESS_TOKEN",
+                        "message": "Authentication required",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Reviewer role, self-review or Admin-only review boundary",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "FORBIDDEN",
+                        "message": "Reviewer role, self-review or Admin-only review boundary",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ACCOUNT_BANNED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ACCOUNT_BANNED",
+                        "message": "Reviewer role, self-review or Admin-only review boundary",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "SELF_APPROVAL_FORBIDDEN": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "SELF_APPROVAL_FORBIDDEN",
+                        "message": "Reviewer role, self-review or Admin-only review boundary",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "ADMIN_REVIEW_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "ADMIN_REVIEW_REQUIRED",
+                        "message": "Reviewer role, self-review or Admin-only review boundary",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Revision not found",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "NOT_FOUND": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "NOT_FOUND",
+                        "message": "Revision not found",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Revision is no longer awaiting review",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "REVIEW_ALREADY_DECIDED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "REVIEW_ALREADY_DECIDED",
+                        "message": "Revision is no longer awaiting review",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "CONTENT_STATE_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "CONTENT_STATE_CONFLICT",
+                        "message": "Revision is no longer awaiting review",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  },
+                  "REVIEW_CONFLICT": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "REVIEW_CONFLICT",
+                        "message": "Revision is no longer awaiting review",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "Tài khoản LOCKED không được thực hiện mutation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                },
+                "example": {
+                  "success": false,
+                  "error": {
+                    "code": "ACCOUNT_LOCKED",
+                    "message": "Tài khoản đang bị khóa",
+                    "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                  }
                 }
               }
             }

@@ -1,10 +1,14 @@
 # Food, Nutrition, and Cooking Data Source Assessment
 
-**Version:** 1.2
+**Version:** 1.3
 
-**Updated:** 2026-10-26
+**Updated:** 2026-10-28
 
 **Status:** Architecture research for Backend Phase 12; provider/legal validation still required before bulk import
+
+## Recipe review estimates and AI gap filling — 2026-10-28
+
+Recipe nutrition is calculated on submit from approved canonical records only (USDA_FDC profiles with source, version and record IDs, reviewed household conversions, yield and retention factors). When those records cannot cover an ingredient or one of the five review metrics, an asynchronous AI job may suggest cooking methods, retention factors and whole-line estimates. These suggestions are stored only in that revision's estimate, keep the `AI_ESTIMATED` label with confidence and assumptions, and are never written to `IngredientFoodProfile`, nutrient values, conversions or factor tables; promoting any of them into canonical data still requires the separate reviewed import/record flow. A reviewer edit is stored as `VERIFIED_OVERRIDE` for that revision with an audit trail. Values become official for a recipe only when a reviewer approves the revision. Change record: v1.3 adds this boundary (BL-05.1 in `docs/IMPLEMENTATION_PLAN.md`).
 
 ## Seed nutrition dataset — 2026-10-26
 

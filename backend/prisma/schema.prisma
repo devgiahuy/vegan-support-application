@@ -626,6 +626,20 @@ enum RecipeNutritionEstimateStatus {
   STALE
 }
 
+enum RecipeNutritionJobState {
+  QUEUED
+  RUNNING
+  RETRY_SCHEDULED
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum RecipeNutritionJobTrigger {
+  SUBMIT
+  REVIEWER_RETRY
+}
+
 enum MealPlanItemSourceType {
   RECIPE
   CUSTOM_MEAL
@@ -809,6 +823,8 @@ model User {
   reviewedAiFlags                AiFlag[]                    @relation("AiFlagReviewer")
   moderationActions              ModerationAction[]          @relation("ModerationActor")
   reviewedPostRevisions          PostRevision[]              @relation("PostRevisionReviewer")
+  recipeNutritionOverrides       RecipeNutritionOverride[]   @relation("RecipeNutritionOverrideActor")
+  recipeNutritionAudits          RecipeNutritionAudit[]      @relation("RecipeNutritionAuditActor")
   hiddenPosts                    Post[]                      @relation("PostHiddenBy")
   personalizationPreference      PersonalizationPreference?
   behaviorEvents                 BehaviorEvent[]
@@ -1603,6 +1619,8 @@ model PostRevision {
   recipeSteps        RecipeStep[]
   nutritionEstimates RecipeNutritionEstimate[]
   nutritionAiJobs    RecipeNutritionAiJob[]
+  nutritionOverrides RecipeNutritionOverride[]
+  nutritionAudits    RecipeNutritionAudit[]
   dietCompatibility  RecipeDietCompatibility[]
   categories         PostCategory[]
   tags               PostTag[]
@@ -2291,26 +2309,76 @@ model RecipeNutritionEstimateLine {
 }
 
 model RecipeNutritionAiJob {
-  referenceVersion   Int                      @default(0) @map("reference_version")
-  id                 String                   @id @default(uuid()) @map("_id")
-  revisionId         String                   @map("revision_id")
-  estimateId         String?                  @map("estimate_id")
+  referenceVersion   Int                        @default(0) @map("reference_version")
+  id                 String                     @id @default(uuid()) @map("_id")
+  revisionId         String                     @map("revision_id")
+  estimateId         String?                    @map("estimate_id")
   provider           String
-  modelId            String                   @map("model_id")
+  modelId            String                     @map("model_id")
   status             AiRequestStatus
-  requestPayloadHash String                   @map("request_payload_hash")
-  resultPayload      Json?                    @map("result_payload")
-  errorCode          String?                  @map("error_code")
-  startedAt          DateTime                 @map("started_at")
-  completedAt        DateTime?                @map("completed_at")
-  createdAt          DateTime                 @default(now()) @map("created_at")
-  updatedAt          DateTime                 @updatedAt @map("updated_at")
-  revision           PostRevision             @relation(fields: [revisionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  estimate           RecipeNutritionEstimate? @relation(fields: [estimateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  requestPayloadHash String                     @map("request_payload_hash")
+  resultPayload      Json?                      @map("result_payload")
+  errorCode          String?                    @map("error_code")
+  /// Review pipeline job state; null for legacy synchronous preview/recalculate calls.
+  state              RecipeNutritionJobState?
+  trigger            RecipeNutritionJobTrigger?
+  requestedById      String?                    @map("requested_by_id")
+  attemptCount       Int                        @default(0) @map("attempt_count")
+  maxAttempts        Int                        @default(1) @map("max_attempts")
+  nextAttemptAt      DateTime?                  @map("next_attempt_at")
+  leaseExpiresAt     DateTime?                  @map("lease_expires_at")
+  startedAt          DateTime                   @map("started_at")
+  completedAt        DateTime?                  @map("completed_at")
+  createdAt          DateTime                   @default(now()) @map("created_at")
+  updatedAt          DateTime                   @updatedAt @map("updated_at")
+  revision           PostRevision               @relation(fields: [revisionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  estimate           RecipeNutritionEstimate?   @relation(fields: [estimateId], references: [id], onDelete: NoAction, onUpdate: NoAction)
 
   @@index([revisionId, createdAt])
   @@index([status, createdAt])
+  @@index([state, nextAttemptAt])
   @@map("recipe_nutrition_ai_jobs")
+}
+
+/// Reviewer manual value for one review metric of a submitted recipe revision.
+model RecipeNutritionOverride {
+  referenceVersion Int          @default(0) @map("reference_version")
+  id               String       @id @default(uuid()) @map("_id")
+  revisionId       String       @map("revision_id")
+  metric           String
+  value            Float
+  updatedById      String       @map("updated_by_id")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  updatedAt        DateTime     @updatedAt @map("updated_at")
+  revision         PostRevision @relation(fields: [revisionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  updatedBy        User         @relation("RecipeNutritionOverrideActor", fields: [updatedById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([revisionId, metric])
+  @@map("recipe_nutrition_review_overrides")
+}
+
+/// Append-only audit of reviewer nutrition edits (effective value before/after).
+model RecipeNutritionAudit {
+  referenceVersion Int          @default(0) @map("reference_version")
+  id               String       @id @default(uuid()) @map("_id")
+  revisionId       String       @map("revision_id")
+  postId           String       @map("post_id")
+  metric           String
+  action           String
+  previousValue    Float?       @map("previous_value")
+  previousOrigin   String?      @map("previous_origin")
+  newValue         Float?       @map("new_value")
+  newOrigin        String?      @map("new_origin")
+  reason           String?
+  actorId          String       @map("actor_id")
+  actorRole        Role         @map("actor_role")
+  createdAt        DateTime     @default(now()) @map("created_at")
+  revision         PostRevision @relation(fields: [revisionId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  actor            User         @relation("RecipeNutritionAuditActor", fields: [actorId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([revisionId, createdAt])
+  @@index([postId, createdAt])
+  @@map("recipe_nutrition_review_audits")
 }
 
 model PostCategory {

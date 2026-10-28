@@ -101,7 +101,10 @@ const nutritionInputSchema = z
     vitaminB12Mcg: z.number().nonnegative().optional(),
   })
   .strict()
-  .default({});
+  .default({})
+  .describe(
+    'Deprecated 2026-10-28 and ignored: authors no longer supply nutrition. It is calculated on submit and written to the revision only when a reviewer approves.',
+  );
 
 const recipeIngredientInputSchema = z
   .object({

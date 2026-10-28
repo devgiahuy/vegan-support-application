@@ -16,15 +16,6 @@ export const recipeStepSchema = z.object({
   imageUrl: z.string().nullable().optional(),
 });
 
-export const recipeNutritionSchema = z.object({
-  calories: z.number().min(0),
-  protein: z.number().min(0),
-  carbs: z.number().min(0),
-  fat: z.number().min(0),
-  fiber: z.number().min(0),
-  vitaminB12: z.number().min(0),
-});
-
 export const recipeFormSchema = z.object({
   title: z
     .string()
@@ -58,7 +49,6 @@ export const recipeFormSchema = z.object({
   description: z.string().max(500, 'Mô tả tối đa 500 ký tự').optional(),
   ingredients: z.array(recipeIngredientSchema).min(1, 'Cần ít nhất 1 nguyên liệu'),
   steps: z.array(recipeStepSchema).min(1, 'Cần ít nhất 1 bước nấu'),
-  nutrition: recipeNutritionSchema.optional(),
 });
 
 export type RecipeFormValues = z.infer<typeof recipeFormSchema>;

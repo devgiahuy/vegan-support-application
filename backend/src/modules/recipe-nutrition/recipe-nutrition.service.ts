@@ -9,7 +9,12 @@ import { AppError } from '../../common/errors/app-error.js';
 import type {
   AiProvider,
   RecipeNutritionFallbackSuggestion,
+  RecipeNutritionReviewEstimateSuggestion,
 } from '../chat/ai-provider.js';
+import {
+  missingMetricsByLine,
+  REVIEW_NUTRITION_METRICS,
+} from './recipe-nutrition-review.metrics.js';
 import {
   CALCULATION_VERSION,
   NUTRITION_DISCLAIMER,
@@ -68,7 +73,7 @@ interface EstimateLine {
   uncoveredReason: string | null;
 }
 
-interface BuiltEstimate {
+export interface BuiltEstimate {
   id: string | null;
   revisionId: string;
   postId: string;
@@ -127,9 +132,7 @@ function jsonArray<T>(value: Prisma.JsonValue, guard: (item: Prisma.JsonValue) =
 }
 
 function asRecord(value: Prisma.JsonValue): Record<string, unknown> {
-  return value && typeof value === 'object' && !Array.isArray(value)
-    ? value
-    : {};
+  return value && typeof value === 'object' && !Array.isArray(value) ? value : {};
 }
 
 function parseSourceVersion(value: Prisma.JsonValue): SourceVersion | null {
@@ -255,7 +258,24 @@ export class RecipeNutritionService {
       });
     }
     const built = await this.build(revision, input.useAiFallback);
-    const saved = await this.repository.saveEstimate({
+    const saved = await this.persistBuilt(revision, built, built.ai.statusJobId);
+    return this.output(this.fromRecord(saved, fingerprint(revision)));
+  }
+
+  /** Canonical-only (hints null) or AI-hinted estimate for the review pipeline; never calls AI itself. */
+  buildForReview(
+    revision: NutritionRevisionRecord,
+    hints: RecipeNutritionReviewEstimateSuggestion | null,
+  ) {
+    return this.build(revision, false, hints);
+  }
+
+  persistBuilt(
+    revision: NutritionRevisionRecord,
+    built: BuiltEstimate,
+    aiJobId?: string,
+  ): Promise<NutritionEstimateRecord> {
+    return this.repository.saveEstimate({
       revisionId: revision.id,
       currentFingerprint: built.recipeFingerprint,
       estimate: {
@@ -294,9 +314,8 @@ export class RecipeNutritionService {
         uncertainty: line.uncertainty as Prisma.InputJsonObject,
         uncoveredReason: line.uncoveredReason,
       })),
-      ...(built.ai.status ? { aiJobId: built.ai.statusJobId } : {}),
+      ...(aiJobId ? { aiJobId } : {}),
     });
-    return this.output(this.fromRecord(saved, fingerprint(revision)));
   }
 
   async current(postId: string, actor?: NutritionActor): Promise<NutritionEstimateOutput> {
@@ -328,7 +347,9 @@ export class RecipeNutritionService {
     const result = await this.repository.listEstimates(revision.id, query.page, query.limit);
     const currentFingerprint = fingerprint(revision);
     return {
-      data: result.records.map((record) => this.output(this.fromRecord(record, currentFingerprint))),
+      data: result.records.map((record) =>
+        this.output(this.fromRecord(record, currentFingerprint)),
+      ),
       meta: {
         page: query.page,
         limit: query.limit,
@@ -370,6 +391,7 @@ export class RecipeNutritionService {
   private async build(
     revision: NutritionRevisionRecord,
     useAiFallback: boolean,
+    reviewHints: RecipeNutritionReviewEstimateSuggestion | null = null,
   ): Promise<BuiltEstimate & { ai: BuiltEstimate['ai'] & { statusJobId?: string } }> {
     if (!revision.recipeDetail) {
       throw new AppError({
@@ -395,7 +417,8 @@ export class RecipeNutritionService {
     const inputs = await this.repository.findNutritionInputs(ingredientIds, methodIds);
     const profileByIngredient = new Map<string, (typeof inputs.profiles)[number]>();
     for (const profile of inputs.profiles) {
-      if (!profileByIngredient.has(profile.ingredientId)) profileByIngredient.set(profile.ingredientId, profile);
+      if (!profileByIngredient.has(profile.ingredientId))
+        profileByIngredient.set(profile.ingredientId, profile);
     }
     const methodById = new Map(inputs.methods.map((method) => [method.id, method]));
     const methodByCode = new Map(inputs.methods.map((method) => [method.code, method]));
@@ -404,7 +427,34 @@ export class RecipeNutritionService {
     let aiStatus: AiRequestStatus | null = null;
     let aiJobId: string | undefined;
     let providerDown = false;
-    if (useAiFallback) {
+    const ingredientEstimates = new Map<
+      number,
+      RecipeNutritionReviewEstimateSuggestion['ingredientEstimates'][number]
+    >();
+    if (reviewHints) {
+      aiSuggestion = validateAiSuggestion(
+        {
+          stepMethods: reviewHints.stepMethods,
+          yieldFactors: [],
+          retentionFactors: reviewHints.retentionFactors,
+        },
+        new Set(revision.recipeSteps.map((step) => step.position)),
+        new Set(revision.ingredients.map((ingredient) => ingredient.position)),
+        new Set(inputs.methods.map((method) => method.code)),
+      );
+      const ingredientPositions = new Set(
+        revision.ingredients.map((ingredient) => ingredient.position),
+      );
+      for (const estimate of reviewHints.ingredientEstimates) {
+        if (
+          ingredientPositions.has(estimate.ingredientPosition) &&
+          validConfidence(estimate.confidence) &&
+          !ingredientEstimates.has(estimate.ingredientPosition)
+        ) {
+          ingredientEstimates.set(estimate.ingredientPosition, estimate);
+        }
+      }
+    } else if (useAiFallback) {
       const startedAt = new Date();
       const requestPayload = {
         revisionId: revision.id,
@@ -470,8 +520,13 @@ export class RecipeNutritionService {
     const stepMethodByPosition = new Map<number, (typeof inputs.methods)[number]>();
     const aiMethodByStep = new Map(
       aiSuggestion?.stepMethods
-        .map((suggestion) => [suggestion.stepPosition, methodByCode.get(suggestion.cookingMethodCode)] as const)
-        .filter((entry): entry is readonly [number, (typeof inputs.methods)[number]] => Boolean(entry[1])) ?? [],
+        .map(
+          (suggestion) =>
+            [suggestion.stepPosition, methodByCode.get(suggestion.cookingMethodCode)] as const,
+        )
+        .filter((entry): entry is readonly [number, (typeof inputs.methods)[number]] =>
+          Boolean(entry[1]),
+        ) ?? [],
     );
     for (const step of revision.recipeSteps) {
       const method = step.cookingMethodId
@@ -490,15 +545,18 @@ export class RecipeNutritionService {
       const profile = ingredient.ingredientId
         ? profileByIngredient.get(ingredient.ingredientId)
         : undefined;
+      const aiEstimate = ingredientEstimates.get(ingredient.position);
       if (!ingredient.ingredientId || !profile) {
-        const reason = !ingredient.ingredientId ? 'UNRESOLVED_INGREDIENT' : 'MISSING_CANONICAL_PROFILE';
+        const reason = !ingredient.ingredientId
+          ? 'UNRESOLVED_INGREDIENT'
+          : 'MISSING_CANONICAL_PROFILE';
         uncovered.push({
           recipeIngredientId: ingredient.id,
           position: ingredient.position,
           displayName: ingredient.displayName,
           reason,
         });
-        lines.push(this.uncoveredLine(ingredient, reason));
+        lines.push(this.uncoveredLine(ingredient, reason, aiEstimate));
         continue;
       }
       const rawGrams = normalizeMass(Number(ingredient.amount), ingredient.unit, profile);
@@ -509,7 +567,7 @@ export class RecipeNutritionService {
           displayName: ingredient.displayName,
           reason: 'UNIT_CONVERSION_UNAVAILABLE',
         });
-        lines.push(this.uncoveredLine(ingredient, 'UNIT_CONVERSION_UNAVAILABLE'));
+        lines.push(this.uncoveredLine(ingredient, 'UNIT_CONVERSION_UNAVAILABLE', aiEstimate));
         continue;
       }
       const edibleRawGrams = rawGrams * (Number(profile.ediblePortionPercent) / 100);
@@ -541,7 +599,7 @@ export class RecipeNutritionService {
         }
       }
       const cookedGrams = edibleRawGrams * yieldFactor;
-      const nutrients = profile.nutrientValues.map((value) => {
+      const nutrients: NutrientAmount[] = profile.nutrientValues.map((value) => {
         const retention = method
           ? bestRetention(method.retentions, value.nutrientId, value.nutrient.code, aiSuggestion)
           : { factor: 1, origin: NutritionValueOrigin.CANONICAL_CALCULATED, confidence: 1 };
@@ -563,6 +621,21 @@ export class RecipeNutritionService {
               : round((Number(value.maxValue) * edibleRawGrams * retention.factor) / 100),
         };
       });
+      if (aiEstimate) {
+        const missing =
+          missingMetricsByLine([{ position: ingredient.position, nutrients }]).get(
+            ingredient.position,
+          ) ?? [];
+        const aiNutrients = aiLineNutrients(aiEstimate, missing);
+        if (aiNutrients.length) {
+          nutrients.push(...aiNutrients);
+          ingredientAssumptions.push({
+            code: 'AI_MISSING_NUTRIENT_ESTIMATE',
+            message: aiEstimate.assumption,
+            origin: NutritionValueOrigin.AI_ESTIMATED,
+          });
+        }
+      }
       if (!nutrients.length) {
         uncovered.push({
           recipeIngredientId: ingredient.id,
@@ -628,11 +701,16 @@ export class RecipeNutritionService {
     const totalCookedGrams = round(lines.reduce((sum, line) => sum + (line.cookedGrams ?? 0), 0));
     const allAssumptions = lines.flatMap((line) => line.assumptions);
     const allSources = dedupeSources(lines.flatMap((line) => line.sourceVersions));
+    // A line counts as covered when it has nutrient amounts (canonical or AI-filled); AI lines
+    // lower the result through their own confidence in the average below.
     const coverage = revision.ingredients.length
-      ? (revision.ingredients.length - uncovered.length) / revision.ingredients.length
+      ? lines.filter((line) => line.nutrients.length > 0).length / revision.ingredients.length
       : 0;
     const confidence = round(
-      Math.max(0, Math.min(1, coverage * (lines.length ? average(lines.map((line) => line.confidence)) : 0))),
+      Math.max(
+        0,
+        Math.min(1, coverage * (lines.length ? average(lines.map((line) => line.confidence)) : 0)),
+      ),
       4,
     );
     return {
@@ -657,9 +735,9 @@ export class RecipeNutritionService {
       confidence,
       uncertainty: { partial: uncovered.length > 0, lineCount: lines.length },
       ai: {
-        used: Boolean(aiSuggestion),
-        provider: useAiFallback ? this.provider.name : null,
-        modelId: useAiFallback ? this.provider.chatModel : null,
+        used: Boolean(aiSuggestion) || ingredientEstimates.size > 0,
+        provider: useAiFallback || reviewHints ? this.provider.name : null,
+        modelId: useAiFallback || reviewHints ? this.provider.chatModel : null,
         status: aiStatus,
         providerDown,
         ...(aiJobId ? { statusJobId: aiJobId } : {}),
@@ -677,7 +755,9 @@ export class RecipeNutritionService {
       postVersion: record.revision.post.version,
       estimateVersion: record.version,
       status: record.status,
-      stale: record.status === RecipeNutritionEstimateStatus.STALE || record.recipeFingerprint !== currentFingerprint,
+      stale:
+        record.status === RecipeNutritionEstimateStatus.STALE ||
+        record.recipeFingerprint !== currentFingerprint,
       calculationVersion: CALCULATION_VERSION,
       recipeFingerprint: record.recipeFingerprint,
       servings: record.servings,
@@ -692,7 +772,8 @@ export class RecipeNutritionService {
         position: line.position,
         displayName: line.displayName,
         origin: line.origin,
-        normalizedRawGrams: line.normalizedRawGrams === null ? null : Number(line.normalizedRawGrams),
+        normalizedRawGrams:
+          line.normalizedRawGrams === null ? null : Number(line.normalizedRawGrams),
         edibleRawGrams: line.edibleRawGrams === null ? null : Number(line.edibleRawGrams),
         yieldFactor: line.yieldFactor === null ? null : Number(line.yieldFactor),
         cookedGrams: line.cookedGrams === null ? null : Number(line.cookedGrams),
@@ -741,7 +822,45 @@ export class RecipeNutritionService {
   private uncoveredLine(
     ingredient: NutritionRevisionRecord['ingredients'][number],
     reason: string,
+    aiEstimate?: RecipeNutritionReviewEstimateSuggestion['ingredientEstimates'][number],
   ): EstimateLine {
+    const aiNutrients = aiEstimate
+      ? aiLineNutrients(
+          aiEstimate,
+          REVIEW_NUTRITION_METRICS.map((definition) => definition.metric),
+        )
+      : [];
+    if (aiEstimate && aiNutrients.length) {
+      return {
+        id: null,
+        recipeIngredientId: ingredient.id,
+        ingredientId: ingredient.ingredientId,
+        position: ingredient.position,
+        displayName: ingredient.displayName,
+        origin: NutritionValueOrigin.AI_ESTIMATED,
+        normalizedRawGrams: null,
+        edibleRawGrams: null,
+        yieldFactor: null,
+        cookedGrams: null,
+        nutrients: aiNutrients,
+        sourceVersions: [],
+        assumptions: [
+          {
+            code: reason,
+            message: 'Ingredient could not be fully covered by reviewed food data.',
+            origin: NutritionValueOrigin.CANONICAL_CALCULATED,
+          },
+          {
+            code: 'AI_INGREDIENT_ESTIMATE',
+            message: aiEstimate.assumption,
+            origin: NutritionValueOrigin.AI_ESTIMATED,
+          },
+        ],
+        confidence: round(aiEstimate.confidence, 4),
+        uncertainty: { uncovered: true, aiEstimated: true },
+        uncoveredReason: reason,
+      };
+    }
     return {
       id: null,
       recipeIngredientId: ingredient.id,
@@ -784,7 +903,9 @@ export class RecipeNutritionService {
 function normalizeMass(
   amount: number,
   unit: string,
-  profile: Awaited<ReturnType<RecipeNutritionRepository['findNutritionInputs']>>['profiles'][number],
+  profile: Awaited<
+    ReturnType<RecipeNutritionRepository['findNutritionInputs']>
+  >['profiles'][number],
 ): number | null {
   const normalizedUnit = unit.trim().toLowerCase();
   const direct = MASS_UNITS.get(normalizedUnit);
@@ -800,12 +921,16 @@ function normalizeMass(
 
 function positions(value: Prisma.JsonValue): number[] {
   return Array.isArray(value)
-    ? value.filter((item): item is number => typeof item === 'number' && Number.isInteger(item) && item >= 0)
+    ? value.filter(
+        (item): item is number => typeof item === 'number' && Number.isInteger(item) && item >= 0,
+      )
     : [];
 }
 
 function bestYield(
-  values: Awaited<ReturnType<RecipeNutritionRepository['findNutritionInputs']>>['methods'][number]['yields'],
+  values: Awaited<
+    ReturnType<RecipeNutritionRepository['findNutritionInputs']>
+  >['methods'][number]['yields'],
   ingredientId: string,
 ): { factor: number; sourceCode: string; sourceVersion: string; sourceRecordId: string } | null {
   const exact = values.find((value) => value.ingredientId === ingredientId);
@@ -822,7 +947,9 @@ function bestYield(
 }
 
 function bestRetention(
-  values: Awaited<ReturnType<RecipeNutritionRepository['findNutritionInputs']>>['methods'][number]['retentions'],
+  values: Awaited<
+    ReturnType<RecipeNutritionRepository['findNutritionInputs']>
+  >['methods'][number]['retentions'],
   nutrientId: string,
   nutrientCode: string,
   aiSuggestion: RecipeNutritionFallbackSuggestion | null,
@@ -835,7 +962,9 @@ function bestRetention(
       confidence: 0.95,
     };
   }
-  const ai = aiSuggestion?.retentionFactors.find((suggestion) => suggestion.nutrientCode === nutrientCode);
+  const ai = aiSuggestion?.retentionFactors.find(
+    (suggestion) => suggestion.nutrientCode === nutrientCode,
+  );
   return ai
     ? {
         factor: ai.factor,
@@ -866,13 +995,9 @@ function aggregate(lines: EstimateLine[], divisor: number): NutrientAmount[] {
         ? NutritionValueOrigin.AI_ESTIMATED
         : NutritionValueOrigin.CANONICAL_CALCULATED;
     current.min =
-      current.min === null || nutrient.min === null
-        ? null
-        : current.min + nutrient.min / divisor;
+      current.min === null || nutrient.min === null ? null : current.min + nutrient.min / divisor;
     current.max =
-      current.max === null || nutrient.max === null
-        ? null
-        : current.max + nutrient.max / divisor;
+      current.max === null || nutrient.max === null ? null : current.max + nutrient.max / divisor;
   }
   return [...totals.values()].map((nutrient) => ({
     ...nutrient,
@@ -888,6 +1013,38 @@ function average(values: number[]): number {
 
 function validConfidence(value: number): boolean {
   return Number.isFinite(value) && value >= 0 && value <= 1;
+}
+
+const AI_ESTIMATE_SPREAD = 0.3;
+
+/** Converts an AI whole-line estimate into AI_ESTIMATED nutrient amounts for the requested metrics only. */
+function aiLineNutrients(
+  estimate: RecipeNutritionReviewEstimateSuggestion['ingredientEstimates'][number],
+  metrics: ReadonlyArray<(typeof REVIEW_NUTRITION_METRICS)[number]['metric']>,
+): NutrientAmount[] {
+  return REVIEW_NUTRITION_METRICS.flatMap((definition) => {
+    const amount = estimate[definition.metric];
+    if (
+      !metrics.includes(definition.metric) ||
+      amount === null ||
+      !Number.isFinite(amount) ||
+      amount < 0
+    ) {
+      return [];
+    }
+    return [
+      {
+        nutrientCode: definition.nutrientCode,
+        nutrientName: definition.nutrientName,
+        unit: definition.unit,
+        amount: round(amount),
+        origin: NutritionValueOrigin.AI_ESTIMATED,
+        confidence: round(estimate.confidence, 4),
+        min: round(amount * (1 - AI_ESTIMATE_SPREAD)),
+        max: round(amount * (1 + AI_ESTIMATE_SPREAD)),
+      },
+    ];
+  });
 }
 
 function validateAiSuggestion(

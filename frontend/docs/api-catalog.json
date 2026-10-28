@@ -1,11 +1,11 @@
 {
   "$generated": "scripts/sync-swagger.mjs — không sửa tay",
   "source": "../backend/openapi.json",
-  "generatedAt": "2026-10-27T16:25:08.323Z",
+  "generatedAt": "2026-10-28T10:19:43.513Z",
   "stats": {
-    "operations": 186,
+    "operations": 189,
     "groups": 42,
-    "schemas": 164
+    "schemas": 166
   },
   "operations": [
     {
@@ -5894,6 +5894,84 @@
         "200": "RecipeNutritionStatusResponse",
         "401": "ErrorResponse",
         "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/api/v1/admin/content-review/{id}/nutrition",
+      "group": "Content Review Admin",
+      "summary": "Reviewer nutrition panel for a submitted recipe revision",
+      "operationId": "getRecipeNutritionReviewPanel",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "200": "RecipeNutritionReviewPanelResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/v1/admin/content-review/{id}/nutrition",
+      "group": "Content Review Admin",
+      "summary": "Reviewer sets or clears per-serving nutrition overrides",
+      "operationId": "updateRecipeNutritionReviewOverrides",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": {
+        "schema": {
+          "$ref": "RecipeNutritionReviewOverrideRequest"
+        },
+        "required": true
+      },
+      "responses": {
+        "200": "RecipeNutritionReviewPanelResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/api/v1/admin/content-review/{id}/nutrition/recalculate",
+      "group": "Content Review Admin",
+      "summary": "Reviewer recalculates nutrition (\"AI tính lại\")",
+      "operationId": "recalculateRecipeNutritionReview",
+      "params": [
+        {
+          "in": "path",
+          "name": "id",
+          "required": true,
+          "type": "string"
+        }
+      ],
+      "request": null,
+      "responses": {
+        "202": "RecipeNutritionReviewPanelResponse",
+        "400": "ErrorResponse",
+        "401": "ErrorResponse",
+        "403": "ErrorResponse",
+        "404": "ErrorResponse",
+        "409": "ErrorResponse",
+        "423": "ErrorResponse"
       }
     },
     {

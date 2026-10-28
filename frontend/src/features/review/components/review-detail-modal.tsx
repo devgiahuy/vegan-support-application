@@ -24,8 +24,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { PostType } from '@/common/enums';
-import { useAdminContentReviewDetailQuery } from '../queries/review.queries';
+import {
+  useAdminContentReviewDetailQuery,
+  useReviewNutritionPanelQuery,
+} from '../queries/review.queries';
 import { VideoPreviewPlayer } from './video-preview-player';
+import { ReviewNutritionPanel } from './review-nutrition-panel';
 import { ReviewDecisionEnum } from '../types/content-review.model';
 
 interface ReviewDetailModalProps {
@@ -45,6 +49,10 @@ export function ReviewDetailModal({
     revisionId,
     open && Boolean(revisionId)
   );
+  const isRecipe = data?.type === PostType.RECIPE;
+  // Dùng chung cache với ReviewNutritionPanel: chỉ cho phê duyệt khi đủ 5 chỉ số
+  const nutritionQuery = useReviewNutritionPanelQuery(revisionId, open && isRecipe);
+  const nutritionBlocksApproval = isRecipe && !nutritionQuery.data?.canApprove;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -269,6 +277,9 @@ export function ReviewDetailModal({
                 </div>
               )}
 
+              {/* Dinh dưỡng do hệ thống tính khi nộp; người duyệt xác nhận/sửa trước khi duyệt */}
+              {isRecipe && <ReviewNutritionPanel revisionId={revisionId} />}
+
               {/* Nội dung bài viết đầy đủ */}
               {data.body && (
                 <div className="space-y-2">
@@ -304,6 +315,12 @@ export function ReviewDetailModal({
 
         {/* Thanh công cụ ra quyết định */}
         <div className="pt-3 border-t flex flex-wrap items-center justify-between gap-2">
+          {data?.canDecide && nutritionBlocksApproval && (
+            <div className="flex items-center gap-1.5 text-xs text-destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <span>Cần đủ 5 chỉ số dinh dưỡng mỗi khẩu phần trước khi phê duyệt.</span>
+            </div>
+          )}
           {!data?.canDecide && data && (
             <div className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
               <AlertTriangle className="h-4 w-4" />
@@ -339,6 +356,12 @@ export function ReviewDetailModal({
                   type="button"
                   size="sm"
                   onClick={() => onDecide(ReviewDecisionEnum.APPROVE)}
+                  disabled={nutritionBlocksApproval}
+                  title={
+                    nutritionBlocksApproval
+                      ? 'Cần đủ 5 chỉ số dinh dưỡng trước khi phê duyệt'
+                      : undefined
+                  }
                   className="rounded-xl text-xs gap-1.5 font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
                 >
                   <Check className="h-3.5 w-3.5" /> Phê duyệt
