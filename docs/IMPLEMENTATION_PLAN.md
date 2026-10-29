@@ -1,6 +1,6 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.15
+**Version:** 4.16
 
 **Updated:** 2026-10-29
 
@@ -256,7 +256,7 @@ User-approved 2026-10-25 extension: use a public named allergen catalog for expl
 
 #### BL-05.1 — Recipe nutrition on submit and reviewer confirmation (user-approved 2026-10-28)
 
-1. Authors no longer enter nutrition. Client-supplied `recipe.nutrition` is ignored; draft revisions carry null nutrition and are not meal-planner eligible.
+1. Superseded by BL-05.2 on 2026-10-29 (authors may enter nutrition again). Draft revisions are not meal-planner eligible.
 2. Submitting a recipe revision calculates a canonical estimate (BL-05 steps 1–3) and attaches it to that pending revision. When reviewed data is complete, AI is not called.
 3. Insufficient data (free-text ingredient, missing canonical profile or any of the five review metrics, unit conversion unavailable, or a step that changes ingredients without a cooking method) never blocks submission. It queues one asynchronous AI job that sees the whole recipe and may suggest missing cooking methods, retention factors and whole-line estimates for the missing metrics. The job makes 1 attempt plus 3 automatic retries after 1, 5 and 15 minutes, then becomes `FAILED`; a startup sweep resumes interrupted jobs. A job that finishes after the revision is decided is discarded.
 4. Recipe AI calls in this pipeline are system-paid: they never consume any user quota or credit, and every call is traced as a `NUTRITION` AI governance event.
@@ -264,6 +264,18 @@ User-approved 2026-10-25 extension: use a public named allergen catalog for expl
 6. A recipe revision can be approved only when all five values are present, even while a job runs or after it failed. A metric missing on any ingredient line is missing; partial sums are never presented as totals. Approval writes the final values into the revision's recipe detail used by cards and the meal planner, and cancels active jobs.
 7. Editing a published recipe creates a new revision that is recalculated from scratch on submit and must be reviewed again. Values approved or overridden for the previous revision are shown for reference only and are never carried over.
 8. AI suggestions apply only to that revision's estimate and remain labelled `AI_ESTIMATED`. They are never written to canonical ingredient data (`IngredientFoodProfile`, nutrient values, factors). Numbers become official for the recipe only through reviewer approval.
+
+#### BL-05.2 — Author-entered nutrition and trusted-author recipe publication (user-approved 2026-10-29)
+
+Agreed by the user with team member Ngô Gia Huy; refines BL-05.1.
+
+1. The recipe form shows six per-serving fields: calories, protein, carbohydrate, fat, fiber and vitamin B12. The revision stores exactly what the author typed (`authorNutrition`) as `USER_PROVIDED` provenance.
+2. Members may leave any field blank. On submit, typed values are kept and only blank metrics are calculated (BL-05.1 pipeline). The system estimate is still computed for comparison, including the AI gap-filling job when reviewed data is insufficient. Review still requires the five metrics of BL-05.1; vitamin B12 is optional, stored when typed and never estimated by AI.
+3. Reviewer precedence per metric: reviewer override > author value > system estimate. The panel shows the author value, the system value and a warning when they differ by more than 30% of the system value. Clearing an override returns to the author value when present.
+4. Approved Contributors (role and active profile authorised by the backend; all Contributors have the same permission) and Admins must declare all six values before a recipe can be submitted (`RECIPE_NUTRITION_REQUIRED`). Their recipe revision — including edits of a published recipe — is then published immediately with an audited moderation action, without the review queue. This is a user-approved exception to BL-06 for recipes only; articles and videos still go through review.
+5. If automated moderation flags a trusted author's recipe, it is not auto-published and waits in the Admin queue.
+6. Auto-published recipes store a canonical-only reference estimate (no AI call). The author-declared values become the published values.
+7. Editors prefill only the author's own typed values, so values calculated or overridden for an earlier revision are never carried into a new revision (BL-05.1 rule 7 still holds).
 
 ### BL-06 — Content and video review lifecycle
 
@@ -586,6 +598,8 @@ A phase is complete only when:
 | Phase 2 ideas are forgotten or accidentally claimed READY | Dedicated roadmap plus explicit status taxonomy |
 
 ## 13. Change record
+
+- **4.16 — 2026-10-29:** User approves BL-05.2 (agreed with Ngô Gia Huy): six optional author nutrition fields for Members (typed values kept, blanks calculated, >30% deviation warning for reviewers), six required fields for approved Contributors/Admins whose recipes and recipe edits are published immediately unless automated moderation flags them, canonical-only reference estimate for auto-published recipes; articles/videos unchanged.
 
 - **4.15 — 2026-10-29:** User approves shopping-gap matching of free-text pantry items by exact canonical name/approved alias, excluding expired pantry items from availability, and auto-linking exact matches on manual pantry creation (BL-12 rule 9). No migration of existing items.
 - **4.14 — 2026-10-28:** User approves BL-05.1: recipe nutrition calculated on submit, async system-paid AI gap filling (1 + 3 retries at 1/5/15 min, startup sweep, quota-free, governance-traced), reviewer panel with five metrics (B12 excluded), audited overrides kept across recalculation, approval gated on five values and written to recipe detail, no carry-over between revisions, and no AI write to canonical food data.

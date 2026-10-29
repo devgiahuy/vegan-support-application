@@ -36,6 +36,8 @@ import {
   FieldError,
   FieldGroup,
   FieldLabel,
+  FieldLegend,
+  FieldSet,
   FieldTitle,
 } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -48,12 +50,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { CategoryType, RecipeDifficulty } from '@/common/enums';
+import { CategoryType, RecipeDifficulty, UserRole } from '@/common/enums';
+import { useAuthStore } from '@/store/useAuthStore';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
 import { flattenCategories } from '@/features/category/utils/flatten-categories';
 import { ImageUploader } from '@/features/post/components/image-uploader';
 import { RecipeNutritionPreviewDrawer } from '@/features/recipe-nutrition/components/recipe-nutrition-preview-drawer';
-import { recipeFormSchema, type RecipeFormValues } from '../schemas/recipe-form.schema';
+import {
+  buildRecipeFormSchema,
+  RECIPE_NUTRITION_FIELDS,
+  type RecipeFormValues,
+} from '../schemas/recipe-form.schema';
 import type { AiRecipeDraftSeed } from './ai-recipe-draft-assistant';
 import { RecipeIngredientRow } from './recipe-ingredient-row';
 import {
@@ -139,8 +146,16 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
       [categoryQuery.data]
     );
 
+    // Contributor/Admin: 6 chỉ số bắt buộc và công thức xuất bản ngay khi đăng (backend kiểm tra lại role).
+    const userRole = useAuthStore((state) => state.user?.role);
+    const requireNutrition = userRole === UserRole.ADMIN || userRole === UserRole.CONTRIBUTOR;
+    const formSchema = React.useMemo(
+      () => buildRecipeFormSchema({ requireNutrition }),
+      [requireNutrition]
+    );
+
     const form = useForm<RecipeFormValues>({
-      resolver: zodResolver(recipeFormSchema),
+      resolver: zodResolver(formSchema),
       shouldFocusError: false,
       defaultValues: {
         title: initialValues?.title || '',
@@ -158,6 +173,7 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
         steps: initialValues?.steps?.length
           ? initialValues.steps
           : [{ stepNumber: 1, instruction: '' }],
+        nutrition: initialValues?.nutrition ?? {},
       },
     });
 
@@ -207,7 +223,7 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
 
     const values = form.watch();
     // Tính lại mỗi lần render: `watch()` có thể trả cùng tham chiếu nên không memo theo `values`.
-    const liveIssues = issuesFromValues(values);
+    const liveIssues = issuesFromValues(values, { requireNutrition });
     const submittedIssues = collectFieldIssues(form.formState.errors);
     const categoryName = flatCategories.find((c) => c.id === values.categoryId)?.name;
 
@@ -731,27 +747,63 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
                     </RadioGroup>
                   </Field>
 
-                  <div className="flex flex-col gap-3 rounded-xl border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="flex flex-col gap-1">
-                      <p className="text-sm font-medium">Dinh dưỡng được tính tự động</p>
-                      <p className="text-xs text-pretty text-muted-foreground">
-                        Sau khi lưu, hệ thống đối chiếu nguyên liệu đã liên kết để ước tính năng
-                        lượng, vi chất và cảnh báo dị ứng. Bạn không cần nhập tay.
-                      </p>
+                  <FieldSet id={fieldDomId('nutrition')} className="rounded-xl border p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex flex-col gap-1">
+                        <FieldLegend variant="label">
+                          Dinh dưỡng mỗi khẩu phần
+                          {requireNutrition ? ' *' : ' (không bắt buộc)'}
+                        </FieldLegend>
+                        <FieldDescription className="text-xs text-pretty">
+                          {requireNutrition
+                            ? 'Bắt buộc nhập đủ 6 chỉ số. Với tài khoản Contributor/Admin, công thức được xuất bản ngay sau khi đăng.'
+                            : 'Để trống ô nào thì hệ thống tự tính ô đó từ nguyên liệu khi gửi duyệt. Ban biên tập kiểm tra lại trước khi xuất bản.'}
+                        </FieldDescription>
+                      </div>
+                      {postId && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="shrink-0"
+                          onClick={() => setPreviewDrawerOpen(true)}
+                        >
+                          <Eye data-icon="inline-start" />
+                          Xem ước tính
+                        </Button>
+                      )}
                     </div>
-                    {postId && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="shrink-0"
-                        onClick={() => setPreviewDrawerOpen(true)}
-                      >
-                        <Eye data-icon="inline-start" />
-                        Xem ước tính
-                      </Button>
-                    )}
-                  </div>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                      {RECIPE_NUTRITION_FIELDS.map((field) => {
+                        const error = errors.nutrition?.[field.key];
+                        const path = `nutrition.${field.key}` as const;
+                        return (
+                          <Field key={field.key} data-invalid={Boolean(error)}>
+                            <FieldLabel htmlFor={fieldDomId(path)}>
+                              {field.label} ({field.unit})
+                            </FieldLabel>
+                            <Input
+                              id={fieldDomId(path)}
+                              type="number"
+                              inputMode="decimal"
+                              min={0}
+                              step={field.integer ? 1 : 0.1}
+                              placeholder={requireNutrition ? 'Bắt buộc' : 'Tự tính'}
+                              aria-invalid={Boolean(error)}
+                              className="tabular-nums"
+                              {...form.register(path, {
+                                setValueAs: (raw: unknown) =>
+                                  raw === '' || raw === null || raw === undefined
+                                    ? undefined
+                                    : Number(raw),
+                              })}
+                            />
+                            <FieldError errors={[error]} />
+                          </Field>
+                        );
+                      })}
+                    </div>
+                  </FieldSet>
                 </FieldGroup>
               )}
 

@@ -2183,6 +2183,8 @@ model RecipeDetail {
   fiberGrams          Float?           @map("fiber_grams")
   vitaminB12Mcg       Float?           @map("vitamin_b12_mcg")
   mealPlannerEligible Boolean          @default(false) @map("meal_planner_eligible")
+  /// Per-serving values the author typed for this revision (provenance; columns above hold final values once published).
+  authorNutrition     Json?            @map("author_nutrition")
   allergenCodes       Json             @default("[]") @map("allergen_codes")
   traditionWarnings   Json             @default("[]") @map("tradition_warnings")
   revision            PostRevision     @relation(fields: [revisionId], references: [id], onDelete: NoAction, onUpdate: NoAction)

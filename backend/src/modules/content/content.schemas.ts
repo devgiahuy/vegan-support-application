@@ -103,7 +103,7 @@ const nutritionInputSchema = z
   .strict()
   .default({})
   .describe(
-    'Deprecated 2026-10-28 and ignored: authors no longer supply nutrition. It is calculated on submit and written to the revision only when a reviewer approves.',
+    'Per-serving values typed by the author (2026-10-29). Optional for Members: missing metrics are calculated on submit and the revision is reviewed. Contributors/Admins must provide all six before submit; their recipe is then published immediately unless automated moderation flags it.',
   );
 
 const recipeIngredientInputSchema = z
@@ -404,6 +404,19 @@ const recipeOutputSchema = z
         vitaminB12Mcg: z.number().nonnegative().nullable(),
       })
       .strict(),
+    authorNutrition: z
+      .object({
+        calories: z.number().nonnegative().nullable(),
+        proteinGrams: z.number().nonnegative().nullable(),
+        carbsGrams: z.number().nonnegative().nullable(),
+        fatGrams: z.number().nonnegative().nullable(),
+        fiberGrams: z.number().nonnegative().nullable(),
+        vitaminB12Mcg: z.number().nonnegative().nullable(),
+      })
+      .strict()
+      .describe(
+        'Values the author typed for this revision (2026-10-29); `nutrition` holds the final published values. Editors prefill from this so previously calculated values are not carried into a new revision.',
+      ),
     mealPlannerEligible: z.boolean(),
     allergenCodes: z.array(z.string()),
     traditionWarnings: z.array(traditionWarningSchema),

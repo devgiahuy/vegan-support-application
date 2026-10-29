@@ -1,5 +1,9 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Dinh dưỡng do tác giả nhập, Contributor/Admin tự xuất bản công thức — Updated 2026-10-29
+
+Form công thức có 6 ô dinh dưỡng mỗi khẩu phần: user thường không bắt buộc (ô trống được hệ thống tính khi gửi duyệt), Contributor/Admin bắt buộc đủ 6 và công thức (kể cả bản sửa) được xuất bản ngay, trừ khi bị bộ lọc tự động gắn cờ. Panel duyệt hiện số tác giả nhập, số hệ thống và cảnh báo lệch >30%. tsc, 735 test, build pass. Mobile chưa cập nhật.
+
 ## Dinh dưỡng công thức tính khi gửi duyệt, người duyệt xác nhận — Updated 2026-10-28
 
 Tác giả không còn nhập dinh dưỡng (bỏ khỏi form, schema và request DTO; backend cũng bỏ qua). Khi gửi duyệt, backend tính từ dữ liệu chuẩn và chạy job AI nền nếu thiếu dữ liệu. Modal duyệt bài có panel "Dinh dưỡng chờ duyệt": 5 chỉ số mỗi khẩu phần kèm nguồn (Dữ liệu chuẩn / AI ước tính / Người duyệt sửa), độ tin cậy, nguyên liệu chưa tính được, trạng thái job (tự làm mới 10 giây/lần khi job đang chạy), nút "AI tính lại", sửa tay có lý do, bỏ sửa tay, giá trị bản trước (chỉ tham khảo) và lịch sử chỉnh sửa. Nút "Phê duyệt" bị khoá khi còn chỉ số trống; xử lý `RECIPE_NUTRITION_INCOMPLETE`. Feature `features/review` (DTO/Model/Mapper/API/Query + mapper test). tsc, 68 files/730+ tests, build pass; browser kiểm panel với backend local. Mobile chưa có panel duyệt dinh dưỡng.

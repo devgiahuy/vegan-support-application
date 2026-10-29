@@ -10,7 +10,7 @@ import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { RecipeDifficulty } from '@/common/enums';
 import { SafeImage } from '@/components/shared/safe-image';
-import type { RecipeFormValues } from '../schemas/recipe-form.schema';
+import { RECIPE_NUTRITION_FIELDS, type RecipeFormValues } from '../schemas/recipe-form.schema';
 import {
   RECIPE_EDITOR_STEPS,
   issueLocation,
@@ -320,6 +320,21 @@ export function RecipeEditorReview({
             <dt className="text-muted-foreground">Độ khó:</dt>
             <dd>{difficultyLabel(values.difficulty)}</dd>
           </div>
+        </dl>
+        <dl className="mt-3 grid grid-cols-2 gap-x-5 gap-y-1 text-sm sm:grid-cols-3">
+          {RECIPE_NUTRITION_FIELDS.map((field) => {
+            const value = values.nutrition?.[field.key];
+            return (
+              <div key={field.key} className="flex gap-1">
+                <dt className="text-muted-foreground">{field.label}:</dt>
+                <dd className="tabular-nums">
+                  {typeof value === 'number'
+                    ? `${value.toLocaleString('vi-VN')} ${field.unit}`
+                    : 'Tự tính'}
+                </dd>
+              </div>
+            );
+          })}
         </dl>
       </ReviewSection>
     </div>

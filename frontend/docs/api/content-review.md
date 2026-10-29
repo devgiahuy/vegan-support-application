@@ -6,7 +6,7 @@ Submit một immutable draft revision để Admin review
 - operationId: `submitPostRevision`
 - Params: `path:id* (string)`
 - Request: `SubmitPostRequest` (required)
-- Responses: `200` → PostResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `410` → ErrorResponse, `423` → ErrorResponse
+- Responses: `200` → PostResponse, `400` → ErrorResponse, `401` → ErrorResponse, `403` → ErrorResponse, `404` → ErrorResponse, `409` → ErrorResponse, `410` → ErrorResponse, `422` → ErrorResponse, `423` → ErrorResponse
 
 ## GET `/api/v1/posts/{id}/review-history`
 Author/Admin xem status và review history

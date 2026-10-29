@@ -1,5 +1,13 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-29] — Dinh dưỡng do tác giả nhập và Contributor/Admin tự xuất bản công thức
+
+- **Yêu cầu**: Người dùng chốt với Ngô Gia Huy: form công thức có lại 6 ô dinh dưỡng; user thường không bắt buộc (thiếu thì hệ thống tính), Contributor bắt buộc và đăng xong là xuất bản. Đã hỏi và chốt: giữ số đã nhập, chỉ tính ô thiếu; vẫn tính số hệ thống để đối chiếu, cảnh báo khi lệch >30%; Admin như Contributor; sửa bài đã xuất bản cũng tự xuất bản; bị bộ lọc tự động gắn cờ thì vào hàng chờ Admin; chỉ áp dụng cho công thức; bài tự xuất bản chỉ lưu bản ước tính từ dữ liệu chuẩn (không gọi AI); duyệt bài user thường vẫn 5 chỉ số, B12 tuỳ chọn.
+- **Backend**: `RecipeDetail.authorNutrition`; response thêm `recipe.authorNutrition`, sửa lỗi 0 bị trả về null; submit kiểm tra 6 chỉ số với Contributor/Admin (`422 RECIPE_NUTRITION_REQUIRED`), policy tự xuất bản (ghi `ModerationAction` APPROVE `autoPublished`); panel duyệt thêm `author`, `deviationPercent`, `deviationWarning`, thứ tự ưu tiên sửa tay > tác giả > hệ thống.
+- **Frontend**: 6 ô ở bước Phân loại (bắt buộc với CONTRIBUTOR/ADMIN), bước Xem lại hiện số đã nhập, form sửa điền sẵn từ `authorNutrition`; trạng thái thật từ phản hồi submit (hộp thoại/toast "Đã xuất bản"), nhãn nút theo role; panel duyệt hiện số tác giả nhập, số hệ thống và cảnh báo lệch. Mapper/schema test mới.
+- **Kiểm chứng**: Backend lint/typecheck/build/OpenAPI; smoke trên DB Mongo tạm (AI giả lập) cho các nhánh Member/Contributor/Admin/gắn cờ/bài viết. FE tsc, vitest 68 file/735 test, build.
+- **Còn lại**: Form công thức mobile chưa có 6 ô nên Contributor gửi từ mobile sẽ nhận 422.
+
 ## [2026-10-29] — Thực đơn tuần: phân biệt "chưa xác minh được" với vi phạm ràng buộc khi thêm món
 
 - **Yêu cầu**: Người dùng báo chọn món cá nhân "Bún chả" bị báo vi phạm dị ứng dù không dính dị ứng. Trên dữ liệu thật, lý do duy nhất là `UNRESOLVED_INGREDIENT`: "bún" và "chả chay" là nguyên liệu Tự do nên backend không kiểm tra được. Người dùng chọn giữ việc chặn món, báo lỗi rõ ràng, không tự ghép tên, không migrate và cảnh báo trước trong form.

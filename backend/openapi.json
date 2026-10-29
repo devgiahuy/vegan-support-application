@@ -3644,7 +3644,7 @@
                     },
                     "default": {},
                     "additionalProperties": false,
-                    "description": "Deprecated 2026-10-28 and ignored: authors no longer supply nutrition. It is calculated on submit and written to the revision only when a reviewer approves."
+                    "description": "Per-serving values typed by the author (2026-10-29). Optional for Members: missing metrics are calculated on submit and the revision is reviewed. Contributors/Admins must provide all six before submit; their recipe is then published immediately unless automated moderation flags it."
                   },
                   "ingredients": {
                     "type": "array",
@@ -4174,7 +4174,7 @@
                     },
                     "default": {},
                     "additionalProperties": false,
-                    "description": "Deprecated 2026-10-28 and ignored: authors no longer supply nutrition. It is calculated on submit and written to the revision only when a reviewer approves."
+                    "description": "Per-serving values typed by the author (2026-10-29). Optional for Members: missing metrics are calculated on submit and the revision is reviewed. Contributors/Admins must provide all six before submit; their recipe is then published immediately unless automated moderation flags it."
                   },
                   "ingredients": {
                     "type": "array",
@@ -4908,6 +4908,63 @@
                         ],
                         "additionalProperties": false
                       },
+                      "authorNutrition": {
+                        "type": "object",
+                        "properties": {
+                          "calories": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "proteinGrams": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "carbsGrams": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "fatGrams": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "fiberGrams": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0
+                          },
+                          "vitaminB12Mcg": {
+                            "type": [
+                              "number",
+                              "null"
+                            ],
+                            "minimum": 0
+                          }
+                        },
+                        "required": [
+                          "calories",
+                          "proteinGrams",
+                          "carbsGrams",
+                          "fatGrams",
+                          "fiberGrams",
+                          "vitaminB12Mcg"
+                        ],
+                        "additionalProperties": false,
+                        "description": "Values the author typed for this revision (2026-10-29); `nutrition` holds the final published values. Editors prefill from this so previously calculated values are not carried into a new revision."
+                      },
                       "mealPlannerEligible": {
                         "type": "boolean"
                       },
@@ -5193,6 +5250,7 @@
                       "cookTimeMinutes",
                       "difficulty",
                       "nutrition",
+                      "authorNutrition",
                       "mealPlannerEligible",
                       "allergenCodes",
                       "traditionWarnings",
@@ -6189,6 +6247,63 @@
                           ],
                           "additionalProperties": false
                         },
+                        "authorNutrition": {
+                          "type": "object",
+                          "properties": {
+                            "calories": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "proteinGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "carbsGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fatGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fiberGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "vitaminB12Mcg": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "calories",
+                            "proteinGrams",
+                            "carbsGrams",
+                            "fatGrams",
+                            "fiberGrams",
+                            "vitaminB12Mcg"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Values the author typed for this revision (2026-10-29); `nutrition` holds the final published values. Editors prefill from this so previously calculated values are not carried into a new revision."
+                        },
                         "mealPlannerEligible": {
                           "type": "boolean"
                         },
@@ -6474,6 +6589,7 @@
                         "cookTimeMinutes",
                         "difficulty",
                         "nutrition",
+                        "authorNutrition",
                         "mealPlannerEligible",
                         "allergenCodes",
                         "traditionWarnings",
@@ -7555,6 +7671,63 @@
                           ],
                           "additionalProperties": false
                         },
+                        "authorNutrition": {
+                          "type": "object",
+                          "properties": {
+                            "calories": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "proteinGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "carbsGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fatGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fiberGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "vitaminB12Mcg": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "calories",
+                            "proteinGrams",
+                            "carbsGrams",
+                            "fatGrams",
+                            "fiberGrams",
+                            "vitaminB12Mcg"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Values the author typed for this revision (2026-10-29); `nutrition` holds the final published values. Editors prefill from this so previously calculated values are not carried into a new revision."
+                        },
                         "mealPlannerEligible": {
                           "type": "boolean"
                         },
@@ -7840,6 +8013,7 @@
                         "cookTimeMinutes",
                         "difficulty",
                         "nutrition",
+                        "authorNutrition",
                         "mealPlannerEligible",
                         "allergenCodes",
                         "traditionWarnings",
@@ -8863,6 +9037,63 @@
                           ],
                           "additionalProperties": false
                         },
+                        "authorNutrition": {
+                          "type": "object",
+                          "properties": {
+                            "calories": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "proteinGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "carbsGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fatGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "fiberGrams": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            },
+                            "vitaminB12Mcg": {
+                              "type": [
+                                "number",
+                                "null"
+                              ],
+                              "minimum": 0
+                            }
+                          },
+                          "required": [
+                            "calories",
+                            "proteinGrams",
+                            "carbsGrams",
+                            "fatGrams",
+                            "fiberGrams",
+                            "vitaminB12Mcg"
+                          ],
+                          "additionalProperties": false,
+                          "description": "Values the author typed for this revision (2026-10-29); `nutrition` holds the final published values. Editors prefill from this so previously calculated values are not carried into a new revision."
+                        },
                         "mealPlannerEligible": {
                           "type": "boolean"
                         },
@@ -9148,6 +9379,7 @@
                         "cookTimeMinutes",
                         "difficulty",
                         "nutrition",
+                        "authorNutrition",
                         "mealPlannerEligible",
                         "allergenCodes",
                         "traditionWarnings",
@@ -10505,7 +10737,7 @@
                         },
                         "default": {},
                         "additionalProperties": false,
-                        "description": "Deprecated 2026-10-28 and ignored: authors no longer supply nutrition. It is calculated on submit and written to the revision only when a reviewer approves."
+                        "description": "Per-serving values typed by the author (2026-10-29). Optional for Members: missing metrics are calculated on submit and the revision is reviewed. Contributors/Admins must provide all six before submit; their recipe is then published immediately unless automated moderation flags it."
                       },
                       "ingredients": {
                         "type": "array",
@@ -21312,6 +21544,26 @@
                       ],
                       "additionalProperties": false
                     },
+                    "author": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0,
+                      "description": "Per-serving value the author typed (USER_PROVIDED); null when left blank."
+                    },
+                    "deviationPercent": {
+                      "type": [
+                        "number",
+                        "null"
+                      ],
+                      "minimum": 0,
+                      "description": "|author − system estimate| / system estimate × 100; null without both values."
+                    },
+                    "deviationWarning": {
+                      "type": "boolean",
+                      "description": "True when deviationPercent exceeds 30 (reviewer should double-check)."
+                    },
                     "override": {
                       "type": [
                         "object",
@@ -21385,6 +21637,9 @@
                     "metric",
                     "unit",
                     "estimate",
+                    "author",
+                    "deviationPercent",
+                    "deviationWarning",
                     "override",
                     "finalValue",
                     "finalOrigin"
@@ -38537,7 +38792,7 @@
           "Content Review"
         ],
         "summary": "Submit một immutable draft revision để Admin review",
-        "description": "Author-only. Revalidates latest version and video media ownership/committed state. Text/metadata moderation may attach a signal and priority, but never approves, rejects, hides, or deletes automatically. For recipes (changed 2026-10-28) the backend calculates a per-revision nutrition estimate from reviewed canonical food data; when data is insufficient (free-text ingredient, missing USDA profile/metric, unit conversion, or a cooking step without a method) it queues a system-paid asynchronous AI gap-filling job (no user quota). Nutrition never blocks submission and is not official until a reviewer approves.",
+        "description": "Author-only. Revalidates latest version and video media ownership/committed state. Text/metadata moderation may attach a signal and priority, but never approves, rejects, hides, or deletes automatically. For recipes (changed 2026-10-28) the backend calculates a per-revision nutrition estimate from reviewed canonical food data; when data is insufficient (free-text ingredient, missing USDA profile/metric, unit conversion, or a cooking step without a method) it queues a system-paid asynchronous AI gap-filling job (no user quota). Nutrition never blocks a Member submission and is not official until a reviewer approves. Changed 2026-10-29: Member-entered per-serving values are kept (USER_PROVIDED) and only missing ones are calculated; the system estimate is still computed for comparison. For RECIPE posts an approved Contributor or an Admin must have declared all six values (calories, proteinGrams, carbsGrams, fatGrams, fiberGrams, vitaminB12Mcg) or the call fails with 422 RECIPE_NUTRITION_REQUIRED (fields.missingMetrics); the revision is then published immediately (also for edits of published recipes) with an audited moderation action, unless automated moderation flags it, in which case it waits in the Admin queue. Auto-published recipes store a canonical-only reference estimate (no AI call). Articles and videos are unchanged.",
         "operationId": "submitPostRevision",
         "security": [
           {
@@ -38760,6 +39015,28 @@
                       "error": {
                         "code": "CONTENT_DELETED",
                         "message": "Content deleted",
+                        "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
+                      }
+                    }
+                  }
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Contributor/Admin recipe is missing declared nutrition (fields.missingMetrics)",
+            "content": {
+              "application/json": {
+                "examples": {
+                  "RECIPE_NUTRITION_REQUIRED": {
+                    "value": {
+                      "success": false,
+                      "error": {
+                        "code": "RECIPE_NUTRITION_REQUIRED",
+                        "message": "Contributor/Admin recipe is missing declared nutrition (fields.missingMetrics)",
                         "requestId": "0781d468-5eb1-4bd0-9671-e4ca33b76462"
                       }
                     }

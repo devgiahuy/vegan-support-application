@@ -1,5 +1,5 @@
 import type { FieldErrors, FieldPath } from 'react-hook-form';
-import { recipeFormSchema, type RecipeFormValues } from '../schemas/recipe-form.schema';
+import { buildRecipeFormSchema, type RecipeFormValues } from '../schemas/recipe-form.schema';
 
 export type RecipeEditorStep = 'basics' | 'ingredients' | 'steps' | 'classify' | 'review';
 export type RecipeContentStep = Exclude<RecipeEditorStep, 'review'>;
@@ -48,7 +48,7 @@ export const STEP_FIELDS: Record<RecipeContentStep, FieldPath<RecipeFormValues>[
   ],
   ingredients: ['ingredients'],
   steps: ['steps'],
-  classify: ['categoryId', 'difficulty'],
+  classify: ['categoryId', 'difficulty', 'nutrition'],
 };
 
 const FIELD_ORDER: string[] = Object.values(STEP_FIELDS).flat();
@@ -113,8 +113,11 @@ export function collectFieldIssues(errors: FieldErrors<RecipeFormValues>): Recip
 }
 
 /** Lỗi tính trực tiếp từ giá trị hiện tại — để bước xem lại báo thiếu trước khi gửi. */
-export function issuesFromValues(values: RecipeFormValues): RecipeFieldIssue[] {
-  const result = recipeFormSchema.safeParse(values);
+export function issuesFromValues(
+  values: RecipeFormValues,
+  options: { requireNutrition: boolean } = { requireNutrition: false }
+): RecipeFieldIssue[] {
+  const result = buildRecipeFormSchema(options).safeParse(values);
   if (result.success) return [];
   return sortIssues(
     result.error.issues.map((issue) => ({

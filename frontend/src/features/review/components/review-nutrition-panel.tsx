@@ -45,7 +45,8 @@ const ORIGIN_BADGE_CLASSES: Record<ReviewNutritionOrigin, string> = {
     'border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300',
   [ReviewNutritionOrigin.VERIFIED_OVERRIDE]:
     'border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-800 dark:bg-sky-950/40 dark:text-sky-300',
-  [ReviewNutritionOrigin.USER_PROVIDED]: 'border-muted bg-muted/40 text-muted-foreground',
+  [ReviewNutritionOrigin.USER_PROVIDED]:
+    'border-violet-200 bg-violet-50 text-violet-700 dark:border-violet-800 dark:bg-violet-950/40 dark:text-violet-300',
   [ReviewNutritionOrigin.UNKNOWN]: 'border-muted bg-muted/40 text-muted-foreground',
 };
 
@@ -144,7 +145,7 @@ function MetricRow({
               Còn trống
             </Badge>
           )}
-          {metric.confidencePercent !== null && !metric.override && (
+          {metric.confidencePercent !== null && !metric.override && metric.authorValue === null && (
             <span className="text-[11px] text-muted-foreground tabular-nums">
               Tin cậy {metric.confidencePercent}%
             </span>
@@ -152,9 +153,37 @@ function MetricRow({
         </div>
         {metric.override && (
           <p className="text-[11px] text-muted-foreground text-pretty">
-            Sửa bởi {metric.override.updatedBy.displayName} lúc {metric.override.formattedUpdatedAt}
-            . Ước tính gốc:{' '}
+            {`Sửa bởi ${metric.override.updatedBy.displayName} lúc ${metric.override.formattedUpdatedAt}. `}
+            {metric.authorValue !== null && (
+              <>
+                Tác giả nhập:{' '}
+                <span className="tabular-nums">{formatValue(metric.authorValue, metric.unit)}</span>
+                {'. '}
+              </>
+            )}
+            Hệ thống tính:{' '}
             <span className="tabular-nums">{formatValue(metric.estimateValue, metric.unit)}</span>
+          </p>
+        )}
+        {!metric.override && metric.authorValue !== null && (
+          <p
+            className={cn(
+              'text-[11px] text-pretty',
+              metric.deviationWarning
+                ? 'font-medium text-amber-700 dark:text-amber-300'
+                : 'text-muted-foreground'
+            )}
+          >
+            {metric.deviationWarning && (
+              <AlertTriangle className="mr-1 inline size-3 align-[-1px]" aria-hidden />
+            )}
+            Hệ thống tính:{' '}
+            <span className="tabular-nums">{formatValue(metric.estimateValue, metric.unit)}</span>
+            {metric.deviationPercent !== null && (
+              <span className="tabular-nums">
+                {` (lệch ${formatNumber(metric.deviationPercent, 1)}%${metric.deviationWarning ? ', nên kiểm tra lại' : ''})`}
+              </span>
+            )}
           </p>
         )}
         {metric.isMissing && metric.partialValue !== null && (
