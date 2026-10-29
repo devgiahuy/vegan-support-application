@@ -1,7 +1,23 @@
 import { RecipeDifficulty } from '@/common/enums';
 import { bodyToSteps } from '../mappers/recipe.mapper';
-import type { RecipeFormValues } from '../schemas/recipe-form.schema';
-import type { Recipe } from '../types/recipe.model';
+import { RECIPE_NUTRITION_FIELDS, type RecipeFormValues } from '../schemas/recipe-form.schema';
+import type { Recipe, RecipeAuthorNutrition } from '../types/recipe.model';
+
+/** Ô để trống → null (backend tự tính); không biến ô trống thành 0. */
+function formNutritionToAuthor(values: RecipeFormValues['nutrition']): RecipeAuthorNutrition {
+  const pick = (key: keyof RecipeAuthorNutrition) => {
+    const value = values?.[key];
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+  };
+  return {
+    calories: pick('calories'),
+    proteinGrams: pick('proteinGrams'),
+    carbsGrams: pick('carbsGrams'),
+    fatGrams: pick('fatGrams'),
+    fiberGrams: pick('fiberGrams'),
+    vitaminB12Mcg: pick('vitaminB12Mcg'),
+  };
+}
 
 /** Chỉ điền thông tin cơ bản còn trống, kể cả khi thời gian được nhập là 0. */
 export function applyDraftBasics(current: RecipeFormValues, draft: Partial<RecipeFormValues>) {
@@ -44,6 +60,7 @@ export function recipeFormToRecipe(values: RecipeFormValues): Partial<Recipe> {
       instruction: st.instruction,
       imageUrl: st.imageUrl || null,
     })),
+    authorNutrition: formNutritionToAuthor(values.nutrition),
   };
 }
 
@@ -100,5 +117,12 @@ export function recipeToFormValues(recipe: Recipe): Partial<RecipeFormValues> {
       unit: ing.unit || 'phần',
     })),
     steps,
+    // Chỉ điền lại số tác giả đã nhập; số hệ thống tính ở bản trước không được mang sang.
+    nutrition: Object.fromEntries(
+      RECIPE_NUTRITION_FIELDS.map((field) => [
+        field.key,
+        recipe.authorNutrition?.[field.key] ?? undefined,
+      ])
+    ),
   };
 }

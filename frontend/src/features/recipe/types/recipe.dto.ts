@@ -58,6 +58,8 @@ export interface RecipeDetailDto extends BasePostDto {
     cookTimeMinutes?: number;
     difficulty?: string;
     nutrition?: NutritionFactDto | null;
+    /** Số tác giả tự nhập (2026-10-29); `nutrition` là số chính thức khi đã xuất bản. */
+    authorNutrition?: NutritionFactDto | null;
     mealPlannerEligible?: boolean;
     allergenCodes?: string[];
     traditionWarnings?: TraditionWarningDto[];
@@ -121,6 +123,15 @@ export interface CreateRecipeRequestDto {
     prepTimeMinutes: number;
     cookTimeMinutes: number;
     difficulty: string;
+    /** Chỉ gửi các chỉ số tác giả đã nhập; thiếu thì backend tự tính khi gửi duyệt. */
+    nutrition?: {
+      calories?: number;
+      proteinGrams?: number;
+      carbsGrams?: number;
+      fatGrams?: number;
+      fiberGrams?: number;
+      vitaminB12Mcg?: number;
+    };
     ingredients: CreateRecipeIngredientInput[];
   };
 }
