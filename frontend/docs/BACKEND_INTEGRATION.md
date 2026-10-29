@@ -1,8 +1,8 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.58
+**Version:** 4.59
 
-**Cập nhật:** 28/10/2026
+**Cập nhật:** 29/10/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
@@ -13,6 +13,21 @@
 ---
 
 ## 1. Source of truth và status
+
+### Pantry free-text matching in shopping gaps — 2026-10-29 (4.59, READY)
+
+User-approved bug fix (report: free-text pantry "Bắp ngọt" 100 g not subtracted from a meal plan needing "Bắp ngọt (hạt)" 250 g). No request/response schema, enum, error code or authorization change; endpoints stay `READY`.
+
+| Method | Endpoint                  | Status  | FE integrated       | Notes                                                                                                                                                                                                                                                                                                                                                       |
+| ------ | ------------------------- | ------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/shopping-lists/preview` | `READY` | Yes (no FE change)  | Confirmed free-text pantry items (`ingredientId` null) now count toward a required ingredient when their normalized text exactly equals its canonical `normalizedName` or an approved alias (canonical name wins). No fuzzy matching. Items with `expiresAt` before today (UTC) no longer count as available. Both cases add a `conversionAssumptions` line |
+| POST   | `/pantry/items`           | `READY` | Yes, web 2026-10-29 | `unmatchedText` that exactly matches an active canonical name or approved alias is stored linked (`ingredientId` set, `unmatchedText` null) and converted with reviewed conversions. Web create form now searches canonical ingredients with the shared `IngredientSuggestions` (aliases, 20/page) instead of a 50-item select                              |
+
+Persistence: none; existing free-text pantry items are not migrated (they are matched at read time). Mobile: no consumer change required.
+
+Verified: backend lint/typecheck/build/OpenAPI; scripted service check with a stubbed repository for the reported case (pantry free-text "Bắp ngọt" 100 g, plan needs 250 g → available 100 g, missing 150 g), plus alias, expired, non-matching and mixed canonical/free-text cases; web tsc and 721 tests. Live Mongo/browser QA not yet recorded.
+
+Changelog 2026-10-29 (4.59): shopping-gap preview matches free-text pantry by exact canonical name/approved alias and skips expired items; pantry create auto-links exact matches; pantry create form uses shared ingredient lookup.
 
 ### Recipe nutrition calculated on submit, confirmed by reviewer — 2026-10-28 (4.58, READY)
 

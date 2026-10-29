@@ -1,8 +1,8 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.14
+**Version:** 4.15
 
-**Updated:** 2026-10-28
+**Updated:** 2026-10-29
 
 **Status:** Approved implementation baseline
 
@@ -337,6 +337,7 @@ Maintenance clarification 2026-10-26: titles and bodies need not be unique. Auto
 6. Meal suggestions use confirmed pantry state and offer multiple candidates.
 7. Shopping gaps are computed only after recipe/custom-meal choice, servings, unit conversion, and confirmed pantry inventory.
 8. Shopping items show required, available, missing, unit, conversion assumptions, and confidence.
+9. A free-text pantry item counts toward a required ingredient only when its normalized text exactly equals the ingredient's canonical name or an approved alias (canonical name wins); there is no fuzzy matching. Pantry items whose expiry date is before today are not counted as available. Manual pantry entry links such exact matches to the canonical ingredient at creation; existing free-text items are matched at read time, not migrated.
 
 ### BL-13 — Behavioral recommendations
 
@@ -586,6 +587,7 @@ A phase is complete only when:
 
 ## 13. Change record
 
+- **4.15 — 2026-10-29:** User approves shopping-gap matching of free-text pantry items by exact canonical name/approved alias, excluding expired pantry items from availability, and auto-linking exact matches on manual pantry creation (BL-12 rule 9). No migration of existing items.
 - **4.14 — 2026-10-28:** User approves BL-05.1: recipe nutrition calculated on submit, async system-paid AI gap filling (1 + 3 retries at 1/5/15 min, startup sweep, quota-free, governance-traced), reviewer panel with five metrics (B12 excluded), audited overrides kept across recalculation, approval gated on five values and written to recipe detail, no carry-over between revisions, and no AI write to canonical food data.
 
 - **4.13 — 2026-10-26:** User clarifies that approved Contributors have review/moderation permissions for submitted community content (recipes, articles, videos) created by Members (excluding self-created content and items flagged with open AI flags or high report counts requiring Admin review). Content review endpoints (`/api/v1/admin/content-review*`) allow both Admin and Contributor roles.

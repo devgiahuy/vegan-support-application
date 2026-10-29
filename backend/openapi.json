@@ -60172,6 +60172,7 @@
           "Pantry"
         ],
         "summary": "Create a confirmed manual pantry item",
+        "description": "When unmatchedText normalizes to exactly the canonical name or an approved alias of an active ingredient, the item is linked to that ingredient (ingredientId set, unmatchedText null) and converted with its reviewed conversions. There is no fuzzy matching; other text stays a free-text item.",
         "operationId": "createPantryItem",
         "security": [
           {
@@ -62781,7 +62782,7 @@
           "Shopping Lists"
         ],
         "summary": "Preview pantry-aware shopping gaps for selected meals and servings",
-        "description": "Uses reviewed conversions and current confirmed pantry quantities. Receipt purchases are never counted separately from pantry.",
+        "description": "Uses reviewed conversions and current confirmed pantry quantities. Free-text pantry items count toward an ingredient only when their normalized text exactly matches its canonical name or an approved alias (no fuzzy matching). Items whose expiry date is before today (UTC) are not counted as available; each such adjustment is listed in conversionAssumptions. Receipt purchases are never counted separately from pantry.",
         "operationId": "previewShoppingGaps",
         "security": [
           {
