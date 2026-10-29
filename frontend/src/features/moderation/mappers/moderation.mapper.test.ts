@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { moderationMapper } from './moderation.mapper';
+import { formatReportReason, moderationMapper } from './moderation.mapper';
 import type {
   AdminModerationCommentListResponseDto,
   AdminModerationUserListResponseDto,
@@ -61,6 +61,36 @@ describe('ModerationMapper reports', () => {
       decision: 'WARN',
       reason: 'Nhắc nhở',
     });
+  });
+
+  it('định dạng mã lý do backend thành nhãn tiếng Việt', () => {
+    expect(formatReportReason('MISLEADING_INFORMATION')).toBe('Thông tin sai lệch');
+    expect(formatReportReason('MISINFORMATION')).toBe('Thông tin sai lệch');
+    expect(formatReportReason('OTHER')).toBe('Lý do khác');
+    expect(formatReportReason('SPAM')).toBe('Spam');
+    expect(formatReportReason('HARMFUL_HEALTH')).toBe('Gây hại sức khỏe');
+    expect(formatReportReason('HARASSMENT')).toBe('Quấy rối');
+    expect(formatReportReason('COPYRIGHT')).toBe('Vi phạm bản quyền');
+    expect(formatReportReason('Nội dung tự do')).toBe('Nội dung tự do');
+    expect(formatReportReason('')).toBe('');
+
+    const modelFromCode = moderationMapper.toModel({
+      id: 'rep-code',
+      reasonCode: 'MISLEADING_INFORMATION',
+    });
+    expect(modelFromCode.reasons).toEqual(['Thông tin sai lệch']);
+
+    const modelFromSnake = moderationMapper.toModel({
+      id: 'rep-snake',
+      reason_code: 'OTHER',
+    });
+    expect(modelFromSnake.reasons).toEqual(['Lý do khác']);
+
+    const modelFromList = moderationMapper.toModel({
+      id: 'rep-list',
+      reasons: ['MISLEADING_INFORMATION', 'OTHER', 'Nội dung gây hại'],
+    });
+    expect(modelFromList.reasons).toEqual(['Thông tin sai lệch', 'Lý do khác', 'Nội dung gây hại']);
   });
 });
 

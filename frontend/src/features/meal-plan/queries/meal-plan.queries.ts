@@ -122,10 +122,10 @@ export function useManualAddMealItemMutation() {
         code === 'ALLERGY_VIOLATION' ||
         code === 'DIET_CONSTRAINT_VIOLATION'
       ) {
-        toast.error('Không thể chọn món này', {
-          description:
-            'Món ăn vi phạm quy tắc dị ứng, kiêng kỵ nghiêm ngặt hoặc chế độ ăn của bạn.',
-        });
+        // toast.error('Không thể chọn món này', {
+        //   description:
+        //     'Món ăn vi phạm quy tắc dị ứng, kiêng kỵ nghiêm ngặt hoặc chế độ ăn của bạn.',
+        // });
         return;
       }
       if (code === 'MEAL_PLAN_VERSION_CONFLICT') {

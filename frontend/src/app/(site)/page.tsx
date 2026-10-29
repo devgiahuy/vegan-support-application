@@ -63,14 +63,14 @@ export default function HomePage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
           >
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary shadow-xs backdrop-blur-md transition-all hover:border-primary/40 hover:bg-primary/15">
+            {/* <span className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/10 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-primary shadow-xs backdrop-blur-md transition-all hover:border-primary/40 hover:bg-primary/15">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
               </span>
               <Leaf className="h-3.5 w-3.5 text-primary" />
               <span>Ứng dụng hỗ trợ ăn chay #1 tại Việt Nam</span>
-            </span>
+            </span> */}
           </motion.div>
 
           {/* Tiêu đề chính sử dụng VerticalCutReveal animation */}
