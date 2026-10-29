@@ -349,6 +349,13 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
       ingredientNames: (values.ingredients ?? [])
         .map((ing) => ing.name?.trim())
         .filter((name): name is string => Boolean(name)),
+      ...(Number.isFinite(values.servings) ? { servings: values.servings } : {}),
+      ...(Number.isFinite(values.prepTimeMinutes)
+        ? { prepTimeMinutes: values.prepTimeMinutes }
+        : {}),
+      ...(Number.isFinite(values.cookTimeMinutes)
+        ? { cookTimeMinutes: values.cookTimeMinutes }
+        : {}),
     };
 
     return (

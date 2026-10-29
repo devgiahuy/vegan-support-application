@@ -34,6 +34,10 @@ export interface AiRecipeDraftSeed {
   cookTimeMinutes: number;
   /** Tên nguyên liệu đã nhập trong form, dùng làm danh sách khởi đầu. */
   ingredientNames: string[];
+  /** Khẩu phần/thời gian ở bước 1 (nếu đã nhập): AI định lượng theo khẩu phần này. */
+  servings?: number;
+  prepTimeMinutes?: number;
+  cookTimeMinutes?: number;
 }
 
 export interface AiRecipeDraftAssistantProps {
@@ -92,6 +96,9 @@ export function AiRecipeDraftAssistant({
       prepTimeMinutes: Number.isNaN(seed.prepTimeMinutes) ? undefined : seed.prepTimeMinutes,
       cookTimeMinutes: Number.isNaN(seed.cookTimeMinutes) ? undefined : seed.cookTimeMinutes,
       ingredientNames,
+      servings: seed.servings,
+      prepTimeMinutes: seed.prepTimeMinutes,
+      cookTimeMinutes: seed.cookTimeMinutes,
     });
   };
 

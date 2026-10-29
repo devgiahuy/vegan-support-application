@@ -1,6 +1,6 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.16
+**Version:** 4.17
 
 **Updated:** 2026-11-09
 
@@ -608,9 +608,12 @@ A phase is complete only when:
 
 ## 13. Change record
 
+- **4.17 — 2026-10-29:** D24 refinement: the AI recipe draft uses and preserves the author's servings/prep/cook times; blanks are filled by the AI; differing AI times are only hinted.
+
 - **4.16 — 2026-10-29:** User approves BL-05.2 (agreed with Ngô Gia Huy): six optional author nutrition fields for Members (typed values kept, blanks calculated, >30% deviation warning for reviewers), six required fields for approved Contributors/Admins whose recipes and recipe edits are published immediately unless automated moderation flags them, canonical-only reference estimate for auto-published recipes; articles/videos unchanged.
 
 - **4.15 — 2026-10-29:** User approves shopping-gap matching of free-text pantry items by exact canonical name/approved alias, excluding expired pantry items from availability, and auto-linking exact matches on manual pantry creation (BL-12 rule 9). No migration of existing items.
+
 - **4.14 — 2026-10-28:** User approves BL-05.1: recipe nutrition calculated on submit, async system-paid AI gap filling (1 + 3 retries at 1/5/15 min, startup sweep, quota-free, governance-traced), reviewer panel with five metrics (B12 excluded), audited overrides kept across recalculation, approval gated on five values and written to recipe detail, no carry-over between revisions, and no AI write to canonical food data.
 
 - **4.13 — 2026-10-26:** User clarifies that approved Contributors have review/moderation permissions for submitted community content (recipes, articles, videos) created by Members (excluding self-created content and items flagged with open AI flags or high report counts requiring Admin review). Content review endpoints (`/api/v1/admin/content-review*`) allow both Admin and Contributor roles.
