@@ -1,5 +1,19 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-29] — Thực đơn tuần: phân biệt "chưa xác minh được" với vi phạm ràng buộc khi thêm món
+
+- **Yêu cầu**: Người dùng báo chọn món cá nhân "Bún chả" bị báo vi phạm dị ứng dù không dính dị ứng. Trên dữ liệu thật, lý do duy nhất là `UNRESOLVED_INGREDIENT`: "bún" và "chả chay" là nguyên liệu Tự do nên backend không kiểm tra được. Người dùng chọn giữ việc chặn món, báo lỗi rõ ràng, không tự ghép tên, không migrate và cảnh báo trước trong form.
+- **Backend**: manual-add trả `409 MEAL_PLAN_INGREDIENTS_UNVERIFIED` (`fields.reasons`, `fields.unverifiedIngredients`) khi lý do chỉ là nguyên liệu chưa liên kết hoặc cấu tạo chưa rà soát; vi phạm thật vẫn trả `MEAL_PLAN_HARD_CONSTRAINT_VIOLATION`. Đã cập nhật OpenAPI.
+- **Frontend**:
+  - `meal-plan.dto.ts` / `meal-plan.model.ts` / `meal-plan.mapper.ts`: thêm `MealPlanConstraintErrorFieldsDto`, `MealPlanConstraintError` và `toConstraintError`, kèm mapper test.
+  - `meal-plan.queries.ts`: toast "Chưa thể kiểm tra món này" liệt kê nguyên liệu chưa liên kết; `meal-plan.api.ts` dùng `silent: true` để bỏ toast trùng từ interceptor.
+  - `custom-meal-ingredient-input.tsx`: hiển thị trạng thái liên kết từng dòng, nút "Liên kết" mở `IngredientSuggestions` và cảnh báo khi còn nguyên liệu Tự do.
+- **Kiểm chứng**:
+  - `npx tsc --noEmit` pass 0 lỗi type.
+  - `npx vitest run` 68 test suite (734 tests pass).
+  - `npm run build` pass.
+  - Gọi `MealPlanService.manualAdd` thật trên bản restore DB tạm cho đúng kịch bản trên.
+
 ## [2026-10-29] — Trang /admin/dashboard: Chuẩn hóa hiển thị lý do báo cáo & thêm 2 nút cuộn ngang thanh tabs
 
 - **Yêu cầu**:

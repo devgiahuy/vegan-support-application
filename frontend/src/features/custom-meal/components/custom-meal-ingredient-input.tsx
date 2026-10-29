@@ -1,7 +1,8 @@
 'use client';
 
 import React from 'react';
-import { Plus, Trash2, Utensils } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Link2, Plus, Trash2, Utensils } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -12,6 +13,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { IngredientSuggestions } from '@/features/ingredient/components/ingredient-suggestions';
+import type { Ingredient } from '@/features/ingredient/types/ingredient.model';
 
 export interface IngredientRow {
   ingredientId?: string | null;
@@ -44,6 +47,11 @@ export const CustomMealIngredientInput: React.FC<CustomMealIngredientInputProps>
   onChange,
   disabled = false,
 }) => {
+  const [linkingIndex, setLinkingIndex] = React.useState<number | null>(null);
+  const unlinkedCount = ingredients.filter(
+    (row) => row.name.trim().length > 0 && !row.ingredientId
+  ).length;
+
   const handleAddRow = () => {
     onChange([
       ...ingredients,
@@ -57,7 +65,16 @@ export const CustomMealIngredientInput: React.FC<CustomMealIngredientInputProps>
   };
 
   const handleRemoveRow = (index: number) => {
+    setLinkingIndex(null);
     onChange(ingredients.filter((_, i) => i !== index));
+  };
+
+  // Tên phải trùng tên chuẩn để backend không trả INGREDIENT_ID_NAME_MISMATCH.
+  const handleLink = (index: number, item: Ingredient) => {
+    const updated = [...ingredients];
+    updated[index] = { ...updated[index], name: item.canonicalName, ingredientId: item.id };
+    onChange(updated);
+    setLinkingIndex(null);
   };
 
   const handleUpdateRow = (
@@ -94,6 +111,18 @@ export const CustomMealIngredientInput: React.FC<CustomMealIngredientInputProps>
         </Button>
       </div>
 
+      {unlinkedCount > 0 && (
+        <Alert className="border-amber-500/40 bg-amber-500/5">
+          <AlertTriangle className="text-amber-600 dark:text-amber-400" />
+          <AlertDescription className="text-xs">
+            Có {unlinkedCount} nguyên liệu tự do chưa liên kết với Ngân hàng Thực phẩm. Hệ thống
+            không kiểm tra được dị ứng, nguyên liệu cần tránh và chế độ ăn với các nguyên liệu này,
+            nên món sẽ không thêm được vào thực đơn tuần nếu hồ sơ ăn uống của bạn có các yêu cầu
+            đó. Chọn &quot;Liên kết&quot; ở từng dòng để khắc phục.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {ingredients.length === 0 ? (
         <div className="text-center py-8 border border-dashed rounded-xl bg-muted/20 space-y-2">
           <Utensils className="w-8 h-8 text-muted-foreground mx-auto opacity-50" />
@@ -114,10 +143,10 @@ export const CustomMealIngredientInput: React.FC<CustomMealIngredientInputProps>
           {ingredients.map((row, index) => (
             <div
               key={index}
-              className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5 p-3 rounded-xl border bg-background/50 border-input transition-colors shadow-2xs"
+              className="flex flex-col sm:flex-row items-stretch sm:items-start gap-2 sm:gap-2.5 p-3 rounded-xl border bg-background/50 border-input transition-colors shadow-2xs"
             >
-              {/* Tên nguyên liệu */}
-              <div className="flex-1">
+              {/* Tên nguyên liệu + trạng thái liên kết */}
+              <div className="flex-1 space-y-1.5">
                 <Input
                   type="text"
                   placeholder="Tên nguyên liệu (vd: Đậu hũ non, Bơ sáp)"
@@ -126,6 +155,35 @@ export const CustomMealIngredientInput: React.FC<CustomMealIngredientInputProps>
                   disabled={disabled}
                   className="h-10 text-sm bg-background"
                 />
+                {row.ingredientId ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 aria-hidden className="h-3 w-3" /> Đã liên kết nguyên liệu chuẩn
+                  </span>
+                ) : row.name.trim().length > 0 ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                      <AlertTriangle aria-hidden className="h-3 w-3" /> Tự do, chưa liên kết
+                    </span>
+                    <Button
+                      type="button"
+                      variant="link"
+                      size="sm"
+                      onClick={() => setLinkingIndex(linkingIndex === index ? null : index)}
+                      disabled={disabled}
+                      aria-expanded={linkingIndex === index}
+                      className="h-auto gap-1 p-0 text-[11px]"
+                    >
+                      <Link2 aria-hidden className="h-3 w-3" />
+                      {linkingIndex === index ? 'Đóng gợi ý' : 'Liên kết'}
+                    </Button>
+                  </div>
+                ) : null}
+                {linkingIndex === index && !row.ingredientId && row.name.trim().length > 0 && (
+                  <IngredientSuggestions
+                    query={row.name}
+                    onSelect={(item) => handleLink(index, item)}
+                  />
+                )}
               </div>
 
               {/* Nhóm Số lượng + Đơn vị + Nút xóa */}
