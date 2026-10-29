@@ -46,6 +46,11 @@ function number(value: number | null): number | null {
   return value === null ? null : typeof value === 'number' ? value : value;
 }
 
+function todayUtc(): Date {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+}
+
 function qualityConfidence(quality: FoodDataQuality): number {
   if (quality === FoodDataQuality.VERIFIED) return 1;
   if (quality === FoodDataQuality.REVIEWED) return 0.9;
@@ -491,17 +496,53 @@ export class ReceiptService {
       groups.set(line.ingredientId, group);
     }
     const pantry = await this.repository.findConfirmedPantry(ownerId, [...groups.keys()]);
-    const pantryByIngredient = new Map<string, typeof pantry>();
+    // Free-text stock counts only when its normalized name exactly matches the canonical name
+    // or an approved alias of a required ingredient; there is no fuzzy matching.
+    const freeTextMatches = await this.repository.resolveIngredients(
+      pantry.flatMap((item) =>
+        !item.ingredientId && item.normalizedUnmatchedText ? [item.normalizedUnmatchedText] : [],
+      ),
+    );
+    const today = todayUtc();
+    const pantryByIngredient = new Map<
+      string,
+      Array<{
+        normalizedGrams: number | null;
+        confidence: number;
+        freeText: boolean;
+        expired: boolean;
+      }>
+    >();
     for (const item of pantry) {
-      if (!item.ingredientId) continue;
-      const items = pantryByIngredient.get(item.ingredientId) ?? [];
-      items.push(item);
-      pantryByIngredient.set(item.ingredientId, items);
+      const ingredientId =
+        item.ingredientId ??
+        (item.normalizedUnmatchedText
+          ? freeTextMatches.get(item.normalizedUnmatchedText)
+          : undefined);
+      if (!ingredientId || !groups.has(ingredientId)) continue;
+      let normalizedGrams = item.normalizedGrams === null ? null : Number(item.normalizedGrams);
+      let confidence = item.conversionConfidence ?? item.confidence;
+      if (normalizedGrams === null && !item.ingredientId) {
+        const conversion = await this.resolveConversion(ingredientId, item.quantity, item.unit);
+        normalizedGrams = conversion.normalizedGrams;
+        confidence = Math.min(item.confidence, conversion.confidence ?? 0.5);
+      }
+      const items = pantryByIngredient.get(ingredientId) ?? [];
+      items.push({
+        normalizedGrams,
+        confidence,
+        freeText: !item.ingredientId,
+        expired: item.expiresAt !== null && item.expiresAt < today,
+      });
+      pantryByIngredient.set(ingredientId, items);
     }
     const items = [...groups.values()].map((group) => {
-      const inventory = pantryByIngredient.get(group.ingredient.id) ?? [];
+      const stock = pantryByIngredient.get(group.ingredient.id) ?? [];
+      const inventory = stock.filter((item) => !item.expired);
       const convertible = inventory.filter((item) => item.normalizedGrams !== null);
       const unavailableCount = inventory.length - convertible.length;
+      const expiredCount = stock.length - inventory.length;
+      const freeTextCount = convertible.filter((item) => item.freeText).length;
       const available = convertible.reduce((sum, item) => sum + (item.normalizedGrams ?? 0), 0);
       const required = Number(group.required.toFixed(4));
       if (unavailableCount) {
@@ -510,8 +551,16 @@ export class ReceiptService {
         );
         group.confidence = Math.min(group.confidence, 0.5);
       }
+      if (expiredCount)
+        group.assumptions.add(
+          `${String(expiredCount)} mục kho đã quá hạn sử dụng nên không được tính là có sẵn.`,
+        );
+      if (freeTextCount)
+        group.assumptions.add(
+          `${String(freeTextCount)} mục kho nhập tự do được tính vì tên trùng khớp với tên chuẩn hoặc tên gọi khác đã duyệt của ${group.ingredient.name}.`,
+        );
       for (const item of convertible)
-        group.confidence = Math.min(group.confidence, item.conversionConfidence ?? item.confidence);
+        group.confidence = Math.min(group.confidence, item.confidence);
       return {
         ingredient: group.ingredient,
         required: { value: required, unit: 'g' },

@@ -110,7 +110,7 @@ export function registerReceiptOpenApi(registry: OpenAPIRegistry, errorSchema: z
     path: '/api/v1/shopping-lists/preview',
     tags: ['Shopping Lists'],
     summary: 'Preview pantry-aware shopping gaps for selected meals and servings',
-    description: 'Uses reviewed conversions and current confirmed pantry quantities. Receipt purchases are never counted separately from pantry.',
+    description: 'Uses reviewed conversions and current confirmed pantry quantities. Free-text pantry items count toward an ingredient only when their normalized text exactly matches its canonical name or an approved alias (no fuzzy matching). Items whose expiry date is before today (UTC) are not counted as available; each such adjustment is listed in conversionAssumptions. Receipt purchases are never counted separately from pantry.',
     operationId: 'previewShoppingGaps',
     security,
     request: { body: { content: json(shoppingRequest) } },
