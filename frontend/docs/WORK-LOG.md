@@ -1,5 +1,52 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-29] — Trang /admin/dashboard: Chuẩn hóa hiển thị lý do báo cáo & thêm 2 nút cuộn ngang thanh tabs
+
+- **Yêu cầu**:
+  1. Chỉnh sửa trường hiển thị lý do ở trang `/admin/dashboard?tab=reports` hiện đang hiển thị status/code thô trả ra từ backend (`MISLEADING_INFORMATION`, `OTHER`, v.v.).
+  2. Thêm 2 nút ở 2 đầu thanh tab bar để người dùng click cuộn ngang thanh tabs.
+- **Frontend**:
+  - `moderation.mapper.ts`:
+    - Khai báo từ điển `REPORT_REASON_LABELS` và hàm helper `formatReportReason` ánh xạ toàn bộ mã lý do báo cáo backend (`MISLEADING_INFORMATION`, `MISINFORMATION`, `SPAM`, `HARMFUL_HEALTH`, `HARASSMENT`, `COPYRIGHT`, `OTHER`, các tín hiệu AI flag/rule moderation) sang nhãn tiếng Việt chuẩn (`Thông tin sai lệch`, `Lý do khác`, `Spam`, `Gây hại sức khỏe`, `Quấy rối`, `Vi phạm bản quyền`).
+    - Cập nhật hàm `toModel` trong `ModerationMapper` chuyển đổi mã thô thành nhãn tiếng Việt trong `reasons` của UI Model.
+  - `reports-table.tsx`:
+    - Thay thế văn bản chuỗi thô bằng các `<Badge variant="outline">` tinh tế, hỗ trợ hiển thị tối đa 2 badge kèm badge `+N` (có tooltip) khi có nhiều lý do, và hiển thị dấu gạch ngang `—` khi không có lý do.
+  - `resolve-dialog.tsx`:
+    - Bổ sung khối thông tin tóm tắt báo cáo (tiêu đề mục tiêu, badge trạng thái, đoạn trích và badge lý do báo cáo) giúp quản trị viên có đầy đủ ngữ cảnh lý do vi phạm trước khi đưa ra quyết định giải quyết.
+  - `moderation.mapper.test.ts`:
+    - Bổ sung bộ unit test xác minh hàm `formatReportReason` và ánh xạ `reasons` từ DTO (`reasonCode`, `reason_code`, `reasons`).
+  - `admin/dashboard/page.tsx`:
+    - Bổ sung 2 nút tròn (`ChevronLeft` và `ChevronRight`) ở 2 đầu thanh tab bar bọc bởi layout `flex w-full min-w-0 items-center gap-1.5`.
+    - Bổ sung `min-w-0` trên `tabListRef` để flex child cho phép co nhỏ hơn nội dung thực tế và kích hoạt cuộn ngang `overflow-x-auto`.
+    - Thay thế `disabled={...}` / `disabled:pointer-events-none` (gây chặn sự kiện click) bằng styling `opacity-40` và điều khiển cuộn thông minh qua `scrollTo({ left: target, behavior: 'smooth' })` với khoảng cuộn 320px được clamp an toàn.
+    - Tích hợp `ResizeObserver` và listener `scroll`/`resize` để cập nhật trạng thái các nút tức thời.
+    - Thêm cơ chế tự động cuộn tab đang chọn vào tầm nhìn (`scrollIntoView`) khi chuyển tab.
+- **Kiểm chứng**:
+  - `npx tsc --noEmit` pass 0 lỗi type.
+  - `npm test` toàn bộ 68 test suite (732 tests pass).
+  - `npm run build` pass thành công toàn bộ 47 routes.
+
+## [2026-10-29] — Tinh gọn SiteFooter: Loại bỏ các nội dung mock và không liên quan
+
+- **Yêu cầu**: Chỉnh sửa tinh gọn Footer, loại bỏ các nội dung không liên quan và các khối đang mock (banner đăng ký newsletter, nút tải ứng dụng di động, cam kết tiếp thị mock, toàn bộ các icon mạng xã hội giả lập).
+- **Frontend**:
+  - `site-footer.tsx`:
+    - **Loại bỏ 3 icon mạng xã hội**: Xóa hoàn toàn các icon và liên kết mạng xã hội giả lập (Facebook, Instagram, YouTube) cùng các hàm SVG định nghĩa tương ứng, giữ phần nhận diện thương hiệu và thông điệp xanh tối giản.
+    - **Loại bỏ khối "Đăng ký nhận tin" (Newsletter)**: Xóa bỏ card đăng ký nhận tin kích thước lớn với hiệu ứng glow, input email và thông báo toast mock phía client (chưa có endpoint backend hỗ trợ) cùng 3 micro-trust badges mock ("Không spam", "Bảo mật thông tin", "Hủy đăng ký dễ dàng").
+    - **Loại bỏ cột "Tải ứng dụng"**: Xóa nút tải trên App Store (`#download-app-store`) và Google Play (`#download-google-play`) vì ứng dụng hiện là web responsive, không có app di động trên cửa hàng.
+    - **Loại bỏ cột "Cam kết của chúng tôi"**: Xóa bỏ các cam kết tiếp thị chung chung mang tính mock và vi phạm quy định không nhận vơ chuyên gia/chứng chỉ trong MVP ("Được chuyên gia tư vấn", "Chất lượng hàng đầu", v.v.).
+    - **Tổ chức lại layout 4 cột chức năng**:
+      - Cột 1 (Thương hiệu & Sứ mệnh): Logo VeggieConnect, slogan "Ăn chay • Sống khỏe • Kết nối cộng đồng", mô tả nền tảng dinh dưỡng thực vật súc tích và thông điệp "Vì một tương lai xanh hơn 🍃".
+      - Cột 2 (Khám phá): Trang chủ, Công thức nấu ăn, Tra cứu dinh dưỡng (`/categories`), Bản đồ quán chay (`/restaurants`), Cẩm nang & Bài viết (`/articles`), Video nấu ăn (`/videos`).
+      - Cột 3 (Tiện ích): Trợ lý AI dinh dưỡng (`/assistant`), Kế hoạch thực đơn (`/meal-plans`), Quản lý tủ bếp (`/pantry`), Quét hóa đơn mua sắm (`/receipts/scan`), Món ăn tùy biến (`/custom-meals`), Gói hội viên (`/billing`).
+      - Cột 4 (Thông tin & Hỗ trợ): Về VeggieConnect (`/about`), Trung tâm trợ giúp (`/help`), Quy chế cộng đồng (`/guidelines`), Điều khoản sử dụng (`/terms`), Chính sách bảo mật (`/privacy`), Liên hệ hỗ trợ (`/contact`), Góp ý & Báo lỗi (`/feedback`).
+    - **Bottom Bar**: Giữ lại bản quyền "© 2026 VeggieConnect", thông điệp xanh và thiết kế thẩm mỹ hòa hợp trên nền botanical dark emerald.
+- **Kiểm chứng**:
+  - `npx tsc --noEmit` pass 0 lỗi type.
+  - `npm test` toàn bộ 68 test suite (731 tests pass).
+  - `npm run build` pass thành công toàn bộ 47 routes.
+
+
 ## [2026-10-28] — Trang /pantry: Bổ sung tùy chọn tự nhập nguyên liệu chuẩn & dropdown đơn vị thông dụng
 
 - **Yêu cầu**: Trên trang `/pantry`, tại modal "Thêm nguyên liệu vào tủ bếp":

@@ -25,7 +25,7 @@ const STATUS_FILTERS = [
   { value: 'RESOLVED', label: 'Đã xử lý' },
 ] as const;
 
-/** Bảng hàng chờ báo cáo gộp theo mục tiêu (fixture ở phase scaffold). */
+/** Bảng hàng chờ báo cáo gộp theo mục tiêu. */
 export function ReportsTable() {
   const [status, setStatus] = React.useState<string>('');
   const [selected, setSelected] = React.useState<ModerationReport | null>(null);
@@ -80,11 +80,34 @@ export function ReportsTable() {
                     </p>
                   </TableCell>
                   <TableCell>{report.openCount}</TableCell>
-                  <TableCell className="max-w-55">
-                    <p className="truncate text-sm">
-                      {report.reasons.slice(0, 3).join('; ') || '—'}
-                      {report.reasons.length > 3 && ` (+${report.reasons.length - 3})`}
-                    </p>
+                  <TableCell className="max-w-60">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {report.reasons.length > 0 ? (
+                        <>
+                          {report.reasons.slice(0, 2).map((reason, index) => (
+                            <Badge
+                              key={index}
+                              variant="outline"
+                              className="font-normal text-xs bg-muted/40"
+                              title={reason}
+                            >
+                              <span className="max-w-44 truncate">{reason}</span>
+                            </Badge>
+                          ))}
+                          {report.reasons.length > 2 && (
+                            <Badge
+                              variant="secondary"
+                              className="font-normal text-xs"
+                              title={report.reasons.slice(2).join(', ')}
+                            >
+                              +{report.reasons.length - 2}
+                            </Badge>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-sm text-muted-foreground">—</span>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <Badge variant={report.status === 'OPEN' ? 'destructive' : 'secondary'}>

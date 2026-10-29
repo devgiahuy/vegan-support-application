@@ -56,6 +56,35 @@ const USER_STATUS_LABELS: Record<MemberStatus, string> = {
   [MemberStatus.DELETED]: 'Đã xóa',
 };
 
+export const REPORT_REASON_LABELS: Record<string, string> = {
+  SPAM: 'Spam',
+  HARMFUL_HEALTH: 'Gây hại sức khỏe',
+  HARASSMENT: 'Quấy rối',
+  MISINFORMATION: 'Thông tin sai lệch',
+  MISLEADING_INFORMATION: 'Thông tin sai lệch',
+  COPYRIGHT: 'Vi phạm bản quyền',
+  OTHER: 'Lý do khác',
+  HARMFUL_HEALTH_CLAIM: 'Tuyên bố sức khỏe gây hại',
+  SPAM_HIGH_CONFIDENCE: 'Nghi vấn spam cao',
+  UNVERIFIED_HEALTH_CLAIM: 'Tuyên bố sức khỏe chưa kiểm chứng',
+  PROMOTIONAL_SPAM_SIGNAL: 'Dấu hiệu quảng cáo rác',
+  SEED_DISPLAY_FIXTURE: 'Dữ liệu mẫu kiểm thử',
+};
+
+/**
+ * Định dạng mã lý do báo cáo thô từ backend thành nhãn tiếng Việt thân thiện với người dùng.
+ * Nếu đã là chuỗi tiếng Việt hoặc không nằm trong danh mục mã, giữ nguyên chuỗi gốc.
+ */
+export function formatReportReason(reason: string): string {
+  const trimmed = reason.trim();
+  if (!trimmed) return '';
+  const upper = trimmed.toUpperCase();
+  if (REPORT_REASON_LABELS[upper]) {
+    return REPORT_REASON_LABELS[upper];
+  }
+  return trimmed;
+}
+
 function emptyPageMeta() {
   return { page: 1, limit: 10, totalItems: 0, totalPages: 0 };
 }
@@ -110,7 +139,7 @@ export class ModerationMapper extends BaseMapper<ModerationReportDto, Moderation
     const rawReasons = pickField(dto, ['reasons'], null);
     const reasons = safeArray<string | null, string>(
       rawReasons ?? (reasonCode ? [reasonCode] : null),
-      (reason) => safeString(reason)
+      (reason) => formatReportReason(safeString(reason))
     ).filter((reason) => reason.length > 0);
 
     const targetId = safeString(pickField(dto, ['targetId', 'target_id'], ''));

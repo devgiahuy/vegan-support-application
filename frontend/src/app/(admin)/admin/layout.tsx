@@ -40,7 +40,7 @@ const NAV_MAIN = [
 
 const NAV_MONITOR = [
   { label: 'Báo cáo vi phạm', href: '/admin/dashboard?tab=reports', icon: Flag, badge: '5' },
-  { label: 'Kiểm chứng AI', href: '/admin/dashboard?tab=ai-verifications', icon: ShieldCheck },
+  // { label: 'Kiểm chứng AI', href: '/admin/dashboard?tab=ai-verifications', icon: ShieldCheck },
   { label: 'Doanh thu AI', href: '/admin/dashboard?tab=ai-revenue', icon: Wallet },
   { label: 'Truy vết AI', href: '/admin/dashboard?tab=ai-usage', icon: Activity },
   { label: 'Nhật ký hệ thống', href: '/admin/dashboard?tab=logs', icon: ScrollText },
