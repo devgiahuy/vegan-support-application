@@ -6,7 +6,7 @@ import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { ArticleForm } from '@/features/post/components/article-form';
 import { useArticleDetailQuery, useUpdateArticleMutation } from '@/features/post/queries/post.queries';
-import { getApiErrorMessage } from '@/lib/api-error';
+import { getApiErrorDetail } from '@/lib/api-error';
 import { FALLBACK_ARTICLE_COVER_URL } from '@/lib/env';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -78,18 +78,21 @@ export default function EditArticleScreen() {
             tags: article.tags,
             categoryId: article.category.id || null,
           }}
-          submitLabel="Lưu thay đổi"
+          submitLabel="Lưu & gửi duyệt lại"
           isSubmitting={updateMutation.isPending}
-          onSubmit={async (values) => {
+          onSubmit={async (values, action) => {
             try {
               await updateMutation.mutateAsync({
                 id: article.id,
                 input: { ...values, expectedVersion: article.version },
               });
-              Alert.alert('Đã lưu', 'Bài viết đã được cập nhật và gửi lại để duyệt.');
+              Alert.alert(
+                'Đã lưu',
+                action === 'DRAFT' ? 'Đã cập nhật bản nháp bài viết.' : 'Bài viết đã được cập nhật và gửi lại để duyệt.'
+              );
               router.replace(`/articles/${article.id}` as Href);
             } catch (error) {
-              Alert.alert('Không lưu được', getApiErrorMessage(error, 'Vui lòng kiểm tra dữ liệu và thử lại.'));
+              Alert.alert('Không lưu được', getApiErrorDetail(error, 'Vui lòng kiểm tra dữ liệu và thử lại.'));
             }
           }}
         />

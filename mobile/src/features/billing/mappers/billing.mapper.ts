@@ -320,6 +320,7 @@ export class EntitlementMapper extends BaseMapper<EntitlementDto, Entitlements> 
           return {
             id: safeString(pickField(entry, ['id'], '')),
             featureLabel: featureLabels[feature] ?? 'Quyền lợi',
+            delta,
             deltaLabel: (delta > 0 ? '+' : '') + delta,
             reasonLabel: reasons[reason] ?? 'Điều chỉnh quyền lợi',
             createdAtLabel: dateLabel(pickField(entry, ['createdAt'], null)),

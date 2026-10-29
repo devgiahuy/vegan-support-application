@@ -23,6 +23,8 @@ export interface CreateArticleInput {
   tags?: string[];
   /** Id asset ảnh bìa đã tải lên và commit (Phase 15); bỏ trống = không có ảnh bìa. */
   coverAssetId?: string;
+  /** `true`: chỉ lưu bản nháp (bỏ bước `POST /posts/:id/submit`) — nút "Lưu bản nháp" như web. */
+  saveAsDraft?: boolean;
 }
 
 export interface UpdateArticleInput extends CreateArticleInput {
@@ -96,7 +98,7 @@ export const postApi = {
     const revisionId = created?.revision?.id;
     const expectedVersion = created?.version;
 
-    if (created?.id && revisionId && expectedVersion) {
+    if (!input.saveAsDraft && created?.id && revisionId && expectedVersion) {
       try {
         const submitRes = await api.post<PostDetailResponseDto>(
           API_ENDPOINTS.POSTS.SUBMIT(created.id),
@@ -134,7 +136,7 @@ export const postApi = {
     const revisionId = updated?.revision?.id;
     const newExpectedVersion = updated?.version;
 
-    if (updated?.id && revisionId && newExpectedVersion) {
+    if (!input.saveAsDraft && updated?.id && revisionId && newExpectedVersion) {
       try {
         const submitRes = await api.post<PostDetailResponseDto>(
           API_ENDPOINTS.POSTS.SUBMIT(updated.id),

@@ -2,6 +2,7 @@ import * as React from 'react';
 import { Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Clock } from 'lucide-react-native';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { useIconColors } from '@/lib/theme-colors';
 import type { Article } from '../types/post.model';
 
@@ -56,9 +57,7 @@ export function PostCard({ post }: { post: Article }) {
         ) : null}
 
         <View className="mt-1 flex-row items-center gap-2 border-t border-border pt-3">
-          <View className="h-7 w-7 items-center justify-center rounded-full bg-primary/10">
-            <Text className="text-xs font-bold text-primary">{post.author.name.charAt(0)}</Text>
-          </View>
+          <UserAvatar name={post.author.name} uri={post.author.avatarUrl} size={28} className="border border-primary/20" />
           <Text numberOfLines={1} className="flex-1 text-xs font-semibold text-foreground">
             {post.author.name}
           </Text>

@@ -23,6 +23,7 @@ import {
 
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { RecipeAllergenHighlight } from '@/features/recipe/components/recipe-allergen-highlight';
 import { RecipeCard } from '@/features/recipe/components/recipe-card';
 import { useRecipeDetailQuery, useRelatedRecipesQuery } from '@/features/recipe/queries/recipe.queries';
@@ -198,9 +199,7 @@ export default function RecipeDetailScreen() {
         {/* Author + actions */}
         <View className="flex-row items-center justify-between gap-3 border-y border-border py-4">
           <View className="flex-row items-center gap-2.5">
-            <View className="h-11 w-11 items-center justify-center rounded-full bg-primary/10">
-              <Text className="text-sm font-bold text-primary">{recipe.author.name.charAt(0)}</Text>
-            </View>
+            <UserAvatar name={recipe.author.name} uri={recipe.author.avatarUrl} size={44} className="border border-primary/20" />
             <Text className="text-sm font-semibold text-foreground">{recipe.author.name}</Text>
           </View>
           {isOwner ? (

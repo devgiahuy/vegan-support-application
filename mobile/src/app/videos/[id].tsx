@@ -1,15 +1,16 @@
 import * as React from 'react';
 import { Alert, Pressable, Share, Text, View } from 'react-native';
-import { Image } from 'expo-image';
 import { Link, type Href, useLocalSearchParams, useRouter } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { ExternalLink, Pencil, Share2, Sparkles, Trash2 } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { CommunityPanel } from '@/features/community/components/community-panel';
 import { ReportButton } from '@/features/safety/components/report-button';
 import { VideoCard } from '@/features/video/components/video-card';
+import { VideoPlayer } from '@/features/video/components/video-player';
 import { useRelatedVideosQuery, useVideoDetailQuery } from '@/features/video/queries/video.queries';
 import { useDeletePostMutation } from '@/features/post/queries/post.queries';
 import { getApiErrorMessage } from '@/lib/api-error';
@@ -106,14 +107,7 @@ export default function VideoDetailScreen() {
     <SiteScreen>
       <View className="gap-5 px-5 pt-4">
         <View className="overflow-hidden rounded-3xl border border-border bg-card">
-          <Pressable onPress={() => void openVideo()} className="relative aspect-video w-full">
-            <Image source={{ uri: video.thumbnailUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
-            <View className="absolute inset-0 items-center justify-center bg-black/20">
-              <View className="h-16 w-16 items-center justify-center rounded-full bg-primary">
-                <ExternalLink size={22} color={colors.primaryForeground} />
-              </View>
-            </View>
-          </Pressable>
+          <VideoPlayer videoUrl={video.videoUrl} provider={video.provider} posterUrl={video.thumbnailUrl} title={video.title} className="rounded-3xl" />
         </View>
 
         <View className="gap-3">
@@ -150,16 +144,14 @@ export default function VideoDetailScreen() {
           ) : null}
 
           <View className="flex-row items-center gap-2">
-            <View className="h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-              <Text className="text-xs font-bold text-primary">{video.author.name.charAt(0)}</Text>
-            </View>
+            <UserAvatar name={video.author.name} uri={video.author.avatarUrl} size={32} className="border border-primary/20" />
             <Text className="flex-1 text-sm font-semibold text-foreground">{video.author.name}</Text>
           </View>
         </View>
 
         <View className="flex-row gap-2">
           <PrimaryButton
-            label="Mở video"
+            label="Mở bằng trình duyệt"
             className="flex-1"
             disabled={!video.videoUrl}
             icon={<ExternalLink size={16} color={colors.primaryForeground} />}

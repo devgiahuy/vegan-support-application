@@ -95,3 +95,74 @@ export const getApiErrorMessage = (
   }
   return fallbackMessage;
 };
+
+// Nhãn tiếng Việt của các field hay gặp — đồng bộ `FIELD_LABELS` của web (`frontend/src/lib/api-error.ts`).
+const FIELD_LABELS: Record<string, string> = {
+  body: 'Nội dung bài viết',
+  content: 'Nội dung bài viết',
+  title: 'Tiêu đề',
+  excerpt: 'Đoạn trích tóm tắt',
+  summary: 'Đoạn trích tóm tắt',
+  categoryIds: 'Chuyên mục',
+  category: 'Chuyên mục',
+  tags: 'Thẻ (Tags)',
+  coverImageUrl: 'Ảnh bìa',
+  email: 'Email',
+  password: 'Mật khẩu',
+  name: 'Tên',
+  displayName: 'Tên hiển thị',
+  reason: 'Lý do',
+  description: 'Mô tả',
+};
+
+/** Việt hóa một lỗi validation (thường là thông điệp Zod tiếng Anh) của một field. */
+export function localizeFieldValidation(field: string, rawMessage: string): string {
+  const label = FIELD_LABELS[field] || field;
+
+  let translated = rawMessage;
+  const tooSmallMatch = rawMessage.match(/^Too small: expected string to have >=(\d+) characters/i);
+  if (tooSmallMatch) {
+    translated = `quá ngắn (yêu cầu tối thiểu ${tooSmallMatch[1]} ký tự)`;
+  } else {
+    const tooBigMatch = rawMessage.match(/^Too big: expected string to have <=(\d+) characters/i);
+    if (tooBigMatch) {
+      translated = `quá dài (tối đa ${tooBigMatch[1]} ký tự)`;
+    } else if (/^Required/i.test(rawMessage)) {
+      translated = 'không được để trống';
+    } else if (/^Invalid url/i.test(rawMessage)) {
+      translated = 'đường dẫn URL không hợp lệ';
+    } else if (/^Invalid email/i.test(rawMessage)) {
+      translated = 'email không hợp lệ';
+    } else if (/^Invalid uuid/i.test(rawMessage)) {
+      translated = 'mã định danh không hợp lệ';
+    }
+  }
+
+  if (!FIELD_LABELS[field] && translated === rawMessage) {
+    return `${field}: ${rawMessage}`;
+  }
+
+  return `${label}: ${translated}`;
+}
+
+/** Gộp tối đa `maxFields` lỗi theo field (`error.fields`) thành các dòng tiếng Việt; không có thì trả `undefined`. */
+export const formatApiErrorFields = (error: unknown, maxFields: number = 3): string | undefined => {
+  const fields = getApiErrorFields(error);
+  if (!fields) return undefined;
+  const parts: string[] = [];
+  for (const [key, value] of Object.entries(fields)) {
+    const rawMessages = Array.isArray(value) ? value.map((v) => String(v)).join(', ') : String(value);
+    parts.push(localizeFieldValidation(key, rawMessages));
+    if (parts.length >= maxFields) break;
+  }
+  if (parts.length === 0) return undefined;
+  const extra = Object.keys(fields).length - parts.length;
+  return extra > 0 ? [...parts, `... và ${extra} lỗi khác`].join('\n') : parts.join('\n');
+};
+
+/** Message chính của BE kèm các dòng lỗi theo field (nếu có) — dùng cho Alert/thông báo lỗi form. */
+export const getApiErrorDetail = (error: unknown, fallbackMessage?: string): string => {
+  const message = getApiErrorMessage(error, fallbackMessage);
+  const fields = formatApiErrorFields(error);
+  return fields ? `${message}\n${fields}` : message;
+};
