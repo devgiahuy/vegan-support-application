@@ -318,7 +318,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     tags: ['Content Review'],
     summary: 'Submit một immutable draft revision để Admin review',
     description:
-      'Author-only. Revalidates latest version and video media ownership/committed state. Text/metadata moderation may attach a signal and priority, but never approves, rejects, hides, or deletes automatically.',
+      'Author-only. Revalidates latest version and video media ownership/committed state. Text/metadata moderation may attach a signal and priority, but never approves, rejects, hides, or deletes automatically. For recipes (changed 2026-10-28) the backend calculates a per-revision nutrition estimate from reviewed canonical food data; when data is insufficient (free-text ingredient, missing USDA profile/metric, unit conversion, or a cooking step without a method) it queues a system-paid asynchronous AI gap-filling job (no user quota). Nutrition never blocks submission and is not official until a reviewer approves.',
     operationId: 'submitPostRevision',
     security: authenticated,
     request: {

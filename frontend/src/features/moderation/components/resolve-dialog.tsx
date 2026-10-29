@@ -3,6 +3,7 @@
 import { useForm } from 'react-hook-form';
 import * as React from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -86,6 +87,36 @@ export function ResolveDialog({
               : 'Chọn quyết định cho toàn bộ báo cáo đang mở của mục tiêu.'}
           </DialogDescription>
         </DialogHeader>
+        {report && (
+          <div className="rounded-lg border bg-muted/30 p-3 text-xs space-y-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="font-medium text-foreground">{report.targetTitle}</span>
+              <Badge
+                variant={report.status === 'OPEN' ? 'destructive' : 'secondary'}
+                className="text-[10px]"
+              >
+                {report.statusLabel}
+              </Badge>
+            </div>
+            {report.targetExcerpt && (
+              <p className="text-muted-foreground line-clamp-2">{report.targetExcerpt}</p>
+            )}
+            {report.reasons.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                <span className="text-muted-foreground">Lý do báo cáo:</span>
+                {report.reasons.map((r, i) => (
+                  <Badge
+                    key={i}
+                    variant="outline"
+                    className="text-[10px] font-normal bg-background/60"
+                  >
+                    {r}
+                  </Badge>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         <form
           onSubmit={(e) => void form.handleSubmit(onSubmit)(e)}
           className="flex flex-col gap-4"

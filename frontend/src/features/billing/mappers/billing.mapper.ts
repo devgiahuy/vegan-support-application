@@ -16,6 +16,7 @@ import type {
   BillingProductDto,
   EntitlementDto,
   EntitlementLedgerDto,
+  EntitlementSubscriptionDto,
 } from '@/features/billing/types/billing.dto';
 import type {
   BillingBenefits,
@@ -25,6 +26,7 @@ import type {
   BillingProduct,
   BillingProvider,
   BillingStatus,
+  EntitlementSubscription,
   Entitlements,
 } from '@/features/billing/types/billing.model';
 
@@ -42,6 +44,23 @@ const dateLabel = (value: unknown) => {
       }).format(date)
     : 'Chưa có';
 };
+const dayLabel = (value: unknown) => {
+  const date = safeDate(value);
+  return date
+    ? new Intl.DateTimeFormat('vi-VN', {
+        timeZone: 'Asia/Ho_Chi_Minh',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(date)
+    : 'Chưa có';
+};
+const durationMonths = (value: unknown): number | null => {
+  const months = count(value ?? 0);
+  return months > 0 ? months : null;
+};
+export const durationLabel = (months: number | null) =>
+  months === null ? 'Mua một lần' : months % 12 === 0 ? months / 12 + ' năm' : months + ' tháng';
 const provider = (value: unknown): BillingProvider =>
   value === 'payos' || value === 'sandbox' || value === 'vnpay' ? value : 'UNKNOWN';
 const providerLabel = (value: BillingProvider) =>
@@ -101,6 +120,8 @@ class ProductMapper extends BaseMapper<BillingProductDto, BillingProduct> {
     const id = safeString(pickField(dto, ['id'], ''));
     const priceVnd = count(pickField(dto, ['priceVnd'], 0));
     const allowance = benefits(dto);
+    const months = durationMonths(pickField(dto, ['durationMonths'], null));
+    const periodDays = months ? count(pickField(dto, ['periodDays'], 30)) || 30 : null;
     return {
       ...allowance,
       id,
@@ -110,12 +131,42 @@ class ProductMapper extends BaseMapper<BillingProductDto, BillingProduct> {
       priceVnd,
       priceLabel: formatCurrency(priceVnd),
       canBuy: Boolean(id && priceVnd > 0 && allowance.benefitLabels.length),
+      durationMonths: months,
+      durationLabel: durationLabel(months),
+      periodDays,
+      monthlyPriceLabel: months ? formatCurrency(Math.round(priceVnd / months)) : '',
+      periodBenefitLabels: months
+        ? [
+            allowance.chatCredits ? allowance.chatCredits + ' lượt chat AI' : '',
+            allowance.fridgeCredits ? allowance.fridgeCredits + ' lượt quét tủ lạnh' : '',
+            allowance.receiptCredits ? allowance.receiptCredits + ' lượt phân tích hóa đơn' : '',
+          ]
+            .filter(Boolean)
+            .map((label) => label + ' mỗi ' + periodDays + ' ngày')
+            .concat(
+              allowance.pantrySlots ? ['+' + allowance.pantrySlots + ' ô tủ đồ ăn khi còn hạn'] : []
+            )
+        : [],
+      savingsPercent: 0,
     };
   }
 }
 export class CatalogMapper extends BaseMapper<BillingCatalogDto, BillingCatalog> {
   toModel(dto: BillingCatalogDto | null | undefined): BillingCatalog {
     const source = provider(safeString(pickField(dto, ['provider'], '')));
+    const products = productMapper.toModelList(pickField(dto, ['products'], []));
+    const plans = products
+      .filter((product) => product.durationMonths !== null)
+      .sort((a, b) => (a.durationMonths ?? 0) - (b.durationMonths ?? 0));
+    const monthly = plans.find((plan) => plan.durationMonths === 1);
+    const durationPlans = plans.map((plan) => {
+      const fullPrice = monthly ? monthly.priceVnd * (plan.durationMonths ?? 1) : 0;
+      return {
+        ...plan,
+        savingsPercent:
+          fullPrice > plan.priceVnd ? Math.round((1 - plan.priceVnd / fullPrice) * 100) : 0,
+      };
+    });
     return {
       enabled:
         safeBoolean(pickField(dto, ['enabled'], false)) &&
@@ -127,7 +178,9 @@ export class CatalogMapper extends BaseMapper<BillingCatalogDto, BillingCatalog>
         source === 'sandbox' ||
         source === 'UNKNOWN' ||
         safeBoolean(pickField(dto, ['simulated'], false)),
-      products: productMapper.toModelList(pickField(dto, ['products'], [])),
+      products,
+      oneTimeProducts: products.filter((product) => product.durationMonths === null),
+      durationPlans,
     };
   }
 }
@@ -140,6 +193,7 @@ export class OrderMapper extends BaseMapper<BillingOrderDto, BillingOrder> {
       id: safeString(pickField(dto, ['id'], '')),
       productId: safeString(pickField(dto, ['productId'], '')),
       productName: safeString(pickField(dto, ['productName'], 'Gói quyền lợi')),
+      durationLabel: durationLabel(durationMonths(pickField(dto, ['durationMonths'], null))),
       provider: source,
       priceLabel: formatCurrency(count(pickField(dto, ['priceVnd'], 0))),
       providerLabel: providerLabel(source),
@@ -197,7 +251,16 @@ export class EntitlementMapper extends BaseMapper<EntitlementDto, Entitlements> 
       USAGE_RESERVED: 'Giữ chỗ cho tác vụ',
       USAGE_COMPLETED: 'Hoàn tất sử dụng',
       USAGE_RELEASED: 'Trả lại lượt',
+      USAGE_RELEASED_PERIOD_EXPIRED: 'Không hoàn lượt của chu kỳ đã hết',
+      SUBSCRIPTION_PERIOD_GRANT: 'Cấp lượt chu kỳ gói tiện ích',
+      SUBSCRIPTION_PERIOD_EXPIRED: 'Lượt chu kỳ cũ hết hạn',
     };
+    const subscription = subscriptionModel(pickField(dto, ['subscription'], null));
+    const chatAvailable = allowance.chatCredits + (subscription?.chatCredits ?? 0);
+    const fridgeAvailable = allowance.fridgeCredits + (subscription?.fridgeCredits ?? 0);
+    const receiptAvailable = allowance.receiptCredits + (subscription?.receiptCredits ?? 0);
+    const periodNote = (credits: number | undefined) =>
+      subscription ? ' · gồm ' + (credits ?? 0) + ' lượt chu kỳ gói' : '';
     return {
       ...allowance,
       enabled: safeBoolean(pickField(dto, ['enabled'], false)),
@@ -221,21 +284,29 @@ export class EntitlementMapper extends BaseMapper<EntitlementDto, Entitlements> 
       usageRows: [
         {
           label: 'Chat mua thêm',
-          value: allowance.chatCredits + ' lượt',
-          note: 'Dùng sau lượt miễn phí · ' + chatReserved + ' đang giữ chỗ',
+          value: chatAvailable + ' lượt',
+          note:
+            'Dùng sau lượt miễn phí · ' +
+            chatReserved +
+            ' đang giữ chỗ' +
+            periodNote(subscription?.chatCredits),
         },
         {
           label: 'Quét tủ lạnh',
-          value: allowance.fridgeCredits + ' lượt',
-          note: fridgeReserved + ' đang giữ chỗ',
+          value: fridgeAvailable + ' lượt',
+          note: fridgeReserved + ' đang giữ chỗ' + periodNote(subscription?.fridgeCredits),
         },
         {
           label: 'Phân tích hóa đơn',
-          value: allowance.receiptCredits + ' lượt',
-          note: receiptReserved + ' đang giữ chỗ',
+          value: receiptAvailable + ' lượt',
+          note: receiptReserved + ' đang giữ chỗ' + periodNote(subscription?.receiptCredits),
         },
         { label: 'Tủ đồ ăn', value: pantryLabel, note: 'Xóa hoặc gộp item sẽ giải phóng ô' },
       ],
+      chatAvailable,
+      fridgeAvailable,
+      receiptAvailable,
+      subscription,
       ledger: safeArray<EntitlementLedgerDto, Entitlements['ledger'][number]>(
         pickField(dto, ['ledger'], []),
         (entry) => {
@@ -244,6 +315,7 @@ export class EntitlementMapper extends BaseMapper<EntitlementDto, Entitlements> 
           const reason = safeString(pickField(entry, ['reason'], ''));
           return {
             id: safeString(pickField(entry, ['id'], '')),
+            delta,
             featureLabel: featureLabels[feature] ?? 'Quyền lợi',
             deltaLabel: (delta > 0 ? '+' : '') + delta,
             reasonLabel: reasons[reason] ?? 'Điều chỉnh quyền lợi',
@@ -253,6 +325,32 @@ export class EntitlementMapper extends BaseMapper<EntitlementDto, Entitlements> 
       ),
     };
   }
+}
+function subscriptionModel(
+  dto: EntitlementSubscriptionDto | null | undefined
+): EntitlementSubscription | null {
+  if (!dto || typeof dto !== 'object' || !safeDate(pickField(dto, ['endsAt'], null))) return null;
+  const chatCredits = count(pickField(dto, ['chatCredits'], 0));
+  const fridgeCredits = count(pickField(dto, ['fridgeCredits'], 0));
+  const receiptCredits = count(pickField(dto, ['receiptCredits'], 0));
+  const pantrySlots = count(pickField(dto, ['pantrySlots'], 0));
+  const per = (field: keyof EntitlementSubscriptionDto) => count(pickField(dto, [field], 0));
+  return {
+    productId: safeString(pickField(dto, ['productId'], '')),
+    endsAtLabel: dayLabel(pickField(dto, ['endsAt'], null)),
+    periodEndsAtLabel: dateLabel(pickField(dto, ['periodEndsAt'], null)),
+    periodDays: count(pickField(dto, ['periodDays'], 30)) || 30,
+    chatCredits,
+    fridgeCredits,
+    receiptCredits,
+    pantrySlots,
+    periodRows: [
+      { label: 'Chat AI', value: chatCredits + ' / ' + per('chatPerPeriod') },
+      { label: 'Quét tủ lạnh', value: fridgeCredits + ' / ' + per('fridgePerPeriod') },
+      { label: 'Phân tích hóa đơn', value: receiptCredits + ' / ' + per('receiptPerPeriod') },
+      { label: 'Ô tủ đồ ăn thêm', value: '+' + pantrySlots },
+    ],
+  };
 }
 export const productMapper = new ProductMapper();
 export const catalogMapper = new CatalogMapper();

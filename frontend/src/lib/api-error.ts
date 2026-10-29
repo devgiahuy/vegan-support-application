@@ -100,6 +100,53 @@ export const getApiErrorMessage = (
   return fallbackMessage;
 };
 
+const FIELD_LABELS: Record<string, string> = {
+  body: 'Nội dung bài viết',
+  content: 'Nội dung bài viết',
+  title: 'Tiêu đề',
+  excerpt: 'Đoạn trích tóm tắt',
+  summary: 'Đoạn trích tóm tắt',
+  categoryIds: 'Chuyên mục',
+  category: 'Chuyên mục',
+  tags: 'Thẻ (Tags)',
+  coverImageUrl: 'Ảnh bìa',
+  email: 'Email',
+  password: 'Mật khẩu',
+  name: 'Tên',
+  displayName: 'Tên hiển thị',
+  reason: 'Lý do',
+  description: 'Mô tả',
+};
+
+function localizeFieldValidation(field: string, rawMessage: string): string {
+  const label = FIELD_LABELS[field] || field;
+
+  let translated = rawMessage;
+  const tooSmallMatch = rawMessage.match(/^Too small: expected string to have >=(\d+) characters/i);
+  if (tooSmallMatch) {
+    translated = `quá ngắn (yêu cầu tối thiểu ${tooSmallMatch[1]} ký tự)`;
+  } else {
+    const tooBigMatch = rawMessage.match(/^Too big: expected string to have <=(\d+) characters/i);
+    if (tooBigMatch) {
+      translated = `quá dài (tối đa ${tooBigMatch[1]} ký tự)`;
+    } else if (/^Required/i.test(rawMessage)) {
+      translated = 'không được để trống';
+    } else if (/^Invalid url/i.test(rawMessage)) {
+      translated = 'đường dẫn URL không hợp lệ';
+    } else if (/^Invalid email/i.test(rawMessage)) {
+      translated = 'email không hợp lệ';
+    } else if (/^Invalid uuid/i.test(rawMessage)) {
+      translated = 'mã định danh không hợp lệ';
+    }
+  }
+
+  if (!FIELD_LABELS[field] && translated === rawMessage) {
+    return `${field}: ${rawMessage}`;
+  }
+
+  return `${label}: ${translated}`;
+}
+
 /**
  * Tóm tắt lỗi từng field (`error.fields`) thành text hiển thị trong toast.
  * Ví dụ: { "title": ["Quá ngắn"] } -> "title: Quá ngắn". Giới hạn số dòng
@@ -110,8 +157,10 @@ export const formatApiErrorFields = (error: unknown, maxFields: number = 3): str
   if (!fields) return undefined;
   const parts: string[] = [];
   for (const [key, value] of Object.entries(fields)) {
-    const messages = Array.isArray(value) ? value.map((v) => String(v)).join(', ') : String(value);
-    parts.push(`${key}: ${messages}`);
+    const rawMessages = Array.isArray(value)
+      ? value.map((v) => String(v)).join(', ')
+      : String(value);
+    parts.push(localizeFieldValidation(key, rawMessages));
     if (parts.length >= maxFields) break;
   }
   if (parts.length === 0) return undefined;

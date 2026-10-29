@@ -328,6 +328,8 @@ export class ChatService {
           historyMessageCount: history.length,
         },
         startedAt: now,
+        quotaSource: reserved.paidReservation ? 'ENTITLEMENT' : 'FREE',
+        usageResourceKey: reserved.paidReservation ? reservationKey : null,
       });
       return this.providerStream({
         identity,
@@ -579,6 +581,7 @@ export class ChatService {
         blockReason: reason,
       },
       startedAt,
+      quotaSource: 'NONE',
     });
     const message = await this.repository.completeNonQuotaTurn({
       assistantMessageId: assistantMessage.id,

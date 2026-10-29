@@ -122,7 +122,7 @@ export default function AssistantScreen() {
       <SiteHeader />
 
       <View className="gap-2 border-b border-border px-5 pb-3 pt-3">
-        <AllowanceNotice feature="CHAT" />
+        <AllowanceNotice feature="CHAT" freeExhausted={quotaExhausted} />
         <View className="flex-row items-center gap-2">
           <View className="h-9 w-9 items-center justify-center rounded-full bg-primary/10">
             <Sparkles size={17} color={colors.primary} />

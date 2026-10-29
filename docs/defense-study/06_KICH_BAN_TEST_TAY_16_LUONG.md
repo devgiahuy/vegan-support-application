@@ -1,6 +1,6 @@
 # Bộ chạy test tay 16 luồng nghiệp vụ
 
-**Ngày đối chiếu source/registry:** 24/10/2026. Đây là **kịch bản để tự chạy**, chưa phải biên bản PASS. Luồng L01–L16 khớp [danh mục nghiệp vụ](02_LUONG_NGHIEP_VU.md). Sau mỗi lần checkout/seed lại, kiểm tra [registry](../../frontend/docs/BACKEND_INTEGRATION.md) và [phase gate](../../backend/docs/IMPLEMENTATION_PHASES.md).
+**Ngày đối chiếu source/registry:** 24/10/2026; bổ sung luồng hóa đơn 25/10/2026. Đây là **kịch bản để tự chạy**, chưa phải biên bản PASS. Luồng L01–L16 khớp [danh mục nghiệp vụ](02_LUONG_NGHIEP_VU.md). Sau mỗi lần checkout/seed lại, kiểm tra [registry](../../frontend/docs/BACKEND_INTEGRATION.md) và [phase gate](../../backend/docs/IMPLEMENTATION_PHASES.md).
 
 ## 1. Chuẩn bị môi trường và cách ghi kết quả
 
@@ -27,7 +27,7 @@ Thay `R` bằng mã riêng mỗi lần chạy, ví dụ `MT2410A`. Tạo hai tà
 
 **Catalog seed để đối chứng:** `goi-cuon-chay-ngu-sac` và `yen-mach-qua-dem-chuoi-chia` có `PEANUT`; `sup-bi-do-kem-dua`, `salad-bo-dau-ga`, `chao-quinoa-bi-do-hat-bi` không khai báo allergen. Chọn theo **slug/tên và response hiện có**; seed có thể đổi. Nguyên liệu seed: `Gạo lứt huyết rồng`, `Đậu hũ trắng`, `Nấm bào ngư xám`, `Đậu phộng rang`. Gạo lứt của S có sẵn 2.000 g, nên bài toán số lượng độc lập hãy dùng A.
 
-**Ảnh test:** chuẩn bị `fridge-1.jpg` (chỉ một quả cà rốt và một bông cải trên nền rõ), `fridge-2.jpg` (cùng rau, góc chụp khác), `receipt-1.jpg` (hóa đơn giả in rõ `Cà rốt 2 kg`, `Gạo lứt 1 kg`) và `receipt-2.jpg` (chụp lại **cùng** hóa đơn), mỗi file JPEG hợp lệ dưới giới hạn upload cấu hình; thêm một `.txt` đổi đuôi `.jpg` để thử MIME. Dùng hóa đơn tự tạo, không chứa tên/số điện thoại/thẻ thật. Kết quả AI thật có thể khác chữ mong đợi; điều cần chứng minh là **user được sửa/xác nhận** và Pantry không đổi trước confirm.
+**Ảnh test:** chuẩn bị `fridge-1.jpg` (chỉ một quả cà rốt và một bông cải trên nền rõ), `fridge-2.jpg` (cùng rau, góc chụp khác), `receipt-1.jpg` (hóa đơn giả in rõ `Cà rốt 2 kg`, `Gạo lứt 1 kg`, `Nước rửa chén 1 chai`) và `receipt-2.jpg` (chụp lại **cùng** hóa đơn), mỗi file JPEG hợp lệ dưới giới hạn upload cấu hình; thêm một `.txt` đổi đuôi `.jpg` để thử MIME. Dùng hóa đơn tự tạo, không chứa tên/số điện thoại/thẻ thật. Kết quả AI thật có thể khác chữ mong đợi; điều cần chứng minh là **user được sửa/xác nhận** và Pantry không đổi trước confirm.
 
 **Thứ tự chạy khuyên dùng:** L01 → L02 → L05 → L03 → L04 → L06 → L07 → L09 → L08 → L11 → L10 → L12 → L13 → L14 → L15 → L16. L09 trước L08 để có món cá nhân. Giữ một bài đã public cho L04/L06 và một tài khoản B chưa có quyền để thử owner.
 
@@ -122,8 +122,8 @@ Thay `R` bằng mã riêng mỗi lần chạy, ví dụ `MT2410A`. Tạo hai tà
 
 - **Điều kiện:** receipt provider bật và upload thật như L12; Compose mặc định **tắt** receipt. Không cần provider để test shopping preview.
 - **Dữ liệu:** `receipt-1.jpg`, `receipt-2.jpg` là cùng hóa đơn; A có Pantry P1 sau L11; chọn recipe `sup-bi-do-kem-dua` và servings 2.
-- **Chạy hóa đơn:** `/receipts/scan` upload/commit ảnh 1 → tạo job → ghi Pantry trước. Sửa một line/quantity/giá, reject một line sai, thêm ảnh 2 vào job chưa confirm qua UI hoặc Swagger, xem line đã gộp. Confirm phần đã chọn → so Pantry sau reload. Với provider fake, dùng kết quả fixture làm bài test state/confirm, **không** coi là OCR ảnh thật.
-- **Đạt:** chưa confirm Pantry không đổi; dòng giống nhau giữa hai ảnh không cộng đôi; dòng lặp thật trong **cùng** ảnh có thể vẫn là hai dòng; confirm chỉ cộng line được chọn. Quá 4 ảnh, version cũ, owner khác hoặc add sau confirm phải bị chặn.
+- **Chạy hóa đơn:** `/receipts/scan` upload/commit ảnh 1 → tạo job → ghi Pantry trước. Xem `notices[]`/`excludedItems[]` cho `Nước rửa chén`; nếu AI loại nhầm một thực phẩm, sửa decision thành `KEEP` rồi review lại. Sửa một line/quantity/giá, reject một line sai, thêm ảnh 2 vào job chưa confirm qua UI hoặc Swagger, xem line đã gộp. Confirm phần đã chọn → so Pantry sau reload. Với provider fake, dùng kết quả fixture làm bài test state/confirm, **không** coi là OCR ảnh thật.
+- **Đạt:** chưa confirm Pantry không đổi; hàng phi thực phẩm bị loại khỏi candidates nhưng owner có thể khôi phục khi AI sai; dòng giống nhau giữa hai ảnh của **cùng hóa đơn** không cộng đôi; dòng lặp thật trong **cùng** ảnh có thể vẫn là hai dòng; confirm chỉ cộng line được chọn. Một job/hóa đơn lặp lại chính xác không tăng Pantry lần nữa; nếu hai lần mua chỉ trùng một phần, backend yêu cầu `identityDecisionRequired` và quyết định `SAME_RECEIPT` hoặc `SEPARATE_RECEIPTS` trước confirm. Cùng tên sản phẩm ở hai ngày mua khác nhau vẫn có thể là hai lần mua thật. Quá 4 ảnh, version cũ, owner khác hoặc add sau confirm phải bị chặn.
 - **Chạy shopping:** ở `/receipts` hoặc meal plan shopping, chọn recipe + servings, gọi `POST /shopping-lists/preview` nếu cần; ghi `required`, `available`, `missing`, `unresolvedItems`. Tăng Pantry một nguyên liệu rồi preview lại.
 - **Đạt shopping:** missing giảm tương ứng với tồn kho **confirmed và quy đổi được**; unresolved tách riêng, không giả định hóa đơn cũ vẫn còn trong kho.
 

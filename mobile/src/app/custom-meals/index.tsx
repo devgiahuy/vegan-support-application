@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Alert, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { Link, type Href } from 'expo-router';
 import { Plus, Search, Utensils } from 'lucide-react-native';
 import { SiteScreen } from '@/components/layout/site-screen';
@@ -100,11 +100,12 @@ export default function CustomMealsScreen() {
             />
           </View>
           <Link href={'/custom-meals/new' as Href} asChild>
-            <PrimaryButton
-              label="Tạo món mới"
-              icon={<Plus size={16} color={colors.primaryForeground} />}
-              style={{ height: 44, paddingHorizontal: 14 }}
-            />
+            <Pressable
+              accessibilityRole="button"
+              className="h-11 flex-row items-center justify-center gap-1.5 rounded-xl bg-primary px-4 active:opacity-90">
+              <Plus size={16} color={colors.primaryForeground} />
+              <Text numberOfLines={1} className="text-sm font-semibold text-primary-foreground">Tạo món mới</Text>
+            </Pressable>
           </Link>
         </View>
 

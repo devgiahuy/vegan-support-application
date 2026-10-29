@@ -1,9 +1,8 @@
 import * as React from 'react';
-import { Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { Image } from 'expo-image';
 import { ArrowRight, Calendar, Camera, Check, CircleAlert, CreditCard, Maximize2, Pencil, Receipt, RotateCcw, Sparkles, Store, Trash2 } from 'lucide-react-native';
 import { FormSheet } from '@/components/shared/form-sheet';
-import { LoadingState } from '@/components/shared/state-views';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { useIconColors } from '@/lib/theme-colors';
 import { cn } from '@/lib/utils';
@@ -68,7 +67,7 @@ export function ScanReview({ job, busy, error, reviewDecision, onReviewDecision,
   const fridge = job.kind === 'fridge';
   const copy = fridge
     ? { title: 'Kiểm tra & Nhập thông tin nguyên liệu', count: 'món nhận diện', hint: 'Đối chiếu hình ảnh tủ lạnh phía trên và hoàn tất trọng lượng, đơn vị bên dưới trước khi lưu.', imageTitle: 'Ảnh chụp tủ lạnh', imageCount: (n: number) => `${n} ảnh`, part: 'Góc ảnh', pick: 'Chọn góc chụp để đối chiếu:', noImage: 'Không tìm thấy ảnh tủ lạnh trong tác vụ này.', guide: 'Hướng dẫn', guideText: 'Nhìn ảnh tủ lạnh phía trên để kiểm tra món đồ, điền trọng lượng và đơn vị vào danh sách bên dưới. Sau đó nhấn ', listTitle: 'Danh sách nguyên liệu', listHint: 'Điền số lượng và đơn vị cho các món thực tế có trong tủ lạnh.', noun: 'nguyên liệu', empty: 'Không tìm thấy nguyên liệu trong ảnh.', sheet: 'Ảnh tủ lạnh' }
-    : { title: 'Kiểm tra & Nhập thông tin hóa đơn', count: 'dòng hàng nhận diện', hint: 'Đối chiếu hóa đơn phía trên và kiểm tra, nhập trọng lượng, đơn vị bên dưới trước khi lưu.', imageTitle: 'Ảnh chụp hóa đơn', imageCount: (n: number) => `${n} ảnh đoạn`, part: 'Đoạn', pick: 'Chọn đoạn để đối chiếu:', noImage: 'Không tìm thấy ảnh hóa đơn trong tác vụ này.', guide: 'Hướng dẫn đối chiếu', guideText: 'Nhìn ảnh hóa đơn phía trên để kiểm tra món đồ, điền trọng lượng và đơn vị vào danh sách bên dưới. Sau đó nhấn ', listTitle: 'Danh sách mặt hàng', listHint: 'Điền trọng lượng và đơn vị cho các mặt hàng thực phẩm muốn lưu vào Tủ bếp.', noun: 'mặt hàng', empty: 'Không tìm thấy mặt hàng trong ảnh.', sheet: 'Ảnh hóa đơn' };
+    : { title: 'Kiểm tra & Nhập thông tin hóa đơn', count: 'dòng hàng nhận diện', hint: 'Đối chiếu hóa đơn phía trên và kiểm tra, nhập trọng lượng, đơn vị bên dưới trước khi lưu.', imageTitle: 'Ảnh chụp hóa đơn', imageCount: (n: number) => `${n} ảnh`, part: 'Ảnh', pick: 'Chọn ảnh để đối chiếu:', noImage: 'Không tìm thấy ảnh hóa đơn trong tác vụ này.', guide: 'Hướng dẫn đối chiếu', guideText: 'Nhìn ảnh hóa đơn phía trên để kiểm tra món đồ, điền trọng lượng và đơn vị vào danh sách bên dưới. Sau đó nhấn ', listTitle: 'Danh sách mặt hàng', listHint: 'Điền trọng lượng và đơn vị cho các mặt hàng thực phẩm muốn lưu vào Tủ bếp.', noun: 'mặt hàng', empty: 'Không tìm thấy mặt hàng trong ảnh.', sheet: 'Ảnh hóa đơn' };
   const ImageIcon = fridge ? Camera : Receipt;
   const [drafts, setDrafts] = React.useState<ScanDraft[]>(() => job.candidates.map(toScanDraft));
   const [filter, setFilter] = React.useState<Filter>('all');
@@ -89,7 +88,7 @@ export function ScanReview({ job, busy, error, reviewDecision, onReviewDecision,
     { key: 'active', label: `Cần thêm (${activeCount})` },
     ...(rejectedCount > 0 ? [{ key: 'rejected' as const, label: `Đã loại (${rejectedCount})` }] : []),
   ];
-  const label = processing ? `Đang xử lý ${job.completedImages}/${job.totalImages} ảnh`
+  const label = processing ? ''
     : job.status === 'FAILED' ? 'Chưa nhận diện được' : job.status === 'PARTIAL_FAILED' ? 'Một số ảnh chưa đọc được'
       : job.status === 'CONFIRMED' ? 'Đã nhập tủ bếp' : job.status === 'CANCELLED' ? 'Đã hủy' : '';
   const inputClass = 'h-11 rounded-xl border border-input bg-background px-3 text-sm text-foreground';
@@ -103,7 +102,6 @@ export function ScanReview({ job, busy, error, reviewDecision, onReviewDecision,
         </View>
         <Text className="text-sm text-muted-foreground">{copy.hint}</Text>
         {label ? <Text className="text-sm font-semibold text-foreground">{label}</Text> : null}
-        {processing ? <LoadingState message={`Đang xử lý ${job.completedImages}/${job.totalImages} ảnh`} /> : null}
         {job.issue ? <Text accessibilityRole="alert" className="text-sm text-destructive">{job.issue.message}</Text> : null}
         {job.status === 'FAILED' || job.status === 'PARTIAL_FAILED' ? <PrimaryButton label="Thử lại" variant="outline" disabled={busy} icon={<RotateCcw size={16} color={colors.primary} />} onPress={onRetry} /> : null}
         {processing ? <PrimaryButton label="Hủy tác vụ" variant="outline" disabled={busy} onPress={onCancel} /> : null}
@@ -141,6 +139,7 @@ export function ScanReview({ job, busy, error, reviewDecision, onReviewDecision,
           <View className="overflow-hidden rounded-xl border border-border bg-black" style={{ aspectRatio: 4 / 3 }}>
             <Image source={{ uri: image.url }} style={{ width: '100%', height: '100%' }} contentFit="contain" accessibilityLabel={`${copy.sheet} ${copy.part.toLowerCase()} ${image.position + 1}`} />
             <View className="absolute left-2.5 top-2.5 rounded-full bg-black/60 px-2.5 py-1"><Text className="text-[11px] font-medium text-white">{copy.part} #{image.position + 1}</Text></View>
+            {processing ? <View accessibilityLabel={`Đang xử lý ${job.completedImages}/${job.totalImages} ảnh`} className="absolute inset-0 items-center justify-center bg-black/45"><ActivityIndicator size="large" color="#ffffff" /></View> : null}
             <Pressable accessibilityRole="button" accessibilityLabel="Xem phóng to ảnh" onPress={() => setZoom(true)} className="absolute bottom-2.5 right-2.5 h-9 w-9 items-center justify-center rounded-full bg-black/65"><Maximize2 size={16} color="#ffffff" /></Pressable>
             {image.issue ? <View className="absolute bottom-2.5 left-2.5 right-14"><Text className="text-xs text-white">{image.issue}</Text></View> : null}
           </View>
@@ -203,9 +202,9 @@ export function ScanReview({ job, busy, error, reviewDecision, onReviewDecision,
           return (
             <View key={draft.id} className={cn('gap-3 rounded-xl border p-3.5', draft.rejected ? 'border-dashed border-border bg-muted/30 opacity-60' : 'border-border bg-card')}>
               <View className="gap-1.5">
-                <TextInput accessibilityLabel={`Tên ${candidate.name}`} style={{ marginLeft: -8 }} editable={!locked} value={draft.name} placeholder="Tên nguyên liệu..." placeholderTextColor={colors.mutedForeground}
+                <TextInput accessibilityLabel={`Tên ${candidate.name}`} style={{ marginLeft: -8 }} textAlignVertical="center" editable={!locked} value={draft.name} placeholder="Tên nguyên liệu..." placeholderTextColor={colors.mutedForeground}
                   onChangeText={value => update(draft.id, { name: value })} maxLength={160}
-                  className={cn('h-10 rounded-lg border border-transparent bg-transparent px-2 text-base font-semibold focus:border-input', draft.rejected ? 'text-muted-foreground line-through' : 'text-foreground')} />
+                  className={cn('h-12 rounded-lg border border-transparent bg-transparent px-2 py-0 text-base font-semibold focus:border-input', draft.rejected ? 'text-muted-foreground line-through' : 'text-foreground')} />
                 {!fridge ? (
                   <View className="flex-row flex-wrap items-center justify-between gap-x-4 gap-y-1.5 pl-0.5">
                     <View className="shrink flex-row items-center gap-1.5">

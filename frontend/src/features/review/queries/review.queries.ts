@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import { getApiErrorCode, getApiErrorFields, toastApiError } from '@/lib/api-error';
 import { reviewApi } from '../api/review.api';
 import type { ReviewQueueQueryParams, SubmitPostInput } from '../types/content-review.model';
+import type { ReviewNutritionOverrideValues } from '../types/review-nutrition.model';
 import { ReviewDecisionEnum } from '../types/content-review.model';
 import { localizeReviewReasonError } from '../utils/review-error';
 
@@ -17,7 +18,11 @@ export const CONTENT_REVIEW_KEYS = {
   detail: (revisionId: string) => [...CONTENT_REVIEW_KEYS.all, 'detail', revisionId] as const,
   history: (postId: string, params?: { page?: number; limit?: number }) =>
     [...CONTENT_REVIEW_KEYS.all, 'history', postId, params] as const,
+  nutrition: (revisionId: string) => [...CONTENT_REVIEW_KEYS.all, 'nutrition', revisionId] as const,
 };
+
+/** Polling khi job AI còn chạy/hẹn thử lại để người duyệt thấy kết quả mà không cần tải lại */
+const NUTRITION_JOB_POLL_MS = 10_000;
 
 /** Alias tương thích ngược cho REVIEW_QUEUE_KEYS */
 export const REVIEW_QUEUE_KEYS = {
@@ -166,6 +171,16 @@ export function useAdminContentReviewDecisionMutation() {
         });
         return;
       }
+      if (code === 'RECIPE_NUTRITION_INCOMPLETE') {
+        toast.error('Chưa đủ chỉ số dinh dưỡng', {
+          description:
+            'Cần đủ 5 chỉ số trên mỗi khẩu phần (năng lượng, protein, carbohydrate, chất béo, chất xơ). Hãy nhập tay chỉ số còn trống hoặc bấm "AI tính lại".',
+        });
+        queryClient.invalidateQueries({
+          queryKey: CONTENT_REVIEW_KEYS.nutrition(variables.revisionId),
+        });
+        return;
+      }
       if (code === 'REVIEW_CONFLICT') {
         toast.error('Xung đột thẩm định', {
           description:
@@ -197,6 +212,95 @@ export function useAdminContentReviewDecisionMutation() {
 
       toastApiError(err, 'Không thể hoàn tất quyết định kiểm duyệt');
     },
+  });
+}
+
+// ==========================================
+// 2b. Dinh dưỡng công thức khi duyệt
+// ==========================================
+
+function toastNutritionReviewError(err: unknown, title: string) {
+  const code = getApiErrorCode(err);
+  if (code === 'SELF_APPROVAL_FORBIDDEN') {
+    toast.error(title, { description: 'Bạn không thể duyệt công thức do chính mình tạo.' });
+    return;
+  }
+  if (code === 'ADMIN_REVIEW_REQUIRED') {
+    toast.error(title, {
+      description: 'Bản nộp này cần Quản trị viên xử lý (có cảnh báo hoặc nhiều báo cáo).',
+    });
+    return;
+  }
+  if (code === 'REVIEW_ALREADY_DECIDED' || code === 'CONTENT_STATE_CONFLICT') {
+    toast.error(title, { description: 'Bản nộp không còn ở trạng thái chờ duyệt.' });
+    return;
+  }
+  if (code === 'INVALID_CONTENT') {
+    toast.error(title, { description: 'Bản nộp này không phải công thức có dữ liệu cấu trúc.' });
+    return;
+  }
+  toastApiError(err, title);
+}
+
+/**
+ * Panel dinh dưỡng cho người duyệt; tự làm mới khi job AI còn đang chạy
+ * GET /api/v1/admin/content-review/:id/nutrition
+ */
+export function useReviewNutritionPanelQuery(revisionId: string, enabled = true) {
+  return useQuery({
+    queryKey: CONTENT_REVIEW_KEYS.nutrition(revisionId),
+    queryFn: () => reviewApi.getNutritionPanel(revisionId),
+    enabled: Boolean(revisionId) && enabled,
+    staleTime: 5 * 1000,
+    refetchInterval: (query) => (query.state.data?.aiJob?.isActive ? NUTRITION_JOB_POLL_MS : false),
+  });
+}
+
+/**
+ * Người duyệt sửa tay / bỏ sửa tay chỉ số dinh dưỡng
+ * PATCH /api/v1/admin/content-review/:id/nutrition
+ */
+export function useUpdateReviewNutritionMutation(revisionId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ values, reason }: { values: ReviewNutritionOverrideValues; reason?: string }) =>
+      reviewApi.updateNutritionOverrides(revisionId, values, reason),
+    onSuccess: (panel) => {
+      queryClient.setQueryData(CONTENT_REVIEW_KEYS.nutrition(revisionId), panel);
+      toast.success('Đã lưu chỉ số dinh dưỡng', {
+        description: 'Chỉnh sửa được ghi lại kèm người sửa và thời điểm.',
+      });
+    },
+    onError: (err: unknown) => {
+      const fields = getApiErrorFields(err);
+      if (getApiErrorCode(err) === 'VALIDATION_ERROR' && fields) {
+        toast.error('Không thể lưu chỉ số dinh dưỡng', {
+          description: 'Giá trị phải là số không âm và nhỏ hơn 100.000.',
+        });
+        return;
+      }
+      toastNutritionReviewError(err, 'Không thể lưu chỉ số dinh dưỡng');
+    },
+  });
+}
+
+/**
+ * "AI tính lại" — hệ thống chịu chi phí, không trừ quota
+ * POST /api/v1/admin/content-review/:id/nutrition/recalculate
+ */
+export function useRecalculateReviewNutritionMutation(revisionId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => reviewApi.recalculateNutrition(revisionId),
+    onSuccess: (panel) => {
+      queryClient.setQueryData(CONTENT_REVIEW_KEYS.nutrition(revisionId), panel);
+      toast.success(panel.aiJob?.isActive ? 'Đã gửi AI tính lại' : 'Đã tính lại dinh dưỡng', {
+        description: panel.aiJob?.isActive
+          ? 'Kết quả sẽ tự cập nhật khi AI chạy xong. Giá trị sửa tay vẫn được giữ.'
+          : 'Dữ liệu chuẩn đã đủ nên không cần gọi AI.',
+      });
+    },
+    onError: (err: unknown) => toastNutritionReviewError(err, 'Không thể tính lại dinh dưỡng'),
   });
 }
 

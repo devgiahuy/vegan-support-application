@@ -91,8 +91,8 @@ export default function RecipeDiscoveryPage() {
     isError: isRecipesError,
     refetch: refetchRecipes,
   } = showingIneligible ? ineligibleQuery : eligibleQuery;
-  const eligibleCount = eligibleQuery.data?.metadata.totalItems;
-  const ineligibleCount = ineligibleQuery.data?.metadata.totalItems;
+  const eligibleCount = eligibleQuery.data?.metadata.totalItems; // eligibleCount là số món ăn phù hợp với tiêu chí
+  const ineligibleCount = ineligibleQuery.data?.metadata.totalItems; // ineligibleCount là số món ăn không phù hợp với tiêu chí
 
   const recipes = recipesPagination?.items || [];
 

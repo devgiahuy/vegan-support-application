@@ -70,22 +70,16 @@ export function useRelatedPostsQuery(id: string) {
 }
 
 /**
- * Hook tạo mới bài viết blog
+ * Hook tạo mới bài viết blog (toast thành công do component gọi để phân biệt Draft/Published)
  */
 export function useCreateArticleMutation() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (article: Partial<Article>) => postApi.createArticle(article),
-    onSuccess: (data) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.articlesList() });
       queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.mineRoot() });
-      toast.success('Đã gửi bài viết thành công!', {
-        description:
-          data.status === 'PUBLISHED'
-            ? 'Bài viết của bạn đã được xuất bản công khai.'
-            : 'Bài viết đã được gửi vào hàng chờ duyệt của ban biên tập.',
-      });
     },
     onError: (err: unknown) => {
       toastApiError(err, 'Không thể tạo bài viết', 'Vui lòng kiểm tra lại thông tin.');
@@ -94,7 +88,7 @@ export function useCreateArticleMutation() {
 }
 
 /**
- * Hook cập nhật bài viết blog
+ * Hook cập nhật bài viết blog (toast thành công do component gọi để phân biệt Draft/Published)
  */
 export function useUpdateArticleMutation() {
   const queryClient = useQueryClient();
@@ -106,7 +100,6 @@ export function useUpdateArticleMutation() {
       queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.articleDetail(variables.id) });
       queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.articlesList() });
       queryClient.invalidateQueries({ queryKey: POST_QUERY_KEYS.mineRoot() });
-      toast.success('Đã lưu bài viết thành công!');
     },
     onError: (err: unknown) => {
       toastApiError(err, 'Lỗi khi cập nhật bài viết');

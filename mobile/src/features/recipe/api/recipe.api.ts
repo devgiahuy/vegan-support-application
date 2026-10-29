@@ -2,6 +2,7 @@ import api from '@/lib/axios';
 import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
 import { PostType, RecipeDifficulty } from '@/common/enums';
 import { recipeMapper } from '../mappers/recipe.mapper';
+import { stepsToBody } from '../utils/recipe-body';
 import type { RecipeDetailResponseDto, RecipeListResponseDto } from '../types/recipe.dto';
 import type { RelatedPostsResponseDto } from '@/features/post/types/post.dto';
 import type { Recipe, RecipePaginationResult } from '../types/recipe.model';
@@ -51,14 +52,6 @@ export interface CreateRecipeInput {
   prepTimeMinutes: number;
   cookTimeMinutes: number;
   difficulty: RecipeDifficulty;
-  nutrition?: {
-    calories?: number;
-    proteinGrams?: number;
-    carbsGrams?: number;
-    fatGrams?: number;
-    fiberGrams?: number;
-    vitaminB12Mcg?: number;
-  };
   ingredients: CreateRecipeIngredientInput[];
   steps: CreateRecipeStepInput[];
 }
@@ -67,10 +60,6 @@ export interface UpdateRecipeInput extends CreateRecipeInput {
   expectedVersion: number;
 }
 
-/** Gộp các bước thành văn bản `revision.body` (backend yêu cầu có nội dung hướng dẫn). */
-function stepsToBody(steps: CreateRecipeStepInput[]): string {
-  return steps.map((step, index) => `Bước ${index + 1}: ${step.instruction.trim()}`).join('\n');
-}
 
 function buildRecipePayload(input: CreateRecipeInput) {
   return {
@@ -88,7 +77,6 @@ function buildRecipePayload(input: CreateRecipeInput) {
       prepTimeMinutes: input.prepTimeMinutes,
       cookTimeMinutes: input.cookTimeMinutes,
       difficulty: input.difficulty,
-      nutrition: input.nutrition ?? {},
       ingredients: input.ingredients.map((ing) => ({
         ...(ing.ingredientId ? { ingredientId: ing.ingredientId } : {}),
         displayName: ing.displayName,

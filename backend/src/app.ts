@@ -94,6 +94,8 @@ import { MealAnalysisService } from './modules/meal-analysis/meal-analysis.servi
 import { createAiProvider } from './modules/chat/ai-provider.js';
 import { AiGovernanceService } from './modules/ai-governance/ai-governance.service.js';
 import { AiGovernanceController } from './modules/ai-governance/ai-governance.controller.js';
+import { createAdminInsightsRouter } from './modules/admin-insights/admin-insights.router.js';
+import { AdminInsightsService } from './modules/admin-insights/admin-insights.service.js';
 import { createAiGovernanceRouter } from './modules/ai-governance/ai-governance.router.js';
 import {
   governAiProvider,
@@ -114,7 +116,13 @@ import {
 import { FoodDataService } from './modules/food-data/food-data.service.js';
 import { RecipeNutritionController } from './modules/recipe-nutrition/recipe-nutrition.controller.js';
 import { RecipeNutritionRepository } from './modules/recipe-nutrition/recipe-nutrition.repository.js';
-import { createRecipeNutritionRouter } from './modules/recipe-nutrition/recipe-nutrition.router.js';
+import {
+  createRecipeNutritionReviewRouter,
+  createRecipeNutritionRouter,
+} from './modules/recipe-nutrition/recipe-nutrition.router.js';
+import { RecipeNutritionReviewController } from './modules/recipe-nutrition/recipe-nutrition-review.controller.js';
+import { RecipeNutritionReviewRepository } from './modules/recipe-nutrition/recipe-nutrition-review.repository.js';
+import { RecipeNutritionReviewService } from './modules/recipe-nutrition/recipe-nutrition-review.service.js';
 import { RecipeNutritionService } from './modules/recipe-nutrition/recipe-nutrition.service.js';
 import { CloudinaryMediaProvider } from './modules/storage/cloudinary.provider.js';
 import { StorageController } from './modules/storage/storage.controller.js';
@@ -167,9 +175,16 @@ export interface AppDependencies {
   config: AppConfig;
   database: Database;
   logger: Logger;
+  /** Resume persisted background jobs (recipe nutrition review AI jobs). Only the HTTP server enables it. */
+  startBackgroundJobs?: boolean;
 }
 
-export function createApp({ config, database, logger }: AppDependencies): Express {
+export function createApp({
+  config,
+  database,
+  logger,
+  startBackgroundJobs = false,
+}: AppDependencies): Express {
   const app = express();
   const contributorStateMachine = new ContributorApplicationStateMachine();
   const authRepository = new AuthRepository(database.client, contributorStateMachine);
@@ -190,13 +205,6 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   const mediaService = new MediaService(storageRepository);
   const ruleModerationService = new RuleModerationService();
   const contentRepository = new ContentRepository(database.client);
-  const contentController = new ContentController(
-    new ContentService(
-      contentRepository,
-      mediaService,
-      new ModeratedPublicationPolicy(ruleModerationService),
-    ),
-  );
   const communityController = new CommunityController(
     new CommunityService(new CommunityRepository(database.client)),
   );
@@ -247,8 +255,27 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   const foodDataController = new FoodDataController(
     new FoodDataService(new FoodDataRepository(database.client)),
   );
-  const recipeNutritionController = new RecipeNutritionController(
-    new RecipeNutritionService(new RecipeNutritionRepository(database.client), aiProvider),
+  const recipeNutritionRepository = new RecipeNutritionRepository(database.client);
+  const recipeNutritionService = new RecipeNutritionService(recipeNutritionRepository, aiProvider);
+  const recipeNutritionController = new RecipeNutritionController(recipeNutritionService);
+  const recipeNutritionReviewService = new RecipeNutritionReviewService(
+    new RecipeNutritionReviewRepository(database.client),
+    recipeNutritionRepository,
+    recipeNutritionService,
+    aiProvider,
+    config.ai.timeoutMs,
+  );
+  const recipeNutritionReviewController = new RecipeNutritionReviewController(
+    recipeNutritionReviewService,
+  );
+  if (startBackgroundJobs) void recipeNutritionReviewService.recoverJobs();
+  const contentController = new ContentController(
+    new ContentService(
+      contentRepository,
+      mediaService,
+      new ModeratedPublicationPolicy(ruleModerationService),
+      (revisionId) => recipeNutritionReviewService.onRevisionSubmitted(revisionId),
+    ),
   );
   const customMealController = new CustomMealController(
     new CustomMealService(new CustomMealRepository(database.client), storageRepository, aiProvider),
@@ -345,12 +372,20 @@ export function createApp({ config, database, logger }: AppDependencies): Expres
   app.use('/api/v1/ingredients', createIngredientRouter(catalogController));
   app.use('/api/v1', createCompositionRouter(database.client, authentication));
   app.use('/api/v1/food-data', createFoodDataRouter(foodDataController));
+  app.use(
+    '/api/v1/admin',
+    createRecipeNutritionReviewRouter(recipeNutritionReviewController, authentication),
+  );
   app.use('/api/v1/admin', createModerationAdminRouter(moderationController, authentication));
   app.use('/api/v1/admin', createCatalogAdminRouter(catalogController, authentication));
   app.use('/api/v1/admin', createFoodDataAdminRouter(foodDataController, authentication));
   app.use('/api/v1/admin', createContributorAdminRouter(contributorController, authentication));
   app.use('/api/v1/admin', createStorageAdminRouter(storageController, authentication));
   app.use('/api/v1/admin', createAiReviewAdminRouter(aiReviewController, authentication));
+  app.use(
+    '/api/v1/admin',
+    createAdminInsightsRouter(new AdminInsightsService(database.client), authentication),
+  );
   app.use(
     '/api/v1/admin',
     createAiGovernanceRouter(new AiGovernanceController(aiGovernance), authentication),

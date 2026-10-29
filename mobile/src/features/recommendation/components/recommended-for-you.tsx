@@ -52,7 +52,7 @@ function RecommendationCard({ item }: { item: Recommendation }) {
           ) : null}
         </View>
 
-        <View className="gap-2 p-3.5">
+        <View className="flex-1 gap-2 p-3.5">
           {item.calories !== null || item.ratingCount > 0 ? (
             <View className="flex-row flex-wrap items-center gap-x-3 gap-y-1">
               {item.calories !== null ? (
@@ -86,7 +86,7 @@ function RecommendationCard({ item }: { item: Recommendation }) {
             </View>
           ) : null}
 
-          <View className="mt-1 flex-row items-center justify-between border-t border-border pt-2.5">
+          <View className="mt-auto flex-row items-center justify-between border-t border-border pt-2.5">
             <Text numberOfLines={1} className="flex-1 text-xs font-medium text-muted-foreground">
               Xem công thức
             </Text>

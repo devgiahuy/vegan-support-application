@@ -1,5 +1,120 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-29] — Trang /admin/dashboard: Chuẩn hóa hiển thị lý do báo cáo & thêm 2 nút cuộn ngang thanh tabs
+
+- **Yêu cầu**:
+  1. Chỉnh sửa trường hiển thị lý do ở trang `/admin/dashboard?tab=reports` hiện đang hiển thị status/code thô trả ra từ backend (`MISLEADING_INFORMATION`, `OTHER`, v.v.).
+  2. Thêm 2 nút ở 2 đầu thanh tab bar để người dùng click cuộn ngang thanh tabs.
+- **Frontend**:
+  - `moderation.mapper.ts`:
+    - Khai báo từ điển `REPORT_REASON_LABELS` và hàm helper `formatReportReason` ánh xạ toàn bộ mã lý do báo cáo backend (`MISLEADING_INFORMATION`, `MISINFORMATION`, `SPAM`, `HARMFUL_HEALTH`, `HARASSMENT`, `COPYRIGHT`, `OTHER`, các tín hiệu AI flag/rule moderation) sang nhãn tiếng Việt chuẩn (`Thông tin sai lệch`, `Lý do khác`, `Spam`, `Gây hại sức khỏe`, `Quấy rối`, `Vi phạm bản quyền`).
+    - Cập nhật hàm `toModel` trong `ModerationMapper` chuyển đổi mã thô thành nhãn tiếng Việt trong `reasons` của UI Model.
+  - `reports-table.tsx`:
+    - Thay thế văn bản chuỗi thô bằng các `<Badge variant="outline">` tinh tế, hỗ trợ hiển thị tối đa 2 badge kèm badge `+N` (có tooltip) khi có nhiều lý do, và hiển thị dấu gạch ngang `—` khi không có lý do.
+  - `resolve-dialog.tsx`:
+    - Bổ sung khối thông tin tóm tắt báo cáo (tiêu đề mục tiêu, badge trạng thái, đoạn trích và badge lý do báo cáo) giúp quản trị viên có đầy đủ ngữ cảnh lý do vi phạm trước khi đưa ra quyết định giải quyết.
+  - `moderation.mapper.test.ts`:
+    - Bổ sung bộ unit test xác minh hàm `formatReportReason` và ánh xạ `reasons` từ DTO (`reasonCode`, `reason_code`, `reasons`).
+  - `admin/dashboard/page.tsx`:
+    - Bổ sung 2 nút tròn (`ChevronLeft` và `ChevronRight`) ở 2 đầu thanh tab bar bọc bởi layout `flex w-full min-w-0 items-center gap-1.5`.
+    - Bổ sung `min-w-0` trên `tabListRef` để flex child cho phép co nhỏ hơn nội dung thực tế và kích hoạt cuộn ngang `overflow-x-auto`.
+    - Thay thế `disabled={...}` / `disabled:pointer-events-none` (gây chặn sự kiện click) bằng styling `opacity-40` và điều khiển cuộn thông minh qua `scrollTo({ left: target, behavior: 'smooth' })` với khoảng cuộn 320px được clamp an toàn.
+    - Tích hợp `ResizeObserver` và listener `scroll`/`resize` để cập nhật trạng thái các nút tức thời.
+    - Thêm cơ chế tự động cuộn tab đang chọn vào tầm nhìn (`scrollIntoView`) khi chuyển tab.
+- **Kiểm chứng**:
+  - `npx tsc --noEmit` pass 0 lỗi type.
+  - `npm test` toàn bộ 68 test suite (732 tests pass).
+  - `npm run build` pass thành công toàn bộ 47 routes.
+
+## [2026-10-29] — Tinh gọn SiteFooter: Loại bỏ các nội dung mock và không liên quan
+
+- **Yêu cầu**: Chỉnh sửa tinh gọn Footer, loại bỏ các nội dung không liên quan và các khối đang mock (banner đăng ký newsletter, nút tải ứng dụng di động, cam kết tiếp thị mock, toàn bộ các icon mạng xã hội giả lập).
+- **Frontend**:
+  - `site-footer.tsx`:
+    - **Loại bỏ 3 icon mạng xã hội**: Xóa hoàn toàn các icon và liên kết mạng xã hội giả lập (Facebook, Instagram, YouTube) cùng các hàm SVG định nghĩa tương ứng, giữ phần nhận diện thương hiệu và thông điệp xanh tối giản.
+    - **Loại bỏ khối "Đăng ký nhận tin" (Newsletter)**: Xóa bỏ card đăng ký nhận tin kích thước lớn với hiệu ứng glow, input email và thông báo toast mock phía client (chưa có endpoint backend hỗ trợ) cùng 3 micro-trust badges mock ("Không spam", "Bảo mật thông tin", "Hủy đăng ký dễ dàng").
+    - **Loại bỏ cột "Tải ứng dụng"**: Xóa nút tải trên App Store (`#download-app-store`) và Google Play (`#download-google-play`) vì ứng dụng hiện là web responsive, không có app di động trên cửa hàng.
+    - **Loại bỏ cột "Cam kết của chúng tôi"**: Xóa bỏ các cam kết tiếp thị chung chung mang tính mock và vi phạm quy định không nhận vơ chuyên gia/chứng chỉ trong MVP ("Được chuyên gia tư vấn", "Chất lượng hàng đầu", v.v.).
+    - **Tổ chức lại layout 4 cột chức năng**:
+      - Cột 1 (Thương hiệu & Sứ mệnh): Logo VeggieConnect, slogan "Ăn chay • Sống khỏe • Kết nối cộng đồng", mô tả nền tảng dinh dưỡng thực vật súc tích và thông điệp "Vì một tương lai xanh hơn 🍃".
+      - Cột 2 (Khám phá): Trang chủ, Công thức nấu ăn, Tra cứu dinh dưỡng (`/categories`), Bản đồ quán chay (`/restaurants`), Cẩm nang & Bài viết (`/articles`), Video nấu ăn (`/videos`).
+      - Cột 3 (Tiện ích): Trợ lý AI dinh dưỡng (`/assistant`), Kế hoạch thực đơn (`/meal-plans`), Quản lý tủ bếp (`/pantry`), Quét hóa đơn mua sắm (`/receipts/scan`), Món ăn tùy biến (`/custom-meals`), Gói hội viên (`/billing`).
+      - Cột 4 (Thông tin & Hỗ trợ): Về VeggieConnect (`/about`), Trung tâm trợ giúp (`/help`), Quy chế cộng đồng (`/guidelines`), Điều khoản sử dụng (`/terms`), Chính sách bảo mật (`/privacy`), Liên hệ hỗ trợ (`/contact`), Góp ý & Báo lỗi (`/feedback`).
+    - **Bottom Bar**: Giữ lại bản quyền "© 2026 VeggieConnect", thông điệp xanh và thiết kế thẩm mỹ hòa hợp trên nền botanical dark emerald.
+- **Kiểm chứng**:
+  - `npx tsc --noEmit` pass 0 lỗi type.
+  - `npm test` toàn bộ 68 test suite (731 tests pass).
+  - `npm run build` pass thành công toàn bộ 47 routes.
+
+
+## [2026-10-28] — Trang /pantry: Bổ sung tùy chọn tự nhập nguyên liệu chuẩn & dropdown đơn vị thông dụng
+
+- **Yêu cầu**: Trên trang `/pantry`, tại modal "Thêm nguyên liệu vào tủ bếp":
+  1. Thêm tùy chọn tự nhập tên nguyên liệu từ người dùng ngay trong ô chọn nguyên liệu chuẩn.
+  2. Chuyển ô đơn vị thành dropdown có gợi ý sẵn các đơn vị thực phẩm thông dụng và hỗ trợ tự nhập khi cần.
+- **Frontend**:
+  - `pantry-item-dialog.tsx`:
+    - **Tự nhập nguyên liệu**:
+      - Thêm mục `✏️ Khác (Tự nhập tên nguyên liệu...)` ở đầu và chân danh sách dropdown nguyên liệu chuẩn, kèm nút thao tác nhanh `Tự nhập tên khác` trên nhãn trường.
+      - Khi người dùng chọn mục này, form tự động đồng bộ switch sang chế độ nhập nguyên liệu tự do (`isCanonical = false`), xóa ID chuẩn và tự động trỏ focus vào ô văn bản.
+      - Tại chế độ tự nhập, bổ sung nút điều hướng nhanh `← Chọn từ danh mục chuẩn` để chuyển đổi qua lại thuận tiện.
+    - **Dropdown đơn vị thông dụng**:
+      - Bổ sung bộ danh mục đơn vị thông dụng `COMMON_UNITS` gồm khối lượng (`g`, `kg`), thể tích (`ml`, `l`, `muỗng canh`, `muỗng cà phê`, `chén`), đếm/bao bì (`quả/trái`, `củ`, `tép/nhánh`, `cây`, `bó`, `miếng/lát`, `gói`, `hộp`, `lon`, `túi/bịch`).
+      - Thay thế input thô bằng `<Select>` chuẩn hóa hiển thị các đơn vị trên, kèm tùy chọn `✏️ Đơn vị khác (tự nhập)...` và nút `Tự nhập` trên label.
+      - Khi chọn tự nhập đơn vị, trường hiển thị input tự do với nút quay lại `← Chọn từ gợi ý` mượt mà, bảo toàn 100% logic validate của form schema.
+- **Kiểm chứng**:
+  - `npx tsc --noEmit` pass 0 lỗi type.
+  - `npm test` toàn bộ 68 test suite (731 tests pass).
+  - `npm run build` pass thành công 47 routes (bao gồm `/pantry`).
+
+## [2026-10-28] — Thiết kế lại giao diện trang /articles/new & chuyển nội dung sang chữ thường
+
+- **Yêu cầu**: Làm lại giao diện trang `/articles/new` khắc phục lỗi responsive cột bên phải và đổi nội dung bài viết thành chữ thường cho người dùng nhập tự nhiên thay vì cú pháp Markdown.
+- **Frontend**:
+  - `post-editor-form.tsx`:
+    - **Nội dung bài viết (Chữ thường)**: Bỏ thanh công cụ định dạng Markdown (`**`, `##`, `> [!TIP]`, v.v.), đổi nhãn thành "Nội dung bài viết" và hướng dẫn rõ ràng cho người dùng nhập văn bản thông thường (xuống dòng giữa các đoạn). Đổi `textarea` sang font chữ sans-serif chuẩn, giữ live preview với định dạng đoạn văn phân cách tự nhiên và bộ đếm từ/thời gian đọc.
+    - **Validation & Toast tiếng Việt**: Thêm kiểm tra độ dài nội dung tối thiểu 100 ký tự (theo contract backend `body >= 100 characters`) và tiêu đề 5-200 ký tự trước khi gửi; hiển thị toast tiếng Việt thân thiện kèm số ký tự hiện có/tối thiểu; bổ sung chỉ số đếm ký tự trực quan thời gian thực trên thanh công cụ.
+    - **Khắc phục Responsive cột bên phải**:
+      - Tái cấu trúc grid thành `grid-cols-1 lg:grid-cols-12` (7/8 cột trái, 5/4 cột phải kèm `min-w-0`) chống tràn layout trên mọi kích thước màn hình.
+      - Chuyển `COVER_PRESETS` từ các nút chữ hẹp bị cắt xén (`...`) sang gallery 3 cột ảnh thumbnail trực quan kèm viền chọn và nhãn rõ ràng.
+      - Tối ưu `SelectTrigger` trường phái ăn chay hiển thị nhãn ngắn gọn, đưa mô tả chi tiết vào danh sách thả xuống để không bị tràn card.
+      - Đưa Card thao tác xuất bản lên vị trí đầu cột bên phải (sticky trên desktop) và bổ sung thanh thao tác nhanh trên mobile, giúp người dùng không bị mất nút xuất bản/lưu nháp.
+  - `post.queries.ts`: Bỏ toast thành công trùng lặp trong `useCreateArticleMutation.onSuccess` và `useUpdateArticleMutation.onSuccess` để chỉ có một toast theo đúng ngữ cảnh (DRAFT vs PUBLISHED) được phát từ form.
+  - `api-error.ts`: Chuẩn hóa và Việt hóa tự động các lỗi Zod/validation từ backend (ví dụ: `body: Too small: expected string to have >=100 characters` chuyển thành `Nội dung bài viết: quá ngắn (yêu cầu tối thiểu 100 ký tự)`), kèm unit test trong `api-error.test.ts`.
+- **Kiểm chứng**:
+  - `vitest` toàn bộ 68 test suite (730 tests pass).
+  - `tsc --noEmit` pass 0 lỗi type.
+  - `npm run build` pass thành công 47 routes (bao gồm `/articles/new` và `/articles/[id]/edit`).
+
+## [2026-10-28] — Hiển thị màu sắc biến động quyền lợi trang /billing
+
+- **Yêu cầu**: Cập nhật giao diện trang `/billing` tại mục "Biến động quyền lợi gần đây": hiển thị số lượt tăng bằng màu xanh (green) và giảm bằng màu đỏ (red).
+- **Frontend**:
+  - `billing.model.ts`: Bổ sung trường `delta: number` vào `EntitlementLedger`.
+  - `billing.mapper.ts`: Map chính xác `delta` từ DTO và cập nhật mapper test tương ứng với các trường hợp tăng, giảm và không đổi.
+  - `billing-view.tsx`: Hiển thị số lượt biến động với styling trực quan `text-emerald-600 dark:text-emerald-400 font-semibold` khi tăng (`delta > 0`), `text-rose-600 dark:text-rose-400 font-semibold` khi giảm (`delta < 0`), và `text-muted-foreground font-medium` khi không đổi (`delta === 0`).
+- **Kiểm chứng**:
+  - `vitest` toàn bộ 68 test suite (730 tests pass).
+  - `tsc --noEmit` pass không có lỗi type.
+  - `npm run build` pass thành công 47 routes bao gồm `/billing`.
+
+## [2026-10-28] — Dinh dưỡng công thức: tính khi gửi duyệt, người duyệt xác nhận
+
+- **Yêu cầu**: Người tạo không nhập dinh dưỡng; backend tự tính khi submit, thiếu dữ liệu thì chạy job AI nền (hệ thống trả, không trừ quota, có truy vết); người duyệt xem/sửa/tính lại và chỉ duyệt khi đủ chỉ số. Các điểm mơ hồ đã hỏi người dùng: 1 lần + 3 retry; "AI tính lại" giữ giá trị sửa tay; bỏ B12 (duyệt 5 chỉ số); nguyên liệu có hồ sơ nhưng thiếu 1 chỉ số coi là thiếu; job xong sau khi đã quyết định thì bỏ qua.
+- **Backend**: `recipe-nutrition-review.*` (metrics, repository, service, schemas, controller, router `/admin/content-review/:id/nutrition[/recalculate]`); job state/trigger/attempt/lease trên `recipe_nutrition_ai_jobs`, collection `recipe_nutrition_review_overrides` + `recipe_nutrition_review_audits`; provider `estimateRecipeNutritionForReview` qua governance `NUTRITION`; submit hook; cổng duyệt `RECIPE_NUTRITION_INCOMPLETE` và ghi `RecipeDetail`; content bỏ qua `recipe.nutrition`; quét job khi khởi động server.
+- **Frontend**: bỏ dinh dưỡng khỏi form/schema/request DTO công thức; `review-nutrition` DTO/Model/Mapper + test; API + hook (`useReviewNutritionPanelQuery` polling khi job chạy, mutation sửa tay/tính lại); `ReviewNutritionPanel` trong `ReviewDetailModal`, khoá nút duyệt khi thiếu chỉ số.
+- **Kiểm chứng**: Backend lint/typecheck/build/OpenAPI; smoke trên DB Mongo tạm (provider giả lập và base URL OpenAI không tới được) cho submit, job, retry 1/5 phút, quét job RUNNING khi khởi động, FAILED sau 4 lượt, sửa tay + audit, 409 rồi duyệt, revision v2 tính lại. FE tsc, vitest toàn bộ, build; browser: panel, AI tính lại, sửa tay chất xơ, lịch sử, tham khảo bản trước.
+- **Sửa thêm (QA)**: Wizard công thức tự gửi duyệt khi bấm "Tiếp" ở bước 4: nút "Tiếp" (`type=button`) và "Gửi" (`type=submit`) cùng vị trí nên React tái dùng một nút DOM; validate xong thì bước 5 render và nút đổi thành submit trước khi trình duyệt chạy hành động mặc định của cú click. Thêm `key` riêng cho hai nút. Đã tái hiện trên browser (1 submit) và xác nhận sau khi sửa (0 submit; nút Gửi ở bước 5 vẫn hoạt động).
+- **Còn lại**: Mobile chưa có panel dinh dưỡng khi duyệt (duyệt công thức trên mobile sẽ nhận 409 nếu thiếu chỉ số); chưa thử provider OpenAI thật cho job ước tính.
+
+## [2026-10-27] — Combo theo thời hạn, doanh thu và truy vết AI cho admin
+
+- **Yêu cầu**: Dashboard admin thêm API thống kê tiền mua quota AI và bảng truy vết sử dụng AI; phần mua gói cho chọn 1 tháng, 3 tháng, 1 năm. Các điểm mơ hồ đã hỏi và người dùng chốt (BL-20.1 trong IMPLEMENTATION_PLAN).
+- **Backend**: `entitlement_subscriptions` + trường tùy chọn trên product/order/account/reservation/AI request log; lượt theo chu kỳ 30 ngày, hết hạn cuối chu kỳ, dùng trước lượt cộng dồn, mua chồng thì nối tiếp. Module `admin-insights`: `GET /admin/billing/revenue`, `GET /admin/ai/usage` (ADMIN). Chat ghi `quotaSource` để phân biệt lượt miễn phí/gói/cộng dồn.
+- **Frontend**: billing DTO/Model/Mapper thêm thời hạn, `subscription`, tổng lượt khả dụng; `DurationPlanCard` dùng ToggleGroup; feature mới `features/admin-insights` (DTO/Model/Mapper/API/Query + test) với `RevenueStatsPanel` và `AiUsageTraceTable`; 2 tab + 2 mục sidebar admin.
+- **Kiểm chứng**: Backend lint/typecheck/build/OpenAPI; `billing:acceptance` 12 PASS và script kiểm chu kỳ/nối tiếp/hết hạn/doanh thu/truy vết trên DB `billing_*` tách riêng (đã xóa sau khi kiểm). FE tsc, 721 test, build; browser: 2 tab admin, lọc theo người dùng, bộ chọn thời hạn và thẻ gói đang dùng ở 375px, không tràn ngang.
+- **Còn lại**: Ứng dụng mobile chưa hiển thị thời hạn/lượt chu kỳ; chưa thanh toán payOS thật cho gói theo thời hạn.
+
 ## [2026-10-26] — Thiết kế lại luồng tạo/sửa công thức
 
 - **Yêu cầu**: Form công thức lặp thông tin, thứ tự bước chưa rõ, submit thiếu field không có thông báo. Bổ sung sau review: nguyên liệu tự liên kết danh mục chuẩn; bấm gửi là gửi kiểm duyệt luôn.
@@ -4634,3 +4749,10 @@
 - Đã làm: merge `origin/dev` vào `feature/mobile-table-completion`, giữ cả mục mobile follow-up và mục sửa font footer trong `frontend/docs/WORK-LOG.md`.
 - Verify: mobile `npx tsc --noEmit`, `npm run lint` và `git diff --check` đều pass sau merge.
 - PROGRESS: không đổi phần trăm tính năng; chỉ giải quyết xung đột nhật ký. Thay đổi chưa commit ở workspace chính được giữ nguyên.
+## [2026-10-25] — Sửa responsive card nguyên liệu `/pantry`
+
+- Mục tiêu: khắc phục nội dung card bị dồn/chèn trên viewport hẹp như ảnh người dùng cung cấp.
+- Đã làm: cho nhóm nhãn tự wrap; nguồn dữ liệu có thể xuống dòng; giới hạn co giãn nội dung, quantity và hạn dùng; tăng nút menu và hai nút điều chỉnh lên vùng chạm 44px, thêm accessible label cho nút menu.
+- File sửa: `src/features/pantry/components/pantry-item-card.tsx`, `docs/PROGRESS.md`, `docs/WORK-LOG.md`.
+- Verify: `npx tsc --noEmit` pass. Chưa chạy production build hoặc kiểm tra viewport thực tế trong task này.
+- Tiến độ Pantry: giữ nguyên; chỉ sửa bố cục responsive.

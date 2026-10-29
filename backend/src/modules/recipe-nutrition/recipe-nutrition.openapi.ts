@@ -9,6 +9,11 @@ import {
   nutritionStatusResponseSchema,
   postIdParamsSchema,
 } from './recipe-nutrition.schemas.js';
+import {
+  reviewNutritionOverrideRequestSchema,
+  reviewNutritionPanelResponseSchema,
+  revisionIdParamsSchema,
+} from './recipe-nutrition-review.schemas.js';
 
 const authenticated = [{ BearerAuth: [] }, { AccessTokenCookie: [] }];
 const optionalAuthenticated = [{}, ...authenticated];
@@ -135,14 +140,9 @@ export function registerRecipeNutritionOpenApi(
         'INVALID_SERVINGS',
       ]),
       401: errorResponse(errorSchema, 'Yeu cau dang nhap', ['AUTH_REQUIRED']),
-      403: errorResponse(errorSchema, 'Khong phai owner/Admin', [
-        'FORBIDDEN',
-        'ACCOUNT_BANNED',
-      ]),
+      403: errorResponse(errorSchema, 'Khong phai owner/Admin', ['FORBIDDEN', 'ACCOUNT_BANNED']),
       404: errorResponse(errorSchema, 'Khong tim thay recipe', ['NOT_FOUND']),
-      409: errorResponse(errorSchema, 'Recipe version da thay doi', [
-        'CONTENT_VERSION_CONFLICT',
-      ]),
+      409: errorResponse(errorSchema, 'Recipe version da thay doi', ['CONTENT_VERSION_CONFLICT']),
     },
   });
 
@@ -212,6 +212,110 @@ export function registerRecipeNutritionOpenApi(
         'TOKEN_EXPIRED',
       ]),
       404: errorResponse(errorSchema, 'Khong tim thay recipe co the truy cap', ['NOT_FOUND']),
+    },
+  });
+
+  const reviewPanelResponse = registry.register(
+    'RecipeNutritionReviewPanelResponse',
+    reviewNutritionPanelResponseSchema,
+  );
+  const reviewOverrideRequest = registry.register(
+    'RecipeNutritionReviewOverrideRequest',
+    reviewNutritionOverrideRequestSchema,
+  );
+  const reviewerAuthErrors = errorResponse(errorSchema, 'Authentication required', [
+    'AUTH_REQUIRED',
+    'INVALID_ACCESS_TOKEN',
+    'TOKEN_EXPIRED',
+    'STALE_ACCESS_TOKEN',
+  ]);
+  const reviewerEditErrors = {
+    401: reviewerAuthErrors,
+    403: errorResponse(errorSchema, 'Reviewer role, self-review or Admin-only review boundary', [
+      'FORBIDDEN',
+      'ACCOUNT_BANNED',
+      'SELF_APPROVAL_FORBIDDEN',
+      'ADMIN_REVIEW_REQUIRED',
+    ]),
+    404: errorResponse(errorSchema, 'Revision not found', ['NOT_FOUND']),
+    409: errorResponse(errorSchema, 'Revision is no longer awaiting review', [
+      'REVIEW_ALREADY_DECIDED',
+      'CONTENT_STATE_CONFLICT',
+      'REVIEW_CONFLICT',
+    ]),
+  };
+
+  registry.registerPath({
+    method: 'get',
+    path: '/api/v1/admin/content-review/{id}/nutrition',
+    tags: ['Content Review Admin'],
+    summary: 'Reviewer nutrition panel for a submitted recipe revision',
+    description:
+      'Admin or Contributor. Five per-serving values (calories, proteinGrams, carbsGrams, fatGrams, fiberGrams) with source label (CANONICAL_CALCULATED, AI_ESTIMATED, VERIFIED_OVERRIDE for reviewer edits), confidence, ingredients that reviewed data could not cover, the latest AI gap-filling job state, the previous approved values (reference only, never carried over) and the edit audit. canApprove is true when every value is present, even while an AI job runs or after it failed. canEdit mirrors the publication decision rules. Path id is the revision id.',
+    operationId: 'getRecipeNutritionReviewPanel',
+    security: authenticated,
+    request: { params: revisionIdParamsSchema },
+    responses: {
+      200: {
+        description: 'Nutrition review panel',
+        content: { 'application/json': { schema: reviewPanelResponse } },
+      },
+      400: errorResponse(errorSchema, 'Revision is not a structured recipe', [
+        'VALIDATION_ERROR',
+        'INVALID_CONTENT',
+      ]),
+      401: reviewerAuthErrors,
+      403: errorResponse(errorSchema, 'Reviewer role required', ['FORBIDDEN', 'ACCOUNT_BANNED']),
+      404: errorResponse(errorSchema, 'Revision not found', ['NOT_FOUND']),
+    },
+  });
+
+  registry.registerPath({
+    method: 'patch',
+    path: '/api/v1/admin/content-review/{id}/nutrition',
+    tags: ['Content Review Admin'],
+    summary: 'Reviewer sets or clears per-serving nutrition overrides',
+    description:
+      'A number sets a reviewer override (VERIFIED_OVERRIDE); null clears it back to the calculated estimate; omitted keys are unchanged. Calories are rounded to an integer, grams to two decimals. Each change appends an audit row with actor, time, reason and the effective value/origin before and after. Overrides apply only to this revision and never change canonical ingredient data.',
+    operationId: 'updateRecipeNutritionReviewOverrides',
+    security: authenticated,
+    request: {
+      params: revisionIdParamsSchema,
+      body: { required: true, content: { 'application/json': { schema: reviewOverrideRequest } } },
+    },
+    responses: {
+      200: {
+        description: 'Updated nutrition review panel',
+        content: { 'application/json': { schema: reviewPanelResponse } },
+      },
+      400: errorResponse(errorSchema, 'Invalid values or not a recipe', [
+        'VALIDATION_ERROR',
+        'INVALID_CONTENT',
+      ]),
+      ...reviewerEditErrors,
+    },
+  });
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/v1/admin/content-review/{id}/nutrition/recalculate',
+    tags: ['Content Review Admin'],
+    summary: 'Reviewer recalculates nutrition ("AI tính lại")',
+    description:
+      'Recomputes the estimate from current reviewed food data and keeps reviewer overrides. If data is still insufficient, cancels any active job and queues a new asynchronous AI gap-filling job (1 attempt + 3 automatic retries after 1, 5 and 15 minutes, then FAILED). AI calls are system-paid, never charge a user quota, and are traced as NUTRITION governance events. AI output is labelled AI_ESTIMATED, applies only to this revision estimate and never writes IngredientFoodProfile or nutrient values.',
+    operationId: 'recalculateRecipeNutritionReview',
+    security: authenticated,
+    request: { params: revisionIdParamsSchema },
+    responses: {
+      202: {
+        description: 'Recalculated panel; aiJob shows the queued job when one was needed',
+        content: { 'application/json': { schema: reviewPanelResponse } },
+      },
+      400: errorResponse(errorSchema, 'Revision is not a structured recipe', [
+        'VALIDATION_ERROR',
+        'INVALID_CONTENT',
+      ]),
+      ...reviewerEditErrors,
     },
   });
 }

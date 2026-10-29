@@ -97,6 +97,9 @@ export const API_ENDPOINTS = {
     LIST: '/admin/content-review',
     DETAIL: (revisionId: string) => `/admin/content-review/${revisionId}`,
     DECISION: (revisionId: string) => `/admin/content-review/${revisionId}`,
+    NUTRITION: (revisionId: string) => `/admin/content-review/${revisionId}/nutrition`,
+    NUTRITION_RECALCULATE: (revisionId: string) =>
+      `/admin/content-review/${revisionId}/nutrition/recalculate`,
   },
   /** @deprecated Backend Phase 16 deprecated in favor of ADMIN_CONTENT_REVIEW */
   REVIEW_QUEUE: {
@@ -208,6 +211,11 @@ export const API_ENDPOINTS = {
     FEATURES: '/admin/ai/features',
     FEATURES_AUDIT: '/admin/ai/features/audit',
     FEATURE_TOGGLE: (feature: string) => `/admin/ai/features/${feature}`,
+  },
+  // Admin insights: doanh thu mua quota AI và truy vết sử dụng AI (READY 2026-10-27)
+  ADMIN_INSIGHTS: {
+    BILLING_REVENUE: '/admin/billing/revenue',
+    AI_USAGE: '/admin/ai/usage',
   },
   // Custom meals Phase 17 — phục vụ món ăn cá nhân (Owner-scoped)
   CUSTOM_MEALS: {

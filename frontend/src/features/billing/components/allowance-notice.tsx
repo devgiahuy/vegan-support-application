@@ -52,16 +52,16 @@ export function AllowanceNotice({
     policyText = 'Vật phẩm chưa xóa, kể cả số lượng bằng 0, đều chiếm một ô trong kho.';
     Icon = Boxes;
   } else if (feature === 'CHAT') {
-    credits = query.data.chatCredits;
+    credits = query.data.chatAvailable;
     quotaLabel = 'lượt chat mua thêm';
     policyText = 'Lượt miễn phí được dùng trước; kết quả lỗi không mất lượt mua thêm.';
     Icon = MessageSquare;
   } else if (feature === 'FRIDGE') {
-    credits = query.data.fridgeCredits;
+    credits = query.data.fridgeAvailable;
     quotaLabel = 'lượt quét tủ lạnh';
     Icon = Refrigerator;
   } else {
-    credits = query.data.receiptCredits;
+    credits = query.data.receiptAvailable;
     quotaLabel = 'lượt phân tích hóa đơn';
     Icon = Receipt;
   }

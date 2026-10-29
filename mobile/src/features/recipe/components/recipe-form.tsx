@@ -1,540 +1,326 @@
 import * as React from 'react';
-import { Alert, Pressable, Text, TextInput, View } from 'react-native';
-import { PlusCircle, Send, Trash2 } from 'lucide-react-native';
+import { Alert, Text, View } from 'react-native';
+import { ArrowLeft, ArrowRight, CircleAlert, Send } from 'lucide-react-native';
 
 import { PrimaryButton } from '@/components/ui/primary-button';
-import { CategoryType, RecipeDifficulty } from '@/common/enums';
-import { CategoryFilterPills } from '@/features/category/components/category-filter-pills';
+import { CategoryType } from '@/common/enums';
 import { useCategoryTreeQuery } from '@/features/category/queries/category.queries';
-import { IngredientPicker, type IngredientPickerValue } from '@/features/ingredient/components/ingredient-picker';
-import { ImagePickerField } from '@/features/storage/components/image-picker-field';
+import { buildCategoryOptions } from '@/features/category/utils/category-options';
 import type { PickedImage } from '@/features/storage/types/storage.model';
-import type { CreateRecipeIngredientInput, CreateRecipeInput } from '../api/recipe.api';
-import { resolveExactIngredientId } from '@/features/ingredient/utils/ingredient-link';
-import type { RecipeDraftSuggestion } from '../types/recipe-draft.model';
-import { AiRecipeDraftPanel } from './ai-recipe-draft-panel';
-import { cn } from '@/lib/utils';
+import { getApiErrorCode } from '@/lib/api-error';
 import { useIconColors } from '@/lib/theme-colors';
+import type { CreateRecipeInput } from '../api/recipe.api';
+import type { RecipeDraftSuggestion } from '../types/recipe-draft.model';
+import {
+  CONTENT_STEPS,
+  RECIPE_EDITOR_STEPS,
+  buildRecipeInput,
+  emptyIngredient,
+  emptyStep,
+  hasUserContent,
+  issueLocation,
+  stepTitle,
+  toEditorValues,
+  validateRecipeEditor,
+  type EditorIngredient,
+  type RecipeContentStep,
+  type RecipeEditorStep,
+  type RecipeEditorValues,
+  type RecipeFieldIssue,
+  type RecipeFormInitial,
+} from '../utils/recipe-editor';
+import { getContentErrorMessage } from '../utils/recipe-errors';
+import { AiRecipeDraftPanel } from './ai-recipe-draft-panel';
+import { RecipeEditorReview } from './recipe-editor-review';
+import { BasicsSection, ClassifySection, IngredientsSection, StepsSection } from './recipe-editor-sections';
+import { RecipeEditorStepper } from './recipe-editor-stepper';
 
-const DIFFICULTY_OPTIONS: { value: RecipeDifficulty; label: string }[] = [
-  { value: RecipeDifficulty.EASY, label: 'Dễ' },
-  { value: RecipeDifficulty.MEDIUM, label: 'Trung bình' },
-  { value: RecipeDifficulty.HARD, label: 'Nâng cao' },
-];
+export type { RecipeFormInitial } from '../utils/recipe-editor';
 
-const MIN_BODY_LENGTH = 20;
-
-function splitTags(value: string): string[] {
-  return value.split(',').map((t) => t.trim()).filter(Boolean).slice(0, 15);
-}
-
-interface DraftIngredient extends CreateRecipeIngredientInput {
-  key: string;
-  /** Vị trí ban đầu khi sửa công thức; dùng để dịch lại tham chiếu của bước nấu sau khi xóa/thêm nguyên liệu. */
-  originalPosition?: number;
-}
-
-/** Các trường của bước nấu mà form di động chưa cho nhập nhưng phải giữ nguyên khi sửa. */
-interface PreservedStepFields {
-  cookingMethodId?: string | null;
-  temperatureCelsius?: number | null;
-  affectedIngredientPositions?: number[];
-}
-
-interface DraftStep extends PreservedStepFields {
-  key: string;
-  instruction: string;
-  duration: string;
-}
-
-/** Các chỉ số dinh dưỡng form chưa cho nhập, được giữ nguyên khi sửa để không bị xóa khỏi bản mới. */
-export interface PreservedNutrition {
-  carbsGrams?: number;
-  fatGrams?: number;
-  fiberGrams?: number;
-  vitaminB12Mcg?: number;
-}
-
-export interface RecipeFormInitial {
-  title?: string;
-  excerpt?: string;
-  /** Ảnh bìa hiện có (chỉ để xem trước khi sửa). */
-  coverImageUrl?: string | null;
-  tags?: string[];
-  categoryId?: string | null;
-  servings?: number;
-  prepTimeMinutes?: number;
-  cookTimeMinutes?: number;
-  difficulty?: RecipeDifficulty;
-  calories?: number;
-  protein?: number;
-  preservedNutrition?: PreservedNutrition;
-  ingredients?: {
-    displayName: string;
-    amount: number;
-    unit: string;
-    ingredientId?: string | null;
-    optional?: boolean;
-    position?: number;
-  }[];
-  steps?: ({ instruction: string; durationMinutes?: number | null } & PreservedStepFields)[];
-}
-
-function toDraftSteps(initial: RecipeFormInitial['steps']): DraftStep[] {
-  if (!initial || initial.length === 0) return [{ key: 'step-0', instruction: '', duration: '' }];
-  return initial.map((step, index) => ({
-    key: `step-${index}`,
-    instruction: step.instruction,
-    duration: step.durationMinutes ? String(step.durationMinutes) : '',
-    cookingMethodId: step.cookingMethodId ?? null,
-    temperatureCelsius: step.temperatureCelsius ?? null,
-    affectedIngredientPositions: step.affectedIngredientPositions ?? [],
-  }));
-}
+const INGREDIENT_ERROR_CODES = new Set(['INGREDIENT_ID_NAME_MISMATCH', 'INVALID_INGREDIENT_REFERENCE']);
 
 /**
- * Form dùng chung cho đăng công thức mới và sửa công thức của chính mình. Nguyên liệu có thể liên kết với
- * nguyên liệu chuẩn (gợi ý tìm kiếm) để backend tính dinh dưỡng và kiểm tra chế độ ăn/dị ứng chính xác hơn;
- * các bước nấu được nhập từng bước.
+ * Form công thức 5 bước dùng chung cho đăng mới và sửa — đồng bộ `recipe-editor-form.tsx` của web:
+ * Thông tin cơ bản → Nguyên liệu → Các bước nấu → Phân loại → Xem lại & gửi. Bấm "Tiếp" kiểm tra riêng từng bước.
+ * Trợ lý AI chỉ có khi tạo mới (`enableAi`). `onSubmit` nên ném lỗi khi lưu thất bại để form đưa người dùng về đúng bước.
  */
 export function RecipeForm({
   initial,
   submitLabel,
   isSubmitting,
   onSubmit,
+  enableAi = false,
+  onStepChange,
 }: {
   initial?: RecipeFormInitial;
   submitLabel: string;
   isSubmitting: boolean;
-  onSubmit: (values: CreateRecipeInput) => void;
+  onSubmit: (input: CreateRecipeInput) => Promise<void> | void;
+  enableAi?: boolean;
+  /** Gọi khi đổi bước để màn hình cuộn lên đầu form. */
+  onStepChange?: () => void;
 }) {
   const colors = useIconColors();
   const keySeq = React.useRef(0);
   const nextKey = (prefix: string) => `${prefix}-new-${++keySeq.current}`;
 
-  const [title, setTitle] = React.useState(initial?.title ?? '');
-  const [excerpt, setExcerpt] = React.useState(initial?.excerpt ?? '');
+  const [step, setStep] = React.useState<RecipeEditorStep>('basics');
+  const [values, setValues] = React.useState<RecipeEditorValues>(() => toEditorValues(initial));
+  const [attempted, setAttempted] = React.useState<ReadonlySet<RecipeContentStep>>(new Set());
+  const [notice, setNotice] = React.useState('');
+  const [submitError, setSubmitError] = React.useState('');
   const [cover, setCover] = React.useState<PickedImage | null>(null);
   const [coverBusy, setCoverBusy] = React.useState(false);
-  const [tags, setTags] = React.useState(initial?.tags?.join(', ') ?? '');
-  const [categoryId, setCategoryId] = React.useState<string | null>(initial?.categoryId ?? null);
-  const [servings, setServings] = React.useState(String(initial?.servings ?? 4));
-  const [prepTime, setPrepTime] = React.useState(String(initial?.prepTimeMinutes ?? 15));
-  const [cookTime, setCookTime] = React.useState(String(initial?.cookTimeMinutes ?? 20));
-  const [difficulty, setDifficulty] = React.useState<RecipeDifficulty>(initial?.difficulty ?? RecipeDifficulty.EASY);
-  const [calories, setCalories] = React.useState(initial?.calories ? String(initial.calories) : '');
-  const [protein, setProtein] = React.useState(initial?.protein ? String(initial.protein) : '');
 
-  const [ingredients, setIngredients] = React.useState<DraftIngredient[]>(
-    (initial?.ingredients ?? []).map(({ position, ...ing }, idx) => ({
-      key: `initial-${idx}`,
-      ...ing,
-      originalPosition: position ?? idx,
-    }))
+  const categoryQuery = useCategoryTreeQuery(CategoryType.RECIPE_GROUP);
+  const categoryOptions = React.useMemo(() => buildCategoryOptions(categoryQuery.data ?? [], 'Chọn danh mục'), [categoryQuery.data]);
+  const categoryName = values.categoryId ? categoryOptions.find((option) => option.value === values.categoryId)?.label : undefined;
+
+  const issues = React.useMemo(() => validateRecipeEditor(values), [values]);
+  const visibleIssues = issues.filter((issue) => attempted.has(issue.step));
+  const errorOf = (path: string) => visibleIssues.find((issue) => issue.path === path)?.message;
+
+  const stepIndex = RECIPE_EDITOR_STEPS.findIndex((item) => item.id === step);
+  const current = RECIPE_EDITOR_STEPS[stepIndex]!;
+  const next = RECIPE_EDITOR_STEPS[stepIndex + 1];
+  const prev = RECIPE_EDITOR_STEPS[stepIndex - 1];
+
+  const patch = (change: Partial<RecipeEditorValues>) => setValues((previous) => ({ ...previous, ...change }));
+  const changeIngredient = React.useCallback(
+    (key: string, change: Partial<EditorIngredient>) =>
+      setValues((previous) => ({
+        ...previous,
+        ingredients: previous.ingredients.map((item) => (item.key === key ? { ...item, ...change } : item)),
+      })),
+    []
   );
-  const [ingredient, setIngredient] = React.useState<IngredientPickerValue>({ displayName: '', ingredientId: null });
-  const [ingAmount, setIngAmount] = React.useState('');
-  const [ingUnit, setIngUnit] = React.useState('');
 
-  const [steps, setSteps] = React.useState<DraftStep[]>(() => toDraftSteps(initial?.steps));
-
-  const {
-    data: categoryTree = [],
-    isLoading: isCategoryLoading,
-    isError: isCategoryError,
-    refetch: refetchCategories,
-  } = useCategoryTreeQuery(CategoryType.RECIPE_GROUP);
-
-  const addIngredient = () => {
-    const name = ingredient.displayName.trim();
-    const amountNum = Number(ingAmount.replace(',', '.'));
-    const unit = ingUnit.trim();
-    if (!name || !unit || !Number.isFinite(amountNum) || amountNum <= 0) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập đủ tên, số lượng (>0) và đơn vị nguyên liệu.');
-      return;
-    }
-    const key = nextKey('ing');
-    setIngredients((prev) => [
-      ...prev,
-      { key, displayName: name, amount: amountNum, unit, ingredientId: ingredient.ingredientId },
-    ]);
-    if (!ingredient.ingredientId) void autoLinkIngredient(key, name);
-    setIngredient({ displayName: '', ingredientId: null });
-    setIngAmount('');
-    setIngUnit('');
+  const goTo = (target: RecipeEditorStep) => {
+    setStep(target);
+    setNotice('');
+    onStepChange?.();
   };
 
-  /** Tên tự nhập khớp đúng một nguyên liệu chuẩn thì tự gắn `ingredientId` để BE tính dinh dưỡng/kiểm tra dị ứng. */
-  const autoLinkIngredient = async (key: string, name: string) => {
-    const ingredientId = await resolveExactIngredientId(name);
-    if (!ingredientId) return;
-    setIngredients((prev) =>
-      prev.map((item) => (item.key === key && !item.ingredientId && item.displayName === name ? { ...item, ingredientId } : item))
-    );
+  const markAttempted = (steps: RecipeContentStep[]) => setAttempted((previous) => new Set([...previous, ...steps]));
+
+  const describe = (list: RecipeFieldIssue[]) => {
+    const first = list[0];
+    if (!first) return '';
+    const location = issueLocation(first.path);
+    return `${stepTitle(first.step)}${location ? ` · ${location}` : ''}: ${first.message}${list.length > 1 ? ` (và ${list.length - 1} mục khác)` : ''}`;
+  };
+
+  const handleNext = () => {
+    if (step === 'review' || !next) return;
+    const stepIssues = issues.filter((issue) => issue.step === step);
+    if (stepIssues.length > 0) {
+      markAttempted([step as RecipeContentStep]);
+      setNotice(`Bước "${current.title}" còn thiếu thông tin — ${describe(stepIssues)}`);
+      return;
+    }
+    goTo(next.id);
+  };
+
+  const fixIssue = (issue: RecipeFieldIssue) => {
+    markAttempted([issue.step]);
+    goTo(issue.step);
+  };
+
+  const handleSubmit = async () => {
+    setSubmitError('');
+    markAttempted(CONTENT_STEPS.map((item) => item.id));
+    if (issues.length > 0) {
+      setNotice(`Công thức còn thiếu thông tin bắt buộc — ${describe(issues)}`);
+      return;
+    }
+    if (coverBusy) {
+      Alert.alert('Ảnh đang tải lên', 'Vui lòng đợi ảnh bìa tải xong rồi gửi công thức.');
+      return;
+    }
+    try {
+      await onSubmit(buildRecipeInput(values, { coverAssetId: cover?.assetId, tags: initial?.tags }));
+    } catch (error) {
+      const code = getApiErrorCode(error);
+      if (code && INGREDIENT_ERROR_CODES.has(code)) {
+        setSubmitError('Một số nguyên liệu không khớp danh mục chuẩn. Hãy gõ lại tên và chọn từ gợi ý.');
+        goTo('ingredients');
+        return;
+      }
+      setSubmitError(getContentErrorMessage(error, 'Không thể lưu công thức. Vui lòng thử lại.'));
+    }
   };
 
   const applyDraft = (draft: RecipeDraftSuggestion) => {
     const stamp = nextKey('ai');
-    const drafted = draft.ingredients.map((item, index) => ({
-      key: `ai-${stamp}-${index}`,
-      displayName: item.name,
-      amount: item.amount,
+    const ingredients: EditorIngredient[] = draft.ingredients.map((item, index) => ({
+      key: `${stamp}-ing-${index}`,
+      ingredientId: null,
+      name: item.name,
+      amount: String(item.amount),
       unit: item.unit,
       ...(item.optional ? { optional: true } : {}),
-      ingredientId: null,
-      // Vị trí AI dùng để tham chiếu nguyên liệu trong bước nấu, giữ nguyên khi người dùng chưa đổi thứ tự.
+      // Vị trí AI dùng để tham chiếu nguyên liệu trong bước nấu.
       originalPosition: index,
     }));
     const run = () => {
-      setServings(String(draft.servings));
-      setPrepTime(String(draft.prepTimeMinutes));
-      setCookTime(String(draft.cookTimeMinutes));
-      setDifficulty(draft.difficulty);
-      setIngredients(drafted);
-      setSteps(
-        draft.steps.map((step, index) => ({
-          key: `ai-step-${stamp}-${index}`,
-          instruction: step.instruction,
-          duration: step.durationMinutes ? String(step.durationMinutes) : '',
-          affectedIngredientPositions: step.affectedIngredientPositions.filter((position) => position < drafted.length),
-        }))
-      );
-      drafted.forEach((item) => void autoLinkIngredient(item.key, item.displayName));
+      // Tên món và mô tả là đầu vào của AI nên giữ bản người dùng đã nhập; danh mục không do AI điền.
+      patch({
+        servings: String(draft.servings),
+        prepTime: String(draft.prepTimeMinutes),
+        cookTime: String(draft.cookTimeMinutes),
+        difficulty: draft.difficulty,
+        ingredients,
+        steps: draft.steps.map((item, index) => ({
+          key: `${stamp}-step-${index}`,
+          instruction: item.instruction,
+          durationMinutes: item.durationMinutes,
+          affectedIngredientPositions: item.affectedIngredientPositions.filter((position) => position < ingredients.length),
+        })),
+      });
+      setSubmitError('');
+      Alert.alert('Đã điền gợi ý AI', 'Đã điền nguyên liệu và các bước nấu. Kiểm tra lại định lượng, liên kết nguyên liệu chuẩn rồi chọn danh mục.');
     };
-    const hasContent = ingredients.length > 0 || steps.some((step) => step.instruction.trim().length > 0);
-    if (!hasContent) return run();
-    Alert.alert('Thay nội dung hiện có?', 'Nguyên liệu, các bước, khẩu phần và thời gian hiện tại sẽ được thay bằng bản nháp AI.', [
+    if (!hasUserContent(values)) return run();
+    Alert.alert('Thay nội dung hiện có?', 'Nguyên liệu, các bước, khẩu phần và thời gian hiện tại sẽ được thay bằng bản nháp AI. Tên món và mô tả của bạn được giữ nguyên.', [
       { text: 'Giữ nguyên', style: 'cancel' },
       { text: 'Thay bằng bản nháp', style: 'destructive', onPress: run },
     ]);
   };
 
-  const removeIngredient = (key: string) => {
-    setIngredients((prev) => prev.filter((i) => i.key !== key));
-  };
-
-  const updateStep = (key: string, patch: Partial<DraftStep>) => {
-    setSteps((prev) => prev.map((step) => (step.key === key ? { ...step, ...patch } : step)));
-  };
-
-  const submit = () => {
-    if (coverBusy) {
-      Alert.alert('Ảnh đang tải lên', 'Vui lòng đợi ảnh bìa tải xong rồi gửi công thức.');
-      return;
-    }
-    const cleanTitle = title.trim();
-    const validSteps = steps
-      .map((step) => ({
-        instruction: step.instruction.trim(),
-        duration: Number(step.duration),
-        cookingMethodId: step.cookingMethodId,
-        temperatureCelsius: step.temperatureCelsius,
-        affectedIngredientPositions: step.affectedIngredientPositions ?? [],
-      }))
-      .filter((step) => step.instruction.length > 0);
-    // Nguyên liệu bị xóa/thêm làm đổi vị trí: dịch lại tham chiếu của bước nấu, bỏ tham chiếu tới nguyên liệu đã xóa.
-    const positionMap = new Map<number, number>();
-    ingredients.forEach((ing, index) => {
-      if (ing.originalPosition !== undefined) positionMap.set(ing.originalPosition, index);
-    });
-    const servingsNum = Math.trunc(Number(servings));
-    const prepNum = Math.trunc(Number(prepTime));
-    const cookNum = Math.trunc(Number(cookTime));
-    const bodyLength = validSteps.reduce((total, step) => total + step.instruction.length, 0);
-
-    if (cleanTitle.length < 3) {
-      Alert.alert('Thiếu tiêu đề', 'Tiêu đề công thức cần ít nhất 3 ký tự.');
-      return;
-    }
-    if (validSteps.length === 0 || bodyLength < MIN_BODY_LENGTH) {
-      Alert.alert('Thiếu hướng dẫn', `Các bước chế biến cần mô tả ít nhất ${MIN_BODY_LENGTH} ký tự.`);
-      return;
-    }
-    if (ingredients.length === 0) {
-      Alert.alert('Thiếu nguyên liệu', 'Vui lòng thêm ít nhất một nguyên liệu.');
-      return;
-    }
-    if (!Number.isFinite(servingsNum) || servingsNum < 1) {
-      Alert.alert('Khẩu phần chưa hợp lệ', 'Số khẩu phần phải từ 1 trở lên.');
-      return;
-    }
-    if (!Number.isFinite(prepNum) || prepNum < 0 || !Number.isFinite(cookNum) || cookNum < 0) {
-      Alert.alert('Thời gian chưa hợp lệ', 'Thời gian chuẩn bị/nấu phải là số không âm.');
-      return;
-    }
-
-    onSubmit({
-      title: cleanTitle,
-      excerpt: excerpt.trim() || undefined,
-      ...(cover ? { coverAssetId: cover.assetId } : {}),
-      categoryIds: categoryId ? [categoryId] : undefined,
-      tags: splitTags(tags),
-      servings: servingsNum,
-      prepTimeMinutes: prepNum,
-      cookTimeMinutes: cookNum,
-      difficulty,
-      nutrition: {
-        calories: calories.trim() ? Number(calories) : undefined,
-        proteinGrams: protein.trim() ? Number(protein) : undefined,
-        ...initial?.preservedNutrition,
-      },
-      ingredients: ingredients.map(({ displayName, amount, unit, ingredientId, optional }) => ({
-        displayName,
-        amount,
-        unit,
-        ...(ingredientId ? { ingredientId } : {}),
-        ...(optional ? { optional: true } : {}),
-      })),
-      steps: validSteps.map((step) => {
-        const affected = step.affectedIngredientPositions
-          .map((position) => positionMap.get(position))
-          .filter((position): position is number => position !== undefined);
-        return {
-          instruction: step.instruction,
-          ...(Number.isFinite(step.duration) && step.duration > 0 ? { durationMinutes: Math.trunc(step.duration) } : {}),
-          ...(step.cookingMethodId ? { cookingMethodId: step.cookingMethodId } : {}),
-          ...(typeof step.temperatureCelsius === 'number' ? { temperatureCelsius: step.temperatureCelsius } : {}),
-          ...(affected.length > 0 ? { affectedIngredientPositions: affected } : {}),
-        };
-      }),
-    });
-  };
-
   return (
     <View className="gap-5">
-      <View className="gap-4">
-        <View>
-          <Text className="mb-1.5 text-xs font-bold uppercase text-muted-foreground">Tên món</Text>
-          <TextInput
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Ví dụ: Cơm gạo lứt đậu hũ nhiều rau"
-            placeholderTextColor={colors.mutedForeground}
-            className="h-12 rounded-2xl border border-input bg-card px-3.5 text-sm text-foreground"
-          />
+      <RecipeEditorStepper current={step} issues={issues} attempted={attempted} disabled={isSubmitting} onSelect={goTo} />
+
+      <View className="gap-5 rounded-2xl border border-border bg-card p-4">
+        <View className="gap-1">
+          <Text className="text-lg font-bold text-foreground">{current.title}</Text>
+          <Text className="text-sm leading-5 text-muted-foreground">{current.description}</Text>
         </View>
 
-        <View>
-          <Text className="mb-1.5 text-xs font-bold uppercase text-muted-foreground">Mô tả ngắn</Text>
-          <TextInput
-            value={excerpt}
-            onChangeText={setExcerpt}
-            placeholder="Mô tả ngắn hiển thị ở danh sách"
-            placeholderTextColor={colors.mutedForeground}
-            className="h-12 rounded-2xl border border-input bg-card px-3.5 text-sm text-foreground"
-          />
-        </View>
-
-        <ImagePickerField
-          label="Ảnh bìa món ăn"
-          value={cover}
-          onChange={setCover}
-          onBusyChange={setCoverBusy}
-          existingUrl={initial?.coverImageUrl}
-          existingNote={"Chọn ảnh mới để thay. Nếu không chọn, bản chỉnh sửa sẽ không có ảnh bìa vì API chưa cho giữ lại ảnh cũ."}
-        />
-
-        <View className="flex-row gap-3">
-          <View className="flex-1">
-            <Text className="mb-1.5 text-xs font-bold uppercase text-muted-foreground">Khẩu phần</Text>
-            <TextInput
-              value={servings}
-              onChangeText={setServings}
-              keyboardType="numeric"
-              className="h-12 rounded-2xl border border-input bg-card px-3.5 text-sm text-foreground"
-            />
-          </View>
-          <View className="flex-1">
-            <Text className="mb-1.5 text-xs font-bold uppercase text-muted-foreground">Chuẩn bị (phút)</Text>
-            <TextInput
-              value={prepTime}
-              onChangeText={setPrepTime}
-              keyboardType="numeric"
-              className="h-12 rounded-2xl border border-input bg-card px-3.5 text-sm text-foreground"
-            />
-          </View>
-          <View className="flex-1">
-            <Text className="mb-1.5 text-xs font-bold uppercase text-muted-foreground">Nấu (phút)</Text>
-            <TextInput
-              value={cookTime}
-              onChangeText={setCookTime}
-              keyboardType="numeric"
-              className="h-12 rounded-2xl border border-input bg-card px-3.5 text-sm text-foreground"
-            />
-          </View>
-        </View>
-
-        <View>
-          <Text className="mb-1.5 text-xs font-bold uppercase text-muted-foreground">Độ khó</Text>
-          <View className="flex-row gap-2">
-            {DIFFICULTY_OPTIONS.map((o) => (
-              <Pressable
-                key={o.value}
-                onPress={() => setDifficulty(o.value)}
-                className={cn(
-                  'flex-1 items-center rounded-xl border px-2 py-2.5',
-                  difficulty === o.value ? 'border-primary bg-primary/10' : 'border-input'
-                )}>
-                <Text className={cn('text-sm', difficulty === o.value ? 'font-semibold text-primary' : 'text-foreground')}>
-                  {o.label}
-                </Text>
-              </Pressable>
-            ))}
-          </View>
-        </View>
-
-        <View className="flex-row gap-3">
-          <View className="flex-1">
-            <Text className="mb-1.5 text-xs font-bold uppercase text-muted-foreground">Calo (không bắt buộc)</Text>
-            <TextInput
-              value={calories}
-              onChangeText={setCalories}
-              keyboardType="numeric"
-              placeholder="VD: 420"
-              placeholderTextColor={colors.mutedForeground}
-              className="h-12 rounded-2xl border border-input bg-card px-3.5 text-sm text-foreground"
-            />
-          </View>
-          <View className="flex-1">
-            <Text className="mb-1.5 text-xs font-bold uppercase text-muted-foreground">Đạm (g, không bắt buộc)</Text>
-            <TextInput
-              value={protein}
-              onChangeText={setProtein}
-              keyboardType="numeric"
-              placeholder="VD: 18"
-              placeholderTextColor={colors.mutedForeground}
-              className="h-12 rounded-2xl border border-input bg-card px-3.5 text-sm text-foreground"
-            />
-          </View>
-        </View>
-
-        <AiRecipeDraftPanel
-          title={title}
-          excerpt={excerpt}
-          existingIngredientNames={ingredients.map((item) => item.displayName)}
-          onApply={applyDraft}
-        />
-
-        <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-          <Text className="text-xs font-bold uppercase text-muted-foreground">Nguyên liệu</Text>
-          {ingredients.length > 0 ? (
-            <View className="gap-1.5">
-              {ingredients.map((i) => (
-                <View key={i.key} className="flex-row items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
-                  <View className="flex-1">
-                    <Text className="text-xs text-foreground">
-                      {i.displayName} — {i.amount} {i.unit}
-                    </Text>
-                    <Text className="text-[10px] text-muted-foreground">
-                      {i.ingredientId ? 'Nguyên liệu chuẩn' : 'Tên tự nhập'}
-                    </Text>
-                  </View>
-                  <Pressable onPress={() => removeIngredient(i.key)}>
-                    <Trash2 size={14} color={colors.destructive} />
-                  </Pressable>
-                </View>
-              ))}
+        {submitError ? (
+          <View className="flex-row items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/5 p-3">
+            <CircleAlert size={16} color={colors.destructive} />
+            <View className="flex-1">
+              <Text className="text-sm font-semibold text-destructive">Chưa lưu được công thức</Text>
+              <Text accessibilityRole="alert" className="mt-0.5 text-xs leading-5 text-destructive">{submitError}</Text>
             </View>
-          ) : null}
-          <IngredientPicker placeholder="Tên nguyên liệu" value={ingredient} onChange={setIngredient} />
-          <View className="flex-row gap-2">
-            <TextInput
-              value={ingAmount}
-              onChangeText={setIngAmount}
-              placeholder="Số lượng"
-              keyboardType="numeric"
-              placeholderTextColor={colors.mutedForeground}
-              className="flex-1 rounded-xl border border-input bg-background px-2.5 py-2.5 text-sm text-foreground"
-            />
-            <TextInput
-              value={ingUnit}
-              onChangeText={setIngUnit}
-              placeholder="Đơn vị (g, muỗng...)"
-              placeholderTextColor={colors.mutedForeground}
-              className="flex-1 rounded-xl border border-input bg-background px-2.5 py-2.5 text-sm text-foreground"
-            />
           </View>
-          <PrimaryButton
-            label="Thêm nguyên liệu"
-            variant="outline"
-            icon={<PlusCircle size={16} color={colors.foreground} />}
-            onPress={addIngredient}
+        ) : null}
+        {notice ? (
+          <View className="flex-row items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/5 p-3">
+            <CircleAlert size={16} color={colors.destructive} />
+            <Text accessibilityRole="alert" className="flex-1 text-xs leading-5 text-destructive">{notice}</Text>
+          </View>
+        ) : null}
+
+        {/* Luôn giữ mounted (chỉ ẩn khi sang bước khác): ô chọn ảnh giữ tiến trình tải lên và tự báo `coverBusy` về
+            false khi xong. Gỡ nó khi đổi bước làm `coverBusy` kẹt ở true nếu ảnh đang tải → không gửi được công thức. */}
+        <View className={step === 'basics' ? '' : 'hidden'}>
+          <BasicsSection
+            values={values}
+            errorOf={errorOf}
+            onPatch={patch}
+            cover={cover}
+            onCoverChange={setCover}
+            onCoverBusyChange={setCoverBusy}
+            existingCoverUrl={initial?.coverImageUrl}
           />
         </View>
 
-        <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-          <Text className="text-xs font-bold uppercase text-muted-foreground">Các bước chế biến</Text>
-          {steps.map((step, index) => (
-            <View key={step.key} className="gap-2 rounded-xl border border-border bg-card p-3">
-              <View className="flex-row items-center justify-between">
-                <Text className="text-xs font-semibold text-foreground">Bước {index + 1}</Text>
-                {steps.length > 1 ? (
-                  <Pressable onPress={() => setSteps((prev) => prev.filter((item) => item.key !== step.key))}>
-                    <Trash2 size={14} color={colors.destructive} />
-                  </Pressable>
-                ) : null}
-              </View>
-              <TextInput
-                value={step.instruction}
-                onChangeText={(value) => updateStep(step.key, { instruction: value })}
-                multiline
-                placeholder="Mô tả bước này, ví dụ: Phi thơm hành, cho nấm vào xào lửa lớn..."
-                placeholderTextColor={colors.mutedForeground}
-                textAlignVertical="top"
-                className="min-h-20 rounded-xl border border-input bg-background px-3 py-2.5 text-sm leading-relaxed text-foreground"
-              />
-              <TextInput
-                value={step.duration}
-                onChangeText={(value) => updateStep(step.key, { duration: value })}
-                keyboardType="numeric"
-                placeholder="Thời gian (phút, không bắt buộc)"
-                placeholderTextColor={colors.mutedForeground}
-                className="rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground"
-              />
-            </View>
-          ))}
-          <PrimaryButton
-            label="Thêm bước"
-            variant="outline"
-            icon={<PlusCircle size={16} color={colors.foreground} />}
-            onPress={() => setSteps((prev) => [...prev, { key: `step-${Date.now()}`, instruction: '', duration: '' }])}
+        {step === 'ingredients' ? (
+          <IngredientsSection
+            ingredients={values.ingredients}
+            errorOf={errorOf}
+            onChangeIngredient={changeIngredient}
+            onRemoveIngredient={(key) => setValues((previous) => ({ ...previous, ingredients: previous.ingredients.filter((item) => item.key !== key) }))}
+            onAddIngredient={() => setValues((previous) => ({ ...previous, ingredients: [...previous.ingredients, emptyIngredient(nextKey('ing'))] }))}
+            assistant={
+              enableAi ? (
+                <AiRecipeDraftPanel
+                  seed={{
+                    title: values.title,
+                    description: values.description,
+                    ingredientNames: values.ingredients.map((item) => item.name.trim()).filter(Boolean),
+                  }}
+                  onApply={applyDraft}
+                  onEditBasics={() => goTo('basics')}
+                />
+              ) : undefined
+            }
           />
-        </View>
+        ) : null}
 
-        <View>
-          <Text className="mb-1.5 text-xs font-bold uppercase text-muted-foreground">Tag</Text>
-          <TextInput
-            value={tags}
-            onChangeText={setTags}
-            placeholder="đậu hũ, bữa tối, nhiều rau"
-            placeholderTextColor={colors.mutedForeground}
-            className="h-12 rounded-2xl border border-input bg-card px-3.5 text-sm text-foreground"
+        {step === 'steps' ? (
+          <StepsSection
+            steps={values.steps}
+            errorOf={errorOf}
+            onChangeStep={(key, instruction) => setValues((previous) => ({ ...previous, steps: previous.steps.map((item) => (item.key === key ? { ...item, instruction } : item)) }))}
+            onMoveStep={(key, offset) =>
+              setValues((previous) => {
+                const index = previous.steps.findIndex((item) => item.key === key);
+                const target = index + offset;
+                if (index < 0 || target < 0 || target >= previous.steps.length) return previous;
+                const steps = [...previous.steps];
+                [steps[index], steps[target]] = [steps[target]!, steps[index]!];
+                return { ...previous, steps };
+              })
+            }
+            onRemoveStep={(key) => setValues((previous) => ({ ...previous, steps: previous.steps.filter((item) => item.key !== key) }))}
+            onAddStep={() => setValues((previous) => ({ ...previous, steps: [...previous.steps, emptyStep(nextKey('step'))] }))}
           />
-        </View>
+        ) : null}
 
-        <View className="border-t border-border pt-4">
-          <Text className="mb-2 text-xs font-bold uppercase text-muted-foreground">Danh mục</Text>
-          {isCategoryLoading ? (
-            <View className="h-8 rounded-lg bg-muted" />
-          ) : isCategoryError ? (
-            <Pressable onPress={() => void refetchCategories()}>
-              <Text className="text-sm text-primary underline">Không tải được danh mục. Thử lại.</Text>
-            </Pressable>
-          ) : categoryTree.length === 0 ? (
-            <Text className="text-sm text-muted-foreground">Có thể đăng mà không chọn danh mục.</Text>
+        {step === 'classify' ? (
+          <ClassifySection
+            categoryId={values.categoryId}
+            categoryOptions={categoryOptions}
+            categoryStatus={categoryQuery.isLoading ? 'loading' : categoryQuery.isError ? 'error' : undefined}
+            onRetryCategories={() => void categoryQuery.refetch()}
+            difficulty={values.difficulty}
+            error={errorOf('categoryId')}
+            onCategoryChange={(categoryId) => patch({ categoryId })}
+            onDifficultyChange={(difficulty) => patch({ difficulty })}
+          />
+        ) : null}
+
+        {step === 'review' ? (
+          <RecipeEditorReview
+            values={values}
+            issues={issues}
+            categoryName={categoryName}
+            coverUrl={cover?.url ?? initial?.coverImageUrl ?? null}
+            onEdit={(target) => goTo(target)}
+            onFixIssue={fixIssue}
+          />
+        ) : null}
+
+        <View className="gap-2 border-t border-border pt-4">
+          {step === 'review' ? (
+            <PrimaryButton
+              label={isSubmitting ? 'Đang gửi…' : submitLabel}
+              loading={isSubmitting}
+              disabled={isSubmitting}
+              icon={<Send size={16} color={colors.primaryForeground} />}
+              onPress={() => void handleSubmit()}
+            />
           ) : (
-            <CategoryFilterPills items={categoryTree} selectedId={categoryId} onSelect={setCategoryId} />
+            <PrimaryButton
+              label={`Tiếp: ${next?.title ?? ''}`}
+              icon={<ArrowRight size={16} color={colors.primaryForeground} />}
+              onPress={handleNext}
+            />
           )}
+          {prev ? (
+            <PrimaryButton
+              label={`Quay lại: ${prev.title}`}
+              variant="outline"
+              disabled={isSubmitting}
+              icon={<ArrowLeft size={16} color={colors.foreground} />}
+              onPress={() => goTo(prev.id)}
+            />
+          ) : null}
         </View>
       </View>
-
-      <PrimaryButton
-        label={isSubmitting ? 'Đang gửi...' : submitLabel}
-        loading={isSubmitting}
-        disabled={coverBusy}
-        icon={<Send size={16} color={colors.primaryForeground} />}
-        onPress={submit}
-      />
     </View>
   );
 }

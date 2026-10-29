@@ -29,6 +29,15 @@ describe('formatApiErrorFields', () => {
     expect(text).toContain('expected string, received null');
   });
 
+  it('localizes common validation errors like minimum string length into Vietnamese', () => {
+    const text = formatApiErrorFields(
+      backendError({
+        body: ['Too small: expected string to have >=100 characters'],
+      })
+    );
+    expect(text).toContain('Nội dung bài viết: quá ngắn (yêu cầu tối thiểu 100 ký tự)');
+  });
+
   it('returns undefined when no fields present', () => {
     expect(formatApiErrorFields(backendError())).toBeUndefined();
     expect(formatApiErrorFields(new Error('boom'))).toBeUndefined();

@@ -28,12 +28,18 @@ export function IngredientPicker({
   placeholder,
   value,
   onChange,
+  onBlur,
+  showHints = true,
   className,
 }: {
   label?: string;
   placeholder?: string;
   value: IngredientPickerValue;
   onChange: (next: IngredientPickerValue) => void;
+  /** Gọi khi rời ô nhập (vd: để tự dò nguyên liệu chuẩn theo tên). */
+  onBlur?: () => void;
+  /** `false`: ẩn các dòng gợi ý trạng thái liên kết để màn hình tự hiển thị trạng thái riêng. */
+  showHints?: boolean;
   className?: string;
 }) {
   const colors = useIconColors();
@@ -71,6 +77,7 @@ export function IngredientPicker({
           value={value.displayName}
           onChangeText={handleChange}
           onFocus={() => setShowSuggestions(true)}
+          onBlur={onBlur}
           placeholder={placeholder ?? 'Tên nguyên liệu'}
           placeholderTextColor={colors.mutedForeground}
           className="h-11 flex-1 text-sm text-foreground"
@@ -78,7 +85,7 @@ export function IngredientPicker({
         {canSearch && isFetching ? <ActivityIndicator size="small" color={colors.primary} /> : null}
       </View>
 
-      {value.ingredientId ? (
+      {!showHints ? null : value.ingredientId ? (
         <Text className="mt-1 text-[11px] text-primary">Đã chọn nguyên liệu chuẩn trong danh mục.</Text>
       ) : value.displayName.trim().length >= MIN_QUERY_LENGTH && !showSuggestions ? (
         <Text className="mt-1 text-[11px] text-muted-foreground">

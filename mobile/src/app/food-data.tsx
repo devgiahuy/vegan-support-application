@@ -349,7 +349,7 @@ function IngredientTab({ colors }: { colors: ReturnType<typeof useIconColors> })
             setKeyword(value);
             setPage(1);
           }}
-          placeholder="Tìm nguyên liệu, vd: dau phong..."
+          placeholder="Tìm nguyên liệu"
         />
         <DropdownField
           className="w-[116px]"

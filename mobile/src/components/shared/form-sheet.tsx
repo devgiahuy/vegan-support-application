@@ -1,8 +1,6 @@
 import type { ReactNode } from 'react';
 import {
-  KeyboardAvoidingView,
   Modal,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -12,6 +10,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { X } from 'lucide-react-native';
+import { useKeyboardAwareScroll } from '@/hooks/use-keyboard-aware-scroll';
 import { useIconColors } from '@/lib/theme-colors';
 
 /**
@@ -33,6 +32,7 @@ export function FormSheet({
 }) {
   const colors = useIconColors();
   const { height: windowHeight } = useWindowDimensions();
+  const { keyboardHeight, scrollProps } = useKeyboardAwareScroll();
 
   if (variant === 'popup') {
     return (
@@ -45,10 +45,8 @@ export function FormSheet({
           if (!busy) onClose();
         }}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          className="flex-1 items-center justify-center bg-black/60 px-5"
-        >
+        {/* Hộp thoại nằm giữa phần màn hình còn lại phía trên bàn phím, không bị bàn phím che. */}
+        <View className="flex-1 items-center justify-center bg-black/60 px-5" style={{ paddingBottom: keyboardHeight }}>
           <Pressable
             accessibilityLabel="Đóng"
             disabled={busy}
@@ -56,7 +54,7 @@ export function FormSheet({
             style={StyleSheet.absoluteFill}
           />
           <View
-            style={{ maxHeight: Math.round(windowHeight * 0.85) }}
+            style={{ maxHeight: Math.min(Math.round(windowHeight * 0.85), windowHeight - keyboardHeight - 48) }}
             className="w-full max-w-md overflow-hidden rounded-3xl border border-border bg-background"
           >
             <View className="flex-row items-center justify-between gap-3 border-b border-border px-5 py-3">
@@ -72,6 +70,7 @@ export function FormSheet({
               </Pressable>
             </View>
             <ScrollView
+              {...scrollProps}
               keyboardShouldPersistTaps="handled"
               contentContainerClassName="gap-4 p-5"
               style={{ flexGrow: 0 }}
@@ -79,7 +78,7 @@ export function FormSheet({
               {children}
             </ScrollView>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
     );
   }
@@ -93,10 +92,7 @@ export function FormSheet({
       }}
     >
       <SafeAreaView className="flex-1 bg-background">
-        <KeyboardAvoidingView
-          className="flex-1"
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        >
+        <View className="flex-1">
           <View className="flex-row items-center justify-between gap-3 border-b border-border px-5 py-3">
             <Text className="flex-1 text-lg font-bold text-foreground">{title}</Text>
             <Pressable
@@ -110,12 +106,14 @@ export function FormSheet({
             </Pressable>
           </View>
           <ScrollView
+            {...scrollProps}
             keyboardShouldPersistTaps="handled"
             contentContainerClassName="gap-4 p-5 pb-10"
           >
             {children}
+            {keyboardHeight > 0 ? <View style={{ height: keyboardHeight }} /> : null}
           </ScrollView>
-        </KeyboardAvoidingView>
+        </View>
       </SafeAreaView>
     </Modal>
   );

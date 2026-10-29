@@ -41,9 +41,30 @@ interface PantryItemDialogProps {
   editingItem?: PantryItem | null;
 }
 
+const COMMON_UNITS: Array<{ value: string; label: string }> = [
+  { value: 'g', label: 'g (Gam)' },
+  { value: 'kg', label: 'kg (Kilôgam)' },
+  { value: 'ml', label: 'ml (Mililít)' },
+  { value: 'l', label: 'l (Lít)' },
+  { value: 'quả', label: 'quả / trái' },
+  { value: 'củ', label: 'củ' },
+  { value: 'tép', label: 'tép / nhánh' },
+  { value: 'cây', label: 'cây' },
+  { value: 'bó', label: 'bó' },
+  { value: 'miếng', label: 'miếng / lát' },
+  { value: 'muỗng canh', label: 'muỗng canh (tbsp)' },
+  { value: 'muỗng cà phê', label: 'muỗng cà phê (tsp)' },
+  { value: 'chén', label: 'chén / bát' },
+  { value: 'gói', label: 'gói' },
+  { value: 'hộp', label: 'hộp' },
+  { value: 'lon', label: 'lon' },
+  { value: 'túi', label: 'túi / bịch' },
+];
+
 export function PantryItemDialog({ open, onOpenChange, editingItem }: PantryItemDialogProps) {
   const isEditing = Boolean(editingItem);
   const [isCanonical, setIsCanonical] = useState(true);
+  const [isCustomUnit, setIsCustomUnit] = useState(false);
   const [ingredientSearch, setIngredientSearch] = useState('');
 
   const { data: ingredientsData } = useIngredientsQuery(
@@ -105,6 +126,7 @@ export function PantryItemDialog({ open, onOpenChange, editingItem }: PantryItem
         freshnessNote: '',
       });
       setIsCanonical(true);
+      setIsCustomUnit(false);
       setIngredientSearch('');
     }
   }, [editingItem, open, createForm, updateForm]);
@@ -224,12 +246,33 @@ export function PantryItemDialog({ open, onOpenChange, editingItem }: PantryItem
 
             {isCanonical ? (
               <div className="space-y-1.5">
-                <Label htmlFor="ingredientSelect" className="text-xs">
-                  Chọn nguyên liệu chuẩn <span className="text-destructive">*</span>
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="ingredientSelect" className="text-xs">
+                    Chọn nguyên liệu chuẩn <span className="text-destructive">*</span>
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCanonical(false);
+                      createForm.setValue('isCanonical', false);
+                      createForm.setValue('ingredientId', '');
+                      createForm.clearErrors('ingredientId');
+                    }}
+                    className="text-[11px] text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline"
+                  >
+                    Tự nhập tên khác
+                  </button>
+                </div>
                 <Select
                   value={createForm.watch('ingredientId')}
                   onValueChange={(val) => {
+                    if (val === '__CUSTOM__' || val === '__CUSTOM_BOTTOM__') {
+                      setIsCanonical(false);
+                      createForm.setValue('isCanonical', false);
+                      createForm.setValue('ingredientId', '');
+                      createForm.clearErrors('ingredientId');
+                      return;
+                    }
                     createForm.setValue('ingredientId', val);
                     createForm.clearErrors('ingredientId');
                   }}
@@ -237,12 +280,32 @@ export function PantryItemDialog({ open, onOpenChange, editingItem }: PantryItem
                   <SelectTrigger id="ingredientSelect">
                     <SelectValue placeholder="Chọn nguyên liệu từ danh mục..." />
                   </SelectTrigger>
-                  <SelectContent className="max-h-56">
+                  <SelectContent className="max-h-60">
+                    <SelectItem
+                      value="__CUSTOM__"
+                      className="text-emerald-600 dark:text-emerald-400 font-medium border-b border-border/50 pb-2 mb-1 cursor-pointer focus:bg-emerald-50 dark:focus:bg-emerald-950/40"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <span>✏️</span>
+                        <span>Khác (Tự nhập tên nguyên liệu...)</span>
+                      </span>
+                    </SelectItem>
                     {ingredientsData?.items?.map((ing) => (
                       <SelectItem key={ing.id} value={ing.id}>
                         {ing.canonicalName}
                       </SelectItem>
                     ))}
+                    {ingredientsData?.items && ingredientsData.items.length > 5 && (
+                      <SelectItem
+                        value="__CUSTOM_BOTTOM__"
+                        className="text-emerald-600 dark:text-emerald-400 font-medium border-t border-border/50 pt-2 mt-1 cursor-pointer focus:bg-emerald-50 dark:focus:bg-emerald-950/40"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <span>✏️</span>
+                          <span>Không tìm thấy? Tự nhập tên nguyên liệu...</span>
+                        </span>
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
                 {createForm.formState.errors.ingredientId && (
@@ -253,12 +316,27 @@ export function PantryItemDialog({ open, onOpenChange, editingItem }: PantryItem
               </div>
             ) : (
               <div className="space-y-1.5">
-                <Label htmlFor="unmatchedText" className="text-xs">
-                  Tên nguyên liệu tự do <span className="text-destructive">*</span>
-                </Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="unmatchedText" className="text-xs">
+                    Tên nguyên liệu tự do <span className="text-destructive">*</span>
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCanonical(true);
+                      createForm.setValue('isCanonical', true);
+                      createForm.setValue('unmatchedText', '');
+                      createForm.clearErrors('unmatchedText');
+                    }}
+                    className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
+                  >
+                    ← Chọn từ danh mục chuẩn
+                  </button>
+                </div>
                 <Input
                   id="unmatchedText"
                   placeholder="Ví dụ: Nấm hương rừng, Rau thơm hữu cơ..."
+                  autoFocus
                   {...createForm.register('unmatchedText')}
                 />
                 {createForm.formState.errors.unmatchedText && (
@@ -281,18 +359,101 @@ export function PantryItemDialog({ open, onOpenChange, editingItem }: PantryItem
                   min="0.01"
                   {...createForm.register('quantity', { valueAsNumber: true })}
                 />
+                {createForm.formState.errors.quantity && (
+                  <p className="text-xs text-destructive">
+                    {createForm.formState.errors.quantity.message}
+                  </p>
+                )}
               </div>
 
-              <div className="space-y-1.5">
-                <Label htmlFor="unit" className="text-xs">
-                  Đơn vị <span className="text-destructive">*</span>
-                </Label>
-                <Input
-                  id="unit"
-                  placeholder="g, kg, ml, bó, quả..."
-                  {...createForm.register('unit')}
-                />
-              </div>
+              {isCustomUnit ? (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="unitInput" className="text-xs">
+                      Đơn vị <span className="text-destructive">*</span>
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomUnit(false);
+                        createForm.setValue('unit', 'g');
+                        createForm.clearErrors('unit');
+                      }}
+                      className="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline font-medium"
+                    >
+                      ← Chọn từ gợi ý
+                    </button>
+                  </div>
+                  <Input
+                    id="unitInput"
+                    placeholder="Ví dụ: bắp, tép, hũ..."
+                    autoFocus
+                    {...createForm.register('unit')}
+                  />
+                  {createForm.formState.errors.unit && (
+                    <p className="text-xs text-destructive">
+                      {createForm.formState.errors.unit.message}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="unitSelect" className="text-xs">
+                      Đơn vị <span className="text-destructive">*</span>
+                    </Label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsCustomUnit(true);
+                        createForm.setValue('unit', '');
+                        createForm.clearErrors('unit');
+                      }}
+                      className="text-[11px] text-muted-foreground hover:text-emerald-600 dark:hover:text-emerald-400 hover:underline"
+                    >
+                      Tự nhập
+                    </button>
+                  </div>
+                  <Select
+                    value={createForm.watch('unit') || 'g'}
+                    onValueChange={(val) => {
+                      if (val === '__CUSTOM_UNIT__') {
+                        setIsCustomUnit(true);
+                        createForm.setValue('unit', '');
+                        createForm.clearErrors('unit');
+                        return;
+                      }
+                      createForm.setValue('unit', val);
+                      createForm.clearErrors('unit');
+                    }}
+                  >
+                    <SelectTrigger id="unitSelect">
+                      <SelectValue placeholder="Chọn đơn vị..." />
+                    </SelectTrigger>
+                    <SelectContent className="max-h-56">
+                      {COMMON_UNITS.map((u) => (
+                        <SelectItem key={u.value} value={u.value}>
+                          {u.label}
+                        </SelectItem>
+                      ))}
+                      <SelectItem
+                        value="__CUSTOM_UNIT__"
+                        className="text-emerald-600 dark:text-emerald-400 font-medium border-t border-border/50 pt-2 mt-1 cursor-pointer focus:bg-emerald-50 dark:focus:bg-emerald-950/40"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          <span>✏️</span>
+                          <span>Đơn vị khác (tự nhập)...</span>
+                        </span>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {createForm.formState.errors.unit && (
+                    <p className="text-xs text-destructive">
+                      {createForm.formState.errors.unit.message}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">

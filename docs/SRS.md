@@ -1,8 +1,8 @@
 # Software Requirements Specification — Vegan Support Application
 
-**Version:** 1.6
+**Version:** 1.7
 
-**Updated:** 2026-10-25
+**Updated:** 2026-10-27
 
 **Status:** Approved product baseline
 
@@ -213,7 +213,7 @@ User-approved 2026-10-25 allergy/composition extension: members select allergies
 ### FR-17 Purchases and usage allowances — approved 2026-10-13; payOS conversion 2026-10-14
 
 - Signed-in users buy one-time packages for additional chat answers, fridge-analysis jobs, receipt-analysis jobs and simultaneous Pantry item capacity.
-- Purchased allowances accumulate without expiry in this demo scope. Free daily chat is consumed first; failed/fallback answers do not consume purchased credits.
+- Purchased single-pack allowances accumulate without expiry in this demo scope. The combo is sold with a 1-month, 3-month or 1-year duration (approved 2026-10-27): credits are granted per 30-day period and unused period credits expire at the period boundary; it never renews automatically. Administrators can view purchase revenue statistics and a per-user AI usage trace that never exposes prompt content. Free daily chat is consumed first; failed/fallback answers do not consume purchased credits.
 - Each scan job is bounded by configured image limits. Full/partial successful analysis consumes one job credit once; total failure releases it. A previously charged job can retry without another debit, subject to configured attempt limits.
 - All undeleted Pantry records count toward capacity, including zero-quantity records. Manual creation and both confirmation flows enforce the same transactional cap. Over-limit existing data remains readable, editable and deletable; no automatic deletion occurs.
 - Only verified server-side settlement grants snapshotted benefits, once. Browser return URLs cannot grant allowances. Purchases never modify roles or bypass dietary rules, consent, provider controls or confirmation.

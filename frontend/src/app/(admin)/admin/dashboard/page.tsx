@@ -24,6 +24,10 @@ import {
   Bot,
   Database,
   Newspaper,
+  Wallet,
+  Activity,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -66,6 +70,7 @@ import {
   FeaturesAuditTable,
 } from '@/features/ai-governance';
 import { AiVerificationTable } from '@/features/ai-artifacts';
+import { AiUsageTraceTable, RevenueStatsPanel } from '@/features/admin-insights';
 import { AdminContentManager } from '@/features/admin-content/components/admin-content-manager';
 
 type Tab =
@@ -82,6 +87,8 @@ type Tab =
   | 'contrib-apps'
   | 'restaurants'
   | 'ai-governance'
+  | 'ai-revenue'
+  | 'ai-usage'
   | 'ai-verifications';
 
 export default function AdminDashboardPage() {
@@ -109,6 +116,8 @@ function parseTabParam(value: string | null): Tab {
     value === 'contrib-apps' ||
     value === 'restaurants' ||
     value === 'ai-governance' ||
+    value === 'ai-revenue' ||
+    value === 'ai-usage' ||
     value === 'ai-verifications'
   ) {
     return value;
@@ -133,7 +142,70 @@ function AdminDashboardContent() {
     [router, searchParams]
   );
 
-  // Queries cho 4 chỉ số KPI thực tế
+  // Điều khiển thanh tab cuộn ngang
+  const tabListRef = React.useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = React.useState(false);
+  const [canScrollRight, setCanScrollRight] = React.useState(true);
+
+  const updateScrollButtons = React.useCallback(() => {
+    const el = tabListRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    setCanScrollLeft(scrollLeft > 4);
+    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 4);
+  }, []);
+
+  const handleScroll = React.useCallback((direction: 'left' | 'right') => {
+    const el = tabListRef.current;
+    if (!el) return;
+    const scrollStep = 320;
+    const current = el.scrollLeft;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    const target =
+      direction === 'left'
+        ? Math.max(0, current - scrollStep)
+        : Math.min(maxScroll, current + scrollStep);
+
+    try {
+      el.scrollTo({ left: target, behavior: 'smooth' });
+    } catch {
+      el.scrollLeft = target;
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const el = tabListRef.current;
+    if (!el) return;
+
+    updateScrollButtons();
+    const timer = setTimeout(updateScrollButtons, 150);
+
+    el.addEventListener('scroll', updateScrollButtons, { passive: true });
+    window.addEventListener('resize', updateScrollButtons);
+
+    let ro: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined') {
+      ro = new ResizeObserver(() => {
+        updateScrollButtons();
+      });
+      ro.observe(el);
+    }
+
+    return () => {
+      clearTimeout(timer);
+      el.removeEventListener('scroll', updateScrollButtons);
+      window.removeEventListener('resize', updateScrollButtons);
+      ro?.disconnect();
+    };
+  }, [updateScrollButtons]);
+
+  React.useEffect(() => {
+    if (!tabListRef.current) return;
+    const activeEl = tabListRef.current.querySelector<HTMLButtonElement>(`[data-tab-id="${tab}"]`);
+    if (activeEl) {
+      activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' });
+    }
+  }, [tab]);
   const {
     data: queueData,
     refetch: refetchQueue,
@@ -212,6 +284,8 @@ function AdminDashboardContent() {
     { id: 'mod-comments', label: 'Kiểm duyệt BL', icon: MessagesSquare },
     // { id: 'contrib-apps', label: 'Đơn cộng tác', icon: UserCheck },
     { id: 'ai-governance', label: 'Giám sát AI', icon: Bot },
+    { id: 'ai-revenue', label: 'Doanh thu AI', icon: Wallet },
+    { id: 'ai-usage', label: 'Truy vết AI', icon: Activity },
     { id: 'restaurants', label: 'Quán chờ duyệt', icon: Store },
     { id: 'categories', label: 'Cây danh mục', icon: FolderTree },
     { id: 'ingredients', label: 'Nguyên liệu', icon: Leaf },
@@ -267,41 +341,79 @@ function AdminDashboardContent() {
           })}
         </div>
 
-        {/* Tabs */}
-        <div className="relative no-scrollbar mt-4 flex gap-1 overflow-x-auto rounded-full border border-border/80 bg-muted/80 p-1.5 shadow-sm backdrop-blur-sm">
-          {tabs.map((t) => {
-            const Icon = t.icon;
-            const isActive = tab === t.id;
-            return (
-              <motion.button
-                key={t.id}
-                type="button"
-                whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
-                onClick={() => handleTabChange(t.id)}
-                className={cn(
-                  'relative z-10 flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary',
-                  isActive
-                    ? 'font-semibold text-primary'
-                    : 'text-muted-foreground hover:text-foreground'
-                )}
-              >
-                {isActive && (
-                  <motion.div
-                    layoutId="active-admin-tab"
-                    className="absolute inset-0 -z-10 rounded-full bg-background shadow-sm border border-border/40"
-                    transition={{ type: 'spring', stiffness: 420, damping: 32 }}
-                  />
-                )}
-                <Icon
+        {/* Tabs Bar với 2 nút cuộn ngang */}
+        <div className="relative mt-4 flex w-full min-w-0 items-center gap-1.5">
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className={cn(
+              'size-9 shrink-0 rounded-full border border-border/80 bg-muted/80 shadow-sm backdrop-blur-sm transition-all hover:bg-background',
+              !canScrollLeft
+                ? 'opacity-40 cursor-default'
+                : 'opacity-100 hover:scale-105 active:scale-95'
+            )}
+            onClick={() => handleScroll('left')}
+            aria-label="Cuộn sang trái"
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+
+          <div
+            ref={tabListRef}
+            className="no-scrollbar flex min-w-0 flex-1 gap-1 overflow-x-auto scroll-smooth rounded-full border border-border/80 bg-muted/80 p-1.5 shadow-sm backdrop-blur-sm"
+          >
+            {tabs.map((t) => {
+              const Icon = t.icon;
+              const isActive = tab === t.id;
+              return (
+                <motion.button
+                  key={t.id}
+                  data-tab-id={t.id}
+                  type="button"
+                  whileTap={shouldReduceMotion ? undefined : { scale: 0.97 }}
+                  onClick={() => handleTabChange(t.id)}
                   className={cn(
-                    'h-4 w-4 transition-transform duration-200',
-                    isActive && 'scale-110 text-primary'
+                    'relative z-10 flex shrink-0 items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                    isActive
+                      ? 'font-semibold text-primary'
+                      : 'text-muted-foreground hover:text-foreground'
                   )}
-                />
-                <span>{t.label}</span>
-              </motion.button>
-            );
-          })}
+                >
+                  {isActive && (
+                    <motion.div
+                      layoutId="active-admin-tab"
+                      className="absolute inset-0 -z-10 rounded-full bg-background shadow-sm border border-border/40"
+                      transition={{ type: 'spring', stiffness: 420, damping: 32 }}
+                    />
+                  )}
+                  <Icon
+                    className={cn(
+                      'h-4 w-4 transition-transform duration-200',
+                      isActive && 'scale-110 text-primary'
+                    )}
+                  />
+                  <span>{t.label}</span>
+                </motion.button>
+              );
+            })}
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className={cn(
+              'size-9 shrink-0 rounded-full border border-border/80 bg-muted/80 shadow-sm backdrop-blur-sm transition-all hover:bg-background',
+              !canScrollRight
+                ? 'opacity-40 cursor-default'
+                : 'opacity-100 hover:scale-105 active:scale-95'
+            )}
+            onClick={() => handleScroll('right')}
+            aria-label="Cuộn sang phải"
+          >
+            <ChevronRight className="size-4" />
+          </Button>
         </div>
 
         {/* Tab Contents với AnimatePresence */}
@@ -355,6 +467,12 @@ function AdminDashboardContent() {
                 <RequestsTable />
               </div>
             )}
+
+            {/* TAB: AI-REVENUE — doanh thu mua quota AI (features/admin-insights) */}
+            {tab === 'ai-revenue' && <RevenueStatsPanel />}
+
+            {/* TAB: AI-USAGE — truy vết sử dụng AI theo người dùng (features/admin-insights) */}
+            {tab === 'ai-usage' && <AiUsageTraceTable />}
 
             {/* TAB: AI-VERIFICATIONS — quản trị kiểm chứng AI (features/ai-artifacts, Phase 23) */}
             {tab === 'ai-verifications' && (

@@ -1,8 +1,8 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.12
+**Version:** 4.14
 
-**Updated:** 2026-10-26
+**Updated:** 2026-10-28
 
 **Status:** Approved implementation baseline
 
@@ -40,7 +40,7 @@ The current API contract may still contain legacy Contributor subtype fields unt
 | D20 | Certificates | No certificate verification in MVP. Future evidence badges do not silently introduce Contributor permission tiers. |
 | D21 | Documentation | `docs/SRS.md` is canonical; runtime capability status stays in frontend integration docs; roadmap is separate from implementation phases. |
 | D22 | Safety | Nutrition, freshness, compatibility, BMI, and AI answers are educational support, not diagnosis or guaranteed safety. |
-| D23 | Usage billing | User-approved 2026-10-13 and payOS conversion 2026-10-14: payOS exclusively for new one-time cumulative AI usage/Pantry capacity packages. App rollout remains development/test; payOS checkout is real money, without sandbox or mock fallback. No recurring or media-storage purchase. |
+| D23 | Usage billing | User-approved 2026-10-13 and payOS conversion 2026-10-14: payOS exclusively for new one-time cumulative AI usage/Pantry capacity packages and, since 2026-10-27, a non-renewing combo with 1-month/3-month/1-year durations (BL-20.1). App rollout remains development/test; payOS checkout is real money, without sandbox or mock fallback. No recurring or media-storage purchase. |
 | D24 | AI recipe draft | Accept title, description and ordered ingredient names without image analysis; return editable amount/unit/serving/time/step suggestions. The author edits and saves via the existing DRAFT content flow. AI output does not publish or become canonical nutrition data. Approved by user 2026-10-24. |
 
 ## 3. MVP scope
@@ -254,6 +254,17 @@ User-approved 2026-10-25 extension: use a public named allergen catalog for expl
 7. AI estimates never overwrite canonical food data. Corrections create versioned records.
 8. Recalculate when ingredient quantities, serving count, cooking steps, or source/factor versions change.
 
+#### BL-05.1 — Recipe nutrition on submit and reviewer confirmation (user-approved 2026-10-28)
+
+1. Authors no longer enter nutrition. Client-supplied `recipe.nutrition` is ignored; draft revisions carry null nutrition and are not meal-planner eligible.
+2. Submitting a recipe revision calculates a canonical estimate (BL-05 steps 1–3) and attaches it to that pending revision. When reviewed data is complete, AI is not called.
+3. Insufficient data (free-text ingredient, missing canonical profile or any of the five review metrics, unit conversion unavailable, or a step that changes ingredients without a cooking method) never blocks submission. It queues one asynchronous AI job that sees the whole recipe and may suggest missing cooking methods, retention factors and whole-line estimates for the missing metrics. The job makes 1 attempt plus 3 automatic retries after 1, 5 and 15 minutes, then becomes `FAILED`; a startup sweep resumes interrupted jobs. A job that finishes after the revision is decided is discarded.
+4. Recipe AI calls in this pipeline are system-paid: they never consume any user quota or credit, and every call is traced as a `NUTRITION` AI governance event.
+5. Reviewers (Admin or Contributor, under the same eligibility as the publication decision) see five per-serving metrics — calories, protein, carbohydrate, fat, fiber; vitamin B12 is excluded — each with source label (`CANONICAL_CALCULATED`, `AI_ESTIMATED`, `VERIFIED_OVERRIDE` for reviewer edits), confidence, uncovered ingredients and job state. They may trigger a system-paid recalculation ("AI tính lại", overrides kept) and edit each value; every edit is audited with actor, role, time, reason and value/origin before and after.
+6. A recipe revision can be approved only when all five values are present, even while a job runs or after it failed. A metric missing on any ingredient line is missing; partial sums are never presented as totals. Approval writes the final values into the revision's recipe detail used by cards and the meal planner, and cancels active jobs.
+7. Editing a published recipe creates a new revision that is recalculated from scratch on submit and must be reviewed again. Values approved or overridden for the previous revision are shown for reference only and are never carried over.
+8. AI suggestions apply only to that revision's estimate and remain labelled `AI_ESTIMATED`. They are never written to canonical ingredient data (`IngredientFoodProfile`, nutrient values, factors). Numbers become official for the recipe only through reviewer approval.
+
 ### BL-06 — Content and video review lifecycle
 
 Maintenance clarification 2026-10-26: titles and bodies need not be unique. Automatically generated URLs are unique and collision-safe; an explicitly requested URL must remain unique. Editing without a requested URL change preserves the current slug.
@@ -393,6 +404,14 @@ Maintenance clarification 2026-10-26: titles and bodies need not be unique. Auto
 - One bounded scan job costs one credit after any image succeeds, including a valid empty analysis. Total failure/cancellation before success releases it. Retries of an already charged job are free, with a configurable default maximum of three processing attempts. Expired queued/processing leases are fenced before release.
 - Pantry capacity counts every undeleted item, including zero quantity. Enforce the limit transactionally for manual creation and both scan confirmations. Existing over-limit items remain readable/editable/deletable; deletion/merge frees capacity. Results require explicit user confirmation before Pantry mutation.
 - Clients share account balances/history and use typed business errors. Mongo validators/indexes, additive queued timestamp backfill, idempotent seed, OpenAPI and consumer documentation are required release gates.
+
+### BL-20.1 — Duration combo and Admin insights (user-approved 2026-10-27)
+
+- Only the combo has durations; the four single packs remain one-time and permanent. Catalog: `combo-1m` 69.000đ, `combo-3m` 176.000đ (−15%, rounded from 175.950), `combo-12m` 580.000đ (−30%, rounded from 579.600). The former one-time `combo` is deactivated; historical/pending orders keep their snapshot (demo data, no migration).
+- A paid duration order creates one subscription of N periods × 30 days from activation (1 year = 12 periods = 360 days). Each period grants 100 chat, 10 fridge and 10 receipt credits once; unused period credits expire at the boundary (ledger `SUBSCRIPTION_PERIOD_EXPIRED`). +50 Pantry slots apply while active, not multiplied; after expiry existing items remain and only new additions are blocked.
+- Current-period credits are spent before permanent (trial and single-pack) credits. A release returns to the same period only while it is current; a release after the boundary is not refunded (`USAGE_RELEASED_PERIOD_EXPIRED`). Buying while active appends after the current end date. No auto-renewal.
+- Admin revenue statistics: overview (revenue of PAID orders, paid orders, buyers, average), contiguous series by day/week/month and order-status counts with success rate. Asia/Ho_Chi_Minh buckets, weeks start Monday; revenue by `paidAt`, statuses by `createdAt`; default 30 days, maximum 731. Simulated sandbox history is excluded. No per-product breakdown or export.
+- Admin AI usage trace: signed-in chat requests (free daily, combo period or permanent credits) and fridge/receipt reservations with user name/email, feature, time, allowance source, units charged, outcome (spent/released/held), AI status, provider/model, tokens, latency and error code. Filters: feature, outcome, user email/name, date range. Prompts, images, receipts and provider payloads are never returned; guests are excluded; chat rows follow AI request-log retention; chat rows created before 2026-10-27 report source `UNKNOWN`. No CSV export.
 
 ## 6. RBAC summary
 
@@ -567,7 +586,11 @@ A phase is complete only when:
 
 ## 13. Change record
 
+- **4.14 — 2026-10-28:** User approves BL-05.1: recipe nutrition calculated on submit, async system-paid AI gap filling (1 + 3 retries at 1/5/15 min, startup sweep, quota-free, governance-traced), reviewer panel with five metrics (B12 excluded), audited overrides kept across recalculation, approval gated on five values and written to recipe detail, no carry-over between revisions, and no AI write to canonical food data.
+
 - **4.13 — 2026-10-26:** User clarifies that approved Contributors have review/moderation permissions for submitted community content (recipes, articles, videos) created by Members (excluding self-created content and items flagged with open AI flags or high report counts requiring Admin review). Content review endpoints (`/api/v1/admin/content-review*`) allow both Admin and Contributor roles.
+
+- **4.13 — 2026-10-27:** User approves combo durations (1 month / 3 months / 1 year, per-30-day credits, −15%/−30%) and Admin revenue statistics plus per-user AI usage trace (BL-20.1). Single packs remain one-time.
 
 - **4.12 — 2026-10-26:** User approves an explicit "not suitable" recipe-discovery view with per-recipe reasons (BL-02.7). Demo composition assertions extend to prepared foods used by seeded recipes.
 

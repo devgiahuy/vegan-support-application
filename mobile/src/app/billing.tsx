@@ -1,6 +1,6 @@
 import { createChatIdempotencyKey } from '@/features/chat/utils/idempotency';
 import * as React from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { Link, useFocusEffect, useLocalSearchParams, type Href } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { useQueryClient } from '@tanstack/react-query';
@@ -23,7 +23,8 @@ import {
   useEntitlementsQuery,
   useReconcileBillingOrderMutation,
 } from '@/features/billing/queries/billing.queries';
-import type { BillingOrder } from '@/features/billing/types/billing.model';
+import type { BillingOrder, BillingProduct, EntitlementSubscription } from '@/features/billing/types/billing.model';
+import { cn } from '@/lib/utils';
 
 function openCheckout(url: string) {
   // Expo web opens in the current tab, so an async order request cannot lose
@@ -67,7 +68,7 @@ function OrderCard({
     <View className="gap-3 rounded-xl border border-border bg-card p-4">
       <Text className="text-base font-semibold text-foreground">{order.productName}</Text>
       <Text className="text-sm text-muted-foreground">
-        {order.priceLabel} · {order.createdAtLabel}
+        {order.durationLabel} · {order.priceLabel} · {order.createdAtLabel}
       </Text>
       <Text className="text-xs text-muted-foreground">{order.providerLabel}</Text>
       <Text className="text-sm font-semibold text-primary">{order.statusLabel}</Text>
@@ -103,6 +104,88 @@ function OrderCard({
           Kiểm tra lúc {feedback.checkedAtLabel}. {feedback.message}
         </Text>
       )}
+    </View>
+  );
+}
+
+function ActivePlanCard({ subscription }: { subscription: EntitlementSubscription }) {
+  return (
+    <View className="gap-3 rounded-xl border border-primary/40 bg-primary/5 p-4">
+      <Text className="text-base font-semibold text-foreground">Combo tiện ích đang hoạt động</Text>
+      <Text className="text-sm text-muted-foreground">
+        Hiệu lực đến {subscription.endsAtLabel} · Chu kỳ hiện tại kết thúc {subscription.periodEndsAtLabel}
+      </Text>
+      <View className="flex-row flex-wrap justify-between gap-y-2">
+        {subscription.periodRows.map((row) => (
+          <View key={row.label} className="w-[48.5%] gap-0.5 rounded-lg border border-border bg-card p-3">
+            <Text className="text-xs text-muted-foreground">{row.label}</Text>
+            <Text className="text-base font-semibold text-foreground">{row.value}</Text>
+          </View>
+        ))}
+      </View>
+      <Text className="text-xs leading-5 text-muted-foreground">
+        Mỗi {subscription.periodDays} ngày cấp lại lượt theo chu kỳ; lượt chưa dùng hết hạn cuối chu kỳ. Lượt chu kỳ được dùng trước lượt mua lẻ. Mua thêm combo khi còn hạn sẽ nối tiếp thời gian hiệu lực.
+      </Text>
+    </View>
+  );
+}
+
+function DurationPlans({
+  plans,
+  enabled,
+  purchasingId,
+  anyPurchasing,
+  onBuy,
+}: {
+  plans: BillingProduct[];
+  enabled: boolean;
+  purchasingId: string | undefined;
+  anyPurchasing: boolean;
+  onBuy: (productId: string) => void;
+}) {
+  const [selectedPlanId, setSelectedPlanId] = React.useState('');
+  const selected = plans.find((plan) => plan.id === selectedPlanId) ?? plans[0];
+  if (!selected) return null;
+  return (
+    <View className="gap-3">
+      <Text className="text-2xl font-semibold text-foreground">Combo tiện ích theo thời hạn</Text>
+      <Text className="text-sm leading-5 text-muted-foreground">
+        Không tự gia hạn. Mỗi chu kỳ 30 ngày được cấp lượt chat AI, quét tủ lạnh, phân tích hóa đơn và thêm ô tủ đồ ăn khi còn hạn.
+      </Text>
+      <View accessibilityRole="radiogroup" className="flex-row gap-2">
+        {plans.map((plan) => {
+          const active = plan.id === selected.id;
+          return (
+            <Pressable
+              key={plan.id}
+              accessibilityRole="radio"
+              accessibilityState={{ selected: active }}
+              onPress={() => setSelectedPlanId(plan.id)}
+              className={cn('flex-1 items-center gap-0.5 rounded-xl border px-2 py-3', active ? 'border-primary bg-primary/10' : 'border-border bg-card')}
+            >
+              <Text className={cn('text-sm font-semibold', active ? 'text-primary' : 'text-foreground')}>{plan.durationLabel}</Text>
+              {plan.savingsPercent > 0 ? <Text className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">Tiết kiệm {plan.savingsPercent}%</Text> : <Text className="text-[11px] text-muted-foreground"> </Text>}
+            </Pressable>
+          );
+        })}
+      </View>
+      <View className="gap-3 rounded-xl border border-border bg-card p-5">
+        <Text className="text-lg font-semibold text-foreground">{selected.name}</Text>
+        <Text className="text-sm text-muted-foreground">{selected.description}</Text>
+        <Text className="text-2xl font-bold text-primary">{selected.priceLabel}</Text>
+        <Text className="text-xs text-muted-foreground">≈ {selected.monthlyPriceLabel} / tháng</Text>
+        {selected.periodBenefitLabels.map((label) => (
+          <Text key={label} className="text-sm text-foreground">
+            {label}
+          </Text>
+        ))}
+        <PrimaryButton
+          label="Thanh toán qua payOS"
+          loading={purchasingId === selected.id}
+          disabled={!enabled || !selected.canBuy || anyPurchasing}
+          onPress={() => onBuy(selected.id)}
+        />
+      </View>
     </View>
   );
 }
@@ -160,8 +243,8 @@ export default function BillingScreen() {
           <Text className="text-sm font-semibold text-primary">Gói tiện ích VeggieConnect</Text>
           <Text className="text-3xl font-bold text-foreground">Thêm lượt, chủ động hơn</Text>
           <Text className="text-sm leading-6 text-muted-foreground">
-            Mua một lần, cộng dồn vào tài khoản. Không tự gia hạn, không tăng dung lượng ảnh lưu
-            trữ.
+            Gói lẻ mua một lần, cộng dồn vào tài khoản; combo tiện ích theo thời hạn cấp lượt mỗi
+            chu kỳ. Không tự gia hạn, không tăng dung lượng ảnh lưu trữ.
           </Text>
         </View>
         {!authenticated ? (
@@ -203,6 +286,7 @@ export default function BillingScreen() {
               </View>
             ) : (
               <>
+                {allowances.data?.subscription ? <ActivePlanCard subscription={allowances.data.subscription} /> : null}
                 <View className="flex-row flex-wrap justify-between gap-y-3">
                   {allowances.data?.usageRows.map((row) => (
                     <View
@@ -247,12 +331,21 @@ export default function BillingScreen() {
                 )}
               </View>
             )}
+            {catalog.data && catalog.data.durationPlans.length > 0 ? (
+              <DurationPlans
+                plans={catalog.data.durationPlans}
+                enabled={catalog.data.enabled}
+                purchasingId={purchase.isPending ? purchase.variables?.productId : undefined}
+                anyPurchasing={purchase.isPending}
+                onBuy={(productId) => void buy(productId)}
+              />
+            ) : null}
             <View className="gap-4">
-              <Text className="text-2xl font-semibold text-foreground">Chọn gói mua thêm</Text>
+              <Text className="text-2xl font-semibold text-foreground">Gói lẻ mua thêm</Text>
               {catalog.data?.products.length === 0 && (
                 <Text className="text-muted-foreground">Chưa có gói đang mở bán.</Text>
               )}
-              {catalog.data?.products.map((product) => (
+              {catalog.data?.oneTimeProducts.map((product) => (
                 <View
                   key={product.id}
                   className="gap-4 rounded-xl border border-border bg-card p-5"

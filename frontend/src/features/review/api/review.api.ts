@@ -2,6 +2,12 @@ import api from '@/lib/axios';
 import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
 import { PaginationResult } from '@/types/api';
 import { contentReviewMapper } from '../mappers/content-review.mapper';
+import { reviewNutritionMapper } from '../mappers/review-nutrition.mapper';
+import type { ReviewNutritionPanelResponseDto } from '../types/review-nutrition.dto';
+import type {
+  ReviewNutritionOverrideValues,
+  ReviewNutritionPanel,
+} from '../types/review-nutrition.model';
 import type {
   AdminContentReviewDetailResponseDto,
   ContentReviewHistoryResponseDto,
@@ -126,6 +132,58 @@ export const reviewApi = {
       return contentReviewMapper.toDetailResponse(res.data);
     }
     throw new Error('Không thể ghi nhận quyết định kiểm duyệt.');
+  },
+
+  // ==========================================
+  // 2b. Dinh dưỡng công thức khi duyệt (2026-10-28)
+  // ==========================================
+
+  /**
+   * Panel dinh dưỡng của revision công thức đang chờ duyệt
+   * GET /api/v1/admin/content-review/:id/nutrition
+   */
+  getNutritionPanel: async (revisionId: string): Promise<ReviewNutritionPanel> => {
+    const res = await api.get<ReviewNutritionPanelResponseDto>(
+      API_ENDPOINTS.ADMIN_CONTENT_REVIEW.NUTRITION(revisionId),
+      { silent: true }
+    );
+    if (res.data?.success && res.data.data) {
+      return reviewNutritionMapper.toResponse(res.data);
+    }
+    throw new Error('Phản hồi dinh dưỡng kiểm duyệt không đúng định dạng.');
+  },
+
+  /**
+   * Người duyệt sửa tay hoặc bỏ sửa tay từng chỉ số (có audit)
+   * PATCH /api/v1/admin/content-review/:id/nutrition
+   */
+  updateNutritionOverrides: async (
+    revisionId: string,
+    values: ReviewNutritionOverrideValues,
+    reason?: string
+  ): Promise<ReviewNutritionPanel> => {
+    const res = await api.patch<ReviewNutritionPanelResponseDto>(
+      API_ENDPOINTS.ADMIN_CONTENT_REVIEW.NUTRITION(revisionId),
+      reviewNutritionMapper.toOverrideRequest(values, reason)
+    );
+    if (res.data?.success && res.data.data) {
+      return reviewNutritionMapper.toResponse(res.data);
+    }
+    throw new Error('Không thể lưu chỉnh sửa dinh dưỡng.');
+  },
+
+  /**
+   * "AI tính lại": tính lại từ dữ liệu chuẩn, chạy job AI nếu còn thiếu; giữ giá trị sửa tay
+   * POST /api/v1/admin/content-review/:id/nutrition/recalculate
+   */
+  recalculateNutrition: async (revisionId: string): Promise<ReviewNutritionPanel> => {
+    const res = await api.post<ReviewNutritionPanelResponseDto>(
+      API_ENDPOINTS.ADMIN_CONTENT_REVIEW.NUTRITION_RECALCULATE(revisionId)
+    );
+    if (res.data?.success && res.data.data) {
+      return reviewNutritionMapper.toResponse(res.data);
+    }
+    throw new Error('Không thể tính lại dinh dưỡng.');
   },
 
   // ==========================================

@@ -65,7 +65,8 @@ export const dietPreferencesApi = {
       ingredientExclusions: input.ingredientExclusions.map((e) => ({
         ingredientName: e.ingredientName,
         ...(e.ingredientId ? { ingredientId: e.ingredientId } : {}),
-        reason: e.reason,
+        // Schema BE yêu cầu reason min(1) nếu có — bỏ khi rỗng.
+        ...(e.reason?.trim() ? { reason: e.reason.trim() } : {}),
       })),
     };
     const res = await api.put<DietPreferenceResponseDto>(API_ENDPOINTS.USERS.DIET_PREFERENCES, payload);

@@ -129,11 +129,16 @@ export function registerModerationOpenApi(registry: OpenAPIRegistry, errorSchema
           'ADMIN_REVIEW_REQUIRED',
         ]),
         404: errors(errorSchema, 'Không tìm thấy target', ['NOT_FOUND']),
-        409: errors(errorSchema, 'Concurrent/already decided review', [
-          'REVIEW_CONFLICT',
-          'REVIEW_ALREADY_DECIDED',
-          'CONTENT_AUTHOR_INACTIVE',
-        ]),
+        409: errors(
+          errorSchema,
+          'Concurrent/already decided review or incomplete recipe nutrition',
+          [
+            'REVIEW_CONFLICT',
+            'REVIEW_ALREADY_DECIDED',
+            'CONTENT_AUTHOR_INACTIVE',
+            'RECIPE_NUTRITION_INCOMPLETE',
+          ],
+        ),
       },
     });
   }
@@ -149,7 +154,10 @@ export function registerModerationOpenApi(registry: OpenAPIRegistry, errorSchema
     security: authenticated,
     request: { query: reviewQueueQuerySchema },
     responses: {
-      200: { description: 'Paginated content review queue', content: { 'application/json': { schema: reviewList } } },
+      200: {
+        description: 'Paginated content review queue',
+        content: { 'application/json': { schema: reviewList } },
+      },
       400: errors(errorSchema, 'Invalid review filters', ['VALIDATION_ERROR']),
       401: errors(errorSchema, 'Authentication required', authErrors),
       403: errors(errorSchema, 'Reviewer permission required', ['FORBIDDEN', 'ACCOUNT_BANNED']),
@@ -167,7 +175,10 @@ export function registerModerationOpenApi(registry: OpenAPIRegistry, errorSchema
     security: authenticated,
     request: { params: moderationIdParamsSchema },
     responses: {
-      200: { description: 'Content review detail', content: { 'application/json': { schema: contentReviewDetail } } },
+      200: {
+        description: 'Content review detail',
+        content: { 'application/json': { schema: contentReviewDetail } },
+      },
       401: errors(errorSchema, 'Authentication required', authErrors),
       403: errors(errorSchema, 'Admin only', ['FORBIDDEN', 'ACCOUNT_BANNED']),
       404: errors(errorSchema, 'Revision not found', ['NOT_FOUND']),
@@ -180,12 +191,15 @@ export function registerModerationOpenApi(registry: OpenAPIRegistry, errorSchema
     tags: ['Content Review Admin'],
     summary: 'Admin or Contributor approve or reject a submitted revision',
     description:
-      'Reason is mandatory. The exact latest revision is locked transactionally. Approve replaces the public pointer; reject keeps any prior approved revision public. Signals are recorded evidence only.',
+      'Reason is mandatory. The exact latest revision is locked transactionally. Approve replaces the public pointer; reject keeps any prior approved revision public. Signals are recorded evidence only. Recipe approval (changed 2026-10-28) requires all five per-serving values (calories, proteinGrams, carbsGrams, fatGrams, fiberGrams) from the submit-time estimate or reviewer overrides (see GET /api/v1/admin/content-review/{id}/nutrition); a running or failed AI job does not block approval. Approval writes the final values into RecipeDetail (vitaminB12Mcg is not written), recomputes mealPlannerEligible, cancels active nutrition AI jobs and stores a nutrition snapshot in the moderation audit. Missing values return 409 RECIPE_NUTRITION_INCOMPLETE with fields.missingMetrics.',
     operationId: 'reviewContentAdmin',
     security: authenticated,
     request: { params: moderationIdParamsSchema, body: jsonBody(contentReviewDecision) },
     responses: {
-      200: { description: 'Decision and audit recorded', content: { 'application/json': { schema: contentReviewDetail } } },
+      200: {
+        description: 'Decision and audit recorded',
+        content: { 'application/json': { schema: contentReviewDetail } },
+      },
       400: errors(errorSchema, 'Invalid decision/reason', ['VALIDATION_ERROR']),
       401: errors(errorSchema, 'Authentication required', authErrors),
       403: errors(errorSchema, 'Reviewer role, Admin review requirement or self-review forbidden', [
@@ -200,6 +214,7 @@ export function registerModerationOpenApi(registry: OpenAPIRegistry, errorSchema
         'REVIEW_CONFLICT',
         'CONTENT_STATE_CONFLICT',
         'CONTENT_AUTHOR_INACTIVE',
+        'RECIPE_NUTRITION_INCOMPLETE',
       ]),
     },
   });

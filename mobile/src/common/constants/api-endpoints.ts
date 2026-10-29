@@ -65,6 +65,12 @@ export const API_ENDPOINTS = {
     SUBMIT: (id: string) => `/posts/${id}/submit`,
     REVIEW_HISTORY: (id: string) => `/posts/${id}/review-history`,
   },
+  CONTENT_REVIEW: {
+    LIST: '/admin/content-review',
+    DETAIL: (revisionId: string) => `/admin/content-review/${revisionId}`,
+    NUTRITION: (revisionId: string) => `/admin/content-review/${revisionId}/nutrition`,
+    NUTRITION_RECALCULATE: (revisionId: string) => `/admin/content-review/${revisionId}/nutrition/recalculate`,
+  },
   COMMUNITY: {
     COMMENTS: (postId: string) => `/posts/${postId}/comments`,
     COMMENT: (id: string) => `/comments/${id}`,

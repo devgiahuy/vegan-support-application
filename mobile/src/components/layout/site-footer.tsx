@@ -10,12 +10,11 @@ import { SOCIAL_LINKS } from '@/lib/env';
 import { SOCIAL_ICON_PATHS } from './social-icon-paths';
 
 const EMERALD_ICON = '#34d399';
-const ART_RATIO = 1671 / 483;
 
 /** Nền footer luôn xanh đậm, nhưng ở chế độ tối phải sáng hơn nền trang và có viền để không chìm vào nền. */
 const PALETTES = {
-  light: { base: '#04120b', veil: 'rgba(2,11,6,0.25)', border: 'rgba(16,185,129,0.45)', card: 'rgba(6,30,19,0.92)' },
-  dark: { base: '#0c3220', veil: 'rgba(4,22,13,0.10)', border: 'rgba(52,211,153,0.55)', card: 'rgba(5,28,17,0.88)' },
+  light: { base: '#04120b', border: 'rgba(16,185,129,0.45)', card: 'rgba(6,30,19,0.92)' },
+  dark: { base: '#0c3220', border: 'rgba(52,211,153,0.55)', card: 'rgba(5,28,17,0.88)' },
 } as const;
 const SOCIAL_ICON_COLOR = '#a7f3d0';
 
@@ -120,25 +119,10 @@ export function SiteFooter() {
         marginTop: 40,
         overflow: 'hidden',
         backgroundColor: palette.base,
-        borderTopLeftRadius: 28,
-        borderTopRightRadius: 28,
         borderTopWidth: 1.5,
         borderColor: palette.border,
       }}>
-      {/* Tranh lá chỉ là dải trang trí ở mép trên/dưới (ảnh ngang nên giữ nguyên tỉ lệ để không bị cắt mất lá). */}
-      <Image
-        source={require('@/assets/images/footer/footer-2.png')}
-        style={{ position: 'absolute', top: 0, left: 0, right: 0, aspectRatio: ART_RATIO }}
-        contentFit="cover"
-      />
-      <Image
-        source={require('@/assets/images/footer/footer-2.png')}
-        style={{ position: 'absolute', bottom: 0, left: 0, right: 0, aspectRatio: ART_RATIO, transform: [{ scaleY: -1 }] }}
-        contentFit="cover"
-      />
-      <View pointerEvents="none" style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, backgroundColor: palette.veil }} />
-
-      <View className="px-4 pb-6" style={{ paddingTop: 40 }}>
+      <View className="px-4" style={{ paddingTop: 40, paddingBottom: 56 }}>
         {/* 1. Đăng ký nhận tin */}
         <View className="gap-4 rounded-3xl p-5" style={{ borderWidth: 1, borderColor: palette.border, backgroundColor: palette.card }}>
           <View className="flex-row items-center gap-4">

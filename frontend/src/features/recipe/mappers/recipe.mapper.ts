@@ -353,16 +353,8 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
           Object.values(RecipeDifficulty).includes(domain.difficulty as RecipeDifficulty)
             ? domain.difficulty
             : RecipeDifficulty.EASY,
-        nutrition: domain.nutrition
-          ? {
-              calories: Math.round(domain.nutrition.calories),
-              proteinGrams: domain.nutrition.protein,
-              carbsGrams: domain.nutrition.carbs,
-              fatGrams: domain.nutrition.fat,
-              fiberGrams: domain.nutrition.fiber,
-              vitaminB12Mcg: domain.nutrition.vitaminB12,
-            }
-          : undefined,
+        // Nutrition không còn do tác giả nhập (2026-10-28): backend tính khi gửi duyệt,
+        // người duyệt xác nhận trước khi xuất bản.
         ingredients: (domain.ingredients || []).map((item) => {
           // Backend `ingredientId` là optional UUID: vắng mặt thì thôi,
           // gửi explicit `null` sẽ 400 strict. Chỉ kèm key khi có UUID thật.

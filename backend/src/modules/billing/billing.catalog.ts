@@ -1,6 +1,11 @@
 import type { PrismaClient } from '@prisma/client';
 
 // Demonstration catalog data, outside domain logic; orders snapshot these benefits.
+// Duration-based combos grant their credits once per period (see subscriptionPeriodDays);
+// the former one-time `combo` is retired and kept only for historical orders.
+export const subscriptionPeriodDays = 30;
+const retiredBillingProductIds = ['combo'];
+
 export const billingProducts = [
   {
     id: 'chat-100',
@@ -11,6 +16,7 @@ export const billingProducts = [
     fridgeCredits: 0,
     receiptCredits: 0,
     pantrySlots: 0,
+    durationMonths: null,
   },
   {
     id: 'fridge-10',
@@ -21,6 +27,7 @@ export const billingProducts = [
     fridgeCredits: 10,
     receiptCredits: 0,
     pantrySlots: 0,
+    durationMonths: null,
   },
   {
     id: 'receipt-10',
@@ -31,6 +38,7 @@ export const billingProducts = [
     fridgeCredits: 0,
     receiptCredits: 10,
     pantrySlots: 0,
+    durationMonths: null,
   },
   {
     id: 'pantry-50',
@@ -41,16 +49,43 @@ export const billingProducts = [
     fridgeCredits: 0,
     receiptCredits: 0,
     pantrySlots: 50,
+    durationMonths: null,
   },
   {
-    id: 'combo',
-    name: 'Gói tiện ích',
-    description: '100 lượt chat, 10 lượt mỗi loại phân tích và 50 ô tủ đồ ăn.',
+    id: 'combo-1m',
+    name: 'Gói tiện ích 1 tháng',
+    description:
+      'Mỗi 30 ngày: 100 lượt chat, 10 lượt mỗi loại phân tích; thêm 50 ô tủ đồ ăn khi còn hạn.',
     priceVnd: 69000,
     chatCredits: 100,
     fridgeCredits: 10,
     receiptCredits: 10,
     pantrySlots: 50,
+    durationMonths: 1,
+  },
+  {
+    id: 'combo-3m',
+    name: 'Gói tiện ích 3 tháng',
+    description:
+      'Mỗi 30 ngày: 100 lượt chat, 10 lượt mỗi loại phân tích; thêm 50 ô tủ đồ ăn khi còn hạn.',
+    priceVnd: 176000,
+    chatCredits: 100,
+    fridgeCredits: 10,
+    receiptCredits: 10,
+    pantrySlots: 50,
+    durationMonths: 3,
+  },
+  {
+    id: 'combo-12m',
+    name: 'Gói tiện ích 1 năm',
+    description:
+      'Mỗi 30 ngày: 100 lượt chat, 10 lượt mỗi loại phân tích; thêm 50 ô tủ đồ ăn khi còn hạn.',
+    priceVnd: 580000,
+    chatCredits: 100,
+    fridgeCredits: 10,
+    receiptCredits: 10,
+    pantrySlots: 50,
+    durationMonths: 12,
   },
 ] as const;
 
@@ -62,4 +97,8 @@ export async function seedBillingProducts(prisma: PrismaClient): Promise<void> {
       update: {},
     });
   }
+  await prisma.billingProduct.updateMany({
+    where: { id: { in: retiredBillingProductIds } },
+    data: { active: false },
+  });
 }

@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, Text, View } from 'react-native';
 import { Link, type Href } from 'expo-router';
 import {
   AlertTriangle,
@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   Lock,
   RefreshCw,
-  ShieldAlert,
   X,
 } from 'lucide-react-native';
 
@@ -27,37 +26,20 @@ import type {
   DraftIngredientAllergy,
   DraftIngredientExclusion,
 } from '@/features/diet-preferences/types/diet-preferences.model';
-import { AllergySeverity, DietPattern, PracticeSchedule, Tradition } from '@/common/enums';
+import { DietPattern, PracticeSchedule, Tradition } from '@/common/enums';
 import { getApiErrorCode, getApiErrorFields, getApiErrorMessage } from '@/lib/api-error';
 import { cn } from '@/lib/utils';
 import { useIconColors } from '@/lib/theme-colors';
-import { IngredientPicker } from '@/features/ingredient/components/ingredient-picker';
-import { AllergenPicker } from '@/features/allergen/components/allergen-picker';
-import type { AllergenOption } from '@/features/allergen/types/allergen.model';
+import { AllergyEditor } from '@/features/diet-preferences/components/allergy-editor';
+import { ExclusionEditor } from '@/features/diet-preferences/components/exclusion-editor';
+import {
+  DietOptionGroup,
+  PATTERN_OPTIONS,
+  SCHEDULE_OPTIONS,
+  TRADITION_OPTIONS,
+} from '@/features/diet-preferences/components/diet-option-group';
 import { useDetailedProfileQuery } from '@/features/profile/queries/profile.queries';
 import { useAuthStore } from '@/store/useAuthStore';
-
-const PATTERN_OPTIONS: { value: DietPattern; label: string; note: string }[] = [
-  { value: DietPattern.VEGAN, label: 'Thuần chay', note: '100% thực vật, không trứng/sữa/mật ong' },
-  { value: DietPattern.LACTO_OVO, label: 'Có trứng sữa', note: 'Cho phép trứng và sữa động vật' },
-];
-
-const SCHEDULE_OPTIONS: { value: PracticeSchedule; label: string; note: string }[] = [
-  { value: PracticeSchedule.PERMANENT, label: 'Trường chay', note: 'Ăn chay quanh năm' },
-  { value: PracticeSchedule.PERIODIC, label: 'Chay kỳ', note: 'Ăn chay theo ngày cố định trong tháng' },
-];
-
-const TRADITION_OPTIONS: { value: Tradition; label: string }[] = [
-  { value: Tradition.NONE, label: 'Không theo truyền thống' },
-  { value: Tradition.BUDDHIST, label: 'Phật giáo' },
-  { value: Tradition.CHRISTIAN, label: 'Kitô giáo' },
-];
-
-const SEVERITY_OPTIONS: { value: AllergySeverity; label: string }[] = [
-  { value: AllergySeverity.MILD, label: 'Nhẹ' },
-  { value: AllergySeverity.MODERATE, label: 'Trung bình' },
-  { value: AllergySeverity.SEVERE, label: 'Nặng' },
-];
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -65,30 +47,6 @@ type Step = 'select' | 'review' | 'done';
 
 function toSeverity(value: string): DraftAllergy['severity'] {
   return value === 'MILD' || value === 'SEVERE' ? value : 'MODERATE';
-}
-
-function OptionPill({
-  selected,
-  label,
-  note,
-  onPress,
-}: {
-  selected: boolean;
-  label: string;
-  note?: string;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      className={cn(
-        'rounded-xl border px-3.5 py-3',
-        selected ? 'border-primary bg-primary/10' : 'border-input bg-background'
-      )}>
-      <Text className={cn('text-sm', selected ? 'font-semibold text-primary' : 'text-foreground')}>{label}</Text>
-      {note ? <Text className="mt-0.5 text-xs text-muted-foreground">{note}</Text> : null}
-    </Pressable>
-  );
 }
 
 /**
@@ -113,15 +71,8 @@ export default function DietPreferencesScreen() {
   const [saveError, setSaveError] = React.useState<string | null>(null);
   const [configUnavailable, setConfigUnavailable] = React.useState(false);
 
-  const [allergenQuery, setAllergenQuery] = React.useState('');
-  const [ingredientAllergyValue, setIngredientAllergyValue] = React.useState<{
-    displayName: string;
-    ingredientId: string | null;
-  }>({ displayName: '', ingredientId: null });
-  const [allergenSeverity, setAllergenSeverity] = React.useState<AllergySeverity>(AllergySeverity.MODERATE);
-  const [exclusionName, setExclusionName] = React.useState('');
-  const [exclusionIngredientId, setExclusionIngredientId] = React.useState<string | null>(null);
-  const [exclusionReason, setExclusionReason] = React.useState('');
+  const [allergySearch, setAllergySearch] = React.useState('');
+  const [exclusionSearch, setExclusionSearch] = React.useState('');
   const [pickerOpen, setPickerOpen] = React.useState(false);
 
   // Dị ứng đang lưu được dùng làm giá trị ban đầu để lưu lại không xoá nhầm lựa chọn đã khai báo ở nơi khác (web).
@@ -206,50 +157,6 @@ export default function DietPreferencesScreen() {
     enabled: r.hardConstraint ? true : (ruleOverrides[r.id] ?? r.defaultEnabled),
   }));
 
-  const selectedAllergenCodes = React.useMemo(() => new Set(allergies.map((a) => a.allergenCode)), [allergies]);
-
-  const addAllergy = (option: AllergenOption) => {
-    if (selectedAllergenCodes.has(option.code)) {
-      Alert.alert('Đã tồn tại', 'Chất này đã có trong danh sách.');
-      return;
-    }
-    setAllergies((prev) => [...prev, { allergenCode: option.code, label: option.label, severity: allergenSeverity }]);
-    setAllergenQuery('');
-  };
-
-  const addIngredientAllergy = () => {
-    const { ingredientId, displayName } = ingredientAllergyValue;
-    if (!ingredientId) {
-      Alert.alert('Chưa chọn nguyên liệu', 'Hãy chọn một nguyên liệu trong danh sách gợi ý.');
-      return;
-    }
-    if (ingredientAllergies.some((a) => a.ingredientId === ingredientId)) {
-      Alert.alert('Đã tồn tại', 'Nguyên liệu này đã có trong danh sách.');
-      return;
-    }
-    setIngredientAllergies((prev) => [...prev, { ingredientId, ingredientName: displayName, severity: allergenSeverity }]);
-    setIngredientAllergyValue({ displayName: '', ingredientId: null });
-  };
-
-  const addExclusion = () => {
-    const name = exclusionName.trim();
-    if (!name) {
-      Alert.alert('Thiếu thông tin', 'Vui lòng nhập tên nguyên liệu cần loại trừ.');
-      return;
-    }
-    setExclusions((prev) => [
-      ...prev,
-      {
-        ingredientName: name,
-        ...(exclusionIngredientId ? { ingredientId: exclusionIngredientId } : {}),
-        reason: exclusionReason.trim() || undefined,
-      },
-    ]);
-    setExclusionName('');
-    setExclusionIngredientId(null);
-    setExclusionReason('');
-  };
-
   const addDate = (value: string) => {
     if (!DATE_RE.test(value)) {
       Alert.alert('Ngày không hợp lệ', 'Ngày phải đúng dạng YYYY-MM-DD (ví dụ 2026-09-15).');
@@ -264,12 +171,6 @@ export default function DietPreferencesScreen() {
 
   const handleSave = async () => {
     if (!confirmed || !preview) return;
-    const pendingIngredientText =
-      ingredientAllergyValue.displayName.trim().length > 0 && !ingredientAllergyValue.ingredientId;
-    if (allergenQuery.trim().length > 0 || pendingIngredientText) {
-      setSaveError('Bạn đang nhập dị ứng nhưng chưa chọn từ gợi ý. Hãy chọn một mục hoặc xoá chữ đã nhập.');
-      return;
-    }
     if (isPeriodic && scheduleDates.length === 0) {
       setSaveError('Lịch chay kỳ cần ít nhất một ngày. Hãy chọn ngày bên dưới rồi xác nhận.');
       return;
@@ -360,39 +261,36 @@ export default function DietPreferencesScreen() {
         </View>
 
         {step === 'select' ? (
-          <View className="gap-5">
-            <View className="gap-2">
-              <Text className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Kiểu ăn
-              </Text>
-              <View className="gap-2">
-                {PATTERN_OPTIONS.map((o) => (
-                  <OptionPill key={o.value} selected={dietPattern === o.value} label={o.label} note={o.note} onPress={() => setDietPattern(o.value)} />
-                ))}
-              </View>
+          <View className="gap-6 rounded-2xl border border-border bg-card p-4">
+            <View className="gap-1">
+              <Text className="text-lg font-semibold text-foreground">Chế độ ăn</Text>
+              <Text className="text-sm text-muted-foreground">Chọn kiểu ăn, thời gian thực hành và truyền thống bạn theo.</Text>
             </View>
 
-            <View className="gap-2">
-              <Text className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Lịch thực hành
-              </Text>
-              <View className="gap-2">
-                {SCHEDULE_OPTIONS.map((o) => (
-                  <OptionPill key={o.value} selected={practiceSchedule === o.value} label={o.label} note={o.note} onPress={() => setPracticeSchedule(o.value)} />
-                ))}
-              </View>
-            </View>
-
-            <View className="gap-2">
-              <Text className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Truyền thống
-              </Text>
-              <View className="gap-2">
-                {TRADITION_OPTIONS.map((o) => (
-                  <OptionPill key={o.value} selected={tradition === o.value} label={o.label} onPress={() => setTradition(o.value)} />
-                ))}
-              </View>
-            </View>
+            <DietOptionGroup
+              title="Bạn ăn chay theo kiểu nào?"
+              description="Quyết định nhóm thực phẩm động vật bị loại khỏi gợi ý."
+              options={PATTERN_OPTIONS}
+              value={dietPattern}
+              onChange={setDietPattern}
+              columns={2}
+            />
+            <DietOptionGroup
+              title="Bạn ăn chay khi nào?"
+              description="Chay kỳ chỉ lọc món vào những ngày bạn đánh dấu."
+              options={SCHEDULE_OPTIONS}
+              value={practiceSchedule}
+              onChange={setPracticeSchedule}
+              columns={2}
+            />
+            <DietOptionGroup
+              title="Bạn có theo truyền thống nào không?"
+              description="Truyền thống bổ sung các quy tắc riêng ngoài kiểu ăn."
+              options={TRADITION_OPTIONS}
+              value={tradition}
+              onChange={setTradition}
+              columns={1}
+            />
 
             <PrimaryButton
               label={previewMutation.isPending ? 'Đang tải quy tắc...' : 'Xem trước quy tắc'}
@@ -430,102 +328,25 @@ export default function DietPreferencesScreen() {
               ))}
             </View>
 
-            <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-              <View className="flex-row items-center gap-1.5">
-                <ShieldAlert size={14} color={colors.destructive} />
-                <Text className="text-sm font-bold text-foreground">Dị ứng (luôn là ràng buộc cứng)</Text>
+            <View className="gap-6 rounded-2xl border border-border bg-card p-4">
+              <View className="gap-1">
+                <Text className="text-lg font-semibold text-foreground">Dị ứng & kiêng</Text>
+                <Text className="text-sm text-muted-foreground">Khai báo thực phẩm gây dị ứng và nguyên liệu bạn không muốn ăn.</Text>
               </View>
-              {allergies.length > 0 ? (
-                <View className="flex-row flex-wrap gap-1.5">
-                  {allergies.map((a) => (
-                    <View key={a.allergenCode} className="flex-row items-center gap-1 rounded-full bg-destructive/10 px-2.5 py-1">
-                      <Text className="text-xs font-medium text-destructive">{a.label}</Text>
-                      <Pressable onPress={() => setAllergies((prev) => prev.filter((x) => x.allergenCode !== a.allergenCode))}>
-                        <X size={11} color={colors.destructive} />
-                      </Pressable>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-              <Text className="text-[11px] text-muted-foreground">
-                Chọn mức độ, rồi tìm và chạm chọn dị ứng trong danh mục (áp dụng cho cả dị ứng theo nguyên liệu bên dưới).
-              </Text>
-              <View className="flex-row gap-1.5">
-                {SEVERITY_OPTIONS.map((o) => (
-                  <Pressable
-                    key={o.value}
-                    onPress={() => setAllergenSeverity(o.value)}
-                    className={cn('flex-1 items-center rounded-lg border px-2 py-2', allergenSeverity === o.value ? 'border-destructive bg-destructive/10' : 'border-input')}>
-                    <Text className={cn('text-xs', allergenSeverity === o.value ? 'font-semibold text-destructive' : 'text-foreground')}>{o.label}</Text>
-                  </Pressable>
-                ))}
-              </View>
-              <AllergenPicker
-                query={allergenQuery}
-                onQueryChange={setAllergenQuery}
-                selectedCodes={selectedAllergenCodes}
-                onSelect={addAllergy}
+              <AllergyEditor
+                allergies={allergies}
+                onAllergiesChange={(next) => setAllergies(() => next)}
+                ingredientAllergies={ingredientAllergies}
+                onIngredientAllergiesChange={(next) => setIngredientAllergies(() => next)}
+                search={allergySearch}
+                onSearchChange={setAllergySearch}
               />
-            </View>
-
-            <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-              <View className="flex-row items-center gap-1.5">
-                <ShieldAlert size={14} color={colors.destructive} />
-                <Text className="text-sm font-bold text-foreground">Dị ứng theo nguyên liệu (ràng buộc cứng)</Text>
-              </View>
-              {ingredientAllergies.length > 0 ? (
-                <View className="flex-row flex-wrap gap-1.5">
-                  {ingredientAllergies.map((a) => (
-                    <View key={a.ingredientId} className="flex-row items-center gap-1 rounded-full bg-destructive/10 px-2.5 py-1">
-                      <Text className="text-xs font-medium text-destructive">{a.ingredientName}</Text>
-                      <Pressable onPress={() => setIngredientAllergies((prev) => prev.filter((x) => x.ingredientId !== a.ingredientId))}>
-                        <X size={11} color={colors.destructive} />
-                      </Pressable>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-              <IngredientPicker
-                placeholder="Tên nguyên liệu (VD: Đậu phộng rang)"
-                value={ingredientAllergyValue}
-                onChange={setIngredientAllergyValue}
+              <ExclusionEditor
+                value={exclusions}
+                onChange={(next) => setExclusions(() => next)}
+                search={exclusionSearch}
+                onSearchChange={setExclusionSearch}
               />
-              <Text className="text-[11px] text-muted-foreground">
-                Phải chọn một nguyên liệu chuẩn trong gợi ý, không dùng tên tự nhập.
-              </Text>
-              <PrimaryButton label="Thêm nguyên liệu dị ứng" variant="outline" onPress={addIngredientAllergy} />
-            </View>
-
-            <View className="gap-2 rounded-2xl border border-dashed border-border p-4">
-              <Text className="text-sm font-bold text-foreground">Nguyên liệu loại trừ</Text>
-              {exclusions.length > 0 ? (
-                <View className="gap-1.5">
-                  {exclusions.map((e, idx) => (
-                    <View key={`${e.ingredientName}-${idx}`} className="flex-row items-center justify-between rounded-xl bg-muted/60 px-3 py-2">
-                      <Text className="flex-1 text-xs text-foreground">{e.ingredientName}</Text>
-                      <Pressable onPress={() => setExclusions((prev) => prev.filter((_, i) => i !== idx))}>
-                        <X size={13} color={colors.mutedForeground} />
-                      </Pressable>
-                    </View>
-                  ))}
-                </View>
-              ) : null}
-              <IngredientPicker
-                placeholder="Tên nguyên liệu (VD: Nấm hương)"
-                value={{ displayName: exclusionName, ingredientId: exclusionIngredientId }}
-                onChange={(next) => {
-                  setExclusionName(next.displayName);
-                  setExclusionIngredientId(next.ingredientId);
-                }}
-              />
-              <TextInput
-                value={exclusionReason}
-                onChangeText={setExclusionReason}
-                placeholder="Lý do (không bắt buộc)"
-                placeholderTextColor={colors.mutedForeground}
-                className="rounded-xl border border-input bg-background p-2.5 text-sm text-foreground"
-              />
-              <PrimaryButton label="Thêm loại trừ" variant="outline" onPress={addExclusion} />
             </View>
 
             {isPeriodic ? (

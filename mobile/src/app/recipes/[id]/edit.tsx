@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Alert, Text, View } from 'react-native';
+import { Alert, ScrollView, Text, View } from 'react-native';
 import { Link, type Href, useLocalSearchParams, useRouter } from 'expo-router';
 
 import { SiteScreen } from '@/components/layout/site-screen';
@@ -7,7 +7,6 @@ import { PrimaryButton } from '@/components/ui/primary-button';
 import { RecipeForm } from '@/features/recipe/components/recipe-form';
 import { useRecipeDetailQuery, useUpdateRecipeMutation } from '@/features/recipe/queries/recipe.queries';
 import { PostStatus } from '@/common/enums';
-import { getContentErrorMessage } from '@/features/recipe/utils/recipe-errors';
 import { FALLBACK_RECIPE_COVER_URL } from '@/lib/env';
 import { useAuthStore } from '@/store/useAuthStore';
 
@@ -18,6 +17,7 @@ export default function EditRecipeScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: recipe, isLoading, isError } = useRecipeDetailQuery(id ?? '');
   const updateMutation = useUpdateRecipeMutation();
+  const scrollRef = React.useRef<ScrollView>(null);
 
   const isOwner = !!currentUserId && recipe?.author.id === currentUserId;
 
@@ -65,7 +65,7 @@ export default function EditRecipeScreen() {
   }
 
   return (
-    <SiteScreen>
+    <SiteScreen scrollRef={scrollRef}>
       <View className="gap-5 px-5 pt-4">
         <Text className="text-2xl font-extrabold tracking-tight text-foreground">Chỉnh sửa công thức</Text>
 
@@ -80,15 +80,6 @@ export default function EditRecipeScreen() {
             prepTimeMinutes: recipe.prepTimeMinutes,
             cookTimeMinutes: recipe.cookTimeMinutes,
             difficulty: recipe.difficulty,
-            calories: recipe.nutrition.calories ?? undefined,
-            protein: recipe.nutrition.protein ?? undefined,
-            // Form chưa cho nhập các chỉ số này; giữ nguyên để bản sửa không làm mất dữ liệu đã có.
-            preservedNutrition: {
-              ...(recipe.nutrition.carbs !== null ? { carbsGrams: recipe.nutrition.carbs } : {}),
-              ...(recipe.nutrition.fat !== null ? { fatGrams: recipe.nutrition.fat } : {}),
-              ...(recipe.nutrition.fiber !== null ? { fiberGrams: recipe.nutrition.fiber } : {}),
-              ...(recipe.nutrition.vitaminB12 !== null ? { vitaminB12Mcg: recipe.nutrition.vitaminB12 } : {}),
-            },
             ingredients: recipe.ingredients.map((ing) => ({
               displayName: ing.name,
               amount: ing.amount,
@@ -112,21 +103,18 @@ export default function EditRecipeScreen() {
           }}
           submitLabel="Lưu thay đổi"
           isSubmitting={updateMutation.isPending}
+          onStepChange={() => scrollRef.current?.scrollTo({ y: 0, animated: true })}
           onSubmit={async (values) => {
-            try {
-              const updated = await updateMutation.mutateAsync({
-                id: recipe.id,
-                input: { ...values, expectedVersion: recipe.version },
-              });
-              if (updated.status === PostStatus.DRAFT) {
-                Alert.alert('Đã lưu bản nháp', 'Thay đổi đã được lưu nhưng chưa gửi duyệt được. Hãy sửa và gửi lại.');
-              } else {
-                Alert.alert('Đã lưu', 'Công thức đã được cập nhật và gửi lại để duyệt.');
-              }
-              router.replace(`/recipes/${recipe.id}` as Href);
-            } catch (error) {
-              Alert.alert('Không lưu được', getContentErrorMessage(error));
+            const updated = await updateMutation.mutateAsync({
+              id: recipe.id,
+              input: { ...values, expectedVersion: recipe.version },
+            });
+            if (updated.status === PostStatus.DRAFT) {
+              Alert.alert('Đã lưu bản nháp', 'Thay đổi đã được lưu nhưng chưa gửi duyệt được. Hãy sửa và gửi lại.');
+            } else {
+              Alert.alert('Đã lưu', 'Công thức đã được cập nhật và gửi lại để duyệt.');
             }
+            router.replace(`/recipes/${recipe.id}` as Href);
           }}
         />
       </View>

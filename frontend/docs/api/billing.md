@@ -137,6 +137,7 @@ Display-only browser return/cancel redirect; never grant or trust query payment 
         "fridgeCredits",
         "receiptCredits",
         "pantrySlots",
+        "durationMonths",
         "provider",
         "simulated",
         "status",
@@ -170,6 +171,12 @@ Display-only browser return/cancel redirect; never grant or trust query payment 
         },
         "pantrySlots": {
           "type": "integer"
+        },
+        "durationMonths": {
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "provider": {
           "type": "string",
@@ -303,6 +310,7 @@ Display-only browser return/cancel redirect; never grant or trust query payment 
         "fridgeMaxImages",
         "receiptMaxImages",
         "scanMaxAttempts",
+        "subscription",
         "ledger"
       ],
       "properties": {
@@ -357,19 +365,55 @@ Display-only browser return/cancel redirect; never grant or trust query payment 
         "scanMaxAttempts": {
           "type": "integer"
         },
-        "ledger": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "_truncated": true
-          }
-        }
-      },
-      "additionalProperties": false
-    }
-  },
-  "additionalProperties": false
-}
+        "subscription": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "required": [
+            "productId",
+            "startsAt",
+            "endsAt",
+            "periodEndsAt",
+            "periodDays",
+            "chatCredits",
+            "fridgeCredits",
+            "receiptCredits",
+            "pantrySlots",
+            "chatPerPeriod",
+            "fridgePerPeriod",
+            "receiptPerPeriod"
+          ],
+          "properties": {
+            "productId": {
+              "type": "string",
+              "_truncated": true
+            },
+            "startsAt": {
+              "type": "string",
+              "_truncated": true
+            },
+            "endsAt": {
+              "type": "string",
+              "_truncated": true
+            },
+            "periodEndsAt": {
+              "type": "string",
+              "_truncated": true
+            },
+            "periodDays": {
+              "type": "integer",
+              "_truncated": true
+            },
+            "chatCredits": {
+              "type": "integer",
+              "_truncated": true
+            },
+            "fridgeCredits": {
+              "type": "integer",
+              "_truncated": true
+            },
+  …(truncated — xem api-catalog.json)
 ```
 
 #### ErrorResponse
