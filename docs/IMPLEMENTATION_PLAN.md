@@ -1,6 +1,6 @@
 # Implementation Plan — Vegan Support Application
 
-**Version:** 4.16
+**Version:** 4.17
 
 **Updated:** 2026-10-29
 
@@ -41,7 +41,7 @@ The current API contract may still contain legacy Contributor subtype fields unt
 | D21 | Documentation | `docs/SRS.md` is canonical; runtime capability status stays in frontend integration docs; roadmap is separate from implementation phases. |
 | D22 | Safety | Nutrition, freshness, compatibility, BMI, and AI answers are educational support, not diagnosis or guaranteed safety. |
 | D23 | Usage billing | User-approved 2026-10-13 and payOS conversion 2026-10-14: payOS exclusively for new one-time cumulative AI usage/Pantry capacity packages and, since 2026-10-27, a non-renewing combo with 1-month/3-month/1-year durations (BL-20.1). App rollout remains development/test; payOS checkout is real money, without sandbox or mock fallback. No recurring or media-storage purchase. |
-| D24 | AI recipe draft | Accept title, description and ordered ingredient names without image analysis; return editable amount/unit/serving/time/step suggestions. The author edits and saves via the existing DRAFT content flow. AI output does not publish or become canonical nutrition data. Approved by user 2026-10-24. |
+| D24 | AI recipe draft | Accept title, description and ordered ingredient names without image analysis; return editable amount/unit/serving/time/step suggestions. The author edits and saves via the existing DRAFT content flow. AI output does not publish or become canonical nutrition data. Approved by user 2026-10-24. Refined 2026-10-29 (agreed with Ngô Gia Huy): servings, prep time and cook time entered in step 1 are sent to the generator (amounts sized for those servings) and are never overwritten when the draft is applied; the AI only fills blanks and its own timing is shown as a hint. |
 
 ## 3. MVP scope
 
@@ -599,9 +599,12 @@ A phase is complete only when:
 
 ## 13. Change record
 
+- **4.17 — 2026-10-29:** D24 refinement: the AI recipe draft uses and preserves the author's servings/prep/cook times; blanks are filled by the AI; differing AI times are only hinted.
+
 - **4.16 — 2026-10-29:** User approves BL-05.2 (agreed with Ngô Gia Huy): six optional author nutrition fields for Members (typed values kept, blanks calculated, >30% deviation warning for reviewers), six required fields for approved Contributors/Admins whose recipes and recipe edits are published immediately unless automated moderation flags them, canonical-only reference estimate for auto-published recipes; articles/videos unchanged.
 
 - **4.15 — 2026-10-29:** User approves shopping-gap matching of free-text pantry items by exact canonical name/approved alias, excluding expired pantry items from availability, and auto-linking exact matches on manual pantry creation (BL-12 rule 9). No migration of existing items.
+
 - **4.14 — 2026-10-28:** User approves BL-05.1: recipe nutrition calculated on submit, async system-paid AI gap filling (1 + 3 retries at 1/5/15 min, startup sweep, quota-free, governance-traced), reviewer panel with five metrics (B12 excluded), audited overrides kept across recalculation, approval gated on five values and written to recipe detail, no carry-over between revisions, and no AI write to canonical food data.
 
 - **4.13 — 2026-10-26:** User clarifies that approved Contributors have review/moderation permissions for submitted community content (recipes, articles, videos) created by Members (excluding self-created content and items flagged with open AI flags or high report counts requiring Admin review). Content review endpoints (`/api/v1/admin/content-review*`) allow both Admin and Contributor roles.

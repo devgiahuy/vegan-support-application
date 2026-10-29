@@ -31,6 +31,10 @@ export interface AiRecipeDraftSeed {
   description: string;
   /** Tên nguyên liệu đã nhập trong form, dùng làm danh sách khởi đầu. */
   ingredientNames: string[];
+  /** Khẩu phần/thời gian ở bước 1 (nếu đã nhập): AI định lượng theo khẩu phần này. */
+  servings?: number;
+  prepTimeMinutes?: number;
+  cookTimeMinutes?: number;
 }
 
 export interface AiRecipeDraftAssistantProps {
@@ -87,6 +91,9 @@ export function AiRecipeDraftAssistant({
       title: cleanTitle,
       description: cleanDesc,
       ingredientNames,
+      servings: seed.servings,
+      prepTimeMinutes: seed.prepTimeMinutes,
+      cookTimeMinutes: seed.cookTimeMinutes,
     });
   };
 

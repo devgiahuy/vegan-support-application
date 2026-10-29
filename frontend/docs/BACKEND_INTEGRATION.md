@@ -1,6 +1,6 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.61
+**Version:** 4.62
 
 **Cập nhật:** 29/10/2026
 
@@ -14,6 +14,16 @@
 
 ## 1. Source of truth và status
 
+### AI recipe draft keeps author servings and times — 2026-10-29 (4.62)
+
+`POST /api/v1/recipe-drafts/generate` keeps status `IN_PROGRESS` (live provider validation still pending); FE integrated 2026-10-29. Additive, non-breaking: request accepts optional `servings` (1–100), `prepTimeMinutes`, `cookTimeMinutes` (0–10080). When supplied, ingredient amounts are sized for that servings value and `draft.recipe` returns the author values; new `data.suggestedTiming {servings, prepTimeMinutes, cookTimeMinutes}` carries the AI's own estimate. No error code, authorization or persistence change.
+
+Assumptions chosen without further questions (user instruction 2026-10-29: "không hỏi nữa, cứ làm đi"): (1) step-1 fields left blank are still filled by the AI; (2) only servings/prep/cook are newly protected — title and description were already preserved, difficulty, ingredients and steps still come from the draft; (3) when the AI's times differ, the apply toast shows them as a hint and nothing is overwritten.
+
+FE: the assistant sends the three step-1 values, `setDraftValues` keeps finite user values, mapper tests cover request fields and `suggestedTiming`.
+
+Changelog 2026-10-29 (4.62): recipe draft generation uses and preserves author servings/prep/cook times; additive `suggestedTiming`.
+
 ### Author nutrition and trusted-author recipe publication — 2026-10-29 (4.61, READY)
 
 User-approved BL-05.2 (`docs/IMPLEMENTATION_PLAN.md`), refines 4.58. `POST /posts`, `PATCH /posts/{id}`, `POST /posts/{id}/submit` and `GET/PATCH /admin/content-review/{id}/nutrition` were `CHANGING` for this change and returned to `READY` after the web consumer, OpenAPI, Mongo schema and lint/typecheck/build gates. Mobile is not updated (see notes).
@@ -25,6 +35,8 @@ User-approved BL-05.2 (`docs/IMPLEMENTATION_PLAN.md`), refines 4.58. `POST /post
 | GET/PATCH | `/admin/content-review/{id}/nutrition`    | `READY` | Yes, web 2026-10-29 | Each metric adds `author`, `deviationPercent`, `deviationWarning` (> 30% vs system estimate). `finalOrigin` can be `USER_PROVIDED`. Precedence override > author > estimate; clearing an override returns to the author value |
 
 Persistence: optional `recipe_details.author_nutrition` (run `npm run prisma:push`). Audit: auto-publish writes a `ModerationAction` `APPROVE` with `metadata.autoPublished=true`, actor role and declared nutrition, and sets `reviewedById`/`reviewNote` on the revision. Frontend migration (done on web): send only typed values; prefill editors from `recipe.authorNutrition`; require the six fields for `CONTRIBUTOR`/`ADMIN` sessions (backend remains authoritative); read the submit response status; handle `RECIPE_NUTRITION_REQUIRED`; show author value, system value and deviation warning in the review panel. Mobile follow-up: the Contributor recipe form has no nutrition inputs, so Contributor submits from mobile get 422 until it is updated; Member submits keep working.
+
+Assumptions chosen without further questions (user instruction 2026-10-29: "không hỏi nữa, cứ làm đi"), beyond the answers already given: the six-value check runs at submit, so Contributor/Admin drafts may be saved incomplete; editors prefill only the author's own typed values; a Member's typed B12 is stored and published on approval but is not reviewer-editable and never AI-estimated; deviation is relative to the system value and not shown when that value is missing or 0; the Contributor role counts only with an active Contributor profile.
 
 Verified: backend lint/typecheck/build/OpenAPI; smoke on a scratch Mongo DB with the fake AI provider (Member partial values kept + deviation warning, clear override → author value, approval writes values; Contributor 422 with missing metrics, Contributor full → PUBLISHED with reference estimate, Contributor edit auto-published, Admin → PUBLISHED, flagged Contributor recipe → PENDING_REVIEW, Contributor article → PENDING_REVIEW). Web tsc, full vitest, build.
 
@@ -1312,6 +1324,8 @@ Không được mô tả endpoint là READY chỉ vì route đã tồn tại n�
 ## 11. Integration changelog
 
 Thêm entry mới nhất ở trên cùng.
+
+Change 2026-10-29 (v4.62): `POST /recipe-drafts/generate` accepts optional `servings`, `prepTimeMinutes`, `cookTimeMinutes`; the draft keeps them and sizes amounts for those servings; additive `data.suggestedTiming`. Web assistant sends them and no longer overwrites them when applying a draft. Status unchanged (`IN_PROGRESS`).
 
 Change 2026-10-29 (v4.61): Recipe form nutrition returns. `POST/PATCH /posts` store author-typed values (`recipe.authorNutrition` in responses); Members' blanks are calculated on submit and reviewers see author vs system values with a >30% warning; approved Contributors/Admins must declare six values (`422 RECIPE_NUTRITION_REQUIRED`) and their recipes, including edits, are published immediately unless automated moderation flags them. Articles/videos unchanged. Endpoints transitioned `CHANGING` → `READY` after the web consumer update. Run `npm run prisma:push` (optional `recipe_details.author_nutrition`). Mobile Contributor form not updated.
 

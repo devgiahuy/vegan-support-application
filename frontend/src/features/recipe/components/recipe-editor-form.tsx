@@ -202,6 +202,15 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
             description: current.description?.trim()
               ? current.description
               : (values.description ?? ''),
+            // Khẩu phần và thời gian người dùng đã nhập ở bước 1 không bị bản nháp AI ghi đè;
+            // AI chỉ điền ô còn trống.
+            servings: Number.isFinite(current.servings) ? current.servings : values.servings,
+            prepTimeMinutes: Number.isFinite(current.prepTimeMinutes)
+              ? current.prepTimeMinutes
+              : values.prepTimeMinutes,
+            cookTimeMinutes: Number.isFinite(current.cookTimeMinutes)
+              ? current.cookTimeMinutes
+              : values.cookTimeMinutes,
             categoryId: values.categoryId || current.categoryId,
             coverImageUrl: values.coverImageUrl || current.coverImageUrl,
             coverMedia: values.coverMedia ?? current.coverMedia,
@@ -331,6 +340,13 @@ export const RecipeEditorForm = React.forwardRef<RecipeEditorFormHandle, RecipeE
       ingredientNames: (values.ingredients ?? [])
         .map((ing) => ing.name?.trim())
         .filter((name): name is string => Boolean(name)),
+      ...(Number.isFinite(values.servings) ? { servings: values.servings } : {}),
+      ...(Number.isFinite(values.prepTimeMinutes)
+        ? { prepTimeMinutes: values.prepTimeMinutes }
+        : {}),
+      ...(Number.isFinite(values.cookTimeMinutes)
+        ? { cookTimeMinutes: values.cookTimeMinutes }
+        : {}),
     };
 
     return (

@@ -53,8 +53,15 @@ export default function CreateRecipePage() {
   const applyDraftToEditor = (draft: RecipeDraftSuggestion) => {
     const formVals = recipeDraftMapper.toFormValues(draft);
     editorRef.current?.setDraftValues(formVals);
+    // Khẩu phần/thời gian đã nhập được giữ; nếu AI đề xuất khác thì chỉ báo để tham khảo.
+    const timingHint = recipeDraftMapper.timingHint(draft);
     toast.success('Đã điền gợi ý AI vào nguyên liệu và các bước nấu', {
-      description: 'Kiểm tra lại định lượng, liên kết nguyên liệu chuẩn rồi chọn danh mục.',
+      description: [
+        'Kiểm tra lại định lượng, liên kết nguyên liệu chuẩn rồi chọn danh mục.',
+        timingHint,
+      ]
+        .filter(Boolean)
+        .join(' '),
     });
   };
 

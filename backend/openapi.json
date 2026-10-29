@@ -10544,6 +10544,21 @@
             },
             "minItems": 1,
             "maxItems": 50
+          },
+          "servings": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          },
+          "prepTimeMinutes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10080
+          },
+          "cookTimeMinutes": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10080
           }
         },
         "required": [
@@ -10862,6 +10877,26 @@
                   "type": "string"
                 }
               },
+              "suggestedTiming": {
+                "type": "object",
+                "properties": {
+                  "servings": {
+                    "type": "integer"
+                  },
+                  "prepTimeMinutes": {
+                    "type": "integer"
+                  },
+                  "cookTimeMinutes": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "servings",
+                  "prepTimeMinutes",
+                  "cookTimeMinutes"
+                ],
+                "description": "The AI's own servings/time suggestion, for display when the author supplied different values."
+              },
               "provenance": {
                 "type": "object",
                 "properties": {
@@ -10887,6 +10922,7 @@
               "ingredientConfidence",
               "confidence",
               "assumptions",
+              "suggestedTiming",
               "provenance"
             ]
           }
@@ -39266,7 +39302,7 @@
           "AI"
         ],
         "summary": "Generate an editable recipe draft from a title, description and ingredient names",
-        "description": "Authenticated preview only. No post or pantry mutation. Ingredient names remain in input order; amounts, units, servings, times and steps are AI suggestions with subjective confidence. The client must let the user edit the returned draft and then call POST /api/v1/posts to save it as DRAFT. Images are not analyzed. No nutrition values are invented.",
+        "description": "Authenticated preview only. No post or pantry mutation. Ingredient names remain in input order; amounts, units, servings, times and steps are AI suggestions with subjective confidence. The client must let the user edit the returned draft and then call POST /api/v1/posts to save it as DRAFT. Images are not analyzed. No nutrition values are invented. Since 2026-10-29 the request may carry optional servings, prepTimeMinutes and cookTimeMinutes entered by the author: amounts are sized for those servings, the returned draft keeps the author values, and data.suggestedTiming carries the AI own servings/time estimate for display only.",
         "operationId": "generateRecipeDraft",
         "security": [
           {

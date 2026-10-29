@@ -1,5 +1,13 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-10-29] — Bản nháp AI không ghi đè khẩu phần và thời gian
+
+- **Yêu cầu**: Người dùng chốt với Ngô Gia Huy: khi áp dụng bản nháp AI không ghi đè khẩu phần, thời gian sơ chế, thời gian nấu đã nhập ở bước 1; gửi 3 giá trị này cho AI để định lượng nguyên liệu đúng khẩu phần.
+- **Giả định (người dùng yêu cầu không hỏi thêm)**: ô bước 1 còn trống thì AI vẫn điền; chỉ bảo vệ 3 trường này (tên/mô tả vốn đã giữ; độ khó, nguyên liệu, bước nấu vẫn theo AI); thời gian AI khác thì chỉ gợi ý trong toast.
+- **Backend**: request `recipe-drafts/generate` thêm `servings`, `prepTimeMinutes`, `cookTimeMinutes` (tuỳ chọn), prompt định lượng theo khẩu phần, bản nháp giữ số tác giả, thêm `suggestedTiming`.
+- **Frontend**: DTO/Model/Mapper thêm trường mới + `timingHint`; trợ lý gửi 3 giá trị; `setDraftValues` giữ số đã nhập; mapper test mới.
+- **Kiểm chứng**: Backend lint/typecheck/build/OpenAPI; FE tsc, vitest, build. Chưa thử với provider OpenAI thật.
+
 ## [2026-10-29] — Dinh dưỡng do tác giả nhập và Contributor/Admin tự xuất bản công thức
 
 - **Yêu cầu**: Người dùng chốt với Ngô Gia Huy: form công thức có lại 6 ô dinh dưỡng; user thường không bắt buộc (thiếu thì hệ thống tính), Contributor bắt buộc và đăng xong là xuất bản. Đã hỏi và chốt: giữ số đã nhập, chỉ tính ô thiếu; vẫn tính số hệ thống để đối chiếu, cảnh báo khi lệch >30%; Admin như Contributor; sửa bài đã xuất bản cũng tự xuất bản; bị bộ lọc tự động gắn cờ thì vào hàng chờ Admin; chỉ áp dụng cho công thức; bài tự xuất bản chỉ lưu bản ước tính từ dữ liệu chuẩn (không gọi AI); duyệt bài user thường vẫn 5 chỉ số, B12 tuỳ chọn.
