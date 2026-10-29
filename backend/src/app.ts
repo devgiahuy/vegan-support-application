@@ -274,7 +274,8 @@ export function createApp({
       contentRepository,
       mediaService,
       new ModeratedPublicationPolicy(ruleModerationService),
-      (revisionId) => recipeNutritionReviewService.onRevisionSubmitted(revisionId),
+      (revisionId, options) =>
+        recipeNutritionReviewService.onRevisionSubmitted(revisionId, options),
     ),
   );
   const customMealController = new CustomMealController(

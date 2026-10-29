@@ -64,9 +64,10 @@ export class RecipeDraftService {
         tags: [],
         media: [],
         recipe: {
-          servings: suggestion.servings,
-          prepTimeMinutes: suggestion.prepTimeMinutes,
-          cookTimeMinutes: suggestion.cookTimeMinutes,
+          // Author-entered step-1 values win; the AI only fills what was left blank.
+          servings: input.servings ?? suggestion.servings,
+          prepTimeMinutes: input.prepTimeMinutes ?? suggestion.prepTimeMinutes,
+          cookTimeMinutes: input.cookTimeMinutes ?? suggestion.cookTimeMinutes,
           difficulty: suggestion.difficulty,
           nutrition: {},
           ingredients: ingredients.map((item, position) => ({
@@ -92,6 +93,11 @@ export class RecipeDraftService {
         ingredientConfidence: ingredients.map((item) => item.confidence),
         confidence: suggestion.confidence,
         assumptions: suggestion.assumptions,
+        suggestedTiming: {
+          servings: suggestion.servings,
+          prepTimeMinutes: suggestion.prepTimeMinutes,
+          cookTimeMinutes: suggestion.cookTimeMinutes,
+        },
         provenance: {
           provider: this.provider.name,
           model: this.provider.model,

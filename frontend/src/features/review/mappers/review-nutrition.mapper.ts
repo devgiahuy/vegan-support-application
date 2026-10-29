@@ -67,7 +67,7 @@ export function getReviewNutritionOriginLabel(origin: ReviewNutritionOrigin | nu
     case ReviewNutritionOrigin.VERIFIED_OVERRIDE:
       return 'Người duyệt sửa';
     case ReviewNutritionOrigin.USER_PROVIDED:
-      return 'Người dùng nhập';
+      return 'Tác giả nhập';
     case null:
       return 'Chưa có';
     default:
@@ -259,6 +259,9 @@ export class ReviewNutritionMapper extends BaseMapper<
       partialValue: nullableNumber(dto?.estimate?.partialValue),
       estimateOrigin: parseReviewNutritionOrigin(dto?.estimate?.origin),
       confidencePercent: toPercent(dto?.estimate?.confidence),
+      authorValue: nullableNumber(dto?.author),
+      deviationPercent: nullableNumber(dto?.deviationPercent),
+      deviationWarning: safeBoolean(dto?.deviationWarning, false),
       override:
         override && overrideValue !== null
           ? {

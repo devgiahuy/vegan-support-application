@@ -58,6 +58,16 @@ export interface NutritionFact {
   vitaminB12: number;
 }
 
+/** Số tác giả tự nhập cho revision (null = để trống, hệ thống sẽ tính). */
+export interface RecipeAuthorNutrition {
+  calories: number | null;
+  proteinGrams: number | null;
+  carbsGrams: number | null;
+  fatGrams: number | null;
+  fiberGrams: number | null;
+  vitaminB12Mcg: number | null;
+}
+
 export interface RecipeAllergen {
   code: string;
   name: string;
@@ -136,6 +146,8 @@ export interface Recipe {
   difficultyLabel?: string;
   mealPlannerEligible?: boolean;
   nutrition?: NutritionFact;
+  /** Giá trị tác giả đã nhập — form sửa điền sẵn từ đây, không lấy số hệ thống đã tính. */
+  authorNutrition?: RecipeAuthorNutrition;
   ingredients?: RecipeIngredient[] | IngredientItem[];
   steps?: RecipeStep[] | InstructionStep[];
   instructions?: InstructionStep[];

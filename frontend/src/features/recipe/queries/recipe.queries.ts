@@ -2,7 +2,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { getApiErrorMessage, toastApiError } from '@/lib/api-error';
 import { PostStatus } from '@/common/enums';
-import { reviewApi } from '@/features/review/api/review.api';
 import { CONTENT_REVIEW_KEYS } from '@/features/review/queries/review.queries';
 import { recipeApi, RecipeQueryParams } from '../api/recipe.api';
 import type { Recipe } from '../types/recipe.model';
@@ -65,11 +64,15 @@ async function submitSavedRecipe(saved: Recipe): Promise<Recipe> {
     if (!saved.id || !saved.revisionId || expectedVersion === undefined) {
       throw new Error('Phản hồi lưu công thức thiếu thông tin phiên bản.');
     }
-    await reviewApi.submitPost(saved.id, { revisionId: saved.revisionId, expectedVersion });
+    // Trạng thái lấy từ phản hồi: Contributor/Admin có thể được xuất bản ngay.
+    const submitted = await recipeApi.submitRecipe(saved.id, {
+      revisionId: saved.revisionId,
+      expectedVersion,
+    });
+    return { ...saved, status: submitted.status ?? PostStatus.PENDING_REVIEW };
   } catch (err) {
     throw new RecipeSubmitForReviewError(saved, err);
   }
-  return { ...saved, status: PostStatus.PENDING_REVIEW };
 }
 
 function useSaveAndSubmitCallbacks() {
@@ -79,6 +82,12 @@ function useSaveAndSubmitCallbacks() {
       queryClient.invalidateQueries({ queryKey: RECIPE_QUERY_KEYS.lists() });
       queryClient.invalidateQueries({ queryKey: RECIPE_QUERY_KEYS.detail(data.id) });
       queryClient.invalidateQueries({ queryKey: CONTENT_REVIEW_KEYS.all });
+      if (data.status === PostStatus.PUBLISHED) {
+        toast.success('Đã đăng công thức', {
+          description: 'Công thức đã được xuất bản ngay với số liệu dinh dưỡng bạn khai báo.',
+        });
+        return;
+      }
       toast.success('Đã gửi công thức để kiểm duyệt', {
         description: 'Ban biên tập sẽ duyệt trước khi công thức được xuất bản.',
       });

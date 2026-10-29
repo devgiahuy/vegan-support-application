@@ -318,7 +318,7 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
     tags: ['Content Review'],
     summary: 'Submit một immutable draft revision để Admin review',
     description:
-      'Author-only. Revalidates latest version and video media ownership/committed state. Text/metadata moderation may attach a signal and priority, but never approves, rejects, hides, or deletes automatically. For recipes (changed 2026-10-28) the backend calculates a per-revision nutrition estimate from reviewed canonical food data; when data is insufficient (free-text ingredient, missing USDA profile/metric, unit conversion, or a cooking step without a method) it queues a system-paid asynchronous AI gap-filling job (no user quota). Nutrition never blocks submission and is not official until a reviewer approves.',
+      'Author-only. Revalidates latest version and video media ownership/committed state. Text/metadata moderation may attach a signal and priority, but never approves, rejects, hides, or deletes automatically. For recipes (changed 2026-10-28) the backend calculates a per-revision nutrition estimate from reviewed canonical food data; when data is insufficient (free-text ingredient, missing USDA profile/metric, unit conversion, or a cooking step without a method) it queues a system-paid asynchronous AI gap-filling job (no user quota). Nutrition never blocks a Member submission and is not official until a reviewer approves. Changed 2026-10-29: Member-entered per-serving values are kept (USER_PROVIDED) and only missing ones are calculated; the system estimate is still computed for comparison. For RECIPE posts an approved Contributor or an Admin must have declared all six values (calories, proteinGrams, carbsGrams, fatGrams, fiberGrams, vitaminB12Mcg) or the call fails with 422 RECIPE_NUTRITION_REQUIRED (fields.missingMetrics); the revision is then published immediately (also for edits of published recipes) with an audited moderation action, unless automated moderation flags it, in which case it waits in the Admin queue. Auto-published recipes store a canonical-only reference estimate (no AI call). Articles and videos are unchanged.',
     operationId: 'submitPostRevision',
     security: authenticated,
     request: {
@@ -347,6 +347,11 @@ export function registerContentOpenApi(registry: OpenAPIRegistry, errorSchema: Z
         'CONTENT_STATE_CONFLICT',
       ]),
       410: errorResponse(errorSchema, 'Content deleted', ['CONTENT_DELETED']),
+      422: errorResponse(
+        errorSchema,
+        'Contributor/Admin recipe is missing declared nutrition (fields.missingMetrics)',
+        ['RECIPE_NUTRITION_REQUIRED'],
+      ),
     },
   });
 

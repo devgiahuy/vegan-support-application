@@ -38,6 +38,12 @@ export interface ReviewNutritionMetric {
   partialValue: number | null;
   estimateOrigin: ReviewNutritionOrigin | null;
   confidencePercent: number | null;
+  /** Số tác giả tự nhập; được ưu tiên hơn số hệ thống tính */
+  authorValue: number | null;
+  /** % lệch giữa số tác giả nhập và số hệ thống tính (khi có cả hai) */
+  deviationPercent: number | null;
+  /** Lệch quá 30%: người duyệt nên kiểm tra lại */
+  deviationWarning: boolean;
   override: {
     value: number;
     updatedBy: ReviewNutritionActor;

@@ -1,8 +1,8 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.58
+**Version:** 4.62
 
-**Cập nhật:** 28/10/2026
+**Cập nhật:** 29/10/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
@@ -13,6 +13,49 @@
 ---
 
 ## 1. Source of truth và status
+
+### AI recipe draft keeps author servings and times — 2026-10-29 (4.62)
+
+`POST /api/v1/recipe-drafts/generate` keeps status `IN_PROGRESS` (live provider validation still pending); FE integrated 2026-10-29. Additive, non-breaking: request accepts optional `servings` (1–100), `prepTimeMinutes`, `cookTimeMinutes` (0–10080). When supplied, ingredient amounts are sized for that servings value and `draft.recipe` returns the author values; new `data.suggestedTiming {servings, prepTimeMinutes, cookTimeMinutes}` carries the AI's own estimate. No error code, authorization or persistence change.
+
+Assumptions chosen without further questions (user instruction 2026-10-29: "không hỏi nữa, cứ làm đi"): (1) step-1 fields left blank are still filled by the AI; (2) only servings/prep/cook are newly protected — title and description were already preserved, difficulty, ingredients and steps still come from the draft; (3) when the AI's times differ, the apply toast shows them as a hint and nothing is overwritten.
+
+FE: the assistant sends the three step-1 values, `setDraftValues` keeps finite user values, mapper tests cover request fields and `suggestedTiming`.
+
+Changelog 2026-10-29 (4.62): recipe draft generation uses and preserves author servings/prep/cook times; additive `suggestedTiming`.
+
+### Author nutrition and trusted-author recipe publication — 2026-10-29 (4.61, READY)
+
+User-approved BL-05.2 (`docs/IMPLEMENTATION_PLAN.md`), refines 4.58. `POST /posts`, `PATCH /posts/{id}`, `POST /posts/{id}/submit` and `GET/PATCH /admin/content-review/{id}/nutrition` were `CHANGING` for this change and returned to `READY` after the web consumer, OpenAPI, Mongo schema and lint/typecheck/build gates. Mobile is not updated (see notes).
+
+| Method | Endpoint                                     | Status  | FE integrated       | Notes |
+| ------ | -------------------------------------------- | ------- | ------------------- | ----- |
+| POST   | `/posts`, PATCH `/posts/{id}`                | `READY` | Yes, web 2026-10-29 | `recipe.nutrition` (6 per-serving values) is accepted again and stored as the author's values (`RecipeDetail.authorNutrition`). Response adds `recipe.authorNutrition` (typed values, null = blank); `recipe.nutrition` stays the official/published values. `0` values are no longer returned as `null` |
+| POST   | `/posts/{id}/submit`                         | `READY` | Yes, web 2026-10-29 | Member: typed values kept, blanks calculated (BL-05.1 pipeline), system estimate always computed; stays `PENDING_REVIEW`. RECIPE by approved Contributor/Admin: all six values required else `422 RECIPE_NUTRITION_REQUIRED` (`fields.missingMetrics`); response `status: PUBLISHED` (also for edits of a published recipe) unless automated moderation flags it (then `PENDING_REVIEW`, Admin queue). Canonical-only reference estimate, no AI. Articles/videos unchanged |
+| GET/PATCH | `/admin/content-review/{id}/nutrition`    | `READY` | Yes, web 2026-10-29 | Each metric adds `author`, `deviationPercent`, `deviationWarning` (> 30% vs system estimate). `finalOrigin` can be `USER_PROVIDED`. Precedence override > author > estimate; clearing an override returns to the author value |
+
+Persistence: optional `recipe_details.author_nutrition` (run `npm run prisma:push`). Audit: auto-publish writes a `ModerationAction` `APPROVE` with `metadata.autoPublished=true`, actor role and declared nutrition, and sets `reviewedById`/`reviewNote` on the revision. Frontend migration (done on web): send only typed values; prefill editors from `recipe.authorNutrition`; require the six fields for `CONTRIBUTOR`/`ADMIN` sessions (backend remains authoritative); read the submit response status; handle `RECIPE_NUTRITION_REQUIRED`; show author value, system value and deviation warning in the review panel. Mobile follow-up: the Contributor recipe form has no nutrition inputs, so Contributor submits from mobile get 422 until it is updated; Member submits keep working.
+
+Assumptions chosen without further questions (user instruction 2026-10-29: "không hỏi nữa, cứ làm đi"), beyond the answers already given: the six-value check runs at submit, so Contributor/Admin drafts may be saved incomplete; editors prefill only the author's own typed values; a Member's typed B12 is stored and published on approval but is not reviewer-editable and never AI-estimated; deviation is relative to the system value and not shown when that value is missing or 0; the Contributor role counts only with an active Contributor profile.
+
+Verified: backend lint/typecheck/build/OpenAPI; smoke on a scratch Mongo DB with the fake AI provider (Member partial values kept + deviation warning, clear override → author value, approval writes values; Contributor 422 with missing metrics, Contributor full → PUBLISHED with reference estimate, Contributor edit auto-published, Admin → PUBLISHED, flagged Contributor recipe → PENDING_REVIEW, Contributor article → PENDING_REVIEW). Web tsc, full vitest, build.
+
+Changelog 2026-10-29 (4.61): author nutrition fields return; Contributor/Admin recipes require six values and publish on submit; reviewer deviation warning.
+
+### Pantry free-text matching in shopping gaps — 2026-10-29 (4.59, READY)
+
+User-approved bug fix (report: free-text pantry "Bắp ngọt" 100 g not subtracted from a meal plan needing "Bắp ngọt (hạt)" 250 g). No request/response schema, enum, error code or authorization change; endpoints stay `READY`.
+
+| Method | Endpoint                  | Status  | FE integrated       | Notes                                                                                                                                                                                                                                                                                                                                                       |
+| ------ | ------------------------- | ------- | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| POST   | `/shopping-lists/preview` | `READY` | Yes (no FE change)  | Confirmed free-text pantry items (`ingredientId` null) now count toward a required ingredient when their normalized text exactly equals its canonical `normalizedName` or an approved alias (canonical name wins). No fuzzy matching. Items with `expiresAt` before today (UTC) no longer count as available. Both cases add a `conversionAssumptions` line |
+| POST   | `/pantry/items`           | `READY` | Yes, web 2026-10-29 | `unmatchedText` that exactly matches an active canonical name or approved alias is stored linked (`ingredientId` set, `unmatchedText` null) and converted with reviewed conversions. Web create form now searches canonical ingredients with the shared `IngredientSuggestions` (aliases, 20/page) instead of a 50-item select                              |
+
+Persistence: none; existing free-text pantry items are not migrated (they are matched at read time). Mobile: no consumer change required.
+
+Verified: backend lint/typecheck/build/OpenAPI; scripted service check with a stubbed repository for the reported case (pantry free-text "Bắp ngọt" 100 g, plan needs 250 g → available 100 g, missing 150 g), plus alias, expired, non-matching and mixed canonical/free-text cases; web tsc and 721 tests. Live Mongo/browser QA not yet recorded.
+
+Changelog 2026-10-29 (4.59): shopping-gap preview matches free-text pantry by exact canonical name/approved alias and skips expired items; pantry create auto-links exact matches; pantry create form uses shared ingredient lookup.
 
 ### Recipe nutrition calculated on submit, confirmed by reviewer — 2026-10-28 (4.58, READY)
 
@@ -739,7 +782,7 @@ MVP không có payment/quota purchase, DMCA workflow, audio/frame copyright dete
 | POST             | `/custom-meals/:id/photos`                 | `READY` | 2026-09-21      | Yes (2026-10-03) | Quota-aware photo attach (`assetId`); FE: `features/custom-meal`                                              |
 | DELETE           | `/custom-meals/:id/photos/:assetId`        | `READY` | 2026-09-21      | Yes (2026-10-03) | Gỡ ảnh khỏi bữa ăn tùy chỉnh; FE: `features/custom-meal`                                                      |
 | PUT              | `/custom-meals/:id/photos/order`           | `READY` | 2026-09-21      | Yes (2026-10-03) | Reorder thứ tự ảnh (`orderedAssetIds`); FE: `features/custom-meal`                                            |
-| PATCH            | `/meal-plans/:id/items/:itemId/manual-add` | `READY` | 2026-09-28      | Yes (2026-10-03) | Saves hard-compatible choice; refreshed analysis returns advisory `MACRO_TARGET_EXCEEDED` without rollback    |
+| PATCH            | `/meal-plans/:id/items/:itemId/manual-add` | `READY` | 2026-10-29      | Yes (2026-10-29) | Saves hard-compatible choice; refreshed analysis returns advisory `MACRO_TARGET_EXCEEDED` without rollback; unverified-only blocks return `MEAL_PLAN_INGREDIENTS_UNVERIFIED` |
 | POST             | `/meal-plans/:id/analyze`                  | `READY` | 2026-09-28      | Yes (2026-10-03) | Estimated protein/fiber/fat/carbohydrate focus; no micronutrient-completeness warning; compatibility retained |
 | GET              | `/meal-plans/:id/analysis`                 | `READY` | 2026-09-28      | Yes (2026-10-03) | Current fingerprint-validated four-macro result; old v1 analysis becomes stale                                |
 | GET              | `/meal-programs`                           | `READY` | 2026-09-23      | Yes (2026-10-25) | Owner paginated list; client sends only `page`, `limit`, and supported `status` values                        |
@@ -1080,6 +1123,7 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `REVIEW_ALREADY_DECIDED`                      | Refresh review queue; revision đã có quyết định                                                            |
 | `REVIEW_CONFLICT`                             | Refresh review queue; reviewer khác vừa xử lý revision                                                     |
 | `RECIPE_NUTRITION_INCOMPLETE`                 | 409 khi duyệt công thức thiếu chỉ số (`fields.missingMetrics`); refetch panel, nhập tay hoặc "AI tính lại" |
+| `RECIPE_NUTRITION_REQUIRED`                   | 422 khi Contributor/Admin gửi công thức thiếu chỉ số (`fields.missingMetrics`); quay lại bước Phân loại     |
 | `CONTENT_AUTHOR_INACTIVE`                     | Không cho publish content của user đã bị ban/xóa                                                           |
 | `SELF_REPORT_FORBIDDEN`                       | Không cho report content/comment của chính user                                                            |
 | `DUPLICATE_ACTIVE_REPORT`                     | Mở report hiện tại thay vì submit report trùng                                                             |
@@ -1177,6 +1221,7 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `MEAL_ANALYSIS_ITEM_UNFILLED`                 | Exclude unfilled slots or add a meal first (READY Phase 18)                                                |
 | `MEAL_ANALYSIS_SOURCE_MISSING`                | Refetch the plan; the selected item no longer has a usable source (READY Phase 18)                         |
 | `MEAL_PLAN_HARD_CONSTRAINT_VIOLATION`         | Do not confirm manual-add; show backend hard diet/allergy/exclusion/tradition reasons (READY Phase 18)     |
+| `MEAL_PLAN_INGREDIENTS_UNVERIFIED`            | 409 manual-add: món chỉ bị chặn vì nguyên liệu chưa liên kết/cấu tạo chưa rà soát; hiển thị `fields.unverifiedIngredients`, nói rõ chưa xác minh được (không phải vi phạm) và hướng dẫn liên kết hoặc chọn món khác |
 | `MEAL_PROGRAM_VERSION_CONFLICT`               | Refetch the READY Phase 19 program before retrying a mutation                                              |
 | `MEAL_PROGRAM_IDEMPOTENCY_CONFLICT`           | Reuse a key only with the identical create/mutation payload                                                |
 | `MEAL_PROGRAM_LIMIT_EXCEEDED`                 | Reduce horizon or alternatives to the advertised configuration limits                                      |
@@ -1279,6 +1324,12 @@ Không được mô tả endpoint là READY chỉ vì route đã tồn tại n�
 ## 11. Integration changelog
 
 Thêm entry mới nhất ở trên cùng.
+
+Change 2026-10-29 (v4.62): `POST /recipe-drafts/generate` accepts optional `servings`, `prepTimeMinutes`, `cookTimeMinutes`; the draft keeps them and sizes amounts for those servings; additive `data.suggestedTiming`. Web assistant sends them and no longer overwrites them when applying a draft. Status unchanged (`IN_PROGRESS`).
+
+Change 2026-10-29 (v4.61): Recipe form nutrition returns. `POST/PATCH /posts` store author-typed values (`recipe.authorNutrition` in responses); Members' blanks are calculated on submit and reviewers see author vs system values with a >30% warning; approved Contributors/Admins must declare six values (`422 RECIPE_NUTRITION_REQUIRED`) and their recipes, including edits, are published immediately unless automated moderation flags them. Articles/videos unchanged. Endpoints transitioned `CHANGING` → `READY` after the web consumer update. Run `npm run prisma:push` (optional `recipe_details.author_nutrition`). Mobile Contributor form not updated.
+
+Change 2026-10-29 (v4.60): `PATCH /meal-plans/{id}/items/{itemId}/manual-add` tách lỗi "chưa xác minh được" khỏi vi phạm thật. Khi hồ sơ có ràng buộc cứng và món chỉ bị chặn vì `UNRESOLVED_INGREDIENT`/`INGREDIENT_COMPOSITION_UNCERTAIN` (ví dụ món cá nhân có nguyên liệu "Tự do"), backend trả `409 MEAL_PLAN_INGREDIENTS_UNVERIFIED` với `fields.reasons` và `fields.unverifiedIngredients` (tên hiển thị). Món vẫn bị chặn; quy tắc ràng buộc cứng không đổi; không tự ghép tên và không migrate dữ liệu cũ (người dùng xác nhận 2026-10-29). Nếu có bất kỳ vi phạm thật nào (`ALLERGY`, `INGREDIENT_EXCLUSION`, `DIET_PATTERN`, `TRADITION_RULE`, `ALLERGEN_SELECTION_UNRESOLVED`) vẫn trả `MEAL_PLAN_HARD_CONSTRAINT_VIOLATION`. Web consumer đã cập nhật cùng thay đổi: mapper `toConstraintError`, toast riêng liệt kê nguyên liệu chưa liên kết, bỏ toast trùng từ interceptor, và form món cá nhân cho phép liên kết nguyên liệu chuẩn qua `IngredientSuggestions` kèm cảnh báo nguyên liệu tự do. Không đổi schema Prisma/seed. Mobile: xử lý mã lỗi mới như lỗi chặn món.
 
 Change 2026-10-28 (v4.58): Recipe nutrition is calculated by the backend on submit and confirmed by a reviewer. `POST/PATCH /posts` ignore `recipe.nutrition`; `POST /posts/{id}/submit` attaches a canonical estimate and queues a system-paid async AI job when data is insufficient (1 + 3 retries at 1/5/15 min, startup sweep); new `GET/PATCH /admin/content-review/{id}/nutrition` and `POST .../nutrition/recalculate`; recipe APPROVE requires 5 per-serving metrics (`409 RECIPE_NUTRITION_INCOMPLETE`) and writes them to `RecipeDetail`. Endpoints transitioned `CHANGING` → `READY` after the web consumer update. New Mongo collections `recipe_nutrition_review_overrides`, `recipe_nutrition_review_audits`; run `npm run prisma:push`. Mobile: author form ignored safely, review panel not yet available.
 

@@ -44,10 +44,27 @@ import type {
   RecipeIngredient,
   RecipeStep,
   NutritionFact,
+  RecipeAuthorNutrition,
   TraditionWarning,
   DietCompatibility,
   RecipePaginationResult,
 } from '../types/recipe.model';
+
+/** Chỉ gửi chỉ số tác giả đã nhập; calories là số nguyên theo contract. */
+function authorNutritionInput(
+  value: RecipeAuthorNutrition | undefined
+):
+  | { nutrition: NonNullable<CreateRecipeRequestDto['recipe']['nutrition']> }
+  | Record<string, never> {
+  if (!value) return {};
+  const nutrition: NonNullable<CreateRecipeRequestDto['recipe']['nutrition']> = {};
+  for (const key of Object.keys(value) as Array<keyof RecipeAuthorNutrition>) {
+    const raw = value[key];
+    if (raw === null || !Number.isFinite(raw) || raw < 0) continue;
+    nutrition[key] = key === 'calories' ? Math.round(raw) : raw;
+  }
+  return Object.keys(nutrition).length ? { nutrition } : {};
+}
 
 function getDifficultyLabel(diff: RecipeDifficulty | string): string {
   switch (diff) {
@@ -124,6 +141,21 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       fat: safeNumber(nutritionDto?.fatGrams, 0),
       fiber: safeNumber(nutritionDto?.fiberGrams, 0),
       vitaminB12: safeNumber(nutritionDto?.vitaminB12Mcg, 0),
+    };
+
+    const authorDto = detail?.authorNutrition ?? null;
+    const authorValue = (value: unknown): number | null => {
+      if (value === null || value === undefined || value === '') return null;
+      const parsed = Number(value);
+      return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+    };
+    const authorNutrition: RecipeAuthorNutrition = {
+      calories: authorValue(authorDto?.calories),
+      proteinGrams: authorValue(authorDto?.proteinGrams),
+      carbsGrams: authorValue(authorDto?.carbsGrams),
+      fatGrams: authorValue(authorDto?.fatGrams),
+      fiberGrams: authorValue(authorDto?.fiberGrams),
+      vitaminB12Mcg: authorValue(authorDto?.vitaminB12Mcg),
     };
 
     const rawIngredients = safeArray<RecipeIngredientDto>(detail?.ingredients);
@@ -255,6 +287,7 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
       difficultyLabel: getDifficultyLabel(difficulty),
       mealPlannerEligible: safeBoolean(detail?.mealPlannerEligible, false),
       nutrition,
+      authorNutrition,
       ingredients,
       steps,
       instructions: [],
@@ -353,8 +386,7 @@ export class RecipeMapper extends BaseMapper<RecipeDetailDto, Recipe> {
           Object.values(RecipeDifficulty).includes(domain.difficulty as RecipeDifficulty)
             ? domain.difficulty
             : RecipeDifficulty.EASY,
-        // Nutrition không còn do tác giả nhập (2026-10-28): backend tính khi gửi duyệt,
-        // người duyệt xác nhận trước khi xuất bản.
+        ...authorNutritionInput(domain.authorNutrition),
         ingredients: (domain.ingredients || []).map((item) => {
           // Backend `ingredientId` là optional UUID: vắng mặt thì thôi,
           // gửi explicit `null` sẽ 400 strict. Chỉ kèm key khi có UUID thật.

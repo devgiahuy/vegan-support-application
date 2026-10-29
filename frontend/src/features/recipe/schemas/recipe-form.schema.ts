@@ -16,6 +16,34 @@ export const recipeStepSchema = z.object({
   imageUrl: z.string().nullable().optional(),
 });
 
+/** 6 chỉ số dinh dưỡng mỗi khẩu phần do tác giả nhập (khoá trùng contract backend). */
+export const RECIPE_NUTRITION_FIELDS = [
+  { key: 'calories', label: 'Năng lượng', unit: 'kcal', integer: true },
+  { key: 'proteinGrams', label: 'Protein', unit: 'g', integer: false },
+  { key: 'carbsGrams', label: 'Carbohydrate', unit: 'g', integer: false },
+  { key: 'fatGrams', label: 'Chất béo', unit: 'g', integer: false },
+  { key: 'fiberGrams', label: 'Chất xơ', unit: 'g', integer: false },
+  { key: 'vitaminB12Mcg', label: 'Vitamin B12', unit: 'mcg', integer: false },
+] as const;
+
+export type RecipeNutritionKey = (typeof RECIPE_NUTRITION_FIELDS)[number]['key'];
+
+// Input dùng `setValueAs` để ô trống thành `undefined` (chưa nhập), không phải NaN hay 0.
+const optionalNutritionValue = z
+  .number({ message: 'Nhập số hợp lệ' })
+  .min(0, 'Không được âm')
+  .max(99_999, 'Giá trị quá lớn')
+  .optional();
+
+export const recipeNutritionFormSchema = z.object({
+  calories: optionalNutritionValue,
+  proteinGrams: optionalNutritionValue,
+  carbsGrams: optionalNutritionValue,
+  fatGrams: optionalNutritionValue,
+  fiberGrams: optionalNutritionValue,
+  vitaminB12Mcg: optionalNutritionValue,
+});
+
 export const recipeFormSchema = z.object({
   title: z
     .string()
@@ -49,6 +77,26 @@ export const recipeFormSchema = z.object({
   description: z.string().max(500, 'Mô tả tối đa 500 ký tự').optional(),
   ingredients: z.array(recipeIngredientSchema).min(1, 'Cần ít nhất 1 nguyên liệu'),
   steps: z.array(recipeStepSchema).min(1, 'Cần ít nhất 1 bước nấu'),
+  nutrition: recipeNutritionFormSchema.optional(),
 });
 
 export type RecipeFormValues = z.infer<typeof recipeFormSchema>;
+
+/**
+ * Contributor/Admin phải nhập đủ 6 chỉ số (backend vẫn kiểm tra lại theo role thật).
+ * User thường để trống được: hệ thống tự tính khi gửi duyệt.
+ */
+export function buildRecipeFormSchema(options: { requireNutrition: boolean }) {
+  if (!options.requireNutrition) return recipeFormSchema;
+  return recipeFormSchema.superRefine((values, context) => {
+    for (const field of RECIPE_NUTRITION_FIELDS) {
+      if (values.nutrition?.[field.key] === undefined) {
+        context.addIssue({
+          code: 'custom',
+          path: ['nutrition', field.key],
+          message: `Nhập ${field.label.toLowerCase()} mỗi khẩu phần`,
+        });
+      }
+    }
+  });
+}

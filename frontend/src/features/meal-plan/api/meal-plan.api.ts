@@ -74,7 +74,8 @@ export const mealPlanApi = {
     const res = await api.patch<MealPlanResponseDto>(
       API_ENDPOINTS.MEAL_PLANS.MANUAL_ADD(planId, itemId),
       body,
-      { showErrorToast: true }
+      // Hook tự toast theo mã lỗi; tránh toast trùng từ interceptor.
+      { silent: true }
     );
     return mealPlanMapper.toDetailModel(res.data);
   },
