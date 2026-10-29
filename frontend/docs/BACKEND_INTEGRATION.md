@@ -797,19 +797,19 @@ MVP không có payment/quota purchase, DMCA workflow, audio/frame copyright dete
 
 ### 6.12 Custom meals, analysis, và multi-week programs — Phases 17–19
 
-| Method           | Path                                       | Status  | Backend updated | FE integrated    | Ghi chú                                                                                                               |
-| ---------------- | ------------------------------------------ | ------- | --------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------- |
-| GET/POST         | `/custom-meals`                            | `READY` | 2026-10-25      | Yes (2026-10-25) | Entire-meal canonical/AI nutrition; additive provenance and bounded fallback; see 4.51                                |
-| GET/PATCH/DELETE | `/custom-meals/:id`                        | `READY` | 2026-10-25      | Yes (2026-10-25) | Owner-only; recalculate changed inputs, preserve manual overrides and reject stale inference; delete policy unchanged |
-| POST             | `/custom-meals/:id/photos`                 | `READY` | 2026-09-21      | Yes (2026-10-03) | Quota-aware photo attach (`assetId`); FE: `features/custom-meal`                                                      |
-| DELETE           | `/custom-meals/:id/photos/:assetId`        | `READY` | 2026-09-21      | Yes (2026-10-03) | Gỡ ảnh khỏi bữa ăn tùy chỉnh; FE: `features/custom-meal`                                                              |
-| PUT              | `/custom-meals/:id/photos/order`           | `READY` | 2026-09-21      | Yes (2026-10-03) | Reorder thứ tự ảnh (`orderedAssetIds`); FE: `features/custom-meal`                                                    |
-| PATCH            | `/meal-plans/:id/items/:itemId/manual-add` | `READY` | 2026-09-28      | Yes (2026-10-03) | Saves hard-compatible choice; refreshed analysis returns advisory `MACRO_TARGET_EXCEEDED` without rollback            |
-| POST             | `/meal-plans/:id/analyze`                  | `READY` | 2026-09-28      | Yes (2026-10-03) | Estimated protein/fiber/fat/carbohydrate focus; no micronutrient-completeness warning; compatibility retained         |
-| GET              | `/meal-plans/:id/analysis`                 | `READY` | 2026-09-28      | Yes (2026-10-03) | Current fingerprint-validated four-macro result; old v1 analysis becomes stale                                        |
-| GET              | `/meal-programs`                           | `READY` | 2026-09-23      | Yes (2026-10-25) | Owner paginated list; client sends only `page`, `limit`, and supported `status` values                                |
-| POST             | `/meal-programs`                           | `READY` | 2026-09-23      | Yes (2026-10-25) | Synchronous generation; FE uses a longer request timeout and idempotent retries                                       |
-| GET/PATCH        | `/meal-programs/:id`                       | `READY` | 2026-09-23      | No               | Snapshot detail; versioned metadata/select/regenerate/reanalyze/confirm actions                                       |
+| Method           | Path                                       | Status  | Backend updated | FE integrated    | Ghi chú                                                                                                       |
+| ---------------- | ------------------------------------------ | ------- | --------------- | ---------------- | ------------------------------------------------------------------------------------------------------------- |
+| GET/POST | `/custom-meals` | `READY` | 2026-10-25 | Yes (2026-10-25) | Entire-meal canonical/AI nutrition; additive provenance and bounded fallback; see 4.51 |
+| GET/PATCH/DELETE | `/custom-meals/:id` | `READY` | 2026-10-25 | Yes (2026-10-25) | Owner-only; recalculate changed inputs, preserve manual overrides and reject stale inference; delete policy unchanged |
+| POST             | `/custom-meals/:id/photos`                 | `READY` | 2026-09-21      | Yes (2026-10-03) | Quota-aware photo attach (`assetId`); FE: `features/custom-meal`                                              |
+| DELETE           | `/custom-meals/:id/photos/:assetId`        | `READY` | 2026-09-21      | Yes (2026-10-03) | Gỡ ảnh khỏi bữa ăn tùy chỉnh; FE: `features/custom-meal`                                                      |
+| PUT              | `/custom-meals/:id/photos/order`           | `READY` | 2026-09-21      | Yes (2026-10-03) | Reorder thứ tự ảnh (`orderedAssetIds`); FE: `features/custom-meal`                                            |
+| PATCH            | `/meal-plans/:id/items/:itemId/manual-add` | `READY` | 2026-10-29      | Yes (2026-10-29) | Saves hard-compatible choice; refreshed analysis returns advisory `MACRO_TARGET_EXCEEDED` without rollback; unverified-only blocks return `MEAL_PLAN_INGREDIENTS_UNVERIFIED` |
+| POST             | `/meal-plans/:id/analyze`                  | `READY` | 2026-09-28      | Yes (2026-10-03) | Estimated protein/fiber/fat/carbohydrate focus; no micronutrient-completeness warning; compatibility retained |
+| GET              | `/meal-plans/:id/analysis`                 | `READY` | 2026-09-28      | Yes (2026-10-03) | Current fingerprint-validated four-macro result; old v1 analysis becomes stale                                |
+| GET              | `/meal-programs`                           | `READY` | 2026-09-23      | Yes (2026-10-25) | Owner paginated list; client sends only `page`, `limit`, and supported `status` values                        |
+| POST             | `/meal-programs`                           | `READY` | 2026-09-23      | Yes (2026-10-25) | Synchronous generation; FE uses a longer request timeout and idempotent retries                               |
+| GET/PATCH        | `/meal-programs/:id`                       | `READY` | 2026-09-23      | No               | Snapshot detail; versioned metadata/select/regenerate/reanalyze/confirm actions                               |
 
 `tags` của custom meal là text do user tạo; `shopee` không phải service/provider ID. Warning DTO phải có code, severity, source/evidence, affected items, explanation, confidence, và suggested adjustment để FE render tooltip/dialog.
 Recipe and custom-meal writes reject a supplied canonical ingredient ID whose display name is neither its canonical name nor an approved alias (`400 INGREDIENT_ID_NAME_MISMATCH`). FE should clear a stale selection when the name changes and let the user select the correct catalog item.
@@ -1242,6 +1242,7 @@ Danh sách này là baseline; schema chính thức phải nằm trong OpenAPI.
 | `MEAL_ANALYSIS_ITEM_UNFILLED`                 | Exclude unfilled slots or add a meal first (READY Phase 18)                                                |
 | `MEAL_ANALYSIS_SOURCE_MISSING`                | Refetch the plan; the selected item no longer has a usable source (READY Phase 18)                         |
 | `MEAL_PLAN_HARD_CONSTRAINT_VIOLATION`         | Do not confirm manual-add; show backend hard diet/allergy/exclusion/tradition reasons (READY Phase 18)     |
+| `MEAL_PLAN_INGREDIENTS_UNVERIFIED`            | 409 manual-add: món chỉ bị chặn vì nguyên liệu chưa liên kết/cấu tạo chưa rà soát; hiển thị `fields.unverifiedIngredients`, nói rõ chưa xác minh được (không phải vi phạm) và hướng dẫn liên kết hoặc chọn món khác |
 | `MEAL_PROGRAM_VERSION_CONFLICT`               | Refetch the READY Phase 19 program before retrying a mutation                                              |
 | `MEAL_PROGRAM_IDEMPOTENCY_CONFLICT`           | Reuse a key only with the identical create/mutation payload                                                |
 | `MEAL_PROGRAM_LIMIT_EXCEEDED`                 | Reduce horizon or alternatives to the advertised configuration limits                                      |
@@ -1344,6 +1345,8 @@ Không được mô tả endpoint là READY chỉ vì route đã tồn tại n�
 ## 11. Integration changelog
 
 Thêm entry mới nhất ở trên cùng.
+
+Change 2026-10-29 (v4.59): `PATCH /meal-plans/{id}/items/{itemId}/manual-add` tách lỗi "chưa xác minh được" khỏi vi phạm thật. Khi hồ sơ có ràng buộc cứng và món chỉ bị chặn vì `UNRESOLVED_INGREDIENT`/`INGREDIENT_COMPOSITION_UNCERTAIN` (ví dụ món cá nhân có nguyên liệu "Tự do"), backend trả `409 MEAL_PLAN_INGREDIENTS_UNVERIFIED` với `fields.reasons` và `fields.unverifiedIngredients` (tên hiển thị). Món vẫn bị chặn; quy tắc ràng buộc cứng không đổi; không tự ghép tên và không migrate dữ liệu cũ (người dùng xác nhận 2026-10-29). Nếu có bất kỳ vi phạm thật nào (`ALLERGY`, `INGREDIENT_EXCLUSION`, `DIET_PATTERN`, `TRADITION_RULE`, `ALLERGEN_SELECTION_UNRESOLVED`) vẫn trả `MEAL_PLAN_HARD_CONSTRAINT_VIOLATION`. Web consumer đã cập nhật cùng thay đổi: mapper `toConstraintError`, toast riêng liệt kê nguyên liệu chưa liên kết, bỏ toast trùng từ interceptor, và form món cá nhân cho phép liên kết nguyên liệu chuẩn qua `IngredientSuggestions` kèm cảnh báo nguyên liệu tự do. Không đổi schema Prisma/seed. Mobile: xử lý mã lỗi mới như lỗi chặn món.
 
 Change 2026-10-28 (v4.58): Recipe nutrition is calculated by the backend on submit and confirmed by a reviewer. `POST/PATCH /posts` ignore `recipe.nutrition`; `POST /posts/{id}/submit` attaches a canonical estimate and queues a system-paid async AI job when data is insufficient (1 + 3 retries at 1/5/15 min, startup sweep); new `GET/PATCH /admin/content-review/{id}/nutrition` and `POST .../nutrition/recalculate`; recipe APPROVE requires 5 per-serving metrics (`409 RECIPE_NUTRITION_INCOMPLETE`) and writes them to `RecipeDetail`. Endpoints transitioned `CHANGING` → `READY` after the web consumer update. New Mongo collections `recipe_nutrition_review_overrides`, `recipe_nutrition_review_audits`; run `npm run prisma:push`. Mobile: author form ignored safely, review panel not yet available.
 
