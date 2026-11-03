@@ -2,10 +2,11 @@ import * as React from 'react';
 import { Alert, Pressable, Share, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Link, type Href, useLocalSearchParams, useRouter } from 'expo-router';
-import { AlertTriangle, Clock, Hourglass, Pencil, Share2, Trash2 } from 'lucide-react-native';
+import { AlertTriangle, Calendar, Clock, Eye, Hourglass, Pencil, Share2, Tag, Trash2 } from 'lucide-react-native';
 
 import { SiteScreen } from '@/components/layout/site-screen';
 import { PrimaryButton } from '@/components/ui/primary-button';
+import { UserAvatar } from '@/components/ui/user-avatar';
 import { PostCard } from '@/features/post/components/post-card';
 import {
   useArticleDetailQuery,
@@ -115,63 +116,87 @@ export default function ArticleDetailScreen() {
           </View>
         ) : null}
 
-        <View className="aspect-video w-full overflow-hidden rounded-2xl border border-border bg-muted">
+        {/* Đầu bài — đồng bộ `post-detail-view.tsx` của web: huy hiệu chuyên mục, tiêu đề, tóm tắt, thanh tác giả. */}
+        <View className="gap-3">
+          <View className="flex-row flex-wrap items-center gap-2">
+            <View className="rounded-full bg-primary px-3 py-1">
+              <Text className="text-xs font-semibold text-primary-foreground">{article.category.name}</Text>
+            </View>
+          </View>
+
+          <Text className="text-2xl font-extrabold leading-tight tracking-tight text-foreground">{article.title}</Text>
+
+          {article.excerpt ? (
+            <Text className="text-base leading-relaxed text-muted-foreground">{article.excerpt}</Text>
+          ) : null}
+
+          <View className="gap-3 border-t border-border pt-4">
+            <View className="flex-row items-center gap-3">
+              <UserAvatar name={article.author.name} uri={article.author.avatarUrl} size={48} className="border-2 border-primary/20" />
+              <View className="flex-1 gap-1">
+                <View className="flex-row flex-wrap items-center gap-2">
+                  <Text className="shrink text-base font-bold text-foreground">{article.author.name}</Text>
+                  <View className="rounded-full bg-muted px-2 py-0.5">
+                    <Text className="text-[10px] font-medium text-muted-foreground">Tác giả</Text>
+                  </View>
+                </View>
+                <View className="flex-row flex-wrap items-center gap-x-3 gap-y-1">
+                  {article.formattedPublishedAt ? (
+                    <View className="flex-row items-center gap-1">
+                      <Calendar size={13} color={colors.mutedForeground} />
+                      <Text className="text-xs text-muted-foreground">{article.formattedPublishedAt}</Text>
+                    </View>
+                  ) : null}
+                  <View className="flex-row items-center gap-1">
+                    <Clock size={13} color={colors.mutedForeground} />
+                    <Text className="text-xs text-muted-foreground">{article.readingTimeMinutes} phút đọc</Text>
+                  </View>
+                  <View className="flex-row items-center gap-1">
+                    <Eye size={13} color={colors.mutedForeground} />
+                    <Text className="text-xs text-muted-foreground">{article.stats.views.toLocaleString('vi-VN')} lượt xem</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+
+            {/* Hành động dạng viên thuốc như web. Không có "Lưu bài": backend không hỗ trợ bookmark cho BLOG. */}
+            <View className="flex-row flex-wrap gap-2">
+              <Pressable
+                accessibilityRole="button"
+                onPress={handleShare}
+                className="h-9 flex-row items-center gap-1.5 rounded-full border border-input bg-background px-3.5 active:bg-muted">
+                <Share2 size={15} color={colors.foreground} />
+                <Text className="text-sm font-medium text-foreground">Chia sẻ</Text>
+              </Pressable>
+              {isOwner ? (
+                <>
+                  <Link href={`/articles/${article.id}/edit` as Href} asChild>
+                    <Pressable
+                      accessibilityRole="button"
+                      className="h-9 flex-row items-center gap-1.5 rounded-full bg-primary/10 px-3.5 active:bg-primary/20">
+                      <Pencil size={14} color={colors.primary} />
+                      <Text className="text-sm font-medium text-primary">Sửa bài</Text>
+                    </Pressable>
+                  </Link>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={confirmDelete}
+                    disabled={deleteMutation.isPending}
+                    className="h-9 flex-row items-center gap-1.5 rounded-full border border-destructive/30 bg-background px-3.5 active:bg-destructive/10">
+                    <Trash2 size={14} color={colors.destructive} />
+                    <Text className="text-sm font-medium text-destructive">Xoá bài</Text>
+                  </Pressable>
+                </>
+              ) : null}
+            </View>
+          </View>
+        </View>
+
+        <View className="aspect-video w-full overflow-hidden rounded-3xl border border-border bg-muted">
           <Image source={{ uri: article.coverImageUrl }} style={{ width: '100%', height: '100%' }} contentFit="cover" />
         </View>
 
-        <View className="gap-3">
-          <View className="flex-row flex-wrap items-center gap-2">
-            <View className="rounded-full bg-primary/10 px-2.5 py-1">
-              <Text className="text-xs font-semibold text-primary">{article.category.name}</Text>
-            </View>
-            <View className="flex-row items-center gap-1">
-              <Clock size={12} color={colors.mutedForeground} />
-              <Text className="text-xs text-muted-foreground">{article.readingTimeMinutes} phút đọc</Text>
-            </View>
-            {article.formattedPublishedAt ? (
-              <Text className="text-xs text-muted-foreground">• {article.formattedPublishedAt}</Text>
-            ) : null}
-          </View>
-
-          <Text className="text-2xl font-extrabold tracking-tight text-foreground">{article.title}</Text>
-
-          {article.excerpt ? (
-            <Text className="text-sm leading-relaxed text-muted-foreground">{article.excerpt}</Text>
-          ) : null}
-
-          <View className="flex-row items-center gap-2">
-            <View className="h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-              <Text className="text-xs font-bold text-primary">{article.author.name.charAt(0)}</Text>
-            </View>
-            <Text className="flex-1 text-sm font-semibold text-foreground">{article.author.name}</Text>
-            {isOwner ? (
-              <View className="flex-row gap-1.5">
-                <Link href={`/articles/${article.id}/edit` as Href} asChild>
-                  <Pressable className="h-9 w-9 items-center justify-center rounded-full bg-muted">
-                    <Pencil size={15} color={colors.foreground} />
-                  </Pressable>
-                </Link>
-                <Pressable
-                  onPress={confirmDelete}
-                  disabled={deleteMutation.isPending}
-                  className="h-9 w-9 items-center justify-center rounded-full bg-destructive/10">
-                  <Trash2 size={15} color={colors.destructive} />
-                </Pressable>
-              </View>
-            ) : null}
-          </View>
-        </View>
-
-        <View className="gap-2">
-          <PrimaryButton
-            label="Chia sẻ"
-            variant="outline"
-            icon={<Share2 size={16} color={colors.foreground} />}
-            onPress={handleShare}
-          />
-        </View>
-
-        <View className="rounded-2xl border border-border p-4">
+        <View>
           {article.content ? (
             <ChatMarkdown content={article.content} />
           ) : (
@@ -180,14 +205,34 @@ export default function ArticleDetailScreen() {
         </View>
 
         {article.tags.length > 0 ? (
-          <View className="flex-row flex-wrap gap-2">
+          <View className="flex-row flex-wrap items-center gap-2 border-t border-border pt-4">
+            <View className="flex-row items-center gap-1">
+              <Tag size={13} color={colors.mutedForeground} />
+              <Text className="text-xs font-semibold text-muted-foreground">Chủ đề liên quan:</Text>
+            </View>
             {article.tags.map((tag) => (
-              <View key={tag} className="rounded-md bg-muted px-2.5 py-1">
-                <Text className="text-xs font-medium text-muted-foreground">#{tag}</Text>
+              <View key={tag} className="rounded-lg bg-primary/10 px-2.5 py-1">
+                <Text className="text-xs font-semibold text-primary">#{tag}</Text>
               </View>
             ))}
           </View>
         ) : null}
+
+        {/* Khung tác giả cuối bài. Mô tả chung vì hồ sơ tác giả chưa có tiểu sử riêng và không khẳng định chuyên môn. */}
+        <View className="gap-3 rounded-3xl border border-border bg-card p-5">
+          <View className="flex-row items-center gap-4">
+            <UserAvatar name={article.author.name} uri={article.author.avatarUrl} size={64} className="border-2 border-primary/30" />
+            <View className="flex-1 flex-row flex-wrap items-center gap-2">
+              <Text className="shrink text-lg font-bold text-foreground">{article.author.name}</Text>
+              <View className="rounded-full bg-primary/10 px-2 py-0.5">
+                <Text className="text-xs font-medium text-primary">Tác giả</Text>
+              </View>
+            </View>
+          </View>
+          <Text className="text-sm leading-relaxed text-muted-foreground">
+            Thành viên tâm huyết chia sẻ kinh nghiệm nấu món chay ngon, dinh dưỡng và gìn giữ văn hoá ẩm thực chay truyền thống.
+          </Text>
+        </View>
 
         {!isOwner ? <ReportButton targetType="POST" targetId={article.id} /> : null}
 
@@ -201,7 +246,10 @@ export default function ArticleDetailScreen() {
 
         {relatedArticles.length > 0 ? (
           <View className="gap-3 pt-2">
-            <Text className="text-lg font-bold text-foreground">Bài viết liên quan</Text>
+            <View className="gap-0.5">
+              <Text className="text-xl font-bold text-foreground">Bài viết cẩm nang liên quan</Text>
+              <Text className="text-xs text-muted-foreground">Khám phá thêm kiến thức dinh dưỡng và kinh nghiệm ăn chay cùng chuyên mục</Text>
+            </View>
             <View className="gap-3">
               {relatedArticles.map((item) => (
                 <Link key={item.id} href={`/articles/${item.id}` as Href} asChild>

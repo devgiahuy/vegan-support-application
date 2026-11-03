@@ -6,7 +6,9 @@ import { DateField } from '@/components/ui/date-field';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextField } from '@/components/ui/text-field';
 import { IngredientPicker } from '@/features/ingredient/components/ingredient-picker';
+import { RecipeUnitPicker } from '@/features/recipe/components/recipe-unit-picker';
 import { createOperationKey } from '@/lib/operation-key';
+import { PANTRY_UNIT_GROUPS } from '../lib/pantry-units';
 import { isValidDateInput } from '../lib/date-input';
 import { pantryErrorMessage } from '../lib/pantry-errors';
 import {
@@ -97,7 +99,10 @@ export function PantryCreateSheet({ onClose }: { onClose: () => void }) {
         onChangeText={setQuantity}
         keyboardType="decimal-pad"
       />
-      <TextField label="Đơn vị" value={unit} onChangeText={setUnit} maxLength={40} />
+      <View className="gap-1.5">
+        <Text className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Đơn vị</Text>
+        <RecipeUnitPicker label="Đơn vị" value={unit} onChange={setUnit} groups={PANTRY_UNIT_GROUPS} />
+      </View>
       <DateField label="Ngày mua" value={purchasedAt} onChange={setPurchasedAt} clearable />
       <DateField label="Hạn dùng" value={date} onChange={setDate} clearable />
       <TextField label="Ghi chú độ tươi" value={note} onChangeText={setNote} maxLength={5000} />

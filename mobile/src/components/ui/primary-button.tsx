@@ -7,6 +7,8 @@ interface PrimaryButtonProps extends PressableProps {
   label: string;
   loading?: boolean;
   icon?: React.ReactNode;
+  /** Vị trí icon so với nhãn: `right` (mặc định) hoặc `left` như nút của web (`data-icon="inline-start"`). */
+  iconPosition?: 'left' | 'right';
   variant?: 'primary' | 'outline';
 }
 
@@ -15,6 +17,7 @@ export function PrimaryButton({
   label,
   loading,
   icon,
+  iconPosition = 'right',
   variant = 'primary',
   className,
   disabled,
@@ -38,6 +41,8 @@ export function PrimaryButton({
     >
       {loading ? (
         <ActivityIndicator color={variant === 'primary' ? colors.primaryForeground : colors.primary} />
+      ) : iconPosition === 'left' ? (
+        icon
       ) : null}
       {/* Nút chỉ có chữ: nhãn rộng bằng cả nút và căn giữa để không bị đo hẹp rồi xuống dòng trên Android.
           Có icon/đang tải: giữ độ rộng theo nội dung (flexShrink 0). Nhãn luôn hiện, kể cả khi đang tải. */}
@@ -51,7 +56,7 @@ export function PrimaryButton({
       >
         {label}
       </Text>
-      {loading ? null : icon}
+      {loading || iconPosition === 'left' ? null : icon}
     </Pressable>
   );
 }
