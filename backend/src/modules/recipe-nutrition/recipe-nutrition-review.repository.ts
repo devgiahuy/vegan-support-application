@@ -67,9 +67,26 @@ export interface ResolvedReviewMetric {
   metric: RecipeReviewNutritionMetric;
   unit: string;
   estimate: ReviewMetricEstimate;
+  /** Value the author typed for this revision (USER_PROVIDED), if any. */
+  author: number | null;
+  /** |author − system estimate| / system estimate × 100, when both exist and the estimate is > 0. */
+  deviationPercent: number | null;
+  deviationWarning: boolean;
   override: NutritionOverrideRecord | null;
+  /** Value without reviewer override: author value first, then the system estimate. */
+  baseValue: number | null;
+  baseOrigin: NutritionValueOrigin | null;
   finalValue: number | null;
   finalOrigin: NutritionValueOrigin | null;
+}
+
+/** Reviewer warning threshold for author vs system values (user decision 2026-10-29). */
+export const AUTHOR_DEVIATION_WARNING_PERCENT = 30;
+
+function authorValue(value: Prisma.JsonValue | null | undefined, metric: string): number | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  const raw = (value as Record<string, unknown>)[metric];
+  return typeof raw === 'number' && Number.isFinite(raw) && raw >= 0 ? raw : null;
 }
 
 export interface ResolvedReviewNutrition {
@@ -93,7 +110,10 @@ export async function resolveReviewNutrition(
       orderBy: { version: 'desc' },
     }),
     client.recipeNutritionOverride.findMany({ where: { revisionId }, include: overrideInclude }),
-    client.recipeDetail.findUnique({ where: { revisionId }, select: { servings: true } }),
+    client.recipeDetail.findUnique({
+      where: { revisionId },
+      select: { servings: true, authorNutrition: true },
+    }),
   ]);
   const servings = estimate?.servings ?? detail?.servings ?? 1;
   const estimates = estimate
@@ -110,17 +130,32 @@ export async function resolveReviewNutrition(
       }));
   const metrics = estimates.map((item): ResolvedReviewMetric => {
     const override = overrides.find((row) => row.metric === item.metric) ?? null;
+    // Precedence: reviewer override > author value > system estimate (user decision 2026-10-29).
+    const author = authorValue(detail?.authorNutrition, item.metric);
+    const deviationPercent =
+      author !== null && item.value !== null && item.value > 0
+        ? Math.round((Math.abs(author - item.value) / item.value) * 1000) / 10
+        : null;
+    const baseValue = author ?? item.value;
+    const baseOrigin =
+      author !== null
+        ? NutritionValueOrigin.USER_PROVIDED
+        : item.value === null
+          ? null
+          : item.origin;
     return {
       metric: item.metric,
       unit: item.unit,
       estimate: item,
+      author,
+      deviationPercent,
+      deviationWarning:
+        deviationPercent !== null && deviationPercent > AUTHOR_DEVIATION_WARNING_PERCENT,
       override,
-      finalValue: override ? override.value : item.value,
-      finalOrigin: override
-        ? NutritionValueOrigin.VERIFIED_OVERRIDE
-        : item.value === null
-          ? null
-          : item.origin,
+      baseValue,
+      baseOrigin,
+      finalValue: override ? override.value : baseValue,
+      finalOrigin: override ? NutritionValueOrigin.VERIFIED_OVERRIDE : baseOrigin,
     };
   });
   return {
@@ -442,8 +477,8 @@ export class RecipeNutritionReviewRepository {
               action: 'CLEAR_OVERRIDE',
               previousValue: current.finalValue,
               previousOrigin: current.finalOrigin,
-              newValue: current.estimate.value,
-              newOrigin: current.estimate.value === null ? null : current.estimate.origin,
+              newValue: current.baseValue,
+              newOrigin: current.baseOrigin,
               reason: input.reason,
               actorId: input.actorId,
               actorRole: input.actorRole,

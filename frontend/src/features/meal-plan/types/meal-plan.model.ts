@@ -147,3 +147,13 @@ export interface GenerateMealPlanInput {
   seed?: string;
   supersedesMealPlanId?: string;
 }
+
+/**
+ * Lý do backend chặn manual-add. `UNVERIFIED` = có nguyên liệu chưa liên kết
+ * nên không kiểm tra được (không phải vi phạm đã xác định); `VIOLATION` = vi phạm thật.
+ */
+export interface MealPlanConstraintError {
+  kind: 'UNVERIFIED' | 'VIOLATION';
+  reasons: string[];
+  unverifiedIngredients: string[];
+}

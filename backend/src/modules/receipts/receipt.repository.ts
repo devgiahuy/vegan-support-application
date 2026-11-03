@@ -937,16 +937,46 @@ export class ReceiptRepository {
     });
   }
 
+  /** Confirmed stock linked to the given ingredients, plus every confirmed free-text item. */
   findConfirmedPantry(ownerId: string, ingredientIds: string[]) {
     return this.prisma.pantryItem.findMany({
       where: {
         ownerId,
-        ingredientId: { in: ingredientIds },
+        OR: [
+          { ingredientId: { in: ingredientIds } },
+          { ingredientId: null, normalizedUnmatchedText: { not: null } },
+        ],
         confirmationStatus: PantryConfirmationStatus.CONFIRMED,
         deletedAt: null,
         quantity: { gt: 0 },
       },
       orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
+  }
+
+  /** Exact canonical-name match wins over an approved alias, as in single-name resolution. */
+  async resolveIngredients(normalizedNames: string[]) {
+    const uniqueNames = [...new Set(normalizedNames)];
+    if (uniqueNames.length === 0) return new Map<string, string>();
+    const [direct, aliases] = await Promise.all([
+      this.prisma.ingredient.findMany({
+        where: { normalizedName: { in: uniqueNames }, status: 'ACTIVE' },
+        select: { id: true, normalizedName: true },
+      }),
+      this.prisma.ingredientAlias.findMany({
+        where: {
+          normalizedAlias: { in: uniqueNames },
+          reviewStatus: FoodDataReviewStatus.APPROVED,
+          ingredient: { status: 'ACTIVE' },
+        },
+        select: { normalizedAlias: true, ingredientId: true },
+      }),
+    ]);
+    const resolved = new Map<string, string>();
+    for (const ingredient of direct) resolved.set(ingredient.normalizedName, ingredient.id);
+    for (const alias of aliases)
+      if (!resolved.has(alias.normalizedAlias))
+        resolved.set(alias.normalizedAlias, alias.ingredientId);
+    return resolved;
   }
 }

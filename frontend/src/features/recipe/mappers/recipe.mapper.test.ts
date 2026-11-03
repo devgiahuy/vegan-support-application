@@ -141,9 +141,60 @@ describe('RecipeMapper', () => {
     expect(createDto.recipe.prepTimeMinutes).toBe(10);
     expect(createDto.recipe.ingredients[0].displayName).toBe('Nấm');
     expect(createDto.recipe.ingredients[0].ingredientId).toBe('ing-1');
-    // Author nutrition is never sent: backend calculates it on submit for reviewer approval.
+    // Calculated/published `nutrition` is never echoed back; only `authorNutrition` is sent.
     expect('nutrition' in createDto.recipe).toBe(false);
     expect(createDto.body).toContain('Nấu sôi nước');
+  });
+
+  it('sends only author-entered nutrition, rounding calories and dropping blanks', () => {
+    const createDto = recipeMapper.toCreateDto({
+      title: 'Canh chua',
+      servings: 2,
+      difficulty: RecipeDifficulty.EASY,
+      authorNutrition: {
+        calories: 120.6,
+        proteinGrams: 5,
+        carbsGrams: null,
+        fatGrams: 0,
+        fiberGrams: null,
+        vitaminB12Mcg: 0,
+      },
+      ingredients: [{ ingredientId: 'ing-1', name: 'Nấm', amount: 100, unit: 'g', notes: '' }],
+      steps: [{ stepNumber: 1, instruction: 'Nấu sôi nước', imageUrl: null }],
+    });
+    expect(createDto.recipe.nutrition).toEqual({
+      calories: 121,
+      proteinGrams: 5,
+      fatGrams: 0,
+      vitaminB12Mcg: 0,
+    });
+  });
+
+  it('maps authorNutrition keeping blanks as null and zero as zero', () => {
+    const dto = backendRecipeDto();
+    const model = recipeMapper.toModel({
+      ...dto,
+      recipe: {
+        ...dto.recipe,
+        authorNutrition: {
+          calories: 300,
+          proteinGrams: null,
+          carbsGrams: null,
+          fatGrams: null,
+          fiberGrams: null,
+          vitaminB12Mcg: 0,
+        },
+      },
+    });
+    expect(model.authorNutrition).toEqual({
+      calories: 300,
+      proteinGrams: null,
+      carbsGrams: null,
+      fatGrams: null,
+      fiberGrams: null,
+      vitaminB12Mcg: 0,
+    });
+    expect(recipeMapper.toModel(backendRecipeDto()).authorNutrition?.calories).toBeNull();
   });
 
   it('stepsToBody falls back when steps are empty', () => {

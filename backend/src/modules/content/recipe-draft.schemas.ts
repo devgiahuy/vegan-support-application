@@ -6,6 +6,11 @@ export const generateRecipeDraftRequestSchema = z
     title: z.string().trim().min(3).max(200),
     description: z.string().trim().min(1).max(500),
     ingredientNames: z.array(z.string().trim().min(1).max(160)).min(1).max(50),
+    // Optional author values from step 1 (2026-10-29): amounts are scaled to these servings and
+    // the returned draft keeps them instead of the AI's own numbers.
+    servings: z.number().int().min(1).max(100).optional(),
+    prepTimeMinutes: z.number().int().min(0).max(10_080).optional(),
+    cookTimeMinutes: z.number().int().min(0).max(10_080).optional(),
   })
   .strict();
 
@@ -53,6 +58,15 @@ export const generateRecipeDraftEnvelopeSchema = z.object({
     ingredientConfidence: z.array(z.number().min(0).max(1)),
     confidence: z.number().min(0).max(1),
     assumptions: z.array(z.string()),
+    suggestedTiming: z
+      .object({
+        servings: z.number().int(),
+        prepTimeMinutes: z.number().int(),
+        cookTimeMinutes: z.number().int(),
+      })
+      .describe(
+        "The AI's own servings/time suggestion, for display when the author supplied different values.",
+      ),
     provenance: z.object({ provider: z.string(), model: z.string(), templateVersion: z.string() }),
   }),
 });

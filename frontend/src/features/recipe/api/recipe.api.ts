@@ -99,6 +99,25 @@ export const recipeApi = {
   },
 
   /**
+   * Gửi revision DRAFT. Phản hồi cho biết trạng thái thật: `PUBLISHED` khi Contributor/Admin
+   * tự xuất bản (đủ 6 chỉ số), ngược lại `PENDING_REVIEW`.
+   * POST /api/v1/posts/:id/submit
+   */
+  submitRecipe: async (
+    id: string,
+    input: { revisionId: string; expectedVersion: number }
+  ): Promise<Recipe> => {
+    const res = await api.post<RecipeDetailResponseDto>(API_ENDPOINTS.CONTENT_REVIEW.SUBMIT(id), {
+      revisionId: input.revisionId,
+      expectedVersion: input.expectedVersion,
+    });
+    if (res.data?.success && res.data.data) {
+      return recipeMapper.toModel(res.data.data);
+    }
+    throw new Error('Phản hồi gửi công thức không đúng định dạng.');
+  },
+
+  /**
    * Cập nhật công thức (backend yêu cầu `expectedVersion`)
    */
   updateRecipe: async (id: string, recipe: Partial<Recipe>): Promise<Recipe> => {

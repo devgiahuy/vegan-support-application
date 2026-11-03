@@ -4,7 +4,7 @@ import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useQueryClient } from '@tanstack/react-query';
-import { Home, ChevronRight, Hourglass, ShieldCheck } from 'lucide-react';
+import { Home, ChevronRight, CheckCircle2, Hourglass, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   RecipeEditorForm,
@@ -25,7 +25,7 @@ import type { RecipeFormValues } from '@/features/recipe/schemas/recipe-form.sch
 import type { Recipe } from '@/features/recipe/types/recipe.model';
 import { recipeFormToRecipe } from '@/features/recipe/utils/recipe-form-values';
 import { useAuthStore } from '@/store/useAuthStore';
-import { UserRole } from '@/common/enums';
+import { PostStatus, UserRole } from '@/common/enums';
 import {
   Dialog,
   DialogContent,
@@ -53,8 +53,15 @@ export default function CreateRecipePage() {
   const applyDraftToEditor = (draft: RecipeDraftSuggestion) => {
     const formVals = recipeDraftMapper.toFormValues(draft);
     editorRef.current?.setDraftValues(formVals);
+    // Khẩu phần/thời gian đã nhập được giữ; nếu AI đề xuất khác thì chỉ báo để tham khảo.
+    const timingHint = recipeDraftMapper.timingHint(draft);
     toast.success('Đã điền gợi ý AI vào nguyên liệu và các bước nấu', {
-      description: 'Kiểm tra lại định lượng, liên kết nguyên liệu chuẩn rồi chọn danh mục.',
+      description: [
+        'Kiểm tra lại định lượng, liên kết nguyên liệu chuẩn rồi chọn danh mục.',
+        timingHint,
+      ]
+        .filter(Boolean)
+        .join(' '),
     });
   };
 
@@ -107,6 +114,8 @@ export default function CreateRecipePage() {
   };
 
   const isModerator = user?.role === UserRole.ADMIN || user?.role === UserRole.CONTRIBUTOR;
+  // Trạng thái lấy từ phản hồi gửi: Contributor/Admin đủ dinh dưỡng thì được xuất bản ngay.
+  const isPublished = createdRecipe?.status === PostStatus.PUBLISHED;
 
   return (
     <AuthGuard>
@@ -133,14 +142,17 @@ export default function CreateRecipePage() {
             Đăng công thức món chay
           </h1>
           <p className="text-sm text-pretty text-muted-foreground">
-            Năm bước ngắn: thông tin món, nguyên liệu, cách nấu, phân loại rồi xem lại. Công thức
-            được Ban biên tập duyệt trước khi xuất bản.
+            Năm bước ngắn: thông tin món, nguyên liệu, cách nấu, phân loại rồi xem lại.{' '}
+            {isModerator
+              ? 'Tài khoản của bạn đăng là xuất bản ngay, cần nhập đủ dinh dưỡng mỗi khẩu phần.'
+              : 'Công thức được Ban biên tập duyệt trước khi xuất bản.'}
           </p>
         </div>
 
         <RecipeEditorForm
           ref={editorRef}
           formTitle="Đăng công thức mới"
+          submitLabel={isModerator ? 'Đăng & xuất bản' : 'Gửi công thức để duyệt'}
           onSubmit={handleSubmit}
           isSubmitting={createRecipeMutation.isPending}
           renderAssistant={(seed, { editBasics }) => (
@@ -163,38 +175,52 @@ export default function CreateRecipePage() {
         <Dialog open={isSuccessModalOpen} onOpenChange={setIsSuccessModalOpen}>
           <DialogContent className="sm:max-w-lg rounded-3xl p-6">
             <DialogHeader className="space-y-3">
-              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
-                <Hourglass className="h-7 w-7" />
-              </div>
+              {isPublished ? (
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
+                  <CheckCircle2 className="h-7 w-7" />
+                </div>
+              ) : (
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                  <Hourglass className="h-7 w-7" />
+                </div>
+              )}
               <DialogTitle className="text-center text-xl sm:text-2xl font-bold text-foreground">
-                Gửi công thức thành công!
+                {isPublished ? 'Đăng công thức thành công!' : 'Gửi công thức thành công!'}
               </DialogTitle>
               <DialogDescription className="text-center text-sm text-muted-foreground leading-relaxed">
                 Công thức <strong>{createdRecipe?.title}</strong> đã được ghi nhận vào hệ thống và
                 đang ở trạng thái{' '}
-                <Badge className="rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500/30">
-                  Chờ kiểm duyệt
-                </Badge>
+                {isPublished ? (
+                  <Badge className="rounded-full bg-emerald-500/20 text-emerald-800 dark:text-emerald-300 border-emerald-500/30">
+                    Đã xuất bản
+                  </Badge>
+                ) : (
+                  <Badge className="rounded-full bg-amber-500/20 text-amber-800 dark:text-amber-300 border-amber-500/30">
+                    Chờ kiểm duyệt
+                  </Badge>
+                )}
               </DialogDescription>
             </DialogHeader>
 
-            <div className="rounded-2xl border border-border/80 bg-muted/50 p-4 text-xs text-muted-foreground space-y-2 my-2">
-              <p className="font-semibold text-foreground flex items-center gap-1.5 text-sm">
-                <ShieldCheck className="h-4 w-4 text-primary" /> Tiêu chuẩn chất lượng thuần thực
-                vật
-              </p>
-              <p className="leading-relaxed">
-                Nhằm đảm bảo 100% nguyên liệu thuần chay, dinh dưỡng an toàn và định lượng chính
-                xác, công thức sẽ được Ban biên tập thẩm định trước khi xuất bản công khai lên kho
-                công thức.
-              </p>
-              {isModerator && (
-                <p className="font-medium text-primary pt-1 border-t border-border/50">
-                  Tài khoản của bạn có quyền kiểm duyệt. Bạn có thể mở Bảng điều khiển để phê duyệt
-                  công thức này ngay bây giờ.
+            {!isPublished && (
+              <div className="rounded-2xl border border-border/80 bg-muted/50 p-4 text-xs text-muted-foreground space-y-2 my-2">
+                <p className="font-semibold text-foreground flex items-center gap-1.5 text-sm">
+                  <ShieldCheck className="h-4 w-4 text-primary" /> Tiêu chuẩn chất lượng thuần thực
+                  vật
                 </p>
-              )}
-            </div>
+                <p className="leading-relaxed">
+                  Nhằm đảm bảo 100% nguyên liệu thuần chay, dinh dưỡng an toàn và định lượng chính
+                  xác, công thức sẽ được Ban biên tập thẩm định trước khi xuất bản công khai lên kho
+                  công thức.
+                </p>
+                {isModerator && (
+                  <p className="font-medium text-primary pt-1 border-t border-border/50">
+                    Bộ lọc tự động đã gắn cờ nội dung này nên công thức cần Quản trị viên duyệt
+                    trước khi xuất bản.
+                  </p>
+                )}
+              </div>
+            )}
 
             <DialogFooter className="flex flex-col sm:flex-row gap-2.5 mt-4">
               <Button
@@ -212,7 +238,7 @@ export default function CreateRecipePage() {
                   Xem bài viết của bạn
                 </Button>
               )}
-              {isModerator && (
+              {isModerator && !isPublished && (
                 <Button
                   variant="secondary"
                   className="rounded-full flex-1"

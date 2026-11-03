@@ -46,6 +46,33 @@ import {
   dateOnlyInSearchTimezone,
 } from './search-constraints.js';
 
+/** Six per-serving values a Contributor/Admin must declare before a recipe is auto-published. */
+const AUTHOR_NUTRITION_KEYS = [
+  'calories',
+  'proteinGrams',
+  'carbsGrams',
+  'fatGrams',
+  'fiberGrams',
+  'vitaminB12Mcg',
+] as const;
+
+function authorNutritionOutput(value: Prisma.JsonValue | null) {
+  const record =
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? (value as Record<string, unknown>)
+      : {};
+  const pick = (key: (typeof AUTHOR_NUTRITION_KEYS)[number]) =>
+    typeof record[key] === 'number' ? record[key] : null;
+  return {
+    calories: pick('calories'),
+    proteinGrams: pick('proteinGrams'),
+    carbsGrams: pick('carbsGrams'),
+    fatGrams: pick('fatGrams'),
+    fiberGrams: pick('fiberGrams'),
+    vitaminB12Mcg: pick('vitaminB12Mcg'),
+  };
+}
+
 export interface ContentActor {
   userId: string;
   role: Role;
@@ -119,9 +146,11 @@ export class ContentService {
     private readonly repository: ContentRepository,
     private readonly mediaService: MediaService,
     private readonly publicationPolicy: ContentPublicationPolicy,
-    /** Recipe submit hook: attaches a nutrition estimate to the pending revision; must never throw. */
-    private readonly onRecipeSubmitted: (revisionId: string) => Promise<void> = () =>
-      Promise.resolve(),
+    /** Recipe submit hook: attaches a nutrition estimate to the revision; must never throw. */
+    private readonly onRecipeSubmitted: (
+      revisionId: string,
+      options: { autoPublished: boolean },
+    ) => Promise<void> = () => Promise.resolve(),
   ) {}
 
   async listPublished(query: PostListQuery, actor?: ContentActor) {
@@ -363,12 +392,41 @@ export class ContentService {
           'Video upload phải là asset đã commit thuộc author; external URL phải thuộc allowlist',
       });
     }
-    const decision = this.publicationPolicy.decideSubmission(actor, {
-      title: revision.title,
-      ...(revision.excerpt ? { excerpt: revision.excerpt } : {}),
-      body: revision.body,
-      tags: revision.tags.map((item) => item.tag),
-    });
+    // Approved Contributors and Admins publish recipes directly once all six values are declared
+    // (user-approved 2026-10-29). Only the backend-authorised role/profile counts.
+    const trustedRecipeAuthor =
+      post.type === PostType.RECIPE &&
+      (actor.role === Role.ADMIN ||
+        (actor.role === Role.CONTRIBUTOR && actor.hasActiveContributorProfile));
+    if (trustedRecipeAuthor) {
+      const declared = revision.recipeDetail?.authorNutrition;
+      const missingMetrics = AUTHOR_NUTRITION_KEYS.filter(
+        (key) =>
+          !declared ||
+          typeof declared !== 'object' ||
+          Array.isArray(declared) ||
+          typeof (declared as Record<string, unknown>)[key] !== 'number',
+      );
+      if (missingMetrics.length) {
+        throw new AppError({
+          statusCode: 422,
+          code: 'RECIPE_NUTRITION_REQUIRED',
+          message:
+            'Contributor/Admin cần khai báo đủ 6 chỉ số dinh dưỡng mỗi khẩu phần trước khi đăng',
+          fields: { missingMetrics },
+        });
+      }
+    }
+    const decision = this.publicationPolicy.decideSubmission(
+      actor,
+      {
+        title: revision.title,
+        ...(revision.excerpt ? { excerpt: revision.excerpt } : {}),
+        body: revision.body,
+        tags: revision.tags.map((item) => item.tag),
+      },
+      { autoPublish: trustedRecipeAuthor },
+    );
     try {
       const submitted = await this.repository.submitRevision(
         post.id,
@@ -377,7 +435,9 @@ export class ContentService {
         input.expectedVersion,
         decision,
       );
-      if (post.type === PostType.RECIPE) await this.onRecipeSubmitted(revision.id);
+      if (post.type === PostType.RECIPE) {
+        await this.onRecipeSubmitted(revision.id, { autoPublished: decision.autoPublished });
+      }
       return this.postOutput(submitted.post, submitted.revision);
     } catch (error) {
       throw this.mapPersistenceError(error);
@@ -631,13 +691,24 @@ export class ContentService {
         reasonCodes: [...reasons],
       };
     });
-    // Author-supplied `recipe.nutrition` is ignored (2026-10-28): nutrition is calculated on submit
-    // and becomes official only when a reviewer approves the revision.
+    // Author values are optional for Members (missing ones are calculated on submit) and required
+    // for Contributors/Admins at submit. They become official only when the revision is published.
+    const nutrition = recipe.nutrition;
+    const authorNutrition = Object.fromEntries(
+      Object.entries(nutrition).filter(([, value]) => value !== undefined),
+    ) as Record<string, number>;
     return {
       servings: recipe.servings,
       prepTimeMinutes: recipe.prepTimeMinutes,
       cookTimeMinutes: recipe.cookTimeMinutes,
       difficulty: recipe.difficulty,
+      ...(nutrition.calories !== undefined ? { calories: nutrition.calories } : {}),
+      ...(nutrition.proteinGrams !== undefined ? { proteinGrams: nutrition.proteinGrams } : {}),
+      ...(nutrition.carbsGrams !== undefined ? { carbsGrams: nutrition.carbsGrams } : {}),
+      ...(nutrition.fatGrams !== undefined ? { fatGrams: nutrition.fatGrams } : {}),
+      ...(nutrition.fiberGrams !== undefined ? { fiberGrams: nutrition.fiberGrams } : {}),
+      ...(nutrition.vitaminB12Mcg !== undefined ? { vitaminB12Mcg: nutrition.vitaminB12Mcg } : {}),
+      authorNutrition,
       mealPlannerEligible: false,
       allergenCodes,
       traditionWarnings: [...warningMap.values()],
@@ -712,12 +783,13 @@ export class ContentService {
           difficulty: detail.difficulty,
           nutrition: {
             calories: detail.calories,
-            proteinGrams: detail.proteinGrams ? Number(detail.proteinGrams) : null,
-            carbsGrams: detail.carbsGrams ? Number(detail.carbsGrams) : null,
-            fatGrams: detail.fatGrams ? Number(detail.fatGrams) : null,
-            fiberGrams: detail.fiberGrams ? Number(detail.fiberGrams) : null,
-            vitaminB12Mcg: detail.vitaminB12Mcg ? Number(detail.vitaminB12Mcg) : null,
+            proteinGrams: detail.proteinGrams === null ? null : Number(detail.proteinGrams),
+            carbsGrams: detail.carbsGrams === null ? null : Number(detail.carbsGrams),
+            fatGrams: detail.fatGrams === null ? null : Number(detail.fatGrams),
+            fiberGrams: detail.fiberGrams === null ? null : Number(detail.fiberGrams),
+            vitaminB12Mcg: detail.vitaminB12Mcg === null ? null : Number(detail.vitaminB12Mcg),
           },
+          authorNutrition: authorNutritionOutput(detail.authorNutrition),
           mealPlannerEligible:
             post.status === PostStatus.PUBLISHED &&
             revision.status === 'PUBLISHED' &&

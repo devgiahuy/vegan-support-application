@@ -16,6 +16,10 @@ import type {
 } from '../types/recipe-draft.model';
 import type { RecipeFormValues } from '../schemas/recipe-form.schema';
 
+function isWholeNumber(value: number | undefined, min: number, max: number): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max;
+}
+
 export class RecipeDraftMapper extends BaseMapper<
   GenerateRecipeDraftResponseDto,
   RecipeDraftSuggestion
@@ -74,6 +78,15 @@ export class RecipeDraftMapper extends BaseMapper<
     if (rawDiff === 'EASY') difficulty = RecipeDifficulty.EASY;
     if (rawDiff === 'HARD') difficulty = RecipeDifficulty.HARD;
 
+    const rawTiming = pickField<Record<string, unknown> | null>(rawData, ['suggestedTiming'], null);
+    const suggestedTiming = rawTiming
+      ? {
+          servings: Math.max(1, safeNumber(pickField(rawTiming, ['servings'], 1), 1)),
+          prepTimeMinutes: Math.max(0, safeNumber(pickField(rawTiming, ['prepTimeMinutes'], 0), 0)),
+          cookTimeMinutes: Math.max(0, safeNumber(pickField(rawTiming, ['cookTimeMinutes'], 0), 0)),
+        }
+      : null;
+
     // Map provenance
     const rawProv = pickField<Record<string, unknown> | null>(rawData, ['provenance'], null) ?? {};
 
@@ -89,6 +102,7 @@ export class RecipeDraftMapper extends BaseMapper<
       steps,
       confidence: safeNumber(pickField(rawData, ['confidence'], 0.85), 0.85),
       assumptions: safeArray<string>(pickField<string[]>(rawData, ['assumptions'], [])),
+      suggestedTiming,
       provenance: {
         provider: safeString(pickField(rawProv, ['provider'], 'AI')),
         model: safeString(pickField(rawProv, ['model'], 'recipe-draft')),
@@ -102,7 +116,29 @@ export class RecipeDraftMapper extends BaseMapper<
       title: prompt.title.trim(),
       description: prompt.description.trim(),
       ingredientNames: prompt.ingredientNames.map((n) => n.trim()).filter(Boolean),
+      // Chỉ gửi số hợp lệ tác giả đã nhập; ô trống để AI đề xuất.
+      ...(isWholeNumber(prompt.servings, 1, 100) ? { servings: prompt.servings } : {}),
+      ...(isWholeNumber(prompt.prepTimeMinutes, 0, 10_080)
+        ? { prepTimeMinutes: prompt.prepTimeMinutes }
+        : {}),
+      ...(isWholeNumber(prompt.cookTimeMinutes, 0, 10_080)
+        ? { cookTimeMinutes: prompt.cookTimeMinutes }
+        : {}),
     };
+  }
+
+  /**
+   * Câu gợi ý khi thời gian AI tự đề xuất khác thời gian trong bản nháp (= số tác giả đã nhập).
+   * Trả null khi giống nhau hoặc backend không gửi `suggestedTiming`.
+   */
+  timingHint(model: RecipeDraftSuggestion): string | null {
+    const ai = model.suggestedTiming;
+    if (!ai) return null;
+    const parts: string[] = [];
+    if (ai.prepTimeMinutes !== model.prepTimeMinutes)
+      parts.push(`sơ chế ${ai.prepTimeMinutes} phút`);
+    if (ai.cookTimeMinutes !== model.cookTimeMinutes) parts.push(`nấu ${ai.cookTimeMinutes} phút`);
+    return parts.length ? `AI ước lượng ${parts.join(', ')}; bạn có thể chỉnh nếu cần.` : null;
   }
 
   /**

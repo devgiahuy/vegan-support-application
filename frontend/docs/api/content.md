@@ -313,6 +313,15 @@ Generate an editable recipe draft from a title, description and ingredient names
       "items": {
         "type": "string"
       }
+    },
+    "servings": {
+      "type": "integer"
+    },
+    "prepTimeMinutes": {
+      "type": "integer"
+    },
+    "cookTimeMinutes": {
+      "type": "integer"
     }
   },
   "additionalProperties": false
@@ -341,6 +350,7 @@ Generate an editable recipe draft from a title, description and ingredient names
         "ingredientConfidence",
         "confidence",
         "assumptions",
+        "suggestedTiming",
         "provenance"
       ],
       "properties": {
@@ -409,6 +419,28 @@ Generate an editable recipe draft from a title, description and ingredient names
             "_truncated": true
           }
         },
+        "suggestedTiming": {
+          "type": "object",
+          "required": [
+            "servings",
+            "prepTimeMinutes",
+            "cookTimeMinutes"
+          ],
+          "properties": {
+            "servings": {
+              "type": "integer",
+              "_truncated": true
+            },
+            "prepTimeMinutes": {
+              "type": "integer",
+              "_truncated": true
+            },
+            "cookTimeMinutes": {
+              "type": "integer",
+              "_truncated": true
+            }
+          }
+        },
         "provenance": {
           "type": "object",
           "required": [
@@ -427,14 +459,7 @@ Generate an editable recipe draft from a title, description and ingredient names
             },
             "templateVersion": {
               "type": "string",
-              "_truncated": true
-            }
-          }
-        }
-      }
-    }
-  }
-}
+  …(truncated — xem api-catalog.json)
 ```
 
 #### MyPostListResponse

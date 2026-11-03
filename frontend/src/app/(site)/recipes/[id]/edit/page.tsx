@@ -15,6 +15,7 @@ import {
 import { ReviewStatusBanner } from '@/features/review/components/review-status-banner';
 import { ReviewHistoryDialog } from '@/features/review/components/review-history-dialog';
 import { useAuthStore } from '@/store/useAuthStore';
+import { UserRole } from '@/common/enums';
 import type { RecipeFormValues } from '@/features/recipe/schemas/recipe-form.schema';
 import { recipeFormToRecipe, recipeToFormValues } from '@/features/recipe/utils/recipe-form-values';
 import { getApiErrorCode } from '@/lib/api-error';
@@ -25,6 +26,9 @@ export default function EditRecipePage() {
   const router = useRouter();
   const [historyDialogOpen, setHistoryDialogOpen] = React.useState(false);
   const currentUser = useAuthStore((s) => s.user);
+  // Contributor/Admin khai báo đủ dinh dưỡng thì bản sửa được xuất bản ngay khi lưu.
+  const publishesDirectly =
+    currentUser?.role === UserRole.ADMIN || currentUser?.role === UserRole.CONTRIBUTOR;
 
   const {
     data: recipe,
@@ -126,7 +130,10 @@ export default function EditRecipePage() {
                 <Pencil className="h-7 w-7 text-primary" /> Chỉnh Sửa Công Thức
               </h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                Sửa theo từng bước, xem lại rồi lưu. Bản sửa được gửi kiểm duyệt ngay khi lưu.
+                Sửa theo từng bước, xem lại rồi lưu.{' '}
+                {publishesDirectly
+                  ? 'Bản sửa được xuất bản ngay khi lưu.'
+                  : 'Bản sửa được gửi kiểm duyệt ngay khi lưu.'}
               </p>
             </div>
             <Button asChild variant="ghost" size="sm" className="gap-1.5 text-muted-foreground">
@@ -164,7 +171,7 @@ export default function EditRecipePage() {
             onSubmit={handleSubmit}
             isSubmitting={updateMutation.isPending}
             formTitle="Cập nhật công thức món chay"
-            submitLabel="Lưu & gửi kiểm duyệt"
+            submitLabel={publishesDirectly ? 'Lưu & xuất bản' : 'Lưu & gửi kiểm duyệt'}
           />
         </div>
       )}

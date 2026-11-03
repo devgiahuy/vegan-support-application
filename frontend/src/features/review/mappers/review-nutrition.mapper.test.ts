@@ -44,6 +44,9 @@ const response: ReviewNutritionPanelResponseDto = {
         unit: 'g',
         estimate: { value: 6, partialValue: 6, origin: 'AI_ESTIMATED', confidence: 0.3 },
         override: { value: 7.5, updatedBy: actor, updatedAt: '2026-10-28T10:05:00.000Z' },
+        author: 9,
+        deviationPercent: 50,
+        deviationWarning: true,
         finalValue: 7.5,
         finalOrigin: 'VERIFIED_OVERRIDE',
       },
@@ -144,6 +147,18 @@ describe('ReviewNutritionMapper', () => {
     expect(protein.estimateOrigin).toBe(ReviewNutritionOrigin.AI_ESTIMATED);
     expect(protein.override?.updatedBy.displayName).toBe('Quản trị viên');
     expect(protein.override?.updatedAt).toBeInstanceOf(Date);
+  });
+
+  it('maps author value, deviation and warning; defaults when absent', () => {
+    const [calories, protein] = reviewNutritionMapper.toResponse(response).metrics;
+
+    expect(protein.authorValue).toBe(9);
+    expect(protein.deviationPercent).toBe(50);
+    expect(protein.deviationWarning).toBe(true);
+    expect(calories.authorValue).toBeNull();
+    expect(calories.deviationPercent).toBeNull();
+    expect(calories.deviationWarning).toBe(false);
+    expect(getReviewNutritionOriginLabel(ReviewNutritionOrigin.USER_PROVIDED)).toBe('Tác giả nhập');
   });
 
   it('never presents a partial sum as the value of a missing metric', () => {

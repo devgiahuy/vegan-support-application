@@ -238,3 +238,13 @@ export interface DeleteMealPlanResponseDto {
   data?: { id?: string; deleted?: boolean } | null;
   meta?: null;
 }
+
+/**
+ * `error.fields` của 409 manual-add khi món bị chặn bởi ràng buộc cứng
+ * (`MEAL_PLAN_HARD_CONSTRAINT_VIOLATION`) hoặc chưa xác minh được
+ * (`MEAL_PLAN_INGREDIENTS_UNVERIFIED`).
+ */
+export interface MealPlanConstraintErrorFieldsDto {
+  reasons?: unknown;
+  unverifiedIngredients?: unknown;
+}

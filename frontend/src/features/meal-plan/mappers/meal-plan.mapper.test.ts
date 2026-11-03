@@ -569,3 +569,39 @@ describe('MealPlanMapper', () => {
     expect(slot.coverImageUrl).toBe('https://images.unsplash.com/photo-custom');
   });
 });
+
+describe('mealPlanMapper.toConstraintError', () => {
+  it('maps unverified ingredients as UNVERIFIED, not a violation', () => {
+    expect(
+      mealPlanMapper.toConstraintError('MEAL_PLAN_INGREDIENTS_UNVERIFIED', {
+        reasons: ['UNRESOLVED_INGREDIENT'],
+        unverifiedIngredients: ['bún', 'chả chay', '', 3],
+      })
+    ).toEqual({
+      kind: 'UNVERIFIED',
+      reasons: ['UNRESOLVED_INGREDIENT'],
+      unverifiedIngredients: ['bún', 'chả chay'],
+    });
+  });
+
+  it('maps hard constraint violation and tolerates missing fields', () => {
+    expect(
+      mealPlanMapper.toConstraintError('MEAL_PLAN_HARD_CONSTRAINT_VIOLATION', undefined)
+    ).toEqual({ kind: 'VIOLATION', reasons: [], unverifiedIngredients: [] });
+    expect(
+      mealPlanMapper.toConstraintError('MEAL_PLAN_HARD_CONSTRAINT_VIOLATION', {
+        reasons: ['ALLERGY', 'UNRESOLVED_INGREDIENT'],
+        unverifiedIngredients: 'bún',
+      })
+    ).toEqual({
+      kind: 'VIOLATION',
+      reasons: ['ALLERGY', 'UNRESOLVED_INGREDIENT'],
+      unverifiedIngredients: [],
+    });
+  });
+
+  it('returns null for unrelated error codes', () => {
+    expect(mealPlanMapper.toConstraintError('MEAL_PLAN_VERSION_CONFLICT', {})).toBeNull();
+    expect(mealPlanMapper.toConstraintError(undefined, undefined)).toBeNull();
+  });
+});

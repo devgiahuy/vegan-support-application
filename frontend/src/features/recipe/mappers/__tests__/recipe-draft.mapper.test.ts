@@ -162,6 +162,54 @@ describe('RecipeDraftMapper', () => {
       expect(dto.title).toBe('Canh chua chay');
       expect(dto.description).toBe('Nấu với thơm và bạc hà');
       expect(dto.ingredientNames).toEqual(['Đậu hũ', 'Bạc hà']);
+      expect('servings' in dto).toBe(false);
+    });
+
+    it('gửi khẩu phần và thời gian hợp lệ từ bước 1, bỏ qua giá trị không hợp lệ', () => {
+      const dto = mapper.toDto({
+        title: 'Canh chua chay',
+        description: 'Nấu với thơm',
+        ingredientNames: ['Đậu hũ'],
+        servings: 4,
+        prepTimeMinutes: 0,
+        cookTimeMinutes: Number.NaN,
+      });
+      expect(dto.servings).toBe(4);
+      expect(dto.prepTimeMinutes).toBe(0);
+      expect('cookTimeMinutes' in dto).toBe(false);
+      expect('servings' in mapper.toDto({ ...dto, servings: 0 })).toBe(false);
+    });
+  });
+
+  describe('suggestedTiming', () => {
+    it('ánh xạ gợi ý thời gian của AI và tạo câu gợi ý khi khác số đã nhập', () => {
+      const model = mapper.toModel({
+        ...mockResponseDto,
+        data: {
+          ...mockResponseDto.data,
+          suggestedTiming: { servings: 4, prepTimeMinutes: 10, cookTimeMinutes: 25 },
+        },
+      });
+      expect(model.suggestedTiming).toEqual({
+        servings: 4,
+        prepTimeMinutes: 10,
+        cookTimeMinutes: 25,
+      });
+      expect(mapper.timingHint(model)).toBe(
+        'AI ước lượng sơ chế 10 phút; bạn có thể chỉnh nếu cần.'
+      );
+    });
+
+    it('không có gợi ý khi backend không gửi hoặc thời gian trùng', () => {
+      const model = mapper.toModel(mockResponseDto);
+      expect(model.suggestedTiming).toBeNull();
+      expect(mapper.timingHint(model)).toBeNull();
+      expect(
+        mapper.timingHint({
+          ...model,
+          suggestedTiming: { servings: 4, prepTimeMinutes: 15, cookTimeMinutes: 25 },
+        })
+      ).toBeNull();
     });
   });
 

@@ -120,6 +120,8 @@ export interface RecipeSnapshot {
   fatGrams?: number;
   fiberGrams?: number;
   vitaminB12Mcg?: number;
+  /** Author-entered per-serving values only (no computed ones). */
+  authorNutrition: Prisma.InputJsonObject;
   mealPlannerEligible: boolean;
   allergenCodes: string[];
   traditionWarnings: Array<{ tradition: string; warningCode: string; label: string }>;
@@ -710,11 +712,17 @@ export class ContentRepository {
         data: {
           status: decision.revisionStatus,
           submittedAt: now,
-          reviewNote: null,
-          reviewedById: null,
-          reviewedAt: null,
+          ...(decision.autoPublished
+            ? {
+                reviewNote: 'Tự xuất bản: tác giả là Contributor/Admin đã khai báo đủ dinh dưỡng',
+                reviewedById: actorId,
+                reviewedAt: now,
+              }
+            : { reviewNote: null, reviewedById: null, reviewedAt: null }),
         },
       });
+      if (decision.autoPublished)
+        await this.applyAutoPublish(transaction, revisionId, postId, actorId);
       if (decision.moderationFlag) {
         await transaction.aiFlag.create({
           data: { postRevisionId: revisionId, ...decision.moderationFlag },
@@ -737,7 +745,9 @@ export class ContentRepository {
       const current = await transaction.post.findUniqueOrThrow({ where: { id: postId } });
       await transaction.post.update({
         where: { id: postId },
-        data: { status: current.publishedRevisionId ? PostStatus.PUBLISHED : decision.postStatus },
+        data: decision.autoPublished
+          ? { status: PostStatus.PUBLISHED, publishedRevisionId: revisionId, publishedAt: now }
+          : { status: current.publishedRevisionId ? PostStatus.PUBLISHED : decision.postStatus },
       });
       return {
         post: await transaction.post.findUniqueOrThrow({
@@ -749,6 +759,55 @@ export class ContentRepository {
           include: revisionInclude,
         }),
       };
+    });
+  }
+
+  /** Author-declared values become the published recipe nutrition; audited like a review decision. */
+  private async applyAutoPublish(
+    transaction: Prisma.TransactionClient,
+    revisionId: string,
+    postId: string,
+    actorId: string,
+  ): Promise<void> {
+    const [detail, unresolvedIngredients, actor, revision] = await Promise.all([
+      transaction.recipeDetail.findUniqueOrThrow({ where: { revisionId } }),
+      transaction.recipeIngredient.count({
+        where: { revisionId, resolutionStatus: { not: 'EXACT' } },
+      }),
+      transaction.user.findUniqueOrThrow({ where: { id: actorId }, select: { role: true } }),
+      transaction.postRevision.findUniqueOrThrow({
+        where: { id: revisionId },
+        select: { version: true },
+      }),
+    ]);
+    await transaction.recipeDetail.update({
+      where: { revisionId },
+      data: {
+        mealPlannerEligible:
+          unresolvedIngredients === 0 &&
+          detail.calories !== null &&
+          detail.proteinGrams !== null &&
+          detail.carbsGrams !== null &&
+          detail.fatGrams !== null,
+      },
+    });
+    await transaction.moderationAction.create({
+      data: {
+        actorId,
+        decision: ModerationDecision.APPROVE,
+        targetType: ModerationTargetType.POST,
+        targetId: postId,
+        reason: 'Tự xuất bản công thức của Contributor/Admin (đã khai báo đủ dinh dưỡng)',
+        relatedAiFlagIds: [],
+        metadata: {
+          revisionId,
+          revisionVersion: revision.version,
+          reviewerRole: actor.role,
+          autoPublished: true,
+          automatedDecision: false,
+          nutrition: detail.authorNutrition ?? {},
+        },
+      },
     });
   }
 
@@ -813,6 +872,7 @@ export class ContentRepository {
                   ...(recipe.vitaminB12Mcg !== undefined
                     ? { vitaminB12Mcg: recipe.vitaminB12Mcg }
                     : {}),
+                  authorNutrition: recipe.authorNutrition,
                   mealPlannerEligible: recipe.mealPlannerEligible,
                   allergenCodes: recipe.allergenCodes,
                   traditionWarnings: recipe.traditionWarnings,
