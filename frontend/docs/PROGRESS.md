@@ -1,5 +1,9 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Refactor chọn ảnh cho luồng quét tủ lạnh và hóa đơn — Updated 2026-11-05
+
+Tách logic chọn, kiểm tra, sắp xếp, xóa và dọn URL ảnh trùng lặp sang hook chung trong `features/storage/hooks`. Hai màn quét giữ nguyên giao diện, giới hạn 6/4 ảnh và luồng tạo job riêng. Không đổi API hoặc trạng thái tích hợp. Typecheck, lint các file sửa, 732 tests và build 47 routes đều pass. Lint toàn frontend còn 82 lỗi và 318 cảnh báo ở các file ngoài phạm vi refactor.
+
 ## Dinh dưỡng công thức tính khi gửi duyệt, người duyệt xác nhận — Updated 2026-10-28
 
 Tác giả không còn nhập dinh dưỡng (bỏ khỏi form, schema và request DTO; backend cũng bỏ qua). Khi gửi duyệt, backend tính từ dữ liệu chuẩn và chạy job AI nền nếu thiếu dữ liệu. Modal duyệt bài có panel "Dinh dưỡng chờ duyệt": 5 chỉ số mỗi khẩu phần kèm nguồn (Dữ liệu chuẩn / AI ước tính / Người duyệt sửa), độ tin cậy, nguyên liệu chưa tính được, trạng thái job (tự làm mới 10 giây/lần khi job đang chạy), nút "AI tính lại", sửa tay có lý do, bỏ sửa tay, giá trị bản trước (chỉ tham khảo) và lịch sử chỉnh sửa. Nút "Phê duyệt" bị khoá khi còn chỉ số trống; xử lý `RECIPE_NUTRITION_INCOMPLETE`. Feature `features/review` (DTO/Model/Mapper/API/Query + mapper test). tsc, 68 files/730+ tests, build pass; browser kiểm panel với backend local. Mobile chưa có panel duyệt dinh dưỡng.

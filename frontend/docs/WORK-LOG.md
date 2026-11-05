@@ -1,5 +1,12 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-11-05] — Refactor quản lý ảnh trong hai luồng quét
+
+- **Yêu cầu**: Tạo nhánh riêng và refactor `frontend/src` mà không đổi hành vi.
+- **Nhánh**: `codex/refactor-src` (từ `dev`).
+- **Thay đổi**: Thêm `features/storage/hooks/use-selected-upload-images.ts` để dùng chung thao tác chọn, xác thực, sắp xếp, xóa và thu hồi URL ảnh. `fridge-upload-zone.tsx` và `receipt-upload-zone.tsx` gọi hook; giới hạn ảnh, thông báo và cách tạo job vẫn giữ nguyên.
+- **Kiểm chứng**: `npx tsc --noEmit`, scoped ESLint, `npm test` (68 files, 732 tests) và `npm run build` (47 routes) pass. `npm run lint` toàn frontend còn 82 lỗi và 318 cảnh báo tại các file ngoài phạm vi sửa. Không đổi endpoint, DTO, mapper hoặc backend contract nên không chạy Swagger sync.
+
 ## [2026-10-29] — Trang /admin/dashboard: Chuẩn hóa hiển thị lý do báo cáo & thêm 2 nút cuộn ngang thanh tabs
 
 - **Yêu cầu**:
