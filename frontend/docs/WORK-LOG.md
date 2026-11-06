@@ -1,5 +1,69 @@
 # WORK-LOG — Nhật ký làm việc (agent cập nhật sau mỗi task)
 
+## [2026-11-05] — Kiểm tra lại response và lỗi API
+
+- **Mục tiêu:** Rà soát lần hai toàn bộ consumer response theo luồng Query/UI → API → mapper và đối chiếu catalog Swagger.
+- **Đã làm:** `/posts` READY không còn trả fixture hoặc thành công giả khi lỗi mạng/server/ghi dữ liệu; GET meal analysis chỉ trả `null` cho `MEAL_ANALYSIS_NOT_FOUND`, còn `MEAL_ANALYSIS_STALE`, lỗi mạng và payload sai đi tới Query error; meal program detail/create/patch/progress kiểm tra envelope trước khi map. Xóa hai API `/uploads/signature` đã REMOVED, fixture và helper fallback không còn consumer; chuyển `UploadedMediaMeta` sang storage model. Thêm test cho lỗi API và payload thiếu. Không đổi backend contract.
+- **File chính:** `src/features/{post,recipe,video,meal-analysis,meal-program,storage}`, `src/common/constants/endpoints/uploads.endpoints.ts`, `docs/BACKEND_INTEGRATION.md`, `docs/PROGRESS.md`, `docs/WORK-LOG.md`.
+- **Kiểm chứng:** `npm run sync:swagger -- ../backend/openapi.json`, `npx tsc --noEmit`, scoped ESLint (0 lỗi), `npm test` (95 files/783 tests), `npm run build` (47 routes) pass. Chưa kiểm thử tay với backend live.
+- **Tiến độ:** Không đổi %. Các endpoint và trạng thái tích hợp giữ nguyên.
+
+## [2026-11-05] — Rà soát cuối các luồng response frontend
+
+- **Mục tiêu:** Kiểm tra mọi consumer API trong `src/features`, sửa luồng còn đọc sai envelope hoặc trả DTO chưa map.
+- **Đã làm:** Đối chiếu các consumer với catalog Swagger 189 endpoints. Sửa danh sách meal program đọc mảng `data` và phân trang `meta` ở envelope; custom meal dùng envelope chuẩn, báo lỗi khi thiếu dữ liệu; storage admin dùng mảng phân trang chuẩn và mapper cho tham số upload nội bộ. Thêm test API cho ba domain và cập nhật test mapper. Không đổi endpoint/backend contract hoặc trạng thái tích hợp.
+- **File chính:** `src/features/meal-program/{api,types,mappers}`, `src/features/custom-meal/{api,types}`, `src/features/storage/{api,types,mappers}`, `docs/BACKEND_INTEGRATION.md`, `docs/PROGRESS.md`, `docs/WORK-LOG.md`.
+- **Kiểm chứng:** `npm run sync:swagger -- ../backend/openapi.json`, `npx tsc --noEmit`, scoped ESLint, `npm test` (96 files/787 tests), `npm run build` (47 routes) pass. Chưa chạy kiểm thử tay với backend live.
+- **Tiến độ:** Phase 15/17/19 giữ 100% → 100%. Luồng SSE chat và phản hồi Cloudinary trực tiếp không phải envelope backend; hai module upload signature cũ không có consumer runtime.
+
+## [2026-11-05] — Chuẩn hóa Model chi tiết nội dung quản trị
+
+- `adminContentApi.getContent` tách response, dùng mapper theo loại và trả `AdminContentDetail` gồm `type` và Model recipe/bài viết/video. Query detail không còn nhận `BasePostDto`; loại không hỗ trợ được báo lỗi.
+- Đã đồng bộ Swagger từ OpenAPI local, cập nhật mapper/API tests; typecheck, scoped lint, 780 tests và build 47 routes pass. Endpoint/backend contract và trạng thái tích hợp không đổi.
+
+## [2026-11-05] — Hoàn tất lượt rà soát envelope trong mapper frontend
+
+- Chuyển AI governance, duyệt nội dung, nội dung quản trị, AI artifacts, fixture chia sẻ chat, danh sách chương trình thực đơn và tủ bếp sang nhận data/metadata đã tách. Giữ cách xử lý nhiều shape danh sách chương trình và kết quả rỗng của AI artifacts.
+- Rà soát truy cập `data` trên tham số mapper: `food-data` đọc `data` thuộc bản ghi nghiệp vụ; API đã tách envelope trước đó. Chat stream SSE và fixture chia sẻ giữ trạng thái hiện tại; không bổ sung backend capability.
+- Đồng bộ Swagger từ OpenAPI local; typecheck, 774 tests và build 47 routes pass; scoped lint 0 lỗi, 11 cảnh báo unused. Không đổi backend contract.
+
+## [2026-11-05] — Tách response cộng đồng, Contributor, kiểm duyệt và nhà hàng
+
+- Chuyển API/mapper và các nhánh fixture cộng đồng; giữ phân trang, dữ liệu trạng thái Contributor, cờ bảo vệ admin, metadata nhà cung cấp và fallback geocode.
+- Đồng bộ Swagger từ OpenAPI local; typecheck, scoped lint, 764 tests và build 47 routes pass. Các domain khác chưa hoàn tất.
+
+## [2026-11-05] — Tiếp tục tách response xác thực và dinh dưỡng
+
+- Chuyển mapper xác thực, chế độ ăn, phân tích thực đơn và panel dinh dưỡng duyệt sang nhận data; bảo toàn fallback response phẳng của refresh và phân tích, cùng dữ liệu nguồn và độ tin cậy dinh dưỡng.
+- Đồng bộ Swagger từ OpenAPI local; typecheck, scoped lint, 758 tests và build 47 routes pass. Các domain còn lại chưa hoàn thành.
+
+## [2026-11-05] — Tiếp tục tách response theo domain
+
+- Chuyển meal plan, nguyên liệu công khai/quản trị, recommendation, chat riêng tư và thống kê sử dụng AI; giữ metadata phân trang và ràng buộc recommendation. Chat stream SSE giữ luồng riêng.
+- Đồng bộ Swagger từ OpenAPI local, cập nhật mapper test và thêm API test. Typecheck, scoped lint, 752 tests và build 47 routes pass. Các domain còn lại chưa hoàn thành.
+
+## [2026-11-05] — Tiếp tục chuẩn hóa response frontend
+
+- Chuyển API hồ sơ cơ bản, danh mục dị ứng, báo cáo an toàn và gợi ý bản nháp công thức sang truyền data DTO trực tiếp cho mapper; giữ kiểm tra lỗi và fallback hiện tại.
+- Đồng bộ Swagger từ OpenAPI local; cập nhật mapper test và thêm API test. Typecheck, scoped lint, 743 tests và build 47 routes pass. Các mapper còn lại chưa hoàn thành.
+
+## [2026-11-05] — Tách response thông báo
+
+- Notification API đọc data và metadata từ envelope; mapper nhận trực tiếp dữ liệu để xử lý danh sách, số chưa đọc và kết quả đánh dấu đã đọc.
+- Cập nhật mapper test và bổ sung API test; Swagger sync từ OpenAPI local, typecheck, scoped lint, 738 tests và build 47 routes pass. Không đổi backend contract; các domain khác chưa hoàn tất.
+
+## [2026-11-05] — Tiếp tục tách response cho danh mục quản trị
+
+- API danh mục quản trị đọc data và metadata từ envelope; mapper nhận dữ liệu trực tiếp. Giữ fallback và metadata phân trang.
+- Đã cập nhật mapper test, bổ sung test response API; typecheck, scoped lint, 736 tests và build 47 routes pass. Đã sync Swagger từ OpenAPI local; không đổi backend contract.
+- Các domain khác còn mapper nhận response envelope và chưa được chuyển đổi trong thay đổi này.
+
+## [2026-11-05] — Tách endpoint theo feature và làm rõ response flow
+
+- **Yêu cầu**: Dễ tìm endpoint theo feature và kiểm tra độ phức tạp của luồng response.
+- **Thay đổi**: Tách 43 nhóm constants, đặt nhóm nhiều feature dùng vào common; chuyển các consumer và cập nhật quy tắc kiến trúc. Category API đọc envelope và chuyển data DTO cho mapper. Các mapper khác giữ cách xử lý hiện tại trong khi chuyển đổi dần.
+- **Kiểm chứng**: Swagger sync từ `backend/openapi.json`; so sánh AST xác nhận 43 nhóm endpoint giữ nguyên giá trị; typecheck, scoped lint, 734 tests và build 47 routes pass. Không đổi contract hoặc trạng thái tích hợp.
+
 ## [2026-11-05] — Refactor quản lý ảnh trong hai luồng quét
 
 - **Yêu cầu**: Tạo nhánh riêng và refactor `frontend/src` mà không đổi hành vi.

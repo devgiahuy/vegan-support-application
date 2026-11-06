@@ -1,5 +1,49 @@
 # PROGRESS — Lịch sử & % hoàn thành theo task / chức năng
 
+## Kiểm tra lại response và lỗi API — Updated 2026-11-05
+
+Đợt rà soát bổ sung tìm thấy fallback fixture còn chạy trên `/posts` READY, nhánh GET meal analysis nuốt lỗi `409 MEAL_ANALYSIS_STALE`, và meal program detail/create/update có thể map payload thiếu thành Model rỗng. Đã sửa các luồng này và bỏ client upload signature không còn endpoint. Các feature liên quan giữ nguyên % vì không thêm capability. Typecheck, 783 tests và build 47 routes pass; lint phạm vi sửa 0 lỗi.
+
+## Rà soát hoàn tất luồng response — Updated 2026-11-05
+
+Sửa danh sách meal program theo `data[]`/`meta` của OpenAPI (trước đó có thể hiện rỗng dù server trả dữ liệu); custom meal bỏ fallback body phẳng; storage admin dùng phân trang chuẩn và mapper cho tham số upload. Phase 15/17/19 giữ 100% → 100% vì đây là sửa consumer, không thêm capability. Typecheck, scoped lint, 787 tests và build 47 routes pass. Các API đang hoạt động đều trả Model qua mapper; SSE chat và phản hồi trực tiếp của nhà cung cấp upload là luồng vận chuyển riêng.
+
+## Chi tiết nội dung quản trị — Updated 2026-11-05
+
+Consumer `GET /posts/{idOrSlug}` cho quản trị trả `AdminContentDetail` phân biệt recipe, bài viết và video thay vì trả DTO thô. Query nhận Model; loại không hỗ trợ trả lỗi rõ ràng. Typecheck, scoped lint, 780 tests và build 47 routes pass.
+
+## Chuẩn hóa response frontend — Updated 2026-11-05
+
+Chuyển tiếp AI governance, duyệt nội dung, nội dung quản trị, AI artifacts, fixture chia sẻ chat, danh sách chương trình thực đơn và tủ bếp. Rà soát mapper trong `src/features`: trường `data` còn ở food-data là nội dung của bản ghi, không phải envelope; SSE xử lý riêng. Typecheck, 774 tests và build 47 routes pass; scoped lint không có lỗi, còn 11 cảnh báo unused tại các file đã kiểm tra.
+
+## Response cộng đồng, Contributor, kiểm duyệt và nhà hàng — Updated 2026-11-05
+
+API tách data và metadata trước mapper cho các luồng cộng đồng, Contributor, kiểm duyệt và nhà hàng; giữ fixture cộng đồng, metadata nhà cung cấp và kết quả geocode không có tọa độ. Typecheck, scoped lint, 764 tests và build 47 routes pass. Các domain khác vẫn cần rà soát.
+
+## Tiếp tục response xác thực, chế độ ăn và dinh dưỡng — Updated 2026-11-05
+
+Chuyển xác thực/refresh, chế độ ăn, phân tích thực đơn và panel dinh dưỡng duyệt sang tách envelope tại API; giữ hỗ trợ refresh và phân tích dạng phẳng cũ. Các domain khác vẫn chờ chuyển đổi.
+
+## Tiếp tục chuẩn hóa response — Updated 2026-11-05
+
+Chuyển meal plan, nguyên liệu công khai/quản trị, recommendation, chat riêng tư và thống kê sử dụng AI sang truyền data và metadata cần thiết từ API function vào mapper. Các domain khác vẫn cần kiểm tra và chuyển đổi.
+
+## Response hồ sơ, dị ứng, báo cáo và gợi ý công thức — Updated 2026-11-05
+
+API hồ sơ cơ bản, danh mục dị ứng, báo cáo an toàn và gợi ý bản nháp công thức tách data từ envelope trước khi gọi mapper. Các luồng khác vẫn đang chờ chuyển đổi.
+
+## Response thông báo — Updated 2026-11-05
+
+API thông báo tách data và metadata trước khi mapper xử lý danh sách, số chưa đọc và các thao tác đánh dấu đã đọc. Typecheck, scoped lint, 738 tests và build 47 routes pass; các domain khác tiếp tục chờ chuyển đổi.
+
+## Response danh mục quản trị — Updated 2026-11-05
+
+API danh mục quản trị tách data và metadata trước khi gọi mapper cho danh sách, tạo, sửa và lưu trữ. Các domain khác vẫn cần chuyển đổi. Typecheck, scoped lint, 736 tests và build 47 routes pass.
+
+## Tổ chức endpoint theo feature — Updated 2026-11-05
+
+Tách 43 nhóm endpoint theo feature hoặc domain dùng chung, chuyển consumer sang import trực tiếp và cập nhật hướng dẫn kiến trúc. Luồng category API đọc response envelope trước khi mapper chuyển dữ liệu sang Model. Không đổi đường dẫn hoặc readiness backend.
+
 ## Refactor chọn ảnh cho luồng quét tủ lạnh và hóa đơn — Updated 2026-11-05
 
 Tách logic chọn, kiểm tra, sắp xếp, xóa và dọn URL ảnh trùng lặp sang hook chung trong `features/storage/hooks`. Hai màn quét giữ nguyên giao diện, giới hạn 6/4 ảnh và luồng tạo job riêng. Không đổi API hoặc trạng thái tích hợp. Typecheck, lint các file sửa, 732 tests và build 47 routes đều pass. Lint toàn frontend còn 82 lỗi và 318 cảnh báo ở các file ngoài phạm vi refactor.
@@ -335,6 +379,8 @@ Roadmap Phase 2 features are tracked only in `/docs/ROADMAP_PHASE_2.md`; they mu
 ## Lịch sử cập nhật (mỗi dòng = 1 lần agent sửa %)
 
 | Ngày (UTC) | Task | % cũ → % mới | Lý do |
+| 2026-11-05 | Kiểm tra lại response và lỗi API | % các feature giữ nguyên | Bỏ fixture fallback trên `/posts` READY, phân biệt 404 chưa phân tích với 409 stale, kiểm tra envelope meal program và bỏ upload signature cũ; 783 tests, typecheck, build pass. |
+| 2026-11-05 | Rà soát cuối response frontend | Phase 15/17/19 100% → 100% | Sửa `data[]`/`meta` meal program; loại fallback sai ở custom meal và storage; 787 tests, typecheck, scoped lint, build 47 routes pass. |
 | 2026-10-25 | Kiểm chứng và bàn giao nhánh sửa 3 luồng | Phase 17/19 100% → 100% | 12 runtime/API checks, 42 món qua mapper; sửa zero/clear/manual macro UI và tổng macro tuần; browser QA custom meal. |
 | 2026-10-25 | Sửa popup kết quả nhập receipt trên `/receipts/scan` | Phase 22 FE scaffold 100% → 100% | Giới hạn chiều cao modal theo viewport, cuộn danh sách bên trong; thẻ thống kê xếp dọc ở viewport hẹp và dùng cột co giãn trên desktop để không tràn ngang. |
 | 2026-10-25 | Receipt purchase identity and review | Phase 22 FE scaffold 100% → 100% | Đồng bộ consumer dev với contract receipt mới; mua cùng món vào ngày khác được giữ là lần mua riêng, lựa chọn xử lý ảnh trùng/ảnh một phần, và UI xử lý dòng phi thực phẩm bị loại. Production vẫn chờ BE READY và kiểm tra hóa đơn thực. |

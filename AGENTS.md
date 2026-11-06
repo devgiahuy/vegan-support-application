@@ -41,7 +41,7 @@ If a backend change is breaking, set the affected endpoint status to `CHANGING`,
 
 - Integrate only endpoints marked `READY` in `frontend/docs/BACKEND_INTEGRATION.md`.
 - Run `npm run sync:swagger` from `frontend/` before implementing or updating an API consumer.
-- Add every path to `src/common/constants/api-endpoints.ts`; do not hard-code endpoint strings inside features.
+- Define endpoint paths in the owning feature's `constants/*.endpoints.ts`; put paths shared by multiple features in `src/common/constants/endpoints/`. Do not hard-code endpoint paths in API consumers.
 - Every API consumer requires separate request/response DTOs, UI Models, Mappers, API functions, TanStack Query keys/hooks, and mapper tests.
 - Components must not consume raw backend DTOs and must not use `any`.
 - Handle documented business error codes and loading/error/empty/success states.

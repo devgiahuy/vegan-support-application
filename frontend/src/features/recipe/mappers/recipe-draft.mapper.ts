@@ -17,15 +17,11 @@ import type {
 import type { RecipeFormValues } from '../schemas/recipe-form.schema';
 
 export class RecipeDraftMapper extends BaseMapper<
-  GenerateRecipeDraftResponseDto,
+  GenerateRecipeDraftResponseDto['data'],
   RecipeDraftSuggestion
 > {
-  toModel(dto: GenerateRecipeDraftResponseDto): RecipeDraftSuggestion {
-    const rawData = pickField<GenerateRecipeDraftResponseDto['data'] | null>(
-      dto,
-      ['data'],
-      null
-    ) ?? {
+  toModel(dto: GenerateRecipeDraftResponseDto['data'] | null | undefined): RecipeDraftSuggestion {
+    const rawData = dto ?? {
       draft: {},
       ingredientConfidence: [],
       confidence: 0.85,

@@ -356,14 +356,11 @@ describe('MealProgramMapper', () => {
     expect(listItem.overallComplianceRate).toBe(92);
     expect(listItem.coverImageUrl).toBe('https://example.com/cover.jpg');
 
-    const result = mapper.toListResult({
-      items: [listDto],
-      pagination: {
-        page: 1,
-        limit: 10,
-        totalItems: 1,
-        totalPages: 1,
-      },
+    const result = mapper.toListResult([listDto], {
+      page: 1,
+      limit: 10,
+      total: 1,
+      totalPages: 1,
     });
     expect(result.items.length).toBe(1);
     expect(result.pagination.totalItems).toBe(1);

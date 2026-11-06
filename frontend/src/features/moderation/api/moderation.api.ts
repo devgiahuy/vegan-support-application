@@ -1,5 +1,5 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { MODERATION_ADMIN_ENDPOINTS } from '@/features/moderation/constants/moderation-admin.endpoints';
 import type { PaginationResult } from '@/types/api';
 import type {
   AdminModerationCommentListResponseDto,
@@ -25,18 +25,15 @@ export const moderationApi = {
   getReports: async (
     params?: ModerationQueryParams
   ): Promise<PaginationResult<ModerationReport>> => {
-    const res = await api.get<ModerationReportListResponseDto>(
-      API_ENDPOINTS.MODERATION_ADMIN.REPORTS,
-      {
-        params: {
-          page: params?.page,
-          limit: params?.limit,
-          status: params?.status || undefined,
-        },
-        silent: true,
-      }
-    );
-    return moderationMapper.toReportsList(res.data);
+    const res = await api.get<ModerationReportListResponseDto>(MODERATION_ADMIN_ENDPOINTS.REPORTS, {
+      params: {
+        page: params?.page,
+        limit: params?.limit,
+        status: params?.status || undefined,
+      },
+      silent: true,
+    });
+    return moderationMapper.toReportsList(res.data?.data, res.data?.meta);
   },
 
   /** `PATCH /admin/reports/:id/resolve` (đóng các báo cáo cùng target). */
@@ -47,16 +44,16 @@ export const moderationApi = {
   ): Promise<ModerationReport> => {
     const payload = moderationMapper.toResolveDto(decision, reason);
     const res = await api.patch<ModerationReportResponseDto>(
-      API_ENDPOINTS.MODERATION_ADMIN.REPORT_RESOLVE(id),
+      MODERATION_ADMIN_ENDPOINTS.REPORT_RESOLVE(id),
       payload
     );
-    return moderationMapper.toResolvedReport(res.data);
+    return moderationMapper.toResolvedReport(res.data?.data);
   },
 
   /** `GET /admin/users` */
   getUsers: async (params?: ModerationQueryParams): Promise<PaginationResult<ModeratedUser>> => {
     const res = await api.get<AdminModerationUserListResponseDto>(
-      API_ENDPOINTS.MODERATION_ADMIN.USERS,
+      MODERATION_ADMIN_ENDPOINTS.USERS,
       {
         params: {
           page: params?.page,
@@ -67,7 +64,7 @@ export const moderationApi = {
         silent: true,
       }
     );
-    return moderationMapper.toUsersList(res.data);
+    return moderationMapper.toUsersList(res.data?.data, res.data?.meta);
   },
 
   /** `PATCH /admin/users/:id/status` */
@@ -78,10 +75,10 @@ export const moderationApi = {
   ): Promise<ModeratedUser> => {
     const payload = moderationMapper.toUserStatusDto(status, reason);
     const res = await api.patch<AdminModerationUserResponseDto>(
-      API_ENDPOINTS.MODERATION_ADMIN.USER_STATUS(id),
+      MODERATION_ADMIN_ENDPOINTS.USER_STATUS(id),
       payload
     );
-    return moderationMapper.toSingleUser(res.data);
+    return moderationMapper.toSingleUser(res.data?.data);
   },
 
   /** `GET /admin/comments` */
@@ -89,7 +86,7 @@ export const moderationApi = {
     params?: ModerationQueryParams
   ): Promise<PaginationResult<ModeratedComment>> => {
     const res = await api.get<AdminModerationCommentListResponseDto>(
-      API_ENDPOINTS.MODERATION_ADMIN.COMMENTS,
+      MODERATION_ADMIN_ENDPOINTS.COMMENTS,
       {
         params: {
           page: params?.page,
@@ -100,7 +97,7 @@ export const moderationApi = {
         silent: true,
       }
     );
-    return moderationMapper.toModCommentsList(res.data);
+    return moderationMapper.toModCommentsList(res.data?.data, res.data?.meta);
   },
 
   /** `PATCH /admin/comments/:id/status` */
@@ -111,9 +108,9 @@ export const moderationApi = {
   ): Promise<ModeratedComment> => {
     const payload = moderationMapper.toCommentStatusDto(status, reason);
     const res = await api.patch<AdminModerationCommentResponseDto>(
-      API_ENDPOINTS.MODERATION_ADMIN.COMMENT_STATUS(id),
+      MODERATION_ADMIN_ENDPOINTS.COMMENT_STATUS(id),
       payload
     );
-    return moderationMapper.toSingleModComment(res.data);
+    return moderationMapper.toSingleModComment(res.data?.data);
   },
 };

@@ -770,7 +770,7 @@ export async function seedScenarioData(
 
   const [communityRecipe, communityVideo] = await Promise.all([
     prisma.post.findUniqueOrThrow({ where: { slug: 'dau-hu-xao-bong-cai-demo' } }),
-    prisma.post.findUniqueOrThrow({ where: { slug: 'video-bua-an-xanh-demo' } }),
+    prisma.post.findUniqueOrThrow({ where: { slug: 'video-nuoc-dung-pho-chay' } }),
   ]);
 
   await prisma.$transaction(async (transaction) => {

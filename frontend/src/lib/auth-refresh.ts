@@ -62,7 +62,7 @@ async function doFetchRefresh(): Promise<string> {
     raw && typeof raw === 'object' && 'accessToken' in raw && !('data' in raw)
       ? { data: raw as RefreshResponseDto['data'] }
       : raw;
-  const token = authMapper.toRefreshedTokenModel(envelope).accessToken;
+  const token = authMapper.toRefreshedTokenModel(envelope?.data).accessToken;
   if (token) {
     setAccessToken(token);
     useAuthStore.getState().setToken(token);

@@ -1,5 +1,6 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { CONTRIBUTOR_ENDPOINTS } from '@/features/contributor/constants/contributor.endpoints';
+import { ADMIN_CONTRIBUTOR_ENDPOINTS } from '@/features/contributor/constants/admin-contributor.endpoints';
 import type { PaginationResult } from '@/types/api';
 import type {
   ContributorApplicationListResponseDto,
@@ -29,10 +30,10 @@ export const contributorApi = {
       referenceLinks
     );
     const res = await api.post<ContributorApplicationResponseDto>(
-      API_ENDPOINTS.CONTRIBUTOR.APPLY,
+      CONTRIBUTOR_ENDPOINTS.APPLY,
       payload
     );
-    return contributorMapper.toSingleApplication(res.data);
+    return contributorMapper.toSingleApplication(res.data?.data);
   },
 
   /** `GET /api/v1/contributor-applications/me` */
@@ -41,13 +42,13 @@ export const contributorApi = {
     limit = 20
   ): Promise<PaginationResult<ContributorApplication>> => {
     const res = await api.get<ContributorApplicationListResponseDto>(
-      API_ENDPOINTS.CONTRIBUTOR.MY_APPLICATIONS,
+      CONTRIBUTOR_ENDPOINTS.MY_APPLICATIONS,
       {
         params: { page, limit },
         silent: true,
       }
     );
-    return contributorMapper.toApplicationList(res.data);
+    return contributorMapper.toApplicationList(res.data?.data, res.data?.meta);
   },
 
   /** `GET /api/v1/admin/contributor-applications` */
@@ -55,7 +56,7 @@ export const contributorApi = {
     params?: ContributorQueueParams
   ): Promise<PaginationResult<ContributorApplication>> => {
     const res = await api.get<ContributorApplicationListResponseDto>(
-      API_ENDPOINTS.ADMIN_CONTRIBUTOR.LIST,
+      ADMIN_CONTRIBUTOR_ENDPOINTS.LIST,
       {
         params: {
           page: params?.page,
@@ -68,7 +69,7 @@ export const contributorApi = {
         silent: true,
       }
     );
-    return contributorMapper.toApplicationList(res.data);
+    return contributorMapper.toApplicationList(res.data?.data, res.data?.meta);
   },
 
   /** `PATCH /api/v1/admin/contributor-applications/:id/review` */
@@ -78,20 +79,20 @@ export const contributorApi = {
   ): Promise<ContributorApplication> => {
     const payload = contributorMapper.toReviewDto(input);
     const res = await api.patch<ContributorApplicationResponseDto>(
-      API_ENDPOINTS.ADMIN_CONTRIBUTOR.REVIEW(id),
+      ADMIN_CONTRIBUTOR_ENDPOINTS.REVIEW(id),
       payload
     );
-    return contributorMapper.toSingleApplication(res.data);
+    return contributorMapper.toSingleApplication(res.data?.data);
   },
 
   /** `POST /api/v1/admin/contributor-invitations` */
   inviteContributor: async (userId: string, reason: string): Promise<ContributorApplication> => {
     const payload = contributorMapper.toInviteDto(userId, reason);
     const res = await api.post<ContributorApplicationResponseDto>(
-      API_ENDPOINTS.ADMIN_CONTRIBUTOR.INVITE,
+      ADMIN_CONTRIBUTOR_ENDPOINTS.INVITE,
       payload
     );
-    return contributorMapper.toSingleApplication(res.data);
+    return contributorMapper.toSingleApplication(res.data?.data);
   },
 
   /** `PATCH /api/v1/admin/contributors/:userId/revoke` */
@@ -101,9 +102,9 @@ export const contributorApi = {
   ): Promise<ContributorRevocationResult> => {
     const payload = contributorMapper.toRevokeDto(reason);
     const res = await api.patch<ContributorRevocationResponseDto>(
-      API_ENDPOINTS.ADMIN_CONTRIBUTOR.REVOKE(userId),
+      ADMIN_CONTRIBUTOR_ENDPOINTS.REVOKE(userId),
       payload
     );
-    return contributorMapper.toRevocationResult(res.data);
+    return contributorMapper.toRevocationResult(res.data?.data);
   },
 };

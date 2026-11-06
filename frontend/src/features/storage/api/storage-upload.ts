@@ -128,7 +128,7 @@ export async function uploadWithReservation(
     reservationId = reservationRes.reservation.id;
     const { upload } = reservationRes;
 
-    const uploadUrl = upload?.uploadUrl || upload?.url;
+    const uploadUrl = upload.uploadUrl;
     if (!uploadUrl) {
       throw new Error('Không nhận được địa chỉ máy chủ tải lên từ hệ thống.');
     }

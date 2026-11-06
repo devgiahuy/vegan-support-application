@@ -86,9 +86,8 @@ describe('admin insights mapper', () => {
   });
 
   it('maps usage rows with sources, outcomes and unknown values', () => {
-    const page = toAiUsagePage({
-      success: true,
-      data: [
+    const page = toAiUsagePage(
+      [
         {
           id: 'chat:1',
           feature: 'CHAT',
@@ -107,8 +106,8 @@ describe('admin insights mapper', () => {
         },
         { id: 'usage:2', feature: 'X', quotaSource: 'Y', outcome: 'Z', user: null },
       ],
-      meta: { page: 1, limit: 20, total: '2', totalPages: 1 },
-    });
+      { page: 1, limit: 20, total: '2', totalPages: 1 }
+    );
     expect(page.total).toBe(2);
     expect(page.items[0]).toMatchObject({
       featureLabel: 'Chat AI',

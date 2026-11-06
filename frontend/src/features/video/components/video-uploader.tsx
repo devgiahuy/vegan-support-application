@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import { VideoSource } from '@/common/enums';
 import { validateVideoFile } from '@/features/post/utils/media-validator';
-import type { UploadedMediaMeta } from '@/features/post/api/upload.api';
+import type { UploadedMediaMeta } from '@/features/storage/types/storage.model';
 import { uploadWithReservation } from '@/features/storage/api/storage-upload';
 import { StorageQuotaWidget } from '@/features/storage/components/storage-quota-widget';
 import { VideoPlayer } from './video-player';

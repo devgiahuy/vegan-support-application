@@ -1,5 +1,5 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { ADMIN_CATALOG_ENDPOINTS } from '@/features/admin-catalog/constants/admin-catalog.endpoints';
 import type { PaginationResult } from '@/types/api';
 import type {
   AddAliasRequestDto,
@@ -23,20 +23,20 @@ export const adminIngredientApi = {
   listIngredients: async (
     params?: AdminIngredientListParams
   ): Promise<PaginationResult<Ingredient>> => {
-    const res = await api.get<IngredientListResponseDto>(
-      API_ENDPOINTS.ADMIN_CATALOG.INGREDIENTS.LIST,
-      { params, silent: true }
-    );
-    return ingredientMapper.toListModel(res.data);
+    const res = await api.get<IngredientListResponseDto>(ADMIN_CATALOG_ENDPOINTS.INGREDIENTS.LIST, {
+      params,
+      silent: true,
+    });
+    return ingredientMapper.toListModel(res.data?.data, res.data?.meta);
   },
 
   createIngredient: async (payload: CreateIngredientRequestDto): Promise<Ingredient> => {
     const res = await api.post<IngredientResponseDto>(
-      API_ENDPOINTS.ADMIN_CATALOG.INGREDIENTS.CREATE,
+      ADMIN_CATALOG_ENDPOINTS.INGREDIENTS.CREATE,
       payload,
       { showErrorToast: true }
     );
-    return ingredientMapper.toSingleModel(res.data);
+    return ingredientMapper.toSingleModel(res.data?.data);
   },
 
   updateIngredient: async (
@@ -44,18 +44,18 @@ export const adminIngredientApi = {
     payload: UpdateIngredientRequestDto
   ): Promise<Ingredient> => {
     const res = await api.patch<IngredientResponseDto>(
-      API_ENDPOINTS.ADMIN_CATALOG.INGREDIENTS.UPDATE(id),
+      ADMIN_CATALOG_ENDPOINTS.INGREDIENTS.UPDATE(id),
       payload,
       { showErrorToast: true }
     );
-    return ingredientMapper.toSingleModel(res.data);
+    return ingredientMapper.toSingleModel(res.data?.data);
   },
 
   archiveIngredient: async (id: string): Promise<{ id: string; status: string }> => {
     const res = await api.delete<{
       success?: boolean;
       data?: { id?: string; status?: string } | null;
-    }>(API_ENDPOINTS.ADMIN_CATALOG.INGREDIENTS.ARCHIVE(id), { showErrorToast: true });
+    }>(ADMIN_CATALOG_ENDPOINTS.INGREDIENTS.ARCHIVE(id), { showErrorToast: true });
     const data = res.data?.data ?? null;
     return {
       id: typeof data?.id === 'string' ? data.id : '',
@@ -66,16 +66,16 @@ export const adminIngredientApi = {
   addAlias: async (id: string, alias: string): Promise<Ingredient> => {
     const body: AddAliasRequestDto = { alias };
     const res = await api.post<IngredientResponseDto>(
-      API_ENDPOINTS.ADMIN_CATALOG.INGREDIENTS.ALIASES(id),
+      ADMIN_CATALOG_ENDPOINTS.INGREDIENTS.ALIASES(id),
       body,
       { showErrorToast: true }
     );
-    return ingredientMapper.toSingleModel(res.data);
+    return ingredientMapper.toSingleModel(res.data?.data);
   },
 
   /** DELETE 204 không body — không parse, chỉ xác nhận thành công. */
   deleteAlias: async (id: string, aliasId: string): Promise<void> => {
-    await api.delete<void>(API_ENDPOINTS.ADMIN_CATALOG.INGREDIENTS.ALIAS(id, aliasId), {
+    await api.delete<void>(ADMIN_CATALOG_ENDPOINTS.INGREDIENTS.ALIAS(id, aliasId), {
       showErrorToast: true,
     });
   },

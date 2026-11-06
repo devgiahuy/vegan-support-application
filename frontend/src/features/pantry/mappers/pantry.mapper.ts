@@ -269,9 +269,10 @@ export class PantryMapper extends BaseMapper<PantryItemDto, PantryItem> {
   }
 
   toPantryPaginationModel(
-    envelope: PantryListEnvelopeDto | null | undefined
+    data: PantryListEnvelopeDto['data'] | null | undefined,
+    meta: PantryListEnvelopeDto['meta'] | null | undefined
   ): PaginationResult<PantryItem> {
-    if (!envelope || !envelope.data) {
+    if (!data) {
       return {
         items: [],
         metadata: {
@@ -284,14 +285,14 @@ export class PantryMapper extends BaseMapper<PantryItemDto, PantryItem> {
     }
 
     return {
-      items: this.toModelList(envelope.data),
+      items: this.toModelList(data),
       metadata: {
-        page: envelope.meta?.page ?? 1,
-        limit: envelope.meta?.limit ?? 20,
-        totalItems: envelope.meta?.total ?? envelope.data.length,
-        totalPages: envelope.meta?.totalPages ?? 1,
-        hasNextPage: (envelope.meta?.page ?? 1) < (envelope.meta?.totalPages ?? 1),
-        hasPrevPage: (envelope.meta?.page ?? 1) > 1,
+        page: meta?.page ?? 1,
+        limit: meta?.limit ?? 20,
+        totalItems: meta?.total ?? data.length,
+        totalPages: meta?.totalPages ?? 1,
+        hasNextPage: (meta?.page ?? 1) < (meta?.totalPages ?? 1),
+        hasPrevPage: (meta?.page ?? 1) > 1,
       },
     };
   }

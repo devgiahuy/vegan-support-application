@@ -1,5 +1,5 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { COMMUNITY_ENDPOINTS } from '@/features/community/constants/community.endpoints';
 import type { PaginationResult } from '@/types/api';
 import type {
   CommunityBookmarkListResponseDto,
@@ -66,7 +66,7 @@ export const communityApi = {
   ): Promise<PaginationResult<CommunityComment>> => {
     if (!USE_FIXTURES) {
       const res = await api.get<CommunityCommentListResponseDto>(
-        API_ENDPOINTS.COMMUNITY.COMMENTS(params.postId),
+        COMMUNITY_ENDPOINTS.COMMENTS(params.postId),
         {
           params: {
             page: params.page ?? 1,
@@ -76,19 +76,15 @@ export const communityApi = {
           silent: true,
         }
       );
-      return communityMapper.toThreadModel(res.data);
+      return communityMapper.toThreadModel(res.data?.data, res.data?.meta);
     }
     await delay();
     const source = clone(threadStore);
-    return communityMapper.toThreadModel({
-      success: true,
-      data: source,
-      meta: {
-        page: params.page ?? 1,
-        limit: params.limit ?? 10,
-        total: source.length,
-        totalPages: 1,
-      },
+    return communityMapper.toThreadModel(source, {
+      page: params.page ?? 1,
+      limit: params.limit ?? 10,
+      total: source.length,
+      totalPages: 1,
     });
   },
 
@@ -100,15 +96,15 @@ export const communityApi = {
   ): Promise<CommunityComment> => {
     if (!USE_FIXTURES) {
       const res = await api.post<CommunityCommentResponseDto>(
-        API_ENDPOINTS.COMMUNITY.COMMENTS(postId),
+        COMMUNITY_ENDPOINTS.COMMENTS(postId),
         { content, ...(parentId ? { parentId } : {}) },
         { showErrorToast: true }
       );
-      return communityMapper.toSingleComment(res.data);
+      return communityMapper.toSingleComment(res.data?.data);
     }
     await delay();
     const created = communityMapper.toSingleComment(
-      createdCommentFixture(content, parentId ?? null)
+      createdCommentFixture(content, parentId ?? null)?.data
     );
     const raw: CommunityCommentDto = {
       id: created.id,
@@ -135,11 +131,11 @@ export const communityApi = {
   updateComment: async (id: string, content: string): Promise<CommunityComment> => {
     if (!USE_FIXTURES) {
       const res = await api.patch<CommunityCommentResponseDto>(
-        API_ENDPOINTS.COMMUNITY.COMMENT(id),
+        COMMUNITY_ENDPOINTS.COMMENT(id),
         { content },
         { showErrorToast: true }
       );
-      return communityMapper.toSingleComment(res.data);
+      return communityMapper.toSingleComment(res.data?.data);
     }
     await delay();
     const patch = (list: (CommunityCommentDto | null)[]): (CommunityCommentDto | null)[] =>
@@ -152,20 +148,20 @@ export const communityApi = {
       );
     threadStore = patch(threadStore);
     return communityMapper.toSingleComment({
-      success: true,
-      data: { id, content, status: 'VISIBLE', editedAt: new Date().toISOString() },
-      meta: null,
+      id,
+      content,
+      status: 'VISIBLE',
+      editedAt: new Date().toISOString(),
     });
   },
 
   /** `DELETE /comments/:id` */
   deleteComment: async (id: string): Promise<CommunityComment> => {
     if (!USE_FIXTURES) {
-      const res = await api.delete<CommunityCommentResponseDto>(
-        API_ENDPOINTS.COMMUNITY.COMMENT(id),
-        { showErrorToast: true }
-      );
-      return communityMapper.toSingleComment(res.data);
+      const res = await api.delete<CommunityCommentResponseDto>(COMMUNITY_ENDPOINTS.COMMENT(id), {
+        showErrorToast: true,
+      });
+      return communityMapper.toSingleComment(res.data?.data);
     }
     await delay();
     const remove = (list: (CommunityCommentDto | null)[]): (CommunityCommentDto | null)[] =>
@@ -173,36 +169,27 @@ export const communityApi = {
         .filter((item) => item?.id !== id)
         .map((item) => (item ? { ...item, replies: remove(item.replies ?? []) } : item));
     threadStore = remove(threadStore);
-    return communityMapper.toSingleComment({
-      success: true,
-      data: { id, status: 'DELETED' },
-      meta: null,
-    });
+    return communityMapper.toSingleComment({ id, status: 'DELETED' });
   },
 
   /** `GET /posts/:id/community-summary` */
   getSummary: async (postId: string): Promise<CommunitySummary> => {
     if (!USE_FIXTURES) {
-      const res = await api.get<CommunitySummaryResponseDto>(
-        API_ENDPOINTS.COMMUNITY.SUMMARY(postId),
-        { silent: true }
-      );
-      return communityMapper.toSummaryModel(res.data);
+      const res = await api.get<CommunitySummaryResponseDto>(COMMUNITY_ENDPOINTS.SUMMARY(postId), {
+        silent: true,
+      });
+      return communityMapper.toSummaryModel(res.data?.data);
     }
     await delay();
     return communityMapper.toSummaryModel({
-      success: true,
-      data: {
-        ...(communitySummaryFixture.data ?? {}),
-        postId,
-        voteCount,
-        viewer: {
-          voted: viewerVoted,
-          bookmarked: viewerBookmarked,
-          rating: { taste: 5, difficulty: 2 },
-        },
+      ...(communitySummaryFixture.data ?? {}),
+      postId,
+      voteCount,
+      viewer: {
+        voted: viewerVoted,
+        bookmarked: viewerBookmarked,
+        rating: { taste: 5, difficulty: 2 },
       },
-      meta: null,
     });
   },
 
@@ -212,11 +199,11 @@ export const communityApi = {
   ): Promise<{ postId: string; voted: boolean; voteCount: number }> => {
     if (!USE_FIXTURES) {
       const res = await api.put<CommunityVoteResponseDto>(
-        API_ENDPOINTS.COMMUNITY.VOTE(postId),
+        COMMUNITY_ENDPOINTS.VOTE(postId),
         {},
         { showErrorToast: true }
       );
-      return communityMapper.toVoteModel(res.data);
+      return communityMapper.toVoteModel(res.data?.data);
     }
     await delay();
     void postId;
@@ -224,7 +211,7 @@ export const communityApi = {
       viewerVoted = true;
       voteCount += 1;
     }
-    return communityMapper.toVoteModel(voteFixture(true, voteCount));
+    return communityMapper.toVoteModel(voteFixture(true, voteCount)?.data);
   },
 
   /** `DELETE /posts/:id/vote` */
@@ -232,10 +219,10 @@ export const communityApi = {
     postId: string
   ): Promise<{ postId: string; voted: boolean; voteCount: number }> => {
     if (!USE_FIXTURES) {
-      const res = await api.delete<CommunityVoteResponseDto>(API_ENDPOINTS.COMMUNITY.VOTE(postId), {
+      const res = await api.delete<CommunityVoteResponseDto>(COMMUNITY_ENDPOINTS.VOTE(postId), {
         showErrorToast: true,
       });
-      return communityMapper.toVoteModel(res.data);
+      return communityMapper.toVoteModel(res.data?.data);
     }
     await delay();
     if (viewerVoted) {
@@ -243,7 +230,7 @@ export const communityApi = {
       voteCount = Math.max(0, voteCount - 1);
     }
     void postId;
-    return communityMapper.toVoteModel(voteFixture(false, voteCount));
+    return communityMapper.toVoteModel(voteFixture(false, voteCount)?.data);
   },
 
   /** `PUT /posts/:id/rating` */
@@ -254,21 +241,17 @@ export const communityApi = {
   ): Promise<CommunityRating> => {
     if (!USE_FIXTURES) {
       const res = await api.put<CommunityRatingResponseDto>(
-        API_ENDPOINTS.COMMUNITY.RATING(postId),
+        COMMUNITY_ENDPOINTS.RATING(postId),
         { taste, difficulty },
         { showErrorToast: true }
       );
-      return communityMapper.toRatingModel(res.data);
+      return communityMapper.toRatingModel(res.data?.data);
     }
     await delay();
     return communityMapper.toRatingModel({
-      success: true,
-      data: {
-        postId,
-        rating: { taste, difficulty },
-        aggregate: ratingFixture.data?.aggregate ?? null,
-      },
-      meta: null,
+      postId,
+      rating: { taste, difficulty },
+      aggregate: ratingFixture.data?.aggregate ?? null,
     });
   },
 
@@ -276,31 +259,31 @@ export const communityApi = {
   putBookmark: async (postId: string): Promise<{ postId: string; bookmarked: boolean }> => {
     if (!USE_FIXTURES) {
       const res = await api.put<CommunityBookmarkResponseDto>(
-        API_ENDPOINTS.COMMUNITY.BOOKMARK(postId),
+        COMMUNITY_ENDPOINTS.BOOKMARK(postId),
         undefined,
         { showErrorToast: true }
       );
-      return communityMapper.toBookmarkModel(res.data);
+      return communityMapper.toBookmarkModel(res.data?.data);
     }
     await delay();
     void postId;
     viewerBookmarked = true;
-    return communityMapper.toBookmarkModel(bookmarkFixture(true));
+    return communityMapper.toBookmarkModel(bookmarkFixture(true)?.data);
   },
 
   /** `DELETE /posts/:id/bookmark` */
   deleteBookmark: async (postId: string): Promise<{ postId: string; bookmarked: boolean }> => {
     if (!USE_FIXTURES) {
       const res = await api.delete<CommunityBookmarkResponseDto>(
-        API_ENDPOINTS.COMMUNITY.BOOKMARK(postId),
+        COMMUNITY_ENDPOINTS.BOOKMARK(postId),
         { showErrorToast: true }
       );
-      return communityMapper.toBookmarkModel(res.data);
+      return communityMapper.toBookmarkModel(res.data?.data);
     }
     await delay();
     viewerBookmarked = false;
     void postId;
-    return communityMapper.toBookmarkModel(bookmarkFixture(false));
+    return communityMapper.toBookmarkModel(bookmarkFixture(false)?.data);
   },
 
   /** `GET /users/me/bookmarks` */
@@ -309,17 +292,18 @@ export const communityApi = {
   ): Promise<PaginationResult<BookmarkedItem>> => {
     if (!USE_FIXTURES) {
       const res = await api.get<CommunityBookmarkListResponseDto>(
-        API_ENDPOINTS.COMMUNITY.MY_BOOKMARKS,
+        COMMUNITY_ENDPOINTS.MY_BOOKMARKS,
         { params, silent: true }
       );
-      return communityMapper.toBookmarksList(res.data);
+      return communityMapper.toBookmarksList(res.data?.data, res.data?.meta);
     }
     await delay();
     void params;
-    return communityMapper.toBookmarksList({
-      success: true,
-      data: clone(bookmarksStore),
-      meta: { page: 1, limit: 10, total: bookmarksStore.length, totalPages: 1 },
+    return communityMapper.toBookmarksList(clone(bookmarksStore), {
+      page: 1,
+      limit: 10,
+      total: bookmarksStore.length,
+      totalPages: 1,
     });
   },
 };

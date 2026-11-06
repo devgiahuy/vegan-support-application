@@ -1,14 +1,22 @@
 # Frontend ↔ Backend Integration Guide
 
-**Version:** 4.58
+**Version:** 4.62
 
-**Cập nhật:** 28/10/2026
+**Cập nhật:** 05/11/2026
 
 **Backend implementation status:** `IN_PROGRESS`
 
 **Contract target:** `/api/v1`
 
 > Tài liệu này là registry sống cho capability backend thực tế. Phases 00–26 đã có source/migrations/OpenAPI; Phase 27 release gate đang kiểm tra. Contributor approval basis chỉ dùng cho audit/presentation; client dùng contract thống nhất từ 2026-09-27.
+
+Changelog 2026-11-05 (4.62): bỏ fallback fixture trên các consumer `/posts` READY (bài viết, công thức, video và nội dung liên quan), để lỗi mạng/server/ghi dữ liệu tới Query/UI; GET meal analysis chỉ trả `null` cho `MEAL_ANALYSIS_NOT_FOUND`, giữ lỗi `MEAL_ANALYSIS_STALE` và payload sai ở trạng thái lỗi; meal program detail/create/update kiểm tra envelope trước mapper. Xóa client `/uploads/signature` đã REMOVED và kiểu DTO chết, giữ luồng upload reservation đang dùng. Không đổi backend contract, route hoặc trạng thái READY.
+
+Changelog 2026-11-05 (4.61): consumer danh sách meal program đọc `data[]` và `meta` trực tiếp từ envelope theo OpenAPI; custom meal dùng envelope chuẩn, storage admin dùng mảng phân trang và metadata chuẩn, tham số upload được map sang model nội bộ. Không đổi route, backend contract hoặc trạng thái READY.
+
+Changelog 2026-11-05 (4.60): consumer chi tiết nội dung quản trị map `GET /posts/{idOrSlug}` sang `AdminContentDetail`; không đổi backend contract hoặc trạng thái tích hợp.
+
+Changelog 2026-11-05 (4.59): cập nhật quy ước vị trí endpoint theo feature/domain dùng chung; không đổi backend contract hoặc trạng thái tích hợp.
 
 ---
 
@@ -466,7 +474,7 @@ npm run sync:swagger
 ```
 
 3. Đọc `docs/API-CATALOG.md`, sau đó chỉ đọc file tag liên quan trong `docs/api/`.
-4. Thêm endpoint vào `src/common/constants/api-endpoints.ts`.
+4. Khai báo endpoint trong `src/features/<domain>/constants/*.endpoints.ts`; nếu nhiều feature dùng, đặt tại `src/common/constants/endpoints/`.
 5. Tạo DTO request/response.
 6. Tạo UI Model riêng.
 7. Tạo Mapper DTO ↔ Model.

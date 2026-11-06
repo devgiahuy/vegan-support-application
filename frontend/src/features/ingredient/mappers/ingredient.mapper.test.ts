@@ -51,11 +51,18 @@ describe('IngredientMapper.toModel', () => {
 
 describe('IngredientMapper.toListModel', () => {
   it('chuẩn hóa meta catalog', () => {
-    const page = ingredientMapper.toListModel({
-      success: true,
-      data: [{ ...ITEM }],
-      meta: { page: 2, limit: 10, total: 25, totalPages: 3 },
-    });
+    const page = ingredientMapper.toListModel(
+      {
+        success: true,
+        data: [{ ...ITEM }],
+        meta: { page: 2, limit: 10, total: 25, totalPages: 3 },
+      }.data,
+      {
+        success: true,
+        data: [{ ...ITEM }],
+        meta: { page: 2, limit: 10, total: 25, totalPages: 3 },
+      }.meta
+    );
     expect(page.metadata).toMatchObject({
       page: 2,
       totalItems: 25,
@@ -68,11 +75,13 @@ describe('IngredientMapper.toListModel', () => {
 
 describe('IngredientMapper.toSingleModel', () => {
   it('bóc envelope data 1 item (dùng cho admin create/update/addAlias)', () => {
-    const m = ingredientMapper.toSingleModel({
-      success: true,
-      data: { ...ITEM },
-      meta: null,
-    });
+    const m = ingredientMapper.toSingleModel(
+      {
+        success: true,
+        data: { ...ITEM },
+        meta: null,
+      }.data
+    );
     expect(m.id).toBe('i-1');
     expect(m.canonicalName).toBe('Đậu phộng');
     expect(m.aliases).toHaveLength(2);
@@ -81,7 +90,7 @@ describe('IngredientMapper.toSingleModel', () => {
   it('trả defaults khi envelope null hoặc data null', () => {
     expect(ingredientMapper.toSingleModel(null).id).toBe('');
     expect(
-      ingredientMapper.toSingleModel({ success: true, data: null, meta: null }).aliases
+      ingredientMapper.toSingleModel({ success: true, data: null, meta: null }.data).aliases
     ).toEqual([]);
   });
 });
@@ -94,11 +103,7 @@ describe('IngredientMapper.toListModel edge', () => {
   });
 
   it('meta thiếu dùng số item làm total fallback', () => {
-    const page = ingredientMapper.toListModel({
-      success: true,
-      data: [{ ...ITEM }],
-      meta: null,
-    } as never);
+    const page = ingredientMapper.toListModel([{ ...ITEM }], null);
     expect(page.items).toHaveLength(1);
     expect(page.metadata.totalItems).toBe(1);
   });
@@ -164,9 +169,10 @@ describe('IngredientMapper.toModel biến thể BE', () => {
 describe('IngredientMapper.toResolutionModel edge', () => {
   it('đọc normalized_query snake_case', () => {
     const r = ingredientMapper.toResolutionModel({
-      success: true,
-      data: { query: 'dau', normalized_query: 'dau', match: 'NONE', candidates: [] },
-      meta: null,
+      query: 'dau',
+      normalized_query: 'dau',
+      match: 'NONE',
+      candidates: [],
     } as never);
     expect(r.normalizedQuery).toBe('dau');
     expect(r.match).toBe(ResolutionMatch.NONE);
@@ -179,21 +185,25 @@ describe('IngredientMapper.toResolutionModel', () => {
     ['EXACT', ResolutionMatch.EXACT],
     ['AMBIGUOUS', ResolutionMatch.AMBIGUOUS],
   ])('match %s map đúng', (raw, expected) => {
-    const r = ingredientMapper.toResolutionModel({
-      success: true,
-      data: { query: 'đậu', normalizedQuery: 'dau', match: raw, candidates: [{ ...ITEM }] },
-      meta: null,
-    });
+    const r = ingredientMapper.toResolutionModel(
+      {
+        success: true,
+        data: { query: 'đậu', normalizedQuery: 'dau', match: raw, candidates: [{ ...ITEM }] },
+        meta: null,
+      }.data
+    );
     expect(r.match).toBe(expected);
     expect(r.candidates).toHaveLength(1);
   });
 
   it('candidates null thành mảng rỗng, match lạ thành NONE', () => {
-    const r = ingredientMapper.toResolutionModel({
-      success: true,
-      data: { query: 'x', match: 'WEIRD', candidates: null },
-      meta: null,
-    });
+    const r = ingredientMapper.toResolutionModel(
+      {
+        success: true,
+        data: { query: 'x', match: 'WEIRD', candidates: null },
+        meta: null,
+      }.data
+    );
     expect(r.match).toBe(ResolutionMatch.NONE);
     expect(r.candidates).toEqual([]);
   });

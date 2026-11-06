@@ -220,7 +220,7 @@ describe('AiArtifactMapper', () => {
       },
     };
 
-    const paginated = aiArtifactMapper.toPaginationModel(response);
+    const paginated = aiArtifactMapper.toPublicListModel(response.data, response.meta);
 
     expect(paginated.items).toHaveLength(2);
     expect(paginated.items[0].title).toBe('Bài 1');

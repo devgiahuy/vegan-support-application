@@ -1,5 +1,5 @@
 import api from '@/lib/axios';
-import { API_ENDPOINTS } from '@/common/constants/api-endpoints';
+import { INGREDIENT_RECOGNITION_ENDPOINTS } from '@/features/ingredient-vision/constants/ingredient-recognition.endpoints';
 import type {
   AddFridgeImagesRequestDto,
   RecognitionJobEnvelopeDto,
@@ -24,7 +24,7 @@ export const ingredientRecognitionApi = {
     });
 
     const res = await api.post<RecognitionJobEnvelopeDto>(
-      API_ENDPOINTS.INGREDIENT_RECOGNITION.JOBS,
+      INGREDIENT_RECOGNITION_ENDPOINTS.JOBS,
       payload,
       { showErrorToast: true }
     );
@@ -36,7 +36,7 @@ export const ingredientRecognitionApi = {
    */
   getJob: async (id: string): Promise<RecognitionJob> => {
     const res = await api.get<RecognitionJobEnvelopeDto>(
-      API_ENDPOINTS.INGREDIENT_RECOGNITION.JOB_DETAIL(id),
+      INGREDIENT_RECOGNITION_ENDPOINTS.JOB_DETAIL(id),
       { silent: true }
     );
     return ingredientRecognitionMapper.toModel(res.data.data);
@@ -52,7 +52,7 @@ export const ingredientRecognitionApi = {
   ): Promise<RecognitionJob> => {
     const payload = ingredientRecognitionMapper.toUpdateCandidateDto(input);
     const res = await api.patch<RecognitionJobEnvelopeDto>(
-      API_ENDPOINTS.INGREDIENT_RECOGNITION.UPDATE_CANDIDATE(jobId, candidateId),
+      INGREDIENT_RECOGNITION_ENDPOINTS.UPDATE_CANDIDATE(jobId, candidateId),
       payload,
       { showErrorToast: true }
     );
@@ -74,7 +74,7 @@ export const ingredientRecognitionApi = {
     });
 
     const res = await api.post<RecognitionConfirmationEnvelopeDto>(
-      API_ENDPOINTS.INGREDIENT_RECOGNITION.CONFIRM(jobId),
+      INGREDIENT_RECOGNITION_ENDPOINTS.CONFIRM(jobId),
       payload,
       { showErrorToast: true }
     );
@@ -86,7 +86,7 @@ export const ingredientRecognitionApi = {
    */
   cancelJob: async (jobId: string): Promise<RecognitionJob> => {
     const res = await api.post<RecognitionJobEnvelopeDto>(
-      API_ENDPOINTS.INGREDIENT_RECOGNITION.CANCEL(jobId),
+      INGREDIENT_RECOGNITION_ENDPOINTS.CANCEL(jobId),
       {},
       { showErrorToast: true }
     );
@@ -101,7 +101,7 @@ export const ingredientRecognitionApi = {
     const payload = ingredientRecognitionMapper.toRetryDto({ idempotencyKey: key });
 
     const res = await api.post<RecognitionJobEnvelopeDto>(
-      API_ENDPOINTS.INGREDIENT_RECOGNITION.RETRY(jobId),
+      INGREDIENT_RECOGNITION_ENDPOINTS.RETRY(jobId),
       payload,
       { showErrorToast: true }
     );
@@ -113,7 +113,7 @@ export const ingredientRecognitionApi = {
    */
   addImages: async (jobId: string, payload: AddFridgeImagesRequestDto): Promise<RecognitionJob> => {
     const res = await api.post<RecognitionJobEnvelopeDto>(
-      API_ENDPOINTS.INGREDIENT_RECOGNITION.ADD_IMAGES(jobId),
+      INGREDIENT_RECOGNITION_ENDPOINTS.ADD_IMAGES(jobId),
       payload,
       { showErrorToast: true }
     );

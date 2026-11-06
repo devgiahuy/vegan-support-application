@@ -432,14 +432,9 @@ export class MealAnalysisMapper extends BaseMapper<MealPlanAnalysisResponseDto, 
   }
 
   public toModel(
-    dto: MealPlanAnalysisResponseDto | { data?: MealPlanAnalysisResponseDto } | null | undefined,
+    source: MealPlanAnalysisResponseDto | null | undefined,
     currentPlanLockVersion?: number
   ): MealPlanAnalysis {
-    const source =
-      dto && typeof dto === 'object' && 'data' in dto && dto.data
-        ? (dto.data as MealPlanAnalysisResponseDto)
-        : (dto as MealPlanAnalysisResponseDto | null | undefined);
-
     const id = safeString(source?.id, '');
     const mealPlanId = safeString(pickField(source, ['mealPlanId', 'meal_plan_id'], ''), '');
     const planLockVersion = safeNumber(

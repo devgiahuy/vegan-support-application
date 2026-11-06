@@ -18,14 +18,11 @@ import {
 } from '@/common/enums';
 import { MAX_RADIUS_M, MIN_RADIUS_M } from '../schemas/restaurant.schema';
 import type {
-  AdminRestaurantListResponseDto,
   GeocodeResponseDto,
   RestaurantDiscoveryMetaDto,
   RestaurantDto,
   RestaurantListResponseDto,
-  RestaurantResponseDto,
   ReviewRestaurantRequestDto,
-  ReviewRestaurantResponseDto,
   SubmitRestaurantRequestDto,
 } from '../types/restaurant.dto';
 import type {
@@ -281,13 +278,14 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
   }
 
   /** `GET /restaurants/nearby|search` → danh sách + meta provider + cảnh báo đã dịch. */
-  toDiscoveryModel(dto: RestaurantListResponseDto | null | undefined): RestaurantDiscoveryResult {
-    const rawItems = pickField(dto, ['data'], null) as (RestaurantDto | null)[] | null;
+  toDiscoveryModel(
+    rawItems: RestaurantListResponseDto['data'],
+    metaDto?: RestaurantDiscoveryMetaDto | null
+  ): RestaurantDiscoveryResult {
     const restaurants = this.toModelList(
       safeArray<RestaurantDto | null, RestaurantDto | null>(rawItems, (item) => item)
     ).filter((item) => item.id.length > 0);
 
-    const metaDto = pickField(dto, ['meta'], null) as RestaurantDiscoveryMetaDto | null;
     const meta = this.toDiscoveryMeta(metaDto, restaurants.length);
 
     return { restaurants, meta, notices: this.buildNotices(meta, restaurants) };
@@ -394,12 +392,13 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
   }
 
   /** Danh sách dạng phân trang — dùng bởi các màn hình khác, không dùng cho discovery. */
-  toListModel(dto: RestaurantListResponseDto | null | undefined): PaginationResult<Restaurant> {
-    const rawItems = pickField(dto, ['data'], null) as (RestaurantDto | null)[] | null;
+  toListModel(
+    rawItems: RestaurantListResponseDto['data'],
+    meta?: RestaurantDiscoveryMetaDto | null
+  ): PaginationResult<Restaurant> {
     const items = this.toModelList(
       safeArray<RestaurantDto | null, RestaurantDto | null>(rawItems, (item) => item)
     ).filter((item) => item.id.length > 0);
-    const meta = pickField(dto, ['meta'], null) as RestaurantDiscoveryMetaDto | null;
     return { items, metadata: this.toPageMeta(meta, items.length) };
   }
 
@@ -434,20 +433,21 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
   }
 
   /** `GET /restaurants/:id` → 1 quán. */
-  toSingleModel(dto: RestaurantResponseDto | null | undefined): Restaurant {
-    return this.toModel(pickField(dto, ['data'], null) as RestaurantDto | null);
+  toSingleModel(data: RestaurantDto | null | undefined): Restaurant {
+    return this.toModel(data);
   }
 
   /** `GET /admin/restaurants` → hàng chờ (ngoài phạm vi redesign, giữ cho màn hình quản trị). */
   toQueueModel(
-    dto: AdminRestaurantListResponseDto | null | undefined
+    data: RestaurantListResponseDto['data'],
+    meta?: RestaurantDiscoveryMetaDto | null
   ): PaginationResult<Restaurant> {
-    return this.toListModel(dto as RestaurantListResponseDto | null | undefined);
+    return this.toListModel(data, meta);
   }
 
   /** `PATCH /admin/restaurants/:id/review` → quán sau duyệt. */
-  toReviewedModel(dto: ReviewRestaurantResponseDto | null | undefined): Restaurant {
-    return this.toModel(pickField(dto, ['data'], null) as RestaurantDto | null);
+  toReviewedModel(data: RestaurantDto | null | undefined): Restaurant {
+    return this.toModel(data);
   }
 
   /**
@@ -455,7 +455,7 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
    * `data: null` nghĩa là không phân giải được: trả `isAvailable: false`,
    * TUYỆT ĐỐI không thay bằng một tọa độ mặc định không liên quan (FR-033).
    */
-  toGeocodeResult(dto: GeocodeResponseDto | null | undefined): RestaurantGeocodeResult {
+  toGeocodeResult(data: GeocodeResponseDto['data']): RestaurantGeocodeResult {
     const unavailable: RestaurantGeocodeResult = {
       lat: null,
       lng: null,
@@ -465,7 +465,6 @@ export class RestaurantMapper extends BaseMapper<RestaurantDto, Restaurant> {
       isAvailable: false,
     };
 
-    const data = pickField<Record<string, unknown> | null>(dto, ['data'], null);
     if (!data || typeof data !== 'object') return unavailable;
 
     const lat = toNullableNumber(pickField(data, ['latitude', 'lat'], null));

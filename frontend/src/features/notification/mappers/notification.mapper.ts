@@ -71,13 +71,12 @@ export class NotificationMapper extends BaseMapper<NotificationDto, AppNotificat
 
   /** `GET /notifications` — mảng + meta. */
   toListModel(
-    dto: NotificationListResponseDto | null | undefined
+    rawItems: NotificationListResponseDto['data'],
+    meta?: NotificationListResponseDto['meta']
   ): PaginationResult<AppNotification> {
-    const rawItems = pickField(dto, ['data'], null) as (NotificationDto | null)[] | null;
     const items = this.toModelList(
       safeArray<NotificationDto | null, NotificationDto | null>(rawItems, (item) => item)
     ).filter((item) => item.id.length > 0);
-    const meta = pickField(dto, ['meta'], null) as NotificationListResponseDto['meta'];
     const page = safeNumber(pickField(meta, ['page'], 1));
     const limit = safeNumber(pickField(meta, ['limit'], 10));
     const totalItems = safeNumber(pickField(meta, ['total'], items.length));
@@ -96,8 +95,7 @@ export class NotificationMapper extends BaseMapper<NotificationDto, AppNotificat
   }
 
   /** `GET /notifications/unread-count` → UnreadCount */
-  toUnreadCountFromDto(dto: NotificationUnreadCountResponseDto | null | undefined): UnreadCount {
-    const data = pickField(dto, ['data'], null) as NotificationUnreadCountResponseDto['data'];
+  toUnreadCountFromDto(data: NotificationUnreadCountResponseDto['data']): UnreadCount {
     const count = safeNumber(pickField(data, ['count'], 0));
     return { count, capped: count === 0 ? '' : count > 9 ? '9+' : String(count) };
   }
@@ -109,8 +107,7 @@ export class NotificationMapper extends BaseMapper<NotificationDto, AppNotificat
   }
 
   /** `PATCH /notifications/:id/read` → id đã đọc. */
-  toReadModel(dto: NotificationReadResponseDto | null | undefined): { id: string; read: boolean } {
-    const data = pickField(dto, ['data'], null) as NotificationReadResponseDto['data'];
+  toReadModel(data: NotificationReadResponseDto['data']): { id: string; read: boolean } {
     return {
       id: safeString(pickField(data, ['id'], '')),
       read: pickField<boolean>(data, ['read'], true),
@@ -118,8 +115,7 @@ export class NotificationMapper extends BaseMapper<NotificationDto, AppNotificat
   }
 
   /** `PATCH /notifications/read-all` → số lượng đã cập nhật. */
-  toReadAllModel(dto: NotificationReadAllResponseDto | null | undefined): { updatedCount: number } {
-    const data = pickField(dto, ['data'], null) as NotificationReadAllResponseDto['data'];
+  toReadAllModel(data: NotificationReadAllResponseDto['data']): { updatedCount: number } {
     return { updatedCount: safeNumber(pickField(data, ['updatedCount'], 0)) };
   }
 }

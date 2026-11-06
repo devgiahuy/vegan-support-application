@@ -5,16 +5,18 @@ import { ChatMessageStatus, ChatOwnerType, ChatRole, FeedbackValue } from '@/com
 
 describe('ChatMapper sessions', () => {
   it('map phiên guest + hết hạn', () => {
-    const session = chatMapper.toSingleSession({
-      success: true,
-      data: {
-        id: 's1',
-        title: '',
-        ownerType: 'GUEST',
-        expiresAt: '2020-01-01T00:00:00.000Z',
-      },
-      meta: null,
-    });
+    const session = chatMapper.toSingleSession(
+      {
+        success: true,
+        data: {
+          id: 's1',
+          title: '',
+          ownerType: 'GUEST',
+          expiresAt: '2020-01-01T00:00:00.000Z',
+        },
+        meta: null,
+      }.data
+    );
     expect(session.title).toBe('Đoạn chat mới');
     expect(session.ownerType).toBe(ChatOwnerType.GUEST);
     expect(session.ownerTypeLabel).toBe('Khách');
@@ -34,7 +36,7 @@ describe('ChatMapper sessions', () => {
       data: [{ id: 'a', title: 'Hỏi đạm', owner_type: 'AUTHENTICATED' }, null],
       meta: { page: 1, limit: 20, total: 2, total_pages: 1 },
     };
-    const result = chatMapper.toSessionList(envelope);
+    const result = chatMapper.toSessionList(envelope.data, envelope.meta);
     expect(result.items).toHaveLength(2);
     expect(result.items[0].ownerTypeLabel).toBe('Cá nhân');
     expect(result.metadata.totalItems).toBe(2);
@@ -60,7 +62,7 @@ describe('ChatMapper messages', () => {
       ],
       meta: { page: 1, limit: 20, total: 1, totalPages: 1 },
     };
-    const result = chatMapper.toMessageList(envelope);
+    const result = chatMapper.toMessageList(envelope.data, envelope.meta);
     const message = result.items[0];
     expect(message.role).toBe(ChatRole.ASSISTANT);
     expect(message.roleLabel).toBe('Trợ lý');
@@ -89,11 +91,13 @@ describe('ChatMapper messages', () => {
 
 describe('ChatMapper feedback + quota + dto', () => {
   it('toFeedbackModel đọc messageId + value', () => {
-    const feedback = chatMapper.toFeedbackModel({
-      success: true,
-      data: { messageId: 'm1', value: 'DOWN', reason: null },
-      meta: null,
-    });
+    const feedback = chatMapper.toFeedbackModel(
+      {
+        success: true,
+        data: { messageId: 'm1', value: 'DOWN', reason: null },
+        meta: null,
+      }.data
+    );
     expect(feedback).toMatchObject({ messageId: 'm1', value: 'DOWN', reason: null });
   });
 
